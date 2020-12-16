@@ -1,0 +1,10 @@
+provider_installation {
+  dev_overrides {
+    #"hashicorp.com/spectrocloud/spectrocloud" = "/Users/saamalik/.terraform.d/plugins"
+    #"hashicorp.com/spectrocloud/spectrocloud" = "/Users/saamalik/.terraform.d/plugins/hashicorp.com/spectrocloud/spectrocloud/0.1/darwin_amd64"
+    #"hashicorp.com/spectrocloud/spectrocloud" = "/tmp/terraform-spectrocloud"
+    "spectrocloud/spectrocloud" = "/tmp/terraform-spectrocloud"
+  }
+
+  direct {}
+}
