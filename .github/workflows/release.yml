@@ -27,9 +27,9 @@ jobs:
       -
         name: Configure git for private modules
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          GH_USER: ${{ secrets.GH_USER }}
-        run: git config --global url."https://${GH_USER}:${GH_TOKEN}@github.com".insteadOf "https://github.com"
+          TOKEN: ${{ secrets.SPECTRO_TOKEN }}
+          USER: ${{ secrets.SPECTRO_USER }}
+        run: git config --global url."https://${USER}:${TOKEN}@github.com".insteadOf "https://github.com"
       -
         name: Set up Go
         uses: actions/setup-go@v2
