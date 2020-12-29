@@ -18,7 +18,7 @@ func main() {
 	opts := &plugin.ServeOpts{ProviderFunc: spectrocloud.Provider}
 
 	if debugMode {
-		err := plugin.Debug(context.Background(), "spectrocloud.com/spectrocloud/spectrocloud", opts)
+		err := plugin.Debug(context.Background(), "spectrocloud/spectrocloud", opts)
 
 		if err != nil {
 			log.Fatal(err.Error())
