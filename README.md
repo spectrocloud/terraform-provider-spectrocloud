@@ -1,8 +1,7 @@
 # Terraform Provider spectrocloud
 
-This repo is a companion repo to the [Call APIs with Terraform Providers](https://learn.hashicorp.com/collections/terraform/providers) Learn collection. 
+Terraform Provider for Spectro Cloud.
 
-In the collection, you will use the spectrocloud provider as a bridge between Terraform and the Spectro Cloud API. Then, extend Terraform by recreating the Spectro Cloud provider. By the end of this collection, you will be able to take these intuitions to create your own custom Terraform provider. 
 
 ## Build provider
 
