@@ -38,6 +38,12 @@ func resourceClusterProfile() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"type": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default: "add-on",
+				ForceNew: true,
+			},
 			"pack" : {
 				Type:     schema.TypeList,
 				Required: true,
@@ -136,12 +142,8 @@ func resourceClusterProfileDelete(ctx context.Context, d *schema.ResourceData, m
 
 	var diags diag.Diagnostics
 
-	err := c.DeleteCluster(d.Id())
+	err := c.DeleteClusterProfile(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := waitForClusterDeletion(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -161,11 +163,7 @@ func toClusterProfile(d *schema.ResourceData) *models.V1alpha1ClusterProfileEnti
 		Spec: &models.V1alpha1ClusterProfileEntitySpec{
 			Template: &models.V1alpha1ClusterProfileTemplateDraft{
 				CloudType:       models.V1alpha1CloudType(d.Get("cloud").(string)),
-				//CloudType:       ptr.StringPtr(cloudConfig["location"].(string)),
-				Packs:     nil,
-				
-				// TODO(saamalik)
-				//Type:      "",
+				Type: d.Get("type").(string),
 			},
 		},
 	}
