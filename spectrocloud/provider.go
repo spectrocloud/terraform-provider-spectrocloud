@@ -28,7 +28,7 @@ func Provider() *schema.Provider {
 				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_PASSWORD", nil),
 			},
-			"project_uid": &schema.Schema{
+			"project_name": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 			},
@@ -54,7 +54,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	host := d.Get("host").(string)
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
-	projectUid := d.Get("project_uid").(string)
+
+	projectName := d.Get("project_name").(string)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -69,5 +70,17 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		return nil, diags
 	}
 
-	return client.New(host, username, password, projectUid), diags
+	c := client.New(host, username, password, "")
+
+	if projectName != "" {
+		uid, err := c.GetProjectUID(projectName)
+		if err != nil {
+			return nil, diag.FromErr(err)
+		}
+
+		c = client.New(host, username, password, uid)
+	}
+
+	return c, diags
+
 }
