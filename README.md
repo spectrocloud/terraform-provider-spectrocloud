@@ -1,3 +1,5 @@
+![release](https://github.com/spectrocloud/terraform-provider-spectrocloud/workflows/release/badge.svg)
+
 # Terraform Provider spectrocloud
 
 Terraform Provider for Spectro Cloud.
