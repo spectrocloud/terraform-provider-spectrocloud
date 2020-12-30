@@ -2,53 +2,58 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Provider -
-func Provider() *schema.Provider {
-	return &schema.Provider{
-		Schema: map[string]*schema.Schema{
-			"host": &schema.Schema{
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_HOST", "console.spectrocloud.com"),
+func New(version string) func() *schema.Provider {
+	return func() *schema.Provider {
+		fmt.Println("Version", version)
+		p := &schema.Provider{
+			Schema: map[string]*schema.Schema{
+				"host": &schema.Schema{
+					Type:        schema.TypeString,
+					Optional:    true,
+					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_HOST", "console.spectrocloud.com"),
+				},
+				"username": &schema.Schema{
+					Type:        schema.TypeString,
+					Required:    true,
+					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_USERNAME", nil),
+				},
+				"password": &schema.Schema{
+					Type:        schema.TypeString,
+					Required:    true,
+					Sensitive:   true,
+					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_PASSWORD", nil),
+				},
+				"project_name": &schema.Schema{
+					Type:     schema.TypeString,
+					Optional: true,
+				},
 			},
-			"username": &schema.Schema{
-				Type:        schema.TypeString,
-				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_USERNAME", nil),
-			},
-			"password": &schema.Schema{
-				Type:        schema.TypeString,
-				Required:    true,
-				Sensitive:   true,
-				DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_PASSWORD", nil),
-			},
-			"project_name": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-		},
-		ResourcesMap: map[string]*schema.Resource{
-			"spectrocloud_cloudaccount_azure": resourceCloudAccountAzure(),
-			"spectrocloud_cluster_azure":      resourceClusterAzure(),
+			ResourcesMap: map[string]*schema.Resource{
+				"spectrocloud_cloudaccount_azure": resourceCloudAccountAzure(),
+				"spectrocloud_cluster_azure":      resourceClusterAzure(),
 
-			"spectrocloud_cluster_vsphere":    resourceClusterVsphere(),
+				"spectrocloud_cluster_vsphere":    resourceClusterVsphere(),
 
-			"spectrocloud_cluster_profile":    resourceClusterProfile(),
-		},
-		DataSourcesMap: map[string]*schema.Resource{
-			"spectrocloud_cluster_profile": dataSourceClusterProfile(),
+				"spectrocloud_cluster_profile":    resourceClusterProfile(),
+			},
+			DataSourcesMap: map[string]*schema.Resource{
+				"spectrocloud_cluster_profile": dataSourceClusterProfile(),
 
-			"spectrocloud_cloudaccount_azure": dataSourceCloudAccountAzure(),
-			//"spectrocloud_ingredients": dataSourceIngredients(),
-			//"spectrocloud_order": dataSourceOrder(),
-		},
-		ConfigureContextFunc: providerConfigure,
+				"spectrocloud_cloudaccount_azure": dataSourceCloudAccountAzure(),
+				//"spectrocloud_ingredients": dataSourceIngredients(),
+				//"spectrocloud_order": dataSourceOrder(),
+			},
+			ConfigureContextFunc: providerConfigure,
+		}
+
+		return p
 	}
 }
 

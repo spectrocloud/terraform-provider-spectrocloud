@@ -9,7 +9,7 @@ cluster_cloud_account_name   = "azure-2"
 cluster_cluster_profile_name = "cp-basic"
 
 # Cluster
-cluster_name = "cluster1-azure"
+cluster_name           = "cluster1-azure"
 cluster_ssh_public_key = <<-EOT
   ssh-rsa AAAA....
 EOT
