@@ -15,11 +15,11 @@ provider "spectrocloud" {
 }
 
 resource "spectrocloud_cloudaccount_vsphere" "vsphere-1" {
-  name = "vsphere-1"
-  private_cloud_gateway_id = "<....>"
-  vsphere_vcenter = "<....>"
-  vsphere_username = "<....>"
-  vsphere_password = "<....>"
+  name                          = "vsphere-1"
+  private_cloud_gateway_id      = "<....>"
+  vsphere_vcenter               = "<....>"
+  vsphere_username              = "<....>"
+  vsphere_password              = "<....>"
   vsphere_ignore_insecure_error = true
 }
 
@@ -31,14 +31,14 @@ resource "spectrocloud_cluster_vsphere" "test6" {
   cloud_config {
     # Replace with your own
     datacenter = "Datacenter"
-    folder = "Demo/spc-test4"
+    folder     = "Demo/spc-test4"
 
     network_type = "DDNS"
     # Replace
     network_search_domain = "spectrocloud.local"
 
     # Replace
-    ssh_key         = "ssh-rsa AAA...."
+    ssh_key = "ssh-rsa AAA...."
 
   }
 
@@ -69,32 +69,32 @@ resource "spectrocloud_cluster_vsphere" "test6" {
     count                   = 1
 
     placement {
-      cluster = "cluster1"
+      cluster       = "cluster1"
       resource_pool = ""
-      datastore = "datastore55"
-      network = "VM Network"
+      datastore     = "datastore55"
+      network       = "VM Network"
     }
     instance_type {
       disk_size_gb = 61
-      memory_mb = 4096
-      cpu = 2
+      memory_mb    = 4096
+      cpu          = 2
     }
   }
 
   machine_pool {
-    name          = "worker-basic"
-    count         = 2
+    name  = "worker-basic"
+    count = 2
 
     placement {
-      cluster = "cluster1"
+      cluster       = "cluster1"
       resource_pool = ""
-      datastore = "datastore55"
-      network = "VM Network"
+      datastore     = "datastore55"
+      network       = "VM Network"
     }
     instance_type {
       disk_size_gb = 65
-      memory_mb = 8192
-      cpu = 4
+      memory_mb    = 8192
+      cpu          = 4
     }
   }
 

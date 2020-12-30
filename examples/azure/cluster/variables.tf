@@ -9,12 +9,12 @@ variable "sc_username" {
 
 variable "sc_password" {
   description = "Spectro Cloud Password"
-  sensitive = true
+  sensitive   = true
 }
 
 variable "sc_project_name" {
   description = "Spectro Cloud Project (e.g: Default)"
-  default = "Default"
+  default     = "Default"
 }
 
 variable "cluster_cloud_account_name" {
@@ -27,7 +27,7 @@ variable "cluster_cluster_profile_name" {
 
 variable "cluster_name" {
   description = "Name of the cluster"
-  default = "cluster1-azure"
+  default     = "cluster1-azure"
 }
 
 variable "cluster_ssh_public_key" {
