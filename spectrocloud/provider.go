@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -11,7 +10,6 @@ import (
 
 func New(version string) func() *schema.Provider {
 	return func() *schema.Provider {
-		fmt.Println("Version", version)
 		p := &schema.Provider{
 			Schema: map[string]*schema.Schema{
 				"host": &schema.Schema{
