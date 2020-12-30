@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "spectrocloud" {
-  host        = "console.spectrocloud.com"
+  host        = "api.spectrocloud.com"
   username    = "<....>"
   password    = "<....>"
   project_uid = "<....>"

@@ -15,7 +15,7 @@ func New(_ string) func() *schema.Provider {
 				"host": &schema.Schema{
 					Type:        schema.TypeString,
 					Optional:    true,
-					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_HOST", "console.spectrocloud.com"),
+					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_HOST", "api.spectrocloud.com"),
 				},
 				"username": &schema.Schema{
 					Type:        schema.TypeString,

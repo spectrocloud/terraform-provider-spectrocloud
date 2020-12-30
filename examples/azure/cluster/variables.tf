@@ -1,6 +1,6 @@
 variable "sc_host" {
   description = "Spectro Cloud Endpoint"
-  default     = "console.spectrocloud.com"
+  default     = "api.spectrocloud.com"
 }
 
 variable "sc_username" {
