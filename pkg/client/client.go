@@ -136,7 +136,7 @@ func (h *V1alpha1Client) getTransport() (*hapitransport.Runtime, error) {
 	httpTransport := hapitransport.New(hubbleUri, "", schemes)
 	httpTransport.DefaultAuthentication = openapiclient.APIKeyAuth(authTokenKey, authTokenInput, authToken.token.Authorization)
 	httpTransport.RetryAttempts = 0
-	httpTransport.Debug = true
+	//httpTransport.Debug = true
 	return httpTransport, nil
 }
 

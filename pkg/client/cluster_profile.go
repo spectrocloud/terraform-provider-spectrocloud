@@ -37,6 +37,27 @@ func (h *V1alpha1Client) GetClusterProfile(uid string) (*models.V1alpha1ClusterP
 	return success.Payload, nil
 }
 
+func (h *V1alpha1Client) GetClusterProfiles() ([]*models.V1alpha1ClusterProfile, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1alpha1ClusterProfilesListParamsWithContext(h.ctx)
+	response, err := client.V1alpha1ClusterProfilesList(params)
+	if err != nil {
+		return nil, err
+	}
+
+	profiles := make([]*models.V1alpha1ClusterProfile, len(response.Payload.Items))
+	for i, profile := range response.Payload.Items {
+		profiles[i] = profile
+	}
+
+	return profiles, nil
+}
+
+
 func (h *V1alpha1Client) UpdateClusterProfile(clusterProfile *models.V1alpha1ClusterProfileEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {

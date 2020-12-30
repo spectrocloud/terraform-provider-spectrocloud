@@ -1,36 +1,32 @@
-terraform {
-  required_providers {
-    spectrocloud = {
-      version = ">= 0.1"
-      source  = "spectrocloud.com/spectrocloud/spectrocloud"
-    }
-  }
+
+data "spectrocloud_cloudaccount_azure" "account" {
+  # id = <uid>
+  name = var.cluster_cloud_account_name
 }
 
-provider "spectrocloud" {
-  host        = "console.spectrocloud.com"
-  username    = "<email>"
-  password    = "<password"
-  project_uid = "<project_uid>"
+data "spectrocloud_cluster_profile" "profile" {
+  # id = <uid>
+  name = var.cluster_cluster_profile_name
 }
 
-resource "spectrocloud_cloudaccount_azure" "azure-1" {
-  name                = "azure-1"
-  azure_tenant_id     = "<....>"
-  azure_client_id     = "<....>"
-  azure_client_secret = "<....>"
-}
 
-resource "spectrocloud_cluster_azure" "test5" {
-  name               = "test5"
-  cluster_profile_id = "5fd97f045e6ad657ac0935a2"
-  cloud_account_id   = spectrocloud_cloudaccount_azure.azure-2.id
+# resource "spectrocloud_cloudaccount_azure" "azure-1" {
+#   name                = "azure-1"
+#   azure_tenant_id     = "<....>"
+#   azure_client_id     = "<....>"
+#   azure_client_secret = "<....>"
+# }
+
+resource "spectrocloud_cluster_azure" "cluster" {
+  name               = var.cluster_name
+  cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
+  cloud_account_id   = data.spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
-    subscription_id = "<....>"
-    resource_group  = "saad-west1"
-    location        = "westus"
-    ssh_key         = "ssh-rsa <PUBKEY>"
+    subscription_id = var.azure_subscription_id
+    resource_group  = var.azure_resource_group
+    location        = var.azure_location
+    ssh_key         = var.cluster_ssh_public_key
   }
 
   # To override or specify values for a cluster:
@@ -70,7 +66,6 @@ resource "spectrocloud_cluster_azure" "test5" {
     count         = 1
     instance_type = "Standard_D2_v3"
   }
-
 
 }
 

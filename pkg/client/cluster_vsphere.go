@@ -129,6 +129,27 @@ func (h *V1alpha1Client) GetCloudAccountVsphere(uid string) (*models.V1alpha1Vsp
 	return success.Payload, nil
 }
 
+func (h *V1alpha1Client) GetCloudAccountsVsphere() ([]*models.V1alpha1VsphereAccount, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1alpha1CloudAccountsVsphereListParamsWithContext(h.ctx)
+	response, err := client.V1alpha1CloudAccountsVsphereList(params)
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := make([]*models.V1alpha1VsphereAccount, len(response.Payload.Items))
+	for i, account := range response.Payload.Items {
+		accounts[i] = account
+	}
+
+	return accounts, nil
+}
+
+
 func (h *V1alpha1Client) GetCloudConfigVsphere(configUID string) (*models.V1alpha1VsphereCloudConfig, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
