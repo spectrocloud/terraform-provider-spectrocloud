@@ -4,7 +4,8 @@ Simple template to create a cluster profile.
 
 Run with a command like this:
 
-```
+```shell
+terraform init
 terraform apply \
    -var 'sc_username={your_spectro_cloud_username}' \
    -var 'sc_password={your_spectro_cloud_password}'

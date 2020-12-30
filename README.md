@@ -21,14 +21,10 @@ First, build and install the provider.
 $ make install
 ```
 
-Then, navigate to the `examples` directory. 
+Then, navigate to the `examples` directory, and see the available examples.
 
 ```shell
 $ cd examples
 ```
 
-Run the following command to initialize the workspace and apply the sample configuration.
-
-```shell
-$ terraform init && terraform apply
-```
+For instance, navigate to the azure/e2e example and read the README.md instructions.
