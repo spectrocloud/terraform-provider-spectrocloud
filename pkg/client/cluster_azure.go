@@ -117,8 +117,8 @@ func (h *V1alpha1Client) GetCloudAccountAzure(uid string) (*models.V1alpha1Azure
 		return nil, err
 	}
 
-	getParams := clusterC.NewV1alpha1CloudAccountsAzureGetParamsWithContext(h.ctx).WithUID(uid)
-	success, err := client.V1alpha1CloudAccountsAzureGet(getParams)
+	params := clusterC.NewV1alpha1CloudAccountsAzureGetParamsWithContext(h.ctx).WithUID(uid)
+	success, err := client.V1alpha1CloudAccountsAzureGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		// TODO(saamalik) check with team if this is proper?
 		return nil, nil
@@ -127,6 +127,26 @@ func (h *V1alpha1Client) GetCloudAccountAzure(uid string) (*models.V1alpha1Azure
 	}
 
 	return success.Payload, nil
+}
+
+func (h *V1alpha1Client) GetCloudAccountsAzure() ([]*models.V1alpha1AzureAccount, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1alpha1CloudAccountsAzureListParamsWithContext(h.ctx)
+	response, err := client.V1alpha1CloudAccountsAzureList(params)
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := make([]*models.V1alpha1AzureAccount, len(response.Payload.Items))
+	for i, account := range response.Payload.Items {
+		accounts[i] = account
+	}
+
+	return accounts, nil
 }
 
 func (h *V1alpha1Client) GetCloudConfigAzure(configUID string) (*models.V1alpha1AzureCloudConfig, error) {

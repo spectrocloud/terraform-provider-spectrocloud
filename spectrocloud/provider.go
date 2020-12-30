@@ -42,7 +42,9 @@ func Provider() *schema.Provider {
 			"spectrocloud_cluster_profile":    resourceClusterProfile(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			//"spectrocloud_cloudaccount": dataSourceCloudAccount(),
+			"spectrocloud_cluster_profile": dataSourceClusterProfile(),
+
+			"spectrocloud_cloudaccount_azure": dataSourceCloudAccountAzure(),
 			//"spectrocloud_ingredients": dataSourceIngredients(),
 			//"spectrocloud_order": dataSourceOrder(),
 		},
