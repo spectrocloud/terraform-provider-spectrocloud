@@ -144,6 +144,20 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceMachinePoolAwsHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+
+	return int(hash(buf.String()))
+}
+
 func resourceMachinePoolVsphereHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})

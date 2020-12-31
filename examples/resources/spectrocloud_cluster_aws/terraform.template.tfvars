@@ -1,10 +1,4 @@
-cluster_cloud_account_name   = "gcp-1"
-cluster_cluster_profile_name = "ProdGoogle"
+cluster_cloud_account_name   = "aws-1"
+cluster_cluster_profile_name = "ProdAWS"
 
-gcp_serviceaccount_json = <<-EOT
-  {
-    "type": "service_account",
-    "project_id": "gcp-project-1",
-    ...
-  }
-EOT
+cluster_name = "aws-2"

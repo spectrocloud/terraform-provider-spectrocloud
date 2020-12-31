@@ -1,18 +1,18 @@
 ---
-page_title: "spectrocloud_cluster_gcp Resource - terraform-provider-spectrocloud"
+page_title: "spectrocloud_cluster_aws Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
   
 ---
 
-# Resource `spectrocloud_cluster_gcp`
+# Resource `spectrocloud_cluster_aws`
 
 
 
 ## Example Usage
 
 ```terraform
-data "spectrocloud_cloudaccount_gcp" "account" {
+data "spectrocloud_cloudaccount_aws" "account" {
   # id = <uid>
   name = var.cluster_cloud_account_name
 }
@@ -23,15 +23,14 @@ data "spectrocloud_cluster_profile" "profile" {
 }
 
 
-resource "spectrocloud_cluster_gcp" "cluster" {
+resource "spectrocloud_cluster_aws" "cluster" {
   name               = var.cluster_name
   cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
-  cloud_account_id   = data.spectrocloud_cloudaccount_gcp.account.id
+  cloud_account_id   = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
-    network = var.gcp_network
-    project = var.gcp_project
-    region  = var.gcp_region
+    ssh_key_name = "default"
+    region       = "us-west-2"
   }
 
   # To override or specify values for a cluster:
@@ -59,16 +58,16 @@ resource "spectrocloud_cluster_gcp" "cluster" {
     control_plane_as_worker = true
     name                    = "master-pool"
     count                   = 1
-    instance_type           = "e2-standard-2"
+    instance_type           = "t3.large"
     disk_size_gb            = 62
-    azs                     = ["us-west3-a"]
+    azs                     = ["us-west-2a"]
   }
 
   machine_pool {
     name          = "worker-basic"
     count         = 1
-    instance_type = "e2-standard-2"
-    azs           = ["us-west3-a"]
+    instance_type = "t3.large"
+    azs           = ["us-west-2a"]
   }
 
 }
@@ -99,12 +98,8 @@ resource "spectrocloud_cluster_gcp" "cluster" {
 
 Required:
 
-- **project** (String)
 - **region** (String)
-
-Optional:
-
-- **network** (String)
+- **ssh_key_name** (String)
 
 
 <a id="nestedblock--machine_pool"></a>

@@ -7,7 +7,3 @@ variable "cluster_cloud_account_name" {}
 variable "cluster_cluster_profile_name" {}
 
 variable "cluster_name" {}
-
-variable "gcp_network" {}
-variable "gcp_project" {}
-variable "gcp_region" {}
