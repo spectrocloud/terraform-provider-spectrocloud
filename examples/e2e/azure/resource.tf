@@ -1,3 +1,4 @@
+
 data "spectrocloud_cloudaccount_azure" "account" {
   # id = <uid>
   name = var.cluster_cloud_account_name
@@ -7,6 +8,14 @@ data "spectrocloud_cluster_profile" "profile" {
   # id = <uid>
   name = var.cluster_cluster_profile_name
 }
+
+
+# resource "spectrocloud_cloudaccount_azure" "azure-1" {
+#   name                = "azure-1"
+#   azure_tenant_id     = "<....>"
+#   azure_client_id     = "<....>"
+#   azure_client_secret = "<....>"
+# }
 
 resource "spectrocloud_cluster_azure" "cluster" {
   name               = var.cluster_name
