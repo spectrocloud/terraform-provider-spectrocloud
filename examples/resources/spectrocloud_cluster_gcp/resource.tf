@@ -47,7 +47,7 @@ resource "spectrocloud_cluster_gcp" "cluster" {
     count                   = 1
     instance_type           = "e2-standard-2"
     disk_size_gb            = 62
-    azs                     = ["us-west3-a", "us-west3-b", "us-west3-c"]
+    azs                     = ["us-west3-a"]
   }
 
   machine_pool {
