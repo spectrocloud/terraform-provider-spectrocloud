@@ -7,10 +7,25 @@ description: |-
 
 # Spectro Cloud Provider
 
+The Spectro Cloud provider provides resources to interact with Spectro Cloud management API (SaaS or on-prem).
 
-The Spectro Cloud provider provides resources to interact with Spectro Cloud management API (SaaS or on-prem). Review the examples.
+## What is Spectro Cloud?
+
+The Spectro Cloud management platform brings the managed Kubernetes experience to users' own unique enterprise
+Kubernetes infrastructure stacks running in any public cloud, or private cloud environments, allowing users to
+not have to trade-off between flexibility and manageability. Spectro Cloud provides an as-a-service experience
+to users by automating the lifecycle of multiple Kubernetes clusters based on user-defined Kubernetes
+infrastructure stacks.
+
+## Spectro Cloud account
+
+This provider requires access to a valid Spectro Cloud account. 
+
+If you haven't already, please signup for a free Spectro Cloud account here: [Spectro Cloud Signup](https://www.spectrocloud.com/free-trial/).
 
 ## Example Usage
+
+Create a `providers.tf` file with the following 
 
 ```terraform
 terraform {
@@ -29,6 +44,24 @@ provider "spectrocloud" {
   project_name = var.sc_project_name # Project name (e.g: Default)
 }
 ```
+
+Create or append to a `terraform.tfvars` file:
+
+```terraform
+# Credentials
+host         = "console.spectrocloud.com"
+username     = "user1@abc.com" # Username of the user (or specify with SPECTROCLOUD_USERNAME env var)
+password     = "superSecure1!" # Password of the user (or specify with SPECTROCLOUD_PASSWORD env var)
+project_name = "Default"       # Project name (e.g: Default)
+```
+
+-> Be sure to populate the `username`, `password`, and other terraform vars.
+
+
+Next, initialize terraform using:
+
+    terraform init
+
 
 ## Schema
 
