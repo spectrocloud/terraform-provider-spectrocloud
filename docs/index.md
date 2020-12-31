@@ -19,13 +19,13 @@ infrastructure stacks.
 
 ## Spectro Cloud account
 
-This provider requires access to a valid Spectro Cloud account. 
+This provider requires access to a valid Spectro Cloud account.
 
 If you haven't already, please signup for a free Spectro Cloud account here: [Spectro Cloud Signup](https://www.spectrocloud.com/free-trial/).
 
 ## Example Usage
 
-Create a `providers.tf` file with the following 
+Create a `providers.tf` file with the following:
 
 ```terraform
 terraform {
@@ -55,13 +55,25 @@ password     = "superSecure1!" # Password of the user (or specify with SPECTROCL
 project_name = "Default"       # Project name (e.g: Default)
 ```
 
+->
+Be sure to populate the `username`, `password`, and other terraform vars.
+
+Ok
+
 -> Be sure to populate the `username`, `password`, and other terraform vars.
 
+Next, run terraform using:
 
-Next, initialize terraform using:
+    terraform init && terraform apply
 
-    terraform init
+Detailed schema definitions for each resource are listed in the _Resources_ menu on the left.
 
+For an end-to-end example of provisioning Spectro Cloud resources, visit: [...](https://github.com).
+
+## Support
+
+For questions or issues with the provider, please post your questions on the
+provider GitHub [discussion board](https://github.com/spectrocloud/terraform-provider-spectrocloud/discussions).
 
 ## Schema
 
