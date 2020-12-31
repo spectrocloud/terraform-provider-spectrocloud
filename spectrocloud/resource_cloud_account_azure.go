@@ -90,9 +90,6 @@ func resourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m 
 		return diag.FromErr(err)
 	}
 
-	// NOTE intentionally not setting the "azure_client_secret" since the backend masks the field
-	//d.Set("azure_client_secret", string(*account.Spec.ClientSecret))
-
 	return diags
 }
 
@@ -103,7 +100,6 @@ func resourceCloudAccountAzureUpdate(ctx context.Context, d *schema.ResourceData
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	//time.Sleep(20 * time.Second)
 	account := toAzureAccount(d)
 
 	err := c.UpdateCloudAccountAzure(account)

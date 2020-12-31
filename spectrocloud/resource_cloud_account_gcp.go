@@ -78,7 +78,6 @@ func resourceCloudAccountGcpUpdate(ctx context.Context, d *schema.ResourceData, 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	//time.Sleep(20 * time.Second)
 	account := toGcpAccount(d)
 
 	err := c.UpdateCloudAccountGcp(account)
