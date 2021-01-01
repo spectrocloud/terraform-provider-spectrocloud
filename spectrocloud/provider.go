@@ -48,6 +48,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cluster_vsphere":    resourceClusterVsphere(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
+				"spectrocloud_pack": dataSourcePack(),
+
 				"spectrocloud_cluster_profile": dataSourceClusterProfile(),
 
 				"spectrocloud_cloudaccount_aws": dataSourceCloudAccountAws(),

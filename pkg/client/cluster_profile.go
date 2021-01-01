@@ -1,8 +1,10 @@
 package client
 
 import (
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
+	"strings"
 
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1alpha1"
 )
@@ -55,6 +57,31 @@ func (h *V1alpha1Client) GetClusterProfiles() ([]*models.V1alpha1ClusterProfile,
 	}
 
 	return profiles, nil
+}
+
+func (h *V1alpha1Client) GetPacks(filters []string) ([]*models.V1alpha1PackSummary, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1alpha1PacksSummaryListParamsWithContext(h.ctx)
+	if filters != nil {
+		filterString := ptr.StringPtr(strings.Join(filters,"AND"))
+		params = params.WithFilters(filterString)
+	}
+
+	response, err := client.V1alpha1PacksSummaryList(params)
+	if err != nil {
+		return nil, err
+	}
+
+	packs := make([]*models.V1alpha1PackSummary, len(response.Payload.Items))
+	for i, pack := range response.Payload.Items {
+		packs[i] = pack
+	}
+
+	return packs, nil
 }
 
 
