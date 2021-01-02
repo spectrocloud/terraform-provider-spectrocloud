@@ -182,10 +182,6 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	cluster := toAzureCluster(d)
 
-
-	// TODO(saamalik) remove hack when Ravi's fix is in
-	cluster.Spec.PackValues = nil
-
 	uid, err := c.CreateClusterAzure(cluster)
 	if err != nil {
 		return diag.FromErr(err)
