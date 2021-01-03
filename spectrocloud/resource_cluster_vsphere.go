@@ -205,10 +205,6 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 
 	cluster := toVsphereCluster(d)
 
-
-	// TODO(saamalik) remove hack when Ravi's fix is in
-	cluster.Spec.PackValues = nil
-
 	uid, err := c.CreateClusterVsphere(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -241,9 +237,9 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1alpha1Client)
 
 	var diags diag.Diagnostics
-	//
+
 	uid := d.Id()
-	//
+
 	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
