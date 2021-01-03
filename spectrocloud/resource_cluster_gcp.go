@@ -191,9 +191,9 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 	c := m.(*client.V1alpha1Client)
 
 	var diags diag.Diagnostics
-	//
+
 	uid := d.Id()
-	//
+
 	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
