@@ -3,6 +3,7 @@ package client
 import (
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
+	"strings"
 
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1alpha1"
 )
@@ -19,10 +20,10 @@ func (h *V1alpha1Client) DeleteCluster(uid string) error {
 	return err
 }
 
-func (h *V1alpha1Client) GetCluster(uid string) (azureAccount *models.V1alpha1SpectroCluster, err error) {
+func (h *V1alpha1Client) GetCluster(uid string) (*models.V1alpha1SpectroCluster, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	params := clusterC.NewV1alpha1SpectroClustersGetParamsWithContext(h.ctx).WithUID(uid)
@@ -35,5 +36,21 @@ func (h *V1alpha1Client) GetCluster(uid string) (azureAccount *models.V1alpha1Sp
 	}
 
 	return success.Payload, nil
+}
+
+func (h *V1alpha1Client) GetClusterKubeConfig(uid string) (string, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return "", err
+	}
+
+	builder := new(strings.Builder)
+	params := clusterC.NewV1alpha1SpectroClustersUIDKubeConfigParamsWithContext(h.ctx).WithUID(uid)
+	_, err = client.V1alpha1SpectroClustersUIDKubeConfig(params, builder)
+	if err != nil {
+		return "", err
+	}
+
+	return builder.String(), nil
 }
 

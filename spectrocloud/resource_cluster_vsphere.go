@@ -45,6 +45,10 @@ func resourceClusterVsphere() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"kubeconfig": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"cloud_config": {
 				Type:     schema.TypeList,
 				ForceNew: true,
@@ -260,6 +264,15 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 
 	mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
 	if err := d.Set("machine_pool", mp); err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Update the kubeconfig
+	kubeconfig, err := c.GetClusterKubeConfig(uid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("kubeconfig", kubeconfig); err != nil {
 		return diag.FromErr(err)
 	}
 

@@ -45,6 +45,10 @@ func resourceClusterAzure() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"kubeconfig": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"cloud_config": {
 				Type:     schema.TypeList,
 				ForceNew: true,
@@ -182,10 +186,6 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	cluster := toAzureCluster(d)
 
-
-	// TODO(saamalik) remove hack when Ravi's fix is in
-	cluster.Spec.PackValues = nil
-
 	uid, err := c.CreateClusterAzure(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -218,9 +218,9 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 	c := m.(*client.V1alpha1Client)
 
 	var diags diag.Diagnostics
-	//
+
 	uid := d.Id()
-	//
+
 	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -241,6 +241,15 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 
 	mp := flattenMachinePoolConfigsAzure(config.Spec.MachinePoolConfig)
 	if err := d.Set("machine_pool", mp); err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Update the kubeconfig
+	kubeconfig, err := c.GetClusterKubeConfig(uid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("kubeconfig", kubeconfig); err != nil {
 		return diag.FromErr(err)
 	}
 

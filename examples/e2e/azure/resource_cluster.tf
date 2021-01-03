@@ -1,26 +1,8 @@
 
-data "spectrocloud_cloudaccount_azure" "account" {
-  # id = <uid>
-  name = var.cluster_cloud_account_name
-}
-
-data "spectrocloud_cluster_profile" "profile" {
-  # id = <uid>
-  name = var.cluster_cluster_profile_name
-}
-
-
-# resource "spectrocloud_cloudaccount_azure" "azure-1" {
-#   name                = "azure-1"
-#   azure_tenant_id     = "<....>"
-#   azure_client_id     = "<....>"
-#   azure_client_secret = "<....>"
-# }
-
 resource "spectrocloud_cluster_azure" "cluster" {
-  name               = var.cluster_name
-  cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
-  cloud_account_id   = data.spectrocloud_cloudaccount_azure.account.id
+  name               = "az-picard-2"
+  cluster_profile_id = spectrocloud_cluster_profile.profile.id
+  cloud_account_id   = spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
     subscription_id = var.azure_subscription_id

@@ -22,14 +22,6 @@ data "spectrocloud_cluster_profile" "profile" {
   name = var.cluster_cluster_profile_name
 }
 
-
-# resource "spectrocloud_cloudaccount_azure" "azure-1" {
-#   name                = "azure-1"
-#   azure_tenant_id     = "<....>"
-#   azure_client_id     = "<....>"
-#   azure_client_secret = "<....>"
-# }
-
 resource "spectrocloud_cluster_azure" "cluster" {
   name               = var.cluster_name
   cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
@@ -102,6 +94,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
 ### Read-only
 
 - **cloud_config_id** (String)
+- **kubeconfig** (String)
 
 <a id="nestedblock--cloud_config"></a>
 ### Nested Schema for `cloud_config`

@@ -19,9 +19,7 @@ infrastructure stacks.
 
 ## Spectro Cloud account
 
-This provider requires access to a valid Spectro Cloud account.
-
-If you haven't already, please signup for a free Spectro Cloud account here: [Spectro Cloud Signup](https://www.spectrocloud.com/free-trial/).
+This provider requires access to a valid Spectro Cloud account. Sign up for a free account [here](https://www.spectrocloud.com/free-trial/).
 
 ## Example Usage
 
@@ -58,9 +56,8 @@ project_name = "Default"       # Project name (e.g: Default)
 ->
 Be sure to populate the `username`, `password`, and other terraform vars.
 
-Ok
-
--> Be sure to populate the `username`, `password`, and other terraform vars.
+Copy one of the resource configuration files (e.g: spectrocloud_cluster_profile) from the _Resources_ documentation. Be sure to specify
+all required parameters.
 
 Next, run terraform using:
 
@@ -68,7 +65,8 @@ Next, run terraform using:
 
 Detailed schema definitions for each resource are listed in the _Resources_ menu on the left.
 
-For an end-to-end example of provisioning Spectro Cloud resources, visit: [...](https://github.com).
+For an end-to-end example of provisioning Spectro Cloud resources, visit:
+[Spectro Cloud E2E Examples](https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/e2e).
 
 ## Support
 

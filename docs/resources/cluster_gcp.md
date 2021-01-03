@@ -93,6 +93,7 @@ resource "spectrocloud_cluster_gcp" "cluster" {
 ### Read-only
 
 - **cloud_config_id** (String)
+- **kubeconfig** (String)
 
 <a id="nestedblock--cloud_config"></a>
 ### Nested Schema for `cloud_config`
