@@ -4,7 +4,7 @@ End-to-end example of provisioning a new GCP K8s cluster with all of its depende
 
 ## Instructions:
 
-Clone this repository to a local directory, and traverse to `examples/e2e/gcp`. Proceed with the following:
+Clone this repository to a local directory, and change directory to `examples/e2e/gcp`. Proceed with the following:
 1. Follow the Spectro Cloud documentations for creating a GCP service account:
 [GCP Service Account](https://docs.spectrocloud.com/clusters/?clusterType=google_cloud_cluster#creatingagcpcloudaccount).
 1. Copy the template variable file `terraform.template.tfvars` to `terraform.tfvars`.
