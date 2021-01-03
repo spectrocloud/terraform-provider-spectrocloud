@@ -4,8 +4,10 @@ End-to-end example of provisioning a new Azure K8s cluster with all of its depen
 
 ## Instructions:
 
+1. Follow the Spectro Cloud documentations for creating an Azure Application Registration:
+[Azure Cloud Account](https://docs.spectrocloud.com/clusters?clusterType=azure_cluster#creatinganazurecloudaccount).
 1. Copy the template variable file `terraform.template.tfvars` to `terraform.tfvars`. 
-1. Specify and upate all the placeholder values in the `terraform.tfvars` file.
+1. Specify and upate all the placeholder values in the `terraform.tfvars` file. _NOTE: Azure specific
 1. Initialize and run terraform: `terraform init && terraform apply`.
 1. Wait for the cluster creation to finish.
 
