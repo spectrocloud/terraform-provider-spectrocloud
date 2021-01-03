@@ -75,5 +75,6 @@ func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, 
 	d.Set("azure_tenant_id", *account.Spec.TenantID)
 	d.Set("azure_client_id", *account.Spec.ClientID)
 
+
 	return diags
 }

@@ -1,17 +1,31 @@
 # Basic Cluster demo
 
-Simple template to create a cluster profile.
+End-to-end example of provisioning a new Azure K8s cluster. This will provision a new cluster profile, cloud account, and cluster.
+
+## Instructions:
+
+Copy the template `terraform.template.tfvars` file to `terraform.tfvars`; and populate all placeholders.
 
 Run with a command like this:
 
 ```shell
 terraform init
-terraform apply \
-   -var 'sc_username={your_spectro_cloud_username}' \
-   -var 'sc_password={your_spectro_cloud_password}'
-   ...
+terraform apply
 ```
 
-Look at `variables.tf` to see all required parameters.
+Once the cluster is provisioned, the cluster _kubeconfig_ file is exported in the current working directly. 
 
-Alternatively to using `-var` with each command, the `terraform.template.tfvars` file can be copied to `terraform.tfvars` and updated.
+Export the kubeconfig and check cluster pods:
+
+```shell
+export KUBECONFIG=kubeconfig_azure-2
+kubectl get pod -A
+```
+
+## Cleanup:
+
+Run the destroy operation:
+
+```shell
+terraform destroy
+```

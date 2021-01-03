@@ -43,13 +43,13 @@ data "spectrocloud_pack" "csi" {
 }
 
 data "spectrocloud_pack" "cni" {
-  name = "cni-calico-azure"
-  version  = "3.16.0"
+  name    = "cni-calico-azure"
+  version = "3.16.0"
 }
 
 data "spectrocloud_pack" "k8s" {
-  name = "kubernetes"
-  version  = "1.18.14"
+  name    = "kubernetes"
+  version = "1.18.14"
 }
 
 data "spectrocloud_pack" "ubuntu" {
@@ -64,9 +64,9 @@ resource "spectrocloud_cluster_profile" "profile" {
   type        = "cluster"
 
   pack {
-    name = "spectro-byo-manifest"
-    tag  = "1.0.x"
-    uid  = data.spectrocloud_pack.byom.id
+    name   = "spectro-byo-manifest"
+    tag    = "1.0.x"
+    uid    = data.spectrocloud_pack.byom.id
     values = <<-EOT
       manifests:
         byo-manifest:
@@ -83,30 +83,30 @@ resource "spectrocloud_cluster_profile" "profile" {
   }
 
   pack {
-    name = "csi-azure"
-    tag  = "1.0.x"
-    uid  = data.spectrocloud_pack.csi.id
+    name   = "csi-azure"
+    tag    = "1.0.x"
+    uid    = data.spectrocloud_pack.csi.id
     values = data.spectrocloud_pack.csi.values
   }
 
   pack {
-    name = "cni-calico-azure"
-    tag  = "3.16.x"
-    uid  = data.spectrocloud_pack.cni.id
+    name   = "cni-calico-azure"
+    tag    = "3.16.x"
+    uid    = data.spectrocloud_pack.cni.id
     values = data.spectrocloud_pack.cni.values
   }
 
   pack {
-    name = "kubernetes"
-    tag  = "1.18.x"
-    uid  = data.spectrocloud_pack.k8s.id
+    name   = "kubernetes"
+    tag    = "1.18.x"
+    uid    = data.spectrocloud_pack.k8s.id
     values = data.spectrocloud_pack.k8s.values
   }
 
   pack {
-    name = "ubuntu-azure"
-    tag  = "LTS__18.4.x"
-    uid  = data.spectrocloud_pack.ubuntu.id
+    name   = "ubuntu-azure"
+    tag    = "LTS__18.4.x"
+    uid    = data.spectrocloud_pack.ubuntu.id
     values = data.spectrocloud_pack.ubuntu.values
   }
 }
