@@ -4,14 +4,15 @@ End-to-end example of provisioning a new Azure K8s cluster with all of its depen
 
 ## Instructions:
 
+Clone this repository to a local directory, and traverse to `examples/e2e/azure`. Proceed with the following:
 1. Follow the Spectro Cloud documentations for creating an Azure Application Registration:
 [Azure Cloud Account](https://docs.spectrocloud.com/clusters?clusterType=azure_cluster#creatinganazurecloudaccount).
-1. Copy the template variable file `terraform.template.tfvars` to `terraform.tfvars`. 
+1. Copy the template variable file `terraform.template.tfvars` to `terraform.tfvars`.
 1. Specify and upate all the placeholder values in the `terraform.tfvars` file.
 1. Initialize and run terraform: `terraform init && terraform apply`.
 1. Wait for the cluster creation to finish.
 
-Once the cluster is provisioned, the cluster _kubeconfig_ file is exported in the current working directly. 
+Once the cluster is provisioned, the cluster _kubeconfig_ file is exported in the current working directly.
 
 Export the kubeconfig and check cluster pods:
 
