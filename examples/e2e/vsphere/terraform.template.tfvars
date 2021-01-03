@@ -16,9 +16,9 @@ EOT
 cluster_network_search = "..." #e.g spectrocloud.local
 
 vsphere_datacenter = "..."
-vsphere_folder = "..."
+vsphere_folder     = "..."
 
-vsphere_cluster = "..."
+vsphere_cluster       = "..."
 vsphere_resource_pool = ""
-vsphere_datastore = "..."
-vsphere_network = "..."
+vsphere_datastore     = "..."
+vsphere_network       = "..."

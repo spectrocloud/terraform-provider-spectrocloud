@@ -9,7 +9,7 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
     datacenter = var.vsphere_datacenter
     folder     = var.vsphere_folder
 
-    network_type = "DDNS"
+    network_type          = "DDNS"
     network_search_domain = var.cluster_network_search
   }
 
