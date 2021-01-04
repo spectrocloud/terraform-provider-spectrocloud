@@ -10,5 +10,5 @@ aws_secret_key = "..."
 
 # Cluster
 aws_ssh_key_name = "default"
-aws_region       = "..."
-aws_region_az    = "..."
+aws_region       = "..." #e.g: us-west-2
+aws_region_az    = "..." #e.g: us-west-2a
