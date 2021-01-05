@@ -8,7 +8,8 @@ Terraform Provider for Spectro Cloud.
 
 To use this Spectro Cloud provider, you must meet the following requirements:
 - Spectro Cloud account ([Sign-up for a free account](https://www.spectrocloud.com/free-trial/) )
-- Terraform 0.13+ (e.g: `brew install terraform`)
+- Terraform (minimum version 0.13+)
+- Kubernetes/Kubectl CLI (minimum version 1.16+)
 
 ## Usage
 
@@ -20,10 +21,6 @@ Examples of other managed resources are also available in the [examples/resource
 Detailed documentation on supported data sources and resources are available on the
 [Terraform Spectro Cloud Provider Documentation](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs).
 
-## Build provider
+## Support
 
-Run the following command to build the provider
-
-```shell
-$ go build -o terraform-provider-spectrocloud
-```
+For questions or issues with the provider, please post your questions on the provider [discussion board](/discussions).

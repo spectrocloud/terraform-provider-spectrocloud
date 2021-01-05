@@ -7,7 +7,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
   cloud_config {
     subscription_id = var.azure_subscription_id
     resource_group  = var.azure_resource_group
-    location        = var.azure_location
+    region          = var.azure_region
     ssh_key         = var.cluster_ssh_public_key
   }
 

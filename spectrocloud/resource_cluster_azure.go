@@ -64,7 +64,7 @@ func resourceClusterAzure() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"location": {
+						"region": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -380,21 +380,10 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			ProfileUID:      ptr.StringPtr(d.Get("cluster_profile_id").(string)),
 			CloudConfig: &models.V1alpha1AzureClusterConfig{
-				//ControlPlaneSubnet: &models.V1alpha1AzureSubnet{
-				//	CidrBlock:         "",
-				//	Name:              "",
-				//	SecurityGroupName: "",
-				//},
-				Location:       ptr.StringPtr(cloudConfig["location"].(string)),
+				Location:       ptr.StringPtr(cloudConfig["region"].(string)),
 				SSHKey:         ptr.StringPtr(cloudConfig["ssh_key"].(string)),
 				SubscriptionID: ptr.StringPtr(cloudConfig["subscription_id"].(string)),
 				ResourceGroup:  cloudConfig["resource_group"].(string),
-				//VnetName:       "",
-				//WorkerSubnet: &models.V1alpha1AzureSubnet{
-				//	CidrBlock:         "",
-				//	Name:              "",
-				//	SecurityGroupName: "",
-				//},
 			},
 		},
 	}
