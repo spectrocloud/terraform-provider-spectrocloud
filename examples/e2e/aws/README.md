@@ -9,7 +9,7 @@ will provision the following resources on Spectro Cloud:
 ## Instructions:
 
 Clone this repository to a local directory, and then change directory to `examples/e2e/aws`. Proceed with the following:
-1. Follow the Spectro Cloud documentations for to create an AWS cloud account with appropriate permissions:
+1. Follow the Spectro Cloud documentation to create an AWS cloud with appropriate permissions:
 [AWS Cloud Account](https://docs.spectrocloud.com/clusters/?clusterType=aws_cluster#awscloudaccountpermissions).
 2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file `terraform.tfvars`.
 3. Specify and update all the placeholder values in the `terraform.tfvars` file.

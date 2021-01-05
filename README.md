@@ -7,7 +7,7 @@ Terraform Provider for Spectro Cloud.
 ## Pre-Requisites
 
 To use this Spectro Cloud provider, you must meet the following requirements:
-- Spectro Cloud account ([Sign-up for a free account](https://www.spectrocloud.com/free-trial/) )
+- Spectro Cloud account ([Sign-up for a free trial account](https://www.spectrocloud.com/free-trial/) )
 - Terraform (minimum version 0.13+)
 - Kubernetes/Kubectl CLI (minimum version 1.16+)
 
