@@ -2,12 +2,12 @@
 page_title: "Spectro Cloud Provider"
 subcategory: ""
 description: |-
-  The Spectro Cloud provider provides resources to interact with Spectro Cloud management API (SaaS or on-prem).
+  The Spectro Cloud provider provides resources to interact with the Spectro Cloud management API (whether SaaS or on-prem).
 ---
 
 # Spectro Cloud Provider
 
-The Spectro Cloud provider provides resources to interact with Spectro Cloud management API (SaaS or on-prem).
+The Spectro Cloud provider provides resources to interact with the Spectro Cloud management API (whether SaaS or on-prem).
 
 ## What is Spectro Cloud?
 
@@ -19,7 +19,7 @@ infrastructure stacks.
 
 ## Spectro Cloud account
 
-This provider requires access to a valid Spectro Cloud account. Sign up for a free account [here](https://www.spectrocloud.com/free-trial/).
+This provider requires access to a valid Spectro Cloud account. Sign up for a free trial account [here](https://www.spectrocloud.com/free-trial/).
 
 ## Example Usage
 

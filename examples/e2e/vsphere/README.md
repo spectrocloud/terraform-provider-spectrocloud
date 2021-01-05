@@ -17,13 +17,15 @@ in Spectro Cloud Admin view:
 - Select _Cloud Accounts_
 - Note the name of the newly added vSphere cloud account
 
+This name will be specified as the `shared_Vmware_cloud_account_name` option in `terraform.tfvars`.
+
 Alternatively, look at using a `spectrocloud_cloud_account_vsphere` resource to have Terraform create
 a dedicated cloud account for this e2e example.
 
 ## Instructions:
 
 Clone this repository to a local directory, and change directory to `examples/e2e/vsphere`. Proceed with the following:
-1. Follow Spectro Cloud documentation to create the private cloud gateway:
+1. Follow the Spectro Cloud documentation to create a Private Cloud Gateway:
 [VMware First Cluster](https://docs.spectrocloud.com/getting-started/?getting_started=vmware#yourfirstvmwarecluster).
 2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file `terraform.tfvars`.
 3. Specify and update all the placeholder values in the `terraform.tfvars` file.
