@@ -12,7 +12,7 @@ Clone this repository to a local directory, and then change directory to `exampl
 1. Follow the Spectro Cloud documentations for to create an AWS cloud account with appropriate permissions:
 [AWS Cloud Account](https://docs.spectrocloud.com/clusters/?clusterType=aws_cluster#awscloudaccountpermissions).
 2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file `terraform.tfvars`.
-3. Specify and upate all the placeholder values in the `terraform.tfvars` file.
+3. Specify and update all the placeholder values in the `terraform.tfvars` file.
 4. Initialize and run terraform: `terraform init && terraform apply`.
 5. Wait for the cluster creation to finish.
 
