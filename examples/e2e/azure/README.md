@@ -9,7 +9,7 @@ will provision the following resources on Spectro Cloud:
 ## Instructions:
 
 Clone this repository to a local directory, and then change directory to `examples/e2e/azure`. Proceed with the following:
-1. Follow the Spectro Cloud documentation to create a GCP service account with appropriate permissions:
+1. Follow the Spectro Cloud documentation to create an Azure Application with appropriate permissions:
 [Azure Cloud Account](https://docs.spectrocloud.com/clusters?clusterType=azure_cluster#creatinganazurecloudaccount).
 2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file `terraform.tfvars`.
 3. Specify and update all the placeholder values in the `terraform.tfvars` file.
