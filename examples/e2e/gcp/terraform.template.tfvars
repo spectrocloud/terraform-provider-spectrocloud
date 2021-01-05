@@ -1,18 +1,20 @@
-# Credentials
-sc_host         = "api.spectrocloud.com"
-sc_username     = "<...>"
-sc_password     = "<...>"
-sc_project_name = "Default"
+# Spectro Cloud credentials
+sc_host         = "{enter Spectro Cloud API endpoint}" #e.g: api.spectrocloud.com (for SaaS)
+sc_username     = "{enter Spectro Cloud username}"     #e.g: user1@abc.com
+sc_password     = "{enter Spectro Cloud password}"     #e.g: supereSecure1!
+sc_project_name = "{enter Spectro Cloud project Name}" #e.g: Default
 
-# Cloud Account credentials
+# Google Cloud account credentials
+# Create a new GCP service account with the Editor role mapping
+# https://cloud.google.com/iam/docs/creating-managing-service-account-keys
+#
+# Paste the service account JSON key contents inside the yaml heredoc EOT markers.
 gcp_serviceaccount_json = <<-EOT
-  {
-    "type": "service_account",
-    ....
-  }
+  {enter GCP service account json}
 EOT
 
-# Cluster
-gcp_network = ""
-gcp_project = "..."
-gcp_region  = "us-west3"
+# GCP Cluster Placement properties
+#
+gcp_network = "{enter GCP network}" #e.g: "" (this one can be blank)
+gcp_project = "{enter GCP project}"
+gcp_region  = "{enter GCP region}" #e.g: us-west3
