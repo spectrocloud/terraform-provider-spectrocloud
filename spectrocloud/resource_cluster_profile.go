@@ -130,6 +130,9 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		if err := c.UpdateClusterProfile(cluster); err != nil {
 			return diag.FromErr(err)
 		}
+		if err := c.PublishClusterProfile(cluster.Metadata.UID); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	resourceClusterProfileRead(ctx, d, m)
@@ -167,6 +170,7 @@ func toClusterProfile(d *schema.ResourceData) *models.V1alpha1ClusterProfileEnti
 			},
 		},
 	}
+
 
 	packs := make([]*models.V1alpha1PackEntity, 0)
 	for _, pack := range d.Get("pack").([]interface{}) {
