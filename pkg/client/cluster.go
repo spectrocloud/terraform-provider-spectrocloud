@@ -35,6 +35,12 @@ func (h *V1alpha1Client) GetCluster(uid string) (*models.V1alpha1SpectroCluster,
 		return nil, err
 	}
 
+	// special check if the cluster is marked deleted
+	cluster := success.Payload
+	if cluster.Status.State == "Deleted" {
+		return nil, nil
+	}
+
 	return success.Payload, nil
 }
 
