@@ -113,9 +113,33 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
-	// TODO(saamalik) read the pack values and upate (for reconciliation)
+	d.Set("name", cp.Metadata.Name)
+	packs := flattenPacks(cp.Spec.Published.Packs)
+	if err := d.Set("pack", packs); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
+}
+
+func flattenPacks(packs []*models.V1alpha1PackRef) []interface{} {
+	if packs == nil {
+		return make([]interface{}, 0)
+	}
+
+	ps := make([]interface{}, len(packs))
+	for i, pack := range packs {
+		p := make(map[string]interface{})
+
+		p["uid"] = pack.PackUID
+		p["name"] = *pack.Name
+		p["tag"] = pack.Tag
+		p["values"] = pack.Values
+
+		ps[i] = p
+	}
+
+	return ps
 }
 
 func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
