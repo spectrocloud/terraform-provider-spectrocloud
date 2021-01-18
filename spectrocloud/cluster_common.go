@@ -119,6 +119,7 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 
 	// TODO(saamalik) fix for disk
 	//buf.WriteString(fmt.Sprintf("%d-", d["size_gb"].(int)))

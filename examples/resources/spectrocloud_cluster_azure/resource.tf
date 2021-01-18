@@ -46,6 +46,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
     name                    = "master-pool"
     count                   = 1
     instance_type           = "Standard_D2_v3"
+    azs                     = []
     disk {
       size_gb = 65
       type    = "Standard_LRS"
@@ -56,6 +57,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
     name          = "worker-basic"
     count         = 1
     instance_type = "Standard_D2_v3"
+    azs           = []
   }
 
 }

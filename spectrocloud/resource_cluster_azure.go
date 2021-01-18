@@ -161,6 +161,14 @@ func resourceClusterAzure() *schema.Resource {
 								},
 							},
 						},
+						"azs": {
+							Type:     schema.TypeSet,
+							Required: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
 					},
 				},
 			},
@@ -273,6 +281,8 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1alpha1AzureMachineP
 		oi["count"] = machinePool.Size
 		oi["update_strategy"] = machinePool.UpdateStrategy.Type
 		oi["instance_type"] = machinePool.InstanceType
+
+		oi["azs"] = machinePool.Azs
 
 		if machinePool.OsDisk != nil {
 			d := make(map[string]interface{})
@@ -425,9 +435,14 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1alpha1AzureMachinePoo
 		diskType = disk0["type"].(string)
 	}
 
+	azs := make([]string, 0)
+	for _, az := range m["azs"].(*schema.Set).List() {
+		azs = append(azs, az.(string))
+	}
+
 	mp := &models.V1alpha1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1alpha1AzureMachinePoolCloudConfigEntity{
-			//Azs:          nil,
+			Azs:          azs,
 			InstanceType: m["instance_type"].(string),
 			OsDisk: &models.V1alpha1AzureOSDisk{
 				DiskSizeGB: int32(diskSize),
