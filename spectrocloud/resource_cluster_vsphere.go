@@ -64,19 +64,26 @@ func resourceClusterVsphere() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"network_type": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"network_search_domain": {
-							Type:     schema.TypeString,
-							Required: true,
-							// TODO(saamalik) required only when not static IP
 
-						},
 						"ssh_key": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+
+						"static_ip": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default: false,
+						},
+
+						// DHCP Properties
+						"network_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"network_search_domain": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 					},
 				},
@@ -177,6 +184,10 @@ func resourceClusterVsphere() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
+									"static_ip_pool_id": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 								},
 							},
 						},
@@ -216,7 +227,7 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 		Pending:    resourceClusterCreatePendingStates,
 		Target:     []string{"Running"},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate),
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1 * time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
 	}
@@ -224,7 +235,7 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 	// Wait, catching any errors
 	_, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
-		diag.FromErr(err)
+		return diag.FromErr(err)
 	}
 
 	resourceClusterVsphereRead(ctx, d, m)
@@ -301,7 +312,6 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1alpha1VsphereMach
 			oi["instance_type"] = []interface{}{s}
 		}
 
-
 		placements := make([]interface{}, len(machinePool.Placements))
 		for j, p := range machinePool.Placements {
 			pj := make(map[string]interface{})
@@ -309,7 +319,12 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1alpha1VsphereMach
 			pj["resource_pool"] = p.ResourcePool
 			pj["datastore"] = p.Datastore
 			pj["network"] = p.Network.NetworkName
-			// TODO(saamalik) Static ip
+
+			poolID := ""
+			if p.Network.ParentPoolRef != nil {
+				poolID = p.Network.ParentPoolRef.UID
+			}
+			pj["static_ip_pool_id"] = poolID
 
 			placements[j] = pj
 		}
@@ -404,6 +419,7 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
+	staticIP := cloudConfig["static_ip"].(bool)
 	cluster := &models.V1alpha1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
@@ -413,26 +429,22 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			ProfileUID:      ptr.StringPtr(d.Get("cluster_profile_id").(string)),
 			CloudConfig: &models.V1alpha1VsphereClusterConfigEntity{
-				ControlPlaneEndpoint: &models.V1alpha1ControlPlaneEndPoint{
-					DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-					Type:             cloudConfig["network_type"].(string),
-				},
 				NtpServers: nil,
 				Placement: &models.V1alpha1VspherePlacementConfigEntity{
 					Datacenter:          cloudConfig["datacenter"].(string),
 					Folder:              cloudConfig["folder"].(string),
-					//ImageTemplateFolder: "",
-					//Network: &models.V1alpha1VsphereNetworkConfigEntity{
-					//	// TODO(saamalik)
-					//	StaticIP:      false,
-					//},
-					//UID:          "",
 				},
 				SSHKeys:  []string{cloudConfig["ssh_key"].(string)},
-				// TODO(saamalik)
-				StaticIP: false,
+				StaticIP: staticIP,
 			},
 		},
+	}
+
+	if !staticIP {
+		cluster.Spec.CloudConfig.ControlPlaneEndpoint= &models.V1alpha1ControlPlaneEndPoint{
+			DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
+			Type:             cloudConfig["network_type"].(string),
+		}
 	}
 
 	machinePoolConfigs := make([]*models.V1alpha1VsphereMachinePoolConfigEntity, 0)
@@ -466,12 +478,20 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 	placements := make([]*models.V1alpha1VspherePlacementConfigEntity, 0)
 	for _, pos := range m["placement"].([]interface{}) {
 		p := pos.(map[string]interface{})
+		poolID := p["static_ip_pool_id"].(string)
+		staticIP := false
+		if len(poolID) > 0 {
+			staticIP = true
+		}
+
 		placements = append(placements, &models.V1alpha1VspherePlacementConfigEntity{
 			Cluster:             p["cluster"].(string),
 			ResourcePool:        p["resource_pool"].(string),
 			Datastore:           p["datastore"].(string),
 			Network:             &models.V1alpha1VsphereNetworkConfigEntity{
 				NetworkName: ptr.StringPtr(p["network"].(string)),
+				ParentPoolUID: poolID,
+				StaticIP: staticIP,
 			},
 		})
 

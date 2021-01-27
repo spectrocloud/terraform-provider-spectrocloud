@@ -124,7 +124,7 @@ func GetProjectContextWithCtx(c context.Context, projectUid string) context.Cont
 
 
 func (h *V1alpha1Client) getTransport() (*hapitransport.Runtime, error) {
-	if authToken == nil || authToken.expiry.Before(time.Now().Add(1*time.Minute)) {
+	if authToken == nil || authToken.expiry.Before(time.Now()) {
 		if tkn, err := h.getNewAuthToken(); err != nil {
 			log.Error("Failed to get auth token ", err)
 			return nil, err

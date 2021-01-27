@@ -166,7 +166,7 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 		Pending:    resourceClusterCreatePendingStates,
 		Target:     []string{"Running"},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate),
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1 * time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
 	}
@@ -174,7 +174,7 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Wait, catching any errors
 	_, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
-		diag.FromErr(err)
+		return diag.FromErr(err)
 	}
 
 	resourceClusterAwsRead(ctx, d, m)

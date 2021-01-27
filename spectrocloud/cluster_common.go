@@ -43,7 +43,7 @@ var resourceClusterCreatePendingStates = []string{
 func waitForClusterDeletion(ctx context.Context, c *client.V1alpha1Client, id string, timeout time.Duration) error {
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterDeletePendingStates,
-		Target:     []string{"Deleted"},
+		Target:     nil, // wait for deleted
 		Refresh:    resourceClusterStateRefreshFunc(c, id),
 		Timeout:    timeout,
 		MinTimeout: 10 * time.Second,
