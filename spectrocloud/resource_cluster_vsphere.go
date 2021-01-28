@@ -73,7 +73,7 @@ func resourceClusterVsphere() *schema.Resource {
 						"static_ip": {
 							Type:     schema.TypeBool,
 							Optional: true,
-							Default: false,
+							Default:  false,
 						},
 
 						// DHCP Properties
@@ -88,7 +88,7 @@ func resourceClusterVsphere() *schema.Resource {
 					},
 				},
 			},
-			"pack" : {
+			"pack": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      resourcePackHash,
@@ -112,7 +112,7 @@ func resourceClusterVsphere() *schema.Resource {
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Set : resourceMachinePoolVsphereHash,
+				Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"control_plane": {
@@ -168,6 +168,10 @@ func resourceClusterVsphere() *schema.Resource {
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"id": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
 									"cluster": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -227,7 +231,7 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 		Pending:    resourceClusterCreatePendingStates,
 		Target:     []string{"Running"},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1 * time.Minute,
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
 	}
@@ -267,7 +271,6 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	if config, err = c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	}
-
 
 	mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
 	if err := d.Set("machine_pool", mp); err != nil {
@@ -315,6 +318,7 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1alpha1VsphereMach
 		placements := make([]interface{}, len(machinePool.Placements))
 		for j, p := range machinePool.Placements {
 			pj := make(map[string]interface{})
+			pj["id"] = p.UID
 			pj["cluster"] = p.Cluster
 			pj["resource_pool"] = p.ResourcePool
 			pj["datastore"] = p.Datastore
@@ -431,8 +435,8 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 			CloudConfig: &models.V1alpha1VsphereClusterConfigEntity{
 				NtpServers: nil,
 				Placement: &models.V1alpha1VspherePlacementConfigEntity{
-					Datacenter:          cloudConfig["datacenter"].(string),
-					Folder:              cloudConfig["folder"].(string),
+					Datacenter: cloudConfig["datacenter"].(string),
+					Folder:     cloudConfig["folder"].(string),
 				},
 				SSHKeys:  []string{cloudConfig["ssh_key"].(string)},
 				StaticIP: staticIP,
@@ -441,7 +445,7 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 	}
 
 	if !staticIP {
-		cluster.Spec.CloudConfig.ControlPlaneEndpoint= &models.V1alpha1ControlPlaneEndPoint{
+		cluster.Spec.CloudConfig.ControlPlaneEndpoint = &models.V1alpha1ControlPlaneEndPoint{
 			DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
 			Type:             cloudConfig["network_type"].(string),
 		}
@@ -485,13 +489,14 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 		}
 
 		placements = append(placements, &models.V1alpha1VspherePlacementConfigEntity{
-			Cluster:             p["cluster"].(string),
-			ResourcePool:        p["resource_pool"].(string),
-			Datastore:           p["datastore"].(string),
-			Network:             &models.V1alpha1VsphereNetworkConfigEntity{
-				NetworkName: ptr.StringPtr(p["network"].(string)),
+			UID:          p["id"].(string),
+			Cluster:      p["cluster"].(string),
+			ResourcePool: p["resource_pool"].(string),
+			Datastore:    p["datastore"].(string),
+			Network: &models.V1alpha1VsphereNetworkConfigEntity{
+				NetworkName:   ptr.StringPtr(p["network"].(string)),
 				ParentPoolUID: poolID,
-				StaticIP: staticIP,
+				StaticIP:      staticIP,
 			},
 		})
 
@@ -506,7 +511,7 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 
 	mp := &models.V1alpha1VsphereMachinePoolConfigEntity{
 		CloudConfig: &models.V1alpha1VsphereMachinePoolCloudConfigEntity{
-			Placements: placements,
+			Placements:   placements,
 			InstanceType: &instanceType,
 		},
 		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
@@ -522,4 +527,3 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 	}
 	return mp
 }
-
