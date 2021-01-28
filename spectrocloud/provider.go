@@ -2,7 +2,9 @@ package spectrocloud
 
 import (
 	"context"
+	"crypto/tls"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -30,6 +32,10 @@ func New(_ string) func() *schema.Provider {
 				},
 				"project_name": &schema.Schema{
 					Type:     schema.TypeString,
+					Optional: true,
+				},
+				"ignore_insecure_tls_error": &schema.Schema{
+					Type:     schema.TypeBool,
 					Optional: true,
 				},
 			},
@@ -68,8 +74,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	host := d.Get("host").(string)
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
-
 	projectName := d.Get("project_name").(string)
+	ignoreTlsError := d.Get("ignore_insecure_tls_error").(bool)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -82,6 +88,10 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		})
 		// TODO(saamalik) verify this block "can" happen (e.g: does required guard this?)
 		return nil, diags
+	}
+
+	if ignoreTlsError {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
 	c := client.New(host, username, password, "")
