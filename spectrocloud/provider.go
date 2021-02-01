@@ -3,8 +3,9 @@ package spectrocloud
 import (
 	"context"
 	"crypto/tls"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"net/http"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -40,7 +41,7 @@ func New(_ string) func() *schema.Provider {
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
-				"spectrocloud_cluster_profile":    resourceClusterProfile(),
+				"spectrocloud_cluster_profile": resourceClusterProfile(),
 
 				"spectrocloud_cloudaccount_aws": resourceCloudAccountAws(),
 				"spectrocloud_cluster_aws":      resourceClusterAws(),
@@ -51,16 +52,18 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cloudaccount_gcp": resourceCloudAccountGcp(),
 				"spectrocloud_cluster_gcp":      resourceClusterGcp(),
 
-				"spectrocloud_cluster_vsphere":    resourceClusterVsphere(),
+				"spectrocloud_cluster_vsphere": resourceClusterVsphere(),
+
+				"spectrocloud_cluster_import": resourceClusterImport(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_pack": dataSourcePack(),
 
 				"spectrocloud_cluster_profile": dataSourceClusterProfile(),
 
-				"spectrocloud_cloudaccount_aws": dataSourceCloudAccountAws(),
-				"spectrocloud_cloudaccount_azure": dataSourceCloudAccountAzure(),
-				"spectrocloud_cloudaccount_gcp": dataSourceCloudAccountGcp(),
+				"spectrocloud_cloudaccount_aws":     dataSourceCloudAccountAws(),
+				"spectrocloud_cloudaccount_azure":   dataSourceCloudAccountAzure(),
+				"spectrocloud_cloudaccount_gcp":     dataSourceCloudAccountGcp(),
 				"spectrocloud_cloudaccount_vsphere": dataSourceCloudAccountVsphere(),
 			},
 			ConfigureContextFunc: providerConfigure,

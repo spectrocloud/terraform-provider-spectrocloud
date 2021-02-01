@@ -2,14 +2,15 @@ package spectrocloud
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"log"
-	"time"
 )
 
 func resourceClusterVsphere() *schema.Resource {
@@ -26,17 +27,17 @@ func resourceClusterVsphere() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"name": {
+			Name: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"cluster_profile_id": {
+			ClusterProfileId: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"cloud_account_id": {
+			CloudAccountId: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -115,13 +116,13 @@ func resourceClusterVsphere() *schema.Resource {
 				Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"control_plane": {
+						ControlPlane: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
 						},
-						"control_plane_as_worker": {
+						ControlPlaneAsWorker: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
@@ -277,15 +278,27 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	// Update the kubeconfig
-	kubeconfig, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("kubeconfig", kubeconfig); err != nil {
-		return diag.FromErr(err)
-	}
+	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
+		if err := d.Set("cluster_import_manifest_url", cluster.Status.ClusterImport.ImportLink); err != nil {
+			return diag.FromErr(err)
+		}
 
+		importManifest, err := c.GetClusterImportManifest(uid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("cluster_import_manifest", importManifest); err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		kubeconfig, err := c.GetClusterKubeConfig(uid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("kubeconfig", kubeconfig); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	return diags
 }
 
@@ -300,11 +313,13 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1alpha1VsphereMach
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi["control_plane"] = machinePool.IsControlPlane
-		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
+		oi[ControlPlane] = machinePool.IsControlPlane
+		oi[ControlPlaneAsWorker] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		if machinePool.UpdateStrategy != nil {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		}
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
@@ -440,8 +455,8 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1SpectroVsphereClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			ProfileUID:      ptr.StringPtr(d.Get("cluster_profile_id").(string)),
+			CloudAccountUID: ptr.StringPtr(d.Get(CloudAccountId).(string)),
+			ProfileUID:      d.Get(ClusterProfileId).(string),
 			CloudConfig: &models.V1alpha1VsphereClusterConfigEntity{
 				NtpServers: nil,
 				Placement: &models.V1alpha1VspherePlacementConfigEntity{
@@ -483,8 +498,8 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
-	controlPlane := m["control_plane"].(bool)
-	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
+	controlPlane := m[ControlPlane].(bool)
+	controlPlaneAsWorker := m[ControlPlaneAsWorker].(bool)
 	if controlPlane {
 		labels = append(labels, "master")
 	}
@@ -536,4 +551,45 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 		},
 	}
 	return mp
+}
+
+func resourceClusterVsphereImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := m.(*client.V1alpha1Client)
+
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
+
+	meta := toClusterMeta(d)
+
+	uid, err := c.ImportClusterVsphere(meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	d.SetId(uid)
+
+	stateConf := &resource.StateChangeConf{
+		//Pending:    resourceClusterCreatePendingStates,
+		Target:     []string{string(Pending)},
+		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
+		MinTimeout: 1 * time.Second,
+		Delay:      5 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err = stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	resourceClusterGcpRead(ctx, d, m)
+
+	if profiles := resourceCloudClusterProfilesGet(d); profiles != nil {
+		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	return diags
 }

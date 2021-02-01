@@ -2,14 +2,15 @@ package spectrocloud
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"log"
-	"time"
 )
 
 func resourceClusterGcp() *schema.Resource {
@@ -27,115 +28,115 @@ func resourceClusterGcp() *schema.Resource {
 
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
-			"name": {
+			Name: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"cluster_profile_id": {
+			ClusterProfileId: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"cloud_account_id": {
+			CloudAccountId: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"cloud_config_id": {
+			CloudConfigId: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"kubeconfig": {
+			Kubeconfig: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"cloud_config": {
+			CloudConfig: {
 				Type:     schema.TypeList,
 				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"network": {
+						Network: {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"project": {
+						Project: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"region": {
+						Region: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			"pack": {
+			Pack: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      resourcePackHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"name": {
+						Name: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"tag": {
+						Tag: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"values": {
+						Values: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			"machine_pool": {
+			MachinePool: {
 				Type:     schema.TypeSet,
 				Required: true,
 				Set:      resourceMachinePoolGcpHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"control_plane": {
+						ControlPlane: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
 						},
-						"control_plane_as_worker": {
+						ControlPlaneAsWorker: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 
 							//ForceNew: true,
 						},
-						"name": {
+						Name: {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
 						},
-						"count": {
+						Count: {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
-						"instance_type": {
+						InstanceType: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"update_strategy": {
+						UpdateStrategy: {
 							Type:     schema.TypeString,
 							Optional: true,
-							Default:  "RollingUpdateScaleOut",
+							Default:  RollingUpdateScaleOut,
 						},
-						"disk_size_gb": {
+						DiskSizeInGb: {
 							Type:     schema.TypeInt,
 							Optional: true,
 							Default:  65,
 						},
-						"azs": {
+						AvailabilityZones: {
 							Type:     schema.TypeSet,
 							Required: true,
 							MinItems: 1,
@@ -170,7 +171,7 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 		Pending:    resourceClusterCreatePendingStates,
 		Target:     []string{"Running"},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1 * time.Minute,
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
 	}
@@ -204,27 +205,44 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
+	d.Set(CloudConfigId, configUID)
 
 	var config *models.V1alpha1GcpCloudConfig
 	if config, err = c.GetCloudConfigGcp(configUID); err != nil {
 		return diag.FromErr(err)
 	}
 
-	mp := flattenMachinePoolConfigsGcp(config.Spec.MachinePoolConfig)
-	if err := d.Set("machine_pool", mp); err != nil {
-		return diag.FromErr(err)
+	//for brownfield cluster
+	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
+		importManifest, err := c.GetClusterImportManifest(uid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set(ClusterImportManifest, importManifest); err != nil {
+			return diag.FromErr(err)
+		}
+
+		if err := d.Set(ClusterImportManifestUrl, cluster.Status.ClusterImport.ImportLink); err != nil {
+			return diag.FromErr(err)
+		}
+
+	} else {
+		kubeconfig, err := c.GetClusterKubeConfig(uid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set(Kubeconfig, kubeconfig); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	// Update the kubeconfig
-	kubeconfig, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
+	//for brownfield, untill cluster is not in running state, don't get machine pool
+	if cluster.Status.ClusterImport == nil || cluster.Status.State == string(Running) {
+		mp := flattenMachinePoolConfigsGcp(config.Spec.MachinePoolConfig)
+		if err := d.Set(MachinePool, mp); err != nil {
+			return diag.FromErr(err)
+		}
 	}
-	if err := d.Set("kubeconfig", kubeconfig); err != nil {
-		return diag.FromErr(err)
-	}
-
 	return diags
 }
 
@@ -239,16 +257,21 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1alpha1GcpMachinePoolC
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi["control_plane"] = machinePool.IsControlPlane
-		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
-		oi["name"] = machinePool.Name
-		oi["count"] = int(machinePool.Size)
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		oi["instance_type"] = *machinePool.InstanceType
+		oi[ControlPlane] = machinePool.IsControlPlane
+		oi[ControlPlaneAsWorker] = machinePool.UseControlPlaneAsWorker
+		oi[Name] = machinePool.Name
+		oi[Count] = int(machinePool.Size)
+		oi[DiskSizeInGb] = int(machinePool.RootDeviceSize)
 
-		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
-
-		oi["azs"] = machinePool.Azs
+		if machinePool.UpdateStrategy != nil {
+			oi[UpdateStrategy] = machinePool.UpdateStrategy.Type
+		}
+		if machinePool.InstanceType != nil {
+			oi[InstanceType] = *machinePool.InstanceType
+		}
+		if len(machinePool.Azs) > 0 {
+			oi[AvailabilityZones] = machinePool.Azs
+		}
 
 		ois[i] = oi
 	}
@@ -344,15 +367,7 @@ func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntit
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
 		},
-		Spec: &models.V1alpha1SpectroGcpClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			ProfileUID:      ptr.StringPtr(d.Get("cluster_profile_id").(string)),
-			CloudConfig: &models.V1alpha1GcpClusterConfig{
-				Network: cloudConfig["network"].(string),
-				Project: ptr.StringPtr(cloudConfig["project"].(string)),
-				Region:  ptr.StringPtr(cloudConfig["region"].(string)),
-			},
-		},
+		Spec: toGcpClusterSpec(d, cloudConfig),
 	}
 
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
@@ -374,12 +389,39 @@ func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntit
 	return cluster
 }
 
+func toGcpClusterSpec(d *schema.ResourceData, cloudConfig map[string]interface{}) *models.V1alpha1SpectroGcpClusterEntitySpec {
+	clusterSpec := &models.V1alpha1SpectroGcpClusterEntitySpec{
+		ProfileUID:  d.Get(ClusterProfileId).(string),
+		CloudConfig: toGcpClusterConfig(cloudConfig),
+	}
+
+	//for brownfield, there will be no cloud account
+	if d.Get(CloudAccountId) != nil {
+		clusterSpec.CloudAccountUID = ptr.StringPtr(d.Get(CloudAccountId).(string))
+	}
+	return clusterSpec
+}
+
+func toGcpClusterConfig(cloudConfig map[string]interface{}) *models.V1alpha1GcpClusterConfig {
+	clusterConfig := &models.V1alpha1GcpClusterConfig{}
+	if cloudConfig["network"] != nil {
+		clusterConfig.Network = cloudConfig["network"].(string)
+	}
+	if cloudConfig["project"] != nil {
+		clusterConfig.Project = ptr.StringPtr(cloudConfig["project"].(string))
+	}
+	if cloudConfig["region"] != nil {
+		clusterConfig.Region = ptr.StringPtr(cloudConfig["region"].(string))
+	}
+	return clusterConfig
+}
+
 func toMachinePoolGcp(machinePool interface{}) *models.V1alpha1GcpMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
-	controlPlane := m["control_plane"].(bool)
-	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
+	controlPlane := m[ControlPlane].(bool)
+	controlPlaneAsWorker := m[ControlPlaneAsWorker].(bool)
 	if controlPlane {
 		labels = append(labels, "master")
 	}
@@ -407,4 +449,46 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1alpha1GcpMachinePoolCon
 		},
 	}
 	return mp
+}
+
+//brownfield
+func resourceClusterGcpImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := m.(*client.V1alpha1Client)
+
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
+
+	meta := toClusterMeta(d)
+
+	uid, err := c.ImportClusterGcp(meta)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	d.SetId(uid)
+
+	stateConf := &resource.StateChangeConf{
+		//Pending:    resourceClusterCreatePendingStates,
+		Target:     []string{string(Pending)},
+		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
+		MinTimeout: 1 * time.Second,
+		Delay:      5 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err = stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	resourceClusterGcpRead(ctx, d, m)
+
+	if profiles := resourceCloudClusterProfilesGet(d); profiles != nil {
+		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	return diags
 }

@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.4.0
 	github.com/prometheus/common v0.10.0
 	github.com/spectrocloud/gomi v0.0.0-20201228182306-1e482c900582
-	github.com/spectrocloud/hapi v1.6.1-0.20201215134830-ba674db801be
+	github.com/spectrocloud/hapi v1.6.1-0.20210128095342-4df47d1cb56a
 )
 
 // replace github.com/spectrocloud/hapi => ../hapi

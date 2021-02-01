@@ -7,6 +7,24 @@ import (
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1alpha1"
 )
 
+func (h *V1alpha1Client) ImportClusterVsphere(meta *models.V1ObjectMetaInputEntity) (string, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return "", err
+	}
+
+	params := clusterC.NewV1alpha1SpectroClustersVsphereImportParamsWithContext(h.ctx).WithBody(
+		&models.V1alpha1SpectroVsphereClusterImportEntity{
+			Metadata: meta,
+		},
+	)
+	success, err := client.V1alpha1SpectroClustersVsphereImport(params)
+	if err != nil {
+		return "", err
+	}
+
+	return *success.Payload.UID, nil
+}
 
 func (h *V1alpha1Client) CreateClusterVsphere(cluster *models.V1alpha1SpectroVsphereClusterEntity) (string, error) {
 	client, err := h.getClusterClient()
@@ -148,7 +166,6 @@ func (h *V1alpha1Client) GetCloudAccountsVsphere() ([]*models.V1alpha1VsphereAcc
 
 	return accounts, nil
 }
-
 
 func (h *V1alpha1Client) GetCloudConfigVsphere(configUID string) (*models.V1alpha1VsphereCloudConfig, error) {
 	client, err := h.getClusterClient()

@@ -7,7 +7,6 @@ import (
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1alpha1"
 )
 
-
 func (h *V1alpha1Client) CreateClusterAzure(cluster *models.V1alpha1SpectroAzureClusterEntity) (string, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
@@ -165,4 +164,24 @@ func (h *V1alpha1Client) GetCloudConfigAzure(configUID string) (*models.V1alpha1
 	}
 
 	return success.Payload, nil
+}
+
+//brownfield
+func (h *V1alpha1Client) ImportClusterAzure(meta *models.V1ObjectMetaInputEntity) (string, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return "", err
+	}
+
+	params := clusterC.NewV1alpha1SpectroClustersAzureImportParamsWithContext(h.ctx).WithBody(
+		&models.V1alpha1SpectroAzureClusterImportEntity{
+			Metadata: meta,
+		},
+	)
+	success, err := client.V1alpha1SpectroClustersAzureImport(params)
+	if err != nil {
+		return "", err
+	}
+
+	return *success.Payload.UID, nil
 }
