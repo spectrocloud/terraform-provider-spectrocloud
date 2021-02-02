@@ -3,54 +3,54 @@ package spectrocloud
 type State string
 
 const (
-	Running      State = "Running"
-	Pending      State = "Pending"
-	Provisioning State = "Provisioning"
-	Deleting     State = "Deleting"
-	Importing    State = "Importing"
-	Deleted      State = "Deleted"
+	running      State = "Running"
+	pending      State = "Pending"
+	provisioning State = "Provisioning"
+	deleting     State = "Deleting"
+	importing    State = "Importing"
+	deleted      State = "Deleted"
 )
 
 type CloudType string
 
 const (
-	CloudTypeAWS     CloudType = "aws"
-	CloudTypeGCP     CloudType = "gcp"
-	CloudTypeAzure   CloudType = "azure"
-	CloudTypeVsphere CloudType = "vsphere"
+	cloud_type_aws     CloudType = "aws"
+	cloud_type_gcp     CloudType = "gcp"
+	cloud_type_azure   CloudType = "azure"
+	cloud_type_vsphere CloudType = "vsphere"
 )
 
 //output
 const (
-	Name         = "name"
-	Count        = "count"
-	DiskSizeInGb = "disk_size_gb"
+	name            = "name"
+	count           = "count"
+	disk_size_in_gb = "disk_size_gb"
 
-	Pack   = "pack"
-	Tag    = "tag"
-	Values = "values"
+	pack   = "pack"
+	tag    = "tag"
+	values = "values"
 
-	UpdateStrategy        = "update_strategy"
-	InstanceType          = "instance_type"
-	AvailabilityZones     = "azs"
-	RollingUpdateScaleOut = "RollingUpdateScaleOut"
+	update_strategy          = "update_strategy"
+	instance_type            = "instance_type"
+	availability_zones       = "azs"
+	rolling_update_scale_out = "rolling_update_scale_out"
 
-	ClusterProfileId = "cluster_profile_id"
-	CloudAccountId   = "cloud_account_id"
+	cluster_prrofile_id = "cluster_profile_id"
+	cloud_account_id    = "cloud_account_id"
 
-	CloudConfig   = "cloud_config"
-	CloudConfigId = "cloud_config_id"
-	Cloud         = "cloud"
-	Kubeconfig    = "kubeconfig"
-	MachinePool   = "machine_pool"
+	cloud_config    = "cloud_config"
+	cloud_config_id = "cloud_config_id"
+	cloud           = "cloud"
+	kubeconfig      = "kubeconfig"
+	machine_pool    = "machine_pool"
 
-	ControlPlane         = "control_plane"
-	ControlPlaneAsWorker = "control_plane_as_worker"
+	control_plane           = "control_plane"
+	control_plane_as_worker = "control_plane_as_worker"
 
-	ClusterImportManifest    = "cluster_import_manifest"
-	ClusterImportManifestUrl = "cluster_import_manifest_url"
+	cluster_import_manifest     = "cluster_import_manifest"
+	cluster_import_manifest_url = "cluster_import_manifest_url"
 
-	Network = "network"
-	Project = "project"
-	Region  = "region"
+	network = "network"
+	project = "project"
+	region  = "region"
 )

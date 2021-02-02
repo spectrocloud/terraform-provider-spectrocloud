@@ -28,115 +28,115 @@ func resourceClusterGcp() *schema.Resource {
 
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
-			Name: {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			ClusterProfileId: {
+			cluster_prrofile_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			CloudAccountId: {
+			cloud_account_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			CloudConfigId: {
+			cloud_config_id: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			Kubeconfig: {
+			kubeconfig: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			CloudConfig: {
+			cloud_config: {
 				Type:     schema.TypeList,
 				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						Network: {
+						network: {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						Project: {
+						project: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						Region: {
+						region: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			Pack: {
+			pack: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      resourcePackHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						Name: {
+						name: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						Tag: {
+						tag: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						Values: {
+						values: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			MachinePool: {
+			machine_pool: {
 				Type:     schema.TypeSet,
 				Required: true,
 				Set:      resourceMachinePoolGcpHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						ControlPlane: {
+						control_plane: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
 						},
-						ControlPlaneAsWorker: {
+						control_plane_as_worker: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 
 							//ForceNew: true,
 						},
-						Name: {
+						name: {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
 						},
-						Count: {
+						count: {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
-						InstanceType: {
+						instance_type: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						UpdateStrategy: {
+						update_strategy: {
 							Type:     schema.TypeString,
 							Optional: true,
-							Default:  RollingUpdateScaleOut,
+							Default:  rolling_update_scale_out,
 						},
-						DiskSizeInGb: {
+						disk_size_in_gb: {
 							Type:     schema.TypeInt,
 							Optional: true,
 							Default:  65,
 						},
-						AvailabilityZones: {
+						availability_zones: {
 							Type:     schema.TypeSet,
 							Required: true,
 							MinItems: 1,
@@ -205,7 +205,7 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set(CloudConfigId, configUID)
+	d.Set(cloud_config_id, configUID)
 
 	var config *models.V1alpha1GcpCloudConfig
 	if config, err = c.GetCloudConfigGcp(configUID); err != nil {
@@ -218,11 +218,11 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set(ClusterImportManifest, importManifest); err != nil {
+		if err := d.Set(cluster_import_manifest, importManifest); err != nil {
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set(ClusterImportManifestUrl, cluster.Status.ClusterImport.ImportLink); err != nil {
+		if err := d.Set(cluster_import_manifest_url, cluster.Status.ClusterImport.ImportLink); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -231,15 +231,15 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set(Kubeconfig, kubeconfig); err != nil {
+		if err := d.Set(kubeconfig, kubeconfig); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
 	//for brownfield, untill cluster is not in running state, don't get machine pool
-	if cluster.Status.ClusterImport == nil || cluster.Status.State == string(Running) {
+	if cluster.Status.ClusterImport == nil || cluster.Status.State == string(running) {
 		mp := flattenMachinePoolConfigsGcp(config.Spec.MachinePoolConfig)
-		if err := d.Set(MachinePool, mp); err != nil {
+		if err := d.Set(machine_pool, mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -257,20 +257,20 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1alpha1GcpMachinePoolC
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi[ControlPlane] = machinePool.IsControlPlane
-		oi[ControlPlaneAsWorker] = machinePool.UseControlPlaneAsWorker
-		oi[Name] = machinePool.Name
-		oi[Count] = int(machinePool.Size)
-		oi[DiskSizeInGb] = int(machinePool.RootDeviceSize)
+		oi[control_plane] = machinePool.IsControlPlane
+		oi[control_plane_as_worker] = machinePool.UseControlPlaneAsWorker
+		oi[name] = machinePool.Name
+		oi[count] = int(machinePool.Size)
+		oi[disk_size_in_gb] = int(machinePool.RootDeviceSize)
 
 		if machinePool.UpdateStrategy != nil {
-			oi[UpdateStrategy] = machinePool.UpdateStrategy.Type
+			oi[update_strategy] = machinePool.UpdateStrategy.Type
 		}
 		if machinePool.InstanceType != nil {
-			oi[InstanceType] = *machinePool.InstanceType
+			oi[instance_type] = *machinePool.InstanceType
 		}
 		if len(machinePool.Azs) > 0 {
-			oi[AvailabilityZones] = machinePool.Azs
+			oi[availability_zones] = machinePool.Azs
 		}
 
 		ois[i] = oi
@@ -370,7 +370,7 @@ func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntit
 		Spec: toGcpClusterSpec(d, cloudConfig),
 	}
 
-	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
+	//for _, machine_pool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1alpha1GcpMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolGcp(machinePool)
@@ -391,13 +391,13 @@ func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntit
 
 func toGcpClusterSpec(d *schema.ResourceData, cloudConfig map[string]interface{}) *models.V1alpha1SpectroGcpClusterEntitySpec {
 	clusterSpec := &models.V1alpha1SpectroGcpClusterEntitySpec{
-		ProfileUID:  d.Get(ClusterProfileId).(string),
+		ProfileUID:  d.Get(cluster_prrofile_id).(string),
 		CloudConfig: toGcpClusterConfig(cloudConfig),
 	}
 
 	//for brownfield, there will be no cloud account
-	if d.Get(CloudAccountId) != nil {
-		clusterSpec.CloudAccountUID = ptr.StringPtr(d.Get(CloudAccountId).(string))
+	if d.Get(cloud_account_id) != nil {
+		clusterSpec.CloudAccountUID = ptr.StringPtr(d.Get(cloud_account_id).(string))
 	}
 	return clusterSpec
 }
@@ -420,8 +420,8 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1alpha1GcpMachinePoolCon
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
-	controlPlane := m[ControlPlane].(bool)
-	controlPlaneAsWorker := m[ControlPlaneAsWorker].(bool)
+	controlPlane := m[control_plane].(bool)
+	controlPlaneAsWorker := m[control_plane_as_worker].(bool)
 	if controlPlane {
 		labels = append(labels, "master")
 	}
@@ -469,7 +469,7 @@ func resourceClusterGcpImport(ctx context.Context, d *schema.ResourceData, m int
 
 	stateConf := &resource.StateChangeConf{
 		//Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{string(Pending)},
+		Target:     []string{string(pending)},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 1 * time.Second,

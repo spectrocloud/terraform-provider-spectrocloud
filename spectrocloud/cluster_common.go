@@ -22,16 +22,16 @@ var (
 )
 
 var resourceClusterDeletePendingStates = []string{
-	string(Pending),
-	string(Provisioning),
-	string(Running),
-	string(Deleting),
-	string(Importing),
+	string(pending),
+	string(provisioning),
+	string(running),
+	string(deleting),
+	string(importing),
 }
 var resourceClusterCreatePendingStates = []string{
-	string(Pending),
-	string(Provisioning),
-	string(Importing),
+	string(pending),
+	string(provisioning),
+	string(importing),
 }
 
 //var resourceClusterUpdatePendingStates = []string{
@@ -59,9 +59,9 @@ func toPack(pSrc interface{}) *models.V1alpha1PackValuesEntity {
 	p := pSrc.(map[string]interface{})
 
 	pack := &models.V1alpha1PackValuesEntity{
-		Name:   ptr.StringPtr(p[Name].(string)),
-		Tag:    ptr.StringPtr(p[Tag].(string)),
-		Values: p[Values].(string),
+		Name:   ptr.StringPtr(p[name].(string)),
+		Tag:    ptr.StringPtr(p[tag].(string)),
+		Values: p[values].(string),
 	}
 	return pack
 }
@@ -72,7 +72,7 @@ func resourceClusterStateRefreshFunc(c *client.V1alpha1Client, id string) resour
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {
-			return nil, string(Deleted), nil
+			return nil, string(deleted), nil
 		}
 
 		state := cluster.Status.State
@@ -100,30 +100,30 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	cloudType := d.Get(Cloud).(string)
+	cloudType := d.Get(cloud).(string)
 	switch CloudType(cloudType) {
-	case CloudTypeAWS:
+	case cloud_type_aws:
 		return resourceClusterAwsImport(ctx, d, m)
-	case CloudTypeAzure:
+	case cloud_type_azure:
 		return resourceClusterAzureImport(ctx, d, m)
-	case CloudTypeGCP:
+	case cloud_type_gcp:
 		return resourceClusterGcpImport(ctx, d, m)
-	case CloudTypeVsphere:
+	case cloud_type_vsphere:
 		return resourceClusterVsphereImport(ctx, d, m)
 	}
 	return diag.FromErr(fmt.Errorf("failed to import cluster as cloud type '%s' is invalid", cloudType))
 }
 
 func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	cloudType := d.Get(Cloud).(string)
+	cloudType := d.Get(cloud).(string)
 	switch CloudType(cloudType) {
-	case CloudTypeAWS:
+	case cloud_type_aws:
 		return resourceClusterAwsRead(ctx, d, m)
-	case CloudTypeAzure:
+	case cloud_type_azure:
 		return resourceClusterAzureRead(ctx, d, m)
-	case CloudTypeGCP:
+	case cloud_type_gcp:
 		return resourceClusterGcpRead(ctx, d, m)
-	case CloudTypeVsphere:
+	case cloud_type_vsphere:
 		return resourceClusterVsphereRead(ctx, d, m)
 	}
 	return diag.FromErr(fmt.Errorf("failed to import cluster as cloud type '%s' is invalid", cloudType))
@@ -133,10 +133,10 @@ func resourceCloudClusterUpdate(ctx context.Context, d *schema.ResourceData, m i
 	c := m.(*client.V1alpha1Client)
 	var diags diag.Diagnostics
 
-	clusterProfileId := d.Get(ClusterProfileId).(string)
+	clusterProfileId := d.Get(cluster_prrofile_id).(string)
 	profiles := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
 	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get(Pack).(*schema.Set).List() {
+	for _, pack := range d.Get(pack).(*schema.Set).List() {
 		p := toPack(pack)
 		packValues = append(packValues, p)
 	}
@@ -159,9 +159,9 @@ func resourcePackHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 
-	buf.WriteString(fmt.Sprintf("%s-", m[Name].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m[Tag].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m[Values].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m[name].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m[tag].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m[values].(string)))
 
 	return int(hash(buf.String()))
 }
@@ -170,12 +170,12 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 	//d := m["disk"].([]interface{})[0].(map[string]interface{})
-	buf.WriteString(fmt.Sprintf("%t-", m[ControlPlane].(bool)))
-	buf.WriteString(fmt.Sprintf("%t-", m[ControlPlaneAsWorker].(bool)))
-	buf.WriteString(fmt.Sprintf("%s-", m[Name].(string)))
-	buf.WriteString(fmt.Sprintf("%d-", m[Count].(int)))
-	buf.WriteString(fmt.Sprintf("%s-", m[InstanceType].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m[AvailabilityZones].(*schema.Set).GoString()))
+	buf.WriteString(fmt.Sprintf("%t-", m[control_plane].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m[control_plane_as_worker].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m[name].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m[count].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m[instance_type].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m[availability_zones].(*schema.Set).GoString()))
 
 	// TODO(saamalik) fix for disk
 	//buf.WriteString(fmt.Sprintf("%d-", d["size_gb"].(int)))
@@ -191,12 +191,12 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 	//d := m["disk"].([]interface{})[0].(map[string]interface{})
-	buf.WriteString(fmt.Sprintf("%t-", m[ControlPlane].(bool)))
-	buf.WriteString(fmt.Sprintf("%t-", m[ControlPlaneAsWorker].(bool)))
-	buf.WriteString(fmt.Sprintf("%s-", m[Name].(string)))
-	buf.WriteString(fmt.Sprintf("%d-", m[Count].(int)))
-	buf.WriteString(fmt.Sprintf("%s-", m[InstanceType].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m[AvailabilityZones].(*schema.Set).GoString()))
+	buf.WriteString(fmt.Sprintf("%t-", m[control_plane].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m[control_plane_as_worker].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m[name].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m[count].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m[instance_type].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m[availability_zones].(*schema.Set).GoString()))
 
 	return int(hash(buf.String()))
 }
@@ -205,12 +205,12 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 	//d := m["disk"].([]interface{})[0].(map[string]interface{})
-	buf.WriteString(fmt.Sprintf("%t-", m[ControlPlane].(bool)))
-	buf.WriteString(fmt.Sprintf("%t-", m[ControlPlaneAsWorker].(bool)))
-	buf.WriteString(fmt.Sprintf("%s-", m[Name].(string)))
-	buf.WriteString(fmt.Sprintf("%d-", m[Count].(int)))
-	buf.WriteString(fmt.Sprintf("%s-", m[InstanceType].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m[AvailabilityZones].(*schema.Set).GoString()))
+	buf.WriteString(fmt.Sprintf("%t-", m[control_plane].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m[control_plane_as_worker].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m[name].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m[count].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m[instance_type].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m[availability_zones].(*schema.Set).GoString()))
 
 	return int(hash(buf.String()))
 }
@@ -219,10 +219,10 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 	//d := m["disk"].([]interface{})[0].(map[string]interface{})
-	buf.WriteString(fmt.Sprintf("%t-", m[ControlPlane].(bool)))
-	buf.WriteString(fmt.Sprintf("%t-", m[ControlPlaneAsWorker].(bool)))
-	buf.WriteString(fmt.Sprintf("%s-", m[Name].(string)))
-	buf.WriteString(fmt.Sprintf("%d-", m[Count].(int)))
+	buf.WriteString(fmt.Sprintf("%t-", m[control_plane].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m[control_plane_as_worker].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m[name].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m[count].(int)))
 
 	// TODO(saamalik) MORE
 
@@ -244,15 +244,15 @@ func hash(s string) uint32 {
 
 func toClusterMeta(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
 	return &models.V1ObjectMetaInputEntity{
-		Name: d.Get(Name).(string),
+		Name: d.Get(name).(string),
 	}
 }
 
 func resourceCloudClusterProfilesGet(d *schema.ResourceData) *models.V1alpha1SpectroClusterProfiles {
-	if clusterProfileUid := d.Get(ClusterProfileId); clusterProfileUid != nil {
+	if clusterProfileUid := d.Get(cluster_prrofile_id); clusterProfileUid != nil {
 		profileEntities := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
 		packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-		for _, pack := range d.Get(Pack).(*schema.Set).List() {
+		for _, pack := range d.Get(pack).(*schema.Set).List() {
 			p := toPack(pack)
 			packValues = append(packValues, p)
 		}

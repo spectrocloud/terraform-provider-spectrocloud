@@ -28,30 +28,30 @@ func resourceClusterAws() *schema.Resource {
 
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
-			Name: {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			ClusterProfileId: {
+			cluster_prrofile_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			CloudAccountId: {
+			cloud_account_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			CloudConfigId: {
+			cloud_config_id: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			Kubeconfig: {
+			kubeconfig: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			CloudConfig: {
+			cloud_config: {
 				Type:     schema.TypeList,
 				ForceNew: true,
 				Required: true,
@@ -69,70 +69,70 @@ func resourceClusterAws() *schema.Resource {
 					},
 				},
 			},
-			Pack: {
+			pack: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      resourcePackHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						Name: {
+						name: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						Tag: {
+						tag: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						Values: {
+						values: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			MachinePool: {
+			machine_pool: {
 				Type:     schema.TypeSet,
 				Required: true,
 				Set:      resourceMachinePoolAwsHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						ControlPlane: {
+						control_plane: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
 						},
-						ControlPlaneAsWorker: {
+						control_plane_as_worker: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 
 							//ForceNew: true,
 						},
-						Name: {
+						name: {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
 						},
-						Count: {
+						count: {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
-						InstanceType: {
+						instance_type: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						UpdateStrategy: {
+						update_strategy: {
 							Type:     schema.TypeString,
 							Optional: true,
-							Default:  "RollingUpdateScaleOut",
+							Default:  "rolling_update_scale_out",
 						},
-						DiskSizeInGb: {
+						disk_size_in_gb: {
 							Type:     schema.TypeInt,
 							Optional: true,
 							Default:  65,
 						},
-						AvailabilityZones: {
+						availability_zones: {
 							Type:     schema.TypeSet,
 							Required: true,
 							MinItems: 1,
@@ -241,8 +241,8 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1alpha1AwsMachinePoolC
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi[ControlPlane] = machinePool.IsControlPlane
-		oi[ControlPlaneAsWorker] = machinePool.UseControlPlaneAsWorker
+		oi[control_plane] = machinePool.IsControlPlane
+		oi[control_plane_as_worker] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
 		oi["update_strategy"] = machinePool.UpdateStrategy.Type
@@ -347,8 +347,8 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get(CloudAccountId).(string)),
-			ProfileUID:      d.Get(ClusterProfileId).(string),
+			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
+			ProfileUID:      d.Get(cluster_prrofile_id).(string),
 			CloudConfig: &models.V1alpha1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
@@ -356,7 +356,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		},
 	}
 
-	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
+	//for _, machine_pool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1alpha1AwsMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolAws(machinePool)
@@ -379,8 +379,8 @@ func toMachinePoolAws(machinePool interface{}) *models.V1alpha1AwsMachinePoolCon
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
-	controlPlane := m[ControlPlane].(bool)
-	controlPlaneAsWorker := m[ControlPlaneAsWorker].(bool)
+	controlPlane := m[control_plane].(bool)
+	controlPlaneAsWorker := m[control_plane_as_worker].(bool)
 	if controlPlane {
 		labels = append(labels, "master")
 	}
@@ -427,8 +427,7 @@ func resourceClusterAzureImport(ctx context.Context, d *schema.ResourceData, m i
 	d.SetId(uid)
 
 	stateConf := &resource.StateChangeConf{
-		//Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{string(Pending)},
+		Target:     []string{string(pending)},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 1 * time.Second,

@@ -27,17 +27,17 @@ func resourceClusterVsphere() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			Name: {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			ClusterProfileId: {
+			cluster_prrofile_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			CloudAccountId: {
+			cloud_account_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -116,13 +116,13 @@ func resourceClusterVsphere() *schema.Resource {
 				Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						ControlPlane: {
+						control_plane: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
 						},
-						ControlPlaneAsWorker: {
+						control_plane_as_worker: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
@@ -141,7 +141,7 @@ func resourceClusterVsphere() *schema.Resource {
 						"update_strategy": {
 							Type:     schema.TypeString,
 							Optional: true,
-							Default:  "RollingUpdateScaleOut",
+							Default:  "rolling_update_scale_out",
 						},
 						"instance_type": {
 							Type:     schema.TypeList,
@@ -313,8 +313,8 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1alpha1VsphereMach
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi[ControlPlane] = machinePool.IsControlPlane
-		oi[ControlPlaneAsWorker] = machinePool.UseControlPlaneAsWorker
+		oi[control_plane] = machinePool.IsControlPlane
+		oi[control_plane_as_worker] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
 		if machinePool.UpdateStrategy != nil {
@@ -455,8 +455,8 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1SpectroVsphereClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get(CloudAccountId).(string)),
-			ProfileUID:      d.Get(ClusterProfileId).(string),
+			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
+			ProfileUID:      d.Get(cluster_prrofile_id).(string),
 			CloudConfig: &models.V1alpha1VsphereClusterConfigEntity{
 				NtpServers: nil,
 				Placement: &models.V1alpha1VspherePlacementConfigEntity{
@@ -498,8 +498,8 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
-	controlPlane := m[ControlPlane].(bool)
-	controlPlaneAsWorker := m[ControlPlaneAsWorker].(bool)
+	controlPlane := m[control_plane].(bool)
+	controlPlaneAsWorker := m[control_plane_as_worker].(bool)
 	if controlPlane {
 		labels = append(labels, "master")
 	}
@@ -570,7 +570,7 @@ func resourceClusterVsphereImport(ctx context.Context, d *schema.ResourceData, m
 
 	stateConf := &resource.StateChangeConf{
 		//Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{string(Pending)},
+		Target:     []string{string(pending)},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 1 * time.Second,

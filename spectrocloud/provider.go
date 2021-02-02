@@ -86,8 +86,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	if (username == "") || (password == "") {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  "Unable to create Spectro Cloud client",
-			Detail:   "Unable to authenticate user for authenticated Spectro Cloud client",
+			Summary:  "Unable to create Spectro cloud client",
+			Detail:   "Unable to authenticate user for authenticated Spectro cloud client",
 		})
 		// TODO(saamalik) verify this block "can" happen (e.g: does required guard this?)
 		return nil, diags

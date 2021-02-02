@@ -32,12 +32,12 @@ func resourceClusterAzure() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			ClusterProfileId: {
+			cluster_prrofile_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			CloudAccountId: {
+			cloud_account_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -103,13 +103,13 @@ func resourceClusterAzure() *schema.Resource {
 				Set:      resourceMachinePoolAzureHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						ControlPlane: {
+						control_plane: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
 						},
-						ControlPlaneAsWorker: {
+						control_plane_as_worker: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
@@ -132,7 +132,7 @@ func resourceClusterAzure() *schema.Resource {
 						"update_strategy": {
 							Type:     schema.TypeString,
 							Optional: true,
-							Default:  "RollingUpdateScaleOut",
+							Default:  "rolling_update_scale_out",
 						},
 						"disk": {
 							Type:     schema.TypeList,
@@ -288,8 +288,8 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1alpha1AzureMachineP
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi[ControlPlane] = machinePool.IsControlPlane
-		oi[ControlPlaneAsWorker] = machinePool.UseControlPlaneAsWorker
+		oi[control_plane] = machinePool.IsControlPlane
+		oi[control_plane_as_worker] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
 		oi["update_strategy"] = machinePool.UpdateStrategy.Type
@@ -400,8 +400,8 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1SpectroAzureClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get(CloudAccountId).(string)),
-			ProfileUID:      d.Get(ClusterProfileId).(string),
+			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
+			ProfileUID:      d.Get(cluster_prrofile_id).(string),
 			CloudConfig: &models.V1alpha1AzureClusterConfig{
 				Location:       ptr.StringPtr(cloudConfig["region"].(string)),
 				SSHKey:         ptr.StringPtr(cloudConfig["ssh_key"].(string)),
@@ -411,7 +411,7 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 		},
 	}
 
-	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
+	//for _, machine_pool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1alpha1AzureMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolAzure(machinePool)
@@ -434,8 +434,8 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1alpha1AzureMachinePoo
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
-	controlPlane := m[ControlPlane].(bool)
-	controlPlaneAsWorker := m[ControlPlaneAsWorker].(bool)
+	controlPlane := m[control_plane].(bool)
+	controlPlaneAsWorker := m[control_plane_as_worker].(bool)
 	if controlPlane {
 		labels = append(labels, "master")
 	}
@@ -495,7 +495,7 @@ func resourceClusterAwsImport(ctx context.Context, d *schema.ResourceData, m int
 	d.SetId(uid)
 
 	stateConf := &resource.StateChangeConf{
-		Target:     []string{string(Pending)},
+		Target:     []string{string(pending)},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 1 * time.Second,

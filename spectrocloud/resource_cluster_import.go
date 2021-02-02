@@ -21,47 +21,47 @@ func resourceClusterImport() *schema.Resource {
 
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
-			Name: {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			Cloud: {
+			cloud: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			CloudConfigId: {
+			cloud_config_id: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			ClusterImportManifestUrl: {
+			cluster_import_manifest_url: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			ClusterImportManifest: {
+			cluster_import_manifest: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			ClusterProfileId: {
+			cluster_prrofile_id: {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			Pack: {
+			pack: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      resourcePackHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						Name: {
+						name: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						Tag: {
+						tag: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						Values: {
+						values: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
