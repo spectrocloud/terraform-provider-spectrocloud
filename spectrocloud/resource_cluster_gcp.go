@@ -241,11 +241,11 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 		}
 
 	} else {
-		kubeconfig, err := c.GetClusterKubeConfig(uid)
+		kubecfg, err := c.GetClusterKubeConfig(uid)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set(kubeconfig, kubeconfig); err != nil {
+		if err := d.Set(kubeconfig, kubecfg); err != nil {
 			return diag.FromErr(err)
 		}
 	}
