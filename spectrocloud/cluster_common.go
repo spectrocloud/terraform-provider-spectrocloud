@@ -106,19 +106,66 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	return diags
 }
 
-func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func cloudClusterImportFunc(c *client.V1alpha1Client, d *schema.ResourceData) (string, error) {
+	meta := toClusterMeta(d)
 	cloudType := d.Get(cloud).(string)
 	switch CloudType(cloudType) {
 	case cloud_type_aws:
-		return resourceClusterAwsImport(ctx, d, m)
+		return c.ImportClusterAws(meta)
 	case cloud_type_azure:
-		return resourceClusterAzureImport(ctx, d, m)
+		return c.ImportClusterAzure(meta)
 	case cloud_type_gcp:
-		return resourceClusterGcpImport(ctx, d, m)
+		return c.ImportClusterGcp(meta)
 	case cloud_type_vsphere:
-		return resourceClusterVsphereImport(ctx, d, m)
+		return c.ImportClusterVsphere(meta)
 	}
-	return diag.FromErr(fmt.Errorf("failed to import cluster as cloud type '%s' is invalid", cloudType))
+	return "", fmt.Errorf("failed to find cloud type %s", cloudType)
+}
+
+func cloudClusterReadFunc(ctx context.Context, d *schema.ResourceData, m interface{}) {
+	cloudType := d.Get(cloud).(string)
+	switch CloudType(cloudType) {
+	case cloud_type_aws:
+		resourceClusterAwsRead(ctx, d, m)
+	case cloud_type_azure:
+		resourceClusterAzureRead(ctx, d, m)
+	case cloud_type_gcp:
+		resourceClusterGcpRead(ctx, d, m)
+	case cloud_type_vsphere:
+		resourceClusterVsphereRead(ctx, d, m)
+	}
+}
+
+func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := m.(*client.V1alpha1Client)
+	var diags diag.Diagnostics
+	uid, err := cloudClusterImportFunc(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.SetId(uid)
+	stateConf := &resource.StateChangeConf{
+		Target:     []string{string(pending)},
+		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
+		MinTimeout: 1 * time.Second,
+		Delay:      5 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err = stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	cloudClusterReadFunc(ctx, d, m)
+
+	if profiles := getCloudClusterProfiles(d); profiles != nil {
+		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	return diags
 }
 
 func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -176,19 +223,19 @@ func resourcePackHash(v interface{}) int {
 func resourceMachinePoolAzureHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+	//d := m[disk].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%t-", m[control_plane].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m[control_plane_as_worker].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m[name].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m[count].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m[instance_type].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m[availability_zones].(*schema.Set).GoString()))
+	buf.WriteString(fmt.Sprintf("%s-", m[azs].(*schema.Set).GoString()))
 
 	// TODO(saamalik) fix for disk
-	//buf.WriteString(fmt.Sprintf("%d-", d["size_gb"].(int)))
-	//buf.WriteString(fmt.Sprintf("%s-", d["type"].(string)))
+	//buf.WriteString(fmt.Sprintf("%d-", d[size_gb].(int)))
+	//buf.WriteString(fmt.Sprintf("%s-", d[disk_type].(string)))
 
-	//d2 := m["disk"].([]interface{})
+	//d2 := m[disk].([]interface{})
 	//d := d2[0].(map[string]interface{})
 
 	return int(hash(buf.String()))
@@ -197,13 +244,13 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 func resourceMachinePoolGcpHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+	//d := m[disk].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%t-", m[control_plane].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m[control_plane_as_worker].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m[name].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m[count].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m[instance_type].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m[availability_zones].(*schema.Set).GoString()))
+	buf.WriteString(fmt.Sprintf("%s-", m[azs].(*schema.Set).GoString()))
 
 	return int(hash(buf.String()))
 }
@@ -211,13 +258,13 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 func resourceMachinePoolAwsHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+	//d := m[disk].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%t-", m[control_plane].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m[control_plane_as_worker].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m[name].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m[count].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m[instance_type].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m[availability_zones].(*schema.Set).GoString()))
+	buf.WriteString(fmt.Sprintf("%s-", m[azs].(*schema.Set).GoString()))
 
 	return int(hash(buf.String()))
 }
@@ -225,7 +272,7 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 func resourceMachinePoolVsphereHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+	//d := m[disk].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%t-", m[control_plane].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m[control_plane_as_worker].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m[name].(string)))
@@ -234,10 +281,10 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	// TODO(saamalik) MORE
 
 	// TODO(saamalik) fix for disk
-	//buf.WriteString(fmt.Sprintf("%d-", d["size_gb"].(int)))
-	//buf.WriteString(fmt.Sprintf("%s-", d["type"].(string)))
+	//buf.WriteString(fmt.Sprintf("%d-", d[size_gb].(int)))
+	//buf.WriteString(fmt.Sprintf("%s-", d[disk_type].(string)))
 
-	//d2 := m["disk"].([]interface{})
+	//d2 := m[disk].([]interface{})
 	//d := d2[0].(map[string]interface{})
 
 	return int(hash(buf.String()))
@@ -315,7 +362,7 @@ func getOsPatchConfig(d *schema.ResourceData) *models.V1alpha1OsPatchConfig {
 func getSpectroClusterProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileEntity {
 	profiles := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
 	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").(*schema.Set).List() {
+	for _, pack := range d.Get(pack).(*schema.Set).List() {
 		p := toPack(pack)
 		packValues = append(packValues, p)
 	}

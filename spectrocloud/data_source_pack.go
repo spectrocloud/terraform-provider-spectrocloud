@@ -15,23 +15,23 @@ func dataSourcePack() *schema.Resource {
 		ReadContext: dataSourcePackRead,
 
 		Schema: map[string]*schema.Schema{
-			"filters": {
+			filters: {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"id", "cloud", "name", "version"},
+				ConflictsWith: []string{id, cloud, name, version},
 			},
-			"id": {
+			id: {
 				Type:     schema.TypeString,
 				Computed: true,
 				Optional: true,
-				ConflictsWith: []string{"filters", "cloud", "name", "version"},
+				ConflictsWith: []string{filters, cloud, name, version},
 			},
-			"name": {
+			name: {
 				Type:     schema.TypeString,
 				Computed: true,
 				Optional: true,
 			},
-			"cloud": {
+			cloud: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Computed: true,
@@ -40,16 +40,16 @@ func dataSourcePack() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"version": {
+			version: {
 				Type:     schema.TypeString,
 				Computed: true,
 				Optional: true,
 			},
-			"registry_uid": {
+			registry_uid: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"values": {
+			values: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -63,34 +63,34 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	filters := make([]string, 0)
-	if v, ok := d.GetOk("filters"); ok {
-		filters = append(filters, v.(string))
-	} else if v, ok := d.GetOk("id"); ok {
-		filters = append(filters, fmt.Sprintf("metadata.uid=%s", v.(string)))
+	packFilters := make([]string, 0)
+	if v, ok := d.GetOk(filters); ok {
+		packFilters = append(packFilters, v.(string))
+	} else if v, ok := d.GetOk(id); ok {
+		packFilters = append(packFilters, fmt.Sprintf("metadata.uid=%s", v.(string)))
 	} else {
-		if v, ok := d.GetOk("name"); ok {
-			filters = append(filters, fmt.Sprintf("spec.name=%s", v.(string)))
+		if v, ok := d.GetOk(name); ok {
+			packFilters = append(packFilters, fmt.Sprintf("spec.name=%s", v.(string)))
 		}
-		if v, ok := d.GetOk("version"); ok {
-			filters = append(filters, fmt.Sprintf("spec.version=%s", v.(string)))
+		if v, ok := d.GetOk(version); ok {
+			packFilters = append(packFilters, fmt.Sprintf("spec.version=%s", v.(string)))
 		}
-		if v, ok := d.GetOk("cloud"); ok {
+		if v, ok := d.GetOk(cloud); ok {
 			clouds := expandStringList(v.(*schema.Set).List())
 			if !stringContains(clouds, "all") {
 				clouds = append(clouds, "all")
 			}
-			filters = append(filters, fmt.Sprintf("spec.cloudTypes_in_%s", strings.Join(clouds, ",")))
+			packFilters = append(packFilters, fmt.Sprintf("spec.cloudTypes_in_%s", strings.Join(clouds, ",")))
 		}
 	}
 
-	packs, err := c.GetPacks(filters)
+	packs, err := c.GetPacks(packFilters)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	packName := "unknown"
-	if v, ok := d.GetOk("name"); ok {
+	if v, ok := d.GetOk(name); ok {
 		packName = v.(string)
 	}
 
@@ -118,11 +118,11 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 	}
 
 	d.SetId(pack.Metadata.UID)
-	d.Set("name", pack.Spec.Name)
-	d.Set("cloud", clouds)
-	d.Set("version", pack.Spec.Version)
-	d.Set("registry_uid", pack.Spec.RegistryUID)
-	d.Set("values", pack.Spec.Values)
+	d.Set(name, pack.Spec.Name)
+	d.Set(cloud, clouds)
+	d.Set(version, pack.Spec.Version)
+	d.Set(registry_uid, pack.Spec.RegistryUID)
+	d.Set(values, pack.Spec.Values)
 
 	return diags
 }

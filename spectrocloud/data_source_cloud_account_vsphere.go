@@ -14,17 +14,17 @@ func dataSourceCloudAccountVsphere() *schema.Resource {
 		ReadContext: dataSourceCloudAccountVsphereRead,
 
 		Schema: map[string]*schema.Schema{
-			"id": {
+			id: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
-			"name": {
+			name: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
 		},
 	}
@@ -44,10 +44,10 @@ func dataSourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData
 	var account *models.V1alpha1VsphereAccount
 	for _, a := range accounts {
 
-		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
+		if v, ok := d.GetOk(id); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break
-		} else if v, ok := d.GetOk("name"); ok && v.(string) == a.Metadata.Name {
+		} else if v, ok := d.GetOk(name); ok && v.(string) == a.Metadata.Name {
 			account = a
 			break
 		}
@@ -63,7 +63,7 @@ func dataSourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
+	d.Set(name, account.Metadata.Name)
 
 	return diags
 }

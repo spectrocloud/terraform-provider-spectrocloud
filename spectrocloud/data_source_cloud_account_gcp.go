@@ -14,17 +14,17 @@ func dataSourceCloudAccountGcp() *schema.Resource {
 		ReadContext: dataSourceCloudAccountGcpRead,
 
 		Schema: map[string]*schema.Schema{
-			"id": {
+			id: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
-			"name": {
+			name: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
 		},
 	}
@@ -44,10 +44,10 @@ func dataSourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m 
 	var account *models.V1alpha1GcpAccount
 	for _, a := range accounts {
 
-		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
+		if v, ok := d.GetOk(id); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break
-		} else if v, ok := d.GetOk("name"); ok && v.(string) == a.Metadata.Name {
+		} else if v, ok := d.GetOk(name); ok && v.(string) == a.Metadata.Name {
 			account = a
 			break
 		}
@@ -63,7 +63,7 @@ func dataSourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m 
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
+	d.Set(name, account.Metadata.Name)
 
 	return diags
 }

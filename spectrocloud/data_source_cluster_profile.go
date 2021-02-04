@@ -15,17 +15,17 @@ func dataSourceClusterProfile() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			// TODO packs
-			"id": {
+			id: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
-			"name": {
+			name: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
 		},
 	}
@@ -45,10 +45,10 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	var profile *models.V1alpha1ClusterProfile
 	for _, p := range profiles {
 
-		if v, ok := d.GetOk("id"); ok && v.(string) == p.Metadata.UID {
+		if v, ok := d.GetOk(id); ok && v.(string) == p.Metadata.UID {
 			profile = p
 			break
-		} else if v, ok := d.GetOk("name"); ok && v.(string) == p.Metadata.Name {
+		} else if v, ok := d.GetOk(name); ok && v.(string) == p.Metadata.Name {
 			profile = p
 			break
 		}
@@ -64,7 +64,7 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	}
 
 	d.SetId(profile.Metadata.UID)
-	d.Set("name", profile.Metadata.Name)
+	d.Set(name, profile.Metadata.Name)
 
 	return diags
 }

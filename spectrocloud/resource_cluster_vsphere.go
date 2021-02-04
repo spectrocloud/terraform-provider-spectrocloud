@@ -71,32 +71,32 @@ func resourceClusterVsphere() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"datacenter": {
+						datacenter: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"folder": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-
-						"ssh_key": {
+						folder: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 
-						"static_ip": {
+						ssh_key: {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+
+						static_ip: {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 						},
 
 						// DHCP Properties
-						"network_type": {
+						network_type: {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"network_search_domain": {
+						network_search_domain: {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
@@ -163,47 +163,47 @@ func resourceClusterVsphere() *schema.Resource {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									disk_size_in_gb: {
+									disk_size_gb: {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
-									"memory_mb": {
+									memory_mb: {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
-									"cpu": {
+									cpu: {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
 								},
 							},
 						},
-						"placement": {
+						placement: {
 							Type:     schema.TypeList,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"id": {
+									id: {
 										Type:     schema.TypeString,
 										Computed: true,
 									},
-									"cluster": {
+									cluster: {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									"resource_pool": {
+									resource_pool: {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									"datastore": {
+									datastore: {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									"network": {
+									network: {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									"static_ip_pool_id": {
+									static_ip_pool_id: {
 										Type:     schema.TypeString,
 										Optional: true,
 									},
@@ -213,7 +213,7 @@ func resourceClusterVsphere() *schema.Resource {
 					},
 				},
 			},
-			//"cloud_config": {
+			//cloud_config: {
 			//	Type:     schema.TypeString,
 			//	Required: true,
 			//	//DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
@@ -286,12 +286,6 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	if config, err = c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	}
-
-	mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
-	if err := d.Set(machine_pool, mp); err != nil {
-		return diag.FromErr(err)
-	}
-
 	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
 		if err := d.Set(cluster_import_manifest_url, cluster.Status.ClusterImport.ImportLink); err != nil {
 			return diag.FromErr(err)
@@ -305,11 +299,19 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 			return diag.FromErr(err)
 		}
 	} else {
-		kubeconfig, err := c.GetClusterKubeConfig(uid)
+		kubecfg, err := c.GetClusterKubeConfig(uid)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("kubeconfig", kubeconfig); err != nil {
+		if err := d.Set(kubeconfig, kubecfg); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	//for brownfield, until cluster is not in running state, don't get machine pool
+	if cluster.Status.ClusterImport == nil || cluster.Status.State == string(running) {
+		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
+		if err := d.Set(machine_pool, mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -329,39 +331,39 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1alpha1VsphereMach
 
 		oi[control_plane] = machinePool.IsControlPlane
 		oi[control_plane_as_worker] = machinePool.UseControlPlaneAsWorker
-		oi["name"] = machinePool.Name
-		oi["count"] = machinePool.Size
+		oi[name] = machinePool.Name
+		oi[count] = machinePool.Size
 		if machinePool.UpdateStrategy != nil {
-			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+			oi[update_strategy] = machinePool.UpdateStrategy.Type
 		}
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
-			s["disk_size_gb"] = int(*machinePool.InstanceType.DiskGiB)
-			s["memory_mb"] = int(*machinePool.InstanceType.MemoryMiB)
-			s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
+			s[disk_size_gb] = int(*machinePool.InstanceType.DiskGiB)
+			s[memory_mb] = int(*machinePool.InstanceType.MemoryMiB)
+			s[cpu] = int(*machinePool.InstanceType.NumCPUs)
 
-			oi["instance_type"] = []interface{}{s}
+			oi[instance_type] = []interface{}{s}
 		}
 
 		placements := make([]interface{}, len(machinePool.Placements))
 		for j, p := range machinePool.Placements {
 			pj := make(map[string]interface{})
-			pj["id"] = p.UID
-			pj["cluster"] = p.Cluster
-			pj["resource_pool"] = p.ResourcePool
-			pj["datastore"] = p.Datastore
-			pj["network"] = p.Network.NetworkName
+			pj[id] = p.UID
+			pj[cluster] = p.Cluster
+			pj[resource_pool] = p.ResourcePool
+			pj[datastore] = p.Datastore
+			pj[network] = p.Network.NetworkName
 
 			poolID := ""
 			if p.Network.ParentPoolRef != nil {
 				poolID = p.Network.ParentPoolRef.UID
 			}
-			pj["static_ip_pool_id"] = poolID
+			pj[static_ip_pool_id] = poolID
 
 			placements[j] = pj
 		}
-		oi["placement"] = placements
+		oi[placement] = placements
 
 		ois[i] = oi
 	}
@@ -375,10 +377,10 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cloudConfigId := d.Get("cloud_config_id").(string)
+	cloudConfigId := d.Get(cloud_config_id).(string)
 
-	if d.HasChange("machine_pool") {
-		oraw, nraw := d.GetChange("machine_pool")
+	if d.HasChange(machine_pool) {
+		oraw, nraw := d.GetChange(machine_pool)
 		if oraw == nil {
 			oraw = new(schema.Set)
 		}
@@ -392,12 +394,12 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 		osMap := make(map[string]interface{})
 		for _, mp := range os.List() {
 			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
+			osMap[machinePool[name].(string)] = machinePool
 		}
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
+			name := machinePoolResource[name].(string)
 			hash := resourceMachinePoolVsphereHash(machinePoolResource)
 
 			machinePool := toMachinePoolVsphere(machinePoolResource)
@@ -432,7 +434,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 		// Deleted old machine pools
 		for _, mp := range osMap {
 			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
+			name := machinePool[name].(string)
 			log.Printf("Deleted machine pool %s", name)
 			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
@@ -444,7 +446,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("pack") {
+	if d.HasChanges(pack) {
 		log.Printf("Updating packs")
 		cluster := toVsphereCluster(d)
 		if err := c.UpdateClusterVsphere(cluster); err != nil {
@@ -459,13 +461,12 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClusterEntity {
 	// gnarly, I know! =/
-	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
+	cloudConfig := d.Get(cloud_config).([]interface{})[0].(map[string]interface{})
 
-	staticIP := cloudConfig["static_ip"].(bool)
+	staticIP := cloudConfig[static_ip].(bool)
 	cluster := &models.V1alpha1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name: d.Get(name).(string),
 			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1SpectroVsphereClusterEntitySpec{
@@ -474,10 +475,10 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 			CloudConfig: &models.V1alpha1VsphereClusterConfigEntity{
 				NtpServers: nil,
 				Placement: &models.V1alpha1VspherePlacementConfigEntity{
-					Datacenter: cloudConfig["datacenter"].(string),
-					Folder:     cloudConfig["folder"].(string),
+					Datacenter: cloudConfig[datacenter].(string),
+					Folder:     cloudConfig[folder].(string),
 				},
-				SSHKeys:  []string{cloudConfig["ssh_key"].(string)},
+				SSHKeys:  []string{cloudConfig[ssh_key].(string)},
 				StaticIP: staticIP,
 			},
 		},
@@ -485,13 +486,13 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 
 	if !staticIP {
 		cluster.Spec.CloudConfig.ControlPlaneEndpoint = &models.V1alpha1ControlPlaneEndPoint{
-			DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-			Type:             cloudConfig["network_type"].(string),
+			DdnsSearchDomain: cloudConfig[network_search_domain].(string),
+			Type:             cloudConfig[network_type].(string),
 		}
 	}
 
 	machinePoolConfigs := make([]*models.V1alpha1VsphereMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get(machine_pool).(*schema.Set).List() {
 		mp := toMachinePoolVsphere(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
@@ -499,7 +500,7 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
 	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").(*schema.Set).List() {
+	for _, pack := range d.Get(pack).(*schema.Set).List() {
 		p := toPack(pack)
 		packValues = append(packValues, p)
 	}
@@ -515,25 +516,25 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 	controlPlane := m[control_plane].(bool)
 	controlPlaneAsWorker := m[control_plane_as_worker].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, master)
 	}
 
 	placements := make([]*models.V1alpha1VspherePlacementConfigEntity, 0)
-	for _, pos := range m["placement"].([]interface{}) {
+	for _, pos := range m[placement].([]interface{}) {
 		p := pos.(map[string]interface{})
-		poolID := p["static_ip_pool_id"].(string)
+		poolID := p[static_ip_pool_id].(string)
 		staticIP := false
 		if len(poolID) > 0 {
 			staticIP = true
 		}
 
 		placements = append(placements, &models.V1alpha1VspherePlacementConfigEntity{
-			UID:          p["id"].(string),
-			Cluster:      p["cluster"].(string),
-			ResourcePool: p["resource_pool"].(string),
-			Datastore:    p["datastore"].(string),
+			UID:          p[id].(string),
+			Cluster:      p[cluster].(string),
+			ResourcePool: p[resource_pool].(string),
+			Datastore:    p[datastore].(string),
 			Network: &models.V1alpha1VsphereNetworkConfigEntity{
-				NetworkName:   ptr.StringPtr(p["network"].(string)),
+				NetworkName:   ptr.StringPtr(p[network].(string)),
 				ParentPoolUID: poolID,
 				StaticIP:      staticIP,
 			},
@@ -541,11 +542,11 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 
 	}
 
-	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
+	ins := m[instance_type].([]interface{})[0].(map[string]interface{})
 	instanceType := models.V1alpha1VsphereInstanceType{
-		DiskGiB:   ptr.Int32Ptr(int32(ins["disk_size_gb"].(int))),
-		MemoryMiB: ptr.Int64Ptr(int64(ins["memory_mb"].(int))),
-		NumCPUs:   ptr.Int32Ptr(int32(ins["cpu"].(int))),
+		DiskGiB:   ptr.Int32Ptr(int32(ins[disk_size_gb].(int))),
+		MemoryMiB: ptr.Int64Ptr(int64(ins[memory_mb].(int))),
+		NumCPUs:   ptr.Int32Ptr(int32(ins[cpu].(int))),
 	}
 
 	mp := &models.V1alpha1VsphereMachinePoolConfigEntity{
@@ -556,54 +557,13 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:           ptr.StringPtr(m[name].(string)),
+			Size:           ptr.Int32Ptr(int32(m[count].(int))),
 			UpdateStrategy: &models.V1alpha1UpdateStrategy{
-				Type: m["update_strategy"].(string),
+				Type: m[update_strategy].(string),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
 	return mp
-}
-
-func resourceClusterVsphereImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
-
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
-
-	meta := toClusterMeta(d)
-
-	uid, err := c.ImportClusterVsphere(meta)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	d.SetId(uid)
-
-	stateConf := &resource.StateChangeConf{
-		//Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{string(pending)},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 1 * time.Second,
-		Delay:      5 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	resourceClusterGcpRead(ctx, d, m)
-
-	if profiles := getCloudClusterProfiles(d); profiles != nil {
-		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	return diags
 }

@@ -17,19 +17,19 @@ func resourceCloudAccountAzure() *schema.Resource {
 		UpdateContext: resourceCloudAccountAzureUpdate,
 		DeleteContext: resourceCloudAccountAzureDelete,
 		Schema: map[string]*schema.Schema{
-			"name": {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"azure_tenant_id": {
+			azure_tenant_id: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"azure_client_id": {
+			azure_client_id: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"azure_client_secret": {
+			azure_client_secret: {
 				Type:     schema.TypeString,
 				Required: true,
 				Sensitive: true,
@@ -80,13 +80,13 @@ func resourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m 
 		return diags
 	}
 
-	if err := d.Set("name", account.Metadata.Name); err != nil {
+	if err := d.Set(name, account.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("azure_tenant_id", *account.Spec.TenantID); err != nil {
+	if err := d.Set(azure_tenant_id, *account.Spec.TenantID); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("azure_client_id", *account.Spec.ClientID); err != nil {
+	if err := d.Set(azure_client_id, *account.Spec.ClientID); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -130,16 +130,16 @@ func resourceCloudAccountAzureDelete(_ context.Context, d *schema.ResourceData, 
 }
 
 func toAzureAccount(d *schema.ResourceData) *models.V1alpha1AzureAccount {
-	clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
+	clientSecret := strfmt.Password(d.Get(azure_client_secret).(string))
 	account := &models.V1alpha1AzureAccount{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name: d.Get(name).(string),
 			UID : d.Id(),
 		},
 		Spec: &models.V1alpha1AzureAccountSpec{
-			ClientID:     ptr.StringPtr(d.Get("azure_client_id").(string)),
+			ClientID:     ptr.StringPtr(d.Get(azure_client_id).(string)),
 			ClientSecret: &clientSecret,
-			TenantID:     ptr.StringPtr(d.Get("azure_tenant_id").(string)),
+			TenantID:     ptr.StringPtr(d.Get(azure_tenant_id).(string)),
 		},
 	}
 	return account

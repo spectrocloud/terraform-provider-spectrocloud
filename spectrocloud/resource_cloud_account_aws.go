@@ -16,15 +16,15 @@ func resourceCloudAccountAws() *schema.Resource {
 		UpdateContext: resourceCloudAccountAwsUpdate,
 		DeleteContext: resourceCloudAccountAwsDelete,
 		Schema: map[string]*schema.Schema{
-			"name": {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"aws_access_key": {
+			aws_access_key: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"aws_secret_key": {
+			aws_secret_key: {
 				Type:     schema.TypeString,
 				Required: true,
 				Sensitive: true,
@@ -69,10 +69,10 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 		return diags
 	}
 
-	if err := d.Set("name", account.Metadata.Name); err != nil {
+	if err := d.Set(name, account.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("aws_access_key", *account.Spec.AccessKey); err != nil {
+	if err := d.Set(aws_access_key, *account.Spec.AccessKey); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -118,12 +118,12 @@ func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m 
 func toAwsAccount(d *schema.ResourceData) *models.V1alpha1AwsAccount {
 	account := &models.V1alpha1AwsAccount{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name: d.Get(name).(string),
 			UID : d.Id(),
 		},
 		Spec: &models.V1alpha1AwsCloudAccount{
-			AccessKey:     ptr.StringPtr(d.Get("aws_access_key").(string)),
-			SecretKey:     ptr.StringPtr(d.Get("aws_secret_key").(string)),
+			AccessKey:     ptr.StringPtr(d.Get(aws_access_key).(string)),
+			SecretKey:     ptr.StringPtr(d.Get(aws_secret_key).(string)),
 		},
 	}
 	return account

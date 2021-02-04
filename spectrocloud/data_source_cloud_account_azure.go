@@ -14,25 +14,25 @@ func dataSourceCloudAccountAzure() *schema.Resource {
 		ReadContext: dataSourceCloudAccountAzureRead,
 
 		Schema: map[string]*schema.Schema{
-			"azure_tenant_id": {
+			azure_tenant_id: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"azure_client_id": {
+			azure_client_id: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"id": {
+			id: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
-			"name": {
+			name: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
 		},
 	}
@@ -52,10 +52,10 @@ func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, 
 	var account *models.V1alpha1AzureAccount
 	for _, a := range accounts {
 
-		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
+		if v, ok := d.GetOk(id); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break
-		} else if v, ok := d.GetOk("name"); ok && v.(string) == a.Metadata.Name {
+		} else if v, ok := d.GetOk(name); ok && v.(string) == a.Metadata.Name {
 			account = a
 			break
 		}
@@ -71,9 +71,9 @@ func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, 
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
-	d.Set("azure_tenant_id", *account.Spec.TenantID)
-	d.Set("azure_client_id", *account.Spec.ClientID)
+	d.Set(name, account.Metadata.Name)
+	d.Set(azure_tenant_id, *account.Spec.TenantID)
+	d.Set(azure_client_id, *account.Spec.ClientID)
 
 
 	return diags

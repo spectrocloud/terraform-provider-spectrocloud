@@ -72,11 +72,11 @@ func resourceClusterAws() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"ssh_key_name": {
+						ssh_key_name: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"region": {
+						region: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -141,12 +141,12 @@ func resourceClusterAws() *schema.Resource {
 							Optional: true,
 							Default:  rolling_update_scale_out,
 						},
-						disk_size_in_gb: {
+						disk_size_gb: {
 							Type:     schema.TypeInt,
 							Optional: true,
 							Default:  65,
 						},
-						availability_zones: {
+						azs: {
 							Type:     schema.TypeSet,
 							Required: true,
 							MinItems: 1,
@@ -179,7 +179,7 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{"Running"},
+		Target:     []string{string(running)},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
@@ -215,29 +215,40 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
+	d.Set(cloud_config_id, configUID)
 
 	var config *models.V1alpha1AwsCloudConfig
 	if config, err = c.GetCloudConfigAws(configUID); err != nil {
 		return diag.FromErr(err)
 	}
 
-	mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
-	if err := d.Set("machine_pool", mp); err != nil {
-		return diag.FromErr(err)
-	}
-
 	// Update the kubeconfig
 	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
-		if err := d.Set("cluster_import_manifest_url", cluster.Status.ClusterImport.ImportLink); err != nil {
+		if err := d.Set(cluster_import_manifest_url, cluster.Status.ClusterImport.ImportLink); err != nil {
 			return diag.FromErr(err)
 		}
-	} else {
-		kubeconfig, err := c.GetClusterKubeConfig(uid)
+
+		importManifest, err := c.GetClusterImportManifest(uid)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("kubeconfig", kubeconfig); err != nil {
+		if err := d.Set(cluster_import_manifest, importManifest); err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		kubecfg, err := c.GetClusterKubeConfig(uid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set(kubeconfig, kubecfg); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	//for brownfield, until cluster is not in running state, don't get machine pool
+	if cluster.Status.ClusterImport == nil || cluster.Status.State == string(running) {
+		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
+		if err := d.Set(machine_pool, mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -257,14 +268,12 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1alpha1AwsMachinePoolC
 
 		oi[control_plane] = machinePool.IsControlPlane
 		oi[control_plane_as_worker] = machinePool.UseControlPlaneAsWorker
-		oi["name"] = machinePool.Name
-		oi["count"] = int(machinePool.Size)
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		oi["instance_type"] = machinePool.InstanceType
-
-		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
-
-		oi["azs"] = machinePool.Azs
+		oi[name] = machinePool.Name
+		oi[count] = int(machinePool.Size)
+		oi[update_strategy] = machinePool.UpdateStrategy.Type
+		oi[instance_type] = machinePool.InstanceType
+		oi[disk_size_gb] = int(machinePool.RootDeviceSize)
+		oi[azs] = machinePool.Azs
 
 		ois[i] = oi
 	}
@@ -278,10 +287,10 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cloudConfigId := d.Get("cloud_config_id").(string)
+	cloudConfigId := d.Get(cloud_config_id).(string)
 
-	if d.HasChange("machine_pool") {
-		oraw, nraw := d.GetChange("machine_pool")
+	if d.HasChange(machine_pool) {
+		oraw, nraw := d.GetChange(machine_pool)
 		if oraw == nil {
 			oraw = new(schema.Set)
 		}
@@ -295,12 +304,12 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 		osMap := make(map[string]interface{})
 		for _, mp := range os.List() {
 			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
+			osMap[machinePool[name].(string)] = machinePool
 		}
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
+			name := machinePoolResource[name].(string)
 			hash := resourceMachinePoolAwsHash(machinePoolResource)
 
 			machinePool := toMachinePoolAws(machinePoolResource)
@@ -325,7 +334,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 		// Deleted old machine pools
 		for _, mp := range osMap {
 			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
+			name := machinePool[name].(string)
 			log.Printf("Deleted machine pool %s", name)
 			if err := c.DeleteMachinePoolAws(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
@@ -337,7 +346,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("pack") {
+	if d.HasChanges(pack) {
 		log.Printf("Updating packs")
 		cluster := toAwsCluster(d)
 		if err := c.UpdateClusterAws(cluster); err != nil {
@@ -352,24 +361,24 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntity {
 	// gnarly, I know! =/
-	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+	cloudConfig := d.Get(cloud_config).([]interface{})[0].(map[string]interface{})
 
 	cluster := &models.V1alpha1SpectroAwsClusterEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name: d.Get(name).(string),
 			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
 			CloudConfig: &models.V1alpha1AwsClusterConfig{
-				SSHKeyName: cloudConfig["ssh_key_name"].(string),
-				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
+				SSHKeyName: cloudConfig[ssh_key_name].(string),
+				Region:     ptr.StringPtr(cloudConfig[region].(string)),
 			},
 		},
 	}
 
 	machinePoolConfigs := make([]*models.V1alpha1AwsMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get(machine_pool).(*schema.Set).List() {
 		mp := toMachinePoolAws(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
@@ -377,7 +386,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
 	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").(*schema.Set).List() {
+	for _, pack := range d.Get(pack).(*schema.Set).List() {
 		p := toPack(pack)
 		packValues = append(packValues, p)
 	}
@@ -393,71 +402,30 @@ func toMachinePoolAws(machinePool interface{}) *models.V1alpha1AwsMachinePoolCon
 	controlPlane := m[control_plane].(bool)
 	controlPlaneAsWorker := m[control_plane_as_worker].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, master)
 	}
 
-	azs := make([]string, 0)
-	for _, az := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, az.(string))
+	azones := make([]string, 0)
+	for _, az := range m[azs].(*schema.Set).List() {
+		azones = append(azones, az.(string))
 	}
 
 	mp := &models.V1alpha1AwsMachinePoolConfigEntity{
 		CloudConfig: &models.V1alpha1AwsMachinePoolCloudConfigEntity{
-			Azs:            azs,
-			InstanceType:   ptr.StringPtr(m["instance_type"].(string)),
-			RootDeviceSize: int64(m["disk_size_gb"].(int)),
+			Azs:            azones,
+			InstanceType:   ptr.StringPtr(m[instance_type].(string)),
+			RootDeviceSize: int64(m[disk_size_gb].(int)),
 		},
 		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:           ptr.StringPtr(m[name].(string)),
+			Size:           ptr.Int32Ptr(int32(m[count].(int))),
 			UpdateStrategy: &models.V1alpha1UpdateStrategy{
-				Type: m["update_strategy"].(string),
+				Type: m[update_strategy].(string),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
 	return mp
-}
-
-//brownfield
-func resourceClusterAzureImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
-
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
-
-	meta := toClusterMeta(d)
-
-	uid, err := c.ImportClusterAzure(meta)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	d.SetId(uid)
-
-	stateConf := &resource.StateChangeConf{
-		Target:     []string{string(pending)},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 1 * time.Second,
-		Delay:      5 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	resourceClusterGcpRead(ctx, d, m)
-
-	if profiles := getCloudClusterProfiles(d); profiles != nil {
-		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	return diags
 }

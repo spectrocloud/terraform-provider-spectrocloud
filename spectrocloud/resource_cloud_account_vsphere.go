@@ -18,28 +18,28 @@ func resourceCloudAccountVsphere() *schema.Resource {
 		UpdateContext: resourceCloudAccountVsphereUpdate,
 		DeleteContext: resourceCloudAccountVsphereDelete,
 		Schema: map[string]*schema.Schema{
-			"name": {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"private_cloud_gateway_id": {
+			private_cloud_gateway_id: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"vsphere_vcenter": {
+			vsphere_vcenter: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"vsphere_username": {
+			vsphere_username: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"vsphere_password": {
+			vsphere_password: {
 				Type:     schema.TypeString,
 				Required: true,
 				Sensitive: true,
 			},
-			"vsphere_ignore_insecure_error": {
+			vsphere_ignore_insecure_error: {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
@@ -83,24 +83,24 @@ func resourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData, 
 		return diags
 	}
 
-	if err := d.Set("name", account.Metadata.Name); err != nil {
+	if err := d.Set(name, account.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
+	if err := d.Set(private_cloud_gateway_id, account.Metadata.Annotations[OverlordUID]); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("vsphere_vcenter", *account.Spec.VcenterServer); err != nil {
+	if err := d.Set(vsphere_vcenter, *account.Spec.VcenterServer); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("vsphere_username", *account.Spec.Username); err != nil {
+	if err := d.Set(vsphere_username, *account.Spec.Username); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("vsphere_ignore_insecure_error", account.Spec.Insecure); err != nil {
+	if err := d.Set(vsphere_ignore_insecure_error, account.Spec.Insecure); err != nil {
 		return diag.FromErr(err)
 	}
 
 	// Don't read the password!!
-	//d.Set("vsphere_password", *account.Spec.Password)
+	//d.Set(vsphere_password, *account.Spec.Password)
 
 	return diags
 }
@@ -142,14 +142,14 @@ func resourceCloudAccountVsphereDelete(_ context.Context, d *schema.ResourceData
 func toVsphereAccount(d *schema.ResourceData) *models.V1alpha1VsphereAccount {
 	account := &models.V1alpha1VsphereAccount{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name: d.Get(name).(string),
 			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1VsphereCloudAccount{
-			VcenterServer: ptr.StringPtr(d.Get("vsphere_password").(string)),
-			Username:      ptr.StringPtr(d.Get("vsphere_password").(string)),
-			Password:      ptr.StringPtr(d.Get("vsphere_password").(string)),
-			Insecure:      d.Get("vsphere_ignore_insecure_error").(bool),
+			VcenterServer: ptr.StringPtr(d.Get(vsphere_password).(string)),
+			Username:      ptr.StringPtr(d.Get(vsphere_password).(string)),
+			Password:      ptr.StringPtr(d.Get(vsphere_password).(string)),
+			Insecure:      d.Get(vsphere_ignore_insecure_error).(bool),
 		},
 	}
 	return account

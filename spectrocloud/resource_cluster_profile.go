@@ -2,13 +2,14 @@ package spectrocloud
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"log"
-	"time"
 )
 
 func resourceClusterProfile() *schema.Resource {
@@ -25,26 +26,26 @@ func resourceClusterProfile() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"name": {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"description": {
+			description: {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"cloud": {
+			cloud: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"type": {
+			cp_type: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Default: "add-on",
+				Default:  add_on_type,
 				ForceNew: true,
 			},
-			"pack" : {
+			pack: {
 				Type:     schema.TypeList,
 				Required: true,
 				Elem: &schema.Resource{
@@ -53,7 +54,7 @@ func resourceClusterProfile() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"name": {
+						name: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -61,11 +62,11 @@ func resourceClusterProfile() *schema.Resource {
 						//	Type:     schema.TypeString,
 						//	Required: true,
 						//},
-						"tag": {
+						tag: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"values": {
+						values: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -113,9 +114,9 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
-	d.Set("name", cp.Metadata.Name)
+	d.Set(name, cp.Metadata.Name)
 	packs := flattenPacks(cp.Spec.Published.Packs)
-	if err := d.Set("pack", packs); err != nil {
+	if err := d.Set(pack, packs); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -132,9 +133,9 @@ func flattenPacks(packs []*models.V1alpha1PackRef) []interface{} {
 		p := make(map[string]interface{})
 
 		p["uid"] = pack.PackUID
-		p["name"] = *pack.Name
-		p["tag"] = pack.Tag
-		p["values"] = pack.Values
+		p[name] = *pack.Name
+		p[tag] = pack.Tag
+		p[values] = pack.Values
 
 		ps[i] = p
 	}
@@ -148,7 +149,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if d.HasChanges("pack") {
+	if d.HasChanges(pack) {
 		log.Printf("Updating packs")
 		cluster := toClusterProfile(d)
 		if err := c.UpdateClusterProfile(cluster); err != nil {
@@ -179,25 +180,30 @@ func resourceClusterProfileDelete(ctx context.Context, d *schema.ResourceData, m
 
 func toClusterProfile(d *schema.ResourceData) *models.V1alpha1ClusterProfileEntity {
 	// gnarly, I know! =/
-	//cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
+	//cloudConfig := d.Get(cloud_config).([]interface{})[0].(map[string]interface{})
+	//clientSecret := strfmt.Password(d.Get(azure_client_secret).(string))
 
 	cluster := &models.V1alpha1ClusterProfileEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name: d.Get(name).(string),
 			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1ClusterProfileEntitySpec{
 			Template: &models.V1alpha1ClusterProfileTemplateDraft{
-				CloudType:       models.V1alpha1CloudType(d.Get("cloud").(string)),
-				Type: d.Get("type").(string),
+				Type: d.Get(cp_type).(string),
 			},
 		},
 	}
 
+	//For add-on type cluster profile, don't associate it with any cloud
+	if d.Get(cp_type).(string) != add_on_type {
+		cluster.Spec.Template.CloudType = models.V1alpha1CloudType(d.Get(cloud).(string))
+	} else {
+		cluster.Spec.Template.CloudType = "all"
+	}
 
 	packs := make([]*models.V1alpha1PackEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
+	for _, pack := range d.Get(pack).([]interface{}) {
 		p := toClusterProfilePack(pack)
 		packs = append(packs, p)
 	}
@@ -211,10 +217,10 @@ func toClusterProfilePack(pSrc interface{}) *models.V1alpha1PackEntity {
 
 	pack := &models.V1alpha1PackEntity{
 		//Layer:  p["layer"].(string),
-		Name:   ptr.StringPtr(p["name"].(string)),
-		Tag:    ptr.StringPtr(p["tag"].(string)),
+		Name:   ptr.StringPtr(p[name].(string)),
+		Tag:    ptr.StringPtr(p[tag].(string)),
 		UID:    ptr.StringPtr(p["uid"].(string)),
-		Values: p["values"].(string),
+		Values: p[values].(string),
 	}
 	return pack
 }

@@ -14,21 +14,21 @@ func dataSourceCloudAccountAws() *schema.Resource {
 		ReadContext: dataSourceCloudAccountAwsRead,
 
 		Schema: map[string]*schema.Schema{
-			"aws_access_key": {
+			aws_access_key: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"id": {
+			id: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
-			"name": {
+			name: {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+				ExactlyOneOf: []string{id, name},
 			},
 		},
 	}
@@ -48,10 +48,10 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 	var account *models.V1alpha1AwsAccount
 	for _, a := range accounts {
 
-		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
+		if v, ok := d.GetOk(id); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break
-		} else if v, ok := d.GetOk("name"); ok && v.(string) == a.Metadata.Name {
+		} else if v, ok := d.GetOk(name); ok && v.(string) == a.Metadata.Name {
 			account = a
 			break
 		}
@@ -67,8 +67,8 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
-	d.Set("aws_access_key", *account.Spec.AccessKey)
+	d.Set(name, account.Metadata.Name)
+	d.Set(aws_access_key, *account.Spec.AccessKey)
 
 	return diags
 }

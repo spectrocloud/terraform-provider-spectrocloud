@@ -145,12 +145,12 @@ func resourceClusterGcp() *schema.Resource {
 							Optional: true,
 							Default:  rolling_update_scale_out,
 						},
-						disk_size_in_gb: {
+						disk_size_gb: {
 							Type:     schema.TypeInt,
 							Optional: true,
 							Default:  65,
 						},
-						availability_zones: {
+						azs: {
 							Type:     schema.TypeSet,
 							Required: true,
 							MinItems: 1,
@@ -250,7 +250,7 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 		}
 	}
 
-	//for brownfield, untill cluster is not in running state, don't get machine pool
+	//for brownfield, until cluster is not in running state, don't get machine pool
 	if cluster.Status.ClusterImport == nil || cluster.Status.State == string(running) {
 		mp := flattenMachinePoolConfigsGcp(config.Spec.MachinePoolConfig)
 		if err := d.Set(machine_pool, mp); err != nil {
@@ -275,7 +275,7 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1alpha1GcpMachinePoolC
 		oi[control_plane_as_worker] = machinePool.UseControlPlaneAsWorker
 		oi[name] = machinePool.Name
 		oi[count] = int(machinePool.Size)
-		oi[disk_size_in_gb] = int(machinePool.RootDeviceSize)
+		oi[disk_size_gb] = int(machinePool.RootDeviceSize)
 
 		if machinePool.UpdateStrategy != nil {
 			oi[update_strategy] = machinePool.UpdateStrategy.Type
@@ -284,7 +284,7 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1alpha1GcpMachinePoolC
 			oi[instance_type] = *machinePool.InstanceType
 		}
 		if len(machinePool.Azs) > 0 {
-			oi[availability_zones] = machinePool.Azs
+			oi[azs] = machinePool.Azs
 		}
 
 		ois[i] = oi
@@ -321,7 +321,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
+			name := machinePoolResource[name].(string)
 			hash := resourceMachinePoolGcpHash(machinePoolResource)
 
 			machinePool := toMachinePoolGcp(machinePoolResource)
@@ -346,7 +346,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 		// Deleted old machine pools
 		for _, mp := range osMap {
 			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
+			name := machinePool[name].(string)
 			log.Printf("Deleted machine pool %s", name)
 			if err := c.DeleteMachinePoolGcp(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
@@ -407,14 +407,14 @@ func toGcpClusterSpec(d *schema.ResourceData, cloudConfig map[string]interface{}
 
 func toGcpClusterConfig(cloudConfig map[string]interface{}) *models.V1alpha1GcpClusterConfig {
 	clusterConfig := &models.V1alpha1GcpClusterConfig{}
-	if cloudConfig["network"] != nil {
-		clusterConfig.Network = cloudConfig["network"].(string)
+	if cloudConfig[network] != nil {
+		clusterConfig.Network = cloudConfig[network].(string)
 	}
 	if cloudConfig["project"] != nil {
 		clusterConfig.Project = ptr.StringPtr(cloudConfig["project"].(string))
 	}
-	if cloudConfig["region"] != nil {
-		clusterConfig.Region = ptr.StringPtr(cloudConfig["region"].(string))
+	if cloudConfig[region] != nil {
+		clusterConfig.Region = ptr.StringPtr(cloudConfig[region].(string))
 	}
 	return clusterConfig
 }
@@ -426,19 +426,19 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1alpha1GcpMachinePoolCon
 	controlPlane := m[control_plane].(bool)
 	controlPlaneAsWorker := m[control_plane_as_worker].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, master)
 	}
 
-	azs := make([]string, 0)
-	for _, az := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, az.(string))
+	azones := make([]string, 0)
+	for _, az := range m[azs].(*schema.Set).List() {
+		azones = append(azones, az.(string))
 	}
 
 	mp := &models.V1alpha1GcpMachinePoolConfigEntity{
 		CloudConfig: &models.V1alpha1GcpMachinePoolCloudConfigEntity{
-			Azs:            azs,
+			Azs:            azones,
 			InstanceType:   ptr.StringPtr(m[instance_type].(string)),
-			RootDeviceSize: int64(m[disk_size_in_gb].(int)),
+			RootDeviceSize: int64(m[disk_size_gb].(int)),
 		},
 		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
@@ -452,46 +452,4 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1alpha1GcpMachinePoolCon
 		},
 	}
 	return mp
-}
-
-//brownfield
-func resourceClusterGcpImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
-
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
-
-	meta := toClusterMeta(d)
-
-	uid, err := c.ImportClusterGcp(meta)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	d.SetId(uid)
-
-	stateConf := &resource.StateChangeConf{
-		//Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{string(pending)},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 1 * time.Second,
-		Delay:      5 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	resourceClusterGcpRead(ctx, d, m)
-
-	if profiles := getCloudClusterProfiles(d); profiles != nil {
-		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	return diags
 }

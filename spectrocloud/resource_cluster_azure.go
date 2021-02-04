@@ -71,19 +71,19 @@ func resourceClusterAzure() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"subscription_id": {
+						subscription_id: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"resource_group": {
+						resource_group: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"region": {
+						region: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"ssh_key": {
+						ssh_key: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -148,7 +148,7 @@ func resourceClusterAzure() *schema.Resource {
 							Optional: true,
 							Default:  rolling_update_scale_out,
 						},
-						"disk": {
+						disk: {
 							Type:     schema.TypeList,
 							Optional: true,
 							Computed: true,
@@ -156,8 +156,8 @@ func resourceClusterAzure() *schema.Resource {
 							// https://github.com/hashicorp/terraform-plugin-sdk/issues/142
 							//DefaultFunc: func() (interface{}, error) {
 							//	disk := map[string]interface{}{
-							//		"size_gb": 55,
-							//		"type" : "Standard_LRS",
+							//		size_gb: 55,
+							//		disk_type : "Standard_LRS",
 							//	}
 							//	//return "us-west", nil
 							//	return []interface{}{disk}, nil
@@ -165,18 +165,18 @@ func resourceClusterAzure() *schema.Resource {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"size_gb": {
+									size_gb: {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
-									"type": {
+									disk_type: {
 										Type:     schema.TypeString,
 										Required: true,
 									},
 								},
 							},
 						},
-						"azs": {
+						azs: {
 							Type:     schema.TypeSet,
 							Required: true,
 							Set:      schema.HashString,
@@ -187,7 +187,7 @@ func resourceClusterAzure() *schema.Resource {
 					},
 				},
 			},
-			//"cloud_config": {
+			//cloud_config: {
 			//	Type:     schema.TypeString,
 			//	Required: true,
 			//	//DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
@@ -218,7 +218,7 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{"Running"},
+		Target:     []string{string(running)},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
@@ -254,21 +254,16 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
+	d.Set(cloud_config_id, configUID)
 
 	var config *models.V1alpha1AzureCloudConfig
 	if config, err = c.GetCloudConfigAzure(configUID); err != nil {
 		return diag.FromErr(err)
 	}
 
-	mp := flattenMachinePoolConfigsAzure(config.Spec.MachinePoolConfig)
-	if err := d.Set("machine_pool", mp); err != nil {
-		return diag.FromErr(err)
-	}
-
 	// Update the kubeconfig
 	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
-		if err := d.Set("cluster_import_manifest_url", cluster.Status.ClusterImport.ImportLink); err != nil {
+		if err := d.Set(cluster_import_manifest_url, cluster.Status.ClusterImport.ImportLink); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -276,15 +271,23 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("cluster_import_manifest", importManifest); err != nil {
+		if err := d.Set(cluster_import_manifest, importManifest); err != nil {
 			return diag.FromErr(err)
 		}
 	} else {
-		kubeconfig, err := c.GetClusterKubeConfig(uid)
+		kubecfg, err := c.GetClusterKubeConfig(uid)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("kubeconfig", kubeconfig); err != nil {
+		if err := d.Set(kubeconfig, kubecfg); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	//for brownfield, until cluster is not in running state, don't get machine pool
+	if cluster.Status.ClusterImport == nil || cluster.Status.State == string(running) {
+		mp := flattenMachinePoolConfigsAzure(config.Spec.MachinePoolConfig)
+		if err := d.Set(machine_pool, mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -304,19 +307,19 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1alpha1AzureMachineP
 
 		oi[control_plane] = machinePool.IsControlPlane
 		oi[control_plane_as_worker] = machinePool.UseControlPlaneAsWorker
-		oi["name"] = machinePool.Name
-		oi["count"] = machinePool.Size
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		oi["instance_type"] = machinePool.InstanceType
+		oi[name] = machinePool.Name
+		oi[count] = machinePool.Size
+		oi[update_strategy] = machinePool.UpdateStrategy.Type
+		oi[instance_type] = machinePool.InstanceType
 
-		oi["azs"] = machinePool.Azs
+		oi[azs] = machinePool.Azs
 
 		if machinePool.OsDisk != nil {
 			d := make(map[string]interface{})
-			d["size_gb"] = machinePool.OsDisk.DiskSizeGB
-			d["type"] = machinePool.OsDisk.ManagedDisk.StorageAccountType
+			d[size_gb] = machinePool.OsDisk.DiskSizeGB
+			d[disk_type] = machinePool.OsDisk.ManagedDisk.StorageAccountType
 
-			oi["disk"] = []interface{}{d}
+			oi[disk] = []interface{}{d}
 		}
 
 		ois[i] = oi
@@ -331,10 +334,10 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cloudConfigId := d.Get("cloud_config_id").(string)
+	cloudConfigId := d.Get(cloud_config_id).(string)
 
-	if d.HasChange("machine_pool") {
-		oraw, nraw := d.GetChange("machine_pool")
+	if d.HasChange(machine_pool) {
+		oraw, nraw := d.GetChange(machine_pool)
 		if oraw == nil {
 			oraw = new(schema.Set)
 		}
@@ -348,12 +351,12 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 		osMap := make(map[string]interface{})
 		for _, mp := range os.List() {
 			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
+			osMap[machinePool[name].(string)] = machinePool
 		}
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
+			name := machinePoolResource[name].(string)
 			hash := resourceMachinePoolAzureHash(machinePoolResource)
 
 			machinePool := toMachinePoolAzure(machinePoolResource)
@@ -378,7 +381,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 		// Deleted old machine pools
 		for _, mp := range osMap {
 			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
+			name := machinePool[name].(string)
 			log.Printf("Deleted machine pool %s", name)
 			if err := c.DeleteMachinePoolAzure(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
@@ -390,7 +393,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("pack") {
+	if d.HasChanges(pack) {
 		log.Printf("Updating packs")
 		cluster := toAzureCluster(d)
 		if err := c.UpdateClusterAzure(cluster); err != nil {
@@ -405,29 +408,29 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterEntity {
 	// gnarly, I know! =/
-	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
+	cloudConfig := d.Get(cloud_config).([]interface{})[0].(map[string]interface{})
+	//clientSecret := strfmt.Password(d.Get(azure_client_secret).(string))
 
 	cluster := &models.V1alpha1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name: d.Get(name).(string),
 			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
 			ProfileUID:      d.Get(cluster_prrofile_id).(string),
 			CloudConfig: &models.V1alpha1AzureClusterConfig{
-				Location:       ptr.StringPtr(cloudConfig["region"].(string)),
-				SSHKey:         ptr.StringPtr(cloudConfig["ssh_key"].(string)),
-				SubscriptionID: ptr.StringPtr(cloudConfig["subscription_id"].(string)),
-				ResourceGroup:  cloudConfig["resource_group"].(string),
+				Location:       ptr.StringPtr(cloudConfig[region].(string)),
+				SSHKey:         ptr.StringPtr(cloudConfig[ssh_key].(string)),
+				SubscriptionID: ptr.StringPtr(cloudConfig[subscription_id].(string)),
+				ResourceGroup:  cloudConfig[resource_group].(string),
 			},
 		},
 	}
 
-	//for _, machine_pool := range d.Get("machine_pool").([]interface{}) {
+	//for _, machine_pool := range d.Get(machine_pool).([]interface{}) {
 	machinePoolConfigs := make([]*models.V1alpha1AzureMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get(machine_pool).(*schema.Set).List() {
 		mp := toMachinePoolAzure(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
@@ -435,7 +438,7 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
 	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").(*schema.Set).List() {
+	for _, pack := range d.Get(pack).(*schema.Set).List() {
 		p := toPack(pack)
 		packValues = append(packValues, p)
 	}
@@ -451,26 +454,26 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1alpha1AzureMachinePoo
 	controlPlane := m[control_plane].(bool)
 	controlPlaneAsWorker := m[control_plane_as_worker].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, master)
 	}
 
 	var diskSize, diskType = DefaultDiskSize, DefaultDiskType
-	disks := m["disk"].([]interface{})
+	disks := m[disk].([]interface{})
 	if len(disks) > 0 {
 		disk0 := disks[0].(map[string]interface{})
-		diskSize = disk0["size_gb"].(int)
-		diskType = disk0["type"].(string)
+		diskSize = disk0[size_gb].(int)
+		diskType = disk0[disk_type].(string)
 	}
 
-	azs := make([]string, 0)
-	for _, az := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, az.(string))
+	azones := make([]string, 0)
+	for _, az := range m[azs].(*schema.Set).List() {
+		azones = append(azones, az.(string))
 	}
 
 	mp := &models.V1alpha1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1alpha1AzureMachinePoolCloudConfigEntity{
-			Azs:          azs,
-			InstanceType: m["instance_type"].(string),
+			Azs:          azones,
+			InstanceType: m[instance_type].(string),
 			OsDisk: &models.V1alpha1AzureOSDisk{
 				DiskSizeGB: int32(diskSize),
 				ManagedDisk: &models.V1alpha1ManagedDisk{
@@ -482,52 +485,13 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1alpha1AzureMachinePoo
 		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:           ptr.StringPtr(m[name].(string)),
+			Size:           ptr.Int32Ptr(int32(m[count].(int))),
 			UpdateStrategy: &models.V1alpha1UpdateStrategy{
-				Type: m["update_strategy"].(string),
+				Type: m[update_strategy].(string),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
 	return mp
-}
-
-func resourceClusterAwsImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
-
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
-
-	meta := toClusterMeta(d)
-
-	uid, err := c.ImportClusterAws(meta)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	d.SetId(uid)
-
-	stateConf := &resource.StateChangeConf{
-		Target:     []string{string(pending)},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 1 * time.Second,
-		Delay:      5 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	resourceClusterGcpRead(ctx, d, m)
-
-	if profiles := getCloudClusterProfiles(d); profiles != nil {
-		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	return diags
 }

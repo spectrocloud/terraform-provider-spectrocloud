@@ -15,11 +15,11 @@ func resourceCloudAccountGcp() *schema.Resource {
 		UpdateContext: resourceCloudAccountGcpUpdate,
 		DeleteContext: resourceCloudAccountGcpDelete,
 		Schema: map[string]*schema.Schema{
-			"name": {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"gcp_json_credentials": {
+			gcp_json_credentials: {
 				Type:     schema.TypeString,
 				Required: true,
 				Sensitive: true,
@@ -64,7 +64,7 @@ func resourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m in
 		return diags
 	}
 
-	if err := d.Set("name", account.Metadata.Name); err != nil {
+	if err := d.Set(name, account.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -108,11 +108,11 @@ func resourceCloudAccountGcpDelete(_ context.Context, d *schema.ResourceData, m 
 func toGcpAccount(d *schema.ResourceData) *models.V1alpha1GcpAccountEntity {
 	account := &models.V1alpha1GcpAccountEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name: d.Get(name).(string),
 			UID : d.Id(),
 		},
 		Spec: &models.V1alpha1GcpAccountEntitySpec{
-			JSONCredentials:        d.Get("gcp_json_credentials").(string),
+			JSONCredentials:        d.Get(gcp_json_credentials).(string),
 		},
 	}
 	return account
