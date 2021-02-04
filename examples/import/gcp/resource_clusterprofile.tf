@@ -10,7 +10,7 @@ data "spectrocloud_pack" "k8s_dashboard" {
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
-  name        = "cloud-addon-12"
+  name        = "cloud-addon-1"
   description = "add-on cp"
   cloud       = "vsphere"
   type        = "add-on"

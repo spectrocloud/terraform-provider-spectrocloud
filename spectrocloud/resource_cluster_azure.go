@@ -32,7 +32,7 @@ func resourceClusterAzure() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			cluster_prrofile_id: {
+			cluster_profile_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -263,7 +263,7 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 
 	// Update the kubeconfig
 	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
-		if err := d.Set(cluster_import_manifest_url, cluster.Status.ClusterImport.ImportLink); err != nil {
+		if err := d.Set(cluster_import_manifest_apply_command, cluster.Status.ClusterImport.ImportLink); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -418,7 +418,7 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 		},
 		Spec: &models.V1alpha1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
-			ProfileUID:      d.Get(cluster_prrofile_id).(string),
+			ProfileUID:      d.Get(cluster_profile_id).(string),
 			CloudConfig: &models.V1alpha1AzureClusterConfig{
 				Location:       ptr.StringPtr(cloudConfig[region].(string)),
 				SSHKey:         ptr.StringPtr(cloudConfig[ssh_key].(string)),
@@ -443,7 +443,7 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 		packValues = append(packValues, p)
 	}
 	cluster.Spec.PackValues = packValues
-	cluster.Spec.ClusterConfig = getClusterConfig(d)
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
 	return cluster
 }
 

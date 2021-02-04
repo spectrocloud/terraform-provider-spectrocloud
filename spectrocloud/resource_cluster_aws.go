@@ -33,7 +33,7 @@ func resourceClusterAws() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			cluster_prrofile_id: {
+			cluster_profile_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -224,7 +224,7 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 
 	// Update the kubeconfig
 	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
-		if err := d.Set(cluster_import_manifest_url, cluster.Status.ClusterImport.ImportLink); err != nil {
+		if err := d.Set(cluster_import_manifest_apply_command, cluster.Status.ClusterImport.ImportLink); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -370,7 +370,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		},
 		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
-			ProfileUID:      d.Get(cluster_prrofile_id).(string),
+			ProfileUID:      d.Get(cluster_profile_id).(string),
 			CloudConfig: &models.V1alpha1AwsClusterConfig{
 				SSHKeyName: cloudConfig[ssh_key_name].(string),
 				Region:     ptr.StringPtr(cloudConfig[region].(string)),
@@ -392,7 +392,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		packValues = append(packValues, p)
 	}
 	cluster.Spec.PackValues = packValues
-	cluster.Spec.ClusterConfig = getClusterConfig(d)
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
 	return cluster
 }
 

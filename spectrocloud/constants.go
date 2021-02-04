@@ -58,8 +58,8 @@ const (
 	azs                      = "azs"
 	rolling_update_scale_out = "RollingUpdateScaleOut"
 
-	cluster_prrofile_id = "cluster_profile_id"
-	cloud_account_id    = "cloud_account_id"
+	cluster_profile_id = "cluster_profile_id"
+	cloud_account_id   = "cloud_account_id"
 
 	cloud_config    = "cloud_config"
 	cloud_config_id = "cloud_config_id"
@@ -71,8 +71,8 @@ const (
 	control_plane           = "control_plane"
 	control_plane_as_worker = "control_plane_as_worker"
 
-	cluster_import_manifest     = "cluster_import_manifest"
-	cluster_import_manifest_url = "cluster_import_manifest_url"
+	cluster_import_manifest               = "cluster_import_manifest"
+	cluster_import_manifest_apply_command = "cluster_import_manifest_apply_command"
 
 	network = "network"
 	project = "project"

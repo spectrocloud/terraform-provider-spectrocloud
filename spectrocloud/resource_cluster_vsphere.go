@@ -32,7 +32,7 @@ func resourceClusterVsphere() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			cluster_prrofile_id: {
+			cluster_profile_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -287,7 +287,7 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
-		if err := d.Set(cluster_import_manifest_url, cluster.Status.ClusterImport.ImportLink); err != nil {
+		if err := d.Set(cluster_import_manifest_apply_command, cluster.Status.ClusterImport.ImportLink); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -471,7 +471,7 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 		},
 		Spec: &models.V1alpha1SpectroVsphereClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
-			ProfileUID:      d.Get(cluster_prrofile_id).(string),
+			ProfileUID:      d.Get(cluster_profile_id).(string),
 			CloudConfig: &models.V1alpha1VsphereClusterConfigEntity{
 				NtpServers: nil,
 				Placement: &models.V1alpha1VspherePlacementConfigEntity{
@@ -505,7 +505,7 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 		packValues = append(packValues, p)
 	}
 	cluster.Spec.PackValues = packValues
-	cluster.Spec.ClusterConfig = getClusterConfig(d)
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
 	return cluster
 }
 

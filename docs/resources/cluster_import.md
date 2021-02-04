@@ -72,7 +72,7 @@ resource "spectrocloud_cluster_import" "cluster" {
 ### Read-only
 
 - **cloud_config_id** (String)
-- **cluster_import_manifest_url** (String)
+- **cluster_import_manifest_apply_command** (String)
 - **cluster_import_manifest** (String)
 
 

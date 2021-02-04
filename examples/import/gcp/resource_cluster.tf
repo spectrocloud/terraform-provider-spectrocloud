@@ -33,4 +33,8 @@ resource "spectrocloud_cluster_import" "cluster" {
               enabled: false
      EOT
   }*/
+
+  provisioner "local-exec" {
+    command = "${spectrocloud_cluster_import.cluster.cluster_import_manifest_apply_command } --kubeconfig ${var.kubeconfig_path}"
+  }
 }

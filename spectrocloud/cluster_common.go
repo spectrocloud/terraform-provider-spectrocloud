@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/robfig/cron"
 	"hash/fnv"
 	"log"
 	"time"
+
+	"github.com/robfig/cron"
 
 	"github.com/go-openapi/strfmt"
 
@@ -106,109 +107,6 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	return diags
 }
 
-func cloudClusterImportFunc(c *client.V1alpha1Client, d *schema.ResourceData) (string, error) {
-	meta := toClusterMeta(d)
-	cloudType := d.Get(cloud).(string)
-	switch CloudType(cloudType) {
-	case cloud_type_aws:
-		return c.ImportClusterAws(meta)
-	case cloud_type_azure:
-		return c.ImportClusterAzure(meta)
-	case cloud_type_gcp:
-		return c.ImportClusterGcp(meta)
-	case cloud_type_vsphere:
-		return c.ImportClusterVsphere(meta)
-	}
-	return "", fmt.Errorf("failed to find cloud type %s", cloudType)
-}
-
-func cloudClusterReadFunc(ctx context.Context, d *schema.ResourceData, m interface{}) {
-	cloudType := d.Get(cloud).(string)
-	switch CloudType(cloudType) {
-	case cloud_type_aws:
-		resourceClusterAwsRead(ctx, d, m)
-	case cloud_type_azure:
-		resourceClusterAzureRead(ctx, d, m)
-	case cloud_type_gcp:
-		resourceClusterGcpRead(ctx, d, m)
-	case cloud_type_vsphere:
-		resourceClusterVsphereRead(ctx, d, m)
-	}
-}
-
-func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
-	var diags diag.Diagnostics
-	uid, err := cloudClusterImportFunc(c, d)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	d.SetId(uid)
-	stateConf := &resource.StateChangeConf{
-		Target:     []string{string(pending)},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 1 * time.Second,
-		Delay:      5 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	cloudClusterReadFunc(ctx, d, m)
-
-	if profiles := getCloudClusterProfiles(d); profiles != nil {
-		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	return diags
-}
-
-func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	cloudType := d.Get(cloud).(string)
-	switch CloudType(cloudType) {
-	case cloud_type_aws:
-		return resourceClusterAwsRead(ctx, d, m)
-	case cloud_type_azure:
-		return resourceClusterAzureRead(ctx, d, m)
-	case cloud_type_gcp:
-		return resourceClusterGcpRead(ctx, d, m)
-	case cloud_type_vsphere:
-		return resourceClusterVsphereRead(ctx, d, m)
-	}
-	return diag.FromErr(fmt.Errorf("failed to import cluster as cloud type '%s' is invalid", cloudType))
-}
-
-func resourceCloudClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
-	var diags diag.Diagnostics
-
-	clusterProfileId := d.Get(cluster_prrofile_id).(string)
-	profiles := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
-	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get(pack).(*schema.Set).List() {
-		p := toPack(pack)
-		packValues = append(packValues, p)
-	}
-
-	profiles = append(profiles, &models.V1alpha1SpectroClusterProfileEntity{
-		PackValues: packValues,
-		UID:        clusterProfileId,
-	})
-
-	err := c.UpdateBrownfieldCluster("", &models.V1alpha1SpectroClusterProfiles{
-		Profiles: profiles,
-	})
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	return diags
-}
-
 func resourcePackHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
@@ -296,49 +194,23 @@ func hash(s string) uint32 {
 	return h.Sum32()
 }
 
-func toClusterMeta(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
-	return &models.V1ObjectMetaInputEntity{
-		Name: d.Get(name).(string),
-	}
-}
-
-func getCloudClusterProfiles(d *schema.ResourceData) *models.V1alpha1SpectroClusterProfiles {
-	if clusterProfileUid := d.Get(cluster_prrofile_id); clusterProfileUid != nil {
-		profileEntities := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
-		packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-		for _, pack := range d.Get(pack).(*schema.Set).List() {
-			p := toPack(pack)
-			packValues = append(packValues, p)
-		}
-
-		profileEntities = append(profileEntities, &models.V1alpha1SpectroClusterProfileEntity{
-			PackValues: packValues,
-			UID:        clusterProfileUid.(string),
-		})
-		return &models.V1alpha1SpectroClusterProfiles{
-			Profiles: profileEntities,
-		}
-	}
-	return nil
-}
-
-func getClusterConfig(d *schema.ResourceData) *models.V1alpha1ClusterConfig {
+func toClusterConfig(d *schema.ResourceData) *models.V1alpha1ClusterConfig {
 	return &models.V1alpha1ClusterConfig{
-		MachineManagementConfig: getMachineManagementConfig(d),
+		MachineManagementConfig: toMachineManagementConfig(d),
 	}
 }
 
-func getMachineManagementConfig(d *schema.ResourceData) *models.V1alpha1MachineManagementConfig {
+func toMachineManagementConfig(d *schema.ResourceData) *models.V1alpha1MachineManagementConfig {
 	return &models.V1alpha1MachineManagementConfig{
-		OsPatchConfig: getOsPatchConfig(d),
+		OsPatchConfig: toOsPatchConfig(d),
 	}
 }
 
-func getOsPatchConfig(d *schema.ResourceData) *models.V1alpha1OsPatchConfig {
+func toOsPatchConfig(d *schema.ResourceData) *models.V1alpha1OsPatchConfig {
 	osPatchOnBoot := d.Get(os_patch_on_boot).(bool)
 	osPatchOnSchedule := d.Get(os_patch_schedule).(string)
 	osPatchAfter := d.Get(os_patch_after).(string)
-	if osPatchOnBoot || len(osPatchOnSchedule) > 0 || len(osPatchAfter) > 0{
+	if osPatchOnBoot || len(osPatchOnSchedule) > 0 || len(osPatchAfter) > 0 {
 		osPatchConfig := &models.V1alpha1OsPatchConfig{}
 		if osPatchOnBoot {
 			osPatchConfig.PatchOnBoot = osPatchOnBoot
@@ -357,34 +229,6 @@ func getOsPatchConfig(d *schema.ResourceData) *models.V1alpha1OsPatchConfig {
 		return osPatchConfig
 	}
 	return nil
-}
-
-func getSpectroClusterProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileEntity {
-	profiles := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
-	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get(pack).(*schema.Set).List() {
-		p := toPack(pack)
-		packValues = append(packValues, p)
-	}
-	profile := &models.V1alpha1SpectroClusterProfileEntity{
-		UID: d.Get("cluster_profile_id").(string),
-	}
-	if len(packValues) > 0 {
-		profile.PackValues = packValues
-	}
-	profiles = append(profiles, profile)
-	return profiles
-}
-
-func validateCloudType(data interface{}, path cty.Path) diag.Diagnostics {
-	var diags diag.Diagnostics
-	inCloudType := data.(string)
-	for _, cloudType := range cloud_types {
-		if cloudType == inCloudType {
-			return diags
-		}
-	}
-	return diag.FromErr(fmt.Errorf("cloud type '%s' is invalid. valid cloud types are %v", inCloudType, cloud_types))
 }
 
 func validateOsPatchSchedule(data interface{}, path cty.Path) diag.Diagnostics {

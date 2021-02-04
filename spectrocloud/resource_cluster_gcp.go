@@ -33,7 +33,7 @@ func resourceClusterGcp() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			cluster_prrofile_id: {
+			cluster_profile_id: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -236,7 +236,7 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set(cluster_import_manifest_url, cluster.Status.ClusterImport.ImportLink); err != nil {
+		if err := d.Set(cluster_import_manifest_apply_command, cluster.Status.ClusterImport.ImportLink); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -388,9 +388,26 @@ func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntit
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-	cluster.Spec.Profiles = getSpectroClusterProfiles(d)
-	cluster.Spec.ClusterConfig = getClusterConfig(d)
+	cluster.Spec.Profiles = toSpectroClusterProfiles(d)
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
 	return cluster
+}
+
+func toSpectroClusterProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileEntity {
+	profiles := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
+	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
+	for _, pack := range d.Get(pack).(*schema.Set).List() {
+		p := toPack(pack)
+		packValues = append(packValues, p)
+	}
+	profile := &models.V1alpha1SpectroClusterProfileEntity{
+		UID: d.Get(cluster_profile_id).(string),
+	}
+	if len(packValues) > 0 {
+		profile.PackValues = packValues
+	}
+	profiles = append(profiles, profile)
+	return profiles
 }
 
 func toGcpClusterSpec(d *schema.ResourceData, cloudConfig map[string]interface{}) *models.V1alpha1SpectroGcpClusterEntitySpec {
