@@ -90,6 +90,10 @@ resource "spectrocloud_cluster_azure" "cluster" {
 - **id** (String) The ID of this resource.
 - **pack** (Block Set) (see [below for nested schema](#nestedblock--pack))
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- **os_patch_on_boot** (Boolean, Optional) OS Patch on boot when set, updates security patch of host OS 
+of all nodes and monitors new nodes (which gets created when cluster is scaled up or cluster k8s version is upgraded) for security patch
+- **os_patch_schedule** (String, Optional) Cron schedule to patch security updates on host OS for all nodes. Please see https://en.wikipedia.org/wiki/Cron for valid cron syntax
+- **os_patch_after** (String, Optional) On demand security patch on host OS for all nodes. Please follow RFC3339 Date and Time Standards. Eg 2021-01-01T00:00:00.000Z
 
 ### Read-only
 
