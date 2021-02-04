@@ -370,6 +370,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		},
 		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
+			ProfileUID:      d.Get(cluster_prrofile_id).(string),
 			CloudConfig: &models.V1alpha1AwsClusterConfig{
 				SSHKeyName: cloudConfig[ssh_key_name].(string),
 				Region:     ptr.StringPtr(cloudConfig[region].(string)),
