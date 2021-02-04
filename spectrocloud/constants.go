@@ -2,6 +2,10 @@ package spectrocloud
 
 type State string
 
+var (
+	cloud_types = []string{string(cloud_type_aws), string(cloud_type_gcp), string(cloud_type_azure), string(cloud_type_vsphere)}
+)
+
 const (
 	running      State = "Running"
 	pending      State = "Pending"
@@ -33,7 +37,7 @@ const (
 	update_strategy          = "update_strategy"
 	instance_type            = "instance_type"
 	availability_zones       = "azs"
-	rolling_update_scale_out = "rolling_update_scale_out"
+	rolling_update_scale_out = "RollingUpdateScaleOut"
 
 	cluster_prrofile_id = "cluster_profile_id"
 	cloud_account_id    = "cloud_account_id"
@@ -53,4 +57,8 @@ const (
 	network = "network"
 	project = "project"
 	region  = "region"
+
+	os_patch_on_boot  = "os_patch_on_boot"
+	os_patch_schedule = "os_patch_schedule"
+	os_patch_after    = "os_patch_after"
 )

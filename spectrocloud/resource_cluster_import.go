@@ -27,9 +27,10 @@ func resourceClusterImport() *schema.Resource {
 				ForceNew: true,
 			},
 			cloud: {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:             schema.TypeString,
+				ForceNew:         true,
+				Required:         true,
+				ValidateDiagFunc: validateCloudType,
 			},
 			cloud_config_id: {
 				Type:     schema.TypeString,

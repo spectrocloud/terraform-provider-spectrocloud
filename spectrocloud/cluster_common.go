@@ -4,12 +4,19 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/robfig/cron"
 	"hash/fnv"
 	"log"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/go-openapi/strfmt"
+
+	"github.com/pkg/errors"
+
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
@@ -248,7 +255,7 @@ func toClusterMeta(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
 	}
 }
 
-func resourceCloudClusterProfilesGet(d *schema.ResourceData) *models.V1alpha1SpectroClusterProfiles {
+func getCloudClusterProfiles(d *schema.ResourceData) *models.V1alpha1SpectroClusterProfiles {
 	if clusterProfileUid := d.Get(cluster_prrofile_id); clusterProfileUid != nil {
 		profileEntities := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
 		packValues := make([]*models.V1alpha1PackValuesEntity, 0)
@@ -266,4 +273,94 @@ func resourceCloudClusterProfilesGet(d *schema.ResourceData) *models.V1alpha1Spe
 		}
 	}
 	return nil
+}
+
+func getClusterConfig(d *schema.ResourceData) *models.V1alpha1ClusterConfig {
+	return &models.V1alpha1ClusterConfig{
+		MachineManagementConfig: getMachineManagementConfig(d),
+	}
+}
+
+func getMachineManagementConfig(d *schema.ResourceData) *models.V1alpha1MachineManagementConfig {
+	return &models.V1alpha1MachineManagementConfig{
+		OsPatchConfig: getOsPatchConfig(d),
+	}
+}
+
+func getOsPatchConfig(d *schema.ResourceData) *models.V1alpha1OsPatchConfig {
+	osPatchOnBoot := d.Get(os_patch_on_boot).(bool)
+	osPatchOnSchedule := d.Get(os_patch_schedule).(string)
+	osPatchAfter := d.Get(os_patch_after).(string)
+	if osPatchOnBoot || len(osPatchOnSchedule) > 0 || len(osPatchAfter) > 0{
+		osPatchConfig := &models.V1alpha1OsPatchConfig{}
+		if osPatchOnBoot {
+			osPatchConfig.PatchOnBoot = osPatchOnBoot
+		}
+		if len(osPatchOnSchedule) > 0 {
+			osPatchConfig.Schedule = osPatchOnSchedule
+		}
+		if len(osPatchAfter) > 0 {
+			dateTime, _ := strfmt.ParseDateTime(osPatchAfter)
+			osPatchConfig.OnDemandPatchAfter = dateTime
+		} else {
+			//setting Zero time in request
+			zeroTime, _ := strfmt.ParseDateTime("0001-01-01T00:00:00.000Z")
+			osPatchConfig.OnDemandPatchAfter = zeroTime
+		}
+		return osPatchConfig
+	}
+	return nil
+}
+
+func getSpectroClusterProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileEntity {
+	profiles := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
+	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
+	for _, pack := range d.Get("pack").(*schema.Set).List() {
+		p := toPack(pack)
+		packValues = append(packValues, p)
+	}
+	profile := &models.V1alpha1SpectroClusterProfileEntity{
+		UID: d.Get("cluster_profile_id").(string),
+	}
+	if len(packValues) > 0 {
+		profile.PackValues = packValues
+	}
+	profiles = append(profiles, profile)
+	return profiles
+}
+
+func validateCloudType(data interface{}, path cty.Path) diag.Diagnostics {
+	var diags diag.Diagnostics
+	inCloudType := data.(string)
+	for _, cloudType := range cloud_types {
+		if cloudType == inCloudType {
+			return diags
+		}
+	}
+	return diag.FromErr(fmt.Errorf("cloud type '%s' is invalid. valid cloud types are %v", inCloudType, cloud_types))
+}
+
+func validateOsPatchSchedule(data interface{}, path cty.Path) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if data != nil {
+		if _, err := cron.ParseStandard(data.(string)); err != nil {
+			return diag.FromErr(errors.Wrap(err, "os patch schedule is invalid. Please see https://en.wikipedia.org/wiki/Cron for valid cron syntax"))
+		}
+	}
+	return diags
+}
+
+func validateOsPatchOnDemandAfter(data interface{}, path cty.Path) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if data != nil {
+		if patchTime, err := time.Parse(time.RFC3339, data.(string)); err != nil {
+			return diag.FromErr(errors.Wrap(err, "time for 'os_patch_after' is invalid. Please follow RFC3339 Date and Time Standards. Eg 2021-01-01T00:00:00.000Z "))
+		} else {
+			if time.Now().After(patchTime.Add(10 * time.Minute)) {
+				return diag.FromErr(fmt.Errorf("valid timestamp is timestamp which is 10 mins ahead of current timestamp. Eg any timestamp ahead of %v", time.Now().Add(10*time.Minute).Format(time.RFC3339)))
+			}
+		}
+	}
+
+	return diags
 }

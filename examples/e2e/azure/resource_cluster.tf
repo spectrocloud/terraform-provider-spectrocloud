@@ -3,6 +3,9 @@ resource "spectrocloud_cluster_azure" "cluster" {
   name               = "az-picard-2"
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
   cloud_account_id   = spectrocloud_cloudaccount_azure.account.id
+  os_patch_on_boot = true
+  os_patch_schedule = "0 0 * * 0"
+  #os_patch_after = "2021-02-03T14:59:37.000Z"
 
   cloud_config {
     subscription_id = var.azure_subscription_id

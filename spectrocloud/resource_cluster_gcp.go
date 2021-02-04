@@ -43,6 +43,20 @@ func resourceClusterGcp() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			os_patch_on_boot: {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			os_patch_schedule: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+			},
+			os_patch_after: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+			},
 			cloud_config_id: {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -285,10 +299,10 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cloudConfigId := d.Get("cloud_config_id").(string)
+	cloudConfigId := d.Get(cloud_config_id).(string)
 
-	if d.HasChange("machine_pool") {
-		oraw, nraw := d.GetChange("machine_pool")
+	if d.HasChange(machine_pool) {
+		oraw, nraw := d.GetChange(machine_pool)
 		if oraw == nil {
 			oraw = new(schema.Set)
 		}
@@ -302,7 +316,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 		osMap := make(map[string]interface{})
 		for _, mp := range os.List() {
 			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
+			osMap[machinePool[name].(string)] = machinePool
 		}
 
 		for _, mp := range ns.List() {
@@ -344,7 +358,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("pack") {
+	if d.HasChanges(pack) {
 		log.Printf("Updating packs")
 		cluster := toGcpCluster(d)
 		if err := c.UpdateClusterGcp(cluster); err != nil {
@@ -359,39 +373,28 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntity {
 	// gnarly, I know! =/
-	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	//clientSecret := strfmt.Password(d.Get("gcp_client_secret").(string))
+	cloudConfig := d.Get(cloud_config).([]interface{})[0].(map[string]interface{})
 
 	cluster := &models.V1alpha1SpectroGcpClusterEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name: d.Get(name).(string),
 			UID:  d.Id(),
 		},
 		Spec: toGcpClusterSpec(d, cloudConfig),
 	}
-
-	//for _, machine_pool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1alpha1GcpMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get(machine_pool).(*schema.Set).List() {
 		mp := toMachinePoolGcp(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
-
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-
-	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").(*schema.Set).List() {
-		p := toPack(pack)
-		packValues = append(packValues, p)
-	}
-	cluster.Spec.PackValues = packValues
-
+	cluster.Spec.Profiles = getSpectroClusterProfiles(d)
+	cluster.Spec.ClusterConfig = getClusterConfig(d)
 	return cluster
 }
 
 func toGcpClusterSpec(d *schema.ResourceData, cloudConfig map[string]interface{}) *models.V1alpha1SpectroGcpClusterEntitySpec {
 	clusterSpec := &models.V1alpha1SpectroGcpClusterEntitySpec{
-		ProfileUID:  d.Get(cluster_prrofile_id).(string),
 		CloudConfig: toGcpClusterConfig(cloudConfig),
 	}
 
@@ -434,16 +437,16 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1alpha1GcpMachinePoolCon
 	mp := &models.V1alpha1GcpMachinePoolConfigEntity{
 		CloudConfig: &models.V1alpha1GcpMachinePoolCloudConfigEntity{
 			Azs:            azs,
-			InstanceType:   ptr.StringPtr(m["instance_type"].(string)),
-			RootDeviceSize: int64(m["disk_size_gb"].(int)),
+			InstanceType:   ptr.StringPtr(m[instance_type].(string)),
+			RootDeviceSize: int64(m[disk_size_in_gb].(int)),
 		},
 		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:           ptr.StringPtr(m[name].(string)),
+			Size:           ptr.Int32Ptr(int32(m[count].(int))),
 			UpdateStrategy: &models.V1alpha1UpdateStrategy{
-				Type: m["update_strategy"].(string),
+				Type: "RollingUpdateScaleOut",
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
@@ -484,7 +487,7 @@ func resourceClusterGcpImport(ctx context.Context, d *schema.ResourceData, m int
 
 	resourceClusterGcpRead(ctx, d, m)
 
-	if profiles := resourceCloudClusterProfilesGet(d); profiles != nil {
+	if profiles := getCloudClusterProfiles(d); profiles != nil {
 		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
 			return diag.FromErr(err)
 		}

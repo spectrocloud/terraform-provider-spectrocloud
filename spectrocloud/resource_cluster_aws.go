@@ -43,6 +43,20 @@ func resourceClusterAws() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			os_patch_on_boot: {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			os_patch_schedule: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+			},
+			os_patch_after: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+			},
 			cloud_config_id: {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -125,7 +139,7 @@ func resourceClusterAws() *schema.Resource {
 						update_strategy: {
 							Type:     schema.TypeString,
 							Optional: true,
-							Default:  "rolling_update_scale_out",
+							Default:  rolling_update_scale_out,
 						},
 						disk_size_in_gb: {
 							Type:     schema.TypeInt,
@@ -339,7 +353,6 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	//clientSecret := strfmt.Password(d.Get("aws_client_secret").(string))
 
 	cluster := &models.V1alpha1SpectroAwsClusterEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -348,7 +361,6 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		},
 		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get(cloud_account_id).(string)),
-			ProfileUID:      d.Get(cluster_prrofile_id).(string),
 			CloudConfig: &models.V1alpha1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
@@ -356,7 +368,6 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		},
 	}
 
-	//for _, machine_pool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1alpha1AwsMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolAws(machinePool)
@@ -371,7 +382,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		packValues = append(packValues, p)
 	}
 	cluster.Spec.PackValues = packValues
-
+	cluster.Spec.ClusterConfig = getClusterConfig(d)
 	return cluster
 }
 
@@ -442,7 +453,7 @@ func resourceClusterAzureImport(ctx context.Context, d *schema.ResourceData, m i
 
 	resourceClusterGcpRead(ctx, d, m)
 
-	if profiles := resourceCloudClusterProfilesGet(d); profiles != nil {
+	if profiles := getCloudClusterProfiles(d); profiles != nil {
 		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
 			return diag.FromErr(err)
 		}

@@ -27,7 +27,7 @@ func resourceClusterAzure() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
-			"name": {
+			name: {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -42,15 +42,29 @@ func resourceClusterAzure() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"cloud_config_id": {
+			os_patch_on_boot: {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			os_patch_schedule: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+			},
+			os_patch_after: {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+			},
+			cloud_config_id: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"kubeconfig": {
+			kubeconfig: {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"cloud_config": {
+			cloud_config: {
 				Type:     schema.TypeList,
 				ForceNew: true,
 				Required: true,
@@ -76,28 +90,28 @@ func resourceClusterAzure() *schema.Resource {
 					},
 				},
 			},
-			"pack": {
+			pack: {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      resourcePackHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"name": {
+						name: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"tag": {
+						tag: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"values": {
+						values: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 					},
 				},
 			},
-			"machine_pool": {
+			machine_pool: {
 				Type:     schema.TypeSet,
 				Required: true,
 				Set:      resourceMachinePoolAzureHash,
@@ -116,23 +130,23 @@ func resourceClusterAzure() *schema.Resource {
 
 							//ForceNew: true,
 						},
-						"name": {
+						name: {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
 						},
-						"count": {
+						count: {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
-						"instance_type": {
+						instance_type: {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"update_strategy": {
+						update_strategy: {
 							Type:     schema.TypeString,
 							Optional: true,
-							Default:  "rolling_update_scale_out",
+							Default:  rolling_update_scale_out,
 						},
 						"disk": {
 							Type:     schema.TypeList,
@@ -426,7 +440,7 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 		packValues = append(packValues, p)
 	}
 	cluster.Spec.PackValues = packValues
-
+	cluster.Spec.ClusterConfig = getClusterConfig(d)
 	return cluster
 }
 
@@ -510,7 +524,7 @@ func resourceClusterAwsImport(ctx context.Context, d *schema.ResourceData, m int
 
 	resourceClusterGcpRead(ctx, d, m)
 
-	if profiles := resourceCloudClusterProfilesGet(d); profiles != nil {
+	if profiles := getCloudClusterProfiles(d); profiles != nil {
 		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
 			return diag.FromErr(err)
 		}
