@@ -1,13 +1,13 @@
 package client
 
 import (
+	"strings"
+
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
-	"strings"
 
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1alpha1"
 )
-
 
 func (h *V1alpha1Client) DeleteCluster(uid string) error {
 	client, err := h.getClusterClient()
@@ -60,3 +60,29 @@ func (h *V1alpha1Client) GetClusterKubeConfig(uid string) (string, error) {
 	return builder.String(), nil
 }
 
+func (h *V1alpha1Client) GetClusterImportManifest(uid string) (string, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return "", err
+	}
+
+	builder := new(strings.Builder)
+	params := clusterC.NewV1alpha1SpectroClustersUIDInstallerManifestParamsWithContext(h.ctx).WithUID(uid)
+	_, err = client.V1alpha1SpectroClustersUIDInstallerManifest(params, builder)
+	if err != nil {
+		return "", err
+	}
+
+	return builder.String(), nil
+}
+
+func (h *V1alpha1Client) UpdateBrownfieldCluster(uid string, profiles *models.V1alpha1SpectroClusterProfiles) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil
+	}
+
+	params := clusterC.NewV1alpha1SpectroClustersUpdateProfilesParamsWithContext(h.ctx).WithUID(uid).WithBody(profiles)
+	_, err = client.V1alpha1SpectroClustersUpdateProfiles(params)
+	return err
+}

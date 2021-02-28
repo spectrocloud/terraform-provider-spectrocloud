@@ -2,14 +2,15 @@ package spectrocloud
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"log"
-	"time"
 )
 
 func resourceClusterAws() *schema.Resource {
@@ -45,6 +46,20 @@ func resourceClusterAws() *schema.Resource {
 			"cloud_config_id": {
 				Type:     schema.TypeString,
 				Computed: true,
+			},
+			"os_patch_on_boot": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"os_patch_schedule": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+			},
+			"os_patch_after": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 			},
 			"kubeconfig": {
 				Type:     schema.TypeString,
@@ -166,7 +181,7 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 		Pending:    resourceClusterCreatePendingStates,
 		Target:     []string{"Running"},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1 * time.Minute,
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
 	}
@@ -207,20 +222,36 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
-	if err := d.Set("machine_pool", mp); err != nil {
-		return diag.FromErr(err)
-	}
-
 	// Update the kubeconfig
-	kubeconfig, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("kubeconfig", kubeconfig); err != nil {
-		return diag.FromErr(err)
+	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
+		if err := d.Set("cluster_import_manifest_apply_command", cluster.Status.ClusterImport.ImportLink); err != nil {
+			return diag.FromErr(err)
+		}
+
+		importManifest, err := c.GetClusterImportManifest(uid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("cluster_import_manifest", importManifest); err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		kubecfg, err := c.GetClusterKubeConfig(uid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("kubeconfig", kubecfg); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
+	//for brownfield, until cluster is not in running state, don't get machine pool
+	if cluster.Status.ClusterImport == nil || cluster.Status.State == "Running" {
+		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
+		if err := d.Set("machine_pool", mp); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	return diags
 }
 
@@ -342,10 +373,10 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		},
 		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			ProfileUID:      ptr.StringPtr(d.Get("cluster_profile_id").(string)),
+			ProfileUID:      d.Get("cluster_profile_id").(string),
 			CloudConfig: &models.V1alpha1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
-				Region:  ptr.StringPtr(cloudConfig["region"].(string)),
+				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
 			},
 		},
 	}
@@ -365,6 +396,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		packValues = append(packValues, p)
 	}
 	cluster.Spec.PackValues = packValues
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster
 }
