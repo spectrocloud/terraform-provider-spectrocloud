@@ -22,7 +22,7 @@ resource "spectrocloud_privatecloudgateway_ippool" "ippool" {
   gateway = "10.10.10.1"
   nameserver_addresses = "8.8.8.8"
   nameserver_search_suffix = "test.com"
-  restrict_to_single_cluster = true
+  restrict_to_single_cluster = false
 }
 
 resource "spectrocloud_privatecloudgateway_ippool" "ippoolprod" {
@@ -44,7 +44,7 @@ resource "spectrocloud_privatecloudgateway_ippool" "ippoolprod" {
 
 - **name** (String)
 - **private_cloud_gateway_id** (String)
-- **network_type** (String) one of ["range", "subnet""]
+- **network_type** (String) one of [`range`, `subnet`]
 - **prefix** (Int)
 - **gateway** (String)
 - **ip_start_range** (String) if `network_type` is `range`
