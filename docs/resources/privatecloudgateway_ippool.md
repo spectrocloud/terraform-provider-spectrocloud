@@ -32,8 +32,8 @@ resource "spectrocloud_privatecloudgateway_ippool" "ippoolprod" {
   subnet_cidr = "10.10.10.100/16"
   prefix = 30
   gateway = "10.10.10.1"
-  nameserver_addresses = "8.8.8.8"
-  nameserver_search_suffix = "test.com"
+  nameserver_addresses = ["8.8.8.8", "9.9.9.9"]
+  nameserver_search_suffix = ["test.com", "dev.com"]
   restrict_to_single_cluster = true
 }
 ```
@@ -53,6 +53,6 @@ resource "spectrocloud_privatecloudgateway_ippool" "ippoolprod" {
 
 ### Optional
 
-- **nameserver_addresses** (String) Comma seperated value
-- **nameserver_search_suffix** (String) Comma seperated value
+- **nameserver_addresses** ([]String) String array as set
+- **nameserver_search_suffix** ([]String) String array as set
 - **restrict_to_single_cluster** (Boolean)

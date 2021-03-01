@@ -6,8 +6,8 @@ resource "spectrocloud_privatecloudgateway_ippool" "ippool1" {
   ip_end_range = "10.12.10.125"
   prefix = 24
   gateway = "10.12.10.1"
-  nameserver_addresses = "8.8.8.8"
-  nameserver_search_suffix = "test.com"
+  nameserver_addresses = ["8.8.8.8"]
+  nameserver_search_suffix = ["test.com"]
   restrict_to_single_cluster = true
 }
 
@@ -18,7 +18,7 @@ resource "spectrocloud_privatecloudgateway_ippool" "ippool2" {
   subnet_cidr = "100.12.10.120/16"
   prefix = 30
   gateway = "100.12.10.1"
-  nameserver_addresses = "8.8.8.8"
-  nameserver_search_suffix = "test.com"
+  nameserver_addresses = ["8.8.8.8"]
+  nameserver_search_suffix = ["test.com"]
   restrict_to_single_cluster = true
 }
