@@ -67,6 +67,8 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 			"nameserver_addresses": {
 				Type:     schema.TypeSet,
 				Optional: true,
+				Set:      schema.HashString,
+				MinItems: 1,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -74,6 +76,8 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 			"nameserver_search_suffix": {
 				Type:     schema.TypeSet,
 				Optional: true,
+				Set:      schema.HashString,
+				MinItems: 1,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -202,13 +206,19 @@ func toIpPool(d *schema.ResourceData) *models.V1alpha1IPPoolInputEntity {
 	}
 
 	if d.Get("nameserver_addresses") != nil {
-		addresses := d.Get("nameserver_addresses").([]string)
+		addresses := make([]string, 0)
+		for _, az := range d.Get("nameserver_addresses").(*schema.Set).List() {
+			addresses = append(addresses, az.(string))
+		}
 		pool.Nameserver.Addresses = addresses
 	}
 
 	if d.Get("nameserver_search_suffix") != nil {
-		searchSuffix := d.Get("nameserver_search_suffix").([]string)
-		pool.Nameserver.Search = searchSuffix
+		searchArr := make([]string, 0)
+		for _, az := range d.Get("nameserver_search_suffix").(*schema.Set).List() {
+			searchArr = append(searchArr, az.(string))
+		}
+		pool.Nameserver.Search = searchArr
 	}
 
 	return &models.V1alpha1IPPoolInputEntity{
