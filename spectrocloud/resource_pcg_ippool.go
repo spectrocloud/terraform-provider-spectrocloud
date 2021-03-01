@@ -3,7 +3,6 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -66,12 +65,18 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 				Required: true,
 			},
 			"nameserver_addresses": {
-				Type:     schema.TypeString,
+				Type:     schema.TypeSet,
 				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			"nameserver_search_suffix": {
-				Type:     schema.TypeString,
+				Type:     schema.TypeSet,
 				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			"restrict_to_single_cluster": {
 				Type:     schema.TypeBool,
@@ -140,11 +145,11 @@ func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface
 	}
 
 	if pool.Spec.Pool.Nameserver != nil && len(pool.Spec.Pool.Nameserver.Addresses) > 0 {
-		if err := d.Set("nameserver_addresses", strings.Join(pool.Spec.Pool.Nameserver.Addresses, ",")); err != nil {
+		if err := d.Set("nameserver_addresses", pool.Spec.Pool.Nameserver.Addresses); err != nil {
 			return diag.FromErr(err)
 		}
 	} else if pool.Spec.Pool.Nameserver != nil && len(pool.Spec.Pool.Nameserver.Search) > 0 {
-		if err := d.Set("nameserver_search_suffix", strings.Join(pool.Spec.Pool.Nameserver.Search, ",")); err != nil {
+		if err := d.Set("nameserver_search_suffix", pool.Spec.Pool.Nameserver.Search); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -197,11 +202,13 @@ func toIpPool(d *schema.ResourceData) *models.V1alpha1IPPoolInputEntity {
 	}
 
 	if d.Get("nameserver_addresses") != nil {
-		pool.Nameserver.Addresses = strings.Split(d.Get("nameserver_addresses").(string), ",")
+		addresses := d.Get("nameserver_addresses").([]string)
+		pool.Nameserver.Addresses = addresses
 	}
 
 	if d.Get("nameserver_search_suffix") != nil {
-		pool.Nameserver.Search = strings.Split(d.Get("nameserver_search_suffix").(string), ",")
+		searchSuffix := d.Get("nameserver_search_suffix").([]string)
+		pool.Nameserver.Search = searchSuffix
 	}
 
 	return &models.V1alpha1IPPoolInputEntity{
