@@ -68,7 +68,6 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      schema.HashString,
-				MinItems: 1,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -77,7 +76,6 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      schema.HashString,
-				MinItems: 1,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
