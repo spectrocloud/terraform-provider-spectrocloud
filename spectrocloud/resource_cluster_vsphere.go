@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -495,6 +496,11 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 		mp := toMachinePoolVsphere(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
+
+	// sort
+	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
+		return machinePoolConfigs[i].PoolConfig.IsControlPlane
+	})
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
