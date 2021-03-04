@@ -34,6 +34,20 @@ func (h *V1alpha1Client) UpdateClusterVsphere(cluster *models.V1alpha1SpectroVsp
 	return err
 }
 
+func (h *V1alpha1Client) UpdateClusterProfileValues(clusterUID string, body *models.V1alpha1SpectroClusterProfiles) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil
+	}
+
+	//uid := cluster.Metadata.UID
+	//params := clusterC.NewV1alpha1SpectroClustersVsphereUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(cluster)
+	//var body *models.V1alpha1SpectroClusterProfiles
+	params := clusterC.NewV1alpha1SpectroClustersUpdateProfilesParamsWithContext(h.ctx).WithUID(clusterUID).WithBody(body)
+	_, err = client.V1alpha1SpectroClustersUpdateProfiles(params)
+	return err
+}
+
 func (h *V1alpha1Client) CreateMachinePoolVsphere(cloudConfigId string, machinePool *models.V1alpha1VsphereMachinePoolConfigEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {

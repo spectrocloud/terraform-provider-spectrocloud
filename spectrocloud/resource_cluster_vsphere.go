@@ -448,7 +448,15 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	if d.HasChanges("pack") {
 		log.Printf("Updating packs")
 		cluster := toVsphereCluster(d)
-		if err := c.UpdateClusterVsphere(cluster); err != nil {
+		body := &models.V1alpha1SpectroClusterProfiles{
+			Profiles: []*models.V1alpha1SpectroClusterProfileEntity{
+				{
+					UID: cluster.Spec.ProfileUID,
+					PackValues: cluster.Spec.PackValues,
+				},
+			},
+		}
+		if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
 			return diag.FromErr(err)
 		}
 	}
