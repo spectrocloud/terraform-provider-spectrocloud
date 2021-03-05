@@ -354,9 +354,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//}
 
 	if d.HasChanges("pack") {
-		log.Printf("Updating packs")
-		cluster := toGcpCluster(d)
-		if err := c.UpdateClusterGcp(cluster); err != nil {
+		if err := updatePacks(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}

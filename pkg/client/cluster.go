@@ -76,7 +76,7 @@ func (h *V1alpha1Client) GetClusterImportManifest(uid string) (string, error) {
 	return builder.String(), nil
 }
 
-func (h *V1alpha1Client) UpdateBrownfieldCluster(uid string, profiles *models.V1alpha1SpectroClusterProfiles) error {
+func (h *V1alpha1Client) UpdateClusterProfileValues(uid string, profiles *models.V1alpha1SpectroClusterProfiles) error {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil

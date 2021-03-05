@@ -446,9 +446,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	//}
 
 	if d.HasChanges("pack") {
-		log.Printf("Updating packs")
-		cluster := toVsphereCluster(d)
-		if err := c.UpdateClusterVsphere(cluster); err != nil {
+		if err := updatePacks(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}

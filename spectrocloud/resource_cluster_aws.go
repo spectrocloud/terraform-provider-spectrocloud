@@ -349,9 +349,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//}
 
 	if d.HasChanges("pack") {
-		log.Printf("Updating packs")
-		cluster := toAwsCluster(d)
-		if err := c.UpdateClusterAws(cluster); err != nil {
+		if err := updatePacks(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}
