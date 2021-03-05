@@ -60,6 +60,31 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1alpha1Client, id st
 	return err
 }
 
+func updatePacks(c *client.V1alpha1Client, d *schema.ResourceData) error {
+	log.Printf("Updating packs")
+	body := &models.V1alpha1SpectroClusterProfiles{
+		Profiles: []*models.V1alpha1SpectroClusterProfileEntity{
+			{
+				UID:        d.Get("cluster_profile_id").(string),
+				PackValues: toPackValues(d),
+			},
+		},
+	}
+	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
+		return err
+	}
+	return nil
+}
+
+func toPackValues(d *schema.ResourceData) []*models.V1alpha1PackValuesEntity {
+	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
+	for _, pack := range d.Get("pack").(*schema.Set).List() {
+		p := toPack(pack)
+		packValues = append(packValues, p)
+	}
+	return packValues
+}
+
 func toPack(pSrc interface{}) *models.V1alpha1PackValuesEntity {
 	p := pSrc.(map[string]interface{})
 

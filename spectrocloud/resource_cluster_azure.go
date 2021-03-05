@@ -394,9 +394,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	//}
 
 	if d.HasChanges("pack") {
-		log.Printf("Updating packs")
-		cluster := toAzureCluster(d)
-		if err := c.UpdateClusterAzure(cluster); err != nil {
+		if err := updatePacks(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}

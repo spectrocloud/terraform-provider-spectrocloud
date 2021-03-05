@@ -107,7 +107,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 	cloudClusterReadFunc(ctx, d, m)
 
 	if profiles := toCloudClusterProfiles(d); profiles != nil {
-		if err := c.UpdateBrownfieldCluster(uid, profiles); err != nil {
+		if err := c.UpdateClusterProfileValues(uid, profiles); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -176,7 +176,7 @@ func resourceCloudClusterUpdate(ctx context.Context, d *schema.ResourceData, m i
 		UID:        clusterProfileId,
 	})
 
-	err := c.UpdateBrownfieldCluster("", &models.V1alpha1SpectroClusterProfiles{
+	err := c.UpdateClusterProfileValues(d.Id(), &models.V1alpha1SpectroClusterProfiles{
 		Profiles: profiles,
 	})
 	if err != nil {
