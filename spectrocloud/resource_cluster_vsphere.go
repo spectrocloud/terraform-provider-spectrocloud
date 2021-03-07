@@ -105,9 +105,8 @@ func resourceClusterVsphere() *schema.Resource {
 				},
 			},
 			"pack": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
-				Set:      resourcePackHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -503,7 +502,7 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
 	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").(*schema.Set).List() {
+	for _, pack := range d.Get("pack").([]interface{}) {
 		p := toPack(pack)
 		packValues = append(packValues, p)
 	}

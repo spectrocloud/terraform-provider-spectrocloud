@@ -78,7 +78,7 @@ func updatePacks(c *client.V1alpha1Client, d *schema.ResourceData) error {
 
 func toPackValues(d *schema.ResourceData) []*models.V1alpha1PackValuesEntity {
 	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").(*schema.Set).List() {
+	for _, pack := range d.Get("pack").([]interface{}) {
 		p := toPack(pack)
 		packValues = append(packValues, p)
 	}
@@ -127,17 +127,6 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	return diags
-}
-
-func resourcePackHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["tag"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["values"].(string)))
-
-	return int(hash(buf.String()))
 }
 
 func resourceMachinePoolAzureHash(v interface{}) int {
@@ -212,7 +201,7 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 
 func hash(s string) uint32 {
 	h := fnv.New32a()
-	h.Write([]byte(s))
+	_, _ = h.Write([]byte(s))
 	return h.Sum32()
 }
 
@@ -253,7 +242,7 @@ func toOsPatchConfig(d *schema.ResourceData) *models.V1alpha1OsPatchConfig {
 	return nil
 }
 
-func validateOsPatchSchedule(data interface{}, path cty.Path) diag.Diagnostics {
+func validateOsPatchSchedule(data interface{}, _ cty.Path) diag.Diagnostics {
 	var diags diag.Diagnostics
 	if data != nil {
 		if _, err := cron.ParseStandard(data.(string)); err != nil {
@@ -263,7 +252,7 @@ func validateOsPatchSchedule(data interface{}, path cty.Path) diag.Diagnostics {
 	return diags
 }
 
-func validateOsPatchOnDemandAfter(data interface{}, path cty.Path) diag.Diagnostics {
+func validateOsPatchOnDemandAfter(data interface{}, _ cty.Path) diag.Diagnostics {
 	var diags diag.Diagnostics
 	if data != nil {
 		if patchTime, err := time.Parse(time.RFC3339, data.(string)); err != nil {

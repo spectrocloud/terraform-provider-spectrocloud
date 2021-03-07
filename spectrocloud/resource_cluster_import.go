@@ -58,9 +58,8 @@ func resourceClusterImport() *schema.Resource {
 				Optional: true,
 			},
 			"pack": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
-				Set:      resourcePackHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -159,14 +158,14 @@ func cloudClusterReadFunc(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 }
 
-func resourceCloudClusterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1alpha1Client)
 	var diags diag.Diagnostics
 
 	clusterProfileId := d.Get("cluster_profile_id").(string)
 	profiles := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
 	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").(*schema.Set).List() {
+	for _, pack := range d.Get("pack").([]interface{}) {
 		p := toPack(pack)
 		packValues = append(packValues, p)
 	}
@@ -189,7 +188,7 @@ func toCloudClusterProfiles(d *schema.ResourceData) *models.V1alpha1SpectroClust
 	if clusterProfileUid := d.Get("cluster_profile_id"); clusterProfileUid != nil {
 		profileEntities := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
 		packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-		for _, pack := range d.Get("pack").(*schema.Set).List() {
+		for _, pack := range d.Get("pack").([]interface{}) {
 			p := toPack(pack)
 			packValues = append(packValues, p)
 		}
