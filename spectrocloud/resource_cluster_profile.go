@@ -8,6 +8,7 @@ import (
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -68,6 +69,13 @@ func resourceClusterProfile() *schema.Resource {
 						"values": {
 							Type:     schema.TypeString,
 							Required: true,
+							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+								// UI strips the trailing newline on save
+								if strings.TrimSuffix(old, "\n") == strings.TrimSuffix(new, "\n") {
+									return true
+								}
+								return false
+							},
 						},
 					},
 				},
