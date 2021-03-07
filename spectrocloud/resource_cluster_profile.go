@@ -71,7 +71,7 @@ func resourceClusterProfile() *schema.Resource {
 							Required: true,
 							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 								// UI strips the trailing newline on save
-								if strings.TrimSuffix(old, "\n") == strings.TrimSuffix(new, "\n") {
+								if strings.TrimSpace(old) == strings.TrimSpace(new) {
 									return true
 								}
 								return false
@@ -222,7 +222,8 @@ func toClusterProfilePack(pSrc interface{}) *models.V1alpha1PackEntity {
 		Name:   ptr.StringPtr(p["name"].(string)),
 		Tag:    ptr.StringPtr(p["tag"].(string)),
 		UID:    ptr.StringPtr(p["uid"].(string)),
-		Values: p["values"].(string),
+		// UI strips a single newline, so we should do the same
+		Values: strings.TrimSpace(p["values"].(string)),
 	}
 	return pack
 }
