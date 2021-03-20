@@ -2,14 +2,16 @@ package spectrocloud
 
 import (
 	"context"
+
+	"log"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"log"
-	"strings"
-	"time"
 )
 
 func resourceClusterProfile() *schema.Resource {
@@ -42,10 +44,10 @@ func resourceClusterProfile() *schema.Resource {
 			"type": {
 				Type:     schema.TypeString,
 				Optional: true,
-				Default: "add-on",
+				Default:  "add-on",
 				ForceNew: true,
 			},
-			"pack" : {
+			"pack": {
 				Type:     schema.TypeList,
 				Required: true,
 				Elem: &schema.Resource{
@@ -197,14 +199,13 @@ func toClusterProfile(d *schema.ResourceData) *models.V1alpha1ClusterProfileEnti
 		},
 		Spec: &models.V1alpha1ClusterProfileEntitySpec{
 			Template: &models.V1alpha1ClusterProfileTemplateDraft{
-				CloudType:       models.V1alpha1CloudType(d.Get("cloud").(string)),
-				Type: d.Get("type").(string),
+				CloudType: models.V1alpha1CloudType(d.Get("cloud").(string)),
+				Type:      models.V1alpha1ProfileType(d.Get("type").(string)),
 			},
 		},
 	}
 
-
-	packs := make([]*models.V1alpha1PackEntity, 0)
+	packs := make([]*models.V1alpha1PackManifestEntity, 0)
 	for _, pack := range d.Get("pack").([]interface{}) {
 		p := toClusterProfilePack(pack)
 		packs = append(packs, p)
@@ -214,14 +215,14 @@ func toClusterProfile(d *schema.ResourceData) *models.V1alpha1ClusterProfileEnti
 	return cluster
 }
 
-func toClusterProfilePack(pSrc interface{}) *models.V1alpha1PackEntity {
+func toClusterProfilePack(pSrc interface{}) *models.V1alpha1PackManifestEntity {
 	p := pSrc.(map[string]interface{})
 
-	pack := &models.V1alpha1PackEntity{
+	pack := &models.V1alpha1PackManifestEntity{
 		//Layer:  p["layer"].(string),
-		Name:   ptr.StringPtr(p["name"].(string)),
-		Tag:    ptr.StringPtr(p["tag"].(string)),
-		UID:    ptr.StringPtr(p["uid"].(string)),
+		Name: ptr.StringPtr(p["name"].(string)),
+		Tag:  p["tag"].(string),
+		UID:  ptr.StringPtr(p["uid"].(string)),
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}
