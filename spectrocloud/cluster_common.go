@@ -226,7 +226,8 @@ func toOsPatchConfig(d *schema.ResourceData) *models.V1alpha1OsPatchConfig {
 			osPatchConfig.Schedule = osPatchOnSchedule
 		}
 		if len(osPatchAfter) > 0 {
-			osPatchConfig.OnDemandPatchAfter = models.V1Time(time.Now())
+			patchAfter, _ := time.Parse(time.RFC3339, osPatchAfter)
+			osPatchConfig.OnDemandPatchAfter = models.V1Time(patchAfter)
 		} else {
 			//setting Zero time in request
 			zeroTime, _ := time.Parse(time.RFC3339, "0001-01-01T00:00:00.000Z")
