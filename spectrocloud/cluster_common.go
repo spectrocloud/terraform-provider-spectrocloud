@@ -8,8 +8,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/go-openapi/strfmt"
-
 	"emperror.dev/errors"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -90,7 +88,7 @@ func toPack(pSrc interface{}) *models.V1alpha1PackValuesEntity {
 
 	pack := &models.V1alpha1PackValuesEntity{
 		Name:   ptr.StringPtr(p["name"].(string)),
-		Tag:    ptr.StringPtr(p["tag"].(string)),
+		Tag:    p["tag"].(string),
 		Values: p["values"].(string),
 	}
 	return pack
@@ -187,14 +185,12 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 
-	// TODO(saamalik) MORE
-
-	// TODO(saamalik) fix for disk
-	//buf.WriteString(fmt.Sprintf("%d-", d["size_gb"].(int)))
-	//buf.WriteString(fmt.Sprintf("%s-", d["type"].(string)))
-
-	//d2 := m["disk"].([]interface{})
-	//d := d2[0].(map[string]interface{})
+	if v, found := m["instance_type"]; found {
+		ins := v.([]interface{})[0].(map[string]interface{})
+		buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
+	}
 
 	return int(hash(buf.String()))
 }
@@ -230,12 +226,12 @@ func toOsPatchConfig(d *schema.ResourceData) *models.V1alpha1OsPatchConfig {
 			osPatchConfig.Schedule = osPatchOnSchedule
 		}
 		if len(osPatchAfter) > 0 {
-			dateTime, _ := strfmt.ParseDateTime(osPatchAfter)
-			osPatchConfig.OnDemandPatchAfter = dateTime
+			patchAfter, _ := time.Parse(time.RFC3339, osPatchAfter)
+			osPatchConfig.OnDemandPatchAfter = models.V1Time(patchAfter)
 		} else {
 			//setting Zero time in request
-			zeroTime, _ := strfmt.ParseDateTime("0001-01-01T00:00:00.000Z")
-			osPatchConfig.OnDemandPatchAfter = zeroTime
+			zeroTime, _ := time.Parse(time.RFC3339, "0001-01-01T00:00:00.000Z")
+			osPatchConfig.OnDemandPatchAfter = models.V1Time(zeroTime)
 		}
 		return osPatchConfig
 	}

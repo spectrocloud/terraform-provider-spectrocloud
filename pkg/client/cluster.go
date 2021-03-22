@@ -82,7 +82,9 @@ func (h *V1alpha1Client) UpdateClusterProfileValues(uid string, profiles *models
 		return nil
 	}
 
-	params := clusterC.NewV1alpha1SpectroClustersUpdateProfilesParamsWithContext(h.ctx).WithUID(uid).WithBody(profiles)
+	resolveNotification := true
+	params := clusterC.NewV1alpha1SpectroClustersUpdateProfilesParamsWithContext(h.ctx).WithUID(uid).
+		WithBody(profiles).WithResolveNotification(&resolveNotification)
 	_, err = client.V1alpha1SpectroClustersUpdateProfiles(params)
 	return err
 }

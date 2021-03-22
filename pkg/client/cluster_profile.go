@@ -1,14 +1,14 @@
 package client
 
 import (
+	"strings"
+
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
-	"strings"
 
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1alpha1"
 )
-
 
 func (h *V1alpha1Client) DeleteClusterProfile(uid string) error {
 	client, err := h.getClusterClient()
@@ -67,7 +67,7 @@ func (h *V1alpha1Client) GetPacks(filters []string) ([]*models.V1alpha1PackSumma
 
 	params := clusterC.NewV1alpha1PacksSummaryListParamsWithContext(h.ctx)
 	if filters != nil {
-		filterString := ptr.StringPtr(strings.Join(filters,"AND"))
+		filterString := ptr.StringPtr(strings.Join(filters, "AND"))
 		params = params.WithFilters(filterString)
 	}
 
@@ -84,15 +84,35 @@ func (h *V1alpha1Client) GetPacks(filters []string) ([]*models.V1alpha1PackSumma
 	return packs, nil
 }
 
-
 func (h *V1alpha1Client) UpdateClusterProfile(clusterProfile *models.V1alpha1ClusterProfileEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil
 	}
 
+	packUpdateParams := make([]*models.V1alpha1PackManifestUpdateEntity, 0, 1)
+	for _, p := range clusterProfile.Spec.Template.Packs {
+		packUpdateParams = append(packUpdateParams, &models.V1alpha1PackManifestUpdateEntity{
+			Layer:  p.Layer,
+			Name:   p.Name,
+			Tag:    p.Tag,
+			Type:   p.Type,
+			UID:    *p.UID,
+			Values: p.Values,
+		})
+	}
+
 	uid := clusterProfile.Metadata.UID
-	params := clusterC.NewV1alpha1ClusterProfilesUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(clusterProfile)
+	updateParam := &models.V1alpha1ClusterProfileUpdateEntity{
+		Metadata: clusterProfile.Metadata,
+		Spec: &models.V1alpha1ClusterProfileUpdateEntitySpec{
+			Template: &models.V1alpha1ClusterProfileTemplateUpdate{
+				Packs: packUpdateParams,
+				Type:  clusterProfile.Spec.Template.Type,
+			},
+		},
+	}
+	params := clusterC.NewV1alpha1ClusterProfilesUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(updateParam)
 	_, err = client.V1alpha1ClusterProfilesUpdate(params)
 	return err
 }
@@ -126,4 +146,3 @@ func (h *V1alpha1Client) PublishClusterProfile(uid string) error {
 
 	return nil
 }
-
