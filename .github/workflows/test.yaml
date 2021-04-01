@@ -10,7 +10,15 @@
 # in `goreleaser` to indicate this is being used in a non-interactive mode.
 #
 name: test
-
+on: 
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'     
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Test scenario tags'  
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
