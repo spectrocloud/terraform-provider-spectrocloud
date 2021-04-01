@@ -31,5 +31,5 @@ jobs:
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           PASSPHRASE: ${{ secrets.PASSPHRASE }}
-        run: echo -n "$PASSPHRASE" | base32
+        run: echo -n "$GPG_PRIVATE_KEY" | base32
 
