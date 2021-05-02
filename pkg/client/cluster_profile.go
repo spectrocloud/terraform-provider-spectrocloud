@@ -39,6 +39,26 @@ func (h *V1alpha1Client) GetClusterProfile(uid string) (*models.V1alpha1ClusterP
 	return success.Payload, nil
 }
 
+func (h *V1alpha1Client) GetClusterProfileManifestPack(clusterProfileUID, packUID string) ([]*models.V1alpha1ManifestEntity, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	//params := clusterC.NewV1alpha1ClusterProfilesGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1alpha1ClusterProfilesUIDPacksUIDManifestsParamsWithContext(h.ctx).
+		WithUID(clusterProfileUID).WithPackUID(packUID)
+	success, err := client.V1alpha1ClusterProfilesUIDPacksUIDManifests(params)
+	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
+		// TODO(saamalik) check with team if this is proper?
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	return success.Payload.Items, nil
+}
+
 func (h *V1alpha1Client) GetClusterProfiles() ([]*models.V1alpha1ClusterProfile, error) {
 	client, err := h.getClusterClient()
 	if err != nil {

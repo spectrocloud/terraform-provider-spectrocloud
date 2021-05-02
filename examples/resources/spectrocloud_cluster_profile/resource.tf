@@ -32,11 +32,6 @@
 # }
 
 
-data "spectrocloud_pack" "byom" {
-  name = "spectro-byo-manifest"
-  # version  = "1.0.x"
-}
-
 data "spectrocloud_pack" "csi" {
   name = "csi-vsphere-volume"
   # version  = "1.0.x"
@@ -49,7 +44,7 @@ data "spectrocloud_pack" "cni" {
 
 data "spectrocloud_pack" "k8s" {
   name    = "kubernetes"
-  version = "1.18.14"
+  version = "1.18.16"
 }
 
 data "spectrocloud_pack" "ubuntu" {
@@ -64,29 +59,17 @@ resource "spectrocloud_cluster_profile" "profile" {
   type        = "cluster"
 
   pack {
-    name   = "spectro-byo-manifest"
-    tag    = "1.0.x"
-    uid    = data.spectrocloud_pack.byom.id
-    values = <<-EOT
-      manifests:
-        byo-manifest:
-          contents: |
-            # Add manifests here
-            apiVersion: v1
-            kind: Namespace
-            metadata:
-              labels:
-                app: wordpress
-                app3: wordpress3
-              name: wordpress
-    EOT
+    name   = "ubuntu-vsphere"
+    tag    = "LTS__18.4.x"
+    uid    = data.spectrocloud_pack.ubuntu.id
+    values = "foo: 1"
   }
 
   pack {
-    name   = "csi-vsphere-volume"
-    tag    = "1.0.x"
-    uid    = data.spectrocloud_pack.csi.id
-    values = data.spectrocloud_pack.csi.values
+    name   = "kubernetes"
+    tag    = "1.18.16"
+    uid    = data.spectrocloud_pack.k8s.id
+    values = data.spectrocloud_pack.k8s.values
   }
 
   pack {
@@ -97,16 +80,27 @@ resource "spectrocloud_cluster_profile" "profile" {
   }
 
   pack {
-    name   = "kubernetes"
-    tag    = "1.18.x"
-    uid    = data.spectrocloud_pack.k8s.id
-    values = data.spectrocloud_pack.k8s.values
+    name   = "csi-vsphere-volume"
+    tag    = "1.0.x"
+    uid    = data.spectrocloud_pack.csi.id
+    values = data.spectrocloud_pack.csi.values
   }
 
   pack {
-    name   = "ubuntu-vsphere"
-    tag    = "LTS__18.4.x"
-    uid    = data.spectrocloud_pack.ubuntu.id
-    values = data.spectrocloud_pack.ubuntu.values
+    name = "manifest-namespace"
+    type = "manifest"
+    manifest {
+      name    = "manifest-namespace"
+      content = <<-EOT
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          labels:
+            app: wordpress
+            app3: wordpress7
+          name: wordpress
+      EOT
+    }
+    #uid    = "spectro-manifest-pack"
   }
 }
