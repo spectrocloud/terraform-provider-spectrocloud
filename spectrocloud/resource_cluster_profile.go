@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 
 	"log"
 	"strings"
@@ -52,13 +53,39 @@ func resourceClusterProfile() *schema.Resource {
 				Required: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default: "spectro",
+						},
 						"uid": {
 							Type:     schema.TypeString,
-							Required: true,
+							Computed: true,
+							Optional: true,
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"manifest": {
+							Type: schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"uid" : {
+										Type: schema.TypeString,
+										Computed: true,
+									},
+									"name" : {
+										Type: schema.TypeString,
+										Required: true,
+									},
+									"content" : {
+										Type: schema.TypeString,
+										Required: true,
+									},
+								},
+							},
 						},
 						//"layer": {
 						//	Type:     schema.TypeString,
@@ -66,11 +93,11 @@ func resourceClusterProfile() *schema.Resource {
 						//},
 						"tag": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 						},
 						"values": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 								// UI strips the trailing newline on save
 								if strings.TrimSpace(old) == strings.TrimSpace(new) {
@@ -92,7 +119,10 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	clusterProfile := toClusterProfile(d)
+	clusterProfile, err := toClusterProfile(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	// Create
 	uid, err := c.CreateClusterProfile(clusterProfile)
@@ -123,8 +153,23 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
-	d.Set("name", cp.Metadata.Name)
-	packs := flattenPacks(cp.Spec.Published.Packs)
+	// make a map of all the content
+	packManifests := make(map[string]string)
+	for _, p := range cp.Spec.Published.Packs {
+		if len(p.Manifests) > 0 {
+			content, err := c.GetClusterProfileManifestPack(d.Id(), p.PackUID)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
+			// TODO at some point support multiple manifests... or I hope it's just returned in
+			// the original call
+			packManifests[p.PackUID] = content[0].Spec.Published.Content
+		}
+	}
+
+	_ = d.Set("name", cp.Metadata.Name)
+	packs := flattenPacks(cp.Spec.Published.Packs, packManifests)
 	if err := d.Set("pack", packs); err != nil {
 		return diag.FromErr(err)
 	}
@@ -132,7 +177,7 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func flattenPacks(packs []*models.V1alpha1PackRef) []interface{} {
+func flattenPacks(packs []*models.V1alpha1PackRef, manifestContent map[string]string) []interface{} {
 	if packs == nil {
 		return make([]interface{}, 0)
 	}
@@ -145,6 +190,19 @@ func flattenPacks(packs []*models.V1alpha1PackRef) []interface{} {
 		p["name"] = *pack.Name
 		p["tag"] = pack.Tag
 		p["values"] = pack.Values
+		p["type"] = pack.Type
+
+		ma := make([]interface{}, len(pack.Manifests))
+		for j, m := range pack.Manifests {
+			mj := make(map[string]interface{})
+			mj["name"] = m.Name
+			mj["uid"] = m.UID
+			mj["content"] = manifestContent[pack.PackUID]
+
+			ma[j] = mj
+		}
+
+		p["manifest"] = ma
 
 		ps[i] = p
 	}
@@ -160,7 +218,10 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	if d.HasChanges("pack") {
 		log.Printf("Updating packs")
-		cluster := toClusterProfile(d)
+		cluster, err := toClusterProfile(d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := c.UpdateClusterProfile(cluster); err != nil {
 			return diag.FromErr(err)
 		}
@@ -174,7 +235,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func resourceClusterProfileDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1alpha1Client)
 
 	var diags diag.Diagnostics
@@ -187,7 +248,7 @@ func resourceClusterProfileDelete(ctx context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func toClusterProfile(d *schema.ResourceData) *models.V1alpha1ClusterProfileEntity {
+func toClusterProfile(d *schema.ResourceData) (*models.V1alpha1ClusterProfileEntity, error) {
 	// gnarly, I know! =/
 	//cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
@@ -207,24 +268,55 @@ func toClusterProfile(d *schema.ResourceData) *models.V1alpha1ClusterProfileEnti
 
 	packs := make([]*models.V1alpha1PackManifestEntity, 0)
 	for _, pack := range d.Get("pack").([]interface{}) {
-		p := toClusterProfilePack(pack)
-		packs = append(packs, p)
+		if p, e := toClusterProfilePack(pack); e != nil {
+			return nil, e
+		} else {
+			packs = append(packs, p)
+		}
 	}
 	cluster.Spec.Template.Packs = packs
 
-	return cluster
+	return cluster, nil
 }
 
-func toClusterProfilePack(pSrc interface{}) *models.V1alpha1PackManifestEntity {
+func toClusterProfilePack(pSrc interface{}) (*models.V1alpha1PackManifestEntity, error) {
 	p := pSrc.(map[string]interface{})
+
+	pName := p["name"].(string)
+	pTag := p["tag"].(string)
+	pUID := p["uid"].(string)
+	pType := models.V1alpha1PackType(p["type"].(string))
+
+	switch pType {
+	case models.V1alpha1PackTypeSpectro:
+		if pTag == "" || pUID == "" {
+			return nil, fmt.Errorf("pack %s needs to specify tag", pName)
+		}
+	case models.V1alpha1PackTypeManifest:
+		if pUID == "" {
+			pUID = "spectro-manifest-pack"
+		}
+	}
 
 	pack := &models.V1alpha1PackManifestEntity{
 		//Layer:  p["layer"].(string),
-		Name: ptr.StringPtr(p["name"].(string)),
+		Name: ptr.StringPtr(pName),
 		Tag:  p["tag"].(string),
-		UID:  ptr.StringPtr(p["uid"].(string)),
+		UID:  ptr.StringPtr(pUID),
+		Type: pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}
-	return pack
+
+	manifests := make([]*models.V1alpha1ManifestInputEntity, 0)
+	for _, manifest := range p["manifest"].([]interface{}) {
+		m := manifest.(map[string]interface{})
+		manifests = append(manifests, &models.V1alpha1ManifestInputEntity{
+			Content: strings.TrimSpace(m["content"].(string)),
+			Name:    m["name"].(string),
+		})
+	}
+	pack.Manifests = manifests
+
+	return pack, nil
 }
