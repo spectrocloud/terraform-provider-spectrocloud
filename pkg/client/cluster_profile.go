@@ -112,6 +112,15 @@ func (h *V1alpha1Client) UpdateClusterProfile(clusterProfile *models.V1alpha1Clu
 
 	packUpdateParams := make([]*models.V1alpha1PackManifestUpdateEntity, 0, 1)
 	for _, p := range clusterProfile.Spec.Template.Packs {
+		manifests := make([]*models.V1alpha1ManifestRefUpdateEntity, len(p.Manifests))
+		for i, m := range p.Manifests {
+			manifests[i] = &models.V1alpha1ManifestRefUpdateEntity{
+				Content: m.Content,
+				Name:    ptr.StringPtr(m.Name),
+				// Seems backend already handles a not passed in UID
+				UID:     "",
+			}
+		}
 		packUpdateParams = append(packUpdateParams, &models.V1alpha1PackManifestUpdateEntity{
 			Layer:  p.Layer,
 			Name:   p.Name,
@@ -119,6 +128,7 @@ func (h *V1alpha1Client) UpdateClusterProfile(clusterProfile *models.V1alpha1Clu
 			Type:   p.Type,
 			UID:    *p.UID,
 			Values: p.Values,
+			Manifests: manifests,
 		})
 	}
 
