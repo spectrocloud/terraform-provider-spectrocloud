@@ -110,7 +110,7 @@ func (h *V1alpha1Client) UpdateClusterProfile(clusterProfile *models.V1alpha1Clu
 		return nil
 	}
 
-
+	uid := clusterProfile.Metadata.UID
 	params := clusterC.NewV1alpha1ClusterProfilesUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(clusterProfile)
 	_, err = client.V1alpha1ClusterProfilesUpdate(params)
 	return err
