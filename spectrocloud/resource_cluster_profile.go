@@ -56,7 +56,7 @@ func resourceClusterProfile() *schema.Resource {
 						"type": {
 							Type:     schema.TypeString,
 							Optional: true,
-							Default: "spectro",
+							Default:  "spectro",
 						},
 						"uid": {
 							Type:     schema.TypeString,
@@ -68,20 +68,20 @@ func resourceClusterProfile() *schema.Resource {
 							Required: true,
 						},
 						"manifest": {
-							Type: schema.TypeList,
+							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"uid" : {
-										Type: schema.TypeString,
+									"uid": {
+										Type:     schema.TypeString,
 										Computed: true,
 									},
-									"name" : {
-										Type: schema.TypeString,
+									"name": {
+										Type:     schema.TypeString,
 										Required: true,
 									},
-									"content" : {
-										Type: schema.TypeString,
+									"content": {
+										Type:     schema.TypeString,
 										Required: true,
 										DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 											// UI strips the trailing newline on save
@@ -126,7 +126,7 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	clusterProfile, err := toClusterProfile(d)
+	clusterProfile, err := toClusterProfileCreate(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -225,7 +225,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	if d.HasChanges("pack") {
 		log.Printf("Updating packs")
-		cluster, err := toClusterProfile(d)
+		cluster, err := toClusterProfileUpdate(d)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -255,12 +255,8 @@ func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func toClusterProfile(d *schema.ResourceData) (*models.V1alpha1ClusterProfileEntity, error) {
-	// gnarly, I know! =/
-	//cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
-
-	cluster := &models.V1alpha1ClusterProfileEntity{
+func toClusterProfileCreate(d *schema.ResourceData) (*models.V1alpha1ClusterProfileEntity, error) {
+	cp := &models.V1alpha1ClusterProfileEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
@@ -275,18 +271,18 @@ func toClusterProfile(d *schema.ResourceData) (*models.V1alpha1ClusterProfileEnt
 
 	packs := make([]*models.V1alpha1PackManifestEntity, 0)
 	for _, pack := range d.Get("pack").([]interface{}) {
-		if p, e := toClusterProfilePack(pack); e != nil {
+		if p, e := toClusterProfilePackCreate(pack); e != nil {
 			return nil, e
 		} else {
 			packs = append(packs, p)
 		}
 	}
-	cluster.Spec.Template.Packs = packs
+	cp.Spec.Template.Packs = packs
 
-	return cluster, nil
+	return cp, nil
 }
 
-func toClusterProfilePack(pSrc interface{}) (*models.V1alpha1PackManifestEntity, error) {
+func toClusterProfilePackCreate(pSrc interface{}) (*models.V1alpha1PackManifestEntity, error) {
 	p := pSrc.(map[string]interface{})
 
 	pName := p["name"].(string)
@@ -321,6 +317,75 @@ func toClusterProfilePack(pSrc interface{}) (*models.V1alpha1PackManifestEntity,
 		manifests = append(manifests, &models.V1alpha1ManifestInputEntity{
 			Content: strings.TrimSpace(m["content"].(string)),
 			Name:    m["name"].(string),
+		})
+	}
+	pack.Manifests = manifests
+
+	return pack, nil
+}
+
+func toClusterProfileUpdate(d *schema.ResourceData) (*models.V1alpha1ClusterProfileUpdateEntity, error) {
+	cp := &models.V1alpha1ClusterProfileUpdateEntity{
+		Metadata: &models.V1ObjectMeta{
+			Name: d.Get("name").(string),
+			UID:  d.Id(),
+		},
+		Spec: &models.V1alpha1ClusterProfileUpdateEntitySpec{
+			Template: &models.V1alpha1ClusterProfileTemplateUpdate{
+				Type: models.V1alpha1ProfileType(d.Get("type").(string)),
+			},
+		},
+	}
+
+	packs := make([]*models.V1alpha1PackManifestUpdateEntity, 0)
+	for _, pack := range d.Get("pack").([]interface{}) {
+		if p, e := toClusterProfilePackUpdate(pack); e != nil {
+			return nil, e
+		} else {
+			packs = append(packs, p)
+		}
+	}
+	cp.Spec.Template.Packs = packs
+
+	return cp, nil
+}
+
+func toClusterProfilePackUpdate(pSrc interface{}) (*models.V1alpha1PackManifestUpdateEntity, error) {
+	p := pSrc.(map[string]interface{})
+
+	pName := p["name"].(string)
+	pTag := p["tag"].(string)
+	pUID := p["uid"].(string)
+	pType := models.V1alpha1PackType(p["type"].(string))
+
+	switch pType {
+	case models.V1alpha1PackTypeSpectro:
+		if pTag == "" || pUID == "" {
+			return nil, fmt.Errorf("pack %s needs to specify tag", pName)
+		}
+	case models.V1alpha1PackTypeManifest:
+		if pUID == "" {
+			pUID = "spectro-manifest-pack"
+		}
+	}
+
+	pack := &models.V1alpha1PackManifestUpdateEntity{
+		//Layer:  p["layer"].(string),
+		Name: ptr.StringPtr(pName),
+		Tag:  p["tag"].(string),
+		UID:  pUID,
+		Type: pType,
+		// UI strips a single newline, so we should do the same
+		Values: strings.TrimSpace(p["values"].(string)),
+	}
+
+	manifests := make([]*models.V1alpha1ManifestRefUpdateEntity, 0)
+	for _, manifest := range p["manifest"].([]interface{}) {
+		m := manifest.(map[string]interface{})
+		manifests = append(manifests, &models.V1alpha1ManifestRefUpdateEntity{
+			Content: strings.TrimSpace(m["content"].(string)),
+			Name:    ptr.StringPtr(m["name"].(string)),
+			UID:     m["uid"].(string),
 		})
 	}
 	pack.Manifests = manifests

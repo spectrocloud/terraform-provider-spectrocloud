@@ -104,56 +104,25 @@ func (h *V1alpha1Client) GetPacks(filters []string) ([]*models.V1alpha1PackSumma
 	return packs, nil
 }
 
-func (h *V1alpha1Client) UpdateClusterProfile(clusterProfile *models.V1alpha1ClusterProfileEntity) error {
+func (h *V1alpha1Client) UpdateClusterProfile(clusterProfile *models.V1alpha1ClusterProfileUpdateEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	packUpdateParams := make([]*models.V1alpha1PackManifestUpdateEntity, 0, 1)
-	for _, p := range clusterProfile.Spec.Template.Packs {
-		manifests := make([]*models.V1alpha1ManifestRefUpdateEntity, len(p.Manifests))
-		for i, m := range p.Manifests {
-			manifests[i] = &models.V1alpha1ManifestRefUpdateEntity{
-				Content: m.Content,
-				Name:    ptr.StringPtr(m.Name),
-				// Seems backend already handles a not passed in UID
-				UID:     "",
-			}
-		}
-		packUpdateParams = append(packUpdateParams, &models.V1alpha1PackManifestUpdateEntity{
-			Layer:  p.Layer,
-			Name:   p.Name,
-			Tag:    p.Tag,
-			Type:   p.Type,
-			UID:    *p.UID,
-			Values: p.Values,
-			Manifests: manifests,
-		})
-	}
 
-	uid := clusterProfile.Metadata.UID
-	updateParam := &models.V1alpha1ClusterProfileUpdateEntity{
-		Metadata: clusterProfile.Metadata,
-		Spec: &models.V1alpha1ClusterProfileUpdateEntitySpec{
-			Template: &models.V1alpha1ClusterProfileTemplateUpdate{
-				Packs: packUpdateParams,
-				Type:  clusterProfile.Spec.Template.Type,
-			},
-		},
-	}
-	params := clusterC.NewV1alpha1ClusterProfilesUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(updateParam)
+	params := clusterC.NewV1alpha1ClusterProfilesUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(clusterProfile)
 	_, err = client.V1alpha1ClusterProfilesUpdate(params)
 	return err
 }
 
-func (h *V1alpha1Client) CreateClusterProfile(cluster *models.V1alpha1ClusterProfileEntity) (string, error) {
+func (h *V1alpha1Client) CreateClusterProfile(clusterProfile *models.V1alpha1ClusterProfileEntity) (string, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1alpha1ClusterProfilesCreateParamsWithContext(h.ctx).WithBody(cluster)
+	params := clusterC.NewV1alpha1ClusterProfilesCreateParamsWithContext(h.ctx).WithBody(clusterProfile)
 	success, err := client.V1alpha1ClusterProfilesCreate(params)
 	if err != nil {
 		return "", err
