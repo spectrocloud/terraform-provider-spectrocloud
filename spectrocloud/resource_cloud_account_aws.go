@@ -123,7 +123,7 @@ func toAwsAccount(d *schema.ResourceData) *models.V1alpha1AwsAccount {
 		},
 		Spec: &models.V1alpha1AwsCloudAccount{
 			AccessKey: d.Get("aws_access_key").(string),
-			SecretKey: d.Get("aws_access_key").(string),
+			SecretKey: d.Get("aws_secret_key").(string),
 		},
 	}
 	return account
