@@ -162,7 +162,6 @@ func resourceClusterEks() *schema.Resource {
 						"subnets": {
 							Type:     schema.TypeMap,
 							Optional: true,
-							//Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -395,48 +394,28 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		cluster.Spec.CloudConfig.VpcID = cloudConfig["vpc_id"].(string)
 	}
 
-	if cloudConfig["endpoint_access"] != nil && len(cloudConfig["endpoint_access"].(string)) > 0 {
-		access := models.V1alpha1EksClusterConfigEndpointAccess{}
-		if cloudConfig["endpoint_access"].(string) == "public" {
-			//"public", "private", "private_and_public"
-			access.Public = true
-			access.Private = false
-		} else if cloudConfig["endpoint_access"].(string) == "private" {
-			//"public", "private", "private_and_public"
-			access.Public = false
-			access.Private = true
-		} else if cloudConfig["endpoint_access"].(string) == "private_and_public" {
-			//"public", "private", "private_and_public"
-			access.Public = true
-			access.Private = true
-		}
-
-		if cloudConfig["public_access_cidrs"] != nil {
-			cidrs := make([]string, 0, 1)
-			for _, cidr := range cloudConfig["public_access_cidrs"].(*schema.Set).List() {
-				cidrs = append(cidrs, cidr.(string))
-			}
-			access.PublicCIDRs = cidrs
-		}
-
-		cluster.Spec.CloudConfig.EndpointAccess = &access
-	} else {
-		access := models.V1alpha1EksClusterConfigEndpointAccess{
-			Public:  true,
-			Private: false,
-		}
-
-		if cloudConfig["public_access_cidrs"] != nil {
-			cidrs := make([]string, 0, 1)
-			for _, cidr := range cloudConfig["public_access_cidrs"].(*schema.Set).List() {
-				cidrs = append(cidrs, cidr.(string))
-			}
-			access.PublicCIDRs = cidrs
-		}
-		cluster.Spec.CloudConfig.EndpointAccess = &access
+	access := models.V1alpha1EksClusterConfigEndpointAccess{}
+	if len(cloudConfig["endpoint_access"].(string)) == 0 || cloudConfig["endpoint_access"].(string) == "public" {
+		access.Public = true
+		access.Private = false
+	} else if cloudConfig["endpoint_access"].(string) == "private" {
+		access.Public = false
+		access.Private = true
+	} else if cloudConfig["endpoint_access"].(string) == "private_and_public" {
+		access.Public = true
+		access.Private = true
 	}
 
-	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
+	if cloudConfig["public_access_cidrs"] != nil {
+		cidrs := make([]string, 0, 1)
+		for _, cidr := range cloudConfig["public_access_cidrs"].(*schema.Set).List() {
+			cidrs = append(cidrs, cidr.(string))
+		}
+		access.PublicCIDRs = cidrs
+	}
+
+	cluster.Spec.CloudConfig.EndpointAccess = &access
+
 	machinePoolConfigs := make([]*models.V1alpha1EksMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolEks(machinePool)
@@ -451,7 +430,6 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		packValues = append(packValues, p)
 	}
 	cluster.Spec.PackValues = packValues
-	//cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster
 }
@@ -466,14 +444,8 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 		labels = append(labels, "master")
 	}
 
-	azs := make([]string, 0)
-	for _, az := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, az.(string))
-	}
-
 	mp := &models.V1alpha1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1alpha1EksMachineCloudConfigEntity{
-			Azs:            azs,
 			InstanceType:   m["instance_type"].(string),
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 		},
@@ -490,15 +462,16 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 	}
 
 	if v, ok := m["subnets"]; ok {
-		//m := make(map[string]string)
+		azs := make([]string, 0)
 		subnets := make([]*models.V1alpha1EksSubnetEntity, 0, 1)
 		for k, val := range v.(map[string]interface{}) {
-			//m[k] = val.(string)
+			azs = append(azs, k)
 			subnets = append(subnets, &models.V1alpha1EksSubnetEntity{
 				Az: k,
 				ID: val.(string),
 			})
 		}
+		mp.CloudConfig.Azs = azs
 		mp.CloudConfig.Subnets = subnets
 	}
 
