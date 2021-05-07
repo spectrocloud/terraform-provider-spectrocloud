@@ -19,6 +19,10 @@ aws_ssh_key_name = "{enter AWS SSH key name}" #e.g: default
 aws_region    = "{enter AWS Region}"            #e.g: us-west-2
 aws_region_az = ["{enter AWS Availability Zone A}", "{enter AWS Availability Zone B}"] #e.g: ["us-west-2a", "us-west-2b"]
 
+cloud_account_type = "{enter AWS Cloud Account Type}" #eg. "secret" or "sts"
+arn = "{enter AWS Arn}"
+external_id = "{enter AWS External Id}"
+
 aws_region_az = ["us-west-2a", "us-west-2b"] #e.g: us-west-2a
 
 master_azs_subnets_map = {

@@ -2,15 +2,13 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
-
-	"github.com/hashicorp/go-cty/cty"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
@@ -74,10 +72,10 @@ func resourceClusterEks() *schema.Resource {
 							Required: true,
 						},
 						"endpoint_access": {
-							Type:             schema.TypeString,
-							Optional:         true,
-							ValidateDiagFunc: validateEndpointAccessType,
-							Default:          "public",
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"public", "private", "private_and_public"}, true),
+							Default:      "public",
 						},
 						"public_access_cidrs": {
 							Type:     schema.TypeSet,
@@ -506,15 +504,4 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 
 	// add subnet in machine pool
 	return mp
-}
-
-func validateEndpointAccessType(data interface{}, path cty.Path) diag.Diagnostics {
-	var diags diag.Diagnostics
-	andpointAccess := data.(string)
-	for _, accessType := range []string{"public", "private", "private_and_public"} {
-		if accessType == andpointAccess {
-			return diags
-		}
-	}
-	return diag.FromErr(fmt.Errorf("endpoint access type '%s' is invalid. valid endpoint access types are 'public', 'private' and 'private_and_public'", andpointAccess))
 }
