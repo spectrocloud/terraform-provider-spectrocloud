@@ -293,7 +293,7 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1alpha1PackManifestE
 	switch pType {
 	case models.V1alpha1PackTypeSpectro:
 		if pTag == "" || pUID == "" {
-			return nil, fmt.Errorf("pack %s needs to specify tag", pName)
+			return nil, fmt.Errorf("pack %s needs to specify tag and/or uid", pName)
 		}
 	case models.V1alpha1PackTypeManifest:
 		if pUID == "" {
