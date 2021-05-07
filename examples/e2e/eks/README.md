@@ -13,8 +13,9 @@ Clone this repository to a local directory, and then change directory to `exampl
 [AWS Cloud Account](https://docs.spectrocloud.com/clusters/?clusterType=aws_cluster#awscloudaccountpermissions).
 2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file `terraform.tfvars`.
 3. Specify and update all the placeholder values in the `terraform.tfvars` file.
-4. Initialize and run terraform: `terraform init && terraform apply`.
-5. Wait for the cluster creation to finish.
+4. Change cloud parameters as applicable in `resource_cluster.tf`.
+5. Initialize and run terraform: `terraform init && terraform apply`.
+6. Wait for the cluster creation to finish.
 
 Once the cluster is provisioned, the cluster _kubeconfig_ file is exported in the current working directly.
 
