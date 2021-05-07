@@ -34,6 +34,10 @@ resource "spectrocloud_cluster_eks" "cluster" {
 
   machine_pool {
     control_plane           = true
+    name                    = "master-pool"
+    count                   = 1
+    instance_type           = "t3.large"
+    disk_size_gb            = 62
     azs                     = var.aws_region_az
     subnets                 = var.master_azs_subnets_map
   }
