@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/hashicorp/go-cty/cty"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -33,10 +35,10 @@ func resourceCloudAccountAws() *schema.Resource {
 				Sensitive: true,
 			},
 			"type": {
-				Type:             schema.TypeString,
-				Optional:         true,
-				ValidateDiagFunc: validateAwsCloudAccountType,
-				Default:          "secret",
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"secret", "sts"}, true),
+				Default:      "secret",
 			},
 			"arn": {
 				Type:     schema.TypeString,
