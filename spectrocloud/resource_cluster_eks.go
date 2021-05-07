@@ -406,7 +406,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		} else if cloudConfig["endpoint_access"].(string) == "private" {
 			//"public", "private", "private_and_public"
 			access.Public = false
-			access.Private = false
+			access.Private = true
 		} else if cloudConfig["endpoint_access"].(string) == "private_and_public" {
 			//"public", "private", "private_and_public"
 			access.Public = true
@@ -420,6 +420,22 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 			}
 			access.PublicCIDRs = cidrs
 		}
+
+		cluster.Spec.CloudConfig.EndpointAccess = &access
+	} else {
+		access := models.V1alpha1EksClusterConfigEndpointAccess{
+			Public:  true,
+			Private: false,
+		}
+
+		if cloudConfig["public_access_cidrs"] != nil {
+			cidrs := make([]string, 0, 1)
+			for _, cidr := range cloudConfig["public_access_cidrs"].(*schema.Set).List() {
+				cidrs = append(cidrs, cidr.(string))
+			}
+			access.PublicCIDRs = cidrs
+		}
+		cluster.Spec.CloudConfig.EndpointAccess = &access
 	}
 
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {

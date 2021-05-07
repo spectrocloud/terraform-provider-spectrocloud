@@ -17,5 +17,22 @@ aws_ssh_key_name = "{enter AWS SSH key name}" #e.g: default
 # Enter the AWS Region and AZ for cluster resources
 # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions
 aws_region    = "{enter AWS Region}"            #e.g: us-west-2
-aws_region_az = "{enter AWS Availability Zone}" #e.g: us-west-2a
+aws_region_az = ["{enter AWS Availability Zone A}", "{enter AWS Availability Zone B}"] #e.g: ["us-west-2a", "us-west-2b"]
 
+aws_region_az = ["us-west-2a", "us-west-2b"] #e.g: us-west-2a
+
+master_azs_subnets_map = {
+  "{enter AWS Availability Zone A}" = "{enter Subnet For Availability Zone A}",
+  "{enter AWS Availability Zone B}" = "{enter Subnet For Availability Zone B}"
+}
+/*
+eg. master_azs_subnets_map = {
+      "us-west-2a" = "subnet-0d4978ddbff16c868",
+      "us-west-2b" = "subnet-041a35c9c06eeb701"
+    }
+*/
+
+worker_azs_subnets_map = {
+  "{enter AWS Availability Zone A}" = "{enter Subnet For Availability Zone A}",
+  "{enter AWS Availability Zone B}" = "{enter Subnet For Availability Zone B}"
+}
