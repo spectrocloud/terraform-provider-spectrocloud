@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
@@ -68,7 +69,7 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 
 	d.SetId(account.Metadata.UID)
 	d.Set("name", account.Metadata.Name)
-	d.Set("aws_access_key", *account.Spec.AccessKey)
+	d.Set("aws_access_key", account.Spec.AccessKey)
 
 	return diags
 }

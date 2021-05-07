@@ -2,9 +2,9 @@ package spectrocloud
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -25,8 +25,8 @@ func resourceCloudAccountAws() *schema.Resource {
 				Required: true,
 			},
 			"aws_secret_key": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
 				Sensitive: true,
 			},
 		},
@@ -72,7 +72,7 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 	if err := d.Set("name", account.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("aws_access_key", *account.Spec.AccessKey); err != nil {
+	if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -119,11 +119,11 @@ func toAwsAccount(d *schema.ResourceData) *models.V1alpha1AwsAccount {
 	account := &models.V1alpha1AwsAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
-			UID : d.Id(),
+			UID:  d.Id(),
 		},
 		Spec: &models.V1alpha1AwsCloudAccount{
-			AccessKey:     ptr.StringPtr(d.Get("aws_access_key").(string)),
-			SecretKey:     ptr.StringPtr(d.Get("aws_secret_key").(string)),
+			AccessKey: d.Get("aws_access_key").(string),
+			SecretKey: d.Get("aws_access_key").(string),
 		},
 	}
 	return account
