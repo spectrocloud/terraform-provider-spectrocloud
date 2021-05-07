@@ -2,6 +2,9 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/hashicorp/go-cty/cty"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -27,6 +30,21 @@ func resourceCloudAccountAws() *schema.Resource {
 			"aws_secret_key": {
 				Type:      schema.TypeString,
 				Required:  true,
+				Sensitive: true,
+			},
+			"type": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateAwsCloudAccountType,
+				Default:          "secret",
+			},
+			"arn": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"external_id": {
+				Type:      schema.TypeString,
+				Optional:  true,
 				Sensitive: true,
 			},
 		},
@@ -126,5 +144,28 @@ func toAwsAccount(d *schema.ResourceData) *models.V1alpha1AwsAccount {
 			SecretKey: d.Get("aws_secret_key").(string),
 		},
 	}
+	if len(d.Get("type").(string)) == 0 || d.Get("type").(string) == "secret" {
+		account.Spec.CredentialType = models.V1alpha1AwsCloudAccountCredentialTypeSecret
+		account.Spec.AccessKey = d.Get("aws_access_key").(string)
+		account.Spec.SecretKey = d.Get("aws_secret_key").(string)
+	} else if d.Get("type").(string) == "sts" {
+		account.Spec.CredentialType = models.V1alpha1AwsCloudAccountCredentialTypeSts
+		account.Spec.AwsStsCredentials = &models.V1alpha1AwsStsCredentials{
+			Arn:        d.Get("arn").(string),
+			ExternalID: d.Get("external_id").(string),
+		}
+	}
+
 	return account
+}
+
+func validateAwsCloudAccountType(data interface{}, path cty.Path) diag.Diagnostics {
+	var diags diag.Diagnostics
+	accType := data.(string)
+	for _, accessType := range []string{"secret", "sts"} {
+		if accessType == accType {
+			return diags
+		}
+	}
+	return diag.FromErr(fmt.Errorf("aws cloud account type '%s' is invalid. valid aws cloud account types are 'secret' and 'sts'", accType))
 }
