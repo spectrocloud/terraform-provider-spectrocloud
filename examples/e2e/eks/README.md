@@ -3,12 +3,12 @@
 End-to-end example of provisioning a new AWS K8s cluster with all of its dependencies. This terraform configuration
 will provision the following resources on Spectro Cloud:
 - AWS Cloud Account
-- AWS Cluster Profile
-- AWS Cluster
+- Eks Cluster Profile
+- Eks Cluster
 
 ## Instructions:
 
-Clone this repository to a local directory, and then change directory to `examples/e2e/aws`. Proceed with the following:
+Clone this repository to a local directory, and then change directory to `examples/e2e/eks`. Proceed with the following:
 1. Follow the Spectro Cloud documentation to create an AWS cloud account with appropriate permissions:
 [AWS Cloud Account](https://docs.spectrocloud.com/clusters/?clusterType=aws_cluster#awscloudaccountpermissions).
 2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file `terraform.tfvars`.
