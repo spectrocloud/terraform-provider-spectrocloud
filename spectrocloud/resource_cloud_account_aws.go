@@ -25,11 +25,11 @@ func resourceCloudAccountAws() *schema.Resource {
 			},
 			"aws_access_key": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"aws_secret_key": {
 				Type:      schema.TypeString,
-				Required:  true,
+				Optional:  true,
 				Sensitive: true,
 			},
 			"type": {
@@ -90,8 +90,18 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 	if err := d.Set("name", account.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
+	if err := d.Set("type", string(account.Spec.CredentialType)); err != nil {
 		return diag.FromErr(err)
+	}
+
+	if account.Spec.CredentialType == models.V1alpha1AwsCloudAccountCredentialTypeSecret {
+		if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		if err := d.Set("arn", account.Spec.AwsStsCredentials.Arn); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return diags
