@@ -8,8 +8,6 @@ resource "spectrocloud_cluster_eks" "cluster" {
     ssh_key_name = var.aws_ssh_key_name
     region       = var.aws_region
     vpc_id = "vpc-0e03ff84a894d40a2"
-    endpoint_access = "public"
-
   }
 
   # To override or specify values for a cluster:
@@ -38,15 +36,13 @@ resource "spectrocloud_cluster_eks" "cluster" {
     count                   = 1
     instance_type           = "t3.large"
     disk_size_gb            = 62
-    azs                     = var.aws_region_az
-    subnets                 = var.master_azs_subnets_map
+    az_subnets              = var.master_azs_subnets_map
   }
 
   machine_pool {
-    name          = "worker-basic"
-    count         = 1
-    instance_type = "t3.large"
-    azs           = var.aws_region_az
-    subnets       = var.worker_azs_subnets_map
+    name            = "worker-basic"
+    count           = 1
+    instance_type   = "t3.large"
+    az_subnets      = var.worker_azs_subnets_map
   }
 }

@@ -91,7 +91,6 @@ resource "spectrocloud_cluster_eks" "cluster" {
     ssh_key_name    = "default"
     region          = "us-west-2"
     vpc_id          = "vpc-123"
-    endpoint_access = "public"
   }
 
   # To override or specify values for a cluster:
@@ -120,8 +119,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     count                   = 1
     instance_type           = "t3.large"
     disk_size_gb            = 62
-    azs                     = ["us-west-2a"]
-    subnets                 = {
+    az_subnets                 = {
                                 "us-west-2a" = "subnet-0d4978ddbff16c868"
                               }
   }
@@ -130,8 +128,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     name          = "worker-basic"
     count         = 1
     instance_type = "t3.large"
-    azs           = ["us-west-2a"]
-    subnets                 = {
+    az_subnets                 = {
                                 "us-west-2a" = "subnet-0d4978ddbff16c868"
                               }
   }

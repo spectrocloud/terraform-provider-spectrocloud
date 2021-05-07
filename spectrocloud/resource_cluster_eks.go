@@ -159,7 +159,7 @@ func resourceClusterEks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"subnets": {
+						"az_subnets": {
 							Type:     schema.TypeMap,
 							Optional: true,
 							Elem: &schema.Schema{
@@ -461,7 +461,7 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 		},
 	}
 
-	if v, ok := m["subnets"]; ok {
+	if v, ok := m["az_subnets"]; ok {
 		azs := make([]string, 0)
 		subnets := make([]*models.V1alpha1EksSubnetEntity, 0, 1)
 		for k, val := range v.(map[string]interface{}) {
