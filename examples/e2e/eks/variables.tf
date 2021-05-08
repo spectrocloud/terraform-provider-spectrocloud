@@ -13,13 +13,13 @@ variable "aws_ssh_key_name" {}
 variable "aws_region" {}
 
 variable "aws_region_az" {
-  type    = list(string)
+  type = list(string)
 }
 
 variable "master_azs_subnets_map" {
-  type = "map"
+  type = map(string)
 }
 
 variable "worker_azs_subnets_map" {
-  type = "map"
+  type = map(string)
 }

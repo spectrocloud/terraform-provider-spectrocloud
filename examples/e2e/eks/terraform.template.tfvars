@@ -17,7 +17,7 @@ aws_access_key = "{enter AWS access key}"
 aws_secret_key = "{enter AWS secret key}"
 
 # OPTION 2 : Specifying arn and external id where cloud_account_type="sts"
-arn = "{enter AWS Arn}"
+arn         = "{enter AWS Arn}"
 external_id = "{enter AWS External Id}"
 
 
@@ -27,7 +27,7 @@ aws_ssh_key_name = "{enter AWS SSH key name}" #e.g: default
 
 # Enter the AWS Region and AZ for cluster resources
 # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions
-aws_region    = "{enter AWS Region}"            #e.g: us-west-2
+aws_region = "{enter AWS Region}" #e.g: us-west-2
 
 master_azs_subnets_map = {
   "{enter AWS Availability Zone A}" = "{enter Subnet For Availability Zone A}",

@@ -9,132 +9,7 @@ description: |-
 
 
 
-## Example Usage
 
-```terraform
-data "spectrocloud_cloudaccount_aws" "account" {
-  # id = <uid>
-  name = var.cluster_cloud_account_name
-}
-
-data "spectrocloud_cluster_profile" "profile" {
-  # id = <uid>
-  name = var.cluster_cluster_profile_name
-}
-
-
-resource "spectrocloud_cluster_eks" "cluster" {
-  name               = var.cluster_name
-  cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
-  cloud_account_id   = data.spectrocloud_cloudaccount_aws.account.id
-
-  cloud_config {
-    ssh_key_name    = "default"
-    region          = "us-west-2"
-  }
-
-  # To override or specify values for a cluster:
-
-  # pack {
-  #   name   = "spectro-byo-manifest"
-  #   tag    = "1.0.x"
-  #   values = <<-EOT
-  #     manifests:
-  #       byo-manifest:
-  #         contents: |
-  #           # Add manifests here
-  #           apiVersion: v1
-  #           kind: Namespace
-  #           metadata:
-  #             labels:
-  #               app: wordpress
-  #               app2: wordpress2
-  #             name: wordpress
-  #   EOT
-  # }
-
-  machine_pool {
-    control_plane           = true
-    name                    = "master-pool"
-    count                   = 1
-    instance_type           = "t3.large"
-    disk_size_gb            = 62
-  }
-
-  machine_pool {
-    name          = "worker-basic"
-    count         = 1
-    instance_type = "t3.large"
-  }
-
-}
-```
-
-```terraform
-data "spectrocloud_cloudaccount_aws" "account" {
-  # id = <uid>
-  name = var.cluster_cloud_account_name
-}
-
-data "spectrocloud_cluster_profile" "profile" {
-  # id = <uid>
-  name = var.cluster_cluster_profile_name
-}
-
-
-resource "spectrocloud_cluster_eks" "cluster" {
-  name               = var.cluster_name
-  cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
-  cloud_account_id   = data.spectrocloud_cloudaccount_aws.account.id
-
-  cloud_config {
-    ssh_key_name    = "default"
-    region          = "us-west-2"
-    vpc_id          = "vpc-123"
-  }
-
-  # To override or specify values for a cluster:
-
-  # pack {
-  #   name   = "spectro-byo-manifest"
-  #   tag    = "1.0.x"
-  #   values = <<-EOT
-  #     manifests:
-  #       byo-manifest:
-  #         contents: |
-  #           # Add manifests here
-  #           apiVersion: v1
-  #           kind: Namespace
-  #           metadata:
-  #             labels:
-  #               app: wordpress
-  #               app2: wordpress2
-  #             name: wordpress
-  #   EOT
-  # }
-
-  machine_pool {
-    control_plane           = true
-    name                    = "master-pool"
-    count                   = 1
-    instance_type           = "t3.large"
-    disk_size_gb            = 62
-    az_subnets                 = {
-                                "us-west-2a" = "subnet-0d4978ddbff16c868"
-                              }
-  }
-
-  machine_pool {
-    name          = "worker-basic"
-    count         = 1
-    instance_type = "t3.large"
-    az_subnets                 = {
-                                "us-west-2a" = "subnet-0d4978ddbff16c868"
-                              }
-  }
-
-}
-```
 
 ## Schema
 
@@ -149,8 +24,9 @@ resource "spectrocloud_cluster_eks" "cluster" {
 ### Optional
 
 - **id** (String) The ID of this resource.
-- **pack** (Block Set) (see [below for nested schema](#nestedblock--pack))
+- **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+
 ### Read-only
 
 - **cloud_config_id** (String)
@@ -164,21 +40,30 @@ Required:
 - **region** (String)
 - **ssh_key_name** (String)
 
+Optional:
+
+- **endpoint_access** (String)
+- **public_access_cidrs** (Set of String)
+- **vpc_id** (String)
+
 
 <a id="nestedblock--machine_pool"></a>
 ### Nested Schema for `machine_pool`
 
 Required:
 
-- **azs** (Set of String)
 - **count** (Number)
 - **instance_type** (String)
 - **name** (String)
 
 Optional:
 
+- **az_subnets** (Map of String)
+- **azs** (Set of String)
 - **control_plane** (Boolean)
+- **control_plane_as_worker** (Boolean)
 - **disk_size_gb** (Number)
+- **update_strategy** (String)
 
 
 <a id="nestedblock--pack"></a>

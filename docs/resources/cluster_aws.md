@@ -28,10 +28,6 @@ resource "spectrocloud_cluster_aws" "cluster" {
   cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
   cloud_account_id   = data.spectrocloud_cloudaccount_aws.account.id
 
-  os_patch_on_boot = true
-  os_patch_schedule = "0 0 * * 0"
-  #os_patch_after = "2021-02-03T14:59:37.000Z"
-
   cloud_config {
     ssh_key_name = "default"
     region       = "us-west-2"
@@ -90,12 +86,11 @@ resource "spectrocloud_cluster_aws" "cluster" {
 ### Optional
 
 - **id** (String) The ID of this resource.
-- **pack** (Block Set) (see [below for nested schema](#nestedblock--pack))
+- **os_patch_after** (String)
+- **os_patch_on_boot** (Boolean)
+- **os_patch_schedule** (String)
+- **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- **os_patch_on_boot** (Boolean, Optional) OS Patch on boot when set, updates security patch of host OS 
-of all nodes and monitors new nodes (which gets created when cluster is scaled up or cluster k8s version is upgraded) for security patch
-- **os_patch_schedule** (String, Optional) Cron schedule to patch security updates on host OS for all nodes. Please see https://en.wikipedia.org/wiki/Cron for valid cron syntax
-- **os_patch_after** (String, Optional) On demand security patch on host OS for all nodes. Please follow RFC3339 Date and Time Standards. Eg 2021-01-01T00:00:00.000Z
 
 ### Read-only
 

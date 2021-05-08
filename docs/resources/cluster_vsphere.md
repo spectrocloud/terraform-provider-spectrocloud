@@ -24,12 +24,11 @@ description: |-
 ### Optional
 
 - **id** (String) The ID of this resource.
-- **pack** (Block Set) (see [below for nested schema](#nestedblock--pack))
+- **os_patch_after** (String)
+- **os_patch_on_boot** (Boolean)
+- **os_patch_schedule** (String)
+- **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- **os_patch_on_boot** (Boolean, Optional) OS Patch on boot when set, updates security patch of host OS 
-of all nodes and monitors new nodes (which gets created when cluster is scaled up or cluster k8s version is upgraded) for security patch
-- **os_patch_schedule** (String, Optional) Cron schedule to patch security updates on host OS for all nodes. Please see https://en.wikipedia.org/wiki/Cron for valid cron syntax
-- **os_patch_after** (String, Optional) On demand security patch on host OS for all nodes. Please follow RFC3339 Date and Time Standards. Eg 2021-01-01T00:00:00.000Z
 
 ### Read-only
 
@@ -43,9 +42,13 @@ Required:
 
 - **datacenter** (String)
 - **folder** (String)
+- **ssh_key** (String)
+
+Optional:
+
 - **network_search_domain** (String)
 - **network_type** (String)
-- **ssh_key** (String)
+- **static_ip** (Boolean)
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -83,6 +86,14 @@ Required:
 - **datastore** (String)
 - **network** (String)
 - **resource_pool** (String)
+
+Optional:
+
+- **static_ip_pool_id** (String)
+
+Read-only:
+
+- **id** (String) The ID of this resource.
 
 
 

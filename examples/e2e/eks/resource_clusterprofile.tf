@@ -5,8 +5,8 @@
 //}
 
 data "spectrocloud_pack" "csi" {
-  name = "csi-aws"
-  version  = "1.0.0"
+  name    = "csi-aws"
+  version = "1.0.0"
 }
 
 data "spectrocloud_pack" "cni" {
@@ -20,8 +20,8 @@ data "spectrocloud_pack" "k8s" {
 }
 
 data "spectrocloud_pack" "ubuntu" {
-  name = "amazon-linux-eks"
-  version  = "5.4"
+  name    = "amazon-linux-eks"
+  version = "5.4"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
@@ -52,7 +52,7 @@ resource "spectrocloud_cluster_profile" "profile" {
   }
 
   pack {
-    name   =  data.spectrocloud_pack.ubuntu.name
+    name   = data.spectrocloud_pack.ubuntu.name
     tag    = "5.4.x"
     uid    = data.spectrocloud_pack.ubuntu.id
     values = data.spectrocloud_pack.ubuntu.values

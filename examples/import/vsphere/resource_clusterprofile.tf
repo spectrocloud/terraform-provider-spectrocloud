@@ -5,8 +5,8 @@
 # }
 
 data "spectrocloud_pack" "k8s_dashboard" {
-  name = "k8s-dashboard"
-  version  = "2.1.0"
+  name    = "k8s-dashboard"
+  version = "2.1.0"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {

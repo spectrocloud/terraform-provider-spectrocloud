@@ -1,9 +1,9 @@
 resource "spectrocloud_cluster_import" "cluster" {
-  name = "gcp-import-tf-11"
-  cloud = "gcp"
+  name               = "gcp-import-tf-11"
+  cloud              = "gcp"
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
 
-/*  pack {
+  /*  pack {
      name   = "k8s-dashboard"
      tag    = "2.1.x"
      values = <<-EOT

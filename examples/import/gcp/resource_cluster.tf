@@ -1,9 +1,9 @@
 resource "spectrocloud_cluster_import" "cluster" {
-  name = "gke-import-demo"
-  cloud = "gcp"
+  name               = "gke-import-demo"
+  cloud              = "gcp"
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
 
-/*  pack {
+  /*  pack {
      name   = "k8s-dashboard"
      tag    = "2.1.x"
      values = <<-EOT
@@ -35,6 +35,6 @@ resource "spectrocloud_cluster_import" "cluster" {
   }*/
 
   provisioner "local-exec" {
-    command = "${spectrocloud_cluster_import.cluster.cluster_import_manifest_apply_command } --kubeconfig ${var.kubeconfig_path}"
+    command = "${spectrocloud_cluster_import.cluster.cluster_import_manifest_apply_command} --kubeconfig ${var.kubeconfig_path}"
   }
 }

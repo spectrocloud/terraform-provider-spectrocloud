@@ -83,4 +83,5 @@ provider GitHub [discussion board](https://github.com/spectrocloud/terraform-pro
 ### Optional
 
 - **host** (String)
+- **ignore_insecure_tls_error** (Boolean)
 - **project_name** (String)

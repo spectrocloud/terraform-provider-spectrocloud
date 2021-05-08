@@ -18,26 +18,20 @@ resource "spectrocloud_cloudaccount_aws" "aws-1" {
   aws_secret_key = var.aws_secret_key
 }
 ```
-```terraform
-resource "spectrocloud_cloudaccount_aws" "aws-2" {
-  name           = "aws-1"
-  type           = "sts"
-  arn            = var.arn
-  external_id    = var.external_id
-}
-```
-
 
 ## Schema
 
 ### Required
 
-- **aws_access_key** (String) & **aws_secret_key** (String, Sensitive) if `type` is `secret`
-- **arn** (String) & **external_id** (String, Sensitive) if `type` is `sts`
 - **name** (String)
 
 ### Optional
 
+- **arn** (String)
+- **aws_access_key** (String)
+- **aws_secret_key** (String, Sensitive)
+- **external_id** (String, Sensitive)
 - **id** (String) The ID of this resource.
+- **type** (String)
 
 

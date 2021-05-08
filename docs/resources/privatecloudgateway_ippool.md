@@ -9,50 +9,36 @@ description: |-
 
 
 
-## Example Usage
 
-```terraform
-resource "spectrocloud_privatecloudgateway_ippool" "ippool" {
-  name                 = "ippool-dev"
-  private_cloud_gateway_id = "5fbb9195f4a3d7b95f888211"
-  network_type = "range"
-  ip_start_range = "10.10.10.100"
-  ip_end_range = "10.10.10.199"
-  prefix = 24
-  gateway = "10.10.10.1"
-  nameserver_addresses = "8.8.8.8"
-  nameserver_search_suffix = "test.com"
-  restrict_to_single_cluster = false
-}
-
-resource "spectrocloud_privatecloudgateway_ippool" "ippoolprod" {
-  name                 = "ippool-prod"
-  private_cloud_gateway_id = "5fbb9195f4a3d7b95f888211"
-  network_type = "subnet"
-  subnet_cidr = "10.10.10.100/16"
-  prefix = 30
-  gateway = "10.10.10.1"
-  nameserver_addresses = ["8.8.8.8", "9.9.9.9"]
-  nameserver_search_suffix = ["test.com", "dev.com"]
-  restrict_to_single_cluster = true
-}
-```
 
 ## Schema
 
 ### Required
 
-- **name** (String)
-- **private_cloud_gateway_id** (String)
-- **network_type** (String) one of [`range`, `subnet`]
-- **prefix** (Int)
 - **gateway** (String)
-- **ip_start_range** (String) if `network_type` is `range`
-- **ip_end_range** (String) if `network_type` is `range`
-- **subnet_cidr** (String) if `network_type` is `subnet`
+- **name** (String)
+- **network_type** (String)
+- **prefix** (Number)
+- **private_cloud_gateway_id** (String)
 
 ### Optional
 
-- **nameserver_addresses** ([]String) String array as set
-- **nameserver_search_suffix** ([]String) String array as set
+- **id** (String) The ID of this resource.
+- **ip_end_range** (String)
+- **ip_start_range** (String)
+- **nameserver_addresses** (Set of String)
+- **nameserver_search_suffix** (Set of String)
 - **restrict_to_single_cluster** (Boolean)
+- **subnet_cidr** (String)
+- **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- **create** (String)
+- **delete** (String)
+- **update** (String)
+
+
