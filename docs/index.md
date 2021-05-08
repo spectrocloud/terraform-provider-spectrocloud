@@ -46,11 +46,11 @@ provider "spectrocloud" {
 Create or append to a `terraform.tfvars` file:
 
 ```terraform
-# Spectro Cloud credentials
-sc_host         = "{enter Spectro Cloud API endpoint}" #e.g: api.spectrocloud.com (for SaaS)
-sc_username     = "{enter Spectro Cloud username}"     #e.g: user1@abc.com
-sc_password     = "{enter Spectro Cloud password}"     #e.g: supereSecure1!
-sc_project_name = "{enter Spectro Cloud project Name}" #e.g: Default
+# Credentials
+host         = "console.spectrocloud.com"
+username     = "user1@abc.com" # Username of the user (or specify with SPECTROCLOUD_USERNAME env var)
+password     = "superSecure1!" # Password of the user (or specify with SPECTROCLOUD_PASSWORD env var)
+project_name = "Default"       # Project name (e.g: Default)
 ```
 
 ->
