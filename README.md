@@ -21,6 +21,12 @@ Examples of other managed resources are also available in the [examples/resource
 Detailed documentation on supported data sources and resources are available on the
 [Terraform Spectro Cloud Provider Documentation](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs).
 
+## Develop
+
+- Hack away
+- Make sure to run `go generate` after your final commit
+- Send in a PR
+
 ## Support
 
 For questions or issues with the provider, please post your questions on the provider [discussion board](/discussions).
