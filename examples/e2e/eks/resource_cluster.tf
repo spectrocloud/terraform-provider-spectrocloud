@@ -1,6 +1,6 @@
 
 resource "spectrocloud_cluster_eks" "cluster" {
-  name               = "eks-tf-dev3"
+  name               = "eks-dev"
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
   cloud_account_id   = spectrocloud_cloudaccount_aws.account.id
 

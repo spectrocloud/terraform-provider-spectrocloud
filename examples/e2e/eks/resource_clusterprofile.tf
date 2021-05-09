@@ -25,7 +25,7 @@ data "spectrocloud_pack" "ubuntu" {
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
-  name        = "eks-tf-basic"
+  name        = "eks-basic"
   description = "basic eks cp"
   cloud       = "eks"
   type        = "cluster"
