@@ -279,43 +279,28 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
-	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
-
-	var config *models.V1alpha1VsphereCloudConfig
-	if config, err = c.GetCloudConfigVsphere(configUID); err != nil {
+	kubecfg, err := c.GetClusterKubeConfig(uid)
+	if err != nil {
 		return diag.FromErr(err)
 	}
-	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
-		if err := d.Set("cluster_import_manifest_apply_command", cluster.Status.ClusterImport.ImportLink); err != nil {
-			return diag.FromErr(err)
-		}
-
-		importManifest, err := c.GetClusterImportManifest(uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("cluster_import_manifest", importManifest); err != nil {
-			return diag.FromErr(err)
-		}
-	} else {
-		kubecfg, err := c.GetClusterKubeConfig(uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("kubeconfig", kubecfg); err != nil {
-			return diag.FromErr(err)
-		}
+	if err := d.Set("kubeconfig", kubecfg); err != nil {
+		return diag.FromErr(err)
 	}
 
-	//for brownfield, until cluster is not in running state, don't get machine pool
-	if cluster.Status.ClusterImport == nil || cluster.Status.State == "Running" {
+	return flattenCloudConfigVsphere(cluster.Spec.CloudConfigRef.UID, d, c)
+}
+
+func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1alpha1Client) diag.Diagnostics {
+	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
+		return diag.FromErr(err)
+	} else {
 		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
-	return diags
+
+	return diag.Diagnostics{}
 }
 
 func flattenMachinePoolConfigsVsphere(machinePools []*models.V1alpha1VsphereMachinePoolConfig) []interface{} {

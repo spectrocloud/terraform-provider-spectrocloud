@@ -217,46 +217,28 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diags
 	}
 
-	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
-
-	var config *models.V1alpha1GcpCloudConfig
-	if config, err = c.GetCloudConfigGcp(configUID); err != nil {
+	kubecfg, err := c.GetClusterKubeConfig(uid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("kubeconfig", kubecfg); err != nil {
 		return diag.FromErr(err)
 	}
 
-	//for brownfield cluster
-	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
-		importManifest, err := c.GetClusterImportManifest(uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("cluster_import_manifest", importManifest); err != nil {
-			return diag.FromErr(err)
-		}
+	return flattenCloudConfigGcp(cluster.Spec.CloudConfigRef.UID, d, c)
+}
 
-		if err := d.Set("cluster_import_manifest_apply_command", cluster.Status.ClusterImport.ImportLink); err != nil {
-			return diag.FromErr(err)
-		}
-
+func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V1alpha1Client) diag.Diagnostics {
+	if config, err := c.GetCloudConfigGcp(configUID); err != nil {
+		return diag.FromErr(err)
 	} else {
-		kubecfg, err := c.GetClusterKubeConfig(uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("kubeconfig", kubecfg); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	//for brownfield, until cluster is not in running state, don't get machine pool
-	if cluster.Status.ClusterImport == nil || cluster.Status.State == "Running" {
 		mp := flattenMachinePoolConfigsGcp(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
-	return diags
+
+	return diag.Diagnostics{}
 }
 
 func flattenMachinePoolConfigsGcp(machinePools []*models.V1alpha1GcpMachinePoolConfig) []interface{} {
