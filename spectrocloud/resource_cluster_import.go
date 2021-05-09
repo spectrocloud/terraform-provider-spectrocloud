@@ -103,7 +103,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 
-	cloudClusterReadFunc(ctx, d, m)
+	resourceCloudClusterRead(ctx, d, m)
 
 	if profiles := toCloudClusterProfiles(d); profiles != nil {
 		if err := c.UpdateClusterProfileValues(uid, profiles); err != nil {
@@ -115,17 +115,55 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 
 func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cloudType := d.Get("cloud").(string)
-	switch cloudType {
-	case "aws":
-		return resourceClusterAwsRead(ctx, d, m)
-	case "azure":
-		return resourceClusterAzureRead(ctx, d, m)
-	case "gcp":
-		return resourceClusterGcpRead(ctx, d, m)
-	case "vsphere":
-		return resourceClusterVsphereRead(ctx, d, m)
+
+	c := m.(*client.V1alpha1Client)
+
+	var diags diag.Diagnostics
+	uid := d.Id()
+	cluster, err := c.GetCluster(uid)
+	if err != nil {
+		return diag.FromErr(err)
+	} else if cluster == nil {
+		d.SetId("")
+		return diags
 	}
-	return diag.FromErr(fmt.Errorf("failed to import cluster as cloud type '%s' is invalid", cloudType))
+
+	if err := resourceCloudClusterImportManoifests(cluster, d, c); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if cluster.Status.State == "Running" {
+		switch cloudType {
+		case "aws":
+			return flattenCloudConfigAws(cluster.Spec.CloudConfigRef.UID, d, c)
+		case "azure":
+			return flattenCloudConfigAzure(cluster.Spec.CloudConfigRef.UID, d, c)
+		case "gcp":
+			return flattenCloudConfigGcp(cluster.Spec.CloudConfigRef.UID, d, c)
+		case "vsphere":
+			return flattenCloudConfigVsphere(cluster.Spec.CloudConfigRef.UID, d, c)
+		}
+		return diag.FromErr(fmt.Errorf("failed to import cluster as cloud type '%s' is invalid", cloudType))
+	}
+
+	return diag.Diagnostics{}
+}
+
+func resourceCloudClusterImportManoifests(cluster *models.V1alpha1SpectroCluster, d *schema.ResourceData, c *client.V1alpha1Client) error {
+	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
+		if err := d.Set("cluster_import_manifest_apply_command", cluster.Status.ClusterImport.ImportLink); err != nil {
+			return err
+		}
+
+		importManifest, err := c.GetClusterImportManifest(cluster.Metadata.UID)
+		if err != nil {
+			return err
+		}
+		if err := d.Set("cluster_import_manifest", importManifest); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func cloudClusterImportFunc(c *client.V1alpha1Client, d *schema.ResourceData) (string, error) {
@@ -142,20 +180,6 @@ func cloudClusterImportFunc(c *client.V1alpha1Client, d *schema.ResourceData) (s
 		return c.ImportClusterVsphere(meta)
 	}
 	return "", fmt.Errorf("failed to find cloud type %s", cloudType)
-}
-
-func cloudClusterReadFunc(ctx context.Context, d *schema.ResourceData, m interface{}) {
-	cloudType := d.Get("cloud").(string)
-	switch cloudType {
-	case "aws":
-		resourceClusterAwsRead(ctx, d, m)
-	case "azure":
-		resourceClusterAzureRead(ctx, d, m)
-	case "gcp":
-		resourceClusterGcpRead(ctx, d, m)
-	case "vsphere":
-		resourceClusterVsphereRead(ctx, d, m)
-	}
 }
 
 func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

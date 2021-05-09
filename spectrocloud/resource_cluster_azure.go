@@ -252,45 +252,30 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 		return diags
 	}
 
-	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
-
-	var config *models.V1alpha1AzureCloudConfig
-	if config, err = c.GetCloudConfigAzure(configUID); err != nil {
+	kubecfg, err := c.GetClusterKubeConfig(uid)
+	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	// Update the kubeconfig
-	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
-		if err := d.Set("cluster_import_manifest_apply_command", cluster.Status.ClusterImport.ImportLink); err != nil {
-			return diag.FromErr(err)
-		}
-
-		importManifest, err := c.GetClusterImportManifest(uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("cluster_import_manifest", importManifest); err != nil {
-			return diag.FromErr(err)
-		}
-	} else {
-		kubecfg, err := c.GetClusterKubeConfig(uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("kubeconfig", kubecfg); err != nil {
-			return diag.FromErr(err)
-		}
+	if err := d.Set("kubeconfig", kubecfg); err != nil {
+		return diag.FromErr(err)
 	}
 
-	//for brownfield, until cluster is not in running state, don't get machine pool
-	if cluster.Status.ClusterImport == nil || cluster.Status.State == "Running" {
+	return flattenCloudConfigAzure(cluster.Spec.CloudConfigRef.UID, d, c)
+}
+
+func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client.V1alpha1Client) diag.Diagnostics {
+	d.Set("cloud_config_id", configUID)
+	if config, err := c.GetCloudConfigAzure(configUID); err != nil {
+		return diag.FromErr(err)
+	} else {
 		mp := flattenMachinePoolConfigsAzure(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
-	return diags
+
+	return diag.Diagnostics{}
 }
 
 func flattenMachinePoolConfigsAzure(machinePools []*models.V1alpha1AzureMachinePoolConfig) []interface{} {
