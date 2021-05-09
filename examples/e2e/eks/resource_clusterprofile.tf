@@ -21,7 +21,7 @@ data "spectrocloud_pack" "k8s" {
 
 data "spectrocloud_pack" "ubuntu" {
   name    = "amazon-linux-eks"
-  version = "5.4"
+  version = "1.0.0"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
@@ -53,7 +53,7 @@ resource "spectrocloud_cluster_profile" "profile" {
 
   pack {
     name   = data.spectrocloud_pack.ubuntu.name
-    tag    = "5.4.x"
+    tag    = "1.0.0"
     uid    = data.spectrocloud_pack.ubuntu.id
     values = data.spectrocloud_pack.ubuntu.values
   }

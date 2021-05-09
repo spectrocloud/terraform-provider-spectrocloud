@@ -61,20 +61,28 @@ func resourceClusterEks() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"ssh_key_name": {
 							Type:     schema.TypeString,
-							Required: true,
-						},
-						"vpc_id": {
-							Type:     schema.TypeString,
 							Optional: true,
 						},
 						"region": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"vpc_id": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"az_subnets": {
+							Type:     schema.TypeMap,
+							Required: true,
+							ValidateDiagFunc: validateSubnets,
+							Elem: &schema.Schema{
+								Type:     schema.TypeString,
+							},
+						},
 						"endpoint_access": {
 							Type:         schema.TypeString,
 							Optional:     true,
-							ValidateFunc: validation.StringInSlice([]string{"public", "private", "private_and_public"}, true),
+							ValidateFunc: validation.StringInSlice([]string{"public", "private", "private_and_public"}, false),
 							Default:      "public",
 						},
 						"public_access_cidrs": {
@@ -111,26 +119,17 @@ func resourceClusterEks() *schema.Resource {
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Set:      resourceMachinePoolAwsHash,
+				Set:      resourceMachinePoolEksHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"control_plane": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-							//ForceNew: true,
-						},
-						"control_plane_as_worker": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-
-							//ForceNew: true,
-						},
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+						},
+						"disk_size_gb": {
+							Type:     schema.TypeInt,
+							Required: true,
 						},
 						"count": {
 							Type:     schema.TypeInt,
@@ -140,30 +139,12 @@ func resourceClusterEks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"update_strategy": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "RollingUpdateScaleOut",
-						},
-						"disk_size_gb": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							Default:  65,
-						},
-						"azs": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							MinItems: 1,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
 						"az_subnets": {
 							Type:     schema.TypeMap,
-							Optional: true,
+							Required: true,
+							ValidateDiagFunc: validateSubnets,
 							Elem: &schema.Schema{
-								Type: schema.TypeString,
+								Type:     schema.TypeString,
 							},
 						},
 					},
@@ -213,9 +194,9 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	c := m.(*client.V1alpha1Client)
 
 	var diags diag.Diagnostics
-	//
+
 	uid := d.Id()
-	//
+
 	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -323,7 +304,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolAwsHash(machinePoolResource)
+			hash := resourceMachinePoolEksHash(machinePoolResource)
 
 			machinePool := toMachinePoolEks(machinePoolResource)
 
@@ -331,7 +312,8 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
 				err = c.CreateMachinePoolEks(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
+			} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
+				// TODO
 				log.Printf("Change in machine pool %s", name)
 				err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
 			}
@@ -384,24 +366,26 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			ProfileUID:      d.Get("cluster_profile_id").(string),
 			CloudConfig: &models.V1alpha1EksClusterConfig{
+				VpcID: cloudConfig["vpc_id"].(string),
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
 			},
 		},
 	}
 
-	if cloudConfig["vpc_id"] != nil && len(cloudConfig["vpc_id"].(string)) > 0 {
-		cluster.Spec.CloudConfig.VpcID = cloudConfig["vpc_id"].(string)
-	}
+	//if cloudConfig["vpc_id"] != nil && len(cloudConfig["vpc_id"].(string)) > 0 {
+	//	cluster.Spec.CloudConfig.VpcID = cloudConfig["vpc_id"].(string)
+	//}
 
-	access := models.V1alpha1EksClusterConfigEndpointAccess{}
-	if len(cloudConfig["endpoint_access"].(string)) == 0 || cloudConfig["endpoint_access"].(string) == "public" {
+	access := &models.V1alpha1EksClusterConfigEndpointAccess{}
+	switch cloudConfig["endpoint_access"].(string) {
+	case "public":
 		access.Public = true
 		access.Private = false
-	} else if cloudConfig["endpoint_access"].(string) == "private" {
+	case "private":
 		access.Public = false
 		access.Private = true
-	} else if cloudConfig["endpoint_access"].(string) == "private_and_public" {
+	case "private_and_public":
 		access.Public = true
 		access.Private = true
 	}
@@ -414,9 +398,18 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		access.PublicCIDRs = cidrs
 	}
 
-	cluster.Spec.CloudConfig.EndpointAccess = &access
+	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1alpha1EksMachinePoolConfigEntity, 0)
+	cpPool := map[string]interface{} {
+		"control_plane" : true,
+		"name": "master-pool",
+		"az_subnets": cloudConfig["az_subnets"],
+		"instance_type": "t3.large",
+		"disk_size_gb": 0,
+		"count": 1,
+	}
+	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -438,43 +431,37 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
-	controlPlane := m["control_plane"].(bool)
-	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
+	controlPlane, _ := m["control_plane"].(bool)
 	if controlPlane {
 		labels = append(labels, "master")
 	}
 
+	azs := make([]string, 0)
+	subnets := make([]*models.V1alpha1EksSubnetEntity, 0)
+	for k, val := range m["az_subnets"].(map[string]interface{}) {
+		azs = append(azs, k)
+		if val.(string) != "" {
+			subnets = append(subnets, &models.V1alpha1EksSubnetEntity{
+				Az: k,
+				ID: val.(string),
+			})
+		}
+	}
+
 	mp := &models.V1alpha1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1alpha1EksMachineCloudConfigEntity{
+			RootDeviceSize:   int64(m["disk_size_gb"].(int)),
 			InstanceType:   m["instance_type"].(string),
-			RootDeviceSize: int64(m["disk_size_gb"].(int)),
+			Azs: azs,
+			Subnets: subnets,
 		},
 		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
 			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			UpdateStrategy: &models.V1alpha1UpdateStrategy{
-				Type: m["update_strategy"].(string),
-			},
-			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
 
-	if v, ok := m["az_subnets"]; ok {
-		azs := make([]string, 0)
-		subnets := make([]*models.V1alpha1EksSubnetEntity, 0, 1)
-		for k, val := range v.(map[string]interface{}) {
-			azs = append(azs, k)
-			subnets = append(subnets, &models.V1alpha1EksSubnetEntity{
-				Az: k,
-				ID: val.(string),
-			})
-		}
-		mp.CloudConfig.Azs = azs
-		mp.CloudConfig.Subnets = subnets
-	}
-
-	// add subnet in machine pool
 	return mp
 }
