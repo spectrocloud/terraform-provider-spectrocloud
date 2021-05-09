@@ -31,20 +31,11 @@ resource "spectrocloud_cluster_eks" "cluster" {
   #   EOT
   # }
 
-  # machine_pool {
-  #   control_plane = true
-  #   name          = "master-pool"
-  #   count         = 1
-  #   instance_type = "t3.large"
-  #   disk_size_gb  = 62
-  #   az_subnets    = var.master_azs_subnets_map
-  # }
-
   machine_pool {
     name          = "worker-basic"
     count         = 1
     instance_type = "t3.large"
     az_subnets    = var.worker_azs_subnets_map
-    disk_size_gb = 60
+    disk_size_gb  = 60
   }
 }
