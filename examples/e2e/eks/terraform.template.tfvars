@@ -29,6 +29,8 @@ aws_ssh_key_name = "{enter AWS SSH key name}" #e.g: default
 # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions
 aws_region = "{enter AWS Region}" #e.g: us-west-2
 
+aws_vpc_id = "{enter AWS Vpc Id}" #e.g: vpc-0e03ff84a894d4
+
 master_azs_subnets_map = {
   "{enter AWS Availability Zone A}" = "{enter Subnet For Availability Zone A}",
   "{enter AWS Availability Zone B}" = "{enter Subnet For Availability Zone B}"

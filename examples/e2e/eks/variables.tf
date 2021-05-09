@@ -11,6 +11,7 @@ variable "external_id" {}
 # Cluster
 variable "aws_ssh_key_name" {}
 variable "aws_region" {}
+variable "aws_vpc_id" {}
 
 variable "aws_region_az" {
   type = list(string)

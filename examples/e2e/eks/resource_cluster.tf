@@ -1,13 +1,13 @@
 
 resource "spectrocloud_cluster_eks" "cluster" {
-  name               = "eks-tf-dev3"
+  name               = "eks-dev"
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
   cloud_account_id   = spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
     ssh_key_name = var.aws_ssh_key_name
     region       = var.aws_region
-    vpc_id       = "vpc-0e03ff84a894d40a2"
+    vpc_id       = var.aws_vpc_id
   }
 
   # To override or specify values for a cluster:
