@@ -1,4 +1,3 @@
-
 resource "spectrocloud_cluster_eks" "cluster" {
   name               = "eks-dev1"
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
