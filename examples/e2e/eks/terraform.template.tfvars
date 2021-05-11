@@ -68,11 +68,10 @@ cloud_account_type = "{enter AWS Cloud Account Type}" #eg. "secret" or "sts"
 #######################
 # (for DYNAMIC, uncomment the following 8 lines)
 # Leave the AZ values as empty ("")
-#master_azs_subnets_map = {
-#  "{enter AWS Availability Zone A}" = ""
-#  "{enter AWS Availability Zone B}" = ""
+# TODO rishi
+#master_azs_map = ["{enter AWS Availability Zone A}" = "" "{enter AWS Availability Zone B}" = ""
 #}
-#worker_azs_subnets_map = {
+#worker_azs_map = {
 #  "{enter AWS Availability Zone A}" = ""
 #  "{enter AWS Availability Zone B}" = ""
 #}
