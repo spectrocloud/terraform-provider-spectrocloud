@@ -66,27 +66,14 @@ cloud_account_type = "{enter AWS Cloud Account Type}" #eg. "secret" or "sts"
 ########################
 # Dynamic Provisioning
 #######################
-# (for DYNAMIC, uncomment the following 8 lines)
-# Leave the AZ values as empty ("")
-# TODO rishi
-#master_azs_map = ["{enter AWS Availability Zone A}" = "" "{enter AWS Availability Zone B}" = ""
-#}
-#worker_azs_map = {
-#  "{enter AWS Availability Zone A}" = ""
-#  "{enter AWS Availability Zone B}" = ""
-#}
-
-## e.g:
-## master_azs_subnets_map = {
-##   "us-west-2a" = ""
-##   "us-west-2b" = ""
-## }
+# (for DYNAMIC, uncomment the following line)
+#azs = ["{enter AWS Availability Zone A}", "{enter AWS Availability Zone B}"]
 
 ########################
 # Static Provisioning
 ########################
 # Static provisioning requires specifying the exiting VPC-ID and all subnets to target
-# (for STATIC, uncomment the following 10 lines)
+# (for STATIC, uncomment the following 9 lines)
 #aws_vpc_id = "{enter AWS VPC ID}" #e.g: vpc-123456
 
 #master_azs_subnets_map = {

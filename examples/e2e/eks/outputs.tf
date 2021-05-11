@@ -7,5 +7,5 @@ output "cluster_kubeconfig" {
 }
 
 output "clusterprofile_id" {
-  value = spectrocloud_cluster_profile.profile.id
+  value = data.spectrocloud_cluster_profile.profile.id
 }

@@ -79,7 +79,7 @@ func resourceClusterEks() *schema.Resource {
 							Optional: true,
 							ForceNew: true,
 							Elem: &schema.Schema{
-								Type:     schema.TypeString,
+								Type: schema.TypeString,
 							},
 						},
 						"az_subnets": {
@@ -87,13 +87,13 @@ func resourceClusterEks() *schema.Resource {
 							Optional: true,
 							ForceNew: true,
 							Elem: &schema.Schema{
-								Type:     schema.TypeString,
+								Type: schema.TypeString,
 							},
 						},
 						"endpoint_access": {
 							Type:         schema.TypeString,
 							Optional:     true,
-							ForceNew: true,
+							ForceNew:     true,
 							ValidateFunc: validation.StringInSlice([]string{"public", "private", "private_and_public"}, false),
 							Default:      "public",
 						},
@@ -155,14 +155,14 @@ func resourceClusterEks() *schema.Resource {
 							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Schema{
-								Type:     schema.TypeString,
+								Type: schema.TypeString,
 							},
 						},
 						"az_subnets": {
 							Type:     schema.TypeMap,
 							Optional: true,
 							Elem: &schema.Schema{
-								Type:     schema.TypeString,
+								Type: schema.TypeString,
 							},
 						},
 					},
@@ -271,16 +271,10 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1alpha1EksMachinePoolC
 
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 
-		// TODO check instead on VPC ID set
 		if len(machinePool.SubnetIds) > 0 {
 			oi["az_subnets"] = machinePool.SubnetIds
 		} else {
-			sj := make(map[string]interface{})
-			for _, az := range machinePool.Azs {
-				sj[az] = "-"
-			}
-			// TODO RISHI
-			oi["azs"] = sj
+			oi["azs"] = machinePool.Azs
 		}
 
 		ois = append(ois, oi)
@@ -382,7 +376,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			ProfileUID:      d.Get("cluster_profile_id").(string),
 			CloudConfig: &models.V1alpha1EksClusterConfig{
-				VpcID: cloudConfig["vpc_id"].(string),
+				VpcID:      cloudConfig["vpc_id"].(string),
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
 			},
@@ -413,16 +407,16 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1alpha1EksMachinePoolConfigEntity, 0)
-	cpPool := map[string]interface{} {
-		"control_plane" : true,
-		"name": "master-pool",
-		"az_subnets": cloudConfig["az_subnets"],
+	cpPool := map[string]interface{}{
+		"control_plane": true,
+		"name":          "master-pool",
+		"az_subnets":    cloudConfig["az_subnets"],
 		"instance_type": "t3.large",
-		"disk_size_gb": 0,
-		"count": 1,
+		"disk_size_gb":  0,
+		"count":         1,
 	}
 	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
@@ -462,10 +456,10 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 
 	mp := &models.V1alpha1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1alpha1EksMachineCloudConfigEntity{
-			RootDeviceSize:   int64(m["disk_size_gb"].(int)),
+			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 			InstanceType:   m["instance_type"].(string),
-			Azs: azs,
-			Subnets: subnets,
+			Azs:            azs,
+			Subnets:        subnets,
 		},
 		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
