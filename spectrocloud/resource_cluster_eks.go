@@ -61,20 +61,31 @@ func resourceClusterEks() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"ssh_key_name": {
 							Type:     schema.TypeString,
+							ForceNew: true,
 							Optional: true,
 						},
 						"region": {
 							Type:     schema.TypeString,
+							ForceNew: true,
 							Required: true,
 						},
 						"vpc_id": {
 							Type:     schema.TypeString,
+							ForceNew: true,
 							Optional: true,
+						},
+						"azs": {
+							Type:     schema.TypeList,
+							Optional: true,
+							ForceNew: true,
+							Elem: &schema.Schema{
+								Type:     schema.TypeString,
+							},
 						},
 						"az_subnets": {
 							Type:     schema.TypeMap,
-							Required: true,
-							ValidateDiagFunc: validateSubnets,
+							Optional: true,
+							ForceNew: true,
 							Elem: &schema.Schema{
 								Type:     schema.TypeString,
 							},
@@ -82,12 +93,14 @@ func resourceClusterEks() *schema.Resource {
 						"endpoint_access": {
 							Type:         schema.TypeString,
 							Optional:     true,
+							ForceNew: true,
 							ValidateFunc: validation.StringInSlice([]string{"public", "private", "private_and_public"}, false),
 							Default:      "public",
 						},
 						"public_access_cidrs": {
 							Type:     schema.TypeSet,
 							Optional: true,
+							ForceNew: true,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
@@ -117,9 +130,8 @@ func resourceClusterEks() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
-				Set:      resourceMachinePoolEksHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -139,10 +151,16 @@ func resourceClusterEks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"azs": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type:     schema.TypeString,
+							},
+						},
 						"az_subnets": {
 							Type:     schema.TypeMap,
-							Required: true,
-							ValidateDiagFunc: validateSubnets,
+							Optional: true,
 							Elem: &schema.Schema{
 								Type:     schema.TypeString,
 							},
@@ -215,35 +233,20 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	// Update the kubeconfig
-	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
-		if err := d.Set("cluster_import_manifest_apply_command", cluster.Status.ClusterImport.ImportLink); err != nil {
-			return diag.FromErr(err)
-		}
-
-		importManifest, err := c.GetClusterImportManifest(uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("cluster_import_manifest", importManifest); err != nil {
-			return diag.FromErr(err)
-		}
-	} else {
-		kubecfg, err := c.GetClusterKubeConfig(uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("kubeconfig", kubecfg); err != nil {
-			return diag.FromErr(err)
-		}
+	kubecfg, err := c.GetClusterKubeConfig(uid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("kubeconfig", kubecfg); err != nil {
+		return diag.FromErr(err)
 	}
 
-	//for brownfield, until cluster is not in running state, don't get machine pool
-	if cluster.Status.ClusterImport == nil || cluster.Status.State == "Running" {
-		mp := flattenMachinePoolConfigsEks(config.Spec.MachinePoolConfig)
-		if err := d.Set("machine_pool", mp); err != nil {
-			return diag.FromErr(err)
-		}
+	mp := flattenMachinePoolConfigsEks(config.Spec.MachinePoolConfig)
+
+	if err := d.Set("machine_pool", mp); err != nil {
+		return diag.FromErr(err)
 	}
+
 	return diags
 }
 
@@ -253,23 +256,34 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1alpha1EksMachinePoolC
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, len(machinePools))
+	ois := make([]interface{}, 0)
 
-	for i, machinePool := range machinePools {
+	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi["control_plane"] = machinePool.IsControlPlane
-		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
+		if *machinePool.IsControlPlane {
+			continue
+		}
+
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
 		oi["instance_type"] = machinePool.InstanceType
 
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 
-		oi["azs"] = machinePool.Azs
+		// TODO check instead on VPC ID set
+		if len(machinePool.SubnetIds) > 0 {
+			oi["az_subnets"] = machinePool.SubnetIds
+		} else {
+			sj := make(map[string]interface{})
+			for _, az := range machinePool.Azs {
+				sj[az] = "-"
+			}
+			// TODO RISHI
+			oi["azs"] = sj
+		}
 
-		ois[i] = oi
+		ois = append(ois, oi)
 	}
 
 	return ois
@@ -283,6 +297,8 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
+	_ = d.Get("machine_pool")
+
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -292,16 +308,16 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.(*schema.Set)
-		ns := nraw.(*schema.Set)
+		os := oraw.([]interface{})
+		ns := nraw.([]interface{})
 
 		osMap := make(map[string]interface{})
-		for _, mp := range os.List() {
+		for _, mp := range os {
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
-		for _, mp := range ns.List() {
+		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
 			hash := resourceMachinePoolEksHash(machinePoolResource)
@@ -373,10 +389,6 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		},
 	}
 
-	//if cloudConfig["vpc_id"] != nil && len(cloudConfig["vpc_id"].(string)) > 0 {
-	//	cluster.Spec.CloudConfig.VpcID = cloudConfig["vpc_id"].(string)
-	//}
-
 	access := &models.V1alpha1EksClusterConfigEndpointAccess{}
 	switch cloudConfig["endpoint_access"].(string) {
 	case "public":
@@ -440,7 +452,7 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 	subnets := make([]*models.V1alpha1EksSubnetEntity, 0)
 	for k, val := range m["az_subnets"].(map[string]interface{}) {
 		azs = append(azs, k)
-		if val.(string) != "" {
+		if val.(string) != "" && val.(string) != "-" {
 			subnets = append(subnets, &models.V1alpha1EksSubnetEntity{
 				Az: k,
 				ID: val.(string),

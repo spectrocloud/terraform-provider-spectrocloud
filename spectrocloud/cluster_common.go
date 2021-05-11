@@ -179,12 +179,16 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 func resourceMachinePoolEksHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
-	// TODO
+
+	for i, j := range m["az_subnets"].(map[string]interface{}) {
+		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
+	}
 	//buf.WriteString(fmt.Sprintf("%s-", m["az_subnets"].(*schema.Map).GoString()))
+	// TODO
 
 	return int(hash(buf.String()))
 }
@@ -274,17 +278,5 @@ func validateOsPatchOnDemandAfter(data interface{}, _ cty.Path) diag.Diagnostics
 	}
 
 	return diags
-}
-
-func validateSubnets(data interface{}, _ cty.Path) diag.Diagnostics {
-	subnets := data.(map[string]interface{})
-	if len(subnets) == 0 {
-		return diag.Errorf("Need to specify at least one az/subnet. " +
-			"For dynamic placement specify empty subnet, e.g: us-west-2 = \"\". " +
-			"For static placement specify one or more subnets separated by commas, e.g: " +
-			"us-west-2 = \"subnet-1234,subnet-4567\".")
-	}
-
-	return nil
 }
 
