@@ -1,8 +1,8 @@
 # If looking up a cluster profile instead of creating a new one
-//data "spectrocloud_cluster_profile" "profile" {
-//  # id = <uid>
-//  name = "eks"
-//}
+# data "spectrocloud_cluster_profile" "profile" {
+#   # id = <uid>
+#   name = "eks-basic"
+# }
 
 data "spectrocloud_pack" "csi" {
   name    = "csi-aws"
@@ -21,7 +21,7 @@ data "spectrocloud_pack" "k8s" {
 
 data "spectrocloud_pack" "ubuntu" {
   name    = "amazon-linux-eks"
-  version = "5.4"
+  version = "1.0.0"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
@@ -53,7 +53,7 @@ resource "spectrocloud_cluster_profile" "profile" {
 
   pack {
     name   = data.spectrocloud_pack.ubuntu.name
-    tag    = "5.4.x"
+    tag    = "1.0.0"
     uid    = data.spectrocloud_pack.ubuntu.id
     values = data.spectrocloud_pack.ubuntu.values
   }
