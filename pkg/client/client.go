@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	openapiclient "github.com/go-openapi/runtime/client"
 	"github.com/prometheus/common/log"
-	"time"
 
 	"github.com/go-openapi/strfmt"
 
@@ -62,7 +63,6 @@ func New(hubbleHost, email, password, projectUID string) *V1alpha1Client {
 	return &V1alpha1Client{ctx, email, password}
 }
 
-
 func (h *V1alpha1Client) getNewAuthToken() (*AuthToken, error) {
 	//httpClient, err := certs.GetHttpClient()
 	//if err != nil {
@@ -97,7 +97,6 @@ func (h *V1alpha1Client) GetProjectUID(projectName string) (string, error) {
 		return "", err
 	}
 
-
 	params := userC.NewV1alpha1ProjectsListParamsWithContext(h.ctx)
 	projects, err := client.V1alpha1ProjectsList(params)
 	if err != nil {
@@ -113,15 +112,12 @@ func (h *V1alpha1Client) GetProjectUID(projectName string) (string, error) {
 	return "", fmt.Errorf("project '%s' not found", projectName)
 }
 
-
-
 func GetProjectContextWithCtx(c context.Context, projectUid string) context.Context {
 	return context.WithValue(c, hapitransport.CUSTOM_HEADERS, hapitransport.Values{
 		HeaderMap: map[string]string{
 			"ProjectUid": projectUid,
 		}})
 }
-
 
 func (h *V1alpha1Client) getTransport() (*hapitransport.Runtime, error) {
 	if authToken == nil || authToken.expiry.Before(time.Now()) {
@@ -158,4 +154,3 @@ func (h *V1alpha1Client) getUserClient() (userC.ClientService, error) {
 
 	return userC.New(httpTransport, strfmt.Default), nil
 }
-
