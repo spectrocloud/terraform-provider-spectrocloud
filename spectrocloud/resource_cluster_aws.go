@@ -35,12 +35,46 @@ func resourceClusterAws() *schema.Resource {
 			},
 			"cluster_profile_id": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
+			},
+			"cluster_profile": {
+				Type:          schema.TypeSet,
+				Optional:      true,
+				ConflictsWith: []string{"cluster_profile_id", "pack"},
+				Set:           resourceClusterProfileHash,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cluster_profile_id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"pack": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"tag": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"values": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 			"cloud_config_id": {
@@ -333,8 +367,8 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("pack") {
-		if err := updatePacks(c, d); err != nil {
+	if d.HasChanges("cluster_profile") {
+		if err := updateProfiles(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -347,7 +381,6 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	//clientSecret := strfmt.Password(d.Get("aws_client_secret").(string))
 
 	cluster := &models.V1alpha1SpectroAwsClusterEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -356,7 +389,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		},
 		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			ProfileUID:      d.Get("cluster_profile_id").(string),
+			Profiles:        toProfiles(d),
 			CloudConfig: &models.V1alpha1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
@@ -372,13 +405,6 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-
-	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		p := toPack(pack)
-		packValues = append(packValues, p)
-	}
-	cluster.Spec.PackValues = packValues
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster

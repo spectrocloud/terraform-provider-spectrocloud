@@ -35,9 +35,46 @@ func resourceClusterEks() *schema.Resource {
 				ForceNew: true,
 			},
 			"cluster_profile_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:       schema.TypeString,
+				Optional:   true,
+				ForceNew:   true,
+				Deprecated: "",
+			},
+			"cluster_profile": {
+				Type:          schema.TypeSet,
+				Optional:      true,
+				ConflictsWith: []string{"cluster_profile_id", "pack"},
+				Set:           resourceClusterProfileHash,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cluster_profile_id": {
+							Type:     schema.TypeString,
+							Required: true,
+							//ForceNew: true,
+							//ForceNew: true,
+						},
+						"pack": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"tag": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"values": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
@@ -359,8 +396,8 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("pack") {
-		if err := updatePacks(c, d); err != nil {
+	if d.HasChanges("cluster_profile") {
+		if err := updateProfiles(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -382,7 +419,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		},
 		Spec: &models.V1alpha1SpectroEksClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			ProfileUID:      d.Get("cluster_profile_id").(string),
+			Profiles:        toProfiles(d),
 			CloudConfig: &models.V1alpha1EksClusterConfig{
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
@@ -423,14 +460,6 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-
-	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		p := toPack(pack)
-		packValues = append(packValues, p)
-	}
-	cluster.Spec.PackValues = packValues
-
 	return cluster
 }
 
