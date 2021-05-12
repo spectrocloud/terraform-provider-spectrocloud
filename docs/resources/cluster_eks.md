@@ -103,13 +103,14 @@ resource "spectrocloud_cluster_eks" "cluster" {
 
 Required:
 
+- **az_subnets** (Map of String)
 - **region** (String)
-- **ssh_key_name** (String)
 
 Optional:
 
 - **endpoint_access** (String)
 - **public_access_cidrs** (Set of String)
+- **ssh_key_name** (String)
 - **vpc_id** (String)
 
 
@@ -118,18 +119,11 @@ Optional:
 
 Required:
 
+- **az_subnets** (Map of String)
 - **count** (Number)
+- **disk_size_gb** (Number)
 - **instance_type** (String)
 - **name** (String)
-
-Optional:
-
-- **az_subnets** (Map of String)
-- **azs** (Set of String)
-- **control_plane** (Boolean)
-- **control_plane_as_worker** (Boolean)
-- **disk_size_gb** (Number)
-- **update_strategy** (String)
 
 
 <a id="nestedblock--pack"></a>
