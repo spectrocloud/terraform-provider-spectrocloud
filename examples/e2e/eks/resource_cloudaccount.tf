@@ -1,9 +1,10 @@
 #
 # If looking up a cloudaccount instead of creating one
-//data "spectrocloud_cloudaccount_aws" "account" {
-//  name = "aws-dev"
-//}
+# data "spectrocloud_cloudaccount_aws" "account" {
+#   name = "aws-dev"
+# }
 
+# If creating a new account
 resource "spectrocloud_cloudaccount_aws" "account" {
   name           = "aws-dev-access"
   aws_access_key = var.aws_access_key

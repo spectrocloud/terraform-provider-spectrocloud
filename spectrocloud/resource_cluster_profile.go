@@ -223,7 +223,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if d.HasChanges("pack") {
+	if d.HasChanges("name") || d.HasChanges("pack") {
 		log.Printf("Updating packs")
 		cluster, err := toClusterProfileUpdate(d)
 		if err != nil {

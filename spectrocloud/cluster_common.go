@@ -176,6 +176,23 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceMachinePoolEksHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
+	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+
+	for i, j := range m["az_subnets"].(map[string]interface{}) {
+		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
+	}
+	//buf.WriteString(fmt.Sprintf("%s-", m["az_subnets"].(*schema.Map).GoString()))
+	// TODO
+
+	return int(hash(buf.String()))
+}
+
 func resourceMachinePoolVsphereHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
@@ -262,3 +279,4 @@ func validateOsPatchOnDemandAfter(data interface{}, _ cty.Path) diag.Diagnostics
 
 	return diags
 }
+
