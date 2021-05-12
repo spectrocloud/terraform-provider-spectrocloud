@@ -84,7 +84,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - **cloud_account_id** (String)
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - **cluster_profile_id** (String)
-- **machine_pool** (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
+- **machine_pool** (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
 
 ### Optional
@@ -103,11 +103,12 @@ resource "spectrocloud_cluster_eks" "cluster" {
 
 Required:
 
-- **az_subnets** (Map of String)
 - **region** (String)
 
 Optional:
 
+- **az_subnets** (Map of String)
+- **azs** (List of String)
 - **endpoint_access** (String)
 - **public_access_cidrs** (Set of String)
 - **ssh_key_name** (String)
@@ -119,11 +120,15 @@ Optional:
 
 Required:
 
-- **az_subnets** (Map of String)
 - **count** (Number)
 - **disk_size_gb** (Number)
 - **instance_type** (String)
 - **name** (String)
+
+Optional:
+
+- **az_subnets** (Map of String)
+- **azs** (List of String)
 
 
 <a id="nestedblock--pack"></a>
