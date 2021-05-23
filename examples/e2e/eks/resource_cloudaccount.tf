@@ -6,7 +6,7 @@
 
 # If creating a new account
 resource "spectrocloud_cloudaccount_aws" "account" {
-  name           = "aws-dev-access"
+  name           = "aws-eks"
   aws_access_key = var.aws_access_key
   aws_secret_key = var.aws_secret_key
   type           = var.cloud_account_type
