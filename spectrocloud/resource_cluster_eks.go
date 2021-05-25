@@ -413,7 +413,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		"az_subnets":    cloudConfig["az_subnets"],
 		"instance_type": "t3.large",
 		"disk_size_gb":  0,
-		"count":         1,
+		"count":         0,
 	}
 	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
@@ -466,6 +466,8 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
 			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
+			MinSize:        int32(m["count"].(int)),
+			MaxSize:        int32(m["count"].(int)),
 		},
 	}
 
