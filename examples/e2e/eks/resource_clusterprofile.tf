@@ -3,6 +3,11 @@
 #   # id = <uid>
 #   name = "eks-basic"
 # }
+#
+data "spectrocloud_pack" "aws-ssm-agent" {
+  name    = "aws-ssm-agent"
+  version = "1.0.0"
+}
 
 data "spectrocloud_pack" "csi" {
   name    = "csi-aws"
@@ -25,16 +30,22 @@ data "spectrocloud_pack" "ubuntu" {
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
-  name        = "eks-basic"
+  name        = "ProdEKS-tf"
   description = "basic eks cp"
   cloud       = "eks"
   type        = "cluster"
 
   pack {
-    name   = data.spectrocloud_pack.csi.name
-    tag    = "1.x"
-    uid    = data.spectrocloud_pack.csi.id
-    values = data.spectrocloud_pack.csi.values
+    name   = data.spectrocloud_pack.ubuntu.name
+    tag    = "1.0.0"
+    uid    = data.spectrocloud_pack.ubuntu.id
+    values = data.spectrocloud_pack.ubuntu.values
+  }
+  pack {
+    name   = data.spectrocloud_pack.k8s.name
+    tag    = "1.19.x"
+    uid    = data.spectrocloud_pack.k8s.id
+    values = data.spectrocloud_pack.k8s.values
   }
 
   pack {
@@ -45,16 +56,18 @@ resource "spectrocloud_cluster_profile" "profile" {
   }
 
   pack {
-    name   = data.spectrocloud_pack.k8s.name
-    tag    = "1.19.x"
-    uid    = data.spectrocloud_pack.k8s.id
-    values = data.spectrocloud_pack.k8s.values
+    name   = data.spectrocloud_pack.csi.name
+    tag    = "1.x"
+    uid    = data.spectrocloud_pack.csi.id
+    values = data.spectrocloud_pack.csi.values
   }
 
   pack {
-    name   = data.spectrocloud_pack.ubuntu.name
-    tag    = "1.0.0"
-    uid    = data.spectrocloud_pack.ubuntu.id
-    values = data.spectrocloud_pack.ubuntu.values
+    name   = data.spectrocloud_pack.aws-ssm-agent.name
+    tag    = "1.0.x"
+    uid    = data.spectrocloud_pack.aws-ssm-agent.id
+    values = data.spectrocloud_pack.aws-ssm-agent.values
   }
+
+
 }

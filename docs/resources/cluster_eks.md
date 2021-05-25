@@ -84,6 +84,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - **cloud_account_id** (String)
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - **cluster_profile_id** (String)
+- **fargate_profile** (Block List, Min: 1) (see [below for nested schema](#nestedblock--fargate_profile))
 - **machine_pool** (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
 
@@ -113,6 +114,32 @@ Optional:
 - **public_access_cidrs** (Set of String)
 - **ssh_key_name** (String)
 - **vpc_id** (String)
+
+
+<a id="nestedblock--fargate_profile"></a>
+### Nested Schema for `fargate_profile`
+
+Required:
+
+- **name** (String)
+- **selector** (Block List, Min: 1) (see [below for nested schema](#nestedblock--fargate_profile--selector))
+
+Optional:
+
+- **additional_tags** (Map of String)
+- **subnets** (List of String)
+
+<a id="nestedblock--fargate_profile--selector"></a>
+### Nested Schema for `fargate_profile.selector`
+
+Required:
+
+- **namespace** (String)
+
+Optional:
+
+- **labels** (Map of String)
+
 
 
 <a id="nestedblock--machine_pool"></a>

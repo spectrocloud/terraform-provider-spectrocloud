@@ -212,8 +212,32 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	for i, j := range m["az_subnets"].(map[string]interface{}) {
 		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
 	}
-	//buf.WriteString(fmt.Sprintf("%s-", m["az_subnets"].(*schema.Map).GoString()))
 	// TODO
+
+	return int(hash(buf.String()))
+}
+
+func resourceFargateProfileEksHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+
+	for _, j := range m["subnets"].([]interface{}) {
+		buf.WriteString(fmt.Sprintf("%s-", j.(string)))
+	}
+
+	for i, j := range m["additional_tags"].(map[string]interface{}) {
+		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
+	}
+
+	for i, j := range m["selector"].([]interface{}) {
+		ins := j.(map[string]interface{})
+		buf.WriteString(fmt.Sprintf("%d-%s-", i, ins["namespace"].(string)))
+
+		for i2, j2 := range m["labels"].(map[string]interface{}) {
+			buf.WriteString(fmt.Sprintf("%s-%s", i2, j2.(string)))
+		}
+	}
 
 	return int(hash(buf.String()))
 }
