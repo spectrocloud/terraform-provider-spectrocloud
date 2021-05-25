@@ -34,6 +34,7 @@ func (h *V1alpha1Client) UpdateClusterEks(cluster *models.V1alpha1SpectroEksClus
 	return err
 }
 
+
 func (h *V1alpha1Client) CreateMachinePoolEks(cloudConfigId string, machinePool *models.V1alpha1EksMachinePoolConfigEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {

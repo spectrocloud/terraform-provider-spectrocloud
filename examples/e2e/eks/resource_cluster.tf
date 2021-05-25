@@ -18,4 +18,31 @@ resource "spectrocloud_cluster_eks" "cluster" {
     az_subnets    = var.worker_azs_subnets_map
     disk_size_gb  = 60
   }
+
+  fargate_profile {
+    name    = "fg-1"
+    subnets = values(var.worker_azs_subnets_map)
+    additional_tags = {
+      hello = "yo"
+    }
+    selector {
+      namespace = "fargate"
+      labels = {
+        abc = "cool"
+      }
+
+    }
+  }
+
+  # fargate_profile {
+  #   name          = "fg-2"
+  #   subnets    = values(var.worker_azs_subnets_map)
+  #   selector {
+  #     namespace = "fargate"
+  #     labels = {
+  #       "abc" : "cool"
+  #     }
+
+  #   }
+  # }
 }

@@ -168,6 +168,60 @@ func resourceClusterEks() *schema.Resource {
 					},
 				},
 			},
+			"fargate_profile": {
+				Type:     schema.TypeList,
+				Required: true,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+							//ForceNew: true,
+						},
+
+						"subnets": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+
+						"additional_tags": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+
+						"selector": {
+							Type:     schema.TypeList,
+							Required: true,
+							ForceNew: true,
+							//MinItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"namespace": {
+										Type:     schema.TypeString,
+										Required: true,
+										ForceNew: true,
+									},
+									"labels": {
+										Type:     schema.TypeMap,
+										Optional: true,
+										ForceNew: true,
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -242,8 +296,12 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	mp := flattenMachinePoolConfigsEks(config.Spec.MachinePoolConfig)
-
 	if err := d.Set("machine_pool", mp); err != nil {
+		return diag.FromErr(err)
+	}
+
+	fp := flattenFargateProfilesEks(config.Spec.FargateProfiles)
+	if err := d.Set("fargate_profile", fp); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -283,6 +341,36 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1alpha1EksMachinePoolC
 	return ois
 }
 
+func flattenFargateProfilesEks(fargateProfiles []*models.V1alpha1FargateProfile) []interface{} {
+
+	if fargateProfiles == nil {
+		return make([]interface{}, 0)
+	}
+
+	ois := make([]interface{}, 0)
+
+	for _, fargateProfile := range fargateProfiles {
+		oi := make(map[string]interface{})
+
+		oi["name"] = fargateProfile.Name
+		oi["subnets"] = fargateProfile.SubnetIds
+		oi["additional_tags"] = fargateProfile.AdditionalTags
+
+		selectors := make([]interface{}, 0)
+		for _, selector := range fargateProfile.Selectors {
+			s := make(map[string]interface{})
+			s["namespace"] = selector.Namespace
+			s["labels"] = selector.Labels
+			selectors = append(selectors, s)
+		}
+		oi["selector"] = selectors
+
+		ois = append(ois, oi)
+	}
+
+	return ois
+}
+
 func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1alpha1Client)
 
@@ -290,6 +378,12 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
+
+
+	//if d.HasChange("fargate_profile") {
+	//	cluster := toEksCluster(d)
+	//	uid, err := c.UpdateClusterEks(cluster)
+	//}
 
 	_ = d.Get("machine_pool")
 
@@ -346,6 +440,63 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			}
 		}
 	}
+
+	//if d.HasChange("fargate_profile") {
+	//	oraw, nraw := d.GetChange("fargate_profile")
+	//	if oraw == nil {
+	//		oraw = new(schema.Set)
+	//	}
+	//	if nraw == nil {
+	//		nraw = new(schema.Set)
+	//	}
+	//
+	//	os := oraw.([]interface{})
+	//	ns := nraw.([]interface{})
+	//
+	//	osMap := make(map[string]interface{})
+	//	for _, mp := range os {
+	//		fargateProfile := mp.(map[string]interface{})
+	//		osMap[fargateProfile["name"].(string)] = fargateProfile
+	//	}
+	//
+	//	for _, mp := range ns {
+	//		fargateProfileResource := mp.(map[string]interface{})
+	//		name := fargateProfileResource["name"].(string)
+	//		hash := resourceFargateProfileEksHash(fargateProfileResource)
+	//
+	//		fargateProfile := toFargateProfileEks(fargateProfileResource)
+	//
+	//		var err error
+	//		if oldMachinePool, ok := osMap[name]; !ok {
+	//			log.Printf("Create fargate profile %s", name)
+	//			err = c.CreateFargateProfileEks(cloudConfigId, fargateProfile)
+	//		} else if hash != resourceFargateProfileEksHash(oldMachinePool) {
+	//			// TODO
+	//			log.Printf("Change in fargate profile %s", name)
+	//			err = c.UpdateFargateProfileEks(cloudConfigId, fargateProfile)
+	//		}
+	//
+	//		if err != nil {
+	//			return diag.FromErr(err)
+	//		}
+	//
+	//		// Processed (if exists)
+	//		delete(osMap, name)
+	//	}
+	//
+	//	// Deleted old fargate profiles
+	//	for _, mp := range osMap {
+	//		fargateProfile := mp.(map[string]interface{})
+	//		name := fargateProfile["name"].(string)
+	//		log.Printf("Deleted fargate profile %s", name)
+	//		if err := c.DeleteFargateProfileEks(cloudConfigId, name); err != nil {
+	//			return diag.FromErr(err)
+	//		}
+	//	}
+	//}
+	//
+
+
 	//TODO(saamalik) update for cluster as well
 	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
 	//	return diag.FromErr(err)
@@ -423,6 +574,14 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
+	fargateProfiles := make([]*models.V1alpha1FargateProfile, 0)
+	for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
+		f := toFargateProfileEks(fargateProfile)
+		fargateProfiles = append(fargateProfiles, f)
+	}
+
+	cluster.Spec.FargateProfiles = fargateProfiles
+
 	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
 	for _, pack := range d.Get("pack").([]interface{}) {
 		p := toPack(pack)
@@ -472,4 +631,38 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 	}
 
 	return mp
+}
+
+func toFargateProfileEks(fargateProfile interface{}) *models.V1alpha1FargateProfile {
+	m := fargateProfile.(map[string]interface{})
+
+	labels := make([]string, 0)
+	controlPlane, _ := m["control_plane"].(bool)
+	if controlPlane {
+		labels = append(labels, "master")
+	}
+
+	//subnets := make([]string, 0)
+	//for _, val := range m["subnets"].([]interface{}) {
+	//	subnets = append(subnets, val.(string))
+	//}
+
+	selectors := make([]*models.V1alpha1FargateSelector, 0)
+	for _, val := range m["selector"].([]interface{}) {
+		s := val.(map[string]interface{})
+
+		selectors = append(selectors, &models.V1alpha1FargateSelector{
+			Labels:    expandStringMap(s["labels"].(map[string]interface{})),
+			Namespace: ptr.StringPtr(s["namespace"].(string)),
+		})
+	}
+
+	f := &models.V1alpha1FargateProfile{
+		Name:           ptr.StringPtr(m["name"].(string)),
+		AdditionalTags: expandStringMap(m["additional_tags"].(map[string]interface{})),
+		Selectors:      selectors,
+		SubnetIds:      expandStringList(m["subnets"].([]interface{})),
+	}
+
+	return f
 }

@@ -1,9 +1,17 @@
 package spectrocloud
 
 func expandStringList(configured []interface{}) []string {
-	vs := make([]string, len(configured))
+	vs := make([]string, 0)
 	for _, v := range configured {
 		vs = append(vs, v.(string))
+	}
+	return vs
+}
+
+func expandStringMap(configured map[string]interface{}) map[string]string {
+	vs := make(map[string]string)
+	for i, j := range configured {
+		vs[i] = j.(string)
 	}
 	return vs
 }
