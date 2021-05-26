@@ -124,12 +124,12 @@ resource "spectrocloud_cluster_profile" "profile" {
 
 ### Required
 
-- **cloud** (String)
 - **name** (String)
 - **pack** (Block List, Min: 1) (see [below for nested schema](#nestedblock--pack))
 
 ### Optional
 
+- **cloud** (String)
 - **description** (String)
 - **id** (String) The ID of this resource.
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))

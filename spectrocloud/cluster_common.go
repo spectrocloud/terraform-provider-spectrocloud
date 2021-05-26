@@ -58,15 +58,10 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1alpha1Client, id st
 	return err
 }
 
-func updatePacks(c *client.V1alpha1Client, d *schema.ResourceData) error {
-	log.Printf("Updating packs")
+func updateProfiles(c *client.V1alpha1Client, d *schema.ResourceData) error {
+	log.Printf("Updating profiles")
 	body := &models.V1alpha1SpectroClusterProfiles{
-		Profiles: []*models.V1alpha1SpectroClusterProfileEntity{
-			{
-				UID:        d.Get("cluster_profile_id").(string),
-				PackValues: toPackValues(d),
-			},
-		},
+		Profiles: toProfiles(d),
 	}
 	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
 		return err
@@ -74,13 +69,36 @@ func updatePacks(c *client.V1alpha1Client, d *schema.ResourceData) error {
 	return nil
 }
 
-func toPackValues(d *schema.ResourceData) []*models.V1alpha1PackValuesEntity {
-	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		p := toPack(pack)
-		packValues = append(packValues, p)
+func toProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileEntity {
+	resp := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
+	profiles := d.Get("cluster_profile").([]interface{})
+	if len(profiles) > 0 {
+		for _, profile := range profiles {
+			p := profile.(map[string]interface{})
+
+			packValues := make([]*models.V1alpha1PackValuesEntity, 0)
+			for _, pack := range p["pack"].([]interface{}) {
+				p := toPack(pack)
+				packValues = append(packValues, p)
+			}
+			resp = append(resp, &models.V1alpha1SpectroClusterProfileEntity{
+				UID:        p["id"].(string),
+				PackValues: packValues,
+			})
+		}
+	} else {
+		packValues := make([]*models.V1alpha1PackValuesEntity, 0)
+		for _, pack := range d.Get("pack").([]interface{}) {
+			p := toPack(pack)
+			packValues = append(packValues, p)
+		}
+		resp = append(resp, &models.V1alpha1SpectroClusterProfileEntity{
+			UID:        d.Get("cluster_profile_id").(string),
+			PackValues: packValues,
+		})
 	}
-	return packValues
+
+	return resp
 }
 
 func toPack(pSrc interface{}) *models.V1alpha1PackValuesEntity {

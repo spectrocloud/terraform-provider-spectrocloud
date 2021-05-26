@@ -17,12 +17,13 @@ description: |-
 
 - **cloud_account_id** (String)
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- **cluster_profile_id** (String)
 - **machine_pool** (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
 
 ### Optional
 
+- **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
+- **cluster_profile_id** (String, Deprecated)
 - **id** (String) The ID of this resource.
 - **os_patch_after** (String)
 - **os_patch_on_boot** (Boolean)
@@ -94,6 +95,28 @@ Optional:
 Read-only:
 
 - **id** (String) The ID of this resource.
+
+
+
+<a id="nestedblock--cluster_profile"></a>
+### Nested Schema for `cluster_profile`
+
+Required:
+
+- **id** (String) The ID of this resource.
+
+Optional:
+
+- **pack** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack))
+
+<a id="nestedblock--cluster_profile--pack"></a>
+### Nested Schema for `cluster_profile.pack`
+
+Required:
+
+- **name** (String)
+- **tag** (String)
+- **values** (String)
 
 
 

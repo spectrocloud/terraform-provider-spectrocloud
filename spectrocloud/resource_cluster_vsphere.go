@@ -35,8 +35,41 @@ func resourceClusterVsphere() *schema.Resource {
 			},
 			"cluster_profile_id": {
 				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Optional: true,
+				Deprecated: "Switch to cluster_profile",
+			},
+			"cluster_profile": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"cluster_profile_id", "pack"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"pack": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"tag": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"values": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
@@ -429,8 +462,8 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("pack") {
-		if err := updatePacks(c, d); err != nil {
+	if d.HasChanges("cluster_profile") {
+		if err := updateProfiles(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -453,7 +486,7 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 		},
 		Spec: &models.V1alpha1SpectroVsphereClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			ProfileUID:      d.Get("cluster_profile_id").(string),
+			Profiles:        toProfiles(d),
 			CloudConfig: &models.V1alpha1VsphereClusterConfigEntity{
 				NtpServers: nil,
 				Placement: &models.V1alpha1VspherePlacementConfigEntity{
@@ -485,13 +518,6 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 	})
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-
-	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		p := toPack(pack)
-		packValues = append(packValues, p)
-	}
-	cluster.Spec.PackValues = packValues
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster

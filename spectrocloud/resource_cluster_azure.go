@@ -34,8 +34,42 @@ func resourceClusterAzure() *schema.Resource {
 			},
 			"cluster_profile_id": {
 				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Optional: true,
+				Deprecated: "Switch to cluster_profile",
+			},
+			"cluster_profile": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"cluster_profile_id", "pack"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:     schema.TypeString,
+							Required: true,
+							//ForceNew: true,
+						},
+						"pack": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"tag": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"values": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
@@ -377,8 +411,8 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("pack") {
-		if err := updatePacks(c, d); err != nil {
+	if d.HasChanges("cluster_profile") {
+		if err := updateProfiles(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -400,7 +434,7 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 		},
 		Spec: &models.V1alpha1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			ProfileUID:      d.Get("cluster_profile_id").(string),
+			Profiles:        toProfiles(d),
 			CloudConfig: &models.V1alpha1AzureClusterConfig{
 				Location:       ptr.StringPtr(cloudConfig["region"].(string)),
 				SSHKey:         ptr.StringPtr(cloudConfig["ssh_key"].(string)),
@@ -418,13 +452,6 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-
-	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		p := toPack(pack)
-		packValues = append(packValues, p)
-	}
-	cluster.Spec.PackValues = packValues
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster
