@@ -10,8 +10,8 @@ data "spectrocloud_cluster_profile" "profile" {
 
 
 resource "spectrocloud_cluster_aws" "cluster" {
-  name               = var.cluster_name
-  cloud_account_id   = data.spectrocloud_cloudaccount_aws.account.id
+  name             = var.cluster_name
+  cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
     ssh_key_name = "default"

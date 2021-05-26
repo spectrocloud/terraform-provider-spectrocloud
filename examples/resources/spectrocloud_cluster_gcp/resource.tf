@@ -10,8 +10,8 @@ data "spectrocloud_cluster_profile" "profile" {
 
 
 resource "spectrocloud_cluster_gcp" "cluster" {
-  name               = var.cluster_name
-  cloud_account_id   = data.spectrocloud_cloudaccount_gcp.account.id
+  name             = var.cluster_name
+  cloud_account_id = data.spectrocloud_cloudaccount_gcp.account.id
 
   cloud_config {
     network = var.gcp_network

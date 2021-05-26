@@ -24,34 +24,37 @@ data "spectrocloud_cluster_profile" "profile" {
 
 
 resource "spectrocloud_cluster_aws" "cluster" {
-  name               = var.cluster_name
-  cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
-  cloud_account_id   = data.spectrocloud_cloudaccount_aws.account.id
+  name             = var.cluster_name
+  cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
     ssh_key_name = "default"
     region       = "us-west-2"
   }
 
-  # To override or specify values for a cluster:
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
 
-  # pack {
-  #   name   = "spectro-byo-manifest"
-  #   tag    = "1.0.x"
-  #   values = <<-EOT
-  #     manifests:
-  #       byo-manifest:
-  #         contents: |
-  #           # Add manifests here
-  #           apiVersion: v1
-  #           kind: Namespace
-  #           metadata:
-  #             labels:
-  #               app: wordpress
-  #               app2: wordpress2
-  #             name: wordpress
-  #   EOT
-  # }
+    # To override or specify values for a cluster:
+
+    # pack {
+    #   name   = "spectro-byo-manifest"
+    #   tag    = "1.0.x"
+    #   values = <<-EOT
+    #     manifests:
+    #       byo-manifest:
+    #         contents: |
+    #           # Add manifests here
+    #           apiVersion: v1
+    #           kind: Namespace
+    #           metadata:
+    #             labels:
+    #               app: wordpress
+    #               app2: wordpress2
+    #             name: wordpress
+    #   EOT
+    # }
+  }
 
   machine_pool {
     control_plane           = true
@@ -77,14 +80,15 @@ resource "spectrocloud_cluster_aws" "cluster" {
 
 ### Required
 
-- **cloud_account_id** (String)
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- **cluster_profile_id** (String)
 - **machine_pool** (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
 
 ### Optional
 
+- **cloud_account_id** (String)
+- **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
+- **cluster_profile_id** (String, Deprecated)
 - **id** (String) The ID of this resource.
 - **os_patch_after** (String)
 - **os_patch_on_boot** (Boolean)
@@ -122,6 +126,28 @@ Optional:
 - **control_plane_as_worker** (Boolean)
 - **disk_size_gb** (Number)
 - **update_strategy** (String)
+
+
+<a id="nestedblock--cluster_profile"></a>
+### Nested Schema for `cluster_profile`
+
+Required:
+
+- **id** (String) The ID of this resource.
+
+Optional:
+
+- **pack** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack))
+
+<a id="nestedblock--cluster_profile--pack"></a>
+### Nested Schema for `cluster_profile.pack`
+
+Required:
+
+- **name** (String)
+- **tag** (String)
+- **values** (String)
+
 
 
 <a id="nestedblock--pack"></a>

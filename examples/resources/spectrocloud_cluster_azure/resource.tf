@@ -9,8 +9,8 @@ data "spectrocloud_cluster_profile" "profile" {
 }
 
 resource "spectrocloud_cluster_azure" "cluster" {
-  name               = var.cluster_name
-  cloud_account_id   = data.spectrocloud_cloudaccount_azure.account.id
+  name             = var.cluster_name
+  cloud_account_id = data.spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
     subscription_id = var.azure_subscription_id
