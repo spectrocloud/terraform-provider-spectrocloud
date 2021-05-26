@@ -38,20 +38,17 @@ func resourceClusterEks() *schema.Resource {
 				Type:       schema.TypeString,
 				Optional:   true,
 				ForceNew:   true,
-				Deprecated: "",
+				Deprecated: "Switch to cluster_profile",
 			},
 			"cluster_profile": {
-				Type:          schema.TypeSet,
+				Type:          schema.TypeList,
 				Optional:      true,
 				ConflictsWith: []string{"cluster_profile_id", "pack"},
-				Set:           resourceClusterProfileHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"cluster_profile_id": {
+						"id": {
 							Type:     schema.TypeString,
 							Required: true,
-							//ForceNew: true,
-							//ForceNew: true,
 						},
 						"pack": {
 							Type:     schema.TypeList,
@@ -671,11 +668,6 @@ func toFargateProfileEks(fargateProfile interface{}) *models.V1alpha1FargateProf
 	if controlPlane {
 		labels = append(labels, "master")
 	}
-
-	//subnets := make([]string, 0)
-	//for _, val := range m["subnets"].([]interface{}) {
-	//	subnets = append(subnets, val.(string))
-	//}
 
 	selectors := make([]*models.V1alpha1FargateSelector, 0)
 	for _, val := range m["selector"].([]interface{}) {

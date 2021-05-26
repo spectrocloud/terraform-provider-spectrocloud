@@ -37,15 +37,15 @@ func resourceClusterAws() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
+				Deprecated: "Switch to cluster_profile",
 			},
 			"cluster_profile": {
-				Type:          schema.TypeSet,
+				Type:          schema.TypeList,
 				Optional:      true,
 				ConflictsWith: []string{"cluster_profile_id", "pack"},
-				Set:           resourceClusterProfileHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"cluster_profile_id": {
+						"id": {
 							Type:     schema.TypeString,
 							Required: true,
 						},

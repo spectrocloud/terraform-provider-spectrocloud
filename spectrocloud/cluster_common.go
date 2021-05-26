@@ -82,7 +82,7 @@ func toProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileE
 				packValues = append(packValues, p)
 			}
 			resp = append(resp, &models.V1alpha1SpectroClusterProfileEntity{
-				UID:        p["cluster_profile_id"].(string),
+				UID:        p["id"].(string),
 				PackValues: packValues,
 			})
 		}
@@ -143,13 +143,6 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	}
 
 	return diags
-}
-
-func resourceClusterProfileHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-	buf.WriteString(fmt.Sprintf("%s-", m["cluster_profile_id"].(string)))
-	return int(hash(buf.String()))
 }
 
 func resourceMachinePoolAzureHash(v interface{}) int {

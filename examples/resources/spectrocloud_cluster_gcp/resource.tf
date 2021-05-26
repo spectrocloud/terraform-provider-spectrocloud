@@ -20,7 +20,7 @@ resource "spectrocloud_cluster_gcp" "cluster" {
   }
 
   cluster_profile {
-    cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
+    id = data.spectrocloud_cluster_profile.profile.id
 
     # To override or specify values for a cluster:
 
