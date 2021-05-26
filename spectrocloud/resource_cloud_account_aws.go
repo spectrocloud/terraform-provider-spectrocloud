@@ -37,7 +37,7 @@ func resourceCloudAccountAws() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"secret", "sts"}, true),
+				ValidateFunc: validation.StringInSlice([]string{"secret", "sts"}, false),
 				Default:      "secret",
 			},
 			"arn": {

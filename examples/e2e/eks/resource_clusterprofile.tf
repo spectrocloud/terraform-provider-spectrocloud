@@ -9,6 +9,11 @@ data "spectrocloud_pack" "aws-ssm-agent" {
   version = "1.0.0"
 }
 
+data "spectrocloud_pack" "spectro-rbac" {
+  name    = "spectro-rbac"
+  version = "1.0.0"
+}
+
 data "spectrocloud_pack" "csi" {
   name    = "csi-aws"
   version = "1.0.0"
@@ -68,6 +73,17 @@ resource "spectrocloud_cluster_profile" "profile" {
     uid    = data.spectrocloud_pack.aws-ssm-agent.id
     values = data.spectrocloud_pack.aws-ssm-agent.values
   }
+}
 
+resource "spectrocloud_cluster_profile" "profile-rbac" {
+  name        = "SC-RBAC"
+  description = "rbac"
+  type        = "add-on"
 
+  pack {
+    name   = data.spectrocloud_pack.spectro-rbac.name
+    tag    = data.spectrocloud_pack.spectro-rbac.version
+    uid    = data.spectrocloud_pack.spectro-rbac.id
+    values = data.spectrocloud_pack.spectro-rbac.values
+  }
 }

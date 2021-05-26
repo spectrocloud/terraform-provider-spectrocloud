@@ -1,7 +1,20 @@
 resource "spectrocloud_cluster_eks" "cluster" {
-  name               = "eks-dev1"
-  cluster_profile_id = spectrocloud_cluster_profile.profile.id
-  cloud_account_id   = spectrocloud_cloudaccount_aws.account.id
+  name = "eks-dev1"
+
+  cluster_profile {
+    id = spectrocloud_cluster_profile.profile.id
+  }
+
+  cluster_profile {
+    id = spectrocloud_cluster_profile.profile-rbac.id
+    pack {
+      name   = "spectro-rbac"
+      tag    = "1.0.0"
+      values = file("rbac.yaml")
+    }
+  }
+
+  cloud_account_id = spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
     ssh_key_name = var.aws_ssh_key_name

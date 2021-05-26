@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"log"
 	"strings"
@@ -39,13 +40,15 @@ func resourceClusterProfile() *schema.Resource {
 			},
 			"cloud": {
 				Type:     schema.TypeString,
-				Required: true,
+				Default: "all",
+				Optional: true,
 				ForceNew: true,
 			},
 			"type": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "add-on",
+				ValidateFunc: validation.StringInSlice([]string{"add-on", "cluster", "infra"}, false),
 				ForceNew: true,
 			},
 			"pack": {

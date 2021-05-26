@@ -71,7 +71,7 @@ func updateProfiles(c *client.V1alpha1Client, d *schema.ResourceData) error {
 
 func toProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileEntity {
 	resp := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
-	profiles := d.Get("cluster_profile").(*schema.Set).List()
+	profiles := d.Get("cluster_profile").([]interface{})
 	if len(profiles) > 0 {
 		for _, profile := range profiles {
 			p := profile.(map[string]interface{})
