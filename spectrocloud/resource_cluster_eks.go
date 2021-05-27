@@ -204,15 +204,12 @@ func resourceClusterEks() *schema.Resource {
 			"fargate_profile": {
 				Type:     schema.TypeList,
 				Required: true,
-				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
-							//ForceNew: true,
 						},
-
 						"subnets": {
 							Type:     schema.TypeList,
 							Optional: true,
@@ -220,7 +217,6 @@ func resourceClusterEks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-
 						"additional_tags": {
 							Type:     schema.TypeMap,
 							Optional: true,
@@ -228,23 +224,19 @@ func resourceClusterEks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-
 						"selector": {
 							Type:     schema.TypeList,
 							Required: true,
-							ForceNew: true,
 							//MinItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"namespace": {
 										Type:     schema.TypeString,
 										Required: true,
-										ForceNew: true,
 									},
 									"labels": {
 										Type:     schema.TypeMap,
 										Optional: true,
-										ForceNew: true,
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
@@ -413,10 +405,23 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
 
-	//if d.HasChange("fargate_profile") {
-	//	cluster := toEksCluster(d)
-	//	uid, err := c.UpdateClusterEks(cluster)
-	//}
+	if d.HasChange("fargate_profile") {
+		fargateProfiles := make([]*models.V1alpha1FargateProfile, 0)
+		for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
+			f := toFargateProfileEks(fargateProfile)
+			fargateProfiles = append(fargateProfiles, f)
+		}
+
+		log.Printf("Updating fargate profiles")
+		fargateProfilesList := &models.V1alpha1EksFargateProfiles{
+			FargateProfiles: fargateProfiles,
+		}
+
+		err := c.UpdateFargateProfiles(cloudConfigId, fargateProfilesList)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	_ = d.Get("machine_pool")
 

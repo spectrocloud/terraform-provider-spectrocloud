@@ -71,6 +71,18 @@ func (h *V1alpha1Client) DeleteMachinePoolEks(cloudConfigId string, machinePoolN
 	return err
 }
 
+func (h *V1alpha1Client) UpdateFargateProfiles(cloudConfigId string, fargateProfiles *models.V1alpha1EksFargateProfiles) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil
+	}
+	params := clusterC.NewV1alpha1CloudConfigsEksUIDFargateProfilesUpdateParamsWithContext(h.ctx).
+		WithConfigUID(cloudConfigId).
+		WithBody(fargateProfiles)
+	_, err = client.V1alpha1CloudConfigsEksUIDFargateProfilesUpdate(params)
+	return err
+}
+
 func (h *V1alpha1Client) GetCloudConfigEks(configUID string) (*models.V1alpha1EksCloudConfig, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
