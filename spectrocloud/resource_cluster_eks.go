@@ -203,7 +203,7 @@ func resourceClusterEks() *schema.Resource {
 			},
 			"fargate_profile": {
 				Type:     schema.TypeList,
-				Required: true,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
