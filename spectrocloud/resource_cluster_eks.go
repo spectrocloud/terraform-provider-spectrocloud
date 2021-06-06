@@ -247,6 +247,70 @@ func resourceClusterEks() *schema.Resource {
 					},
 				},
 			},
+			"backup_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"prefix": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"backup_location_id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"expiry_in_hour": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"include_disks": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"include_cluster_resources": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"namespaces": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
+			"scan_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"configuration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"penetration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"conformance_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -330,6 +394,22 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
+	//read backup policy and scan policy
+	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
+		return diag.FromErr(err)
+	} else if policy != nil && policy.Spec.Config != nil {
+		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
+		return diag.FromErr(err)
+	} else if policy != nil && policy.Spec.DriverSpec != nil {
+		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	return diags
 }
 
@@ -403,7 +483,6 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
 
 	if d.HasChange("fargate_profile") {
 		fargateProfiles := make([]*models.V1alpha1FargateProfile, 0)
@@ -534,7 +613,6 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//}
 	//
 
-
 	//TODO(saamalik) update for cluster as well
 	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
 	//	return diag.FromErr(err)
@@ -542,6 +620,18 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	if d.HasChanges("cluster_profile") {
 		if err := updateProfiles(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("backup_policy") {
+		if err := updateBackupPolicy(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("scan_policy") {
+		if err := updateScanPolicy(c, d); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -564,6 +654,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		Spec: &models.V1alpha1SpectroEksClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
+			Policies:        toPolicies(d),
 			CloudConfig: &models.V1alpha1EksClusterConfig{
 				VpcID:      cloudConfig["vpc_id"].(string),
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
@@ -601,8 +692,8 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		"name":          "master-pool",
 		"az_subnets":    cloudConfig["az_subnets"],
 		"instance_type": "t3.large",
-		"disk_size_gb":  0,
-		"count":         0,
+		"disk_size_gb":  60,
+		"count":         2,
 	}
 	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
