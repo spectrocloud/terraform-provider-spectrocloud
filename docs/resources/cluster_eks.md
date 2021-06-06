@@ -22,6 +22,9 @@ data "spectrocloud_cluster_profile" "profile" {
   name = var.cluster_cluster_profile_name
 }
 
+data "spectrocloud_backup_storage_location" "bsl" {
+  name = var.backup_storage_location_name
+}
 
 resource "spectrocloud_cluster_eks" "cluster" {
   name             = var.cluster_name
@@ -56,6 +59,21 @@ resource "spectrocloud_cluster_eks" "cluster" {
     # }
   }
 
+  backup_policy {
+    schedule                  = "0 0 * * SUN"
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = "prod-backup"
+    expiry_in_hour            = 7200
+    include_disks             = true
+    include_cluster_resources = true
+  }
+
+  scan_policy {
+    configuration_scan_schedule = "0 0 * * SUN"
+    penetration_scan_schedule   = "0 0 * * SUN"
+    conformance_scan_schedule   = "0 0 1 * *"
+  }
+
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
@@ -86,16 +104,18 @@ resource "spectrocloud_cluster_eks" "cluster" {
 
 - **cloud_account_id** (String)
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- **fargate_profile** (Block List, Min: 1) (see [below for nested schema](#nestedblock--fargate_profile))
 - **machine_pool** (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
 
 ### Optional
 
+- **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **cluster_profile_id** (String, Deprecated)
+- **fargate_profile** (Block List) (see [below for nested schema](#nestedblock--fargate_profile))
 - **id** (String) The ID of this resource.
 - **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
+- **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-only
@@ -118,6 +138,61 @@ Optional:
 - **public_access_cidrs** (Set of String)
 - **ssh_key_name** (String)
 - **vpc_id** (String)
+
+
+<a id="nestedblock--machine_pool"></a>
+### Nested Schema for `machine_pool`
+
+Required:
+
+- **count** (Number)
+- **disk_size_gb** (Number)
+- **instance_type** (String)
+- **name** (String)
+
+Optional:
+
+- **az_subnets** (Map of String)
+- **azs** (List of String)
+
+
+<a id="nestedblock--backup_policy"></a>
+### Nested Schema for `backup_policy`
+
+Required:
+
+- **backup_location_id** (String)
+- **expiry_in_hour** (Number)
+- **prefix** (String)
+- **schedule** (String)
+
+Optional:
+
+- **include_cluster_resources** (Boolean)
+- **include_disks** (Boolean)
+- **namespaces** (Set of String)
+
+
+<a id="nestedblock--cluster_profile"></a>
+### Nested Schema for `cluster_profile`
+
+Required:
+
+- **id** (String) The ID of this resource.
+
+Optional:
+
+- **pack** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack))
+
+<a id="nestedblock--cluster_profile--pack"></a>
+### Nested Schema for `cluster_profile.pack`
+
+Required:
+
+- **name** (String)
+- **tag** (String)
+- **values** (String)
+
 
 
 <a id="nestedblock--fargate_profile"></a>
@@ -146,44 +221,6 @@ Optional:
 
 
 
-<a id="nestedblock--machine_pool"></a>
-### Nested Schema for `machine_pool`
-
-Required:
-
-- **count** (Number)
-- **disk_size_gb** (Number)
-- **instance_type** (String)
-- **name** (String)
-
-Optional:
-
-- **az_subnets** (Map of String)
-- **azs** (List of String)
-
-
-<a id="nestedblock--cluster_profile"></a>
-### Nested Schema for `cluster_profile`
-
-Required:
-
-- **id** (String) The ID of this resource.
-
-Optional:
-
-- **pack** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack))
-
-<a id="nestedblock--cluster_profile--pack"></a>
-### Nested Schema for `cluster_profile.pack`
-
-Required:
-
-- **name** (String)
-- **tag** (String)
-- **values** (String)
-
-
-
 <a id="nestedblock--pack"></a>
 ### Nested Schema for `pack`
 
@@ -192,6 +229,16 @@ Required:
 - **name** (String)
 - **tag** (String)
 - **values** (String)
+
+
+<a id="nestedblock--scan_policy"></a>
+### Nested Schema for `scan_policy`
+
+Required:
+
+- **configuration_scan_schedule** (String)
+- **conformance_scan_schedule** (String)
+- **penetration_scan_schedule** (String)
 
 
 <a id="nestedblock--timeouts"></a>

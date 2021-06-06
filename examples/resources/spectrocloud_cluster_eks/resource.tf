@@ -8,6 +8,9 @@ data "spectrocloud_cluster_profile" "profile" {
   name = var.cluster_cluster_profile_name
 }
 
+data "spectrocloud_backup_storage_location" "bsl" {
+  name = var.backup_storage_location_name
+}
 
 resource "spectrocloud_cluster_eks" "cluster" {
   name             = var.cluster_name
@@ -40,6 +43,21 @@ resource "spectrocloud_cluster_eks" "cluster" {
     #             name: wordpress
     #   EOT
     # }
+  }
+
+  backup_policy {
+    schedule                  = "0 0 * * SUN"
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = "prod-backup"
+    expiry_in_hour            = 7200
+    include_disks             = true
+    include_cluster_resources = true
+  }
+
+  scan_policy {
+    configuration_scan_schedule = "0 0 * * SUN"
+    penetration_scan_schedule   = "0 0 * * SUN"
+    conformance_scan_schedule   = "0 0 1 * *"
   }
 
   machine_pool {
