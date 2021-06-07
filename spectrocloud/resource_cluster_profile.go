@@ -164,7 +164,7 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	// make a map of all the content
-	packManifests := make(map[string]string)
+	packManifests := make(map[string][]string)
 	for _, p := range cp.Spec.Published.Packs {
 		if len(p.Manifests) > 0 {
 			content, err := c.GetClusterProfileManifestPack(d.Id(), p.PackUID)
@@ -174,7 +174,11 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 
 			// TODO at some point support multiple manifests... or I hope it's just returned in
 			// the original call
-			packManifests[p.PackUID] = content[0].Spec.Published.Content
+			c := make([]string, len(content))
+			for i, co := range content {
+				c[i] = co.Spec.Published.Content
+			}
+			packManifests[p.PackUID] = c
 		}
 	}
 
@@ -187,7 +191,7 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func flattenPacks(packs []*models.V1alpha1PackRef, manifestContent map[string]string) []interface{} {
+func flattenPacks(packs []*models.V1alpha1PackRef, manifestContent map[string][]string) []interface{} {
 	if packs == nil {
 		return make([]interface{}, 0)
 	}
@@ -207,7 +211,7 @@ func flattenPacks(packs []*models.V1alpha1PackRef, manifestContent map[string]st
 			mj := make(map[string]interface{})
 			mj["name"] = m.Name
 			mj["uid"] = m.UID
-			mj["content"] = manifestContent[pack.PackUID]
+			mj["content"] = manifestContent[pack.PackUID][j]
 
 			ma[j] = mj
 		}
