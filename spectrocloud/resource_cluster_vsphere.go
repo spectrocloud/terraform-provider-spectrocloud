@@ -33,6 +33,14 @@ func resourceClusterVsphere() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"cluster_profile_id": {
 				Type:       schema.TypeString,
 				Optional:   true,
@@ -376,6 +384,10 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
+	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
+		return diag.FromErr(err)
+	}
+
 	kubecfg, err := c.GetClusterKubeConfig(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -573,8 +585,9 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 	staticIP := cloudConfig["static_ip"].(bool)
 	cluster := &models.V1alpha1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Name:   d.Get("name").(string),
+			UID:    d.Id(),
+			Labels: toTags(d),
 		},
 		Spec: &models.V1alpha1SpectroVsphereClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),

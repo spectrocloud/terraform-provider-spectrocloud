@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"log"
@@ -34,22 +35,30 @@ func resourceClusterProfile() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"description": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
 			"cloud": {
 				Type:     schema.TypeString,
-				Default: "all",
+				Default:  "all",
 				Optional: true,
 				ForceNew: true,
 			},
 			"type": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "add-on",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "add-on",
 				ValidateFunc: validation.StringInSlice([]string{"add-on", "cluster", "infra"}, false),
-				ForceNew: true,
+				ForceNew:     true,
 			},
 			"pack": {
 				Type:     schema.TypeList,
@@ -163,6 +172,10 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
+	if err := d.Set("tags", flattenTags(cp.Metadata.Labels)); err != nil {
+		return diag.FromErr(err)
+	}
+
 	// make a map of all the content
 	packManifests := make(map[string][]string)
 	for _, p := range cp.Spec.Published.Packs {
@@ -265,8 +278,9 @@ func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m i
 func toClusterProfileCreate(d *schema.ResourceData) (*models.V1alpha1ClusterProfileEntity, error) {
 	cp := &models.V1alpha1ClusterProfileEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Name:   d.Get("name").(string),
+			UID:    d.Id(),
+			Labels: toTags(d),
 		},
 		Spec: &models.V1alpha1ClusterProfileEntitySpec{
 			Template: &models.V1alpha1ClusterProfileTemplateDraft{

@@ -33,6 +33,14 @@ func resourceClusterAws() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"cluster_profile_id": {
 				Type:       schema.TypeString,
 				Optional:   true,
@@ -316,6 +324,9 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
+	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
+		return diag.FromErr(err)
+	}
 	if err := d.Set("kubeconfig", kubeconfig); err != nil {
 		return diag.FromErr(err)
 	}
@@ -475,8 +486,9 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 
 	cluster := &models.V1alpha1SpectroAwsClusterEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Name:   d.Get("name").(string),
+			UID:    d.Id(),
+			Labels: toTags(d),
 		},
 		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
