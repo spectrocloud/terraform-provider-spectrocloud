@@ -59,6 +59,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cluster_import": resourceClusterImport(),
 
 				"spectrocloud_privatecloudgateway_ippool": resourcePrivateCloudGatewayIpPool(),
+
+				"spectrocloud_backup_storage_location": resourceBackupStorageLocation(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_pack": dataSourcePack(),
@@ -69,6 +71,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cloudaccount_azure":   dataSourceCloudAccountAzure(),
 				"spectrocloud_cloudaccount_gcp":     dataSourceCloudAccountGcp(),
 				"spectrocloud_cloudaccount_vsphere": dataSourceCloudAccountVsphere(),
+
+				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}

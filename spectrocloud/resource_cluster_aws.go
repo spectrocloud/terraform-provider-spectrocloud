@@ -34,8 +34,8 @@ func resourceClusterAws() *schema.Resource {
 				ForceNew: true,
 			},
 			"cluster_profile_id": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:       schema.TypeString,
+				Optional:   true,
 				Deprecated: "Switch to cluster_profile",
 			},
 			"cluster_profile": {
@@ -190,6 +190,70 @@ func resourceClusterAws() *schema.Resource {
 					},
 				},
 			},
+			"backup_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"prefix": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"backup_location_id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"expiry_in_hour": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"include_disks": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"include_cluster_resources": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"namespaces": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
+			"scan_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"configuration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"penetration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"conformance_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -254,6 +318,22 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 
 	if err := d.Set("kubeconfig", kubeconfig); err != nil {
 		return diag.FromErr(err)
+	}
+
+	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
+		return diag.FromErr(err)
+	} else if policy != nil && policy.Spec.Config != nil {
+		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
+		return diag.FromErr(err)
+	} else if policy != nil && policy.Spec.DriverSpec != nil {
+		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return flattenCloudConfigAws(cluster.Spec.CloudConfigRef.UID, d, c)
@@ -372,6 +452,18 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 		}
 	}
 
+	if d.HasChange("backup_policy") {
+		if err := updateBackupPolicy(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("scan_policy") {
+		if err := updateScanPolicy(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	resourceClusterAwsRead(ctx, d, m)
 
 	return diags
@@ -389,6 +481,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
+			Policies:        toPolicies(d),
 			CloudConfig: &models.V1alpha1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),

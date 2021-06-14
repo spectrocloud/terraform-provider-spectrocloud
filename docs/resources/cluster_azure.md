@@ -91,6 +91,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
 
 ### Optional
 
+- **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **cluster_profile_id** (String, Deprecated)
 - **id** (String) The ID of this resource.
@@ -98,6 +99,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
 - **os_patch_on_boot** (Boolean)
 - **os_patch_schedule** (String)
 - **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
+- **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-only
@@ -143,6 +145,23 @@ Required:
 
 
 
+<a id="nestedblock--backup_policy"></a>
+### Nested Schema for `backup_policy`
+
+Required:
+
+- **backup_location_id** (String)
+- **expiry_in_hour** (Number)
+- **prefix** (String)
+- **schedule** (String)
+
+Optional:
+
+- **include_cluster_resources** (Boolean)
+- **include_disks** (Boolean)
+- **namespaces** (Set of String)
+
+
 <a id="nestedblock--cluster_profile"></a>
 ### Nested Schema for `cluster_profile`
 
@@ -173,6 +192,16 @@ Required:
 - **name** (String)
 - **tag** (String)
 - **values** (String)
+
+
+<a id="nestedblock--scan_policy"></a>
+### Nested Schema for `scan_policy`
+
+Required:
+
+- **configuration_scan_schedule** (String)
+- **conformance_scan_schedule** (String)
+- **penetration_scan_schedule** (String)
 
 
 <a id="nestedblock--timeouts"></a>

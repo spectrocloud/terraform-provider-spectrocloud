@@ -69,6 +69,116 @@ func updateProfiles(c *client.V1alpha1Client, d *schema.ResourceData) error {
 	return nil
 }
 
+func toPolicies(d *schema.ResourceData) *models.V1alpha1SpectroClusterPolicies {
+	return &models.V1alpha1SpectroClusterPolicies{
+		BackupPolicy: toBackupPolicy(d),
+		ScanPolicy:   toScanPolicy(d),
+	}
+}
+
+func toBackupPolicy(d *schema.ResourceData) *models.V1alpha1ClusterBackupConfig {
+	if policies, found := d.GetOk("backup_policy"); found {
+		//policy := policies.([]interface{})[0]
+		policy := policies.([]interface{})[0].(map[string]interface{})
+
+		namespaces := make([]string, 0, 1)
+		if policy["namespaces"] != nil {
+			if nss, ok := policy["namespaces"].([]interface{}); ok {
+				for _, ns := range nss {
+					namespaces = append(namespaces, ns.(string))
+				}
+			}
+		}
+
+		return &models.V1alpha1ClusterBackupConfig{
+			BackupLocationUID:       policy["backup_location_id"].(string),
+			BackupPrefix:            policy["prefix"].(string),
+			DurationInHours:         int64(policy["expiry_in_hour"].(int)),
+			IncludeAllDisks:         policy["include_disks"].(bool),
+			IncludeClusterResources: policy["include_cluster_resources"].(bool),
+			Namespaces:              namespaces,
+			Schedule: &models.V1alpha1ClusterFeatureSchedule{
+				ScheduledRunTime: policy["schedule"].(string),
+			},
+		}
+	}
+	return nil
+}
+
+func flattenBackupPolicy(policy *models.V1alpha1ClusterBackupConfig) []interface{} {
+	result := make([]interface{}, 0, 1)
+	data := make(map[string]interface{})
+	data["schedule"] = policy.Schedule.ScheduledRunTime
+	data["backup_location_id"] = policy.BackupLocationUID
+	data["prefix"] = policy.BackupPrefix
+	data["namespaces"] = policy.Namespaces
+	data["expiry_in_hour"] = policy.DurationInHours
+	data["include_disks"] = policy.IncludeAllDisks
+	data["include_cluster_resources"] = policy.IncludeClusterResources
+	result = append(result, data)
+	return result
+}
+
+func updateBackupPolicy(c *client.V1alpha1Client, d *schema.ResourceData) error {
+	if policy := toBackupPolicy(d); policy != nil {
+		return c.ApplyClusterBackupConfig(d.Id(), policy)
+	}
+	return nil
+}
+
+func toScanPolicy(d *schema.ResourceData) *models.V1alpha1ClusterComplianceScheduleConfig {
+	if profiles, found := d.GetOk("scan_policy"); found {
+		config := &models.V1alpha1ClusterComplianceScheduleConfig{}
+		policy := profiles.([]interface{})[0].(map[string]interface{})
+		if policy["configuration_scan_schedule"] != nil {
+			config.KubeBench = &models.V1alpha1ClusterComplianceScanKubeBenchScheduleConfig{
+				Schedule: &models.V1alpha1ClusterFeatureSchedule{
+					ScheduledRunTime: policy["configuration_scan_schedule"].(string),
+				},
+			}
+		}
+		if policy["penetration_scan_schedule"] != nil {
+			config.KubeHunter = &models.V1alpha1ClusterComplianceScanKubeHunterScheduleConfig{
+				Schedule: &models.V1alpha1ClusterFeatureSchedule{
+					ScheduledRunTime: policy["penetration_scan_schedule"].(string),
+				},
+			}
+		}
+		if policy["conformance_scan_schedule"] != nil {
+			config.Sonobuoy = &models.V1alpha1ClusterComplianceScanSonobuoyScheduleConfig{
+				Schedule: &models.V1alpha1ClusterFeatureSchedule{
+					ScheduledRunTime: policy["conformance_scan_schedule"].(string),
+				},
+			}
+		}
+		return config
+	}
+	return nil
+}
+
+func flattenScanPolicy(driverSpec map[string]models.V1alpha1ComplianceScanDriverSpec) []interface{} {
+	result := make([]interface{}, 1)
+	data := make(map[string]interface{})
+	if v, found := driverSpec["kube-bench"]; found {
+		data["configuration_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
+	}
+	if v, found := driverSpec["kube-hunter"]; found {
+		data["penetration_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
+	}
+	if v, found := driverSpec["sonobuoy"]; found {
+		data["conformance_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
+	}
+	result = append(result, data)
+	return result
+}
+
+func updateScanPolicy(c *client.V1alpha1Client, d *schema.ResourceData) error {
+	if policy := toScanPolicy(d); policy != nil {
+		return c.ApplyClusterScanConfig(d.Id(), policy)
+	}
+	return nil
+}
+
 func toProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileEntity {
 	resp := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
 	profiles := d.Get("cluster_profile").([]interface{})
@@ -296,4 +406,3 @@ func validateOsPatchOnDemandAfter(data interface{}, _ cty.Path) diag.Diagnostics
 
 	return diags
 }
-

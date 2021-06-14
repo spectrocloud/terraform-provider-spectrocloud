@@ -3,6 +3,8 @@ package client
 import (
 	"strings"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client/herr"
+
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 
@@ -86,4 +88,104 @@ func (h *V1alpha1Client) UpdateClusterProfileValues(uid string, profiles *models
 		WithBody(profiles)
 	_, err = client.V1alpha1SpectroClustersUpdateProfiles(params)
 	return err
+}
+
+func (h *V1alpha1Client) GetClusterBackupConfig(uid string) (*models.V1alpha1ClusterBackup, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1alpha1ClusterFeatureBackupGetParamsWithContext(h.ctx).WithUID(uid)
+	success, err := client.V1alpha1ClusterFeatureBackupGet(params)
+	if err != nil {
+		if herr.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return success.Payload, nil
+}
+
+func (h *V1alpha1Client) CreateClusterBackupConfig(uid string, config *models.V1alpha1ClusterBackupConfig) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return err
+	}
+
+	params := clusterC.NewV1alpha1ClusterFeatureBackupCreateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	_, err = client.V1alpha1ClusterFeatureBackupCreate(params)
+	return err
+}
+
+func (h *V1alpha1Client) UpdateClusterBackupConfig(uid string, config *models.V1alpha1ClusterBackupConfig) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return err
+	}
+
+	params := clusterC.NewV1alpha1ClusterFeatureBackupUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	_, err = client.V1alpha1ClusterFeatureBackupUpdate(params)
+	return err
+}
+
+func (h *V1alpha1Client) ApplyClusterBackupConfig(uid string, config *models.V1alpha1ClusterBackupConfig) error {
+	if policy, err := h.GetClusterBackupConfig(uid); err != nil {
+		return err
+	} else if policy == nil {
+		return h.CreateClusterBackupConfig(uid, config)
+	} else {
+		return h.UpdateClusterBackupConfig(uid, config)
+	}
+}
+
+func (h *V1alpha1Client) GetClusterScanConfig(uid string) (*models.V1alpha1ClusterComplianceScan, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1alpha1ClusterFeatureComplianceScanGetParamsWithContext(h.ctx).WithUID(uid)
+	success, err := client.V1alpha1ClusterFeatureComplianceScanGet(params)
+	if err != nil {
+		if herr.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return success.Payload, nil
+}
+
+func (h *V1alpha1Client) CreateClusterScanConfig(uid string, config *models.V1alpha1ClusterComplianceScheduleConfig) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return err
+	}
+
+	params := clusterC.NewV1alpha1ClusterFeatureComplianceScanCreateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	_, err = client.V1alpha1ClusterFeatureComplianceScanCreate(params)
+	return err
+}
+
+func (h *V1alpha1Client) UpdateClusterScanConfig(uid string, config *models.V1alpha1ClusterComplianceScheduleConfig) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return err
+	}
+
+	params := clusterC.NewV1alpha1ClusterFeatureComplianceScanUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	_, err = client.V1alpha1ClusterFeatureComplianceScanUpdate(params)
+	return err
+}
+
+func (h *V1alpha1Client) ApplyClusterScanConfig(uid string, config *models.V1alpha1ClusterComplianceScheduleConfig) error {
+	if policy, err := h.GetClusterScanConfig(uid); err != nil {
+		return err
+	} else if policy == nil {
+		return h.CreateClusterScanConfig(uid, config)
+	} else {
+		return h.UpdateClusterScanConfig(uid, config)
+	}
 }
