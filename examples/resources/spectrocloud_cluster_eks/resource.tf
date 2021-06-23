@@ -14,6 +14,7 @@ data "spectrocloud_backup_storage_location" "bsl" {
 
 resource "spectrocloud_cluster_eks" "cluster" {
   name             = var.cluster_name
+  tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {

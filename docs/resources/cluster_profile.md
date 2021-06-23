@@ -69,6 +69,7 @@ data "spectrocloud_pack" "ubuntu" {
 resource "spectrocloud_cluster_profile" "profile" {
   name        = "vsphere-picard-3"
   description = "basic cp"
+  tags        = ["dev", "department:devops", "owner:bob"]
   cloud       = "vsphere"
   type        = "cluster"
 
@@ -132,6 +133,7 @@ resource "spectrocloud_cluster_profile" "profile" {
 - **cloud** (String)
 - **description** (String)
 - **id** (String) The ID of this resource.
+- **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - **type** (String)
 

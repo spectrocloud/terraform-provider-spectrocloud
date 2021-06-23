@@ -41,6 +41,8 @@ func New(_ string) func() *schema.Provider {
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
+				"spectrocloud_team": resourceTeam(),
+
 				"spectrocloud_cluster_profile": resourceClusterProfile(),
 
 				"spectrocloud_cloudaccount_aws": resourceCloudAccountAws(),
@@ -63,6 +65,10 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_backup_storage_location": resourceBackupStorageLocation(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
+				"spectrocloud_user":    dataSourceUser(),
+				"spectrocloud_project": dataSourceProject(),
+				"spectrocloud_role":    dataSourceRole(),
+
 				"spectrocloud_pack": dataSourcePack(),
 
 				"spectrocloud_cluster_profile": dataSourceClusterProfile(),

@@ -55,6 +55,7 @@ data "spectrocloud_pack" "ubuntu" {
 resource "spectrocloud_cluster_profile" "profile" {
   name        = "vsphere-picard-3"
   description = "basic cp"
+  tags        = ["dev", "department:devops", "owner:bob"]
   cloud       = "vsphere"
   type        = "cluster"
 

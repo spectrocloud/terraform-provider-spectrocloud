@@ -33,6 +33,14 @@ func resourceClusterGcp() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"cluster_profile_id": {
 				Type:       schema.TypeString,
 				Optional:   true,
@@ -314,6 +322,10 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diags
 	}
 
+	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
+		return diag.FromErr(err)
+	}
+
 	kubecfg, err := c.GetClusterKubeConfig(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -477,8 +489,9 @@ func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntit
 
 	cluster := &models.V1alpha1SpectroGcpClusterEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Name:   d.Get("name").(string),
+			UID:    d.Id(),
+			Labels: toTags(d),
 		},
 		Spec: &models.V1alpha1SpectroGcpClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),

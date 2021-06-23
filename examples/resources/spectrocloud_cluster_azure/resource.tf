@@ -10,6 +10,7 @@ data "spectrocloud_cluster_profile" "profile" {
 
 resource "spectrocloud_cluster_azure" "cluster" {
   name             = var.cluster_name
+  tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
