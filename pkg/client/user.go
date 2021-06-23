@@ -8,27 +8,6 @@ import (
 	"github.com/spectrocloud/hapi/models"
 )
 
-func (h *V1alpha1Client) GetProjectUID(projectName string) (string, error) {
-	client, err := h.getUserClient()
-	if err != nil {
-		return "", err
-	}
-
-	params := userC.NewV1alpha1ProjectsListParamsWithContext(h.ctx)
-	projects, err := client.V1alpha1ProjectsList(params)
-	if err != nil {
-		return "", err
-	}
-
-	for _, project := range projects.Payload.Items {
-		if project.Metadata.Name == projectName {
-			return project.Metadata.UID, nil
-		}
-	}
-
-	return "", fmt.Errorf("project '%s' not found", projectName)
-}
-
 func (h *V1alpha1Client) GetRole(roleName string) (*models.V1alpha1Role, error) {
 	client, err := h.getUserClient()
 	if err != nil {
