@@ -1,2 +1,4 @@
-aws_access_key = "<...>"
-aws_secret_key = "<...>"
+sc_host         = "{enter host}"
+sc_username     = "{enter username}"
+sc_password     = "{enter password}"
+sc_project_name = "{enter Project}"

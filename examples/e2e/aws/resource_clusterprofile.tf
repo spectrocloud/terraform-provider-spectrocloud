@@ -60,6 +60,7 @@ data "spectrocloud_pack" "ubuntu" {
 resource "spectrocloud_cluster_profile" "profile" {
   name        = "aws-picard-2"
   description = "basic cp"
+  tags        = ["dev", "department:devops", "owner:bob"]
   cloud       = "aws"
   type        = "cluster"
 

@@ -24,6 +24,7 @@ data "spectrocloud_cluster_profile" "profile" {
 
 resource "spectrocloud_cluster_azure" "cluster" {
   name             = var.cluster_name
+  tags             = ["dev", "department:devops", "owner:bob"]
   cloud_account_id = data.spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
@@ -100,6 +101,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
 - **os_patch_schedule** (String)
 - **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
+- **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-only
