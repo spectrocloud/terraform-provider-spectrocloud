@@ -187,7 +187,7 @@ func toScanPolicy(d *schema.ResourceData) *models.V1alpha1ClusterComplianceSched
 }
 
 func flattenScanPolicy(driverSpec map[string]models.V1alpha1ComplianceScanDriverSpec) []interface{} {
-	result := make([]interface{}, 1)
+	result := make([]interface{}, 0, 1)
 	data := make(map[string]interface{})
 	if v, found := driverSpec["kube-bench"]; found {
 		data["configuration_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
