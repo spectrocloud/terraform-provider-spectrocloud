@@ -43,6 +43,8 @@ func New(_ string) func() *schema.Provider {
 			ResourcesMap: map[string]*schema.Resource{
 				"spectrocloud_team": resourceTeam(),
 
+				"spectrocloud_project": resourceProject(),
+
 				"spectrocloud_cluster_profile": resourceClusterProfile(),
 
 				"spectrocloud_cloudaccount_aws": resourceCloudAccountAws(),
