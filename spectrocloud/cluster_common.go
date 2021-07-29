@@ -369,6 +369,24 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceMachinePoolOpenStackHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+
+	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["subnet_id"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+
+	return int(hash(buf.String()))
+}
+
+
 func hash(s string) uint32 {
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(s))
