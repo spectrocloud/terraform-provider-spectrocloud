@@ -101,7 +101,7 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 	} else {
-		if err := d.Set("arn", account.Spec.AwsStsCredentials.Arn); err != nil {
+		if err := d.Set("arn", account.Spec.Sts.Arn); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -162,7 +162,7 @@ func toAwsAccount(d *schema.ResourceData) *models.V1alpha1AwsAccount {
 		account.Spec.SecretKey = d.Get("aws_secret_key").(string)
 	} else if d.Get("type").(string) == "sts" {
 		account.Spec.CredentialType = models.V1alpha1AwsCloudAccountCredentialTypeSts
-		account.Spec.AwsStsCredentials = &models.V1alpha1AwsStsCredentials{
+		account.Spec.Sts = &models.V1alpha1AwsStsCredentials{
 			Arn:        d.Get("arn").(string),
 			ExternalID: d.Get("external_id").(string),
 		}

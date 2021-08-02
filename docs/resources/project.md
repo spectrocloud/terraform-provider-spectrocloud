@@ -12,7 +12,7 @@ description: |-
 ## Example Usage
 
 ```terraform
-resource "spectrocloud_team" "project" {
+resource "spectrocloud_project" "project" {
   name = "dev1"
 }
 ```

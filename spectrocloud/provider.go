@@ -58,6 +58,9 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cloudaccount_gcp": resourceCloudAccountGcp(),
 				"spectrocloud_cluster_gcp":      resourceClusterGcp(),
 
+				"spectrocloud_cloudaccount_openstack": resourceCloudAccountOpenstack(),
+				"spectrocloud_cluster_openstack":      resourceClusterOpenStack(),
+
 				"spectrocloud_cluster_vsphere": resourceClusterVsphere(),
 
 				"spectrocloud_cluster_import": resourceClusterImport(),
@@ -79,6 +82,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cloudaccount_azure":   dataSourceCloudAccountAzure(),
 				"spectrocloud_cloudaccount_gcp":     dataSourceCloudAccountGcp(),
 				"spectrocloud_cloudaccount_vsphere": dataSourceCloudAccountVsphere(),
+				"spectrocloud_cloudaccount_openstack": dataSourceCloudAccountOpenStack(),
 
 				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
 			},

@@ -130,13 +130,13 @@ func resourceCloudAccountAzureDelete(_ context.Context, d *schema.ResourceData, 
 }
 
 func toAzureAccount(d *schema.ResourceData) *models.V1alpha1AzureAccount {
-	clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
+	clientSecret := strfmt.Password(d.Get("azure_client_secret").(string)).String()
 	account := &models.V1alpha1AzureAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID : d.Id(),
 		},
-		Spec: &models.V1alpha1AzureAccountSpec{
+		Spec: &models.V1alpha1AzureCloudAccount{
 			ClientID:     ptr.StringPtr(d.Get("azure_client_id").(string)),
 			ClientSecret: &clientSecret,
 			TenantID:     ptr.StringPtr(d.Get("azure_tenant_id").(string)),
