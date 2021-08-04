@@ -34,7 +34,7 @@ func resourceTeam() *schema.Resource {
 			},
 			"users": {
 				Type:     schema.TypeSet,
-				Required: true,
+				Optional: true,
 				Set:      schema.HashString,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
