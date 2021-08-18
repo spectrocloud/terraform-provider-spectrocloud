@@ -306,6 +306,18 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceMachinePoolAksHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
+	buf.WriteString(fmt.Sprintf("%d-", m["is_system_node_pool"].(bool)))
+	buf.WriteString(fmt.Sprintf("%d-", m["storage_account_type"].(string)))
+	return int(hash(buf.String()))
+}
+
 func resourceMachinePoolGcpHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
