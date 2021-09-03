@@ -35,11 +35,11 @@ output "same" {
 - **filters** (String)
 - **id** (String) The ID of this resource.
 - **name** (String)
+- **registry_uid** (String)
 - **version** (String)
 
 ### Read-only
 
-- **registry_uid** (String)
 - **values** (String)
 
 
