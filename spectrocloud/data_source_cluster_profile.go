@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
@@ -14,7 +16,6 @@ func dataSourceClusterProfile() *schema.Resource {
 		ReadContext: dataSourceClusterProfileRead,
 
 		Schema: map[string]*schema.Schema{
-			// TODO packs
 			"id": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -26,6 +27,69 @@ func dataSourceClusterProfile() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+			},
+			"pack": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "spectro",
+						},
+						"uid": {
+							Type:     schema.TypeString,
+							Computed: true,
+							Optional: true,
+						},
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"manifest": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"uid": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"content": {
+										Type:     schema.TypeString,
+										Required: true,
+										DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+											if strings.TrimSpace(old) == strings.TrimSpace(new) {
+												return true
+											}
+											return false
+										},
+									},
+								},
+							},
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Optional: true,
+							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+								// UI strips the trailing newline on save
+								if strings.TrimSpace(old) == strings.TrimSpace(new) {
+									return true
+								}
+								return false
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -65,6 +129,29 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 
 	d.SetId(profile.Metadata.UID)
 	d.Set("name", profile.Metadata.Name)
+	if profile.Spec.Published != nil && len(profile.Spec.Published.Packs) > 0 {
+		packManifests := make(map[string][]string)
+		for _, p := range profile.Spec.Published.Packs {
+			if len(p.Manifests) > 0 {
+				content, err := c.GetClusterProfileManifestPack(d.Id(), p.PackUID)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// the original call
+				c := make([]string, len(content))
+				for i, co := range content {
+					c[i] = co.Spec.Published.Content
+				}
+				packManifests[p.PackUID] = c
+			}
+		}
+
+		packs := flattenPacks(profile.Spec.Published.Packs, packManifests)
+		if err := d.Set("pack", packs); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	return diags
 }

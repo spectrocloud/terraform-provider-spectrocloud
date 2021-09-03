@@ -3,9 +3,10 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -21,9 +22,9 @@ func dataSourcePack() *schema.Resource {
 				ConflictsWith: []string{"id", "cloud", "name", "version"},
 			},
 			"id": {
-				Type:     schema.TypeString,
-				Computed: true,
-				Optional: true,
+				Type:          schema.TypeString,
+				Computed:      true,
+				Optional:      true,
 				ConflictsWith: []string{"filters", "cloud", "name", "version"},
 			},
 			"name": {
@@ -96,16 +97,16 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 
 	if len(packs) == 0 {
 		diags = append(diags, diag.Diagnostic{
-			Severity:       diag.Error,
-			Summary:       fmt.Sprintf("%s: no matching packs", packName),
-			Detail:        "No packs matching criteria found",
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("%s: no matching packs", packName),
+			Detail:   "No packs matching criteria found",
 		})
 		return diags
 	} else if len(packs) > 1 {
 		diags = append(diags, diag.Diagnostic{
-			Severity:       diag.Error,
-			Summary:       fmt.Sprintf("%s: Multiple packs returned", packName),
-			Detail:        fmt.Sprintf("Found %d matching packs. Restrict packs criteria to a single match", len(packs)),
+			Severity: diag.Error,
+			Summary:  fmt.Sprintf("%s: Multiple packs returned", packName),
+			Detail:   fmt.Sprintf("Found %d matching packs. Restrict packs criteria to a single match", len(packs)),
 		})
 		return diags
 	}

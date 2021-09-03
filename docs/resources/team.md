@@ -60,13 +60,13 @@ resource "spectrocloud_team" "t1" {
 ### Required
 
 - **name** (String)
-- **users** (Set of String)
 
 ### Optional
 
 - **id** (String) The ID of this resource.
 - **project_role_mapping** (Block List) (see [below for nested schema](#nestedblock--project_role_mapping))
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- **users** (Set of String)
 
 <a id="nestedblock--project_role_mapping"></a>
 ### Nested Schema for `project_role_mapping`
