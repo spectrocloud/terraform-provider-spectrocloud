@@ -49,7 +49,6 @@ func dataSourcePack() *schema.Resource {
 			"registry_uid": {
 				Type:     schema.TypeString,
 				Computed: true,
-				Optional: true,
 			},
 			"values": {
 				Type:     schema.TypeString,
