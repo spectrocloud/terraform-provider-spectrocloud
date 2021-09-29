@@ -29,7 +29,7 @@ func resourceCloudAccountGcp() *schema.Resource {
 }
 
 func resourceCloudAccountGcpCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -49,7 +49,7 @@ func resourceCloudAccountGcpCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -73,7 +73,7 @@ func resourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m in
 
 //
 func resourceCloudAccountGcpUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -91,7 +91,7 @@ func resourceCloudAccountGcpUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceCloudAccountGcpDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -105,13 +105,13 @@ func resourceCloudAccountGcpDelete(_ context.Context, d *schema.ResourceData, m 
 	return diags
 }
 
-func toGcpAccount(d *schema.ResourceData) *models.V1alpha1GcpAccountEntity {
-	account := &models.V1alpha1GcpAccountEntity{
+func toGcpAccount(d *schema.ResourceData) *models.V1GcpAccountEntity {
+	account := &models.V1GcpAccountEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID : d.Id(),
 		},
-		Spec: &models.V1alpha1GcpAccountEntitySpec{
+		Spec: &models.V1GcpAccountEntitySpec{
 			JSONCredentials:        d.Get("gcp_json_credentials").(string),
 		},
 	}

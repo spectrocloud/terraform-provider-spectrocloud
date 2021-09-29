@@ -333,7 +333,7 @@ func resourceClusterVsphere() *schema.Resource {
 }
 
 func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -369,7 +369,7 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -415,7 +415,7 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	return flattenCloudConfigVsphere(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1alpha1Client) diag.Diagnostics {
+func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
@@ -428,7 +428,7 @@ func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *clie
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsVsphere(machinePools []*models.V1alpha1VsphereMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -480,7 +480,7 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1alpha1VsphereMach
 }
 
 func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -577,25 +577,25 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClusterEntity {
+func toVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
 	staticIP := cloudConfig["static_ip"].(bool)
-	cluster := &models.V1alpha1SpectroVsphereClusterEntity{
+	cluster := &models.V1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1alpha1SpectroVsphereClusterEntitySpec{
+		Spec: &models.V1SpectroVsphereClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1alpha1VsphereClusterConfigEntity{
+			CloudConfig: &models.V1VsphereClusterConfigEntity{
 				NtpServers: nil,
-				Placement: &models.V1alpha1VspherePlacementConfigEntity{
+				Placement: &models.V1VspherePlacementConfigEntity{
 					Datacenter: cloudConfig["datacenter"].(string),
 					Folder:     cloudConfig["folder"].(string),
 				},
@@ -606,13 +606,13 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 	}
 
 	if !staticIP {
-		cluster.Spec.CloudConfig.ControlPlaneEndpoint = &models.V1alpha1ControlPlaneEndPoint{
+		cluster.Spec.CloudConfig.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
 			DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
 			Type:             cloudConfig["network_type"].(string),
 		}
 	}
 
-	machinePoolConfigs := make([]*models.V1alpha1VsphereMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolVsphere(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -629,7 +629,7 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1alpha1SpectroVsphereClus
 	return cluster
 }
 
-func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachinePoolConfigEntity {
+func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -639,7 +639,7 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 		labels = append(labels, "master")
 	}
 
-	placements := make([]*models.V1alpha1VspherePlacementConfigEntity, 0)
+	placements := make([]*models.V1VspherePlacementConfigEntity, 0)
 	for _, pos := range m["placement"].([]interface{}) {
 		p := pos.(map[string]interface{})
 		poolID := p["static_ip_pool_id"].(string)
@@ -648,12 +648,12 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 			staticIP = true
 		}
 
-		placements = append(placements, &models.V1alpha1VspherePlacementConfigEntity{
+		placements = append(placements, &models.V1VspherePlacementConfigEntity{
 			UID:          p["id"].(string),
 			Cluster:      p["cluster"].(string),
 			ResourcePool: p["resource_pool"].(string),
 			Datastore:    p["datastore"].(string),
-			Network: &models.V1alpha1VsphereNetworkConfigEntity{
+			Network: &models.V1VsphereNetworkConfigEntity{
 				NetworkName:   ptr.StringPtr(p["network"].(string)),
 				ParentPoolUID: poolID,
 				StaticIP:      staticIP,
@@ -663,23 +663,23 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1alpha1VsphereMachin
 	}
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
-	instanceType := models.V1alpha1VsphereInstanceType{
+	instanceType := models.V1VsphereInstanceType{
 		DiskGiB:   ptr.Int32Ptr(int32(ins["disk_size_gb"].(int))),
 		MemoryMiB: ptr.Int64Ptr(int64(ins["memory_mb"].(int))),
 		NumCPUs:   ptr.Int32Ptr(int32(ins["cpu"].(int))),
 	}
 
-	mp := &models.V1alpha1VsphereMachinePoolConfigEntity{
-		CloudConfig: &models.V1alpha1VsphereMachinePoolCloudConfigEntity{
+	mp := &models.V1VsphereMachinePoolConfigEntity{
+		CloudConfig: &models.V1VsphereMachinePoolCloudConfigEntity{
 			Placements:   placements,
 			InstanceType: &instanceType,
 		},
-		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
+		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
 			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			UpdateStrategy: &models.V1alpha1UpdateStrategy{
+			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: m["update_strategy"].(string),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,

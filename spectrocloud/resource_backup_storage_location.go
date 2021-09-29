@@ -92,7 +92,7 @@ func resourceBackupStorageLocation() *schema.Resource {
 }
 
 func resourceBackupStorageLocationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	bsl := toBackupStorageLocation(d)
@@ -106,7 +106,7 @@ func resourceBackupStorageLocationCreate(ctx context.Context, d *schema.Resource
 }
 
 func resourceBackupStorageLocationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	bsl, err := c.GetBackupStorageLocation(d.Id())
@@ -155,7 +155,7 @@ func resourceBackupStorageLocationRead(ctx context.Context, d *schema.ResourceDa
 			s3["s3_force_path_style"] = *s3Bsl.Spec.Config.S3ForcePathStyle
 		}
 		s3["credential_type"] = string(s3Bsl.Spec.Config.Credentials.CredentialType)
-		if s3Bsl.Spec.Config.Credentials.CredentialType == models.V1alpha1AwsCloudAccountCredentialTypeSecret {
+		if s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
 			s3["secret_key"] = s3Bsl.Spec.Config.Credentials.SecretKey
 		} else {
@@ -175,7 +175,7 @@ func resourceBackupStorageLocationRead(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceBackupStorageLocationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	bsl := toBackupStorageLocation(d)
@@ -188,7 +188,7 @@ func resourceBackupStorageLocationUpdate(ctx context.Context, d *schema.Resource
 }
 
 func resourceBackupStorageLocationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	err := c.DeleteS3BackupStorageLocation(d.Id())
 	if err != nil {
@@ -198,17 +198,17 @@ func resourceBackupStorageLocationDelete(ctx context.Context, d *schema.Resource
 	return diags
 }
 
-func toBackupStorageLocation(d *schema.ResourceData) *models.V1alpha1UserAssetsLocationS3 {
+func toBackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLocationS3 {
 	bucketName := d.Get("bucket_name").(string)
 	region := d.Get("region").(string)
 	s3config := d.Get("s3").([]interface{})[0].(map[string]interface{})
 	s3ForcePathStyle := s3config["s3_force_path_style"].(bool)
-	return &models.V1alpha1UserAssetsLocationS3{
+	return &models.V1UserAssetsLocationS3{
 		Metadata: &models.V1ObjectMetaInputEntity{
 			Name: d.Get("name").(string),
 		},
-		Spec: &models.V1alpha1UserAssetsLocationS3Spec{
-			Config: &models.V1alpha1S3Credentials{
+		Spec: &models.V1UserAssetsLocationS3Spec{
+			Config: &models.V1S3Credentials{
 				BucketName:       &bucketName,
 				CaCert:           d.Get("ca_cert").(string),
 				Credentials:      toAwsAccountCredential(s3config),
@@ -221,15 +221,15 @@ func toBackupStorageLocation(d *schema.ResourceData) *models.V1alpha1UserAssetsL
 	}
 }
 
-func toAwsAccountCredential(s3cred map[string]interface{}) *models.V1alpha1AwsCloudAccount {
-	account := &models.V1alpha1AwsCloudAccount{}
+func toAwsAccountCredential(s3cred map[string]interface{}) *models.V1AwsCloudAccount {
+	account := &models.V1AwsCloudAccount{}
 	if len(s3cred["credential_type"].(string)) == 0 || s3cred["credential_type"].(string) == "secret" {
-		account.CredentialType = models.V1alpha1AwsCloudAccountCredentialTypeSecret
+		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret
 		account.AccessKey = s3cred["access_key"].(string)
 		account.SecretKey = s3cred["secret_key"].(string)
 	} else if s3cred["credential_type"].(string) == "sts" {
-		account.CredentialType = models.V1alpha1AwsCloudAccountCredentialTypeSts
-		account.Sts = &models.V1alpha1AwsStsCredentials{
+		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
+		account.Sts = &models.V1AwsStsCredentials{
 			Arn:        s3cred["arn"].(string),
 			ExternalID: s3cred["external_id"].(string),
 		}

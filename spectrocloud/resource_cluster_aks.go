@@ -241,7 +241,7 @@ func resourceClusterAks() *schema.Resource {
 }
 
 func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -277,7 +277,7 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -299,7 +299,7 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	var config *models.V1alpha1AzureCloudConfig
+	var config *models.V1AzureCloudConfig
 	if config, err = c.GetCloudConfigAks(configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -337,7 +337,7 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	return diags
 }
 
-func flattenMachinePoolConfigsAks(machinePools []*models.V1alpha1AzureMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfig) []interface{} {
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -362,7 +362,7 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1alpha1AzureMachinePoo
 }
 
 func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -442,19 +442,19 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toAksCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterEntity {
+func toAksCluster(d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	cluster := &models.V1alpha1SpectroAzureClusterEntity{
+	cluster := &models.V1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1alpha1SpectroAzureClusterEntitySpec{
+		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1alpha1AzureClusterConfig{
+			CloudConfig: &models.V1AzureClusterConfig{
 				ControlPlaneSubnet: nil,
 				Location:           ptr.StringPtr(cloudConfig["region"].(string)),
 				ResourceGroup:      cloudConfig["resource_group"].(string),
@@ -464,7 +464,7 @@ func toAksCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterEnt
 		},
 	}
 
-	machinePoolConfigs := make([]*models.V1alpha1AzureMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolAks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -473,7 +473,7 @@ func toAksCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterEnt
 	return cluster
 }
 
-func toMachinePoolAks(machinePool interface{}) *models.V1alpha1AzureMachinePoolConfigEntity {
+func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -482,22 +482,22 @@ func toMachinePoolAks(machinePool interface{}) *models.V1alpha1AzureMachinePoolC
 		labels = append(labels, "master")
 	}
 
-	mp := &models.V1alpha1AzureMachinePoolConfigEntity{
-		CloudConfig: &models.V1alpha1AzureMachinePoolCloudConfigEntity{
+	mp := &models.V1AzureMachinePoolConfigEntity{
+		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			InstanceType: m["instance_type"].(string),
-			OsDisk: &models.V1alpha1AzureOSDisk{
+			OsDisk: &models.V1AzureOSDisk{
 				DiskSizeGB: int32(m["disk_size_gb"].(int)),
-				ManagedDisk: &models.V1alpha1ManagedDisk{
+				ManagedDisk: &models.V1ManagedDisk{
 					StorageAccountType: m["storage_account_type"].(string),
 				},
 				OsType: "",
 			},
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
-		ManagedPoolConfig: &models.V1alpha1AzureManagedMachinePoolConfig{
+		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
-		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
+		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),

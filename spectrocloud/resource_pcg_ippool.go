@@ -90,7 +90,7 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 }
 
 func resourceIpPoolCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
 
@@ -106,7 +106,7 @@ func resourceIpPoolCreate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
@@ -160,7 +160,7 @@ func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceIpPoolUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
@@ -176,7 +176,7 @@ func resourceIpPoolUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceIpPoolDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
@@ -189,10 +189,10 @@ func resourceIpPoolDelete(ctx context.Context, d *schema.ResourceData, m interfa
 	return diags
 }
 
-func toIpPool(d *schema.ResourceData) *models.V1alpha1IPPoolInputEntity {
-	pool := &models.V1alpha1Pool{
+func toIpPool(d *schema.ResourceData) *models.V1IPPoolInputEntity {
+	pool := &models.V1Pool{
 		Gateway:    d.Get("gateway").(string),
-		Nameserver: &models.V1alpha1Nameserver{},
+		Nameserver: &models.V1Nameserver{},
 		Prefix:     int32(d.Get("prefix").(int)),
 	}
 
@@ -219,12 +219,12 @@ func toIpPool(d *schema.ResourceData) *models.V1alpha1IPPoolInputEntity {
 		pool.Nameserver.Search = searchArr
 	}
 
-	return &models.V1alpha1IPPoolInputEntity{
+	return &models.V1IPPoolInputEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
 		},
-		Spec: &models.V1alpha1IPPoolInputEntitySpec{
+		Spec: &models.V1IPPoolInputEntitySpec{
 			Pool:                    pool,
 			RestrictToSingleCluster: d.Get("restrict_to_single_cluster").(bool),
 		},

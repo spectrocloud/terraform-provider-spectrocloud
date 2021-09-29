@@ -30,7 +30,7 @@ func dataSourceProject() *schema.Resource {
 }
 
 func dataSourceProjectRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if v, ok := d.GetOk("name"); ok {
 		uid, err := c.GetProjectUID(v.(string))

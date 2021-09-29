@@ -288,7 +288,7 @@ func resourceClusterOpenStack() *schema.Resource {
 }
 
 func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -322,34 +322,34 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	return diags
 }
 
-func toOpenStackCluster(d *schema.ResourceData) *models.V1alpha1SpectroOpenStackClusterEntity {
+func toOpenStackCluster(d *schema.ResourceData) *models.V1SpectroOpenStackClusterEntity {
 
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
-	cluster := &models.V1alpha1SpectroOpenStackClusterEntity{
+	cluster := &models.V1SpectroOpenStackClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1alpha1SpectroOpenStackClusterEntitySpec{
+		Spec: &models.V1SpectroOpenStackClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1alpha1OpenStackClusterConfig{
+			CloudConfig: &models.V1OpenStackClusterConfig{
 				Region:     cloudConfig["region"].(string),
 				SSHKeyName: cloudConfig["ssh_key"].(string),
-				Domain: &models.V1alpha1OpenStackResource {
+				Domain: &models.V1OpenStackResource {
 					ID: cloudConfig["domain"].(string),
 					Name: cloudConfig["domain"].(string),
 				},
-				Network: &models.V1alpha1OpenStackResource {
+				Network: &models.V1OpenStackResource {
 					ID: cloudConfig["network_id"].(string),
 				},
-				Project: &models.V1alpha1OpenStackResource {
+				Project: &models.V1OpenStackResource {
 					Name: cloudConfig["project"].(string),
 				},
-				Subnet: &models.V1alpha1OpenStackResource {
+				Subnet: &models.V1OpenStackResource {
 					ID: cloudConfig["subnet_id"].(string),
 				},
 				NodeCidr: cloudConfig["subnet_cidr"].(string),
@@ -366,7 +366,7 @@ func toOpenStackCluster(d *schema.ResourceData) *models.V1alpha1SpectroOpenStack
 		cluster.Spec.CloudConfig.DNSNameservers = dnsServers
 	}
 
-	machinePoolConfigs := make([]*models.V1alpha1OpenStackMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1OpenStackMachinePoolConfigEntity, 0)
 
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolOpenStack(machinePool)
@@ -387,7 +387,7 @@ func toOpenStackCluster(d *schema.ResourceData) *models.V1alpha1SpectroOpenStack
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -409,7 +409,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 
-	var config *models.V1alpha1OpenStackCloudConfig
+	var config *models.V1OpenStackCloudConfig
 	if config, err = c.GetCloudConfigOpenStack(configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -446,7 +446,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1alpha1OpenStackMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -474,7 +474,7 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1alpha1OpenStack
 }
 
 func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -558,7 +558,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 }
 
 
-func toMachinePoolOpenStack(machinePool interface{}) *models.V1alpha1OpenStackMachinePoolConfigEntity {
+func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -573,22 +573,22 @@ func toMachinePoolOpenStack(machinePool interface{}) *models.V1alpha1OpenStackMa
 		azs = append(azs, val.(string))
 	}
 
-	mp := &models.V1alpha1OpenStackMachinePoolConfigEntity{
-		CloudConfig: &models.V1alpha1OpenStackMachinePoolCloudConfigEntity{
+	mp := &models.V1OpenStackMachinePoolConfigEntity{
+		CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
 			Azs: azs,
-			Subnet: &models.V1alpha1OpenStackResource {
+			Subnet: &models.V1OpenStackResource {
 				ID: m["subnet_id"].(string),
 			},
-			FlavorConfig: &models.V1alpha1OpenstackFlavorConfig {
+			FlavorConfig: &models.V1OpenstackFlavorConfig {
 				Name: ptr.StringPtr(m["instance_type"].(string)),
 			},
 		},
-		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
+		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
 			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			UpdateStrategy: &models.V1alpha1UpdateStrategy{
+			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: m["update_strategy"].(string),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,

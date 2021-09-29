@@ -30,7 +30,7 @@ func dataSourceRole() *schema.Resource {
 }
 
 func dataSourceRoleRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if v, ok := d.GetOk("name"); ok {
 		role, err := c.GetRole(v.(string))

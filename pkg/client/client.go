@@ -14,10 +14,10 @@ import (
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 
-	authC "github.com/spectrocloud/hapi/auth/client/v1alpha1"
+	authC "github.com/spectrocloud/hapi/auth/client/v1"
 
-	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1alpha1"
-	userC "github.com/spectrocloud/hapi/user/client/v1alpha1"
+	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	userC "github.com/spectrocloud/hapi/user/client/v1"
 )
 
 const (
@@ -38,17 +38,17 @@ var tokenExpiry = 10 * time.Minute
 //var hubbleRestClientLatch sync.Mutex
 
 type AuthToken struct {
-	token  *models.V1alpha1UserToken
+	token  *models.V1UserToken
 	expiry time.Time
 }
 
-type V1alpha1Client struct {
+type V1Client struct {
 	ctx      context.Context
 	email    string
 	password string
 }
 
-func New(hubbleHost, email, password, projectUID string) *V1alpha1Client {
+func New(hubbleHost, email, password, projectUID string) *V1Client {
 	ctx := context.Background()
 	if projectUID != "" {
 		ctx = GetProjectContextWithCtx(ctx, projectUID)
@@ -60,20 +60,20 @@ func New(hubbleHost, email, password, projectUID string) *V1alpha1Client {
 	authHttpTransport.RetryAttempts = 0
 	//authHttpTransport.Debug = true
 	AuthClient = authC.New(authHttpTransport, strfmt.Default)
-	return &V1alpha1Client{ctx, email, password}
+	return &V1Client{ctx, email, password}
 }
 
-func (h *V1alpha1Client) getNewAuthToken() (*AuthToken, error) {
+func (h *V1Client) getNewAuthToken() (*AuthToken, error) {
 	//httpClient, err := certs.GetHttpClient()
 	//if err != nil {
 	//	return nil, err
 	//}
-	authParam := authC.NewV1alpha1AuthenticateParams().
-		WithBody(&models.V1alpha1AuthLogin{
+	authParam := authC.NewV1AuthenticateParams().
+		WithBody(&models.V1AuthLogin{
 			EmailID:  h.email,
 			Password: strfmt.Password(h.password),
 		})
-	res, err := AuthClient.V1alpha1Authenticate(authParam)
+	res, err := AuthClient.V1Authenticate(authParam)
 	if err != nil {
 		log.Error("Error", err)
 		return nil, err
@@ -91,14 +91,14 @@ func (h *V1alpha1Client) getNewAuthToken() (*AuthToken, error) {
 	return authToken, nil
 }
 
-func (h *V1alpha1Client) GetProjectUID(projectName string) (string, error) {
+func (h *V1Client) GetProjectUID(projectName string) (string, error) {
 	client, err := h.getUserClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := userC.NewV1alpha1ProjectsListParamsWithContext(h.ctx)
-	projects, err := client.V1alpha1ProjectsList(params)
+	params := userC.NewV1ProjectsListParamsWithContext(h.ctx)
+	projects, err := client.V1ProjectsList(params)
 	if err != nil {
 		return "", err
 	}
@@ -119,7 +119,7 @@ func GetProjectContextWithCtx(c context.Context, projectUid string) context.Cont
 		}})
 }
 
-func (h *V1alpha1Client) getTransport() (*hapitransport.Runtime, error) {
+func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
 	if authToken == nil || authToken.expiry.Before(time.Now()) {
 		if tkn, err := h.getNewAuthToken(); err != nil {
 			log.Error("Failed to get auth token ", err)
@@ -137,7 +137,7 @@ func (h *V1alpha1Client) getTransport() (*hapitransport.Runtime, error) {
 }
 
 // Clients
-func (h *V1alpha1Client) getClusterClient() (clusterC.ClientService, error) {
+func (h *V1Client) getClusterClient() (clusterC.ClientService, error) {
 	httpTransport, err := h.getTransport()
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (h *V1alpha1Client) getClusterClient() (clusterC.ClientService, error) {
 	return clusterC.New(httpTransport, strfmt.Default), nil
 }
 
-func (h *V1alpha1Client) getUserClient() (userC.ClientService, error) {
+func (h *V1Client) getUserClient() (userC.ClientService, error) {
 	httpTransport, err := h.getTransport()
 	if err != nil {
 		return nil, err
