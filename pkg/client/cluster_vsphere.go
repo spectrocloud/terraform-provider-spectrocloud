@@ -22,18 +22,6 @@ func (h *V1Client) CreateClusterVsphere(cluster *models.V1SpectroVsphereClusterE
 	return *success.Payload.UID, nil
 }
 
-func (h *V1Client) UpdateClusterVsphere(cluster *models.V1SpectroVsphereClusterEntity) error {
-	client, err := h.getClusterClient()
-	if err != nil {
-		return nil
-	}
-
-	uid := cluster.Metadata.UID
-	params := clusterC.NewV1SpectroClustersVsphereUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(cluster)
-	_, err = client.V1SpectroClustersVsphereUpdate(params)
-	return err
-}
-
 func (h *V1Client) CreateMachinePoolVsphere(cloudConfigId string, machinePool *models.V1VsphereMachinePoolConfigEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {

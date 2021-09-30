@@ -22,18 +22,6 @@ func (h *V1Client) CreateClusterGcp(cluster *models.V1SpectroGcpClusterEntity) (
 	return *success.Payload.UID, nil
 }
 
-func (h *V1Client) UpdateClusterGcp(cluster *models.V1SpectroGcpClusterEntity) error {
-	client, err := h.getClusterClient()
-	if err != nil {
-		return nil
-	}
-
-	uid := cluster.Metadata.UID
-	params := clusterC.NewV1SpectroClustersGcpUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(cluster)
-	_, err = client.V1SpectroClustersGcpUpdate(params)
-	return err
-}
-
 func (h *V1Client) CreateMachinePoolGcp(cloudConfigId string, machinePool *models.V1GcpMachinePoolConfigEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {

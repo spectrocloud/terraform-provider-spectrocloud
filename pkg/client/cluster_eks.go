@@ -22,19 +22,6 @@ func (h *V1Client) CreateClusterEks(cluster *models.V1SpectroEksClusterEntity) (
 	return *success.Payload.UID, nil
 }
 
-func (h *V1Client) UpdateClusterEks(cluster *models.V1SpectroEksClusterEntity) error {
-	client, err := h.getClusterClient()
-	if err != nil {
-		return nil
-	}
-
-	uid := cluster.Metadata.UID
-	params := clusterC.NewV1SpectroClustersEksUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(cluster)
-	_, err = client.V1SpectroClustersEksUpdate(params)
-	return err
-}
-
-
 func (h *V1Client) CreateMachinePoolEks(cloudConfigId string, machinePool *models.V1EksMachinePoolConfigEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {

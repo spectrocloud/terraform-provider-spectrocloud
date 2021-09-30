@@ -22,18 +22,6 @@ func (h *V1Client) CreateClusterAzure(cluster *models.V1SpectroAzureClusterEntit
 	return *success.Payload.UID, nil
 }
 
-func (h *V1Client) UpdateClusterAzure(cluster *models.V1SpectroAzureClusterEntity) error {
-	client, err := h.getClusterClient()
-	if err != nil {
-		return nil
-	}
-
-	uid := cluster.Metadata.UID
-	params := clusterC.NewV1SpectroClustersAzureUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(cluster)
-	_, err = client.V1SpectroClustersAzureUpdate(params)
-	return err
-}
-
 func (h *V1Client) CreateMachinePoolAzure(cloudConfigId string, machinePool *models.V1AzureMachinePoolConfigEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {

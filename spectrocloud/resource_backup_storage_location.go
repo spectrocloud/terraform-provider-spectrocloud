@@ -125,7 +125,7 @@ func resourceBackupStorageLocationRead(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	if *bsl.Spec.Storage == "s3" {
+	if bsl.Spec.Storage == "s3" {
 		s3Bsl, err := c.GetS3BackupStorageLocation(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
@@ -208,13 +208,14 @@ func toBackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLocatio
 			Name: d.Get("name").(string),
 		},
 		Spec: &models.V1UserAssetsLocationS3Spec{
-			Config: &models.V1S3Credentials{
+			Config: &models.V1S3StorageConfig{
 				BucketName:       &bucketName,
 				CaCert:           d.Get("ca_cert").(string),
 				Credentials:      toAwsAccountCredential(s3config),
 				Region:           &region,
 				S3ForcePathStyle: &s3ForcePathStyle,
 				S3URL:            s3config["s3_url"].(string),
+				UseRestic:        nil,
 			},
 			IsDefault: d.Get("is_default").(bool),
 		},
