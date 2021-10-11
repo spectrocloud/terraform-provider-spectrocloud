@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -33,6 +35,11 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"type": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
 			"is_private": {
 				Type:     schema.TypeBool,
 				Required: true,
@@ -52,22 +59,13 @@ func resourceRegistryOciEcr() *schema.Resource {
 							Required:     true,
 							ValidateFunc: validation.StringInSlice([]string{"secret", "sts"}, false),
 						},
-						"sts": {
-							Type:     schema.TypeList,
-							Required: true,
-							MaxItems: 1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"arn": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"external_id": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-								},
-							},
+						"arn": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"external_id": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 					},
 				},
@@ -114,20 +112,19 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 	}
 
 	if registry.Spec.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSts {
-		sts_list := make([]interface{}, 0, 1)
-		sts := make(map[string]interface{})
-		sts["arn"] = registry.Spec.Credentials.Sts.Arn
-		sts["external_id"] = registry.Spec.Credentials.Sts.ExternalID
-		sts_list = append(sts_list, sts)
-
-		cred := make(map[string]interface{})
-		cred["credential_type"]  = models.V1AwsCloudAccountCredentialTypeSts
-		cred["sts"] = sts_list
 		credentials := make([]interface{}, 0, 1)
-		credentials = append(credentials, cred)
+		acc := make(map[string]interface{})
+		acc["arn"] = registry.Spec.Credentials.Sts.Arn
+		acc["external_id"] = registry.Spec.Credentials.Sts.ExternalID
+		acc["credential_type"]  = models.V1AwsCloudAccountCredentialTypeSts
+		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
 		}
+	} else {
+		errMsg := fmt.Sprintf("Registry type %s not implemented.", registry.Spec.Credentials.CredentialType)
+		err = errors.New(errMsg)
+		return diag.FromErr(err)
 	}
 
 	return diags
@@ -181,10 +178,9 @@ func toRegistryAwsAccountCredential(regCred map[string]interface{}) *models.V1Aw
 		account.SecretKey = regCred["secret_key"].(string)
 	} else if regCred["credential_type"].(string) == "sts" {
 		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
-		sts := regCred["sts"].([]interface{})[0].(map[string]interface{})
 		account.Sts = &models.V1AwsStsCredentials{
-			Arn:        sts["arn"].(string),
-			ExternalID: sts["external_id"].(string),
+			Arn:        regCred["arn"].(string),
+			ExternalID: regCred["external_id"].(string),
 		}
 	}
 	return account
