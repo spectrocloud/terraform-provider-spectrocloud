@@ -326,7 +326,7 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 		//Layer:  p["layer"].(string),
 		Name: ptr.StringPtr(pName),
 		Tag:  p["tag"].(string),
-		UID:  ptr.StringPtr(pUID),
+		UID:  p["uid"].(string),
 		Type: pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
