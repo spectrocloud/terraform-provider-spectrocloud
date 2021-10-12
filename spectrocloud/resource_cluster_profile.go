@@ -326,10 +326,14 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 		//Layer:  p["layer"].(string),
 		Name: ptr.StringPtr(pName),
 		Tag:  p["tag"].(string),
-		UID:  p["uid"].(string),
+		//UID:  p["uid"].(string),
 		Type: pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
+	}
+
+	if len(p["uid"].(string)) > 0 {
+		pack.UID = p["uid"].(string)
 	}
 
 	manifests := make([]*models.V1ManifestInputEntity, 0)
