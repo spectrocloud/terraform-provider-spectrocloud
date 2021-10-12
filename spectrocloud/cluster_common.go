@@ -246,9 +246,30 @@ func toPack(pSrc interface{}) *models.V1PackValuesEntity {
 
 	pack := &models.V1PackValuesEntity{
 		Name:   ptr.StringPtr(p["name"].(string)),
-		Tag:    p["tag"].(string),
-		Values: p["values"].(string),
 	}
+
+	if val, found := p["values"]; found && len(val.(string)) > 0 {
+		pack.Values = val.(string)
+	}
+	if val, found := p["tag"]; found && len(val.(string)) > 0 {
+		pack.Tag = val.(string)
+	}
+	if val, found := p["type"]; found && len(val.(string)) > 0 {
+		pack.Type = models.V1PackType(val.(string))
+	}
+	if val, found := p["manifest"]; found && len(val.([]interface{})) > 0 {
+		manifestsData := val.([]interface{})
+		manifests := make([]*models.V1ManifestRefUpdateEntity, len(manifestsData))
+		for i := 0; i < len(manifestsData); i++ {
+			data := manifestsData[i].(map[string]interface{})
+			manifests[i] = &models.V1ManifestRefUpdateEntity{
+				Name:    ptr.StringPtr(data["name"].(string)),
+				Content: data["content"].(string),
+			}
+		}
+		pack.Manifests = manifests
+	}
+
 	return pack
 }
 
@@ -397,7 +418,6 @@ func resourceMachinePoolOpenStackHash(v interface{}) int {
 
 	return int(hash(buf.String()))
 }
-
 
 func hash(s string) uint32 {
 	h := fnv.New32a()
