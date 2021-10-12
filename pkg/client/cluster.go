@@ -56,6 +56,9 @@ func (h *V1Client) GetClusterKubeConfig(uid string) (string, error) {
 	params := clusterC.NewV1SpectroClustersUIDKubeConfigParamsWithContext(h.ctx).WithUID(uid)
 	_, err = client.V1SpectroClustersUIDKubeConfig(params, builder)
 	if err != nil {
+		if herr.IsNotFound(err) {
+			return "", nil
+		}
 		return "", err
 	}
 
