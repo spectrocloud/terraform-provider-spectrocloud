@@ -39,7 +39,7 @@ func dataSourceCloudAccountAzure() *schema.Resource {
 }
 
 func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -49,7 +49,7 @@ func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	var account *models.V1alpha1AzureAccount
+	var account *models.V1AzureAccount
 	for _, a := range accounts {
 
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {

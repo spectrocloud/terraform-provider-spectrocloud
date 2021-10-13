@@ -54,7 +54,7 @@ func resourceCloudAccountAws() *schema.Resource {
 }
 
 func resourceCloudAccountAwsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -74,7 +74,7 @@ func resourceCloudAccountAwsCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -96,7 +96,7 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	if account.Spec.CredentialType == models.V1alpha1AwsCloudAccountCredentialTypeSecret {
+	if account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 		if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
 			return diag.FromErr(err)
 		}
@@ -111,7 +111,7 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 
 //
 func resourceCloudAccountAwsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -129,7 +129,7 @@ func resourceCloudAccountAwsUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -145,24 +145,24 @@ func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m 
 	return diags
 }
 
-func toAwsAccount(d *schema.ResourceData) *models.V1alpha1AwsAccount {
-	account := &models.V1alpha1AwsAccount{
+func toAwsAccount(d *schema.ResourceData) *models.V1AwsAccount {
+	account := &models.V1AwsAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
 		},
-		Spec: &models.V1alpha1AwsCloudAccount{
+		Spec: &models.V1AwsCloudAccount{
 			AccessKey: d.Get("aws_access_key").(string),
 			SecretKey: d.Get("aws_secret_key").(string),
 		},
 	}
 	if len(d.Get("type").(string)) == 0 || d.Get("type").(string) == "secret" {
-		account.Spec.CredentialType = models.V1alpha1AwsCloudAccountCredentialTypeSecret
+		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret
 		account.Spec.AccessKey = d.Get("aws_access_key").(string)
 		account.Spec.SecretKey = d.Get("aws_secret_key").(string)
 	} else if d.Get("type").(string) == "sts" {
-		account.Spec.CredentialType = models.V1alpha1AwsCloudAccountCredentialTypeSts
-		account.Spec.Sts = &models.V1alpha1AwsStsCredentials{
+		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
+		account.Spec.Sts = &models.V1AwsStsCredentials{
 			Arn:        d.Get("arn").(string),
 			ExternalID: d.Get("external_id").(string),
 		}

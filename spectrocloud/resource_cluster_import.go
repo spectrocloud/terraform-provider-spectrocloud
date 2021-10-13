@@ -82,7 +82,7 @@ func resourceClusterImport() *schema.Resource {
 }
 
 func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	uid, err := cloudClusterImportFunc(c, d)
 	if err != nil {
@@ -116,7 +116,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	cloudType := d.Get("cloud").(string)
 
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 	uid := d.Id()
@@ -149,7 +149,7 @@ func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m int
 	return diag.Diagnostics{}
 }
 
-func resourceCloudClusterImportManoifests(cluster *models.V1alpha1SpectroCluster, d *schema.ResourceData, c *client.V1alpha1Client) error {
+func resourceCloudClusterImportManoifests(cluster *models.V1SpectroCluster, d *schema.ResourceData, c *client.V1Client) error {
 	if cluster.Status != nil && cluster.Status.ClusterImport != nil && cluster.Status.ClusterImport.IsBrownfield {
 		if err := d.Set("cluster_import_manifest_apply_command", cluster.Status.ClusterImport.ImportLink); err != nil {
 			return err
@@ -166,7 +166,7 @@ func resourceCloudClusterImportManoifests(cluster *models.V1alpha1SpectroCluster
 	return nil
 }
 
-func cloudClusterImportFunc(c *client.V1alpha1Client, d *schema.ResourceData) (string, error) {
+func cloudClusterImportFunc(c *client.V1Client, d *schema.ResourceData) (string, error) {
 	meta := toClusterMeta(d)
 	cloudType := d.Get("cloud").(string)
 	switch cloudType {
@@ -183,23 +183,23 @@ func cloudClusterImportFunc(c *client.V1alpha1Client, d *schema.ResourceData) (s
 }
 
 func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	clusterProfileId := d.Get("cluster_profile_id").(string)
-	profiles := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
-	packValues := make([]*models.V1alpha1PackValuesEntity, 0)
+	profiles := make([]*models.V1SpectroClusterProfileEntity, 0)
+	packValues := make([]*models.V1PackValuesEntity, 0)
 	for _, pack := range d.Get("pack").([]interface{}) {
 		p := toPack(pack)
 		packValues = append(packValues, p)
 	}
 
-	profiles = append(profiles, &models.V1alpha1SpectroClusterProfileEntity{
+	profiles = append(profiles, &models.V1SpectroClusterProfileEntity{
 		PackValues: packValues,
 		UID:        clusterProfileId,
 	})
 
-	err := c.UpdateClusterProfileValues(d.Id(), &models.V1alpha1SpectroClusterProfiles{
+	err := c.UpdateClusterProfileValues(d.Id(), &models.V1SpectroClusterProfiles{
 		Profiles: profiles,
 	})
 	if err != nil {
@@ -208,20 +208,20 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toCloudClusterProfiles(d *schema.ResourceData) *models.V1alpha1SpectroClusterProfiles {
+func toCloudClusterProfiles(d *schema.ResourceData) *models.V1SpectroClusterProfiles {
 	if clusterProfileUid := d.Get("cluster_profile_id"); clusterProfileUid != nil {
-		profileEntities := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
-		packValues := make([]*models.V1alpha1PackValuesEntity, 0)
+		profileEntities := make([]*models.V1SpectroClusterProfileEntity, 0)
+		packValues := make([]*models.V1PackValuesEntity, 0)
 		for _, pack := range d.Get("pack").([]interface{}) {
 			p := toPack(pack)
 			packValues = append(packValues, p)
 		}
 
-		profileEntities = append(profileEntities, &models.V1alpha1SpectroClusterProfileEntity{
+		profileEntities = append(profileEntities, &models.V1SpectroClusterProfileEntity{
 			PackValues: packValues,
 			UID:        clusterProfileUid.(string),
 		})
-		return &models.V1alpha1SpectroClusterProfiles{
+		return &models.V1SpectroClusterProfiles{
 			Profiles: profileEntities,
 		}
 	}

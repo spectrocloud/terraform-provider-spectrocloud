@@ -48,7 +48,7 @@ func resourceCloudAccountVsphere() *schema.Resource {
 }
 
 func resourceCloudAccountVsphereCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -68,7 +68,7 @@ func resourceCloudAccountVsphereCreate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -107,7 +107,7 @@ func resourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData, 
 
 //
 func resourceCloudAccountVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -125,7 +125,7 @@ func resourceCloudAccountVsphereUpdate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceCloudAccountVsphereDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -139,13 +139,13 @@ func resourceCloudAccountVsphereDelete(_ context.Context, d *schema.ResourceData
 	return diags
 }
 
-func toVsphereAccount(d *schema.ResourceData) *models.V1alpha1VsphereAccount {
-	account := &models.V1alpha1VsphereAccount{
+func toVsphereAccount(d *schema.ResourceData) *models.V1VsphereAccount {
+	account := &models.V1VsphereAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
 		},
-		Spec: &models.V1alpha1VsphereCloudAccount{
+		Spec: &models.V1VsphereCloudAccount{
 			VcenterServer: ptr.StringPtr(d.Get("vsphere_password").(string)),
 			Username:      ptr.StringPtr(d.Get("vsphere_password").(string)),
 			Password:      ptr.StringPtr(d.Get("vsphere_password").(string)),

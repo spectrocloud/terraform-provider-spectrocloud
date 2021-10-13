@@ -96,17 +96,16 @@ func dataSourceClusterProfile() *schema.Resource {
 }
 
 func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-
 	profiles, err := c.GetClusterProfiles()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	var profile *models.V1alpha1ClusterProfile
+	var profile *models.V1ClusterProfile
 	for _, p := range profiles {
 
 		if v, ok := d.GetOk("id"); ok && v.(string) == p.Metadata.UID {

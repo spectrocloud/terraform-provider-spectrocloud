@@ -353,7 +353,7 @@ func resourceClusterEks() *schema.Resource {
 }
 
 func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -389,7 +389,7 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -411,7 +411,7 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	var config *models.V1alpha1EksCloudConfig
+	var config *models.V1EksCloudConfig
 	if config, err = c.GetCloudConfigEks(configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -454,7 +454,7 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	return diags
 }
 
-func flattenMachinePoolConfigsEks(machinePools []*models.V1alpha1EksMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -487,7 +487,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1alpha1EksMachinePoolC
 	return ois
 }
 
-func flattenFargateProfilesEks(fargateProfiles []*models.V1alpha1FargateProfile) []interface{} {
+func flattenFargateProfilesEks(fargateProfiles []*models.V1FargateProfile) []interface{} {
 
 	if fargateProfiles == nil {
 		return make([]interface{}, 0)
@@ -518,7 +518,7 @@ func flattenFargateProfilesEks(fargateProfiles []*models.V1alpha1FargateProfile)
 }
 
 func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -526,14 +526,14 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
 	if d.HasChange("fargate_profile") {
-		fargateProfiles := make([]*models.V1alpha1FargateProfile, 0)
+		fargateProfiles := make([]*models.V1FargateProfile, 0)
 		for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
 			f := toFargateProfileEks(fargateProfile)
 			fargateProfiles = append(fargateProfiles, f)
 		}
 
 		log.Printf("Updating fargate profiles")
-		fargateProfilesList := &models.V1alpha1EksFargateProfiles{
+		fargateProfilesList := &models.V1EksFargateProfiles{
 			FargateProfiles: fargateProfiles,
 		}
 
@@ -682,22 +682,22 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntity {
+func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("Eks_client_secret").(string))
 
-	cluster := &models.V1alpha1SpectroEksClusterEntity{
+	cluster := &models.V1SpectroEksClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1alpha1SpectroEksClusterEntitySpec{
+		Spec: &models.V1SpectroEksClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1alpha1EksClusterConfig{
+			CloudConfig: &models.V1EksClusterConfig{
 				VpcID:      cloudConfig["vpc_id"].(string),
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
@@ -705,7 +705,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 		},
 	}
 
-	access := &models.V1alpha1EksClusterConfigEndpointAccess{}
+	access := &models.V1EksClusterConfigEndpointAccess{}
 	switch cloudConfig["endpoint_access"].(string) {
 	case "public":
 		access.Public = true
@@ -728,7 +728,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
-	machinePoolConfigs := make([]*models.V1alpha1EksMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
 	cpPool := map[string]interface{}{
 		"control_plane": true,
 		"name":          "master-pool",
@@ -745,7 +745,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
-	fargateProfiles := make([]*models.V1alpha1FargateProfile, 0)
+	fargateProfiles := make([]*models.V1FargateProfile, 0)
 	for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
 		f := toFargateProfileEks(fargateProfile)
 		fargateProfiles = append(fargateProfiles, f)
@@ -756,7 +756,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1alpha1SpectroEksClusterEntit
 	return cluster
 }
 
-func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolConfigEntity {
+func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -766,25 +766,25 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 	}
 
 	azs := make([]string, 0)
-	subnets := make([]*models.V1alpha1EksSubnetEntity, 0)
+	subnets := make([]*models.V1EksSubnetEntity, 0)
 	for k, val := range m["az_subnets"].(map[string]interface{}) {
 		azs = append(azs, k)
 		if val.(string) != "" && val.(string) != "-" {
-			subnets = append(subnets, &models.V1alpha1EksSubnetEntity{
+			subnets = append(subnets, &models.V1EksSubnetEntity{
 				Az: k,
 				ID: val.(string),
 			})
 		}
 	}
 
-	mp := &models.V1alpha1EksMachinePoolConfigEntity{
-		CloudConfig: &models.V1alpha1EksMachineCloudConfigEntity{
+	mp := &models.V1EksMachinePoolConfigEntity{
+		CloudConfig: &models.V1EksMachineCloudConfigEntity{
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 			InstanceType:   m["instance_type"].(string),
 			Azs:            azs,
 			Subnets:        subnets,
 		},
-		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
+		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
@@ -797,7 +797,7 @@ func toMachinePoolEks(machinePool interface{}) *models.V1alpha1EksMachinePoolCon
 	return mp
 }
 
-func toFargateProfileEks(fargateProfile interface{}) *models.V1alpha1FargateProfile {
+func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {
 	m := fargateProfile.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -806,17 +806,17 @@ func toFargateProfileEks(fargateProfile interface{}) *models.V1alpha1FargateProf
 		labels = append(labels, "master")
 	}
 
-	selectors := make([]*models.V1alpha1FargateSelector, 0)
+	selectors := make([]*models.V1FargateSelector, 0)
 	for _, val := range m["selector"].([]interface{}) {
 		s := val.(map[string]interface{})
 
-		selectors = append(selectors, &models.V1alpha1FargateSelector{
+		selectors = append(selectors, &models.V1FargateSelector{
 			Labels:    expandStringMap(s["labels"].(map[string]interface{})),
 			Namespace: ptr.StringPtr(s["namespace"].(string)),
 		})
 	}
 
-	f := &models.V1alpha1FargateProfile{
+	f := &models.V1FargateProfile{
 		Name:           ptr.StringPtr(m["name"].(string)),
 		AdditionalTags: expandStringMap(m["additional_tags"].(map[string]interface{})),
 		Selectors:      selectors,

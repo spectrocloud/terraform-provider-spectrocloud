@@ -49,7 +49,7 @@ func resourceProject() *schema.Resource {
 }
 
 func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	uid, err := c.CreateProject(toProject(d))
@@ -62,7 +62,7 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	project, err := c.GetProject(d.Id())
@@ -92,7 +92,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 }
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	err := c.UpdateProject(d.Id(), toProject(d))
@@ -103,7 +103,7 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	err := c.DeleteProject(d.Id())
@@ -114,12 +114,12 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interf
 	return diags
 }
 
-func toProject(d *schema.ResourceData) *models.V1alpha1ProjectEntity {
+func toProject(d *schema.ResourceData) *models.V1ProjectEntity {
 	annotations := make(map[string]string)
 	if len(d.Get("description").(string)) > 0 {
 		annotations["description"] = d.Get("description").(string)
 	}
-	return &models.V1alpha1ProjectEntity{
+	return &models.V1ProjectEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:        d.Get("name").(string),
 			UID:         d.Id(),
