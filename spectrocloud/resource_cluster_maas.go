@@ -296,7 +296,7 @@ func resourceClusterMaas() *schema.Resource {
 }
 
 func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -332,7 +332,7 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 	//
@@ -379,7 +379,7 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 	return flattenCloudConfigMaas(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.V1alpha1Client) diag.Diagnostics {
+func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	err := d.Set("cloud_config_id", configUID)
 	if err != nil {
 		return diag.FromErr(err)
@@ -396,7 +396,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsMaas(machinePools []*models.V1alpha1MaasMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -427,7 +427,7 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1alpha1MaasMachinePoo
 }
 
 func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -515,29 +515,29 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-func toMaasCluster(d *schema.ResourceData) *models.V1alpha1SpectroMaasClusterEntity {
+func toMaasCluster(d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	DomainVal := cloudConfig["domain"].(string)
 
-	cluster := &models.V1alpha1SpectroMaasClusterEntity{
+	cluster := &models.V1SpectroMaasClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1alpha1SpectroMaasClusterEntitySpec{
+		Spec: &models.V1SpectroMaasClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1alpha1MaasClusterConfig{
+			CloudConfig: &models.V1MaasClusterConfig{
 				Domain: &DomainVal,
 			},
 		},
 	}
 
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-	machinePoolConfigs := make([]*models.V1alpha1MaasMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1MaasMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolMaas(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -549,7 +549,7 @@ func toMaasCluster(d *schema.ResourceData) *models.V1alpha1SpectroMaasClusterEnt
 	return cluster
 }
 
-func toMachinePoolMaas(machinePool interface{}) *models.V1alpha1MaasMachinePoolConfigEntity {
+func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -567,21 +567,21 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1alpha1MaasMachinePoolC
 	InstanceType := m["instance_type"].([]interface{})[0].(map[string]interface{})
 	Placement := m["placement"].([]interface{})[0].(map[string]interface{})
 	log.Printf("Create machine pool %s", InstanceType)
-	mp := &models.V1alpha1MaasMachinePoolConfigEntity{
-		CloudConfig: &models.V1alpha1MaasMachinePoolCloudConfigEntity{
+	mp := &models.V1MaasMachinePoolConfigEntity{
+		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
 			Azs: azs,
-			InstanceType: &models.V1alpha1MaasInstanceType{
+			InstanceType: &models.V1MaasInstanceType{
 				MinCPU:     int32(InstanceType["cpu"].(int)),
 				MinMemInMB: int32(InstanceType["memory_mb"].(int)),
 			},
 			ResourcePool: ptr.StringPtr(Placement["resource_pool"].(string)),
 		},
-		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
+		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
 			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			UpdateStrategy: &models.V1alpha1UpdateStrategy{
+			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: m["update_strategy"].(string),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,

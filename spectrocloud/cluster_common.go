@@ -44,7 +44,7 @@ var resourceClusterCreatePendingStates = []string{
 //	"resetting-master-credentials",
 //	"upgrading",
 //}
-func waitForClusterDeletion(ctx context.Context, c *client.V1alpha1Client, id string, timeout time.Duration) error {
+func waitForClusterDeletion(ctx context.Context, c *client.V1Client, id string, timeout time.Duration) error {
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterDeletePendingStates,
 		Target:     nil, // wait for deleted
@@ -59,9 +59,9 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1alpha1Client, id st
 	return err
 }
 
-func updateProfiles(c *client.V1alpha1Client, d *schema.ResourceData) error {
+func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	log.Printf("Updating profiles")
-	body := &models.V1alpha1SpectroClusterProfiles{
+	body := &models.V1SpectroClusterProfiles{
 		Profiles: toProfiles(d),
 	}
 	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
@@ -99,14 +99,14 @@ func flattenTags(labels map[string]string) []interface{} {
 	return tags
 }
 
-func toPolicies(d *schema.ResourceData) *models.V1alpha1SpectroClusterPolicies {
-	return &models.V1alpha1SpectroClusterPolicies{
+func toPolicies(d *schema.ResourceData) *models.V1SpectroClusterPolicies {
+	return &models.V1SpectroClusterPolicies{
 		BackupPolicy: toBackupPolicy(d),
 		ScanPolicy:   toScanPolicy(d),
 	}
 }
 
-func toBackupPolicy(d *schema.ResourceData) *models.V1alpha1ClusterBackupConfig {
+func toBackupPolicy(d *schema.ResourceData) *models.V1ClusterBackupConfig {
 	if policies, found := d.GetOk("backup_policy"); found {
 		//policy := policies.([]interface{})[0]
 		policy := policies.([]interface{})[0].(map[string]interface{})
@@ -120,14 +120,14 @@ func toBackupPolicy(d *schema.ResourceData) *models.V1alpha1ClusterBackupConfig 
 			}
 		}
 
-		return &models.V1alpha1ClusterBackupConfig{
+		return &models.V1ClusterBackupConfig{
 			BackupLocationUID:       policy["backup_location_id"].(string),
 			BackupPrefix:            policy["prefix"].(string),
 			DurationInHours:         int64(policy["expiry_in_hour"].(int)),
 			IncludeAllDisks:         policy["include_disks"].(bool),
 			IncludeClusterResources: policy["include_cluster_resources"].(bool),
 			Namespaces:              namespaces,
-			Schedule: &models.V1alpha1ClusterFeatureSchedule{
+			Schedule: &models.V1ClusterFeatureSchedule{
 				ScheduledRunTime: policy["schedule"].(string),
 			},
 		}
@@ -135,7 +135,7 @@ func toBackupPolicy(d *schema.ResourceData) *models.V1alpha1ClusterBackupConfig 
 	return nil
 }
 
-func flattenBackupPolicy(policy *models.V1alpha1ClusterBackupConfig) []interface{} {
+func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
 	result := make([]interface{}, 0, 1)
 	data := make(map[string]interface{})
 	data["schedule"] = policy.Schedule.ScheduledRunTime
@@ -149,34 +149,34 @@ func flattenBackupPolicy(policy *models.V1alpha1ClusterBackupConfig) []interface
 	return result
 }
 
-func updateBackupPolicy(c *client.V1alpha1Client, d *schema.ResourceData) error {
+func updateBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	if policy := toBackupPolicy(d); policy != nil {
 		return c.ApplyClusterBackupConfig(d.Id(), policy)
 	}
 	return nil
 }
 
-func toScanPolicy(d *schema.ResourceData) *models.V1alpha1ClusterComplianceScheduleConfig {
+func toScanPolicy(d *schema.ResourceData) *models.V1ClusterComplianceScheduleConfig {
 	if profiles, found := d.GetOk("scan_policy"); found {
-		config := &models.V1alpha1ClusterComplianceScheduleConfig{}
+		config := &models.V1ClusterComplianceScheduleConfig{}
 		policy := profiles.([]interface{})[0].(map[string]interface{})
 		if policy["configuration_scan_schedule"] != nil {
-			config.KubeBench = &models.V1alpha1ClusterComplianceScanKubeBenchScheduleConfig{
-				Schedule: &models.V1alpha1ClusterFeatureSchedule{
+			config.KubeBench = &models.V1ClusterComplianceScanKubeBenchScheduleConfig{
+				Schedule: &models.V1ClusterFeatureSchedule{
 					ScheduledRunTime: policy["configuration_scan_schedule"].(string),
 				},
 			}
 		}
 		if policy["penetration_scan_schedule"] != nil {
-			config.KubeHunter = &models.V1alpha1ClusterComplianceScanKubeHunterScheduleConfig{
-				Schedule: &models.V1alpha1ClusterFeatureSchedule{
+			config.KubeHunter = &models.V1ClusterComplianceScanKubeHunterScheduleConfig{
+				Schedule: &models.V1ClusterFeatureSchedule{
 					ScheduledRunTime: policy["penetration_scan_schedule"].(string),
 				},
 			}
 		}
 		if policy["conformance_scan_schedule"] != nil {
-			config.Sonobuoy = &models.V1alpha1ClusterComplianceScanSonobuoyScheduleConfig{
-				Schedule: &models.V1alpha1ClusterFeatureSchedule{
+			config.Sonobuoy = &models.V1ClusterComplianceScanSonobuoyScheduleConfig{
+				Schedule: &models.V1ClusterFeatureSchedule{
 					ScheduledRunTime: policy["conformance_scan_schedule"].(string),
 				},
 			}
@@ -186,7 +186,7 @@ func toScanPolicy(d *schema.ResourceData) *models.V1alpha1ClusterComplianceSched
 	return nil
 }
 
-func flattenScanPolicy(driverSpec map[string]models.V1alpha1ComplianceScanDriverSpec) []interface{} {
+func flattenScanPolicy(driverSpec map[string]models.V1ComplianceScanDriverSpec) []interface{} {
 	result := make([]interface{}, 0, 1)
 	data := make(map[string]interface{})
 	if v, found := driverSpec["kube-bench"]; found {
@@ -202,37 +202,37 @@ func flattenScanPolicy(driverSpec map[string]models.V1alpha1ComplianceScanDriver
 	return result
 }
 
-func updateScanPolicy(c *client.V1alpha1Client, d *schema.ResourceData) error {
+func updateScanPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	if policy := toScanPolicy(d); policy != nil {
 		return c.ApplyClusterScanConfig(d.Id(), policy)
 	}
 	return nil
 }
 
-func toProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileEntity {
-	resp := make([]*models.V1alpha1SpectroClusterProfileEntity, 0)
+func toProfiles(d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity {
+	resp := make([]*models.V1SpectroClusterProfileEntity, 0)
 	profiles := d.Get("cluster_profile").([]interface{})
 	if len(profiles) > 0 {
 		for _, profile := range profiles {
 			p := profile.(map[string]interface{})
 
-			packValues := make([]*models.V1alpha1PackValuesEntity, 0)
+			packValues := make([]*models.V1PackValuesEntity, 0)
 			for _, pack := range p["pack"].([]interface{}) {
 				p := toPack(pack)
 				packValues = append(packValues, p)
 			}
-			resp = append(resp, &models.V1alpha1SpectroClusterProfileEntity{
+			resp = append(resp, &models.V1SpectroClusterProfileEntity{
 				UID:        p["id"].(string),
 				PackValues: packValues,
 			})
 		}
 	} else {
-		packValues := make([]*models.V1alpha1PackValuesEntity, 0)
+		packValues := make([]*models.V1PackValuesEntity, 0)
 		for _, pack := range d.Get("pack").([]interface{}) {
 			p := toPack(pack)
 			packValues = append(packValues, p)
 		}
-		resp = append(resp, &models.V1alpha1SpectroClusterProfileEntity{
+		resp = append(resp, &models.V1SpectroClusterProfileEntity{
 			UID:        d.Get("cluster_profile_id").(string),
 			PackValues: packValues,
 		})
@@ -241,18 +241,39 @@ func toProfiles(d *schema.ResourceData) []*models.V1alpha1SpectroClusterProfileE
 	return resp
 }
 
-func toPack(pSrc interface{}) *models.V1alpha1PackValuesEntity {
+func toPack(pSrc interface{}) *models.V1PackValuesEntity {
 	p := pSrc.(map[string]interface{})
 
-	pack := &models.V1alpha1PackValuesEntity{
-		Name:   ptr.StringPtr(p["name"].(string)),
-		Tag:    p["tag"].(string),
-		Values: p["values"].(string),
+	pack := &models.V1PackValuesEntity{
+		Name: ptr.StringPtr(p["name"].(string)),
 	}
+
+	if val, found := p["values"]; found && len(val.(string)) > 0 {
+		pack.Values = val.(string)
+	}
+	if val, found := p["tag"]; found && len(val.(string)) > 0 {
+		pack.Tag = val.(string)
+	}
+	if val, found := p["type"]; found && len(val.(string)) > 0 {
+		pack.Type = models.V1PackType(val.(string))
+	}
+	if val, found := p["manifest"]; found && len(val.([]interface{})) > 0 {
+		manifestsData := val.([]interface{})
+		manifests := make([]*models.V1ManifestRefUpdateEntity, len(manifestsData))
+		for i := 0; i < len(manifestsData); i++ {
+			data := manifestsData[i].(map[string]interface{})
+			manifests[i] = &models.V1ManifestRefUpdateEntity{
+				Name:    ptr.StringPtr(data["name"].(string)),
+				Content: data["content"].(string),
+			}
+		}
+		pack.Manifests = manifests
+	}
+
 	return pack
 }
 
-func resourceClusterStateRefreshFunc(c *client.V1alpha1Client, id string) resource.StateRefreshFunc {
+func resourceClusterStateRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(id)
 		if err != nil {
@@ -269,7 +290,7 @@ func resourceClusterStateRefreshFunc(c *client.V1alpha1Client, id string) resour
 }
 
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -423,24 +444,24 @@ func hash(s string) uint32 {
 	return h.Sum32()
 }
 
-func toClusterConfig(d *schema.ResourceData) *models.V1alpha1ClusterConfig {
-	return &models.V1alpha1ClusterConfig{
+func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfig {
+	return &models.V1ClusterConfig{
 		MachineManagementConfig: toMachineManagementConfig(d),
 	}
 }
 
-func toMachineManagementConfig(d *schema.ResourceData) *models.V1alpha1MachineManagementConfig {
-	return &models.V1alpha1MachineManagementConfig{
+func toMachineManagementConfig(d *schema.ResourceData) *models.V1MachineManagementConfig {
+	return &models.V1MachineManagementConfig{
 		OsPatchConfig: toOsPatchConfig(d),
 	}
 }
 
-func toOsPatchConfig(d *schema.ResourceData) *models.V1alpha1OsPatchConfig {
+func toOsPatchConfig(d *schema.ResourceData) *models.V1OsPatchConfig {
 	osPatchOnBoot := d.Get("os_patch_on_boot").(bool)
 	osPatchOnSchedule := d.Get("os_patch_schedule").(string)
 	osPatchAfter := d.Get("os_patch_after").(string)
 	if osPatchOnBoot || len(osPatchOnSchedule) > 0 || len(osPatchAfter) > 0 {
-		osPatchConfig := &models.V1alpha1OsPatchConfig{}
+		osPatchConfig := &models.V1OsPatchConfig{}
 		if osPatchOnBoot {
 			osPatchConfig.PatchOnBoot = osPatchOnBoot
 		}

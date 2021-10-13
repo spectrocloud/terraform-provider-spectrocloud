@@ -31,7 +31,7 @@ func dataSourceCloudAccountGcp() *schema.Resource {
 }
 
 func dataSourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -41,7 +41,7 @@ func dataSourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m 
 		return diag.FromErr(err)
 	}
 
-	var account *models.V1alpha1GcpAccount
+	var account *models.V1GcpAccount
 	for _, a := range accounts {
 
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {

@@ -65,7 +65,7 @@ func resourceTeam() *schema.Resource {
 }
 
 func resourceTeamCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	uid, err := c.CreateTeam(toTeam(d))
@@ -85,7 +85,7 @@ func resourceTeamCreate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceTeamRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	team, err := c.GetTeam(d.Id())
@@ -130,7 +130,7 @@ func resourceTeamRead(ctx context.Context, d *schema.ResourceData, m interface{}
 }
 
 func resourceTeamUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	err := c.UpdateTeam(d.Id(), toTeam(d))
@@ -148,7 +148,7 @@ func resourceTeamUpdate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceTeamDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
 	err := c.DeleteTeam(d.Id())
@@ -159,7 +159,7 @@ func resourceTeamDelete(ctx context.Context, d *schema.ResourceData, m interface
 	return diags
 }
 
-func toTeam(d *schema.ResourceData) *models.V1alpha1Team {
+func toTeam(d *schema.ResourceData) *models.V1Team {
 	userIDs := make([]string, 0)
 
 	if d.Get("users") != nil {
@@ -168,19 +168,19 @@ func toTeam(d *schema.ResourceData) *models.V1alpha1Team {
 		}
 	}
 
-	return &models.V1alpha1Team{
+	return &models.V1Team{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
 		},
-		Spec: &models.V1alpha1TeamSpec{
+		Spec: &models.V1TeamSpec{
 			Users: userIDs,
 		},
 	}
 }
 
-func toTeamProjectRoleMapping(d *schema.ResourceData) *models.V1alpha1ProjectRolesPatch {
-	projects := make([]*models.V1alpha1ProjectRolesPatchProjectsItems0, 0)
+func toTeamProjectRoleMapping(d *schema.ResourceData) *models.V1ProjectRolesPatch {
+	projects := make([]*models.V1ProjectRolesPatchProjectsItems0, 0)
 	mappings := d.Get("project_role_mapping").([]interface{})
 	for _, mapping := range mappings {
 		data := mapping.(map[string]interface{})
@@ -192,13 +192,13 @@ func toTeamProjectRoleMapping(d *schema.ResourceData) *models.V1alpha1ProjectRol
 			}
 		}
 
-		projects = append(projects, &models.V1alpha1ProjectRolesPatchProjectsItems0{
+		projects = append(projects, &models.V1ProjectRolesPatchProjectsItems0{
 			ProjectUID: data["id"].(string),
 			Roles:      roles,
 		})
 	}
 
-	return &models.V1alpha1ProjectRolesPatch{
+	return &models.V1ProjectRolesPatch{
 		Projects: projects,
 	}
 }

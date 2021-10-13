@@ -271,7 +271,7 @@ func resourceClusterGcp() *schema.Resource {
 }
 
 func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -307,7 +307,7 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -353,7 +353,7 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 	return flattenCloudConfigGcp(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V1alpha1Client) diag.Diagnostics {
+func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	if config, err := c.GetCloudConfigGcp(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
@@ -366,7 +366,7 @@ func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsGcp(machinePools []*models.V1alpha1GcpMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -395,7 +395,7 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1alpha1GcpMachinePoolC
 }
 
 func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -482,22 +482,22 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntity {
+func toGcpCluster(d *schema.ResourceData) *models.V1SpectroGcpClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("gcp_client_secret").(string))
 
-	cluster := &models.V1alpha1SpectroGcpClusterEntity{
+	cluster := &models.V1SpectroGcpClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1alpha1SpectroGcpClusterEntitySpec{
+		Spec: &models.V1SpectroGcpClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1alpha1GcpClusterConfig{
+			CloudConfig: &models.V1GcpClusterConfig{
 				Network: cloudConfig["network"].(string),
 				Project: ptr.StringPtr(cloudConfig["project"].(string)),
 				Region:  ptr.StringPtr(cloudConfig["region"].(string)),
@@ -505,7 +505,7 @@ func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntit
 		},
 	}
 
-	machinePoolConfigs := make([]*models.V1alpha1GcpMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1GcpMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolGcp(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -517,7 +517,7 @@ func toGcpCluster(d *schema.ResourceData) *models.V1alpha1SpectroGcpClusterEntit
 	return cluster
 }
 
-func toMachinePoolGcp(machinePool interface{}) *models.V1alpha1GcpMachinePoolConfigEntity {
+func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -532,18 +532,18 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1alpha1GcpMachinePoolCon
 		azs = append(azs, az.(string))
 	}
 
-	mp := &models.V1alpha1GcpMachinePoolConfigEntity{
-		CloudConfig: &models.V1alpha1GcpMachinePoolCloudConfigEntity{
+	mp := &models.V1GcpMachinePoolConfigEntity{
+		CloudConfig: &models.V1GcpMachinePoolCloudConfigEntity{
 			Azs:            azs,
 			InstanceType:   ptr.StringPtr(m["instance_type"].(string)),
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 		},
-		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
+		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
 			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			UpdateStrategy: &models.V1alpha1UpdateStrategy{
+			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: m["update_strategy"].(string),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,

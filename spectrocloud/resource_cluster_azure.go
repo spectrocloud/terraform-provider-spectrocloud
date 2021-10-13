@@ -307,7 +307,7 @@ func resourceClusterAzure() *schema.Resource {
 }
 
 func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -343,7 +343,7 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -390,7 +390,7 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 	return flattenCloudConfigAzure(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client.V1alpha1Client) diag.Diagnostics {
+func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	d.Set("cloud_config_id", configUID)
 	if config, err := c.GetCloudConfigAzure(configUID); err != nil {
 		return diag.FromErr(err)
@@ -404,7 +404,7 @@ func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsAzure(machinePools []*models.V1alpha1AzureMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -439,7 +439,7 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1alpha1AzureMachineP
 }
 
 func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -526,22 +526,22 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterEntity {
+func toAzureCluster(d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
-	cluster := &models.V1alpha1SpectroAzureClusterEntity{
+	cluster := &models.V1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1alpha1SpectroAzureClusterEntitySpec{
+		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1alpha1AzureClusterConfig{
+			CloudConfig: &models.V1AzureClusterConfig{
 				Location:       ptr.StringPtr(cloudConfig["region"].(string)),
 				SSHKey:         ptr.StringPtr(cloudConfig["ssh_key"].(string)),
 				SubscriptionID: ptr.StringPtr(cloudConfig["subscription_id"].(string)),
@@ -551,7 +551,7 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 	}
 
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-	machinePoolConfigs := make([]*models.V1alpha1AzureMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolAzure(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -563,7 +563,7 @@ func toAzureCluster(d *schema.ResourceData) *models.V1alpha1SpectroAzureClusterE
 	return cluster
 }
 
-func toMachinePoolAzure(machinePool interface{}) *models.V1alpha1AzureMachinePoolConfigEntity {
+func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -586,24 +586,24 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1alpha1AzureMachinePoo
 		azs = append(azs, az.(string))
 	}
 
-	mp := &models.V1alpha1AzureMachinePoolConfigEntity{
-		CloudConfig: &models.V1alpha1AzureMachinePoolCloudConfigEntity{
+	mp := &models.V1AzureMachinePoolConfigEntity{
+		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			Azs:          azs,
 			InstanceType: m["instance_type"].(string),
-			OsDisk: &models.V1alpha1AzureOSDisk{
+			OsDisk: &models.V1AzureOSDisk{
 				DiskSizeGB: int32(diskSize),
-				ManagedDisk: &models.V1alpha1ManagedDisk{
+				ManagedDisk: &models.V1ManagedDisk{
 					StorageAccountType: diskType,
 				},
 				OsType: "linux",
 			},
 		},
-		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
+		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
 			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			UpdateStrategy: &models.V1alpha1UpdateStrategy{
+			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: m["update_strategy"].(string),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,

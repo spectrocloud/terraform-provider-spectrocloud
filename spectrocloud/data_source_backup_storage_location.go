@@ -32,7 +32,7 @@ func dataSourceBackupStorageLocation() *schema.Resource {
 }
 
 func dataSourceBackupStorageLocationRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -44,7 +44,7 @@ func dataSourceBackupStorageLocationRead(_ context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	var bsl *models.V1alpha1UserAssetsLocation
+	var bsl *models.V1UserAssetsLocation
 	for _, a := range bsls {
 
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {

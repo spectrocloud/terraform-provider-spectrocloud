@@ -30,8 +30,8 @@ func resourceCloudAccountAzure() *schema.Resource {
 				Required: true,
 			},
 			"azure_client_secret": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
 				Sensitive: true,
 				//DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 				//	return false
@@ -45,7 +45,7 @@ func resourceCloudAccountAzure() *schema.Resource {
 }
 
 func resourceCloudAccountAzureCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -65,7 +65,7 @@ func resourceCloudAccountAzureCreate(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -95,7 +95,7 @@ func resourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m 
 
 //
 func resourceCloudAccountAzureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -113,7 +113,7 @@ func resourceCloudAccountAzureUpdate(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceCloudAccountAzureDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -129,14 +129,14 @@ func resourceCloudAccountAzureDelete(_ context.Context, d *schema.ResourceData, 
 	return diags
 }
 
-func toAzureAccount(d *schema.ResourceData) *models.V1alpha1AzureAccount {
+func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 	clientSecret := strfmt.Password(d.Get("azure_client_secret").(string)).String()
-	account := &models.V1alpha1AzureAccount{
+	account := &models.V1AzureAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
-			UID : d.Id(),
+			UID:  d.Id(),
 		},
-		Spec: &models.V1alpha1AzureCloudAccount{
+		Spec: &models.V1AzureCloudAccount{
 			ClientID:     ptr.StringPtr(d.Get("azure_client_id").(string)),
 			ClientSecret: &clientSecret,
 			TenantID:     ptr.StringPtr(d.Get("azure_tenant_id").(string)),

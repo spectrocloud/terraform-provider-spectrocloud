@@ -25,12 +25,12 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 				Required: true,
 			},
 			"openstack_username": {
-				Type:      schema.TypeString,
-				Required:  true,
+				Type:     schema.TypeString,
+				Required: true,
 			},
 			"openstack_password": {
-				Type:         schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
 				Sensitive: true,
 			},
 			"identity_endpoint": {
@@ -38,8 +38,8 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 				Required: true,
 			},
 			"openstack_allow_insecure": {
-				Type:      schema.TypeBool,
-				Optional:  true,
+				Type:     schema.TypeBool,
+				Optional: true,
 			},
 			"ca_certificate": {
 				Type:     schema.TypeString,
@@ -62,7 +62,7 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 }
 
 func resourceCloudAccountOpenStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -82,7 +82,7 @@ func resourceCloudAccountOpenStackCreate(ctx context.Context, d *schema.Resource
 }
 
 func resourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -125,13 +125,12 @@ func resourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-
 	return diags
 }
 
 //
 func resourceCloudAccountOpenStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -149,7 +148,7 @@ func resourceCloudAccountOpenStackUpdate(ctx context.Context, d *schema.Resource
 }
 
 func resourceCloudAccountOpenStackDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -163,23 +162,23 @@ func resourceCloudAccountOpenStackDelete(_ context.Context, d *schema.ResourceDa
 	return diags
 }
 
-func toOpenStackAccount(d *schema.ResourceData) *models.V1alpha1OpenStackAccount {
+func toOpenStackAccount(d *schema.ResourceData) *models.V1OpenStackAccount {
 
-	account := &models.V1alpha1OpenStackAccount{
+	account := &models.V1OpenStackAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
 		},
 
-		Spec: &models.V1alpha1OpenStackCloudAccount{
+		Spec: &models.V1OpenStackCloudAccount{
 			CaCert:           d.Get("ca_certificate").(string),
 			DefaultDomain:    d.Get("default_domain").(string),
 			DefaultProject:   d.Get("default_project").(string),
 			IdentityEndpoint: ptr.StringPtr(d.Get("identity_endpoint").(string)),
 			Insecure:         d.Get("openstack_allow_insecure").(bool),
 			ParentRegion:     d.Get("parent_region").(string),
-			Password: ptr.StringPtr(d.Get("openstack_password").(string)),
-			Username: ptr.StringPtr(d.Get("openstack_username").(string)),
+			Password:         ptr.StringPtr(d.Get("openstack_password").(string)),
+			Username:         ptr.StringPtr(d.Get("openstack_username").(string)),
 		},
 	}
 

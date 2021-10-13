@@ -267,7 +267,7 @@ func resourceClusterAws() *schema.Resource {
 }
 
 func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -303,7 +303,7 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 	//
@@ -350,7 +350,7 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 	return flattenCloudConfigAws(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V1alpha1Client) diag.Diagnostics {
+func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	d.Set("cloud_config_id", configUID)
 	if config, err := c.GetCloudConfigAws(configUID); err != nil {
 		return diag.FromErr(err)
@@ -364,7 +364,7 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsAws(machinePools []*models.V1alpha1AwsMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -393,7 +393,7 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1alpha1AwsMachinePoolC
 }
 
 func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -480,21 +480,21 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntity {
+func toAwsCluster(d *schema.ResourceData) *models.V1SpectroAwsClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
-	cluster := &models.V1alpha1SpectroAwsClusterEntity{
+	cluster := &models.V1SpectroAwsClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1alpha1SpectroAwsClusterEntitySpec{
+		Spec: &models.V1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1alpha1AwsClusterConfig{
+			CloudConfig: &models.V1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
 				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
 			},
@@ -502,7 +502,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 	}
 
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-	machinePoolConfigs := make([]*models.V1alpha1AwsMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1AwsMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolAws(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -514,7 +514,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1alpha1SpectroAwsClusterEntit
 	return cluster
 }
 
-func toMachinePoolAws(machinePool interface{}) *models.V1alpha1AwsMachinePoolConfigEntity {
+func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -529,18 +529,18 @@ func toMachinePoolAws(machinePool interface{}) *models.V1alpha1AwsMachinePoolCon
 		azs = append(azs, az.(string))
 	}
 
-	mp := &models.V1alpha1AwsMachinePoolConfigEntity{
-		CloudConfig: &models.V1alpha1AwsMachinePoolCloudConfigEntity{
+	mp := &models.V1AwsMachinePoolConfigEntity{
+		CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
 			Azs:            azs,
 			InstanceType:   ptr.StringPtr(m["instance_type"].(string)),
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 		},
-		PoolConfig: &models.V1alpha1MachinePoolConfigEntity{
+		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
 			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			UpdateStrategy: &models.V1alpha1UpdateStrategy{
+			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: m["update_strategy"].(string),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,

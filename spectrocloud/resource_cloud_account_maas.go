@@ -33,7 +33,7 @@ func resourceCloudAccountMaas() *schema.Resource {
 }
 
 func resourceCloudAccountMaasCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -53,7 +53,7 @@ func resourceCloudAccountMaasCreate(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -77,7 +77,7 @@ func resourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m i
 
 //
 func resourceCloudAccountMaasUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -95,7 +95,7 @@ func resourceCloudAccountMaasUpdate(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceCloudAccountMaasDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1alpha1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -111,15 +111,15 @@ func resourceCloudAccountMaasDelete(_ context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func toMaasAccount(d *schema.ResourceData) *models.V1alpha1MaasAccount {
+func toMaasAccount(d *schema.ResourceData) *models.V1MaasAccount {
 	EndpointVal := d.Get("maas_api_endpoint").(string)
 	KeyVal := d.Get("maas_api_key").(string)
-	account := &models.V1alpha1MaasAccount{
+	account := &models.V1MaasAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
 		},
-		Spec: &models.V1alpha1MaasCloudAccount{
+		Spec: &models.V1MaasCloudAccount{
 			APIEndpoint: &EndpointVal,
 			APIKey:      &KeyVal,
 		},
