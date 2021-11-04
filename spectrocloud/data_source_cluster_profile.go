@@ -137,12 +137,13 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 					return diag.FromErr(err)
 				}
 
-				// the original call
-				c := make([]string, len(content))
-				for i, co := range content {
-					c[i] = co.Spec.Published.Content
+				if len(content) > 0 {
+					c := make([]string, len(content))
+					for i, co := range content {
+						c[i] = co.Spec.Published.Content
+					}
+					packManifests[p.PackUID] = c
 				}
-				packManifests[p.PackUID] = c
 			}
 		}
 
