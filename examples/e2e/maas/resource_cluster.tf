@@ -1,8 +1,8 @@
 
 resource "spectrocloud_cluster_maas" "cluster" {
-  name               = "maas-picard-3"
+  name               = "maas-picard-cluster"
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
-  cloud_account_id   = spectrocloud_cloudaccount_maas.account.id
+  cloud_account_id   = data.spectrocloud_cloudaccount_maas.account.id
 
   cloud_config {
     domain = var.maas_domain # "maas.sc"

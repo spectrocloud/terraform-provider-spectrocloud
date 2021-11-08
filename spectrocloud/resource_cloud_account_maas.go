@@ -19,6 +19,10 @@ func resourceCloudAccountMaas() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"private_cloud_gateway_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"maas_api_endpoint": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -69,6 +73,9 @@ func resourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m i
 	}
 
 	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
 		return diag.FromErr(err)
 	}
 

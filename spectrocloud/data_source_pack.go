@@ -19,13 +19,13 @@ func dataSourcePack() *schema.Resource {
 			"filters": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"id", "cloud", "name", "version"},
+				ConflictsWith: []string{"id", "cloud", "name", "version", "registry_uid"},
 			},
 			"id": {
 				Type:          schema.TypeString,
 				Computed:      true,
 				Optional:      true,
-				ConflictsWith: []string{"filters", "cloud", "name", "version"},
+				ConflictsWith: []string{"filters", "cloud", "name", "version", "registry_uid"},
 			},
 			"name": {
 				Type:     schema.TypeString,
@@ -49,6 +49,7 @@ func dataSourcePack() *schema.Resource {
 			"registry_uid": {
 				Type:     schema.TypeString,
 				Computed: true,
+				Optional: true,
 			},
 			"values": {
 				Type:     schema.TypeString,
@@ -75,6 +76,9 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		}
 		if v, ok := d.GetOk("version"); ok {
 			filters = append(filters, fmt.Sprintf("spec.version=%s", v.(string)))
+		}
+		if v, ok := d.GetOk("registry_uid"); ok {
+			filters = append(filters, fmt.Sprintf("spec.registry_uid=%s", v.(string)))
 		}
 		if v, ok := d.GetOk("cloud"); ok {
 			clouds := expandStringList(v.(*schema.Set).List())

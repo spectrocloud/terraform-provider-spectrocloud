@@ -47,55 +47,55 @@
 
 data "spectrocloud_pack" "csi" {
   name = "csi-maas-volume"
-  # version  = "1.0.x"
+  version  = "1.0.0"
 }
 
 data "spectrocloud_pack" "cni" {
   name    = "cni-calico"
-  version = "3.16.0"
+  version = "3.19.0"
 }
 
 data "spectrocloud_pack" "k8s" {
   name    = "kubernetes"
-  version = "1.18.14"
+  version = "1.21.3"
 }
 
 data "spectrocloud_pack" "ubuntu" {
   name = "ubuntu-maas"
-  # version  = "1.0.x"
+  #version  = "1.0.x"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
-  name        = "maas-picard-3"
+  name        = "maas-picard-cp"
   description = "basic cp"
   cloud       = "maas"
   type        = "cluster"
 
 
   pack {
-    name   = "csi-maas-volume"
-    tag    = "1.0.x"
+    name   = data.spectrocloud_pack.csi.name
+    tag    = data.spectrocloud_pack.csi.version
     uid    = data.spectrocloud_pack.csi.id
     values = data.spectrocloud_pack.csi.values
   }
 
   pack {
-    name   = "cni-calico"
-    tag    = "3.16.x"
+    name   = data.spectrocloud_pack.cni.name
+    tag    = data.spectrocloud_pack.cni.version
     uid    = data.spectrocloud_pack.cni.id
     values = data.spectrocloud_pack.cni.values
   }
 
   pack {
-    name   = "kubernetes"
-    tag    = "1.18.x"
+    name   = data.spectrocloud_pack.k8s.name
+    tag    = data.spectrocloud_pack.k8s.version
     uid    = data.spectrocloud_pack.k8s.id
     values = data.spectrocloud_pack.k8s.values
   }
 
   pack {
-    name   = "ubuntu-maas"
-    tag    = "LTS__18.4.x"
+    name   = data.spectrocloud_pack.ubuntu.name
+    tag    = data.spectrocloud_pack.ubuntu.version
     uid    = data.spectrocloud_pack.ubuntu.id
     values = data.spectrocloud_pack.ubuntu.values
   }

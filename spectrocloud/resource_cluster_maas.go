@@ -2,7 +2,9 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/hapi/apiutil/transport"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -349,7 +351,7 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 
 	// Update the kubeconfig
 	kubeconfig, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
+	if err != nil && err.(*transport.TransportError).HttpCode != http.StatusNotFound {
 		return diag.FromErr(err)
 	}
 
@@ -417,8 +419,16 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		//TODO: No root disk?
 		//oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 
+		if machinePool.InstanceType != nil {
+			s := make(map[string]interface{})
+			s["memory_mb"] = int(machinePool.InstanceType.MinMemInMB)
+			s["cpu"] = int(machinePool.InstanceType.MinCPU)
+
+			oi["instance_type"] = []interface{}{s}
+		}
+
 		oi["azs"] = machinePool.Azs
-		oi["resource_pool"] = machinePool.ResourcePool
+		//oi["resource_pool"] = machinePool.ResourcePool
 
 		ois[i] = oi
 	}

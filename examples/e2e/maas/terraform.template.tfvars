@@ -5,6 +5,7 @@ sc_password     = "{enter Spectro Cloud password}"     #e.g: supereSecure1!
 sc_project_name = "{enter Spectro Cloud project Name}" #e.g: Default
 
 # Maas API credentials
+private_cloud_gateway_id = "{Enter Private Cloud Gateway id}"
 maas_api_endpoint = "{enter Maas API endpoint}"
 maas_api_key = "{enter Maas API key}"
 maas_domain = "{enter Maas Domain}" # "maas.sc"
