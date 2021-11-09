@@ -176,6 +176,14 @@ func resourceClusterAws() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"capacity_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"max_price": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"update_strategy": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -381,6 +389,8 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		oi["count"] = int(machinePool.Size)
 		oi["update_strategy"] = machinePool.UpdateStrategy.Type
 		oi["instance_type"] = machinePool.InstanceType
+		oi["capacity_type"] = machinePool.CapacityType
+		oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
 
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 
@@ -529,10 +539,15 @@ func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEnt
 		azs = append(azs, az.(string))
 	}
 
+	capacityType, spotMarketOptions := getInstanceProperties(m)
+
 	mp := &models.V1AwsMachinePoolConfigEntity{
 		CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
-			Azs:            azs,
-			InstanceType:   ptr.StringPtr(m["instance_type"].(string)),
+			Azs:               azs,
+			InstanceType:      ptr.StringPtr(m["instance_type"].(string)),
+			CapacityType:      &capacityType,
+			SpotMarketOptions: &spotMarketOptions,
+
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{

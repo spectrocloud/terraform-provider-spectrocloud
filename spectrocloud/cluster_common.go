@@ -245,7 +245,7 @@ func toPack(pSrc interface{}) *models.V1PackValuesEntity {
 	p := pSrc.(map[string]interface{})
 
 	pack := &models.V1PackValuesEntity{
-		Name:   ptr.StringPtr(p["name"].(string)),
+		Name: ptr.StringPtr(p["name"].(string)),
 	}
 
 	if val, found := p["values"]; found && len(val.(string)) > 0 {
@@ -362,6 +362,8 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 
 	return int(hash(buf.String()))
@@ -374,6 +376,8 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
 
 	for i, j := range m["az_subnets"].(map[string]interface{}) {
 		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
@@ -485,4 +489,21 @@ func validateOsPatchOnDemandAfter(data interface{}, _ cty.Path) diag.Diagnostics
 	}
 
 	return diags
+}
+
+func getInstanceProperties(m map[string]interface{}) (string, models.V1SpotMarketOptions) {
+	capacityType := "on-demand" // on-demand by default.
+	if m["capacity_type"] != nil {
+		capacityType = m["capacity_type"].(string)
+	}
+
+	maxPrice := "0.0" // default value
+	if m["max_price"] != nil {
+		maxPrice = m["max_price"].(string)
+	}
+
+	spotMarketOptions := models.V1SpotMarketOptions{
+		MaxPrice: maxPrice,
+	}
+	return capacityType, spotMarketOptions
 }
