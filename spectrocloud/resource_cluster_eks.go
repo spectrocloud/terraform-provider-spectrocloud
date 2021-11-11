@@ -221,6 +221,14 @@ func resourceClusterEks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"capacity_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"max_price": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"azs": {
 							Type:     schema.TypeList,
 							Optional: true,
@@ -472,6 +480,8 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
 		oi["instance_type"] = machinePool.InstanceType
+		oi["capacity_type"] = machinePool.CapacityType
+		oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
 
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 
@@ -777,12 +787,16 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		}
 	}
 
+	capacityType, spotMarketOptions := getInstanceProperties(m)
+
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
-			RootDeviceSize: int64(m["disk_size_gb"].(int)),
-			InstanceType:   m["instance_type"].(string),
-			Azs:            azs,
-			Subnets:        subnets,
+			RootDeviceSize:    int64(m["disk_size_gb"].(int)),
+			InstanceType:      m["instance_type"].(string),
+			CapacityType:      &capacityType,
+			SpotMarketOptions: &spotMarketOptions,
+			Azs:               azs,
+			Subnets:           subnets,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,

@@ -3,7 +3,9 @@ package spectrocloud
 func expandStringList(configured []interface{}) []string {
 	vs := make([]string, 0)
 	for _, v := range configured {
-		vs = append(vs, v.(string))
+		if v != nil {
+			vs = append(vs, v.(string))
+		}
 	}
 	return vs
 }
