@@ -27,7 +27,6 @@ func (h *V1Client) GetRegistryOciByName(registryName string) (*models.V1OciRegis
 	return nil, fmt.Errorf("Registry '%s' not found.", registryName)
 }
 
-
 func (h *V1Client) GetRegistryOci(uid string) (*models.V1EcrRegistry, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
@@ -43,7 +42,6 @@ func (h *V1Client) GetRegistryOci(uid string) (*models.V1EcrRegistry, error) {
 	return response.Payload, nil
 }
 
-
 func (h *V1Client) CreateOciEcrRegistry(registry *models.V1EcrRegistry) (string, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
@@ -57,7 +55,6 @@ func (h *V1Client) CreateOciEcrRegistry(registry *models.V1EcrRegistry) (string,
 		return *resp.Payload.UID, nil
 	}
 }
-
 
 func (h *V1Client) UpdateEcrRegistry(uid string, registry *models.V1EcrRegistry) error {
 	client, err := h.getClusterClient()

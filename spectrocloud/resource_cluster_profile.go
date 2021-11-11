@@ -185,13 +185,15 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 				return diag.FromErr(err)
 			}
 
-			// TODO at some point support multiple manifests... or I hope it's just returned in
-			// the original call
-			c := make([]string, len(content))
-			for i, co := range content {
-				c[i] = co.Spec.Published.Content
+			if len(content) > 0 {
+				// TODO at some point support multiple manifests... or I hope it's just returned in
+				// the original call
+				c := make([]string, len(content))
+				for i, co := range content {
+					c[i] = co.Spec.Published.Content
+				}
+				packManifests[p.PackUID] = c
 			}
-			packManifests[p.PackUID] = c
 		}
 	}
 
@@ -219,18 +221,19 @@ func flattenPacks(packs []*models.V1PackRef, manifestContent map[string][]string
 		p["values"] = pack.Values
 		p["type"] = pack.Type
 
-		ma := make([]interface{}, len(pack.Manifests))
-		for j, m := range pack.Manifests {
-			mj := make(map[string]interface{})
-			mj["name"] = m.Name
-			mj["uid"] = m.UID
-			mj["content"] = manifestContent[pack.PackUID][j]
+		if _, ok := manifestContent[pack.PackUID]; ok {
+			ma := make([]interface{}, len(pack.Manifests))
+			for j, m := range pack.Manifests {
+				mj := make(map[string]interface{})
+				mj["name"] = m.Name
+				mj["uid"] = m.UID
+				mj["content"] = manifestContent[pack.PackUID][j]
 
-			ma[j] = mj
+				ma[j] = mj
+			}
+
+			p["manifest"] = ma
 		}
-
-		p["manifest"] = ma
-
 		ps[i] = p
 	}
 

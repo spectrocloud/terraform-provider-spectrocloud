@@ -30,8 +30,8 @@ func resourceCloudAccountAzure() *schema.Resource {
 				Required: true,
 			},
 			"azure_client_secret": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
 				Sensitive: true,
 				//DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 				//	return false
@@ -134,7 +134,7 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 	account := &models.V1AzureAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
-			UID : d.Id(),
+			UID:  d.Id(),
 		},
 		Spec: &models.V1AzureCloudAccount{
 			ClientID:     ptr.StringPtr(d.Get("azure_client_id").(string)),

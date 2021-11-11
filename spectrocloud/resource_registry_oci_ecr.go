@@ -116,7 +116,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		acc := make(map[string]interface{})
 		acc["arn"] = registry.Spec.Credentials.Sts.Arn
 		acc["external_id"] = registry.Spec.Credentials.Sts.ExternalID
-		acc["credential_type"]  = models.V1AwsCloudAccountCredentialTypeSts
+		acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSts
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
@@ -164,8 +164,8 @@ func toRegistryEcr(d *schema.ResourceData) *models.V1EcrRegistry {
 		},
 		Spec: &models.V1EcrRegistrySpec{
 			Credentials: toRegistryAwsAccountCredential(s3config),
-			Endpoint : &endpoint,
-			IsPrivate: &isPrivate,
+			Endpoint:    &endpoint,
+			IsPrivate:   &isPrivate,
 		},
 	}
 }
