@@ -493,7 +493,7 @@ func validateOsPatchOnDemandAfter(data interface{}, _ cty.Path) diag.Diagnostics
 
 func getInstanceProperties(m map[string]interface{}) (string, models.V1SpotMarketOptions) {
 	capacityType := "on-demand" // on-demand by default.
-	if m["capacity_type"] != nil {
+	if m["capacity_type"] != nil && len(m["capacity_type"].(string)) > 0 {
 		capacityType = m["capacity_type"].(string)
 	}
 
