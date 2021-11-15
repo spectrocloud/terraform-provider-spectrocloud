@@ -223,6 +223,7 @@ func resourceClusterEks() *schema.Resource {
 						},
 						"capacity_type": {
 							Type:     schema.TypeString,
+							Default:  "on-demand",
 							Optional: true,
 						},
 						"max_price": {
@@ -480,11 +481,13 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
 		oi["instance_type"] = machinePool.InstanceType
-		oi["capacity_type"] = machinePool.CapacityType
-		oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
-
+		if machinePool.CapacityType != nil {
+			oi["capacity_type"] = machinePool.CapacityType
+		}
+		if machinePool.SpotMarketOptions != nil {
+			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
+		}
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
-
 		if len(machinePool.SubnetIds) > 0 {
 			oi["az_subnets"] = machinePool.SubnetIds
 		} else {
