@@ -389,13 +389,14 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		oi["count"] = int(machinePool.Size)
 		oi["update_strategy"] = machinePool.UpdateStrategy.Type
 		oi["instance_type"] = machinePool.InstanceType
-		oi["capacity_type"] = machinePool.CapacityType
-		oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
-
+		if machinePool.CapacityType != nil {
+			oi["capacity_type"] = machinePool.CapacityType
+		}
+		if machinePool.SpotMarketOptions != nil {
+			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
+		}
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
-
 		oi["azs"] = machinePool.Azs
-
 		ois[i] = oi
 	}
 
