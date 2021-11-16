@@ -356,7 +356,6 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 func resourceMachinePoolAwsHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
@@ -489,21 +488,4 @@ func validateOsPatchOnDemandAfter(data interface{}, _ cty.Path) diag.Diagnostics
 	}
 
 	return diags
-}
-
-func getInstanceProperties(m map[string]interface{}) (string, models.V1SpotMarketOptions) {
-	capacityType := "on-demand" // on-demand by default.
-	if m["capacity_type"] != nil && len(m["capacity_type"].(string)) > 0 {
-		capacityType = m["capacity_type"].(string)
-	}
-
-	maxPrice := "0.0" // default value
-	if m["max_price"] != nil {
-		maxPrice = m["max_price"].(string)
-	}
-
-	spotMarketOptions := models.V1SpotMarketOptions{
-		MaxPrice: maxPrice,
-	}
-	return capacityType, spotMarketOptions
 }
