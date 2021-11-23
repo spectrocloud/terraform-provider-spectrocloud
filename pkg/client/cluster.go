@@ -103,7 +103,7 @@ func (h *V1Client) GetClusterBackupConfig(uid string) (*models.V1ClusterBackup, 
 	params := clusterC.NewV1ClusterFeatureBackupGetParamsWithContext(h.ctx).WithUID(uid)
 	success, err := client.V1ClusterFeatureBackupGet(params)
 	if err != nil {
-		if herr.IsNotFound(err) {
+		if herr.IsNotFound(err) || herr.IsBackupNotConfigured(err) {
 			return nil, nil
 		}
 		return nil, err

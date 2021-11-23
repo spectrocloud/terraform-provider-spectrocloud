@@ -223,6 +223,7 @@ func resourceClusterEks() *schema.Resource {
 						},
 						"capacity_type": {
 							Type:     schema.TypeString,
+							Default:  "on-demand",
 							Optional: true,
 						},
 						"max_price": {
@@ -480,11 +481,13 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
 		oi["instance_type"] = machinePool.InstanceType
-		oi["capacity_type"] = machinePool.CapacityType
-		oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
-
+		if machinePool.CapacityType != nil {
+			oi["capacity_type"] = machinePool.CapacityType
+		}
+		if machinePool.SpotMarketOptions != nil {
+			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
+		}
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
-
 		if len(machinePool.SubnetIds) > 0 {
 			oi["az_subnets"] = machinePool.SubnetIds
 		} else {
@@ -787,16 +790,18 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		}
 	}
 
-	capacityType, spotMarketOptions := getInstanceProperties(m)
+	capacityType := "on-demand" // on-demand by default.
+	if m["capacity_type"] != nil && len(m["capacity_type"].(string)) > 0 {
+		capacityType = m["capacity_type"].(string)
+	}
 
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
-			RootDeviceSize:    int64(m["disk_size_gb"].(int)),
-			InstanceType:      m["instance_type"].(string),
-			CapacityType:      &capacityType,
-			SpotMarketOptions: &spotMarketOptions,
-			Azs:               azs,
-			Subnets:           subnets,
+			RootDeviceSize: int64(m["disk_size_gb"].(int)),
+			InstanceType:   m["instance_type"].(string),
+			CapacityType:   &capacityType,
+			Azs:            azs,
+			Subnets:        subnets,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
@@ -806,6 +811,17 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			MinSize:        int32(m["count"].(int)),
 			MaxSize:        int32(m["count"].(int)),
 		},
+	}
+
+	if capacityType == "spot" {
+		maxPrice := "0.0" // default value
+		if m["max_price"] != nil && len(m["max_price"].(string)) > 0 {
+			maxPrice = m["max_price"].(string)
+		}
+
+		mp.CloudConfig.SpotMarketOptions = &models.V1SpotMarketOptions{
+			MaxPrice: maxPrice,
+		}
 	}
 
 	return mp
