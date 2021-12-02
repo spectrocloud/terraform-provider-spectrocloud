@@ -1,32 +1,15 @@
 
 resource "spectrocloud_cluster_maas" "cluster" {
   name               = "maas-picard-cluster-1"
-  cluster_profile_id = spectrocloud_cluster_profile.profile.id
+
+  cluster_profile {
+    id = spectrocloud_cluster_profile.profile.id
+  }
   cloud_account_id   = data.spectrocloud_cloudaccount_maas.account.id
 
   cloud_config {
     domain = var.maas_domain # "maas.sc"
   }
-
-  # To override or specify values for a cluster:
-
-  # pack {
-  #   name   = "spectro-byo-manifest"
-  #   tag    = "1.0.x"
-  #   values = <<-EOT
-  #     manifests:
-  #       byo-manifest:
-  #         contents: |
-  #           # Add manifests here
-  #           apiVersion: v1
-  #           kind: Namespace
-  #           metadata:
-  #             labels:
-  #               app: wordpress
-  #               app2: wordpress2
-  #             name: wordpress
-  #   EOT
-  # }
 
   machine_pool {
     control_plane           = true
@@ -49,7 +32,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
     name          = "worker-basic"
     count         = 1
     placement {
-      resource_pool = "Medium-Generic"
+      resource_pool = var.maas_resource_pool # "Medium-Generic"
     }
     instance_type {
       disk_size_gb = 61
@@ -57,7 +40,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
       cpu          = 2
     }
 
-    azs           = var.maas_azs
+    azs           = ["az2"]
   }
 
 }
