@@ -356,12 +356,13 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 func resourceMachinePoolAwsHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 
 	return int(hash(buf.String()))
@@ -374,6 +375,8 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
 
 	for i, j := range m["az_subnets"].(map[string]interface{}) {
 		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
