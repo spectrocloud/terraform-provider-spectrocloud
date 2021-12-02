@@ -79,7 +79,7 @@ func (h *V1Client) GetClusterProfiles() ([]*models.V1ClusterProfile, error) {
 	return profiles, nil
 }
 
-func (h *V1Client) GetPacks(filters []string) ([]*models.V1PackSummary, error) {
+func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1PackSummary, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil, err
@@ -96,9 +96,11 @@ func (h *V1Client) GetPacks(filters []string) ([]*models.V1PackSummary, error) {
 		return nil, err
 	}
 
-	packs := make([]*models.V1PackSummary, len(response.Payload.Items))
-	for i, pack := range response.Payload.Items {
-		packs[i] = pack
+	packs := make([]*models.V1PackSummary, 0)
+	for _, pack := range response.Payload.Items {
+		if registryUID != "" && pack.Spec.RegistryUID == registryUID {
+			packs = append(packs, pack)
+		}
 	}
 
 	return packs, nil

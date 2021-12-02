@@ -5,5 +5,4 @@ variable "maas_api_key" {}
 variable "private_cloud_gateway_id" {}
 variable "maas_resource_pool" {}
 variable "maas_domain" {}
-variable "maas_region" {}
-variable "maas_region_az" {}
+variable "maas_azs" {}

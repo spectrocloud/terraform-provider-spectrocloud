@@ -47,26 +47,30 @@
 
 data "spectrocloud_pack" "csi" {
   name = "csi-maas-volume"
+  registry_uid = "5e2031962f090e2d3d8a3290"
   version  = "1.0.0"
 }
 
 data "spectrocloud_pack" "cni" {
   name    = "cni-calico"
+  registry_uid = "5e2031962f090e2d3d8a3290"
   version = "3.19.0"
 }
 
 data "spectrocloud_pack" "k8s" {
   name    = "kubernetes"
+  registry_uid = "5e2031962f090e2d3d8a3290"
   version = "1.21.3"
 }
 
 data "spectrocloud_pack" "ubuntu" {
   name = "ubuntu-maas"
+  registry_uid = "5e2031962f090e2d3d8a3290"
   #version  = "1.0.x"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
-  name        = "maas-picard-cp"
+  name        = "maas-picard-cp-1"
   description = "basic cp"
   cloud       = "maas"
   type        = "cluster"

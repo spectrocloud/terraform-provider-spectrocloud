@@ -66,6 +66,7 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 	var diags diag.Diagnostics
 
 	filters := make([]string, 0)
+	registryUID := ""
 	if v, ok := d.GetOk("filters"); ok {
 		filters = append(filters, v.(string))
 	} else if v, ok := d.GetOk("id"); ok {
@@ -78,7 +79,7 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 			filters = append(filters, fmt.Sprintf("spec.version=%s", v.(string)))
 		}
 		if v, ok := d.GetOk("registry_uid"); ok {
-			filters = append(filters, fmt.Sprintf("spec.registry_uid=%s", v.(string)))
+			registryUID = v.(string)
 		}
 		if v, ok := d.GetOk("cloud"); ok {
 			clouds := expandStringList(v.(*schema.Set).List())
@@ -89,7 +90,7 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		}
 	}
 
-	packs, err := c.GetPacks(filters)
+	packs, err := c.GetPacks(filters, registryUID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

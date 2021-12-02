@@ -12,5 +12,4 @@ maas_domain = "{enter Maas Domain}" # "maas.sc"
 
 # Enter the Maas Region and AZ for cluster resources
 maas_resource_pool = "{enter Maas Resource Pool}"
-maas_region    = "{enter Maas Region}"            #e.g: us-west-2
-maas_region_az = "{enter Maas Availability Zone}" #e.g: us-west-2a
+maas_azs = ["{enter Maas Availability Zone}"]

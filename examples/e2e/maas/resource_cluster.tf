@@ -1,6 +1,6 @@
 
 resource "spectrocloud_cluster_maas" "cluster" {
-  name               = "maas-picard-cluster"
+  name               = "maas-picard-cluster-1"
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
   cloud_account_id   = data.spectrocloud_cloudaccount_maas.account.id
 
@@ -42,14 +42,14 @@ resource "spectrocloud_cluster_maas" "cluster" {
       cpu          = 2
     }
 
-    azs                     = [var.maas_region_az]
+    azs                     = var.maas_azs
   }
 
   machine_pool {
     name          = "worker-basic"
     count         = 1
     placement {
-      resource_pool = var.maas_resource_pool
+      resource_pool = "Medium-Generic"
     }
     instance_type {
       disk_size_gb = 61
@@ -57,7 +57,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
       cpu          = 2
     }
 
-    azs           = [var.maas_region_az]
+    azs           = var.maas_azs
   }
 
 }
