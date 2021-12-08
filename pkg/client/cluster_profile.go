@@ -98,7 +98,7 @@ func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1P
 
 	packs := make([]*models.V1PackSummary, 0)
 	for _, pack := range response.Payload.Items {
-		if registryUID != "" && pack.Spec.RegistryUID == registryUID {
+		if registryUID == "" || pack.Spec.RegistryUID == registryUID {
 			packs = append(packs, pack)
 		}
 	}
