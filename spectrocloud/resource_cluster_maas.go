@@ -117,26 +117,6 @@ func resourceClusterMaas() *schema.Resource {
 					},
 				},
 			},
-			"pack": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"tag": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"values": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
-			},
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
