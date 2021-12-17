@@ -65,7 +65,8 @@ func (h *V1Client) GetClusterProfiles() ([]*models.V1ClusterProfile, error) {
 		return nil, err
 	}
 
-	params := clusterC.NewV1ClusterProfilesListParamsWithContext(h.ctx)
+	limit := int64(0)
+	params := clusterC.NewV1ClusterProfilesListParamsWithContext(h.ctx).WithLimit(&limit)
 	response, err := client.V1ClusterProfilesList(params)
 	if err != nil {
 		return nil, err
