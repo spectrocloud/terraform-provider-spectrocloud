@@ -44,9 +44,8 @@ func resourceClusterMaas() *schema.Resource {
 				},
 			},
 			"cluster_profile": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				ConflictsWith: []string{"pack"},
+				Type:     schema.TypeList,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
