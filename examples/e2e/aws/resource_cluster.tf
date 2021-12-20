@@ -1,7 +1,9 @@
 
 resource "spectrocloud_cluster_aws" "cluster" {
   name               = "aws-picard-3"
-  cluster_profile_id = spectrocloud_cluster_profile.profile.id
+  cluster_profile {
+   id = spectrocloud_cluster_profile.profile.id
+  }
   cloud_account_id   = spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
