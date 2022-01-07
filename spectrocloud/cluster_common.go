@@ -405,6 +405,27 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceMachinePoolLibvirtHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+
+	if v, found := m["instance_type"]; found {
+		ins := v.([]interface{})[0].(map[string]interface{})
+		buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["attached_disks_size_gb"].(int)))
+	}
+
+	return int(hash(buf.String()))
+}
+
 func resourceMachinePoolOpenStackHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})

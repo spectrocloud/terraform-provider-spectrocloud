@@ -1,48 +1,37 @@
-resource "spectrocloud_cluster_eks" "cluster" {
+resource "spectrocloud_cluster_libvirt" "cluster" {
   name = "virt-dev1"
 
   cluster_profile {
-    id = spectrocloud_cluster_profile.profile.id
+    id = data.spectrocloud_cluster_profile.profile.id
   }
-
-  cluster_profile {
-    id = spectrocloud_cluster_profile.profile-rbac.id
-    pack {
-      name   = "spectro-rbac"
-      tag    = "1.0.0"
-      values = file("rbac.yaml")
-    }
-  }
-
-  cloud_account_id = spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
-    ssh_key_name = var.aws_ssh_key_name
-    region       = var.aws_region
-    vpc_id       = var.aws_vpc_id
-    az_subnets   = var.master_azs_subnets_map
+    ssh_key = "spectro2022"
+    vip = "10.11.130.19"
   }
 
   machine_pool {
-    name          = "worker-basic"
-    count         = 3
-    instance_type = "t3.large"
-    az_subnets    = var.worker_azs_subnets_map
-    disk_size_gb  = 60
-  }
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = "master-pool"
+    count                   = 1
 
-  fargate_profile {
-    name    = "fg-1"
-    subnets = values(var.worker_azs_subnets_map)
-    additional_tags = {
-      hello = "yo"
+    placements {
+      appliance_id = data.spectrocloud_appliance.virt_appliance.id
+      network_type = "bridge"
+      network_names = ["br0"]
+      image_storage_pool = "ehl_images"
+      target_storage_pool = "ehl_images"
+      data_storage_pool = "ehl_data"
+      network = "br"
     }
-    selector {
-      namespace = "fargate"
-      labels = {
-        abc = "cool"
-      }
 
+    instance_type {
+      disk_size_gb    = 30
+      memory_mb = 8096
+      cpu          = 4
+      cpus_sets = 1
+      attached_disks_size_gb = 30
     }
   }
 

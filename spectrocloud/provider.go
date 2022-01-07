@@ -65,7 +65,7 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cluster_vsphere": resourceClusterVsphere(),
 
-				//"spectrocloud_cluster_libvirt": resourceClusterLibvirt(),
+				"spectrocloud_cluster_libvirt": resourceClusterLibvirt(),
 
 				"spectrocloud_cluster_import": resourceClusterImport(),
 
