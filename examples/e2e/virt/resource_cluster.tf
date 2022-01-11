@@ -1,5 +1,5 @@
 resource "spectrocloud_cluster_libvirt" "cluster" {
-  name = "virt-dev1"
+  name = "virt-dev"
 
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id
@@ -19,7 +19,7 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
     placements {
       appliance_id = data.spectrocloud_appliance.virt_appliance.id
       network_type = "bridge"
-      network_names = ["br0"]
+      network_names = "br0"
       image_storage_pool = "ehl_images"
       target_storage_pool = "ehl_images"
       data_storage_pool = "ehl_data"
@@ -31,7 +31,29 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
       memory_mb = 8096
       cpu          = 4
       cpus_sets = 1
-      attached_disks_size_gb = 30
+      attached_disks_size_gb = "30, 10"
+    }
+  }
+
+  machine_pool {
+    name                    = "worker-pool"
+    count                   = 3
+
+    placements {
+      appliance_id = data.spectrocloud_appliance.virt_appliance.id
+      network_type = "bridge"
+      network_names = "br0"
+      image_storage_pool = "ehl_images"
+      target_storage_pool = "ehl_images"
+      data_storage_pool = "ehl_data"
+      network = "br"
+    }
+
+    instance_type {
+      disk_size_gb    = 30
+      memory_mb = 8096
+      cpu          = 2
+      cpus_sets = 1
     }
   }
 

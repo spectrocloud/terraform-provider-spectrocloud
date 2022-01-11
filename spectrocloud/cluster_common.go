@@ -420,7 +420,7 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
 		buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
 		buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["attached_disks_size_gb"].(int)))
+		buf.WriteString(fmt.Sprintf("%s-", ins["attached_disks_size_gb"].(string)))
 	}
 
 	return int(hash(buf.String()))

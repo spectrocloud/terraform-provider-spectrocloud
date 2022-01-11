@@ -2,9 +2,11 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -186,12 +188,12 @@ func resourceClusterLibvirt() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"attached_disks_size_gb": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:     schema.TypeString,
+										Optional: true,
 									},
 									"cpus_sets": {
 										Type:     schema.TypeInt,
-										Required: true,
+										Optional: true,
 									},
 									"disk_size_gb": {
 										Type:     schema.TypeInt,
@@ -222,11 +224,8 @@ func resourceClusterLibvirt() *schema.Resource {
 										Required: true,
 									},
 									"network_names": {
-										Type:     schema.TypeList,
+										Type:     schema.TypeString,
 										Required: true,
-										Elem: &schema.Schema{
-											Type: schema.TypeString,
-										},
 									},
 									"image_storage_pool": {
 										Type:     schema.TypeString,
@@ -436,27 +435,45 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
+			additionalDisks := make([]string, 0)
 
-			s["attached_disks_size_gb"] = machinePool.NonRootDisksInGB[0].SizeInGB
+			if machinePool.NonRootDisksInGB != nil && len(machinePool.NonRootDisksInGB) > 0 {
+				for _, disk := range machinePool.NonRootDisksInGB {
+					additionalDisks = append(additionalDisks, fmt.Sprint(*disk.SizeInGB))
+				}
+			}
 			s["disk_size_gb"] = int(*machinePool.RootDiskInGB)
 			s["memory_mb"] = int(*machinePool.InstanceType.MemoryInMB)
 			s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
 
 			oi["instance_type"] = []interface{}{s}
+			additionalDisksStr := strings.Join(additionalDisks, ",")
+			s["attached_disks_size_gb"] = additionalDisksStr
 		}
 
 		placements := make([]interface{}, len(machinePool.Placements))
 		for j, p := range machinePool.Placements {
 			pj := make(map[string]interface{})
-			pj["id"] = p.HostUID
-			pj["network_type"] = p.TargetStoragePool
-			pj["network_names"] = p.Networks
+			pj["appliance_id"] = p.HostUID
+			if p.Networks != nil {
+				for _, network := range p.Networks {
+					pj["network_type"] = network.NetworkType
+					break
+				}
+			}
+			networkNames := make([]string, 0)
+			for _, network := range p.Networks {
+				networkNames = append(networkNames, *network.NetworkName)
+			}
+			networkNamesStr := strings.Join(networkNames, ",")
+
+			pj["network_names"] = networkNamesStr
 			pj["image_storage_pool"] = p.SourceStoragePool
 			pj["target_storage_pool"] = p.TargetStoragePool
 			pj["data_storage_pool"] = p.DataStoragePool
 			placements[j] = pj
 		}
-		oi["placement"] = placements
+		oi["placements"] = placements
 
 		ois[i] = oi
 	}
@@ -601,11 +618,14 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 	placements := make([]*models.V1LibvirtPlacementEntity, 0)
 	for _, pos := range m["placements"].([]interface{}) {
 		p := pos.(map[string]interface{})
+		networks := getNetworks(p)
+
 		imageStoragePool := p["image_storage_pool"].(string)
 		targetStoragePool := p["target_storage_pool"].(string)
 		dataStoragePool := p["data_storage_pool"].(string)
 
 		placements = append(placements, &models.V1LibvirtPlacementEntity{
+			Networks:          networks,
 			SourceStoragePool: imageStoragePool,
 			TargetStoragePool: targetStoragePool,
 			DataStoragePool:   dataStoragePool,
@@ -616,17 +636,19 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
 	instanceType := models.V1LibvirtInstanceType{
-		Cpuset:     strconv.FormatInt(int64(ins["memory_mb"].(int)), 10),
+		Cpuset:     strconv.FormatInt(int64(ins["cpus_sets"].(int)), 10),
 		MemoryInMB: ptr.Int32Ptr(int32(ins["memory_mb"].(int))),
 		NumCPUs:    ptr.Int32Ptr(int32(ins["cpu"].(int))),
 	}
 
+	addDisks := getAdditionalDisks(ins)
+
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
 		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{
-			Placements:   placements,
-			RootDiskInGB: ptr.Int32Ptr(int32(ins["disk_size_gb"].(int))),
-			//NonRootDisksInGB:, s["attached_disks_size_gb"] = machinePool.NonRootDisksInGB[0].SizeInGB
-			InstanceType: &instanceType,
+			Placements:       placements,
+			RootDiskInGB:     ptr.Int32Ptr(int32(ins["disk_size_gb"].(int))),
+			NonRootDisksInGB: addDisks,
+			InstanceType:     &instanceType,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
@@ -640,4 +662,41 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 		},
 	}
 	return mp
+}
+
+func getAdditionalDisks(ins map[string]interface{}) []*models.V1LibvirtDiskSpec {
+	addDisks := make([]*models.V1LibvirtDiskSpec, 0)
+
+	if ins["attached_disks_size_gb"] != nil {
+		disks := strings.Split(ins["attached_disks_size_gb"].(string), ",")
+		for _, addDisk := range disks {
+			x, err := strconv.ParseInt(strings.TrimSpace(addDisk), 10, 32)
+			if err != nil {
+				return nil
+			}
+			size := int32(x)
+			addDisks = append(addDisks, &models.V1LibvirtDiskSpec{
+				SizeInGB: &size,
+			})
+		}
+	}
+	return addDisks
+}
+
+func getNetworks(p map[string]interface{}) []*models.V1LibvirtNetworkSpec {
+	networkType := ""
+	networks := make([]*models.V1LibvirtNetworkSpec, 0)
+
+	if p["network_names"] != nil {
+		for _, n := range strings.Split(p["network_names"].(string), ",") {
+			networkName := strings.TrimSpace(n)
+			networkType = p["network_type"].(string)
+			network := &models.V1LibvirtNetworkSpec{
+				NetworkName: &networkName,
+				NetworkType: &networkType,
+			}
+			networks = append(networks, network)
+		}
+	}
+	return networks
 }
