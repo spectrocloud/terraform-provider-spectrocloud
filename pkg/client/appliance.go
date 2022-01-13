@@ -6,7 +6,7 @@ import (
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 )
 
-func (h *V1Client) GetApplianceByName(projectId string, deviceName string) (*models.V1EdgeHostDevice, error) {
+func (h *V1Client) GetApplianceByName(deviceName string) (*models.V1EdgeHostDevice, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (h *V1Client) GetAppliance(uid string) (*models.V1EdgeHostDevice, error) {
 		return nil, err
 	}
 
-	params := clusterC.NewV1EdgeHostDevicesUIDGetParams().WithUID(uid)
+	params := clusterC.NewV1EdgeHostDevicesUIDGetParamsWithContext(h.ctx).WithUID(uid)
 	response, err := client.V1EdgeHostDevicesUIDGet(params)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (h *V1Client) CreateAppliance(createHostDevice *models.V1EdgeHostDeviceEnti
 		return "", err
 	}
 
-	params := clusterC.NewV1EdgeHostDevicesCreateParams().WithBody(createHostDevice)
+	params := clusterC.NewV1EdgeHostDevicesCreateParams().WithContext(h.ctx).WithBody(createHostDevice)
 	if resp, err := client.V1EdgeHostDevicesCreate(params); err != nil {
 		return "", err
 	} else {
@@ -58,14 +58,14 @@ func (h *V1Client) CreateAppliance(createHostDevice *models.V1EdgeHostDeviceEnti
 	}
 }
 
-func (h *V1Client) UpdateAppliance(uid string, registry *models.V1EcrRegistry) error {
+func (h *V1Client) UpdateAppliance(uid string, appliance *models.V1EdgeHostDevice) error {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1EcrRegistriesUIDUpdateParams().WithBody(registry).WithUID(uid)
-	_, err = client.V1EcrRegistriesUIDUpdate(params)
+	params := clusterC.NewV1EdgeHostDevicesUIDUpdateParams().WithContext(h.ctx).WithBody(appliance).WithUID(uid)
+	_, err = client.V1EdgeHostDevicesUIDUpdate(params)
 	if err != nil {
 		return err
 	}
@@ -79,8 +79,8 @@ func (h *V1Client) DeleteAppliance(uid string) error {
 		return err
 	}
 
-	params := clusterC.NewV1BasicOciRegistriesUIDDeleteParams().WithUID(uid)
-	_, err = client.V1BasicOciRegistriesUIDDelete(params)
+	params := clusterC.NewV1EdgeHostDevicesUIDDeleteParams().WithUID(uid)
+	_, err = client.V1EdgeHostDevicesUIDDelete(params)
 	if err != nil {
 		return err
 	}

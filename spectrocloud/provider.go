@@ -74,6 +74,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_backup_storage_location": resourceBackupStorageLocation(),
 
 				"spectrocloud_registry_oci": resourceRegistryOciEcr(),
+
+				"spectrocloud_appliance": resourceAppliance(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_user":    dataSourceUser(),
