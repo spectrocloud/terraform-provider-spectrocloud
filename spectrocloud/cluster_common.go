@@ -426,6 +426,17 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceMachinePoolEdgeHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+
+	return int(hash(buf.String()))
+}
+
 func resourceMachinePoolOpenStackHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
