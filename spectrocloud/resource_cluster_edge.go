@@ -42,15 +42,9 @@ func resourceClusterEdge() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"cluster_profile_id": {
-				Type:       schema.TypeString,
-				Optional:   true,
-				Deprecated: "Switch to cluster_profile",
-			},
 			"cluster_profile": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				ConflictsWith: []string{"cluster_profile_id", "pack"},
+				Type:     schema.TypeList,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
@@ -115,26 +109,6 @@ func resourceClusterEdge() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
-			},
-			"pack": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"tag": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"values": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
