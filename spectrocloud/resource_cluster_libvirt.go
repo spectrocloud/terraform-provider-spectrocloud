@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"log"
 	"sort"
 	"strconv"
@@ -45,15 +46,9 @@ func resourceClusterLibvirt() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"cluster_profile_id": {
-				Type:       schema.TypeString,
-				Optional:   true,
-				Deprecated: "Switch to cluster_profile",
-			},
 			"cluster_profile": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				ConflictsWith: []string{"cluster_profile_id", "pack"},
+				Type:     schema.TypeList,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
@@ -122,26 +117,6 @@ func resourceClusterLibvirt() *schema.Resource {
 							Required: true,
 						},
 						"vip": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
-			},
-			"pack": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"tag": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"values": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -220,8 +195,9 @@ func resourceClusterLibvirt() *schema.Resource {
 										Required: true,
 									},
 									"network_type": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:         schema.TypeString,
+										ValidateFunc: validation.StringInSlice([]string{"default", "bridge"}, false),
+										Required:     true,
 									},
 									"network_names": {
 										Type:     schema.TypeString,

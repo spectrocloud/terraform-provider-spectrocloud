@@ -1,5 +1,5 @@
 resource "spectrocloud_cluster_libvirt" "cluster" {
-  name = "virt-dev"
+  name = "virt-nik"
 
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id
@@ -37,7 +37,7 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
 
   machine_pool {
     name                    = "worker-pool"
-    count                   = 3
+    count                   = 1
 
     placements {
       appliance_id = data.spectrocloud_appliance.virt_appliance.id
