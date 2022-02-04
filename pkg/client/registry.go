@@ -6,6 +6,27 @@ import (
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 )
 
+func (h *V1Client) GetRegistryHelmByName(registryName string) (*models.V1HelmRegistry, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1RegistriesHelmListParams()
+	registries, err := client.V1RegistriesHelmList(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, registry := range registries.Payload.Items {
+		if registry.Metadata.Name == registryName {
+			return registry, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Registry '%s' not found.", registryName)
+}
+
 func (h *V1Client) GetRegistryOciByName(registryName string) (*models.V1OciRegistry, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
