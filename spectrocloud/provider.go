@@ -50,6 +50,9 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cloudaccount_aws": resourceCloudAccountAws(),
 				"spectrocloud_cluster_aws":      resourceClusterAws(),
 
+				"spectrocloud_cloudaccount_maas": resourceCloudAccountMaas(),
+				"spectrocloud_cluster_maas":      resourceClusterMaas(),
+
 				"spectrocloud_cluster_eks": resourceClusterEks(),
 
 				"spectrocloud_cloudaccount_azure": resourceCloudAccountAzure(),
@@ -93,6 +96,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cloudaccount_gcp":       dataSourceCloudAccountGcp(),
 				"spectrocloud_cloudaccount_vsphere":   dataSourceCloudAccountVsphere(),
 				"spectrocloud_cloudaccount_openstack": dataSourceCloudAccountOpenStack(),
+				"spectrocloud_cloudaccount_maas":      dataSourceCloudAccountMaas(),
 
 				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
 

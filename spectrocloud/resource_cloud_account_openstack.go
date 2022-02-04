@@ -25,12 +25,12 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 				Required: true,
 			},
 			"openstack_username": {
-				Type:      schema.TypeString,
-				Required:  true,
+				Type:     schema.TypeString,
+				Required: true,
 			},
 			"openstack_password": {
-				Type:         schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
 				Sensitive: true,
 			},
 			"identity_endpoint": {
@@ -38,8 +38,8 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 				Required: true,
 			},
 			"openstack_allow_insecure": {
-				Type:      schema.TypeBool,
-				Optional:  true,
+				Type:     schema.TypeBool,
+				Optional: true,
 			},
 			"ca_certificate": {
 				Type:     schema.TypeString,
@@ -125,7 +125,6 @@ func resourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-
 	return diags
 }
 
@@ -178,8 +177,8 @@ func toOpenStackAccount(d *schema.ResourceData) *models.V1OpenStackAccount {
 			IdentityEndpoint: ptr.StringPtr(d.Get("identity_endpoint").(string)),
 			Insecure:         d.Get("openstack_allow_insecure").(bool),
 			ParentRegion:     d.Get("parent_region").(string),
-			Password: ptr.StringPtr(d.Get("openstack_password").(string)),
-			Username: ptr.StringPtr(d.Get("openstack_username").(string)),
+			Password:         ptr.StringPtr(d.Get("openstack_password").(string)),
+			Username:         ptr.StringPtr(d.Get("openstack_username").(string)),
 		},
 	}
 

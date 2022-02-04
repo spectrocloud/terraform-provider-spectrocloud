@@ -854,15 +854,8 @@ github.com/smartystreets/goconvey v1.6.4/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/sony/gobreaker v0.4.1/go.mod h1:ZKptC7FHNvhBz7dN2LGjPVBz2sZJmc0/PkyDJOjmxWY=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
-github.com/spectrocloud/gomi v0.0.0-20201113051324-08a1179400db/go.mod h1:rPAwipFWzjYkTfx44KmQazP1NR2cnHe7HSFZkc63mf4=
-github.com/spectrocloud/gomi v1.9.1-0.20210519044035-5333c9359877 h1:rbfwoaCqN862q0LVra0UistoS+QRhM3D/e+pNnwy7zw=
-github.com/spectrocloud/gomi v1.9.1-0.20210519044035-5333c9359877/go.mod h1:rPAwipFWzjYkTfx44KmQazP1NR2cnHe7HSFZkc63mf4=
 github.com/spectrocloud/gomi v1.14.0 h1:XwOqPssfX1D1tRr1EzUgRULrdncubZG1O/zp/7DuSyU=
 github.com/spectrocloud/gomi v1.14.0/go.mod h1:rPAwipFWzjYkTfx44KmQazP1NR2cnHe7HSFZkc63mf4=
-github.com/spectrocloud/hapi v1.14.0 h1:TX8anADhcUDEflianwFgWY4i6q7iE+CybCQhujh0wDc=
-github.com/spectrocloud/hapi v1.14.0/go.mod h1:Ei/9inB59vzn0oXpPf00FsbgjXGKVYC4HfA1IVb9fIE=
-github.com/spectrocloud/hapi v1.14.1-0.20211008142225-a25ce038cd52 h1:PSBh9GZLjXofhCH8wKTiwU2yJUsTH/5OohzzR3Zy0rs=
-github.com/spectrocloud/hapi v1.14.1-0.20211008142225-a25ce038cd52/go.mod h1:Ei/9inB59vzn0oXpPf00FsbgjXGKVYC4HfA1IVb9fIE=
 github.com/spectrocloud/hapi v1.14.1-0.20211221130518-cdf34e97ba47 h1:kVezZ5BzFkC27iWg9M0heNYoaS0elwAgG38nQuV6mrU=
 github.com/spectrocloud/hapi v1.14.1-0.20211221130518-cdf34e97ba47/go.mod h1:RCM1yAaUo8WILb81+fu0PhEHO9EABVKVzs/+DIwLYHc=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=

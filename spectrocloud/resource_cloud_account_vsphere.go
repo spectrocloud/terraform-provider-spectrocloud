@@ -35,8 +35,8 @@ func resourceCloudAccountVsphere() *schema.Resource {
 				Required: true,
 			},
 			"vsphere_password": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
 				Sensitive: true,
 			},
 			"vsphere_ignore_insecure_error": {
