@@ -711,9 +711,10 @@ func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
-				VpcID:      cloudConfig["vpc_id"].(string),
-				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
-				SSHKeyName: cloudConfig["ssh_key_name"].(string),
+				BastionDisabled: true,
+				VpcID:           cloudConfig["vpc_id"].(string),
+				Region:          ptr.StringPtr(cloudConfig["region"].(string)),
+				SSHKeyName:      cloudConfig["ssh_key_name"].(string),
 			},
 		},
 	}
