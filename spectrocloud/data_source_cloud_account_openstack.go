@@ -67,4 +67,3 @@ func dataSourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceDa
 
 	return diags
 }
-

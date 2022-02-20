@@ -334,8 +334,8 @@ func resourceMachinePoolAksHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
-	buf.WriteString(fmt.Sprintf("%d-", m["is_system_node_pool"].(bool)))
-	buf.WriteString(fmt.Sprintf("%d-", m["storage_account_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%t-", m["is_system_node_pool"].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m["storage_account_type"].(string)))
 	return int(hash(buf.String()))
 }
 
@@ -417,6 +417,24 @@ func resourceMachinePoolOpenStackHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["subnet_id"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolMaasHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	if v, found := m["instance_type"]; found {
+		ins := v.([]interface{})[0].(map[string]interface{})
+		buf.WriteString(fmt.Sprintf("%d-", ins["min_cpu"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["min_memory_mb"].(int)))
+	}
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 
 	return int(hash(buf.String()))
