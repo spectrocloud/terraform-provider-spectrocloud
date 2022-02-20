@@ -150,15 +150,11 @@ func resourceClusterMaas() *schema.Resource {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"disk_size_gb": {
+									"min_memory_mb": {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
-									"memory_mb": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-									"cpu": {
+									"min_cpu": {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
@@ -169,11 +165,6 @@ func resourceClusterMaas() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 							Default:  "RollingUpdateScaleOut",
-						},
-						"disk_size_gb": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							Default:  65,
 						},
 						"azs": {
 							Type:     schema.TypeSet,
@@ -390,13 +381,10 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		oi["update_strategy"] = machinePool.UpdateStrategy.Type
 		oi["instance_type"] = machinePool.InstanceType
 
-		//TODO: No root disk?
-		//oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
-
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
-			s["memory_mb"] = int(machinePool.InstanceType.MinMemInMB)
-			s["cpu"] = int(machinePool.InstanceType.MinCPU)
+			s["min_memory_mb"] = int(machinePool.InstanceType.MinMemInMB)
+			s["min_cpu"] = int(machinePool.InstanceType.MinCPU)
 
 			oi["instance_type"] = []interface{}{s}
 		}
@@ -449,8 +437,7 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 				err = c.CreateMachinePoolMaas(cloudConfigId, machinePool)
 			} else if hash != resourceMachinePoolMaasHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
-				// TODO: no update?
-				//err = c.UpdateMachinePoolMaas(cloudConfigId, machinePool)
+				err = c.UpdateMachinePoolMaas(cloudConfigId, machinePool)
 			}
 
 			if err != nil {
@@ -555,8 +542,8 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
 			Azs: azs,
 			InstanceType: &models.V1MaasInstanceType{
-				MinCPU:     int32(InstanceType["cpu"].(int)),
-				MinMemInMB: int32(InstanceType["memory_mb"].(int)),
+				MinCPU:     int32(InstanceType["min_cpu"].(int)),
+				MinMemInMB: int32(InstanceType["min_memory_mb"].(int)),
 			},
 			ResourcePool: ptr.StringPtr(Placement["resource_pool"].(string)),
 		},

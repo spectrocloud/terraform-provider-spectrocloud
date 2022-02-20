@@ -20,9 +20,8 @@ resource "spectrocloud_cluster_maas" "cluster" {
       resource_pool = var.maas_resource_pool
     }
     instance_type {
-      disk_size_gb = 61
-      memory_mb    = 4096
-      cpu          = 2
+      min_memory_mb    = 4096
+      min_cpu          = 2
     }
 
     azs                     = var.maas_azs
@@ -35,9 +34,8 @@ resource "spectrocloud_cluster_maas" "cluster" {
       resource_pool = var.maas_resource_pool # "Medium-Generic"
     }
     instance_type {
-      disk_size_gb = 61
-      memory_mb    = 4096
-      cpu          = 2
+      min_memory_mb    = 4096
+      min_cpu          = 2
     }
 
     azs           = ["az2"]
