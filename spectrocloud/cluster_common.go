@@ -446,8 +446,8 @@ func hash(s string) uint32 {
 	return h.Sum32()
 }
 
-func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfig {
-	return &models.V1ClusterConfig{
+func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfigEntity {
+	return &models.V1ClusterConfigEntity{
 		MachineManagementConfig: toMachineManagementConfig(d),
 	}
 }
