@@ -357,6 +357,68 @@ func resourceClusterEks() *schema.Resource {
 					},
 				},
 			},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -460,6 +522,23 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 			return diag.FromErr(err)
 		}
 	}
+
+	if rbac, err := c.GetClusterRbacConfig(d.Id()); err != nil {
+		return diag.FromErr(err)
+	} else if rbac != nil && rbac.Items != nil {
+		if err := d.Set("cluster_rbac_binding", flattenClusterRBAC(rbac.Items)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if namespace, err := c.GetClusterNamespaceConfig(d.Id()); err != nil {
+		return diag.FromErr(err)
+	} else if namespace != nil && namespace.Items != nil {
+		if err := d.Set("namespaces", flattenClusterNamespaces(namespace.Items)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	return diags
 }
 
@@ -672,6 +751,18 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//	return diag.FromErr(err)
 	//}
 
+	if d.HasChange("namespaces") {
+		if err := updateClusterNamespaces(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("cluster_rbac_binding") {
+		if err := updateClusterRBAC(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	if d.HasChanges("cluster_profile") {
 		if err := updateProfiles(c, d); err != nil {
 			return diag.FromErr(err)
@@ -758,6 +849,9 @@ func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
+	cluster.Spec.ClusterConfig = &models.V1ClusterConfigEntity{
+		Resources: toClusterResourceConfig(d),
+	}
 
 	fargateProfiles := make([]*models.V1FargateProfile, 0)
 	for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
