@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"hash/fnv"
+	"sort"
 )
 
 func resourceMachinePoolAzureHash(v interface{}) int {
@@ -72,6 +73,10 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 func resourceMachinePoolEksHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
@@ -139,6 +144,34 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 
 	return int(hash(buf.String()))
+}
+
+func HashStringMapList(v interface{}) string {
+	var b bytes.Buffer
+	m := v.([]interface{})
+
+	for _, i := range m {
+		b.WriteString(HashStringMap(i))
+	}
+
+	return b.String()
+}
+
+func HashStringMap(v interface{}) string {
+	var b bytes.Buffer
+	m := v.(map[string]interface{})
+
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		b.WriteString(fmt.Sprintf("%s-", m[k].(string)))
+	}
+
+	return b.String()
 }
 
 func hash(s string) uint32 {

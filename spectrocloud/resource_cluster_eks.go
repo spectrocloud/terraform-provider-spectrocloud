@@ -209,6 +209,33 @@ func resourceClusterEks() *schema.Resource {
 							Required: true,
 							//ForceNew: true,
 						},
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"disk_size_gb": {
 							Type:     schema.TypeInt,
 							Required: true,
@@ -553,6 +580,9 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
+		oi["additional_labels"] = machinePool.AdditionalLabels
+		oi["taints"] = flattenClusterTaints(machinePool.Taints)
+
 		if *machinePool.IsControlPlane {
 			continue
 		}
@@ -890,6 +920,11 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		capacityType = m["capacity_type"].(string)
 	}
 
+	additionalLabels := make(map[string]string)
+	if m["additional_labels"] != nil {
+		additionalLabels = expandStringMap(m["additional_labels"].(map[string]interface{}))
+	}
+
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
@@ -899,12 +934,14 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			Subnets:        subnets,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			IsControlPlane: controlPlane,
-			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			MinSize:        int32(m["count"].(int)),
-			MaxSize:        int32(m["count"].(int)),
+			AdditionalLabels: additionalLabels,
+			Taints:           toClusterTaints(m),
+			IsControlPlane:   controlPlane,
+			Labels:           labels,
+			Name:             ptr.StringPtr(m["name"].(string)),
+			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			MinSize:          int32(m["count"].(int)),
+			MaxSize:          int32(m["count"].(int)),
 		},
 	}
 
