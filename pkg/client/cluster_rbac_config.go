@@ -59,15 +59,36 @@ func (h *V1Client) ApplyClusterRbacConfig(uid string, config *models.V1ClusterRb
 }
 
 func toUpdateRbac(config *models.V1ClusterRbac) *models.V1ClusterRbacResourcesUpdateEntity {
-	rbacs := make([]*models.V1ClusterRbacInputEntity, 0, 1)
+	rbacs := make([]*models.V1ClusterRbacInputEntity, 0)
 
-	if config != nil {
-		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
-			Spec: &models.V1ClusterRbacSpec{
-				Bindings: config.Spec.Bindings,
-			},
-		})
+	clusterRoleBindings := make([]*models.V1ClusterRbacBinding, 0)
+	roleBindings := make([]*models.V1ClusterRbacBinding, 0)
+
+	for _, binding := range config.Spec.Bindings {
+		switch binding.Type {
+		case "ClusterRoleBinding":
+			clusterRoleBindings = append(clusterRoleBindings, binding)
+			break
+		case "RoleBinding":
+			roleBindings = append(roleBindings, binding)
+			break
+		default:
+			break
+		}
+
 	}
+
+	rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
+		Spec: &models.V1ClusterRbacSpec{
+			Bindings: clusterRoleBindings,
+		},
+	})
+
+	rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
+		Spec: &models.V1ClusterRbacSpec{
+			Bindings: roleBindings,
+		},
+	})
 
 	return &models.V1ClusterRbacResourcesUpdateEntity{
 		Rbacs: rbacs,
