@@ -209,6 +209,33 @@ func resourceClusterEks() *schema.Resource {
 							Required: true,
 							//ForceNew: true,
 						},
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"disk_size_gb": {
 							Type:     schema.TypeInt,
 							Required: true,
@@ -357,6 +384,68 @@ func resourceClusterEks() *schema.Resource {
 					},
 				},
 			},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -460,6 +549,23 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 			return diag.FromErr(err)
 		}
 	}
+
+	if rbac, err := c.GetClusterRbacConfig(d.Id()); err != nil {
+		return diag.FromErr(err)
+	} else if rbac != nil && rbac.Items != nil {
+		if err := d.Set("cluster_rbac_binding", flattenClusterRBAC(rbac.Items)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if namespace, err := c.GetClusterNamespaceConfig(d.Id()); err != nil {
+		return diag.FromErr(err)
+	} else if namespace != nil && namespace.Items != nil {
+		if err := d.Set("namespaces", flattenClusterNamespaces(namespace.Items)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	return diags
 }
 
@@ -473,6 +579,9 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
+
+		oi["additional_labels"] = machinePool.AdditionalLabels
+		oi["taints"] = flattenClusterTaints(machinePool.Taints)
 
 		if *machinePool.IsControlPlane {
 			continue
@@ -672,6 +781,18 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//	return diag.FromErr(err)
 	//}
 
+	if d.HasChange("namespaces") {
+		if err := updateClusterNamespaces(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("cluster_rbac_binding") {
+		if err := updateClusterRBAC(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	if d.HasChanges("cluster_profile") {
 		if err := updateProfiles(c, d); err != nil {
 			return diag.FromErr(err)
@@ -711,9 +832,10 @@ func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
-				VpcID:      cloudConfig["vpc_id"].(string),
-				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
-				SSHKeyName: cloudConfig["ssh_key_name"].(string),
+				BastionDisabled: true,
+				VpcID:           cloudConfig["vpc_id"].(string),
+				Region:          ptr.StringPtr(cloudConfig["region"].(string)),
+				SSHKeyName:      cloudConfig["ssh_key_name"].(string),
 			},
 		},
 	}
@@ -757,6 +879,9 @@ func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
+	cluster.Spec.ClusterConfig = &models.V1ClusterConfigEntity{
+		Resources: toClusterResourceConfig(d),
+	}
 
 	fargateProfiles := make([]*models.V1FargateProfile, 0)
 	for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
@@ -795,6 +920,11 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		capacityType = m["capacity_type"].(string)
 	}
 
+	additionalLabels := make(map[string]string)
+	if m["additional_labels"] != nil {
+		additionalLabels = expandStringMap(m["additional_labels"].(map[string]interface{}))
+	}
+
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
@@ -804,12 +934,14 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			Subnets:        subnets,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			IsControlPlane: controlPlane,
-			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			MinSize:        int32(m["count"].(int)),
-			MaxSize:        int32(m["count"].(int)),
+			AdditionalLabels: additionalLabels,
+			Taints:           toClusterTaints(m),
+			IsControlPlane:   controlPlane,
+			Labels:           labels,
+			Name:             ptr.StringPtr(m["name"].(string)),
+			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			MinSize:          int32(m["count"].(int)),
+			MaxSize:          int32(m["count"].(int)),
 		},
 	}
 

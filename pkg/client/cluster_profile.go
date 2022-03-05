@@ -39,7 +39,7 @@ func (h *V1Client) GetClusterProfile(uid string) (*models.V1ClusterProfile, erro
 	return success.Payload, nil
 }
 
-func (h *V1Client) GetClusterProfileManifestPack(clusterProfileUID, packUID string) ([]*models.V1ManifestEntity, error) {
+func (h *V1Client) GetClusterProfileManifestPack(clusterProfileUID, packName string) ([]*models.V1ManifestEntity, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (h *V1Client) GetClusterProfileManifestPack(clusterProfileUID, packUID stri
 
 	//params := clusterC.NewV1ClusterProfilesGetParamsWithContext(h.ctx).WithUID(uid)
 	params := clusterC.NewV1ClusterProfilesUIDPacksUIDManifestsParamsWithContext(h.ctx).
-		WithUID(clusterProfileUID).WithPackUID(packUID)
+		WithUID(clusterProfileUID).WithPackName(packName)
 	success, err := client.V1ClusterProfilesUIDPacksUIDManifests(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		// TODO(saamalik) check with team if this is proper?

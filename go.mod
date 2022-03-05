@@ -11,8 +11,8 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.6.1
 	github.com/prometheus/common v0.23.0
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/gomi v1.14.0
-	github.com/spectrocloud/hapi v1.14.1-0.20211221130518-cdf34e97ba47
+	github.com/spectrocloud/gomi v1.14.1-0.20211203081134-89d0a1620fd9
+	github.com/spectrocloud/hapi v1.14.1-0.20220222083813-8693e3f0afbc
 )
 
 //replace github.com/spectrocloud/hapi => ../hapi
