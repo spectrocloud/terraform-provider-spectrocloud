@@ -1,5 +1,5 @@
 resource "spectrocloud_cluster_libvirt" "cluster" {
-  name = "virt-nik"
+  name = "virt-nik-new"
 
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id

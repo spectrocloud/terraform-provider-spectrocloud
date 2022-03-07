@@ -44,12 +44,29 @@ data "spectrocloud_pack" "cni" {
 
 data "spectrocloud_pack" "k8s" {
   name    = "kubernetes"
-  version = "1.18.16"
+  version = "1.21.5"
 }
 
 data "spectrocloud_pack" "ubuntu" {
   name = "ubuntu-vsphere"
   # version  = "1.0.x"
+}
+
+locals {
+  proxy_val = <<-EOT
+        manifests:
+            -manifest:
+                -contents: |
+                    pack:
+                      spectrocloud.com/install-priority: "0"
+                    manifests:
+                      spectro-proxy:
+                        namespace: "cluster-{{ .spectro.system.cluster.uid }}"
+                        server: "{{ .spectro.system.reverseproxy.server }}"
+                        # Cluster UID - DO NOT CHANGE (new3)
+                        clusterUid: "{{ .spectro.system.cluster.uid }}"
+                        subdomain: "cluster-{{ .spectro.system.cluster.uid }}"
+             EOT
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
@@ -68,7 +85,7 @@ resource "spectrocloud_cluster_profile" "profile" {
 
   pack {
     name   = "kubernetes"
-    tag    = "1.18.16"
+    tag    = "1.21.5"
     uid    = data.spectrocloud_pack.k8s.id
     values = data.spectrocloud_pack.k8s.values
   }
@@ -103,5 +120,12 @@ resource "spectrocloud_cluster_profile" "profile" {
       EOT
     }
     #uid    = "spectro-manifest-pack"
+  }
+
+  pack {
+    name   = "spectro-proxy"
+    tag = "1.0.0"
+    uid = "60bd99ce9c10082ed8b314c9"
+    values = local.proxy_val
   }
 }

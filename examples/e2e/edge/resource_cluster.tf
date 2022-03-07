@@ -6,7 +6,7 @@ resource "spectrocloud_cluster_edge" "cluster" {
   }
 
   cloud_config {
-    ssh_key = "spectro2022"
+    ssh_key = "spectro2021"
   }
 
   machine_pool {

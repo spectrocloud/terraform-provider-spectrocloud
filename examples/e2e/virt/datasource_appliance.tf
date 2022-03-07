@@ -1,3 +1,3 @@
 data "spectrocloud_appliance" "virt_appliance" {
-  name = "niklibvirtfeb14"
+  name = "niklibvirtfeb16"
 }
