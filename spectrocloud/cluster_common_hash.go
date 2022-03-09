@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"hash/fnv"
 	"sort"
+	"strings"
 )
 
 func resourceMachinePoolAzureHash(v interface{}) int {
@@ -161,7 +162,10 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
 		buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
 		buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["attached_disks_size_gb"].(int)))
+		disks := strings.Split(ins["attached_disks_size_gb"].(string), ",")
+		for _, disk := range disks {
+			buf.WriteString(fmt.Sprintf("%s-", disk))
+		}
 	}
 
 	return int(hash(buf.String()))
