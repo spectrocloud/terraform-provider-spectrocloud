@@ -24,6 +24,7 @@ const (
 	//UriTemplate    string = "%s:%s"
 	authTokenInput string = "header"
 	authTokenKey   string = "Authorization"
+	authApiKey     string = "ApiKey"
 )
 
 var hubbleUri string
@@ -46,9 +47,10 @@ type V1Client struct {
 	ctx      context.Context
 	email    string
 	password string
+	apikey   string
 }
 
-func New(hubbleHost, email, password, projectUID string) *V1Client {
+func New(hubbleHost, email, password, projectUID string, apikey string) *V1Client {
 	ctx := context.Background()
 	if projectUID != "" {
 		ctx = GetProjectContextWithCtx(ctx, projectUID)
@@ -60,7 +62,7 @@ func New(hubbleHost, email, password, projectUID string) *V1Client {
 	authHttpTransport.RetryAttempts = 0
 	//authHttpTransport.Debug = true
 	AuthClient = authC.New(authHttpTransport, strfmt.Default)
-	return &V1Client{ctx, email, password}
+	return &V1Client{ctx, email, password, apikey}
 }
 
 func (h *V1Client) getNewAuthToken() (*AuthToken, error) {
@@ -120,7 +122,7 @@ func GetProjectContextWithCtx(c context.Context, projectUid string) context.Cont
 }
 
 func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
-	if authToken == nil || authToken.expiry.Before(time.Now()) {
+	if h.apikey == "" && (authToken == nil || authToken.expiry.Before(time.Now())) {
 		if tkn, err := h.getNewAuthToken(); err != nil {
 			log.Error("Failed to get auth token ", err)
 			return nil, err
@@ -130,7 +132,11 @@ func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
 	}
 
 	httpTransport := hapitransport.New(hubbleUri, "", schemes)
-	httpTransport.DefaultAuthentication = openapiclient.APIKeyAuth(authTokenKey, authTokenInput, authToken.token.Authorization)
+	if h.apikey != "" {
+		httpTransport.DefaultAuthentication = openapiclient.APIKeyAuth(authApiKey, authTokenInput, h.apikey)
+	} else {
+		httpTransport.DefaultAuthentication = openapiclient.APIKeyAuth(authTokenKey, authTokenInput, authToken.token.Authorization)
+	}
 	httpTransport.RetryAttempts = 0
 	//httpTransport.Debug = true
 	return httpTransport, nil

@@ -2,9 +2,12 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/hapi/apiutil/transport"
+	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"log"
-	"net/http"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -15,11 +18,11 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-func resourceClusterMaas() *schema.Resource {
+func resourceClusterLibvirt() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceClusterMaasCreate,
-		ReadContext:   resourceClusterMaasRead,
-		UpdateContext: resourceClusterMaasUpdate,
+		CreateContext: resourceClusterVirtCreate,
+		ReadContext:   resourceClusterLibvirtRead,
+		UpdateContext: resourceClusterVirtUpdate,
 		DeleteContext: resourceClusterDelete,
 
 		Timeouts: &schema.ResourceTimeout{
@@ -109,7 +112,11 @@ func resourceClusterMaas() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"domain": {
+						"ssh_key": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"vip": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -119,7 +126,7 @@ func resourceClusterMaas() *schema.Resource {
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Set:      resourceMachinePoolMaasHash,
+				Set:      resourceMachinePoolLibvirtHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"control_plane": {
@@ -144,47 +151,71 @@ func resourceClusterMaas() *schema.Resource {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
+						"update_strategy": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "RollingUpdateScaleOut",
+						},
 						"instance_type": {
 							Type:     schema.TypeList,
 							Required: true,
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"min_memory_mb": {
+									"attached_disks_size_gb": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"cpus_sets": {
+										Type:     schema.TypeInt,
+										Optional: true,
+									},
+									"disk_size_gb": {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
-									"min_cpu": {
+									"memory_mb": {
+										Type:     schema.TypeInt,
+										Required: true,
+									},
+									"cpu": {
 										Type:     schema.TypeInt,
 										Required: true,
 									},
 								},
 							},
 						},
-						"update_strategy": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "RollingUpdateScaleOut",
-						},
-						"azs": {
-							Type:     schema.TypeSet,
-							Required: true,
-							MinItems: 1,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"placement": {
+						"placements": {
 							Type:     schema.TypeList,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"id": {
+									"appliance_id": {
 										Type:     schema.TypeString,
-										Computed: true,
+										Required: true,
 									},
-									"resource_pool": {
+									"network_type": {
+										Type:         schema.TypeString,
+										ValidateFunc: validation.StringInSlice([]string{"default", "bridge"}, false),
+										Required:     true,
+									},
+									"network_names": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"image_storage_pool": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"target_storage_pool": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"data_storage_pool": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"network": {
 										Type:     schema.TypeString,
 										Required: true,
 									},
@@ -194,6 +225,7 @@ func resourceClusterMaas() *schema.Resource {
 					},
 				},
 			},
+
 			"backup_policy": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -262,15 +294,15 @@ func resourceClusterMaas() *schema.Resource {
 	}
 }
 
-func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toMaasCluster(d)
+	cluster := toLibvirtCluster(d)
 
-	uid, err := c.CreateClusterMaas(cluster)
+	uid, err := c.CreateClusterLibvirt(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -292,13 +324,13 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	resourceClusterMaasRead(ctx, d, m)
+	resourceClusterLibvirtRead(ctx, d, m)
 
 	return diags
 }
 
 //goland:noinspection GoUnhandledErrorResult
-func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
@@ -316,7 +348,7 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 
 	// Update the kubeconfig
 	kubeconfig, err := c.GetClusterKubeConfig(uid)
-	if err != nil && err.(*transport.TransportError).HttpCode != http.StatusNotFound {
+	if err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -343,18 +375,15 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 		}
 	}
 
-	return flattenCloudConfigMaas(cluster.Spec.CloudConfigRef.UID, d, c)
+	return flattenCloudConfigLibvirt(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	err := d.Set("cloud_config_id", configUID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if config, err := c.GetCloudConfigMaas(configUID); err != nil {
+func flattenCloudConfigLibvirt(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	d.Set("cloud_config_id", configUID)
+	if config, err := c.GetCloudConfigLibvirt(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig)
+		mp := flattenMachinePoolConfigsLibvirt(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -363,7 +392,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -377,19 +406,50 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
-		oi["count"] = int(machinePool.Size)
+		oi["count"] = machinePool.Size
 		oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		oi["instance_type"] = machinePool.InstanceType
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
-			s["min_memory_mb"] = int(machinePool.InstanceType.MinMemInMB)
-			s["min_cpu"] = int(machinePool.InstanceType.MinCPU)
+			additionalDisks := make([]string, 0)
+
+			if machinePool.NonRootDisksInGB != nil && len(machinePool.NonRootDisksInGB) > 0 {
+				for _, disk := range machinePool.NonRootDisksInGB {
+					additionalDisks = append(additionalDisks, fmt.Sprint(*disk.SizeInGB))
+				}
+			}
+			s["disk_size_gb"] = int(*machinePool.RootDiskInGB)
+			s["memory_mb"] = int(*machinePool.InstanceType.MemoryInMB)
+			s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
+
 			oi["instance_type"] = []interface{}{s}
+			additionalDisksStr := strings.Join(additionalDisks, ",")
+			s["attached_disks_size_gb"] = additionalDisksStr
 		}
 
-		oi["azs"] = machinePool.Azs
-		//oi["resource_pool"] = machinePool.ResourcePool
+		placements := make([]interface{}, len(machinePool.Placements))
+		for j, p := range machinePool.Placements {
+			pj := make(map[string]interface{})
+			pj["appliance_id"] = p.HostUID
+			if p.Networks != nil {
+				for _, network := range p.Networks {
+					pj["network_type"] = network.NetworkType
+					break
+				}
+			}
+			networkNames := make([]string, 0)
+			for _, network := range p.Networks {
+				networkNames = append(networkNames, *network.NetworkName)
+			}
+			networkNamesStr := strings.Join(networkNames, ",")
+
+			pj["network_names"] = networkNamesStr
+			pj["image_storage_pool"] = p.SourceStoragePool
+			pj["target_storage_pool"] = p.TargetStoragePool
+			pj["data_storage_pool"] = p.DataStoragePool
+			placements[j] = pj
+		}
+		oi["placements"] = placements
 
 		ois[i] = oi
 	}
@@ -397,7 +457,7 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 	return ois
 }
 
-func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
@@ -426,17 +486,17 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolMaasHash(machinePoolResource)
+			hash := resourceMachinePoolLibvirtHash(machinePoolResource)
 
-			machinePool := toMachinePoolMaas(machinePoolResource)
+			machinePool := toMachinePoolLibvirt(machinePoolResource)
 
 			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolMaas(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolMaasHash(oldMachinePool) {
+				err = c.CreateMachinePoolLibvirt(cloudConfigId, machinePool)
+			} else if hash != resourceMachinePoolLibvirtHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolMaas(cloudConfigId, machinePool)
+				err = c.UpdateMachinePoolLibvirt(cloudConfigId, machinePool)
 			}
 
 			if err != nil {
@@ -452,15 +512,11 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolMaas(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolLibvirt(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	if d.HasChanges("cluster_profile") {
 		if err := updateProfiles(c, d); err != nil {
@@ -480,38 +536,44 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 		}
 	}
 
-	resourceClusterMaasRead(ctx, d, m)
+	resourceClusterLibvirtRead(ctx, d, m)
 
 	return diags
 }
 
-func toMaasCluster(d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
-	// gnarly, I know! =/
+func toLibvirtCluster(d *schema.ResourceData) *models.V1SpectroLibvirtClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	DomainVal := cloudConfig["domain"].(string)
 
-	cluster := &models.V1SpectroMaasClusterEntity{
+	cluster := &models.V1SpectroLibvirtClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1SpectroMaasClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
-			Policies:        toPolicies(d),
-			CloudConfig: &models.V1MaasClusterConfig{
-				Domain: &DomainVal,
+		Spec: &models.V1SpectroLibvirtClusterEntitySpec{
+			Profiles: toProfiles(d),
+			Policies: toPolicies(d),
+			CloudConfig: &models.V1LibvirtClusterConfig{
+				NtpServers: nil,
+				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
+				ControlPlaneEndpoint: &models.V1LibvirtControlPlaneEndPoint{
+					Host: cloudConfig["vip"].(string),
+					Type: "VIP",
+				},
 			},
 		},
 	}
 
-	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-	machinePoolConfigs := make([]*models.V1MaasMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1LibvirtMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolMaas(machinePool)
+		mp := toMachinePoolLibvirt(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
+
+	// sort
+	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
+		return machinePoolConfigs[i].PoolConfig.IsControlPlane
+	})
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
@@ -519,7 +581,7 @@ func toMaasCluster(d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
 	return cluster
 }
 
-func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigEntity {
+func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -529,22 +591,40 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 		labels = append(labels, "master")
 	}
 
-	azs := make([]string, 0)
-	for _, az := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, az.(string))
+	placements := make([]*models.V1LibvirtPlacementEntity, 0)
+	for _, pos := range m["placements"].([]interface{}) {
+		p := pos.(map[string]interface{})
+		networks := getNetworks(p)
+
+		imageStoragePool := p["image_storage_pool"].(string)
+		targetStoragePool := p["target_storage_pool"].(string)
+		dataStoragePool := p["data_storage_pool"].(string)
+
+		placements = append(placements, &models.V1LibvirtPlacementEntity{
+			Networks:          networks,
+			SourceStoragePool: imageStoragePool,
+			TargetStoragePool: targetStoragePool,
+			DataStoragePool:   dataStoragePool,
+			HostUID:           ptr.StringPtr(p["appliance_id"].(string)),
+		})
+
 	}
 
-	InstanceType := m["instance_type"].([]interface{})[0].(map[string]interface{})
-	Placement := m["placement"].([]interface{})[0].(map[string]interface{})
-	log.Printf("Create machine pool %s", InstanceType)
-	mp := &models.V1MaasMachinePoolConfigEntity{
-		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
-			Azs: azs,
-			InstanceType: &models.V1MaasInstanceType{
-				MinCPU:     int32(InstanceType["min_cpu"].(int)),
-				MinMemInMB: int32(InstanceType["min_memory_mb"].(int)),
-			},
-			ResourcePool: ptr.StringPtr(Placement["resource_pool"].(string)),
+	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
+	instanceType := models.V1LibvirtInstanceType{
+		Cpuset:     strconv.FormatInt(int64(ins["cpus_sets"].(int)), 10),
+		MemoryInMB: ptr.Int32Ptr(int32(ins["memory_mb"].(int))),
+		NumCPUs:    ptr.Int32Ptr(int32(ins["cpu"].(int))),
+	}
+
+	addDisks := getAdditionalDisks(ins)
+
+	mp := &models.V1LibvirtMachinePoolConfigEntity{
+		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{
+			Placements:       placements,
+			RootDiskInGB:     ptr.Int32Ptr(int32(ins["disk_size_gb"].(int))),
+			NonRootDisksInGB: addDisks,
+			InstanceType:     &instanceType,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
@@ -558,4 +638,41 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 		},
 	}
 	return mp
+}
+
+func getAdditionalDisks(ins map[string]interface{}) []*models.V1LibvirtDiskSpec {
+	addDisks := make([]*models.V1LibvirtDiskSpec, 0)
+
+	if ins["attached_disks_size_gb"] != nil {
+		disks := strings.Split(ins["attached_disks_size_gb"].(string), ",")
+		for _, addDisk := range disks {
+			x, err := strconv.ParseInt(strings.TrimSpace(addDisk), 10, 32)
+			if err != nil {
+				return nil
+			}
+			size := int32(x)
+			addDisks = append(addDisks, &models.V1LibvirtDiskSpec{
+				SizeInGB: &size,
+			})
+		}
+	}
+	return addDisks
+}
+
+func getNetworks(p map[string]interface{}) []*models.V1LibvirtNetworkSpec {
+	networkType := ""
+	networks := make([]*models.V1LibvirtNetworkSpec, 0)
+
+	if p["network_names"] != nil {
+		for _, n := range strings.Split(p["network_names"].(string), ",") {
+			networkName := strings.TrimSpace(n)
+			networkType = p["network_type"].(string)
+			network := &models.V1LibvirtNetworkSpec{
+				NetworkName: &networkName,
+				NetworkType: &networkType,
+			}
+			networks = append(networks, network)
+		}
+	}
+	return networks
 }

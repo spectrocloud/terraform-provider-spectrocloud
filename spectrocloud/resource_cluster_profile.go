@@ -70,6 +70,10 @@ func resourceClusterProfile() *schema.Resource {
 							Optional: true,
 							Default:  "spectro",
 						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"uid": {
 							Type:     schema.TypeString,
 							Computed: true,
@@ -312,6 +316,10 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 	pName := p["name"].(string)
 	pTag := p["tag"].(string)
 	pUID := p["uid"].(string)
+	pRegistryUID := ""
+	if p["registry_uid"] != nil {
+		pRegistryUID = p["registry_uid"].(string)
+	}
 	pType := models.V1PackType(p["type"].(string))
 
 	switch pType {
@@ -326,9 +334,10 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 	}
 
 	pack := &models.V1PackManifestEntity{
-		Name: ptr.StringPtr(pName),
-		Tag:  p["tag"].(string),
-		UID:  pUID,
+		Name:        ptr.StringPtr(pName),
+		Tag:         p["tag"].(string),
+		RegistryUID: pRegistryUID,
+		//UID:         pUID,
 		Type: pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),

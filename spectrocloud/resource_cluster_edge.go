@@ -2,9 +2,8 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/hapi/apiutil/transport"
 	"log"
-	"net/http"
+	"sort"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -15,11 +14,11 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-func resourceClusterMaas() *schema.Resource {
+func resourceClusterEdge() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceClusterMaasCreate,
-		ReadContext:   resourceClusterMaasRead,
-		UpdateContext: resourceClusterMaasUpdate,
+		CreateContext: resourceClusterEdgeCreate,
+		ReadContext:   resourceClusterEdgeRead,
+		UpdateContext: resourceClusterEdgeUpdate,
 		DeleteContext: resourceClusterDelete,
 
 		Timeouts: &schema.ResourceTimeout{
@@ -109,7 +108,7 @@ func resourceClusterMaas() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"domain": {
+						"ssh_key": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -119,7 +118,7 @@ func resourceClusterMaas() *schema.Resource {
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Set:      resourceMachinePoolMaasHash,
+				Set:      resourceMachinePoolEdgeHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"control_plane": {
@@ -144,47 +143,17 @@ func resourceClusterMaas() *schema.Resource {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
-						"instance_type": {
-							Type:     schema.TypeList,
-							Required: true,
-							MaxItems: 1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"min_memory_mb": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-									"min_cpu": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-								},
-							},
-						},
 						"update_strategy": {
 							Type:     schema.TypeString,
 							Optional: true,
 							Default:  "RollingUpdateScaleOut",
 						},
-						"azs": {
-							Type:     schema.TypeSet,
-							Required: true,
-							MinItems: 1,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"placement": {
+						"placements": {
 							Type:     schema.TypeList,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"id": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"resource_pool": {
+									"appliance_id": {
 										Type:     schema.TypeString,
 										Required: true,
 									},
@@ -194,6 +163,7 @@ func resourceClusterMaas() *schema.Resource {
 					},
 				},
 			},
+
 			"backup_policy": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -262,15 +232,15 @@ func resourceClusterMaas() *schema.Resource {
 	}
 }
 
-func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterEdgeCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toMaasCluster(d)
+	cluster := toEdgeCluster(d)
 
-	uid, err := c.CreateClusterMaas(cluster)
+	uid, err := c.CreateClusterEdge(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -292,13 +262,13 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	resourceClusterMaasRead(ctx, d, m)
+	resourceClusterEdgeRead(ctx, d, m)
 
 	return diags
 }
 
 //goland:noinspection GoUnhandledErrorResult
-func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterEdgeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
@@ -316,7 +286,7 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 
 	// Update the kubeconfig
 	kubeconfig, err := c.GetClusterKubeConfig(uid)
-	if err != nil && err.(*transport.TransportError).HttpCode != http.StatusNotFound {
+	if err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -343,18 +313,15 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 		}
 	}
 
-	return flattenCloudConfigMaas(cluster.Spec.CloudConfigRef.UID, d, c)
+	return flattenCloudConfigEdge(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	err := d.Set("cloud_config_id", configUID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if config, err := c.GetCloudConfigMaas(configUID); err != nil {
+func flattenCloudConfigEdge(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	d.Set("cloud_config_id", configUID)
+	if config, err := c.GetCloudConfigEdge(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig)
+		mp := flattenMachinePoolConfigsEdge(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -363,7 +330,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsEdge(machinePools []*models.V1EdgeMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -377,19 +344,16 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
-		oi["count"] = int(machinePool.Size)
+		oi["count"] = machinePool.Size
 		oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		oi["instance_type"] = machinePool.InstanceType
 
-		if machinePool.InstanceType != nil {
-			s := make(map[string]interface{})
-			s["min_memory_mb"] = int(machinePool.InstanceType.MinMemInMB)
-			s["min_cpu"] = int(machinePool.InstanceType.MinCPU)
-			oi["instance_type"] = []interface{}{s}
+		placements := make([]interface{}, len(machinePool.Hosts))
+		for j, p := range machinePool.Hosts {
+			pj := make(map[string]interface{})
+			pj["appliance_id"] = p.HostUID
+			placements[j] = pj
 		}
-
-		oi["azs"] = machinePool.Azs
-		//oi["resource_pool"] = machinePool.ResourcePool
+		oi["placements"] = placements
 
 		ois[i] = oi
 	}
@@ -397,7 +361,7 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 	return ois
 }
 
-func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
@@ -426,17 +390,17 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolMaasHash(machinePoolResource)
+			hash := resourceMachinePoolEdgeHash(machinePoolResource)
 
-			machinePool := toMachinePoolMaas(machinePoolResource)
+			machinePool := toMachinePoolEdge(machinePoolResource)
 
 			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolMaas(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolMaasHash(oldMachinePool) {
+				err = c.CreateMachinePoolEdge(cloudConfigId, machinePool)
+			} else if hash != resourceMachinePoolEdgeHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolMaas(cloudConfigId, machinePool)
+				err = c.UpdateMachinePoolEdge(cloudConfigId, machinePool)
 			}
 
 			if err != nil {
@@ -452,15 +416,11 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolMaas(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolEdge(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	if d.HasChanges("cluster_profile") {
 		if err := updateProfiles(c, d); err != nil {
@@ -480,38 +440,39 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 		}
 	}
 
-	resourceClusterMaasRead(ctx, d, m)
+	resourceClusterEdgeRead(ctx, d, m)
 
 	return diags
 }
 
-func toMaasCluster(d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
-	// gnarly, I know! =/
+func toEdgeCluster(d *schema.ResourceData) *models.V1SpectroEdgeClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	DomainVal := cloudConfig["domain"].(string)
 
-	cluster := &models.V1SpectroMaasClusterEntity{
+	cluster := &models.V1SpectroEdgeClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1SpectroMaasClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
-			Policies:        toPolicies(d),
-			CloudConfig: &models.V1MaasClusterConfig{
-				Domain: &DomainVal,
+		Spec: &models.V1SpectroEdgeClusterEntitySpec{
+			Profiles: toProfiles(d),
+			Policies: toPolicies(d),
+			CloudConfig: &models.V1EdgeClusterConfig{
+				SSHKeys: []string{cloudConfig["ssh_key"].(string)},
 			},
 		},
 	}
 
-	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-	machinePoolConfigs := make([]*models.V1MaasMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1EdgeMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolMaas(machinePool)
+		mp := toMachinePoolEdge(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
+
+	// sort
+	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
+		return machinePoolConfigs[i].PoolConfig.IsControlPlane
+	})
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
@@ -519,7 +480,7 @@ func toMaasCluster(d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
 	return cluster
 }
 
-func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigEntity {
+func toMachinePoolEdge(machinePool interface{}) *models.V1EdgeMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -529,22 +490,19 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 		labels = append(labels, "master")
 	}
 
-	azs := make([]string, 0)
-	for _, az := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, az.(string))
+	placements := make([]*models.V1EdgeMachinePoolHostEntity, 0)
+	for _, pos := range m["placements"].([]interface{}) {
+		p := pos.(map[string]interface{})
+
+		placements = append(placements, &models.V1EdgeMachinePoolHostEntity{
+			HostUID: ptr.StringPtr(p["appliance_id"].(string)),
+		})
+
 	}
 
-	InstanceType := m["instance_type"].([]interface{})[0].(map[string]interface{})
-	Placement := m["placement"].([]interface{})[0].(map[string]interface{})
-	log.Printf("Create machine pool %s", InstanceType)
-	mp := &models.V1MaasMachinePoolConfigEntity{
-		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
-			Azs: azs,
-			InstanceType: &models.V1MaasInstanceType{
-				MinCPU:     int32(InstanceType["min_cpu"].(int)),
-				MinMemInMB: int32(InstanceType["min_memory_mb"].(int)),
-			},
-			ResourcePool: ptr.StringPtr(Placement["resource_pool"].(string)),
+	mp := &models.V1EdgeMachinePoolConfigEntity{
+		CloudConfig: &models.V1EdgeMachinePoolCloudConfigEntity{
+			EdgeHosts: placements,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,

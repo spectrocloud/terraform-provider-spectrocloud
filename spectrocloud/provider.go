@@ -22,14 +22,20 @@ func New(_ string) func() *schema.Provider {
 				},
 				"username": &schema.Schema{
 					Type:        schema.TypeString,
-					Required:    true,
+					Optional:    true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_USERNAME", nil),
 				},
 				"password": &schema.Schema{
 					Type:        schema.TypeString,
-					Required:    true,
+					Optional:    true,
 					Sensitive:   true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_PASSWORD", nil),
+				},
+				"api_key": &schema.Schema{
+					Type:        schema.TypeString,
+					Optional:    true,
+					Sensitive:   true,
+					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_APIKEY", nil),
 				},
 				"project_name": &schema.Schema{
 					Type:     schema.TypeString,
@@ -68,6 +74,10 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cluster_vsphere": resourceClusterVsphere(),
 
+				"spectrocloud_cluster_libvirt": resourceClusterLibvirt(),
+
+				"spectrocloud_cluster_edge": resourceClusterEdge(),
+
 				"spectrocloud_cluster_import": resourceClusterImport(),
 
 				"spectrocloud_privatecloudgateway_ippool": resourcePrivateCloudGatewayIpPool(),
@@ -75,6 +85,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_backup_storage_location": resourceBackupStorageLocation(),
 
 				"spectrocloud_registry_oci": resourceRegistryOciEcr(),
+
+				"spectrocloud_appliance": resourceAppliance(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_user":    dataSourceUser(),
@@ -94,7 +106,10 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
 
-				"spectrocloud_registry_oci": dataSourceRegistryOci(),
+				"spectrocloud_registry_helm": dataSourceRegistryHelm(),
+				"spectrocloud_registry_oci":  dataSourceRegistryOci(),
+
+				"spectrocloud_appliance": dataSourceAppliance(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}
@@ -105,8 +120,16 @@ func New(_ string) func() *schema.Provider {
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	host := d.Get("host").(string)
-	username := d.Get("username").(string)
-	password := d.Get("password").(string)
+	username := ""
+	password := ""
+	apiKey := ""
+	if d.Get("username") != nil && d.Get("password") != nil {
+		username = d.Get("username").(string)
+		password = d.Get("password").(string)
+	}
+	if d.Get("api_key") != nil {
+		apiKey = d.Get("api_key").(string)
+	}
 	projectName := d.Get("project_name").(string)
 	ignoreTlsError := d.Get("ignore_insecure_tls_error").(bool)
 
@@ -127,7 +150,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	c := client.New(host, username, password, "")
+	c := client.New(host, username, password, "", apiKey)
 
 	if projectName != "" {
 		uid, err := c.GetProjectUID(projectName)
@@ -135,7 +158,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 			return nil, diag.FromErr(err)
 		}
 
-		c = client.New(host, username, password, uid)
+		c = client.New(host, username, password, uid, apiKey)
 	}
 
 	return c, diags
