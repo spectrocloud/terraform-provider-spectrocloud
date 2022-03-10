@@ -61,17 +61,6 @@ resource "spectrocloud_cluster_eks" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
-  machine_pool {
-    control_plane           = true
-    control_plane_as_worker = true
-    name                    = "master-pool"
-    count                   = 1
-    instance_type           = "t3.large"
-    disk_size_gb            = 62
-    az_subnets = {
-      "us-west-2a" = "subnet-0d4978ddbff16c"
-    }
-  }
 
   machine_pool {
     name          = "worker-basic"

@@ -385,7 +385,6 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 			s := make(map[string]interface{})
 			s["min_memory_mb"] = int(machinePool.InstanceType.MinMemInMB)
 			s["min_cpu"] = int(machinePool.InstanceType.MinCPU)
-
 			oi["instance_type"] = []interface{}{s}
 		}
 
