@@ -132,7 +132,7 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 		packManifests := make(map[string][]string)
 		for _, p := range profile.Spec.Published.Packs {
 			if len(p.Manifests) > 0 {
-				content, err := c.GetClusterProfileManifestPack(d.Id(), p.PackUID)
+				content, err := c.GetClusterProfileManifestPack(d.Id(), *p.Name)
 				if err != nil {
 					return diag.FromErr(err)
 				}

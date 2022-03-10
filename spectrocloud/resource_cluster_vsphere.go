@@ -591,7 +591,7 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereClusterEnt
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroVsphereClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: d.Get("cloud_account_id").(string),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1VsphereClusterConfigEntity{
