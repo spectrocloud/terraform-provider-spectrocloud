@@ -48,7 +48,7 @@ func resourceAppliance() *schema.Resource {
 {"metadata":{"name":"test_id","uid":"test_id","labels":{"name":"test_tag"}}}
 */
 var resourceApplianceCreatePendingStates = []string{
-	"unpaired",
+	"unpaired_", "ready_",
 }
 
 func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -64,7 +64,7 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceApplianceCreatePendingStates,
-		Target:     []string{"ready"},
+		Target:     []string{"ready_healthy"},
 		Refresh:    resourceApplianceStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
@@ -89,7 +89,7 @@ func resourceApplianceStateRefreshFunc(c *client.V1Client, id string) resource.S
 			return nil, "Deleted", nil
 		}
 
-		state := appliance.Status.State
+		state := appliance.Status.State + "_" + appliance.Status.Health.State
 		log.Printf("Appliance state (%s): %s", id, state)
 
 		return appliance, state, nil
@@ -126,7 +126,7 @@ func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 func resourceApplianceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	err := c.DeleteRegistry(d.Id())
+	err := c.DeleteAppliance(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -152,10 +152,34 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 }
 
 func toAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
-	//description := d.Get("description").(string)
-	return &models.V1EdgeHostDevice{
-		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-		},
+
+	if d.Get("labels") != nil {
+		labels := d.Get("labels").(map[string]interface{})
+
+		appliance := SetFields(d, labels)
+
+		return &appliance
 	}
+
+	return &models.V1EdgeHostDevice{}
+
+}
+
+func SetFields(d *schema.ResourceData, labels map[string]interface{}) models.V1EdgeHostDevice {
+	appliance := models.V1EdgeHostDevice{}
+	appliance.Metadata = &models.V1ObjectMeta{}
+	appliance.Metadata.UID = d.Id()
+	if labels["name"] != nil {
+		appliance.Metadata.Name = labels["name"].(string)
+	}
+	appliance.Metadata.Labels = getLabels(labels)
+	return appliance
+}
+
+func getLabels(labels map[string]interface{}) map[string]string {
+	labelsStr := map[string]string{}
+	for k, v := range labels {
+		labelsStr[k] = v.(string)
+	}
+	return labelsStr
 }

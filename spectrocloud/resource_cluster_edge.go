@@ -390,17 +390,17 @@ func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m in
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolAwsHash(machinePoolResource)
+			hash := resourceMachinePoolEdgeHash(machinePoolResource)
 
-			machinePool := toMachinePoolAws(machinePoolResource)
+			machinePool := toMachinePoolEdge(machinePoolResource)
 
 			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
+				err = c.CreateMachinePoolEdge(cloudConfigId, machinePool)
+			} else if hash != resourceMachinePoolEdgeHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
+				err = c.UpdateMachinePoolEdge(cloudConfigId, machinePool)
 			}
 
 			if err != nil {
@@ -416,7 +416,7 @@ func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m in
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAws(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolEdge(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

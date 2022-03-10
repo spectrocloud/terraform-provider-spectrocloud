@@ -79,7 +79,7 @@ func (h *V1Client) DeleteAppliance(uid string) error {
 		return err
 	}
 
-	params := clusterC.NewV1EdgeHostDevicesUIDDeleteParams().WithUID(uid)
+	params := clusterC.NewV1EdgeHostDevicesUIDDeleteParams().WithContext(h.ctx).WithUID(uid)
 	_, err = client.V1EdgeHostDevicesUIDDelete(params)
 	if err != nil {
 		return err
