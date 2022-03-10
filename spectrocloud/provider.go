@@ -68,6 +68,10 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cluster_vsphere": resourceClusterVsphere(),
 
+				"spectrocloud_cluster_libvirt": resourceClusterLibvirt(),
+
+				"spectrocloud_cluster_edge": resourceClusterEdge(),
+
 				"spectrocloud_cluster_import": resourceClusterImport(),
 
 				"spectrocloud_privatecloudgateway_ippool": resourcePrivateCloudGatewayIpPool(),
@@ -75,6 +79,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_backup_storage_location": resourceBackupStorageLocation(),
 
 				"spectrocloud_registry_oci": resourceRegistryOciEcr(),
+
+				"spectrocloud_appliance": resourceAppliance(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_user":    dataSourceUser(),
@@ -94,7 +100,10 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
 
-				"spectrocloud_registry_oci": dataSourceRegistryOci(),
+				"spectrocloud_registry_helm": dataSourceRegistryHelm(),
+				"spectrocloud_registry_oci":  dataSourceRegistryOci(),
+
+				"spectrocloud_appliance": dataSourceAppliance(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}
