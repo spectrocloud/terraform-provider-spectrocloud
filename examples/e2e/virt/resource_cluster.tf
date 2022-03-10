@@ -20,9 +20,9 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
       appliance_id = data.spectrocloud_appliance.virt_appliance.id
       network_type = "bridge"
       network_names = "br0"
-      image_storage_pool = "ehl_images"
-      target_storage_pool = "ehl_images"
-      data_storage_pool = "ehl_data"
+      image_storage_pool = "ubuntu"
+      target_storage_pool = "guest_images"
+      data_storage_pool = "tmp"
       network = "br"
     }
 
@@ -43,9 +43,9 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
       appliance_id = data.spectrocloud_appliance.virt_appliance.id
       network_type = "bridge"
       network_names = "br0"
-      image_storage_pool = "ehl_images"
-      target_storage_pool = "ehl_images"
-      data_storage_pool = "ehl_data"
+      image_storage_pool = "ubuntu"
+      target_storage_pool = "guest_images"
+      data_storage_pool = "tmp"
       network = "br"
     }
 

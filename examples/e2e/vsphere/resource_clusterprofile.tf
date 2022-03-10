@@ -4,29 +4,29 @@
 #   name = var.cluster_cluster_profile_name
 # }
 
-data "spectrocloud_pack" "byom" {
+/*data "spectrocloud_pack" "byom" {
   name = "spectro-byo-manifest"
   # version  = "1.0.x"
-}
+}*/
 
 data "spectrocloud_pack" "csi" {
-  name = "csi-vsphere-volume"
-  # version  = "1.0.x"
+  name = "csi-vsphere-csi"
+  version  = "2.3.0"
 }
 
 data "spectrocloud_pack" "cni" {
   name    = "cni-calico"
-  version = "3.16.0"
+  version = "3.19.0"
 }
 
 data "spectrocloud_pack" "k8s" {
   name    = "kubernetes"
-  version = "1.18.16"
+  version = "1.21.9"
 }
 
 data "spectrocloud_pack" "ubuntu" {
   name = "ubuntu-vsphere"
-  # version  = "1.0.x"
+  version  = "18.04"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
@@ -44,26 +44,26 @@ resource "spectrocloud_cluster_profile" "profile" {
 
   pack {
     name   = "kubernetes"
-    tag    = "1.18.15"
+    tag    = "1.21.9"
     uid    = data.spectrocloud_pack.k8s.id
     values = data.spectrocloud_pack.k8s.values
   }
 
   pack {
     name   = "cni-calico"
-    tag    = "3.16.x"
+    tag    = "3.19.x"
     uid    = data.spectrocloud_pack.cni.id
     values = data.spectrocloud_pack.cni.values
   }
 
   pack {
-    name   = "csi-vsphere-volume"
-    tag    = "1.0.x"
+    name   = "csi-vsphere-csi"
+    tag    = "2.3.x"
     uid    = data.spectrocloud_pack.csi.id
     values = data.spectrocloud_pack.csi.values
   }
 
-  pack {
+/*  pack {
     name   = "spectro-byo-manifest"
     tag    = "1.0.x"
     uid    = data.spectrocloud_pack.byom.id
@@ -80,7 +80,7 @@ resource "spectrocloud_cluster_profile" "profile" {
                 app3: wordpress3
               name: wordpress
     EOT
-  }
+  }*/
 
 
 }
