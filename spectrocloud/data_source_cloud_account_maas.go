@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
@@ -9,16 +10,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func dataSourceCloudAccountAzure() *schema.Resource {
+func dataSourceCloudAccountMaas() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceCloudAccountAzureRead,
+		ReadContext: dataSourceCloudAccountMaasRead,
 
 		Schema: map[string]*schema.Schema{
-			"azure_tenant_id": {
+			"maas_api_endpoint": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"azure_client_id": {
+			"maas_api_key": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -38,18 +39,18 @@ func dataSourceCloudAccountAzure() *schema.Resource {
 	}
 }
 
-func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func dataSourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	accounts, err := c.GetCloudAccountsAzure()
+	accounts, err := c.GetCloudAccountsMaas()
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	var account *models.V1AzureAccount
+	var account *models.V1MaasAccount
 	for _, a := range accounts {
 
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
@@ -64,16 +65,25 @@ func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, 
 	if account == nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  "Unable to find azure cloud account",
-			Detail:   "Unable to find the specified azure cloud account",
+			Summary:  "Unable to find maas cloud account",
+			Detail:   "Unable to find the specified maas cloud account",
 		})
 		return diags
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
-	d.Set("azure_tenant_id", *account.Spec.TenantID)
-	d.Set("azure_client_id", *account.Spec.ClientID)
+	err = d.Set("name", account.Metadata.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("maas_api_endpoint", account.Spec.APIEndpoint)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("maas_api_key", account.Spec.APIKey)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }

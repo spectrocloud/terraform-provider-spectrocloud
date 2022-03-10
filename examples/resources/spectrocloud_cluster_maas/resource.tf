@@ -1,4 +1,4 @@
-data "spectrocloud_cloudaccount_aws" "account" {
+data "spectrocloud_cloudaccount_maas" "account" {
   # id = <uid>
   name = var.cluster_cloud_account_name
 }
@@ -12,14 +12,16 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
-resource "spectrocloud_cluster_eks" "cluster" {
+resource "spectrocloud_cluster_maas" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
-  cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
+  cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
   cloud_config {
-    ssh_key_name = "default"
-    region       = "us-west-2"
+    subscription_id = "subscription-id"
+    resource_group  = "dev"
+    ssh_key         = "ssh key value"
+    region          = "centralus"
   }
 
   cluster_profile {
@@ -61,14 +63,12 @@ resource "spectrocloud_cluster_eks" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
-
   machine_pool {
-    name          = "worker-basic"
-    count         = 1
-    instance_type = "t3.large"
-    az_subnets = {
-      "us-west-2a" = "subnet-0d4978ddbff16c"
-    }
+    name                 = "worker-basic"
+    count                = 1
+    instance_type        = "Standard_DS4"
+    disk_size_gb         = 60
+    is_system_node_pool  = true
+    storage_account_type = "Standard_LRS"
   }
-
 }

@@ -20,8 +20,8 @@ func resourceCloudAccountGcp() *schema.Resource {
 				Required: true,
 			},
 			"gcp_json_credentials": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
 				Sensitive: true,
 			},
 		},
@@ -109,10 +109,10 @@ func toGcpAccount(d *schema.ResourceData) *models.V1GcpAccountEntity {
 	account := &models.V1GcpAccountEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
-			UID : d.Id(),
+			UID:  d.Id(),
 		},
 		Spec: &models.V1GcpAccountEntitySpec{
-			JSONCredentials:        d.Get("gcp_json_credentials").(string),
+			JSONCredentials: d.Get("gcp_json_credentials").(string),
 		},
 	}
 	return account

@@ -109,7 +109,6 @@ func (h *V1Client) GetCloudConfigOpenStack(configUID string) (*models.V1OpenStac
 	return success.Payload, nil
 }
 
-
 func (h *V1Client) UpdateCloudAccountOpenStack(account *models.V1OpenStackAccount) error {
 	client, err := h.getClusterClient()
 	if err != nil {
@@ -152,5 +151,3 @@ func (h *V1Client) GetCloudAccountsOpenStack() ([]*models.V1OpenStackAccount, er
 
 	return accounts, nil
 }
-
-
