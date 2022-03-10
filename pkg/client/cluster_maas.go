@@ -33,6 +33,20 @@ func (h *V1Client) CreateMachinePoolMaas(cloudConfigId string, machinePool *mode
 	return err
 }
 
+func (h *V1Client) UpdateMachinePoolMaas(cloudConfigId string, machinePool *models.V1MaasMachinePoolConfigEntity) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil
+	}
+
+	params := clusterC.NewV1CloudConfigsMaasMachinePoolUpdateParamsWithContext(h.ctx).
+		WithConfigUID(cloudConfigId).
+		WithMachinePoolName(*machinePool.PoolConfig.Name).
+		WithBody(machinePool)
+	_, err = client.V1CloudConfigsMaasMachinePoolUpdate(params)
+	return err
+}
+
 func (h *V1Client) DeleteMachinePoolMaas(cloudConfigId string, machinePoolName string) error {
 	client, err := h.getClusterClient()
 	if err != nil {
@@ -93,7 +107,6 @@ func (h *V1Client) GetCloudAccountMaas(uid string) (*models.V1MaasAccount, error
 	params := clusterC.NewV1CloudAccountsMaasGetParamsWithContext(h.ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsMaasGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -131,7 +144,6 @@ func (h *V1Client) GetCloudConfigMaas(configUID string) (*models.V1MaasCloudConf
 	params := clusterC.NewV1CloudConfigsMaasGetParamsWithContext(h.ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsMaasGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
 		return nil, nil
 	} else if err != nil {
 		return nil, err
