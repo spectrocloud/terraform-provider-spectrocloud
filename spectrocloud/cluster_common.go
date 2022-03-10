@@ -464,9 +464,8 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	if v, found := m["instance_type"]; found {
 		ins := v.([]interface{})[0].(map[string]interface{})
-		buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["min_cpu"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["min_memory_mb"].(int)))
 	}
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 
