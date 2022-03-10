@@ -88,7 +88,6 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	for i, j := range m["az_subnets"].(map[string]interface{}) {
 		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
 	}
-	// TODO
 
 	return int(hash(buf.String()))
 }
