@@ -46,7 +46,7 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
       network       = var.vsphere_network
     }
     instance_type {
-      disk_size_gb = 61
+      disk_size_gb = 40
       memory_mb    = 4096
       cpu          = 2
     }
@@ -54,7 +54,7 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
 
   machine_pool {
     name  = "worker-basic"
-    count = 2
+    count = 1
 
     placement {
       cluster       = var.vsphere_cluster
@@ -63,7 +63,7 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
       network       = var.vsphere_network
     }
     instance_type {
-      disk_size_gb = 65
+      disk_size_gb = 40
       memory_mb    = 8192
       cpu          = 4
     }
