@@ -57,7 +57,7 @@ func resourceClusterProfile() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "add-on",
-				ValidateFunc: validation.StringInSlice([]string{"add-on", "cluster", "infra"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"add-on", "cluster", "infra", "system"}, false),
 				ForceNew:     true,
 			},
 			"pack": {

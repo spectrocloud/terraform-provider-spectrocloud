@@ -33,8 +33,8 @@
 
 
 data "spectrocloud_pack" "csi" {
-  name = "csi-vsphere-volume"
-  # version  = "1.0.x"
+  name = "csi-vsphere-csi"
+  version  = "2.3.0"
 }
 
 data "spectrocloud_pack" "cni" {
@@ -49,7 +49,7 @@ data "spectrocloud_pack" "k8s" {
 
 data "spectrocloud_pack" "ubuntu" {
   name = "ubuntu-vsphere"
-  # version  = "1.0.x"
+  version  = "18.04"
 }
 
 locals {
@@ -98,8 +98,8 @@ resource "spectrocloud_cluster_profile" "profile" {
   }
 
   pack {
-    name   = "csi-vsphere-volume"
-    tag    = "1.0.x"
+    name   = "csi-vsphere-csi"
+    tag    = "2.3.x"
     uid    = data.spectrocloud_pack.csi.id
     values = data.spectrocloud_pack.csi.values
   }
