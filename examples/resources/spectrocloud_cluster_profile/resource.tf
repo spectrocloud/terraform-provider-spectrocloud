@@ -55,18 +55,15 @@ data "spectrocloud_pack" "ubuntu" {
 locals {
   proxy_val = <<-EOT
         manifests:
-            -manifest:
-                -contents: |
-                    pack:
-                      spectrocloud.com/install-priority: "0"
-                    manifests:
-                      spectro-proxy:
-                        namespace: "cluster-{{ .spectro.system.cluster.uid }}"
-                        server: "{{ .spectro.system.reverseproxy.server }}"
-                        # Cluster UID - DO NOT CHANGE (new3)
-                        clusterUid: "{{ .spectro.system.cluster.uid }}"
-                        subdomain: "cluster-{{ .spectro.system.cluster.uid }}"
-             EOT
+          spectro-proxy:
+            namespace: "cluster-{{ .spectro.system.cluster.uid }}"
+
+            server: "{{ .spectro.system.reverseproxy.server }}"
+
+            # Cluster UID - DO NOT CHANGE (new3)
+            clusterUid: "{{ .spectro.system.cluster.uid }}"
+            subdomain: "cluster-{{ .spectro.system.cluster.uid }}"
+  EOT
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
