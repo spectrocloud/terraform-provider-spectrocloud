@@ -106,6 +106,7 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
 
+				"spectrocloud_registry_pack": dataSourceRegistryPack(),
 				"spectrocloud_registry_helm": dataSourceRegistryHelm(),
 				"spectrocloud_registry_oci":  dataSourceRegistryOci(),
 
@@ -136,7 +137,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if (username == "") || (password == "") {
+	if (apiKey == "") && ((username == "") || (password == "")) {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  "Unable to create Spectro Cloud client",

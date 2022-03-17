@@ -8,9 +8,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func dataSourceRegistryHelm() *schema.Resource {
+func dataSourceRegistryPack() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceRegistryHelmRead,
+		ReadContext: dataSourceRegistryPackRead,
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -27,11 +27,11 @@ func dataSourceRegistryHelm() *schema.Resource {
 	}
 }
 
-func dataSourceRegistryHelmRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func dataSourceRegistryPackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if v, ok := d.GetOk("name"); ok {
-		registry, err := c.GetHelmRegistryByName(v.(string))
+		registry, err := c.GetPackRegistryByName(v.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}
