@@ -72,7 +72,7 @@ resource "spectrocloud_cluster_openstack" "cluster" {
     project     = var.project
     region      = var.region
     ssh_key     = var.sshkey
-    dns_servers = ["10.10128.8", "8.8.8.8"]
+    dns_servers = ["10.10.128.8", "8.8.8.8"]
     subnet_cidr = var.subnet_cidr
   }
 
