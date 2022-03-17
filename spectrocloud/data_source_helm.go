@@ -31,7 +31,7 @@ func dataSourceRegistryHelmRead(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if v, ok := d.GetOk("name"); ok {
-		registry, err := c.GetRegistryHelmByName(v.(string))
+		registry, err := c.GetHelmRegistryByName(v.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}

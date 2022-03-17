@@ -31,7 +31,7 @@ func dataSourceRegistryOciRead(_ context.Context, d *schema.ResourceData, m inte
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if v, ok := d.GetOk("name"); ok {
-		registry, err := c.GetRegistryOciByName(v.(string))
+		registry, err := c.GetOciRegistryByName(v.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}

@@ -31,7 +31,7 @@ func dataSourceRegistryPackRead(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if v, ok := d.GetOk("name"); ok {
-		registry, err := c.GetRegistryPackByName(v.(string))
+		registry, err := c.GetPackRegistryByName(v.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}

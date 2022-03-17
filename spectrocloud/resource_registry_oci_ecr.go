@@ -92,7 +92,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
-	registry, err := c.GetRegistryOci(d.Id())
+	registry, err := c.GetOciRegistry(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	} else if registry == nil {

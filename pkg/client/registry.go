@@ -6,7 +6,7 @@ import (
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 )
 
-func (h *V1Client) GetRegistryPackByName(registryName string) (*models.V1PackRegistry, error) {
+func (h *V1Client) GetPackRegistryByName(registryName string) (*models.V1PackRegistry, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (h *V1Client) GetRegistryPackByName(registryName string) (*models.V1PackReg
 	return nil, fmt.Errorf("Registry '%s' not found.", registryName)
 }
 
-func (h *V1Client) GetRegistryHelmByName(registryName string) (*models.V1HelmRegistry, error) {
+func (h *V1Client) GetHelmRegistryByName(registryName string) (*models.V1HelmRegistry, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (h *V1Client) GetRegistryHelmByName(registryName string) (*models.V1HelmReg
 	return nil, fmt.Errorf("Registry '%s' not found.", registryName)
 }
 
-func (h *V1Client) GetRegistryOciByName(registryName string) (*models.V1OciRegistry, error) {
+func (h *V1Client) GetOciRegistryByName(registryName string) (*models.V1OciRegistry, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (h *V1Client) GetRegistryOciByName(registryName string) (*models.V1OciRegis
 	return nil, fmt.Errorf("Registry '%s' not found.", registryName)
 }
 
-func (h *V1Client) GetRegistryOci(uid string) (*models.V1EcrRegistry, error) {
+func (h *V1Client) GetOciRegistry(uid string) (*models.V1EcrRegistry, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil, err
