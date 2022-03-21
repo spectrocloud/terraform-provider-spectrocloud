@@ -40,6 +40,11 @@ func resourceAppliance() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"wait": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				ForceNew: true,
+			},
 		},
 	}
 }
@@ -62,19 +67,21 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 	}
 	d.SetId(uid)
 
-	stateConf := &resource.StateChangeConf{
-		Pending:    resourceApplianceCreatePendingStates,
-		Target:     []string{"ready_healthy"},
-		Refresh:    resourceApplianceStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
-	}
-
 	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
+	if d.Get("wait") != nil && d.Get("wait").(bool) {
+		stateConf := &resource.StateChangeConf{
+			Pending:    resourceApplianceCreatePendingStates,
+			Target:     []string{"ready_healthy"},
+			Refresh:    resourceApplianceStateRefreshFunc(c, d.Id()),
+			Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
+			MinTimeout: 10 * time.Second,
+			Delay:      30 * time.Second,
+		}
+
+		_, err = stateConf.WaitForStateContext(ctx)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return diags
