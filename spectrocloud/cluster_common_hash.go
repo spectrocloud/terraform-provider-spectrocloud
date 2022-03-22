@@ -81,6 +81,12 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	if m["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
+	}
+	if m["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
+	}
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))

@@ -154,6 +154,8 @@ Required:
 
 Optional:
 
+- **min** (Number) Minimum number of nodes. Set to **count** by default.
+- **max** (Number) Maximum number of nodes. Set to **count** by default.
 - **az_subnets** (Map of String)
 - **azs** (List of String)
 

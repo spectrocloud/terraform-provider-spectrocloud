@@ -244,6 +244,14 @@ func resourceClusterEks() *schema.Resource {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
+						"min": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"max": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
 						"instance_type": {
 							Type:     schema.TypeString,
 							Required: true,
@@ -589,6 +597,8 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
+		oi["min"] = int(machinePool.MinSize)
+		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
 		if machinePool.CapacityType != nil {
 			oi["capacity_type"] = machinePool.CapacityType
@@ -925,6 +935,17 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		additionalLabels = expandStringMap(m["additional_labels"].(map[string]interface{}))
 	}
 
+	min := int32(m["count"].(int))
+	max := int32(m["count"].(int))
+
+	if m["min"] != nil {
+		min = int32(m["min"].(int))
+	}
+
+	if m["max"] != nil {
+		max = int32(m["max"].(int))
+	}
+
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
@@ -940,8 +961,8 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			Labels:           labels,
 			Name:             ptr.StringPtr(m["name"].(string)),
 			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
-			MinSize:          int32(m["count"].(int)),
-			MaxSize:          int32(m["count"].(int)),
+			MinSize:          min,
+			MaxSize:          max,
 		},
 	}
 
