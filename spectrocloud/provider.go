@@ -124,6 +124,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	username := ""
 	password := ""
 	apiKey := ""
+	transportDebug := false
+
+	if d.Get("transport_debug") != nil {
+		transportDebug = d.Get("transport_debug").(bool)
+	}
+
 	if d.Get("username") != nil && d.Get("password") != nil {
 		username = d.Get("username").(string)
 		password = d.Get("password").(string)
@@ -151,7 +157,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	c := client.New(host, username, password, "", apiKey)
+	c := client.New(host, username, password, "", apiKey, transportDebug)
 
 	if projectName != "" {
 		uid, err := c.GetProjectUID(projectName)
@@ -159,7 +165,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 			return nil, diag.FromErr(err)
 		}
 
-		c = client.New(host, username, password, uid, apiKey)
+		c = client.New(host, username, password, uid, apiKey, transportDebug)
 	}
 
 	return c, diags

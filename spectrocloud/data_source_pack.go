@@ -51,6 +51,11 @@ func dataSourcePack() *schema.Resource {
 				Computed: true,
 				Optional: true,
 			},
+			"type": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Optional: true,
+			},
 			"values": {
 				Type:     schema.TypeString,
 				Computed: true,

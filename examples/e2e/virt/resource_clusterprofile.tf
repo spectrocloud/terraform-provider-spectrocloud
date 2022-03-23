@@ -1,5 +1,5 @@
 data "spectrocloud_cluster_profile" "profile" {
-   name = "libvirt"
+   name = "bm-gpu-full"
 }
 
 output "same" {

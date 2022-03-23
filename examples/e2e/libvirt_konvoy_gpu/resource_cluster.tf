@@ -2,12 +2,12 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
   name = "virt-nik"
 
   cluster_profile {
-    id = data.spectrocloud_cluster_profile.profile.id
+    id = resource.spectrocloud_cluster_profile.profile.id
   }
 
   cloud_config {
     ssh_key = "spectro2022"
-    vip = "192.168.100.15"
+    vip = "10.11.130.19"
   }
 
   machine_pool {
