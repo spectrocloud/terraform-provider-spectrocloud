@@ -65,6 +65,12 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
+	if v, ok := d.GetOk("type"); ok {
+		if v.(string) == "manifest" {
+			return diags
+		}
+	}
+
 	filters := make([]string, 0)
 	registryUID := ""
 	if v, ok := d.GetOk("filters"); ok {
