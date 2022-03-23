@@ -37,6 +37,11 @@ func New(_ string) func() *schema.Provider {
 					Sensitive:   true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_APIKEY", nil),
 				},
+				"transport_debug": &schema.Schema{
+					Type:        schema.TypeBool,
+					Optional:    true,
+					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_TRANSPORT_DEBUG", nil),
+				},
 				"project_name": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
