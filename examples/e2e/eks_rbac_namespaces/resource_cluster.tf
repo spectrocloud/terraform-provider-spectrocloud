@@ -70,6 +70,8 @@ resource "spectrocloud_cluster_eks" "cluster" {
   machine_pool {
     name          = "worker-basic"
     count         = 1
+    min           = 1
+    max           = 3
     instance_type = "t3.large"
     az_subnets    = var.worker_azs_subnets_map
     disk_size_gb  = 30
