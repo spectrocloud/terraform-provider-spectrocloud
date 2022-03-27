@@ -1,6 +1,7 @@
 resource "spectrocloud_appliance" "appliance" {
-  uid = "niklibvirtfeb16"
+  uid = "nik-libvirt15-mar-20"
   labels = {
-    "name" = "nik_name_upd"
+    "name" = "nik_appliance_name"
   }
+  wait = true
 }

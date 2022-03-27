@@ -38,6 +38,11 @@ func resourceClusterLibvirt() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"wait_for_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default: true,
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -60,6 +65,11 @@ func resourceClusterLibvirt() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "spectro",
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -71,6 +81,29 @@ func resourceClusterLibvirt() *schema.Resource {
 									"values": {
 										Type:     schema.TypeString,
 										Required: true,
+									},
+									"manifest": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"content": {
+													Type:     schema.TypeString,
+													Required: true,
+													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+														// UI strips the trailing newline on save
+														if strings.TrimSpace(old) == strings.TrimSpace(new) {
+															return true
+														}
+														return false
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -308,6 +341,10 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	d.SetId(uid)
+
+	if !d.Get("wait_for_completion").(bool){
+		return diags
+	}
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
