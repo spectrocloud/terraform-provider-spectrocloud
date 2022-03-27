@@ -33,6 +33,17 @@ func toTags(d *schema.ResourceData) map[string]string {
 	return tags
 }
 
+func toNtpServers(in map[string]interface{}) []string {
+	servers := make([]string, 0, 1)
+	if _, ok := in["ntp_servers"]; ok {
+		for _, t := range in["ntp_servers"].(*schema.Set).List() {
+			ntp := t.(string)
+			servers = append(servers, ntp)
+		}
+	}
+	return servers
+}
+
 func flattenTags(labels map[string]string) []interface{} {
 	tags := make([]interface{}, 0)
 	if len(labels) > 0 {
