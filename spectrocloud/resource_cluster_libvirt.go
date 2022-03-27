@@ -38,6 +38,11 @@ func resourceClusterLibvirt() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"wait_for_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default: true,
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -336,6 +341,10 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	d.SetId(uid)
+
+	if !d.Get("wait_for_completion").(bool){
+		return diags
+	}
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
