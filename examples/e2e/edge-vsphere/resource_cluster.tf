@@ -1,7 +1,7 @@
 resource "spectrocloud_cluster_edge_vsphere" "cluster" {
   name = "nikwithcred-mar25"
 
-  edge_host_uid = "nik-withcreds-mar25"
+  edge_host_uid = data.spectrocloud_appliance.virt_appliance.name
 
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id
