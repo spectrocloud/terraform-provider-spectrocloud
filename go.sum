@@ -740,6 +740,10 @@ github.com/spectrocloud/gomi v1.14.1-0.20211203081134-89d0a1620fd9 h1:0fHhTE9a+v
 github.com/spectrocloud/gomi v1.14.1-0.20211203081134-89d0a1620fd9/go.mod h1:AtulJf3ryKRaI6gjMNt0vfz1fbuu7MolXK/rBS5XTBU=
 github.com/spectrocloud/hapi v1.14.1-0.20220315085808-c28eca5ef1d9 h1:0cJGAqBLcpRk6PVrX/eMYV0Od+UmyfOMLyHZyc4fofA=
 github.com/spectrocloud/hapi v1.14.1-0.20220315085808-c28eca5ef1d9/go.mod h1:rDz4cJGZylomt9DjCzyHaBpEcHajCyj/V2X5BkJB8kU=
+github.com/spectrocloud/hapi v1.14.1-0.20220325143208-2194e1f4c895 h1:vWksqClSRmuHfcN939ChWEXWWmbKzSBBNOp/Xr5OkIk=
+github.com/spectrocloud/hapi v1.14.1-0.20220325143208-2194e1f4c895/go.mod h1:rDz4cJGZylomt9DjCzyHaBpEcHajCyj/V2X5BkJB8kU=
+github.com/spectrocloud/hapi v1.14.1-0.20220326090351-4f2d1c58bfde h1:qOH9q4maNQ1Ocl35macvoQ0GfO/5KTjeAhQfQwI54qI=
+github.com/spectrocloud/hapi v1.14.1-0.20220326090351-4f2d1c58bfde/go.mod h1:rDz4cJGZylomt9DjCzyHaBpEcHajCyj/V2X5BkJB8kU=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
 github.com/spf13/cast v1.2.0/go.mod h1:r2rcYCSwa1IExKTDiTfzaxqT2FNHs8hODu4LnUfgKEg=
