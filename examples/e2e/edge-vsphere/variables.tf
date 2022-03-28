@@ -3,6 +3,7 @@ variable "cluster_ssh_key_name" {
   default = "spectro2022"
 }
 
+variable "cluster_ssh_public_key" {}
 variable "cluster_network_search" {}
 
 variable "vsphere_datacenter" {}
