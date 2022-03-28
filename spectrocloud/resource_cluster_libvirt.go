@@ -152,6 +152,14 @@ func resourceClusterLibvirt() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"ntp_servers": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
 					},
 				},
 			},
@@ -340,6 +348,10 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	d.SetId(uid)
+
+	if _, found := toTags(d)["skip_completion"]; found {
+		return diags
+	}
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
@@ -586,7 +598,7 @@ func toLibvirtCluster(d *schema.ResourceData) *models.V1SpectroLibvirtClusterEnt
 			Profiles: toProfiles(d),
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1LibvirtClusterConfig{
-				NtpServers: nil,
+				NtpServers: toNtpServers(cloudConfig),
 				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
 				ControlPlaneEndpoint: &models.V1LibvirtControlPlaneEndPoint{
 					Host: cloudConfig["vip"].(string),
