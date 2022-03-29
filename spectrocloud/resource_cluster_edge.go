@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -56,6 +57,11 @@ func resourceClusterEdge() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "spectro",
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -67,6 +73,29 @@ func resourceClusterEdge() *schema.Resource {
 									"values": {
 										Type:     schema.TypeString,
 										Required: true,
+									},
+									"manifest": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"content": {
+													Type:     schema.TypeString,
+													Required: true,
+													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+														// UI strips the trailing newline on save
+														if strings.TrimSpace(old) == strings.TrimSpace(new) {
+															return true
+														}
+														return false
+													},
+												},
+											},
+										},
 									},
 								},
 							},

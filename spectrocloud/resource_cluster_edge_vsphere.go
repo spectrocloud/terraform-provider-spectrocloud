@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -61,6 +62,11 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "spectro",
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -72,6 +78,29 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 									"values": {
 										Type:     schema.TypeString,
 										Required: true,
+									},
+									"manifest": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"content": {
+													Type:     schema.TypeString,
+													Required: true,
+													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+														// UI strips the trailing newline on save
+														if strings.TrimSpace(old) == strings.TrimSpace(new) {
+															return true
+														}
+														return false
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -115,7 +144,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 
 						"ssh_key": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 						},
 
 						"vip": {
@@ -552,12 +581,17 @@ func toEdgeVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereCluste
 
 	staticIP := cloudConfig["static_ip"].(bool)
 	vip := cloudConfig["vip"].(string)
+	sshKey := ""
+	if cloudConfig["ssh_key"] != nil {
+		sshKey = cloudConfig["ssh_key"].(string)
+	}
 	cluster := &models.V1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
+
 		Spec: &models.V1SpectroVsphereClusterEntitySpec{
 			EdgeHostUID: d.Get("edge_host_uid").(string),
 
@@ -569,7 +603,7 @@ func toEdgeVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereCluste
 					Datacenter: cloudConfig["datacenter"].(string),
 					Folder:     cloudConfig["folder"].(string),
 				},
-				SSHKeys:  []string{cloudConfig["ssh_key"].(string)},
+				SSHKeys:  []string{sshKey},
 				StaticIP: staticIP,
 			},
 		},
