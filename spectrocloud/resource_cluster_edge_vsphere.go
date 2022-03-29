@@ -2,12 +2,8 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"log"
 	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -18,22 +14,26 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-func resourceClusterLibvirt() *schema.Resource {
+func resourceClusterEdgeVsphere() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceClusterVirtCreate,
-		ReadContext:   resourceClusterLibvirtRead,
-		UpdateContext: resourceClusterVirtUpdate,
+		CreateContext: resourceClusterEdgeVsphereCreate,
+		ReadContext:   resourceClusterEdgeVsphereRead,
+		UpdateContext: resourceClusterEdgeVsphereUpdate,
 		DeleteContext: resourceClusterDelete,
 
 		Timeouts: &schema.ResourceTimeout{
-			Create: schema.DefaultTimeout(60 * time.Minute),
-			Update: schema.DefaultTimeout(60 * time.Minute),
-			Delete: schema.DefaultTimeout(60 * time.Minute),
+			Create: schema.DefaultTimeout(180 * time.Minute),
+			Update: schema.DefaultTimeout(180 * time.Minute),
+			Delete: schema.DefaultTimeout(180 * time.Minute),
 		},
 
-		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"edge_host_uid": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -47,28 +47,20 @@ func resourceClusterLibvirt() *schema.Resource {
 				},
 			},
 			"cluster_profile": {
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"pack"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"type": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
 						"pack": {
 							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"type": {
-										Type:     schema.TypeString,
-										Optional: true,
-										Default:  "spectro",
-									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -81,43 +73,11 @@ func resourceClusterLibvirt() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									"manifest": {
-										Type:     schema.TypeList,
-										Optional: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"name": {
-													Type:     schema.TypeString,
-													Required: true,
-												},
-												"content": {
-													Type:     schema.TypeString,
-													Required: true,
-													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-														// UI strips the trailing newline on save
-														if strings.TrimSpace(old) == strings.TrimSpace(new) {
-															return true
-														}
-														return false
-													},
-												},
-											},
-										},
-									},
 								},
 							},
 						},
 					},
 				},
-			},
-			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-			"cloud_config_id": {
-				Type:     schema.TypeString,
-				Computed: true,
 			},
 			"os_patch_on_boot": {
 				Type:     schema.TypeBool,
@@ -144,21 +104,58 @@ func resourceClusterLibvirt() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"datacenter": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"folder": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+
 						"ssh_key": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+
 						"vip": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"ntp_servers": {
-							Type:     schema.TypeSet,
+
+						"static_ip": {
+							Type:     schema.TypeBool,
 							Optional: true,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
+							Default:  false,
+						},
+
+						"network_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"network_search_domain": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+			"pack": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Required: true,
 						},
 					},
 				},
@@ -166,26 +163,22 @@ func resourceClusterLibvirt() *schema.Resource {
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Set:      resourceMachinePoolLibvirtHash,
+				Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"control_plane": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-							//ForceNew: true,
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-
-							//ForceNew: true,
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
-							//ForceNew: true,
 						},
 						"count": {
 							Type:     schema.TypeInt,
@@ -202,14 +195,6 @@ func resourceClusterLibvirt() *schema.Resource {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"attached_disks_size_gb": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"cpus_sets": {
-										Type:     schema.TypeInt,
-										Optional: true,
-									},
 									"disk_size_gb": {
 										Type:     schema.TypeInt,
 										Required: true,
@@ -225,33 +210,24 @@ func resourceClusterLibvirt() *schema.Resource {
 								},
 							},
 						},
-						"placements": {
+						"placement": {
 							Type:     schema.TypeList,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"appliance_id": {
+									"id": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"cluster": {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									"network_type": {
-										Type:         schema.TypeString,
-										ValidateFunc: validation.StringInSlice([]string{"default", "bridge"}, false),
-										Required:     true,
-									},
-									"network_names": {
+									"resource_pool": {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									"image_storage_pool": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"target_storage_pool": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"data_storage_pool": {
+									"datastore": {
 										Type:     schema.TypeString,
 										Required: true,
 									},
@@ -259,13 +235,16 @@ func resourceClusterLibvirt() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
+									"static_ip_pool_id": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-
 			"backup_policy": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -334,24 +313,19 @@ func resourceClusterLibvirt() *schema.Resource {
 	}
 }
 
-func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
-	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toLibvirtCluster(d)
+	cluster := toEdgeVsphereCluster(d)
 
-	uid, err := c.CreateClusterLibvirt(cluster)
+	uid, err := c.CreateClusterEdgeVsphere(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	d.SetId(uid)
-
-	if _, found := toTags(d)["skip_completion"]; found {
-		return diags
-	}
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
@@ -362,44 +336,40 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 		Delay:      30 * time.Second,
 	}
 
-	// Wait, catching any errors
 	_, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	resourceClusterLibvirtRead(ctx, d, m)
+	resourceClusterEdgeVsphereRead(ctx, d, m)
 
 	return diags
 }
 
-//goland:noinspection GoUnhandledErrorResult
-func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterEdgeVsphereRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	//
+
 	uid := d.Id()
-	//
+
 	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
-		// Deleted - Terraform will recreate it
 		d.SetId("")
 		return diags
-	}
-
-	// Update the kubeconfig
-	kubeconfig, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
 	}
 
 	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("kubeconfig", kubeconfig); err != nil {
+
+	kubecfg, err := c.GetClusterKubeConfig(uid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("kubeconfig", kubecfg); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -419,15 +389,15 @@ func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m int
 		}
 	}
 
-	return flattenCloudConfigLibvirt(cluster.Spec.CloudConfigRef.UID, d, c)
+	return flattenCloudConfigEdgeVsphere(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenCloudConfigLibvirt(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+func flattenCloudConfigEdgeVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	d.Set("cloud_config_id", configUID)
-	if config, err := c.GetCloudConfigLibvirt(configUID); err != nil {
+	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		mp := flattenMachinePoolConfigsLibvirt(config.Spec.MachinePoolConfig)
+		mp := flattenMachinePoolConfigsEdgeVsphere(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -436,7 +406,7 @@ func flattenCloudConfigLibvirt(configUID string, d *schema.ResourceData, c *clie
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -455,45 +425,31 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
-			additionalDisks := make([]string, 0)
-
-			if machinePool.NonRootDisksInGB != nil && len(machinePool.NonRootDisksInGB) > 0 {
-				for _, disk := range machinePool.NonRootDisksInGB {
-					additionalDisks = append(additionalDisks, fmt.Sprint(*disk.SizeInGB))
-				}
-			}
-			s["disk_size_gb"] = int(*machinePool.RootDiskInGB)
-			s["memory_mb"] = int(*machinePool.InstanceType.MemoryInMB)
+			s["disk_size_gb"] = int(*machinePool.InstanceType.DiskGiB)
+			s["memory_mb"] = int(*machinePool.InstanceType.MemoryMiB)
 			s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
 
 			oi["instance_type"] = []interface{}{s}
-			additionalDisksStr := strings.Join(additionalDisks, ",")
-			s["attached_disks_size_gb"] = additionalDisksStr
 		}
 
 		placements := make([]interface{}, len(machinePool.Placements))
 		for j, p := range machinePool.Placements {
 			pj := make(map[string]interface{})
-			pj["appliance_id"] = p.HostUID
-			if p.Networks != nil {
-				for _, network := range p.Networks {
-					pj["network_type"] = network.NetworkType
-					break
-				}
-			}
-			networkNames := make([]string, 0)
-			for _, network := range p.Networks {
-				networkNames = append(networkNames, *network.NetworkName)
-			}
-			networkNamesStr := strings.Join(networkNames, ",")
+			pj["id"] = p.UID
+			pj["cluster"] = p.Cluster
+			pj["resource_pool"] = p.ResourcePool
+			pj["datastore"] = p.Datastore
+			pj["network"] = p.Network.NetworkName
 
-			pj["network_names"] = networkNamesStr
-			pj["image_storage_pool"] = p.SourceStoragePool
-			pj["target_storage_pool"] = p.TargetStoragePool
-			pj["data_storage_pool"] = p.DataStoragePool
+			poolID := ""
+			if p.Network.ParentPoolRef != nil {
+				poolID = p.Network.ParentPoolRef.UID
+			}
+			pj["static_ip_pool_id"] = poolID
+
 			placements[j] = pj
 		}
-		oi["placements"] = placements
+		oi["placement"] = placements
 
 		ois[i] = oi
 	}
@@ -501,10 +457,9 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 	return ois
 }
 
-func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
-	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
@@ -530,33 +485,40 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolLibvirtHash(machinePoolResource)
+			hash := resourceMachinePoolVsphereHash(machinePoolResource)
 
-			machinePool := toMachinePoolLibvirt(machinePoolResource)
+			machinePool := toMachinePoolEdgeVsphere(machinePoolResource)
 
 			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolLibvirt(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolLibvirtHash(oldMachinePool) {
+				err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
+			} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolLibvirt(cloudConfigId, machinePool)
+				oldMachinePool := toMachinePoolEdgeVsphere(oldMachinePool)
+				oldPlacements := oldMachinePool.CloudConfig.Placements
+
+				for i, p := range machinePool.CloudConfig.Placements {
+					if len(oldPlacements) > i {
+						p.UID = oldPlacements[i].UID
+					}
+				}
+
+				err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
 			}
 
 			if err != nil {
 				return diag.FromErr(err)
 			}
 
-			// Processed (if exists)
 			delete(osMap, name)
 		}
 
-		// Deleted old machine pools
 		for _, mp := range osMap {
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolLibvirt(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -580,41 +542,50 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 		}
 	}
 
-	resourceClusterLibvirtRead(ctx, d, m)
+	resourceClusterEdgeVsphereRead(ctx, d, m)
 
 	return diags
 }
 
-func toLibvirtCluster(d *schema.ResourceData) *models.V1SpectroLibvirtClusterEntity {
+func toEdgeVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
-	cluster := &models.V1SpectroLibvirtClusterEntity{
+	staticIP := cloudConfig["static_ip"].(bool)
+	vip := cloudConfig["vip"].(string)
+	cluster := &models.V1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1SpectroLibvirtClusterEntitySpec{
+		Spec: &models.V1SpectroVsphereClusterEntitySpec{
+			EdgeHostUID: d.Get("edge_host_uid").(string),
+
 			Profiles: toProfiles(d),
 			Policies: toPolicies(d),
-			CloudConfig: &models.V1LibvirtClusterConfig{
-				NtpServers: toNtpServers(cloudConfig),
-				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
-				ControlPlaneEndpoint: &models.V1LibvirtControlPlaneEndPoint{
-					Host: cloudConfig["vip"].(string),
-					Type: "VIP",
+			CloudConfig: &models.V1VsphereClusterConfigEntity{
+				NtpServers: nil,
+				Placement: &models.V1VspherePlacementConfigEntity{
+					Datacenter: cloudConfig["datacenter"].(string),
+					Folder:     cloudConfig["folder"].(string),
 				},
+				SSHKeys:  []string{cloudConfig["ssh_key"].(string)},
+				StaticIP: staticIP,
 			},
 		},
 	}
 
-	machinePoolConfigs := make([]*models.V1LibvirtMachinePoolConfigEntity, 0)
+	cluster.Spec.CloudConfig.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
+		Host: vip,
+		Type: cloudConfig["network_type"].(string),
+	}
+
+	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolLibvirt(machinePool)
+		mp := toMachinePoolEdgeVsphere(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
-	// sort
 	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
 		return machinePoolConfigs[i].PoolConfig.IsControlPlane
 	})
@@ -625,7 +596,7 @@ func toLibvirtCluster(d *schema.ResourceData) *models.V1SpectroLibvirtClusterEnt
 	return cluster
 }
 
-func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolConfigEntity {
+func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -635,40 +606,40 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 		labels = append(labels, "master")
 	}
 
-	placements := make([]*models.V1LibvirtPlacementEntity, 0)
-	for _, pos := range m["placements"].([]interface{}) {
+	placements := make([]*models.V1VspherePlacementConfigEntity, 0)
+	for _, pos := range m["placement"].([]interface{}) {
 		p := pos.(map[string]interface{})
-		networks := getNetworks(p)
+		poolID := p["static_ip_pool_id"].(string)
+		staticIP := false
+		if len(poolID) > 0 {
+			staticIP = true
+		}
 
-		imageStoragePool := p["image_storage_pool"].(string)
-		targetStoragePool := p["target_storage_pool"].(string)
-		dataStoragePool := p["data_storage_pool"].(string)
-
-		placements = append(placements, &models.V1LibvirtPlacementEntity{
-			Networks:          networks,
-			SourceStoragePool: imageStoragePool,
-			TargetStoragePool: targetStoragePool,
-			DataStoragePool:   dataStoragePool,
-			HostUID:           ptr.StringPtr(p["appliance_id"].(string)),
+		placements = append(placements, &models.V1VspherePlacementConfigEntity{
+			UID:          p["id"].(string),
+			Cluster:      p["cluster"].(string),
+			ResourcePool: p["resource_pool"].(string),
+			Datastore:    p["datastore"].(string),
+			Network: &models.V1VsphereNetworkConfigEntity{
+				NetworkName:   ptr.StringPtr(p["network"].(string)),
+				ParentPoolUID: poolID,
+				StaticIP:      staticIP,
+			},
 		})
 
 	}
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
-	instanceType := models.V1LibvirtInstanceType{
-		Cpuset:     strconv.FormatInt(int64(ins["cpus_sets"].(int)), 10),
-		MemoryInMB: ptr.Int32Ptr(int32(ins["memory_mb"].(int))),
-		NumCPUs:    ptr.Int32Ptr(int32(ins["cpu"].(int))),
+	instanceType := models.V1VsphereInstanceType{
+		DiskGiB:   ptr.Int32Ptr(int32(ins["disk_size_gb"].(int))),
+		MemoryMiB: ptr.Int64Ptr(int64(ins["memory_mb"].(int))),
+		NumCPUs:   ptr.Int32Ptr(int32(ins["cpu"].(int))),
 	}
 
-	addDisks := getAdditionalDisks(ins)
-
-	mp := &models.V1LibvirtMachinePoolConfigEntity{
-		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{
-			Placements:       placements,
-			RootDiskInGB:     ptr.Int32Ptr(int32(ins["disk_size_gb"].(int))),
-			NonRootDisksInGB: addDisks,
-			InstanceType:     &instanceType,
+	mp := &models.V1VsphereMachinePoolConfigEntity{
+		CloudConfig: &models.V1VsphereMachinePoolCloudConfigEntity{
+			Placements:   placements,
+			InstanceType: &instanceType,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,
@@ -682,41 +653,4 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 		},
 	}
 	return mp
-}
-
-func getAdditionalDisks(ins map[string]interface{}) []*models.V1LibvirtDiskSpec {
-	addDisks := make([]*models.V1LibvirtDiskSpec, 0)
-
-	if ins["attached_disks_size_gb"] != nil {
-		disks := strings.Split(ins["attached_disks_size_gb"].(string), ",")
-		for _, addDisk := range disks {
-			x, err := strconv.ParseInt(strings.TrimSpace(addDisk), 10, 32)
-			if err != nil {
-				return nil
-			}
-			size := int32(x)
-			addDisks = append(addDisks, &models.V1LibvirtDiskSpec{
-				SizeInGB: &size,
-			})
-		}
-	}
-	return addDisks
-}
-
-func getNetworks(p map[string]interface{}) []*models.V1LibvirtNetworkSpec {
-	networkType := ""
-	networks := make([]*models.V1LibvirtNetworkSpec, 0)
-
-	if p["network_names"] != nil {
-		for _, n := range strings.Split(p["network_names"].(string), ",") {
-			networkName := strings.TrimSpace(n)
-			networkType = p["network_type"].(string)
-			network := &models.V1LibvirtNetworkSpec{
-				NetworkName: &networkName,
-				NetworkType: &networkType,
-			}
-			networks = append(networks, network)
-		}
-	}
-	return networks
 }

@@ -83,6 +83,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cluster_edge": resourceClusterEdge(),
 
+				"spectrocloud_cluster_edge_vsphere": resourceClusterEdgeVsphere(),
+
 				"spectrocloud_cluster_import": resourceClusterImport(),
 
 				"spectrocloud_privatecloudgateway_ippool": resourcePrivateCloudGatewayIpPool(),
