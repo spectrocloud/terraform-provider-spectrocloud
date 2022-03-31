@@ -15,11 +15,11 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-func resourceClusterEks() *schema.Resource {
+func resourceClusterTke() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceClusterEksCreate,
-		ReadContext:   resourceClusterEksRead,
-		UpdateContext: resourceClusterEksUpdate,
+		CreateContext: resourceClusterTkeCreate,
+		ReadContext:   resourceClusterTkeRead,
+		UpdateContext: resourceClusterTkeUpdate,
 		DeleteContext: resourceClusterDelete,
 
 		Timeouts: &schema.ResourceTimeout{
@@ -93,7 +93,6 @@ func resourceClusterEks() *schema.Resource {
 													Type:     schema.TypeString,
 													Required: true,
 													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-														// UI strips the trailing newline on save
 														if strings.TrimSpace(old) == strings.TrimSpace(new) {
 															return true
 														}
@@ -207,7 +206,6 @@ func resourceClusterEks() *schema.Resource {
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
-							//ForceNew: true,
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -277,52 +275,6 @@ func resourceClusterEks() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
-							},
-						},
-					},
-				},
-			},
-			"fargate_profile": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"subnets": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"additional_tags": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"selector": {
-							Type:     schema.TypeList,
-							Required: true,
-							//MinItems: 1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"namespace": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"labels": {
-										Type:     schema.TypeMap,
-										Optional: true,
-										Elem: &schema.Schema{
-											Type: schema.TypeString,
-										},
-									},
-								},
 							},
 						},
 					},
@@ -458,15 +410,14 @@ func resourceClusterEks() *schema.Resource {
 	}
 }
 
-func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterTkeCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
-	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toEksCluster(d)
+	cluster := toTkeCluster(d)
 
-	uid, err := c.CreateClusterEks(cluster)
+	uid, err := c.CreateClusterTke(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -482,19 +433,17 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 		Delay:      30 * time.Second,
 	}
 
-	// Wait, catching any errors
 	_, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	resourceClusterEksRead(ctx, d, m)
+	resourceClusterTkeRead(ctx, d, m)
 
 	return diags
 }
 
-//goland:noinspection GoUnhandledErrorResult
-func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
@@ -505,7 +454,6 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
-		// Deleted - Terraform will recreate it
 		d.SetId("")
 		return diags
 	}
@@ -517,12 +465,11 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	var config *models.V1EksCloudConfig
-	if config, err = c.GetCloudConfigEks(configUID); err != nil {
+	var config *models.V1TencentCloudConfig
+	if config, err = c.GetCloudConfigTke(configUID); err != nil {
 		return diag.FromErr(err)
 	}
 
-	// Update the kubeconfig
 	kubecfg, err := c.GetClusterKubeConfig(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -531,17 +478,11 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	mp := flattenMachinePoolConfigsEks(config.Spec.MachinePoolConfig)
+	mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
 	if err := d.Set("machine_pool", mp); err != nil {
 		return diag.FromErr(err)
 	}
 
-	fp := flattenFargateProfilesEks(config.Spec.FargateProfiles)
-	if err := d.Set("fargate_profile", fp); err != nil {
-		return diag.FromErr(err)
-	}
-
-	//read backup policy and scan policy
 	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
 		return diag.FromErr(err)
 	} else if policy != nil && policy.Spec.Config != nil {
@@ -577,7 +518,7 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	return diags
 }
 
-func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsTke(machinePools []*models.V1TencentMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -591,7 +532,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		oi["additional_labels"] = machinePool.AdditionalLabels
 		oi["taints"] = flattenClusterTaints(machinePool.Taints)
 
-		if *machinePool.IsControlPlane {
+		if machinePool.IsControlPlane {
 			continue
 		}
 
@@ -600,18 +541,8 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
-		if machinePool.CapacityType != nil {
-			oi["capacity_type"] = machinePool.CapacityType
-		}
-		if machinePool.SpotMarketOptions != nil {
-			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
-		}
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
-		if len(machinePool.SubnetIds) > 0 {
-			oi["az_subnets"] = machinePool.SubnetIds
-		} else {
-			oi["azs"] = machinePool.Azs
-		}
+		oi["azs"] = machinePool.Azs
 
 		ois = append(ois, oi)
 	}
@@ -619,61 +550,12 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 	return ois
 }
 
-func flattenFargateProfilesEks(fargateProfiles []*models.V1FargateProfile) []interface{} {
-
-	if fargateProfiles == nil {
-		return make([]interface{}, 0)
-	}
-
-	ois := make([]interface{}, 0)
-
-	for _, fargateProfile := range fargateProfiles {
-		oi := make(map[string]interface{})
-
-		oi["name"] = fargateProfile.Name
-		oi["subnets"] = fargateProfile.SubnetIds
-		oi["additional_tags"] = fargateProfile.AdditionalTags
-
-		selectors := make([]interface{}, 0)
-		for _, selector := range fargateProfile.Selectors {
-			s := make(map[string]interface{})
-			s["namespace"] = selector.Namespace
-			s["labels"] = selector.Labels
-			selectors = append(selectors, s)
-		}
-		oi["selector"] = selectors
-
-		ois = append(ois, oi)
-	}
-
-	return ois
-}
-
-func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
-	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
-	if d.HasChange("fargate_profile") {
-		fargateProfiles := make([]*models.V1FargateProfile, 0)
-		for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
-			f := toFargateProfileEks(fargateProfile)
-			fargateProfiles = append(fargateProfiles, f)
-		}
-
-		log.Printf("Updating fargate profiles")
-		fargateProfilesList := &models.V1EksFargateProfiles{
-			FargateProfiles: fargateProfiles,
-		}
-
-		err := c.UpdateFargateProfilesEks(cloudConfigId, fargateProfilesList)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
 
 	_ = d.Get("machine_pool")
 
@@ -698,98 +580,35 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolEksHash(machinePoolResource)
+			hash := resourceMachinePoolTkeHash(machinePoolResource)
 
-			machinePool := toMachinePoolEks(machinePoolResource)
+			machinePool := toMachinePoolTke(machinePoolResource)
 
 			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolEks(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
-				// TODO
+				err = c.CreateMachinePoolTke(cloudConfigId, machinePool)
+			} else if hash != resourceMachinePoolTkeHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
+				err = c.UpdateMachinePoolTke(cloudConfigId, machinePool)
 			}
 
 			if err != nil {
 				return diag.FromErr(err)
 			}
 
-			// Processed (if exists)
 			delete(osMap, name)
 		}
 
-		// Deleted old machine pools
 		for _, mp := range osMap {
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEks(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolTke(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-
-	//if d.HasChange("fargate_profile") {
-	//	oraw, nraw := d.GetChange("fargate_profile")
-	//	if oraw == nil {
-	//		oraw = new(schema.Set)
-	//	}
-	//	if nraw == nil {
-	//		nraw = new(schema.Set)
-	//	}
-	//
-	//	os := oraw.([]interface{})
-	//	ns := nraw.([]interface{})
-	//
-	//	osMap := make(map[string]interface{})
-	//	for _, mp := range os {
-	//		fargateProfile := mp.(map[string]interface{})
-	//		osMap[fargateProfile["name"].(string)] = fargateProfile
-	//	}
-	//
-	//	for _, mp := range ns {
-	//		fargateProfileResource := mp.(map[string]interface{})
-	//		name := fargateProfileResource["name"].(string)
-	//		hash := resourceFargateProfileEksHash(fargateProfileResource)
-	//
-	//		fargateProfile := toFargateProfileEks(fargateProfileResource)
-	//
-	//		var err error
-	//		if oldMachinePool, ok := osMap[name]; !ok {
-	//			log.Printf("Create fargate profile %s", name)
-	//			err = c.CreateFargateProfileEks(cloudConfigId, fargateProfile)
-	//		} else if hash != resourceFargateProfileEksHash(oldMachinePool) {
-	//			// TODO
-	//			log.Printf("Change in fargate profile %s", name)
-	//			err = c.UpdateFargateProfileEks(cloudConfigId, fargateProfile)
-	//		}
-	//
-	//		if err != nil {
-	//			return diag.FromErr(err)
-	//		}
-	//
-	//		// Processed (if exists)
-	//		delete(osMap, name)
-	//	}
-	//
-	//	// Deleted old fargate profiles
-	//	for _, mp := range osMap {
-	//		fargateProfile := mp.(map[string]interface{})
-	//		name := fargateProfile["name"].(string)
-	//		log.Printf("Deleted fargate profile %s", name)
-	//		if err := c.DeleteFargateProfileEks(cloudConfigId, name); err != nil {
-	//			return diag.FromErr(err)
-	//		}
-	//	}
-	//}
-	//
-
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	if d.HasChange("namespaces") {
 		if err := updateClusterNamespaces(c, d); err != nil {
@@ -821,36 +640,33 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		}
 	}
 
-	resourceClusterEksRead(ctx, d, m)
+	resourceClusterTkeRead(ctx, d, m)
 
 	return diags
 }
 
-func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
-	// gnarly, I know! =/
+func toTkeCluster(d *schema.ResourceData) *models.V1SpectroTencentClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	//clientSecret := strfmt.Password(d.Get("Eks_client_secret").(string))
 
-	cluster := &models.V1SpectroEksClusterEntity{
+	cluster := &models.V1SpectroTencentClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1SpectroEksClusterEntitySpec{
+		Spec: &models.V1SpectroTencentClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1EksClusterConfig{
-				BastionDisabled: true,
-				VpcID:           cloudConfig["vpc_id"].(string),
-				Region:          ptr.StringPtr(cloudConfig["region"].(string)),
-				SSHKeyName:      cloudConfig["ssh_key_name"].(string),
+			CloudConfig: &models.V1TencentClusterConfig{
+				VpcID:      cloudConfig["vpc_id"].(string),
+				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
+				SSHKeyName: cloudConfig["ssh_key_name"].(string),
 			},
 		},
 	}
 
-	access := &models.V1EksClusterConfigEndpointAccess{}
+	access := &models.V1EndpointAccess{}
 	switch cloudConfig["endpoint_access"].(string) {
 	case "public":
 		access.Public = true
@@ -873,18 +689,18 @@ func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
-	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
-	cpPool := map[string]interface{}{
+	machinePoolConfigs := make([]*models.V1TencentMachinePoolConfigEntity, 0)
+	/*cpPool := map[string]interface{}{
 		"control_plane": true,
 		"name":          "master-pool",
 		"az_subnets":    cloudConfig["az_subnets"],
-		"instance_type": "t3.large",
+		"instance_type": "S3.LARGE8",
 		"disk_size_gb":  60,
 		"count":         2,
 	}
-	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
+	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolTke(cpPool))*/
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolEks(machinePool)
+		mp := toMachinePoolTke(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -893,18 +709,10 @@ func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 		Resources: toClusterResourceConfig(d),
 	}
 
-	fargateProfiles := make([]*models.V1FargateProfile, 0)
-	for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
-		f := toFargateProfileEks(fargateProfile)
-		fargateProfiles = append(fargateProfiles, f)
-	}
-
-	cluster.Spec.FargateProfiles = fargateProfiles
-
 	return cluster
 }
 
-func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEntity {
+func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -914,20 +722,8 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 	}
 
 	azs := make([]string, 0)
-	subnets := make([]*models.V1EksSubnetEntity, 0)
-	for k, val := range m["az_subnets"].(map[string]interface{}) {
+	for k, _ := range m["az_subnets"].(map[string]interface{}) {
 		azs = append(azs, k)
-		if val.(string) != "" && val.(string) != "-" {
-			subnets = append(subnets, &models.V1EksSubnetEntity{
-				Az: k,
-				ID: val.(string),
-			})
-		}
-	}
-
-	capacityType := "on-demand" // on-demand by default.
-	if m["capacity_type"] != nil && len(m["capacity_type"].(string)) > 0 {
-		capacityType = m["capacity_type"].(string)
 	}
 
 	additionalLabels := make(map[string]string)
@@ -946,13 +742,11 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		max = int32(m["max"].(int))
 	}
 
-	mp := &models.V1EksMachinePoolConfigEntity{
-		CloudConfig: &models.V1EksMachineCloudConfigEntity{
+	mp := &models.V1TencentMachinePoolConfigEntity{
+		CloudConfig: &models.V1TencentMachinePoolCloudConfigEntity{
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 			InstanceType:   m["instance_type"].(string),
-			CapacityType:   &capacityType,
 			Azs:            azs,
-			Subnets:        subnets,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: additionalLabels,
@@ -966,45 +760,5 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		},
 	}
 
-	if capacityType == "spot" {
-		maxPrice := "0.0" // default value
-		if m["max_price"] != nil && len(m["max_price"].(string)) > 0 {
-			maxPrice = m["max_price"].(string)
-		}
-
-		mp.CloudConfig.SpotMarketOptions = &models.V1SpotMarketOptions{
-			MaxPrice: maxPrice,
-		}
-	}
-
 	return mp
-}
-
-func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {
-	m := fargateProfile.(map[string]interface{})
-
-	labels := make([]string, 0)
-	controlPlane, _ := m["control_plane"].(bool)
-	if controlPlane {
-		labels = append(labels, "master")
-	}
-
-	selectors := make([]*models.V1FargateSelector, 0)
-	for _, val := range m["selector"].([]interface{}) {
-		s := val.(map[string]interface{})
-
-		selectors = append(selectors, &models.V1FargateSelector{
-			Labels:    expandStringMap(s["labels"].(map[string]interface{})),
-			Namespace: ptr.StringPtr(s["namespace"].(string)),
-		})
-	}
-
-	f := &models.V1FargateProfile{
-		Name:           ptr.StringPtr(m["name"].(string)),
-		AdditionalTags: expandStringMap(m["additional_tags"].(map[string]interface{})),
-		Selectors:      selectors,
-		SubnetIds:      expandStringList(m["subnets"].([]interface{})),
-	}
-
-	return f
 }
