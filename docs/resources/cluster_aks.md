@@ -101,7 +101,6 @@ resource "spectrocloud_cluster_aks" "cluster" {
 
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
-- **cluster_profile_id** (String, Deprecated)
 - **id** (String) The ID of this resource.
 - **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))

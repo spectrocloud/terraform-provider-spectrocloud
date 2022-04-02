@@ -40,15 +40,10 @@ func resourceClusterAzure() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"cluster_profile_id": {
-				Type:       schema.TypeString,
-				Optional:   true,
-				Deprecated: "Switch to cluster_profile",
-			},
 			"cluster_profile": {
 				Type:          schema.TypeList,
 				Optional:      true,
-				ConflictsWith: []string{"cluster_profile_id", "pack"},
+				ConflictsWith: []string{"pack"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {

@@ -1,42 +1,42 @@
 data "spectrocloud_pack" "csi" {
-   name    = var.csi_name
-   version = var.csi_ver
+  name    = var.csi_name
+  version = var.csi_ver
 }
 
 data "spectrocloud_pack" "cni" {
-   name    = var.cni_name
-   version = var.cni_ver
+  name    = var.cni_name
+  version = var.cni_ver
 }
 
 data "spectrocloud_pack" "k8s" {
-   name    = var.k8s_name
-   version = var.k8s_ver
+  name    = var.k8s_name
+  version = var.k8s_ver
 }
 
 data "spectrocloud_pack" "os" {
-   name    = var.os_name
-   version = var.os_ver
+  name    = var.os_name
+  version = var.os_ver
 }
 
 data "spectrocloud_pack" "addon" {
-   name    = var.addon_name
-   version = var.addon_ver
+  name    = var.addon_name
+  version = var.addon_ver
 }
 resource "spectrocloud_cluster_profile" "profile" {
-   name        = var.cp_name
-   type = var.type_name
-   cloud= var.cloud_name
+  name  = var.cp_name
+  type  = var.type_name
+  cloud = var.cloud_name
 
-   pack {
-      name   = data.spectrocloud_pack.os.name
-      tag = var.os_ver
-      uid = data.spectrocloud_pack.os.id
-   }
-   pack {
-      name   = data.spectrocloud_pack.k8s.name
-      tag = var.k8s_ver
-      uid = data.spectrocloud_pack.k8s.id
-      values=<<-EOT
+  pack {
+    name = data.spectrocloud_pack.os.name
+    tag  = var.os_ver
+    uid  = data.spectrocloud_pack.os.id
+  }
+  pack {
+    name   = data.spectrocloud_pack.k8s.name
+    tag    = var.k8s_ver
+    uid    = data.spectrocloud_pack.k8s.id
+    values = <<-EOT
                manifests:
                       -manifest:
                           contents: |
@@ -126,22 +126,22 @@ resource "spectrocloud_cluster_profile" "profile" {
                                   #oidc-client-secret: 1gsranjjmdgahm10j8r6m47ejokm9kafvcbhi3d48jlc3rfpprhv
                                   #oidc-extra-scope: profile,email
               EOT
-   }
+  }
 
-   pack {
-      name   = data.spectrocloud_pack.cni.name
-      tag = var.cni_ver
-      uid = data.spectrocloud_pack.cni.id
-   }
-   pack {
-      name   = data.spectrocloud_pack.csi.name
-      tag = var.csi_ver
-      uid = data.spectrocloud_pack.csi.id
-   }
-   pack {
-      name   = data.spectrocloud_pack.addon.name
-      tag = var.addon_ver
-      uid = data.spectrocloud_pack.addon.id
-      values = ""
-   }
+  pack {
+    name = data.spectrocloud_pack.cni.name
+    tag  = var.cni_ver
+    uid  = data.spectrocloud_pack.cni.id
+  }
+  pack {
+    name = data.spectrocloud_pack.csi.name
+    tag  = var.csi_ver
+    uid  = data.spectrocloud_pack.csi.id
+  }
+  pack {
+    name   = data.spectrocloud_pack.addon.name
+    tag    = var.addon_ver
+    uid    = data.spectrocloud_pack.addon.id
+    values = ""
+  }
 }

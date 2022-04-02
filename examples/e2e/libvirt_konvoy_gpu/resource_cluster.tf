@@ -7,7 +7,7 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
 
   cloud_config {
     ssh_key = "spectro2022"
-    vip = "10.11.130.19"
+    vip     = "10.11.130.19"
   }
 
   machine_pool {
@@ -17,43 +17,43 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
     count                   = 1
 
     placements {
-      appliance_id = data.spectrocloud_appliance.virt_appliance.id
-      network_type = "bridge"
-      network_names = "br0"
-      image_storage_pool = "ubuntu"
+      appliance_id        = data.spectrocloud_appliance.virt_appliance.id
+      network_type        = "bridge"
+      network_names       = "br0"
+      image_storage_pool  = "ubuntu"
       target_storage_pool = "guest_images"
-      data_storage_pool = "tmp"
-      network = "br"
+      data_storage_pool   = "tmp"
+      network             = "br"
     }
 
     instance_type {
-      disk_size_gb    = 30
-      memory_mb = 8096
-      cpu          = 4
-      cpus_sets = 1
+      disk_size_gb           = 30
+      memory_mb              = 8096
+      cpu                    = 4
+      cpus_sets              = 1
       attached_disks_size_gb = "30, 10"
     }
   }
 
   machine_pool {
-    name                    = "worker-pool"
-    count                   = 1
+    name  = "worker-pool"
+    count = 1
 
     placements {
-      appliance_id = data.spectrocloud_appliance.virt_appliance.id
-      network_type = "bridge"
-      network_names = "br0"
-      image_storage_pool = "ubuntu"
+      appliance_id        = data.spectrocloud_appliance.virt_appliance.id
+      network_type        = "bridge"
+      network_names       = "br0"
+      image_storage_pool  = "ubuntu"
       target_storage_pool = "guest_images"
-      data_storage_pool = "tmp"
-      network = "br"
+      data_storage_pool   = "tmp"
+      network             = "br"
     }
 
     instance_type {
-      disk_size_gb    = 30
-      memory_mb = 8096
+      disk_size_gb = 30
+      memory_mb    = 8096
       cpu          = 2
-      cpus_sets = 1
+      cpus_sets    = 1
     }
   }
 

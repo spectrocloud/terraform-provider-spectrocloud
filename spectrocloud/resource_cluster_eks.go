@@ -669,7 +669,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			FargateProfiles: fargateProfiles,
 		}
 
-		err := c.UpdateFargateProfiles(cloudConfigId, fargateProfilesList)
+		err := c.UpdateFargateProfilesEks(cloudConfigId, fargateProfilesList)
 		if err != nil {
 			return diag.FromErr(err)
 		}

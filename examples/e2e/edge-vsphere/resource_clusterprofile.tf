@@ -1,11 +1,11 @@
 data "spectrocloud_cluster_profile" "profile" {
-   name = "withcredentials-full"
+  name = "withcredentials-full"
 }
 
 data "spectrocloud_cluster_profile" "system" {
-   name = "system-profile"
+  name = "system-profile"
 }
 
 output "same" {
-   value = data.spectrocloud_cluster_profile.profile
+  value = data.spectrocloud_cluster_profile.profile
 }

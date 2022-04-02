@@ -22,8 +22,8 @@ resource "spectrocloud_cluster_edge" "cluster" {
   }
 
   machine_pool {
-    name                    = "worker-pool"
-    count                   = 1
+    name  = "worker-pool"
+    count = 1
 
     placements {
       appliance_id = data.spectrocloud_appliance.virt_appliance.id

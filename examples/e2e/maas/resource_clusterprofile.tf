@@ -1,17 +1,17 @@
 data "spectrocloud_pack" "csi" {
   name = "csi-maas-volume"
   #registry_uid = "5e2031962f090e2d3d8a3290"
-  version  = "1.0.0"
+  version = "1.0.0"
 }
 
 data "spectrocloud_pack" "cni" {
-  name    = "cni-calico"
+  name = "cni-calico"
   #registry_uid = "5e2031962f090e2d3d8a3290"
   version = "3.19.0"
 }
 
 data "spectrocloud_pack" "k8s" {
-  name    = "kubernetes"
+  name = "kubernetes"
   #registry_uid = "5e2031962f090e2d3d8a3290"
   version = "1.21.3"
 }

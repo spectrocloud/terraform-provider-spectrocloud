@@ -33,8 +33,8 @@
 
 
 data "spectrocloud_pack" "csi" {
-  name = "csi-vsphere-csi"
-  version  = "2.3.0"
+  name    = "csi-vsphere-csi"
+  version = "2.3.0"
 }
 
 data "spectrocloud_pack" "cni" {
@@ -48,8 +48,8 @@ data "spectrocloud_pack" "k8s" {
 }
 
 data "spectrocloud_pack" "ubuntu" {
-  name = "ubuntu-vsphere"
-  version  = "18.04"
+  name    = "ubuntu-vsphere"
+  version = "18.04"
 }
 
 locals {
@@ -121,8 +121,8 @@ resource "spectrocloud_cluster_profile" "profile" {
 
   pack {
     name   = "spectro-proxy"
-    tag = "1.0.0"
-    uid = "60bd99ce9c10082ed8b314c9"
+    tag    = "1.0.0"
+    uid    = "60bd99ce9c10082ed8b314c9"
     values = local.proxy_val
   }
 }

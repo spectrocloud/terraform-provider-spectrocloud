@@ -37,10 +37,10 @@ func New(_ string) func() *schema.Provider {
 					Sensitive:   true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_APIKEY", nil),
 				},
-				"transport_debug": &schema.Schema{
+				"trace": &schema.Schema{
 					Type:        schema.TypeBool,
 					Optional:    true,
-					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_TRANSPORT_DEBUG", nil),
+					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_TRACE", nil),
 				},
 				"project_name": &schema.Schema{
 					Type:     schema.TypeString,
@@ -65,6 +65,9 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cluster_maas":      resourceClusterMaas(),
 
 				"spectrocloud_cluster_eks": resourceClusterEks(),
+
+				"spectrocloud_cloudaccount_tencent": resourceCloudAccountTencent(),
+				"spectrocloud_cluster_tke":          resourceClusterTke(),
 
 				"spectrocloud_cloudaccount_azure": resourceCloudAccountAzure(),
 				"spectrocloud_cluster_azure":      resourceClusterAzure(),
@@ -106,6 +109,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cluster_profile": dataSourceClusterProfile(),
 
 				"spectrocloud_cloudaccount_aws":       dataSourceCloudAccountAws(),
+				"spectrocloud_cloudaccount_tencent":   dataSourceCloudAccountTencent(),
 				"spectrocloud_cloudaccount_azure":     dataSourceCloudAccountAzure(),
 				"spectrocloud_cloudaccount_gcp":       dataSourceCloudAccountGcp(),
 				"spectrocloud_cloudaccount_vsphere":   dataSourceCloudAccountVsphere(),
@@ -134,8 +138,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	apiKey := ""
 	transportDebug := false
 
-	if d.Get("transport_debug") != nil {
-		transportDebug = d.Get("transport_debug").(bool)
+	if d.Get("trace") != nil {
+		transportDebug = d.Get("trace").(bool)
 	}
 
 	if d.Get("username") != nil && d.Get("password") != nil {

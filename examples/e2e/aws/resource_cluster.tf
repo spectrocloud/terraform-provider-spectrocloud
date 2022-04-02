@@ -1,10 +1,10 @@
 
 resource "spectrocloud_cluster_aws" "cluster" {
-  name               = "aws-picard-3"
+  name = "aws-picard-3"
   cluster_profile {
-   id = spectrocloud_cluster_profile.profile.id
+    id = spectrocloud_cluster_profile.profile.id
   }
-  cloud_account_id   = spectrocloud_cloudaccount_aws.account.id
+  cloud_account_id = spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
     ssh_key_name = var.aws_ssh_key_name

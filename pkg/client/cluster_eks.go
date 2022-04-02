@@ -58,7 +58,7 @@ func (h *V1Client) DeleteMachinePoolEks(cloudConfigId string, machinePoolName st
 	return err
 }
 
-func (h *V1Client) UpdateFargateProfiles(cloudConfigId string, fargateProfiles *models.V1EksFargateProfiles) error {
+func (h *V1Client) UpdateFargateProfilesEks(cloudConfigId string, fargateProfiles *models.V1EksFargateProfiles) error {
 	client, err := h.getClusterClient()
 	if err != nil {
 		return nil
