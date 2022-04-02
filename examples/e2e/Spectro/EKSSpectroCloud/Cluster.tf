@@ -1,14 +1,14 @@
 
 
 resource "spectrocloud_cluster_eks" "cluster" {
-  name               = lower("${lookup(var.taggingstandard,"deployment")}-EKS")
-  cloud_account_id   = data.spectrocloud_cloudaccount_aws.account.id
+  name             = lower("${lookup(var.taggingstandard, "deployment")}-EKS")
+  cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
     region       = var.aws_region
     ssh_key_name = ""
-    az_subnets = var.aws_subnets
-    vpc_id = var.aws_vpc_main_id
+    az_subnets   = var.aws_subnets
+    vpc_id       = var.aws_vpc_main_id
   }
 
   dynamic "cluster_profile" {
@@ -22,11 +22,11 @@ resource "spectrocloud_cluster_eks" "cluster" {
     for_each = var.SpectroConfig
 
     content {
-      name          = lower(lookup(var.SpectroConfig[machine_pool.key],"WorkerPoolName"))
-      count         = lookup(var.SpectroConfig[machine_pool.key],"WorkerPoolCount")
-      instance_type = lookup(var.SpectroConfig[machine_pool.key],"WorkerPoolInstanceType")
-      disk_size_gb  = lookup(var.SpectroConfig[machine_pool.key],"WorkerPoolDiskSize")
-      az_subnets = var.aws_subnets
+      name          = lower(lookup(var.SpectroConfig[machine_pool.key], "WorkerPoolName"))
+      count         = lookup(var.SpectroConfig[machine_pool.key], "WorkerPoolCount")
+      instance_type = lookup(var.SpectroConfig[machine_pool.key], "WorkerPoolInstanceType")
+      disk_size_gb  = lookup(var.SpectroConfig[machine_pool.key], "WorkerPoolDiskSize")
+      az_subnets    = var.aws_subnets
     }
   }
 }

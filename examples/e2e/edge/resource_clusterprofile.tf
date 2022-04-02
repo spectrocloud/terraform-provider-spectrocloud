@@ -1,7 +1,7 @@
 data "spectrocloud_cluster_profile" "profile" {
-   name = "profile-edge"
+  name = "profile-edge"
 }
 
 output "same" {
-   value = data.spectrocloud_cluster_profile.profile
+  value = data.spectrocloud_cluster_profile.profile
 }

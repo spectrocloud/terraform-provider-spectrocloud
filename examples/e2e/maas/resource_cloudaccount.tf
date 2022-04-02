@@ -1,7 +1,7 @@
 # If looking up a cloudaccount instead of creating one
 data "spectrocloud_cloudaccount_maas" "account" {
-#   # id = <uid>
-   name = "gateway-maas-2"
+  #   # id = <uid>
+  name = "gateway-maas-2"
 }
 
 /*

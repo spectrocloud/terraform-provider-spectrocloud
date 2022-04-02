@@ -36,7 +36,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
   }
 
   cluster_rbac_binding {
-    type = "RoleBinding"
+    type      = "RoleBinding"
     namespace = "test5ns"
     role = {
       kind = "Role"
@@ -79,14 +79,14 @@ resource "spectrocloud_cluster_eks" "cluster" {
     }
 
     taints {
-      key = "taintkey1"
-      value = "taintvalue1"
+      key    = "taintkey1"
+      value  = "taintvalue1"
       effect = "PreferNoSchedule"
     }
 
     taints {
-      key = "taintkey2"
-      value = "taintvalue2"
+      key    = "taintkey2"
+      value  = "taintvalue2"
       effect = "NoSchedule"
     }
 

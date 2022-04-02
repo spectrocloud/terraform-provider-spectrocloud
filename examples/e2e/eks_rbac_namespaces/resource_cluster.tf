@@ -36,7 +36,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
   }
 
   cluster_rbac_binding {
-    type = "RoleBinding"
+    type      = "RoleBinding"
     namespace = "test2ns"
     role = {
       kind = "Role"

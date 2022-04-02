@@ -10,8 +10,8 @@
 }*/
 
 data "spectrocloud_pack" "csi" {
-  name = "csi-vsphere-csi"
-  version  = "2.3.0"
+  name    = "csi-vsphere-csi"
+  version = "2.3.0"
 }
 
 data "spectrocloud_pack" "cni" {
@@ -25,8 +25,8 @@ data "spectrocloud_pack" "k8s" {
 }
 
 data "spectrocloud_pack" "ubuntu" {
-  name = "ubuntu-vsphere"
-  version  = "18.04"
+  name    = "ubuntu-vsphere"
+  version = "18.04"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
@@ -63,7 +63,7 @@ resource "spectrocloud_cluster_profile" "profile" {
     values = data.spectrocloud_pack.csi.values
   }
 
-/*  pack {
+  /*  pack {
     name   = "spectro-byo-manifest"
     tag    = "1.0.x"
     uid    = data.spectrocloud_pack.byom.id

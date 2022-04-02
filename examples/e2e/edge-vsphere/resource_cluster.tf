@@ -8,12 +8,12 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
   }
 
   cloud_config {
-    ssh_key = var.cluster_ssh_public_key
-    static_ip = false
-    network_type          = "VIP"
-    vip = "192.168.100.15"
-    datacenter = var.vsphere_datacenter
-    folder     = var.vsphere_folder
+    ssh_key      = var.cluster_ssh_public_key
+    static_ip    = false
+    network_type = "VIP"
+    vip          = "192.168.100.15"
+    datacenter   = var.vsphere_datacenter
+    folder       = var.vsphere_folder
 
   }
 

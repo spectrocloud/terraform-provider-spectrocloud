@@ -36,7 +36,7 @@ resource "spectrocloud_cluster_tke" "cluster" {
   }
 
   cluster_rbac_binding {
-    type = "RoleBinding"
+    type      = "RoleBinding"
     namespace = "test5ns"
     role = {
       kind = "Role"
@@ -70,8 +70,8 @@ resource "spectrocloud_cluster_tke" "cluster" {
   machine_pool {
     name          = "worker-basic"
     count         = 1
-    min = 1
-    max = 1
+    min           = 1
+    max           = 1
     instance_type = "S3.MEDIUM4"
     az_subnets    = var.worker_tke_subnets_map
     disk_size_gb  = 30
@@ -81,14 +81,14 @@ resource "spectrocloud_cluster_tke" "cluster" {
     }
 
     taints {
-      key = "taintkey1"
-      value = "taintvalue1"
+      key    = "taintkey1"
+      value  = "taintvalue1"
       effect = "PreferNoSchedule"
     }
 
     taints {
-      key = "taintkey2"
-      value = "taintvalue2"
+      key    = "taintkey2"
+      value  = "taintvalue2"
       effect = "NoSchedule"
     }
 

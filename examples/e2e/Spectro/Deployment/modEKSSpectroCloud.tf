@@ -1,15 +1,15 @@
 
 #SpectroCloud Variables
-variable SpectroCloudProject { type = string }
-variable SpectroCloudAccount { type = string }
-variable SpectroCloudUsername { type = string }
-variable SpectroCloudPassword { type = string }
-variable SpectroCloudURI { type = string }
-variable SpectroConfig { type = map }
-variable SpectroCloudClusterProfiles { type = map }
+variable "SpectroCloudProject" { type = string }
+variable "SpectroCloudAccount" { type = string }
+variable "SpectroCloudUsername" { type = string }
+variable "SpectroCloudPassword" { type = string }
+variable "SpectroCloudURI" { type = string }
+variable "SpectroConfig" { type = map(any) }
+variable "SpectroCloudClusterProfiles" { type = map(any) }
 
 module "EKSSpectroCloud" {
-  source = "../EKSSpectroCloud"
+  source        = "../EKSSpectroCloud"
   ComponentName = "EHSCluster"
 
   # Core Deployment Information
@@ -21,10 +21,10 @@ module "EKSSpectroCloud" {
   aws_availability_zones = var.aws_availability_zones
 
   # Virtual Network Infomration
-  vpc_cidr = var.vpc_cidr
-  IPSubnets = local.IPSubnets
+  vpc_cidr      = var.vpc_cidr
+  IPSubnets     = local.IPSubnets
   trusted_cidrs = var.trusted_cidrs
-  
+
   # Locals Brought Over
   taggingstandard = local.taggingstandard
 
@@ -34,13 +34,13 @@ module "EKSSpectroCloud" {
   ]
 
   #Module Outputs
-  aws_vpc_main_id = module.core.aws_vpc_main_id
+  aws_vpc_main_id                = module.core.aws_vpc_main_id
   aws_route_table_internetnat_id = module.core.aws_route_table_internetnat_id
-  
+
   #SpectroCloud Variables
   #SpectroCloudProject = var.SpectroCloudProject
   SpectroCloudClusterProfiles = var.SpectroCloudClusterProfiles
-  SpectroCloudAccount = var.SpectroCloudAccount
-  SpectroConfig = var.SpectroConfig
-  aws_subnets = module.EKSFramework.EKS_Subnets
+  SpectroCloudAccount         = var.SpectroCloudAccount
+  SpectroConfig               = var.SpectroConfig
+  aws_subnets                 = module.EKSFramework.EKS_Subnets
 }

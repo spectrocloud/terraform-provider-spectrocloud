@@ -3,7 +3,7 @@ data "spectrocloud_cloudaccount_openstack" "account" {
 }
 
 data "spectrocloud_pack" "csi" {
-  name = var.csi_name
+  name    = var.csi_name
   version = var.csi_ver
 }
 
@@ -18,14 +18,14 @@ data "spectrocloud_pack" "k8s" {
 }
 
 data "spectrocloud_pack" "ubuntu" {
-  name = var.os_name
+  name    = var.os_name
   version = var.os_ver
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
-  name        = var.cp_name
-  cloud       = var.cloud_name
-  type        = "cluster"
+  name  = var.cp_name
+  cloud = var.cloud_name
+  type  = "cluster"
 
   pack {
     name   = data.spectrocloud_pack.ubuntu.name
