@@ -48,6 +48,63 @@ func (h *V1Client) GetHelmRegistryByName(registryName string) (*models.V1HelmReg
 	return nil, fmt.Errorf("Registry '%s' not found.", registryName)
 }
 
+func (h *V1Client) GetHelmRegistry(uid string) (*models.V1HelmRegistry, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1RegistriesHelmUIDGetParams().WithUID(uid)
+	response, err := client.V1RegistriesHelmUIDGet(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Payload, nil
+}
+
+func (h *V1Client) CreateHelmRegistry(registry *models.V1HelmRegistryEntity) (string, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return "", err
+	}
+
+	params := clusterC.NewV1RegistriesHelmCreateParams().WithBody(registry)
+	if resp, err := client.V1RegistriesHelmCreate(params); err != nil {
+		return "", err
+	} else {
+		return *resp.Payload.UID, nil
+	}
+}
+
+func (h *V1Client) UpdateHelmRegistry(uid string, registry *models.V1HelmRegistry) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return err
+	}
+
+	params := clusterC.NewV1RegistriesHelmUIDUpdateParams().WithBody(registry).WithUID(uid)
+	if _, err := client.V1RegistriesHelmUIDUpdate(params); err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+func (h *V1Client) DeleteHelmRegistry(uid string) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return err
+	}
+
+	params := clusterC.NewV1RegistriesHelmUIDDeleteParams().WithUID(uid)
+	if _, err := client.V1RegistriesHelmUIDDelete(params); err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
 func (h *V1Client) GetOciRegistryByName(registryName string) (*models.V1OciRegistry, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
