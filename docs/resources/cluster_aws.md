@@ -145,9 +145,11 @@ Required:
 
 Optional:
 
+- **capacity_type** (String)
 - **control_plane** (Boolean)
 - **control_plane_as_worker** (Boolean)
 - **disk_size_gb** (Number)
+- **max_price** (String)
 - **update_strategy** (String)
 
 

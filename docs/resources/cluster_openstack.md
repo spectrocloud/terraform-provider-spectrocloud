@@ -92,7 +92,6 @@ resource "spectrocloud_cluster_openstack" "cluster" {
 
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
-- **cluster_profile_id** (String, Deprecated)
 - **id** (String) The ID of this resource.
 - **os_patch_after** (String)
 - **os_patch_on_boot** (Boolean)

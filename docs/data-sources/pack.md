@@ -36,6 +36,7 @@ output "same" {
 - **id** (String) The ID of this resource.
 - **name** (String)
 - **registry_uid** (String)
+- **type** (String)
 - **version** (String)
 
 ### Read-only

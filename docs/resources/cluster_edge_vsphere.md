@@ -1,89 +1,22 @@
 ---
-page_title: "spectrocloud_cluster_gcp Resource - terraform-provider-spectrocloud"
+page_title: "spectrocloud_cluster_edge_vsphere Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
   
 ---
 
-# Resource `spectrocloud_cluster_gcp`
+# Resource `spectrocloud_cluster_edge_vsphere`
 
 
 
-## Example Usage
 
-```terraform
-data "spectrocloud_cloudaccount_gcp" "account" {
-  # id = <uid>
-  name = var.cluster_cloud_account_name
-}
-
-data "spectrocloud_cluster_profile" "profile" {
-  # id = <uid>
-  name = var.cluster_cluster_profile_name
-}
-
-
-resource "spectrocloud_cluster_gcp" "cluster" {
-  name             = var.cluster_name
-  tags             = ["dev", "department:devops", "owner:bob"]
-  cloud_account_id = data.spectrocloud_cloudaccount_gcp.account.id
-
-  cloud_config {
-    network = var.gcp_network
-    project = var.gcp_project
-    region  = var.gcp_region
-  }
-
-  cluster_profile {
-    id = data.spectrocloud_cluster_profile.profile.id
-
-    # To override or specify values for a cluster:
-
-    # pack {
-    #   name   = "spectro-byo-manifest"
-    #   tag    = "1.0.x"
-    #   values = <<-EOT
-    #     manifests:
-    #       byo-manifest:
-    #         contents: |
-    #           # Add manifests here
-    #           apiVersion: v1
-    #           kind: Namespace
-    #           metadata:
-    #             labels:
-    #               app: wordpress
-    #               app2: wordpress2
-    #             name: wordpress
-    #   EOT
-    # }
-  }
-
-  machine_pool {
-    control_plane           = true
-    control_plane_as_worker = true
-    name                    = "master-pool"
-    count                   = 1
-    instance_type           = "e2-standard-2"
-    disk_size_gb            = 62
-    azs                     = ["us-west3-a"]
-  }
-
-  machine_pool {
-    name          = "worker-basic"
-    count         = 1
-    instance_type = "e2-standard-2"
-    azs           = ["us-west3-a"]
-  }
-
-}
-```
 
 ## Schema
 
 ### Required
 
-- **cloud_account_id** (String)
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
+- **edge_host_uid** (String)
 - **machine_pool** (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
 
@@ -102,7 +35,6 @@ resource "spectrocloud_cluster_gcp" "cluster" {
 
 ### Read-only
 
-- **cloud_config_id** (String)
 - **kubeconfig** (String)
 
 <a id="nestedblock--cloud_config"></a>
@@ -110,12 +42,16 @@ resource "spectrocloud_cluster_gcp" "cluster" {
 
 Required:
 
-- **project** (String)
-- **region** (String)
+- **datacenter** (String)
+- **folder** (String)
+- **vip** (String)
 
 Optional:
 
-- **network** (String)
+- **network_search_domain** (String)
+- **network_type** (String)
+- **ssh_key** (String)
+- **static_ip** (Boolean)
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -123,17 +59,45 @@ Optional:
 
 Required:
 
-- **azs** (Set of String)
 - **count** (Number)
-- **instance_type** (String)
+- **instance_type** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - **name** (String)
+- **placement** (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
 
 - **control_plane** (Boolean)
 - **control_plane_as_worker** (Boolean)
-- **disk_size_gb** (Number)
 - **update_strategy** (String)
+
+<a id="nestedblock--machine_pool--instance_type"></a>
+### Nested Schema for `machine_pool.instance_type`
+
+Required:
+
+- **cpu** (Number)
+- **disk_size_gb** (Number)
+- **memory_mb** (Number)
+
+
+<a id="nestedblock--machine_pool--placement"></a>
+### Nested Schema for `machine_pool.placement`
+
+Required:
+
+- **cluster** (String)
+- **datastore** (String)
+- **network** (String)
+- **resource_pool** (String)
+
+Optional:
+
+- **static_ip_pool_id** (String)
+
+Read-only:
+
+- **id** (String) The ID of this resource.
+
 
 
 <a id="nestedblock--backup_policy"></a>
@@ -172,6 +136,20 @@ Required:
 - **name** (String)
 - **tag** (String)
 - **values** (String)
+
+Optional:
+
+- **manifest** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack--manifest))
+- **type** (String)
+
+<a id="nestedblock--cluster_profile--pack--manifest"></a>
+### Nested Schema for `cluster_profile.pack.manifest`
+
+Required:
+
+- **content** (String)
+- **name** (String)
+
 
 
 

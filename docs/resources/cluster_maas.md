@@ -1,18 +1,18 @@
 ---
-page_title: "spectrocloud_cluster_gcp Resource - terraform-provider-spectrocloud"
+page_title: "spectrocloud_cluster_maas Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
   
 ---
 
-# Resource `spectrocloud_cluster_gcp`
+# Resource `spectrocloud_cluster_maas`
 
 
 
 ## Example Usage
 
 ```terraform
-data "spectrocloud_cloudaccount_gcp" "account" {
+data "spectrocloud_cloudaccount_maas" "account" {
   # id = <uid>
   name = var.cluster_cloud_account_name
 }
@@ -22,16 +22,20 @@ data "spectrocloud_cluster_profile" "profile" {
   name = var.cluster_cluster_profile_name
 }
 
+data "spectrocloud_backup_storage_location" "bsl" {
+  name = var.backup_storage_location_name
+}
 
-resource "spectrocloud_cluster_gcp" "cluster" {
+resource "spectrocloud_cluster_maas" "cluster" {
   name             = var.cluster_name
   tags             = ["dev", "department:devops", "owner:bob"]
-  cloud_account_id = data.spectrocloud_cloudaccount_gcp.account.id
+  cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
   cloud_config {
-    network = var.gcp_network
-    project = var.gcp_project
-    region  = var.gcp_region
+    subscription_id = "subscription-id"
+    resource_group  = "dev"
+    ssh_key         = "ssh key value"
+    region          = "centralus"
   }
 
   cluster_profile {
@@ -58,23 +62,29 @@ resource "spectrocloud_cluster_gcp" "cluster" {
     # }
   }
 
-  machine_pool {
-    control_plane           = true
-    control_plane_as_worker = true
-    name                    = "master-pool"
-    count                   = 1
-    instance_type           = "e2-standard-2"
-    disk_size_gb            = 62
-    azs                     = ["us-west3-a"]
+  backup_policy {
+    schedule                  = "0 0 * * SUN"
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = "prod-backup"
+    expiry_in_hour            = 7200
+    include_disks             = true
+    include_cluster_resources = true
+  }
+
+  scan_policy {
+    configuration_scan_schedule = "0 0 * * SUN"
+    penetration_scan_schedule   = "0 0 * * SUN"
+    conformance_scan_schedule   = "0 0 1 * *"
   }
 
   machine_pool {
-    name          = "worker-basic"
-    count         = 1
-    instance_type = "e2-standard-2"
-    azs           = ["us-west3-a"]
+    name                 = "worker-basic"
+    count                = 1
+    instance_type        = "Standard_DS4"
+    disk_size_gb         = 60
+    is_system_node_pool  = true
+    storage_account_type = "Standard_LRS"
   }
-
 }
 ```
 
@@ -82,7 +92,6 @@ resource "spectrocloud_cluster_gcp" "cluster" {
 
 ### Required
 
-- **cloud_account_id** (String)
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - **machine_pool** (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
@@ -90,12 +99,12 @@ resource "spectrocloud_cluster_gcp" "cluster" {
 ### Optional
 
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
+- **cloud_account_id** (String)
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **id** (String) The ID of this resource.
 - **os_patch_after** (String)
 - **os_patch_on_boot** (Boolean)
 - **os_patch_schedule** (String)
-- **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
@@ -110,12 +119,7 @@ resource "spectrocloud_cluster_gcp" "cluster" {
 
 Required:
 
-- **project** (String)
-- **region** (String)
-
-Optional:
-
-- **network** (String)
+- **domain** (String)
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -125,15 +129,36 @@ Required:
 
 - **azs** (Set of String)
 - **count** (Number)
-- **instance_type** (String)
+- **instance_type** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - **name** (String)
+- **placement** (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
 
 - **control_plane** (Boolean)
 - **control_plane_as_worker** (Boolean)
-- **disk_size_gb** (Number)
 - **update_strategy** (String)
+
+<a id="nestedblock--machine_pool--instance_type"></a>
+### Nested Schema for `machine_pool.instance_type`
+
+Required:
+
+- **min_cpu** (Number)
+- **min_memory_mb** (Number)
+
+
+<a id="nestedblock--machine_pool--placement"></a>
+### Nested Schema for `machine_pool.placement`
+
+Required:
+
+- **resource_pool** (String)
+
+Read-only:
+
+- **id** (String) The ID of this resource.
+
 
 
 <a id="nestedblock--backup_policy"></a>
@@ -173,16 +198,6 @@ Required:
 - **tag** (String)
 - **values** (String)
 
-
-
-<a id="nestedblock--pack"></a>
-### Nested Schema for `pack`
-
-Required:
-
-- **name** (String)
-- **tag** (String)
-- **values** (String)
 
 
 <a id="nestedblock--scan_policy"></a>

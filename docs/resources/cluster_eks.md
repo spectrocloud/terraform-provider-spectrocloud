@@ -75,17 +75,6 @@ resource "spectrocloud_cluster_eks" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
-  machine_pool {
-    control_plane           = true
-    control_plane_as_worker = true
-    name                    = "master-pool"
-    count                   = 1
-    instance_type           = "t3.large"
-    disk_size_gb            = 62
-    az_subnets = {
-      "us-west-2a" = "subnet-0d4978ddbff16c"
-    }
-  }
 
   machine_pool {
     name          = "worker-basic"
@@ -113,8 +102,10 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **cluster_profile_id** (String, Deprecated)
+- **cluster_rbac_binding** (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - **fargate_profile** (Block List) (see [below for nested schema](#nestedblock--fargate_profile))
 - **id** (String) The ID of this resource.
+- **namespaces** (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - **tags** (Set of String)
@@ -154,10 +145,24 @@ Required:
 
 Optional:
 
-- **min** (Number) Minimum number of nodes. Set to **count** by default.
-- **max** (Number) Maximum number of nodes. Set to **count** by default.
+- **additional_labels** (Map of String)
 - **az_subnets** (Map of String)
 - **azs** (List of String)
+- **capacity_type** (String)
+- **max** (Number)
+- **max_price** (String)
+- **min** (Number)
+- **taints** (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
+
+<a id="nestedblock--machine_pool--taints"></a>
+### Nested Schema for `machine_pool.taints`
+
+Required:
+
+- **effect** (String)
+- **key** (String)
+- **value** (String)
+
 
 
 <a id="nestedblock--backup_policy"></a>
@@ -194,8 +199,49 @@ Optional:
 Required:
 
 - **name** (String)
+
+Optional:
+
+- **manifest** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack--manifest))
 - **tag** (String)
+- **type** (String)
 - **values** (String)
+
+<a id="nestedblock--cluster_profile--pack--manifest"></a>
+### Nested Schema for `cluster_profile.pack.manifest`
+
+Required:
+
+- **content** (String)
+- **name** (String)
+
+
+
+
+<a id="nestedblock--cluster_rbac_binding"></a>
+### Nested Schema for `cluster_rbac_binding`
+
+Required:
+
+- **type** (String)
+
+Optional:
+
+- **namespace** (String)
+- **role** (Map of String)
+- **subjects** (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding--subjects))
+
+<a id="nestedblock--cluster_rbac_binding--subjects"></a>
+### Nested Schema for `cluster_rbac_binding.subjects`
+
+Required:
+
+- **name** (String)
+- **type** (String)
+
+Optional:
+
+- **namespace** (String)
 
 
 
@@ -223,6 +269,15 @@ Optional:
 
 - **labels** (Map of String)
 
+
+
+<a id="nestedblock--namespaces"></a>
+### Nested Schema for `namespaces`
+
+Required:
+
+- **name** (String)
+- **resource_allocation** (Map of String)
 
 
 <a id="nestedblock--pack"></a>
