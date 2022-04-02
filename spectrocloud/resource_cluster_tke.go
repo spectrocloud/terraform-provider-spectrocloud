@@ -642,6 +642,11 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 func toTkeCluster(d *schema.ResourceData) *models.V1SpectroTencentClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+	sshKeyIds := make([]string, 1)
+
+	if cloudConfig["ssh_key_name"] != nil {
+		sshKeyIds = append(sshKeyIds, cloudConfig["ssh_key_name"].(string))
+	}
 
 	cluster := &models.V1SpectroTencentClusterEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -654,9 +659,9 @@ func toTkeCluster(d *schema.ResourceData) *models.V1SpectroTencentClusterEntity 
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1TencentClusterConfig{
-				VpcID:      cloudConfig["vpc_id"].(string),
-				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
-				SSHKeyName: cloudConfig["ssh_key_name"].(string),
+				VpcID:     cloudConfig["vpc_id"].(string),
+				Region:    ptr.StringPtr(cloudConfig["region"].(string)),
+				SSHKeyIDs: sshKeyIds,
 			},
 		},
 	}
