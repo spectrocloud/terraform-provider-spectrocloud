@@ -95,6 +95,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_backup_storage_location": resourceBackupStorageLocation(),
 
 				"spectrocloud_registry_oci": resourceRegistryOciEcr(),
+				"spectrocloud_registry_helm": resourceRegistryHelm(),
 
 				"spectrocloud_appliance": resourceAppliance(),
 			},
