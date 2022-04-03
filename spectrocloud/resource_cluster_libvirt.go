@@ -207,7 +207,7 @@ func resourceClusterLibvirt() *schema.Resource {
 										Optional: true,
 									},
 									"cpus_sets": {
-										Type:     schema.TypeInt,
+										Type:     schema.TypeString,
 										Optional: true,
 									},
 									"disk_size_gb": {
@@ -463,6 +463,9 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 				}
 			}
 			s["disk_size_gb"] = int(*machinePool.RootDiskInGB)
+			if len(machinePool.InstanceType.Cpuset) > 0 {
+				s["cpus_sets"] = machinePool.InstanceType.Cpuset
+			}
 			s["memory_mb"] = int(*machinePool.InstanceType.MemoryInMB)
 			s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
 
@@ -656,11 +659,13 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
 	instanceType := models.V1LibvirtInstanceType{
-		Cpuset:     strconv.FormatInt(int64(ins["cpus_sets"].(int)), 10),
 		MemoryInMB: ptr.Int32Ptr(int32(ins["memory_mb"].(int))),
 		NumCPUs:    ptr.Int32Ptr(int32(ins["cpu"].(int))),
 	}
 
+	if ins["cpus_sets"] != nil && len(ins["cpus_sets"].(string)) > 0 {
+		instanceType.Cpuset = ins["cpus_sets"].(string)
+	}
 	addDisks := getAdditionalDisks(ins)
 
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
