@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"log"
 	"sort"
@@ -203,8 +202,21 @@ func resourceClusterLibvirt() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"attached_disks_size_gb": {
-										Type:     schema.TypeString,
+										Type:     schema.TypeList,
 										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"managed": {
+													Type:     schema.TypeBool,
+													Optional: true,
+													Default:  false,
+												},
+												"size_in_gb": {
+													Type:     schema.TypeInt,
+													Required: true,
+												},
+											},
+										},
 									},
 									"cpus_sets": {
 										Type:     schema.TypeInt,
@@ -455,11 +467,14 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
-			additionalDisks := make([]string, 0)
+			additionalDisks := make([]interface{}, 0)
 
 			if machinePool.NonRootDisksInGB != nil && len(machinePool.NonRootDisksInGB) > 0 {
 				for _, disk := range machinePool.NonRootDisksInGB {
-					additionalDisks = append(additionalDisks, fmt.Sprint(*disk.SizeInGB))
+					addDisk := make(map[string]interface{})
+					addDisk["managed"] = disk.Managed
+					addDisk["size_in_gb"] = *disk.SizeInGB
+					additionalDisks = append(additionalDisks, addDisk)
 				}
 			}
 			s["disk_size_gb"] = int(*machinePool.RootDiskInGB)
@@ -467,8 +482,7 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 			s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
 
 			oi["instance_type"] = []interface{}{s}
-			additionalDisksStr := strings.Join(additionalDisks, ",")
-			s["attached_disks_size_gb"] = additionalDisksStr
+			s["attached_disks_size_gb"] = additionalDisks
 		}
 
 		placements := make([]interface{}, len(machinePool.Placements))
@@ -688,15 +702,23 @@ func getAdditionalDisks(ins map[string]interface{}) []*models.V1LibvirtDiskSpec 
 	addDisks := make([]*models.V1LibvirtDiskSpec, 0)
 
 	if ins["attached_disks_size_gb"] != nil {
-		disks := strings.Split(ins["attached_disks_size_gb"].(string), ",")
-		for _, addDisk := range disks {
-			x, err := strconv.ParseInt(strings.TrimSpace(addDisk), 10, 32)
-			if err != nil {
-				return nil
+		for _, disk := range ins["attached_disks_size_gb"].([]interface{}) {
+			size := int32(0)
+			managed := false
+			for j, prop := range disk.(map[string]interface{}) {
+				switch {
+				case j == "managed":
+					managed = prop.(bool)
+				case j == "size_in_gb":
+					size = int32(prop.(int))
+				default:
+					return nil
+				}
 			}
-			size := int32(x)
+
 			addDisks = append(addDisks, &models.V1LibvirtDiskSpec{
 				SizeInGB: &size,
+				Managed:  managed,
 			})
 		}
 	}

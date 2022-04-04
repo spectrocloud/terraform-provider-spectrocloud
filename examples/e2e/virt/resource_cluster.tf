@@ -31,7 +31,10 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
       memory_mb              = 8096
       cpu                    = 4
       cpus_sets              = 1
-      attached_disks_size_gb = "30, 10"
+
+      attached_disks_size_gb {
+        size_in_gb = "10"
+      }
     }
   }
 
@@ -54,6 +57,17 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
       memory_mb    = 8096
       cpu          = 2
       cpus_sets    = 1
+
+      attached_disks_size_gb {
+        size_in_gb = "30"
+        managed = true
+      }
+
+      attached_disks_size_gb {
+        size_in_gb = "10"
+        managed = true
+      }
+
     }
   }
 
