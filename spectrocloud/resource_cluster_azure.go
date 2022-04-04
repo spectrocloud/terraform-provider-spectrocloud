@@ -316,6 +316,10 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	d.SetId(uid)
 
+	if _, found := toTags(d)["skip_completion"]; found {
+		return diags
+	}
+
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
 		Target:     []string{"Running"},
