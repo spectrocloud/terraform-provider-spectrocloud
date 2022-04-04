@@ -192,7 +192,7 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
 		buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
 		buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(string)))
 		if ins["attached_disks_size_gb"] != nil {
 			for _, disk := range ins["attached_disks_size_gb"].([]interface{}) {
 				for j, prop := range disk.(map[string]interface{}) {
