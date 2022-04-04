@@ -2,9 +2,31 @@ package client
 
 import (
 	"fmt"
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 )
+
+func (h *V1Client) GetPackRegistryCommonByName(registryName string) (*models.V1RegistryMetadata, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1RegistriesMetadataParams().WithScope(ptr.StringPtr(""))
+	registries, err := client.V1RegistriesMetadata(params)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, registry := range registries.Payload.Items {
+		if registry.Name == registryName {
+			return registry, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Registry '%s' not found.", registryName)
+}
 
 func (h *V1Client) GetPackRegistryByName(registryName string) (*models.V1PackRegistry, error) {
 	client, err := h.getClusterClient()

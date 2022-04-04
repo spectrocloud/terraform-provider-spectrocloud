@@ -74,6 +74,17 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		if v.(string) == "manifest" {
 			return diags
 		}
+		if v.(string) == "helm" {
+			if regUID, ok := d.GetOk("registry_uid"); ok {
+				registry, err := c.GetHelmRegistry(regUID.(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+				if registry.Spec.IsPrivate {
+					return diags
+				}
+			}
+		}
 	}
 
 	filters := make([]string, 0)
