@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"hash/fnv"
 	"sort"
-	"strings"
 )
 
 func resourceMachinePoolAzureHash(v interface{}) int {
@@ -193,10 +192,22 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
 		buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
 		buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
-		buf.WriteString(fmt.Sprintf("%s-", ins["cpus_sets"].(string)))
-		disks := strings.Split(ins["attached_disks_size_gb"].(string), ",")
-		for _, disk := range disks {
-			buf.WriteString(fmt.Sprintf("%s-", disk))
+		buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(string)))
+		if ins["attached_disks_size_gb"] != nil {
+			for _, disk := range ins["attached_disks_size_gb"].([]interface{}) {
+				for j, prop := range disk.(map[string]interface{}) {
+					switch {
+					case j == "managed":
+						buf.WriteString(fmt.Sprintf("%s-%s", j, prop.(bool)))
+						break
+					case j == "size_in_gb":
+						buf.WriteString(fmt.Sprintf("%s-%s", j, prop.(int)))
+						break
+					default:
+						buf.WriteString(fmt.Sprintf("%s-%s", j, prop.(string)))
+					}
+				}
+			}
 		}
 	}
 

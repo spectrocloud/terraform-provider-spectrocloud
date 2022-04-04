@@ -276,6 +276,10 @@ func resourceClusterEdgeCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	d.SetId(uid)
 
+	if _, found := toTags(d)["skip_completion"]; found {
+		return diags
+	}
+
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
 		Target:     []string{"Running"},
