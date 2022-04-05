@@ -200,7 +200,7 @@ func resourceClusterLibvirt() *schema.Resource {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"attached_disks_size_gb": {
+									"attached_disks": {
 										Type:     schema.TypeList,
 										Optional: true,
 										Elem: &schema.Resource{
@@ -484,7 +484,7 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 			s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
 
 			oi["instance_type"] = []interface{}{s}
-			s["attached_disks_size_gb"] = additionalDisks
+			s["attached_disks"] = additionalDisks
 		}
 
 		placements := make([]interface{}, len(machinePool.Placements))
@@ -705,8 +705,8 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 func getAdditionalDisks(ins map[string]interface{}) []*models.V1LibvirtDiskSpec {
 	addDisks := make([]*models.V1LibvirtDiskSpec, 0)
 
-	if ins["attached_disks_size_gb"] != nil {
-		for _, disk := range ins["attached_disks_size_gb"].([]interface{}) {
+	if ins["attached_disks"] != nil {
+		for _, disk := range ins["attached_disks"].([]interface{}) {
 			size := int32(0)
 			managed := false
 			for j, prop := range disk.(map[string]interface{}) {

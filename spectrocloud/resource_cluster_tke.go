@@ -646,7 +646,7 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 func toTkeCluster(d *schema.ResourceData) *models.V1SpectroTencentClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	sshKeyIds := make([]string, 1)
+	sshKeyIds := make([]string, 0)
 
 	if cloudConfig["ssh_key_name"] != nil {
 		sshKeyIds = append(sshKeyIds, cloudConfig["ssh_key_name"].(string))
