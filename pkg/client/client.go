@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	openapiclient "github.com/go-openapi/runtime/client"
@@ -92,27 +91,6 @@ func (h *V1Client) getNewAuthToken() (*AuthToken, error) {
 		expiry: time.Now().Add(tokenExpiry),
 	}
 	return authToken, nil
-}
-
-func (h *V1Client) GetProjectUID(projectName string) (string, error) {
-	client, err := h.getUserClient()
-	if err != nil {
-		return "", err
-	}
-
-	params := userC.NewV1ProjectsListParamsWithContext(h.ctx)
-	projects, err := client.V1ProjectsList(params)
-	if err != nil {
-		return "", err
-	}
-
-	for _, project := range projects.Payload.Items {
-		if project.Metadata.Name == projectName {
-			return project.Metadata.UID, nil
-		}
-	}
-
-	return "", fmt.Errorf("project '%s' not found", projectName)
 }
 
 func GetProjectContextWithCtx(c context.Context, projectUid string) context.Context {
