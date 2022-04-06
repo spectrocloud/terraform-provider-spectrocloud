@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"github.com/spectrocloud/hapi/models"
 
 	userC "github.com/spectrocloud/hapi/user/client/v1"
@@ -22,25 +23,34 @@ func (h *V1Client) CreateProject(body *models.V1ProjectEntity) (string, error) {
 }
 
 func (h *V1Client) GetProject(uid string) (*models.V1Project, error) {
-	client, err := h.getUserClient()
+	projects, err := h.GetProjects()
 	if err != nil {
 		return nil, err
 	}
 
-	limit := int64(5000)
-	params := userC.NewV1ProjectsListParams().WithLimit(&limit)
-	projects, err := client.V1ProjectsList(params)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, project := range projects.Payload.Items {
+	for _, project := range projects.Items {
 		if project.Metadata.UID == uid {
 			return project, nil
 		}
 	}
 
 	return nil, nil
+}
+
+func (h *V1Client) GetProjects() (*models.V1Projects, error) {
+	client, err := h.getUserClient()
+	if err != nil {
+		return nil, err
+	}
+
+	limit := int64(0)
+	params := userC.NewV1ProjectsListParams().WithLimit(&limit)
+	projects, err := client.V1ProjectsList(params)
+	if err != nil || projects == nil {
+		return nil, err
+	}
+
+	return projects.Payload, nil
 }
 
 func (h *V1Client) UpdateProject(uid string, body *models.V1ProjectEntity) error {
@@ -71,4 +81,19 @@ func (h *V1Client) DeleteProject(uid string) error {
 	}
 
 	return nil
+}
+
+func (h *V1Client) GetProjectUID(projectName string) (string, error) {
+	projects, err := h.GetProjects()
+	if err != nil {
+		return "", err
+	}
+
+	for _, project := range projects.Items {
+		if project.Metadata.Name == projectName {
+			return project.Metadata.UID, nil
+		}
+	}
+
+	return "", fmt.Errorf("project '%s' not found", projectName)
 }
