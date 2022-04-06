@@ -283,10 +283,17 @@ func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m i
 }
 
 func toClusterProfileCreate(d *schema.ResourceData) (*models.V1ClusterProfileEntity, error) {
+	description := ""
+	if d.Get("description") != nil {
+		description = d.Get("description").(string)
+	}
 	cp := &models.V1ClusterProfileEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
+			Name: d.Get("name").(string),
+			UID:  d.Id(),
+			Annotations: map[string]string{
+				"description": description,
+			},
 			Labels: toTags(d),
 		},
 		Spec: &models.V1ClusterProfileEntitySpec{
