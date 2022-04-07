@@ -77,8 +77,20 @@ Required:
 
 Optional:
 
-- **attached_disks_size_gb** (String)
-- **cpus_sets** (Number)
+- **attached_disks** (Block List) (see [below for nested schema](#nestedblock--machine_pool--instance_type--attached_disks))
+- **cpus_sets** (String)
+
+<a id="nestedblock--machine_pool--instance_type--attached_disks"></a>
+### Nested Schema for `machine_pool.instance_type.attached_disks`
+
+Required:
+
+- **size_in_gb** (Number)
+
+Optional:
+
+- **managed** (Boolean)
+
 
 
 <a id="nestedblock--machine_pool--placements"></a>

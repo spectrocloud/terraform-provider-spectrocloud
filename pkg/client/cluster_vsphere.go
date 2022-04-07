@@ -172,3 +172,27 @@ func (h *V1Client) ImportClusterVsphere(meta *models.V1ObjectMetaInputEntity) (s
 
 	return *success.Payload.UID, nil
 }
+
+func (h *V1Client) GetVsphereClouldConfigValues(uid string) (*models.V1VsphereCloudConfig, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1CloudConfigsVsphereGetParamsWithContext(h.ctx).WithConfigUID(uid)
+	cloudConfig, err := client.V1CloudConfigsVsphereGet(params)
+
+	return cloudConfig.Payload, nil
+}
+
+func (h *V1Client) UpdateVsphereCloudConfigValues(uid string, clusterConfig *models.V1VsphereCloudClusterConfigEntity) error {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil
+	}
+
+	params := clusterC.NewV1CloudConfigsVsphereUIDClusterConfigParamsWithContext(h.ctx).WithConfigUID(uid).WithBody(clusterConfig)
+	_, err = client.V1CloudConfigsVsphereUIDClusterConfig(params)
+
+	return err
+}

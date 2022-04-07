@@ -1,26 +1,25 @@
 ---
-page_title: "spectrocloud_registry_oci Resource - terraform-provider-spectrocloud"
+page_title: "spectrocloud_registry_helm Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
   
 ---
 
-# Resource `spectrocloud_registry_oci`
+# Resource `spectrocloud_registry_helm`
 
 
 
 ## Example Usage
 
 ```terraform
-resource "spectrocloud_registry_oci" "r1" {
-  name       = "test-nik2"
-  type       = "ecr" # basic
-  endpoint   = "123456.dkr.ecr.us-west-1.amazonaws.com"
+resource "spectrocloud_registry_helm" "r1" {
+  name       = "us-artifactory"
+  endpoint   = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
   is_private = true
   credentials {
-    credential_type = "sts"
-    arn             = "arn:aws:iam::123456:role/stage-demo-ecr"
-    external_id     = "sofiwhgowbrgiornM="
+    credential_type = "noAuth"
+    username        = "abc"
+    password        = "def"
   }
 }
 ```
@@ -33,7 +32,6 @@ resource "spectrocloud_registry_oci" "r1" {
 - **endpoint** (String)
 - **is_private** (Boolean)
 - **name** (String)
-- **type** (String)
 
 ### Optional
 
@@ -49,8 +47,9 @@ Required:
 
 Optional:
 
-- **arn** (String)
-- **external_id** (String)
+- **password** (String)
+- **token** (String)
+- **username** (String)
 
 
 <a id="nestedblock--timeouts"></a>
