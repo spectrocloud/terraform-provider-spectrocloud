@@ -5,11 +5,6 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
     id = data.spectrocloud_cluster_profile.profile.id
   }
 
-  cloud_config {
-    ssh_key = "spectro2022"
-    vip     = "192.168.100.15"
-  }
-
   cluster_rbac_binding {
     type = "ClusterRoleBinding"
 
@@ -62,6 +57,11 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
     }
   }
 
+  cloud_config {
+    ssh_key = "spectro2022"
+    vip     = "192.168.100.15"
+  }
+
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
@@ -72,9 +72,9 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
       appliance_id        = data.spectrocloud_appliance.virt_appliance.id
       network_type        = "bridge"
       network_names       = "br0"
-      image_storage_pool  = "ehl_images"
-      target_storage_pool = "ehl_images"
-      data_storage_pool   = "ehl_data"
+      image_storage_pool  = "ubuntu"
+      target_storage_pool = "guest_images"
+      data_storage_pool   = "tmp"
       network             = "br"
     }
 
@@ -92,23 +92,6 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
 
   machine_pool {
     name  = "worker-pool"
-
-    additional_labels = {
-      addlabel = "addlabelval1"
-    }
-
-    taints {
-      key    = "taintkey1"
-      value  = "taintvalue1"
-      effect = "PreferNoSchedule"
-    }
-
-    taints {
-      key    = "taintkey2"
-      value  = "taintvalue2"
-      effect = "NoSchedule"
-    }
-
     count = 1
 
     placements {

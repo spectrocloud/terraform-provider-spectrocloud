@@ -1,3 +1,3 @@
 data "spectrocloud_appliance" "virt_appliance" {
-  name = "edge-apr-5"
+  name = "libvirt-nik-mar-21"
 }
