@@ -19,3 +19,11 @@ func toAdditionalLabels(d *schema.ResourceData) map[string]string {
 	}
 	return tags
 }
+
+func toAdditionalNodePoolLabels(m map[string]interface{}) map[string]string {
+	additionalLabels := make(map[string]string)
+	if m["additional_labels"] != nil {
+		additionalLabels = expandStringMap(m["additional_labels"].(map[string]interface{}))
+	}
+	return additionalLabels
+}
