@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"fmt"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"strings"
 	"time"
 
@@ -126,4 +127,86 @@ func validateOsPatchOnDemandAfter(data interface{}, _ cty.Path) diag.Diagnostics
 	}
 
 	return diags
+}
+
+//read common fields like kubeconfig, tags, backup policy, scan policy, cluster_rbac_binding, namespaces
+func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
+	kubecfg, err := c.GetClusterKubeConfig(d.Id())
+	if err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("kubeconfig", kubecfg); err != nil {
+		return diag.FromErr(err), true
+	}
+
+	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
+		return diag.FromErr(err), true
+	}
+
+	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
+		return diag.FromErr(err), true
+	} else if policy != nil && policy.Spec.Config != nil {
+		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
+		return diag.FromErr(err), true
+	} else if policy != nil && policy.Spec.DriverSpec != nil {
+		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if rbac, err := c.GetClusterRbacConfig(d.Id()); err != nil {
+		return diag.FromErr(err), true
+	} else if rbac != nil && rbac.Items != nil {
+		if err := d.Set("cluster_rbac_binding", flattenClusterRBAC(rbac.Items)); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if namespace, err := c.GetClusterNamespaceConfig(d.Id()); err != nil {
+		return diag.FromErr(err), true
+	} else if namespace != nil && namespace.Items != nil {
+		if err := d.Set("namespaces", flattenClusterNamespaces(namespace.Items)); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+	return nil, false
+}
+
+// update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
+func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
+	if d.HasChange("namespaces") {
+		if err := updateClusterNamespaces(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if d.HasChange("cluster_rbac_binding") {
+		if err := updateClusterRBAC(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if d.HasChanges("cluster_profile") {
+		if err := updateProfiles(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if d.HasChange("backup_policy") {
+		if err := updateBackupPolicy(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if d.HasChange("scan_policy") {
+		if err := updateScanPolicy(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+	return nil, false
 }

@@ -171,6 +171,38 @@ func resourceClusterVsphere() *schema.Resource {
 				Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+							//ForceNew: true,
+						},
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"control_plane": {
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -182,11 +214,6 @@ func resourceClusterVsphere() *schema.Resource {
 							Optional: true,
 							Default:  false,
 
-							//ForceNew: true,
-						},
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
 							//ForceNew: true,
 						},
 						"count": {
@@ -318,16 +345,68 @@ func resourceClusterVsphere() *schema.Resource {
 					},
 				},
 			},
-			//"cloud_config": {
-			//	Type:     schema.TypeString,
-			//	Required: true,
-			//	//DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-			//	//	return false
-			//	//},
-			//	//StateFunc: func(val interface{}) string {
-			//	//	return strings.ToLower(val.(string))
-			//	//},
-			//},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -388,39 +467,10 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
-	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
+	configUID := cluster.Spec.CloudConfigRef.UID
+	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-
-	kubecfg, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("kubeconfig", kubecfg); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.Config != nil {
-		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.DriverSpec != nil {
-		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	return flattenCloudConfigVsphere(cluster.Spec.CloudConfigRef.UID, d, c)
-}
-
-func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	d.Set("cloud_config_id", configUID)
 	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
@@ -429,6 +479,16 @@ func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *clie
 			return diag.FromErr(err)
 		}
 	}
+
+	diagnostics, done := readCommonFields(c, d, cluster)
+	if done {
+		return diagnostics
+	}
+
+	return diags
+}
+
+func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 
 	return diag.Diagnostics{}
 }
@@ -559,22 +619,9 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("cluster_profile") {
-		if err := updateProfiles(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("backup_policy") {
-		if err := updateBackupPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("scan_policy") {
-		if err := updateScanPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := updateCommonFields(d, c)
+	if done {
+		return diagnostics
 	}
 
 	resourceClusterVsphereRead(ctx, d, m)
@@ -680,10 +727,12 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolC
 			InstanceType: &instanceType,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			IsControlPlane: controlPlane,
-			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
+			AdditionalLabels: toAdditionalNodePoolLabels(m),
+			Taints:           toClusterTaints(m),
+			IsControlPlane:   controlPlane,
+			Labels:           labels,
+			Name:             ptr.StringPtr(m["name"].(string)),
+			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: m["update_strategy"].(string),
 			},
