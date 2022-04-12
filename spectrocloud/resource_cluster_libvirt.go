@@ -524,7 +524,9 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi["additional_labels"] = machinePool.AdditionalLabels
+		if machinePool.AdditionalLabels != nil {
+			oi["additional_labels"] = machinePool.AdditionalLabels
+		}
 		oi["taints"] = flattenClusterTaints(machinePool.Taints)
 
 		oi["control_plane"] = machinePool.IsControlPlane

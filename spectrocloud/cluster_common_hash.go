@@ -208,18 +208,12 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 			buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(string)))
 			if ins["attached_disks"] != nil {
 				for _, disk := range ins["attached_disks"].([]interface{}) {
-					for j, prop := range disk.(map[string]interface{}) {
-						switch {
-						case j == "managed":
-							buf.WriteString(fmt.Sprintf("%s-%s", j, prop.(bool)))
-							break
-						case j == "size_in_gb":
-							buf.WriteString(fmt.Sprintf("%s-%s", j, prop.(int)))
-							break
-						default:
-							buf.WriteString(fmt.Sprintf("%s-%s", j, prop.(string)))
-							break
-						}
+					diskMap := disk.(map[string]interface{})
+					if diskMap["managed"] != nil {
+						buf.WriteString(fmt.Sprintf("%s-%s", "managed", diskMap["managed"].(bool)))
+					}
+					if diskMap["size_in_gb"] != nil {
+						buf.WriteString(fmt.Sprintf("%s-%s", "size_in_gb", diskMap["size_in_gb"].(int)))
 					}
 				}
 			}
