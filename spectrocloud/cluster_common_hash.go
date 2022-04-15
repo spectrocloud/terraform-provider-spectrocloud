@@ -217,9 +217,7 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 					}
 				}
 			}
-		} /* else {
-			return 0
-		}*/
+		}
 	}
 
 	return int(hash(buf.String()))

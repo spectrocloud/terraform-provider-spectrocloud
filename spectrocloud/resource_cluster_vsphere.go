@@ -512,6 +512,17 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
+		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
+			oi["additional_labels"] = make(map[string]interface{})
+		} else {
+			oi["additional_labels"] = machinePool.AdditionalLabels
+		}
+
+		taints := flattenClusterTaints(machinePool.Taints)
+		if len(taints) > 0 {
+			oi["taints"] = taints
+		}
+
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name

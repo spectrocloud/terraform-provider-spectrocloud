@@ -459,12 +459,14 @@ func flattenMachinePoolConfigsEdge(machinePools []*models.V1EdgeMachinePoolConfi
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, len(machinePools))
+	ois := make([]interface{}, 0)
 
-	for i, machinePool := range machinePools {
+	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		if machinePool.AdditionalLabels != nil {
+		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
+			oi["additional_labels"] = make(map[string]interface{})
+		} else {
 			oi["additional_labels"] = machinePool.AdditionalLabels
 		}
 
@@ -487,7 +489,7 @@ func flattenMachinePoolConfigsEdge(machinePools []*models.V1EdgeMachinePoolConfi
 		}
 		oi["placements"] = placements
 
-		ois[i] = oi
+		ois = append(ois, oi)
 	}
 
 	return ois
@@ -522,6 +524,9 @@ func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m in
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
+			if name == "" {
+				continue
+			}
 			hash := resourceMachinePoolEdgeHash(machinePoolResource)
 
 			machinePool := toMachinePoolEdge(machinePoolResource)
