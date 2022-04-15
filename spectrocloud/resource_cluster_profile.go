@@ -202,7 +202,10 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	_ = d.Set("name", cp.Metadata.Name)
-	packs := flattenPacks(cp.Spec.Published.Packs, packManifests)
+	packs, err := flattenPacks(c, cp.Spec.Published.Packs, packManifests)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if err := d.Set("pack", packs); err != nil {
 		return diag.FromErr(err)
 	}
@@ -210,9 +213,9 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func flattenPacks(packs []*models.V1PackRef, manifestContent map[string][]string) []interface{} {
+func flattenPacks(c *client.V1Client, packs []*models.V1PackRef, manifestContent map[string][]string) ([]interface{}, error) {
 	if packs == nil {
-		return make([]interface{}, 0)
+		return make([]interface{}, 0), nil
 	}
 
 	ps := make([]interface{}, len(packs))
@@ -220,6 +223,7 @@ func flattenPacks(packs []*models.V1PackRef, manifestContent map[string][]string
 		p := make(map[string]interface{})
 
 		p["uid"] = pack.PackUID
+		p["registry_uid"] = c.GetPackRegistry(pack.PackUID)
 		p["name"] = *pack.Name
 		p["tag"] = pack.Tag
 		p["values"] = pack.Values
@@ -241,7 +245,7 @@ func flattenPacks(packs []*models.V1PackRef, manifestContent map[string][]string
 		ps[i] = p
 	}
 
-	return ps
+	return ps, nil
 }
 
 func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

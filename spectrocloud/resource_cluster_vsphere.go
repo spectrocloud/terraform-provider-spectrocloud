@@ -65,6 +65,10 @@ func resourceClusterVsphere() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"tag": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -153,6 +157,10 @@ func resourceClusterVsphere() *schema.Resource {
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"tag": {
 							Type:     schema.TypeString,

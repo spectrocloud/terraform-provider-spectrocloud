@@ -67,6 +67,10 @@ func resourceClusterLibvirt() *schema.Resource {
 										Optional: true,
 										Default:  "spectro",
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -157,6 +161,30 @@ func resourceClusterLibvirt() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+						},
+					},
+				},
+			},
+			"pack": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Required: true,
 						},
 					},
 				},
@@ -295,7 +323,7 @@ func resourceClusterLibvirt() *schema.Resource {
 									},
 									"network": {
 										Type:     schema.TypeString,
-										Required: true,
+										Optional: true,
 									},
 								},
 							},
@@ -468,7 +496,7 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	resourceClusterLibvirtRead(ctx, d, m)
+	diags = resourceClusterLibvirtRead(ctx, d, m)
 
 	return diags
 }
@@ -491,12 +519,13 @@ func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	// Update the kubeconfig
-	diagnostics, done := readCommonFields(c, d, cluster)
-	if done {
+	diagnostics, errorSet := readCommonFields(c, d, cluster)
+	if errorSet {
 		return diagnostics
 	}
 
-	return flattenCloudConfigLibvirt(cluster.Spec.CloudConfigRef.UID, d, c)
+	diags = flattenCloudConfigLibvirt(cluster.Spec.CloudConfigRef.UID, d, c)
+	return diags
 }
 
 func flattenCloudConfigLibvirt(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
@@ -519,15 +548,21 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, len(machinePools))
+	ois := make([]interface{}, 0, 1)
 
-	for i, machinePool := range machinePools {
+	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		if machinePool.AdditionalLabels != nil {
+		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
+			oi["additional_labels"] = make(map[string]interface{})
+		} else {
 			oi["additional_labels"] = machinePool.AdditionalLabels
 		}
-		oi["taints"] = flattenClusterTaints(machinePool.Taints)
+
+		taints := flattenClusterTaints(machinePool.Taints)
+		if len(taints) > 0 {
+			oi["taints"] = taints
+		}
 
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
@@ -582,7 +617,7 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 		}
 		oi["placements"] = placements
 
-		ois[i] = oi
+		ois = append(ois, oi)
 	}
 
 	return ois
@@ -649,12 +684,12 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 		}
 	}
 
-	diagnostics, done := updateCommonFields(d, c)
-	if done {
+	diagnostics, errorSet := updateCommonFields(d, c)
+	if errorSet {
 		return diagnostics
 	}
 
-	resourceClusterLibvirtRead(ctx, d, m)
+	diags = resourceClusterLibvirtRead(ctx, d, m)
 
 	return diags
 }

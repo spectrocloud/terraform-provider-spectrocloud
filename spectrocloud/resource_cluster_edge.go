@@ -62,6 +62,10 @@ func resourceClusterEdge() *schema.Resource {
 										Optional: true,
 										Default:  "spectro",
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -138,6 +142,30 @@ func resourceClusterEdge() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"pack": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"values": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -436,8 +464,14 @@ func flattenMachinePoolConfigsEdge(machinePools []*models.V1EdgeMachinePoolConfi
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi["additional_labels"] = machinePool.AdditionalLabels
-		oi["taints"] = flattenClusterTaints(machinePool.Taints)
+		if machinePool.AdditionalLabels != nil {
+			oi["additional_labels"] = machinePool.AdditionalLabels
+		}
+
+		taints := flattenClusterTaints(machinePool.Taints)
+		if len(taints) > 0 {
+			oi["taints"] = taints
+		}
 
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker

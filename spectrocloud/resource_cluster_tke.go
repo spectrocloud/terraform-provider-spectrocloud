@@ -63,6 +63,10 @@ func resourceClusterTke() *schema.Resource {
 										Optional: true,
 										Default:  "spectro",
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -181,6 +185,10 @@ func resourceClusterTke() *schema.Resource {
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"tag": {
 							Type:     schema.TypeString,
