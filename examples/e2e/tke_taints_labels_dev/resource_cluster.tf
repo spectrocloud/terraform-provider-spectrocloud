@@ -1,5 +1,5 @@
 resource "spectrocloud_cluster_tke" "cluster" {
-  name = "tke-demo-tf"
+  name = "tke-dev-taints"
 
   cluster_profile {
     id = spectrocloud_cluster_profile.profile.id
@@ -70,9 +70,9 @@ resource "spectrocloud_cluster_tke" "cluster" {
 
   machine_pool {
     name          = "worker-basic"
-    count         = 1
+    count         = 2
     min           = 1
-    max           = 1
+    max           = 3
     instance_type = "S3.MEDIUM4"
     az_subnets    = var.worker_tke_subnets_map
     disk_size_gb  = 30

@@ -517,21 +517,8 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	configUID := cluster.Spec.CloudConfigRef.UID
 	d.Set("cloud_config_id", configUID)
 
-	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
-		return diag.FromErr(err)
-	}
-
 	var config *models.V1EksCloudConfig
 	if config, err = c.GetCloudConfigEks(configUID); err != nil {
-		return diag.FromErr(err)
-	}
-
-	// Update the kubeconfig
-	kubecfg, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("kubeconfig", kubecfg); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -545,37 +532,9 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	//read backup policy and scan policy
-	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.Config != nil {
-		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.DriverSpec != nil {
-		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if rbac, err := c.GetClusterRbacConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if rbac != nil && rbac.Items != nil {
-		if err := d.Set("cluster_rbac_binding", flattenClusterRBAC(rbac.Items)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if namespace, err := c.GetClusterNamespaceConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if namespace != nil && namespace.Items != nil {
-		if err := d.Set("namespaces", flattenClusterNamespaces(namespace.Items)); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := readCommonFields(c, d, cluster)
+	if done {
+		return diagnostics
 	}
 
 	return diags
@@ -795,34 +754,9 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChange("namespaces") {
-		if err := updateClusterNamespaces(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("cluster_rbac_binding") {
-		if err := updateClusterRBAC(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChanges("cluster_profile") {
-		if err := updateProfiles(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("backup_policy") {
-		if err := updateBackupPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("scan_policy") {
-		if err := updateScanPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := updateCommonFields(d, c)
+	if done {
+		return diagnostics
 	}
 
 	resourceClusterEksRead(ctx, d, m)
@@ -934,11 +868,6 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		capacityType = m["capacity_type"].(string)
 	}
 
-	additionalLabels := make(map[string]string)
-	if m["additional_labels"] != nil {
-		additionalLabels = expandStringMap(m["additional_labels"].(map[string]interface{}))
-	}
-
 	min := int32(m["count"].(int))
 	max := int32(m["count"].(int))
 
@@ -959,7 +888,7 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			Subnets:        subnets,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels: additionalLabels,
+			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
