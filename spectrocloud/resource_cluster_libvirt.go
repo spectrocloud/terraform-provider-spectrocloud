@@ -652,6 +652,9 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
+			if name == "" {
+				continue
+			}
 			hash := resourceMachinePoolLibvirtHash(machinePoolResource)
 
 			machinePool := toMachinePoolLibvirt(machinePoolResource)

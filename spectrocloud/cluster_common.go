@@ -174,7 +174,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 			return diag.FromErr(err), true
 		}
 	}
-	return nil, false
+	return diag.Diagnostics{}, false
 }
 
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
@@ -208,5 +208,5 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 			return diag.FromErr(err), true
 		}
 	}
-	return nil, false
+	return diag.Diagnostics{}, false
 }

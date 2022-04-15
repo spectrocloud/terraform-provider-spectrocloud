@@ -217,9 +217,9 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 					}
 				}
 			}
-		} else {
+		} /* else {
 			return 0
-		}
+		}*/
 	}
 
 	return int(hash(buf.String()))
@@ -248,7 +248,7 @@ func HashStringMapList(v interface{}) string {
 		return ""
 	}
 
-	hashes := make([]string, 0, len(m))
+	hashes := make([]string, 0)
 
 	for _, i := range m {
 		hashes = append(hashes, HashStringMap(i))
