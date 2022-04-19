@@ -246,13 +246,13 @@ func HashStringMapList(v interface{}) string {
 		return ""
 	}
 
-	hashes := make([]string, 0, len(m))
+	hashes := make([]string, 0)
 
 	for _, i := range m {
 		hashes = append(hashes, HashStringMap(i))
 	}
 
-	sortedHashes := make([]string, 0, len(m))
+	sortedHashes := make([]string, len(hashes), len(hashes))
 	copy(sortedHashes, hashes)
 	sort.Strings(sortedHashes)
 
@@ -264,19 +264,19 @@ func HashStringMapList(v interface{}) string {
 }
 
 func HashStringMap(v interface{}) string {
-	if v == nil {
+	if v == nil || len(v.(map[string]interface{})) == 0 {
 		return ""
 	}
 
 	var b bytes.Buffer
 	m := v.(map[string]interface{})
 
-	keys := make([]string, 0, len(m))
+	keys := make([]string, 0)
 	for k := range m {
 		keys = append(keys, k)
 	}
 
-	sortedKeys := make([]string, 0, len(m))
+	sortedKeys := make([]string, len(keys), len(keys))
 	copy(sortedKeys, keys)
 	sort.Strings(sortedKeys)
 

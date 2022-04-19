@@ -61,6 +61,10 @@ func resourceClusterMaas() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"tag": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -110,6 +114,30 @@ func resourceClusterMaas() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"domain": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"pack": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"values": {
 							Type:     schema.TypeString,
 							Required: true,
 						},

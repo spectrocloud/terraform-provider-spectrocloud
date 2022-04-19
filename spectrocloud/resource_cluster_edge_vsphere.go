@@ -67,6 +67,10 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 										Optional: true,
 										Default:  "spectro",
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -181,6 +185,10 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"tag": {
 							Type:     schema.TypeString,
@@ -517,11 +525,19 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 
 	ois := make([]interface{}, len(machinePools))
 
-	for i, machinePool := range machinePools {
+	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi["additional_labels"] = machinePool.AdditionalLabels
-		oi["taints"] = flattenClusterTaints(machinePool.Taints)
+		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
+			oi["additional_labels"] = make(map[string]interface{})
+		} else {
+			oi["additional_labels"] = machinePool.AdditionalLabels
+		}
+
+		taints := flattenClusterTaints(machinePool.Taints)
+		if len(taints) > 0 {
+			oi["taints"] = taints
+		}
 
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
@@ -557,7 +573,7 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 		}
 		oi["placement"] = placements
 
-		ois[i] = oi
+		ois = append(ois, oi)
 	}
 
 	return ois

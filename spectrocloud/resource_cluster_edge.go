@@ -62,6 +62,10 @@ func resourceClusterEdge() *schema.Resource {
 										Optional: true,
 										Default:  "spectro",
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -138,6 +142,30 @@ func resourceClusterEdge() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"pack": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"values": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -431,13 +459,21 @@ func flattenMachinePoolConfigsEdge(machinePools []*models.V1EdgeMachinePoolConfi
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, len(machinePools))
+	ois := make([]interface{}, 0)
 
-	for i, machinePool := range machinePools {
+	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi["additional_labels"] = machinePool.AdditionalLabels
-		oi["taints"] = flattenClusterTaints(machinePool.Taints)
+		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
+			oi["additional_labels"] = make(map[string]interface{})
+		} else {
+			oi["additional_labels"] = machinePool.AdditionalLabels
+		}
+
+		taints := flattenClusterTaints(machinePool.Taints)
+		if len(taints) > 0 {
+			oi["taints"] = taints
+		}
 
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
@@ -453,7 +489,7 @@ func flattenMachinePoolConfigsEdge(machinePools []*models.V1EdgeMachinePoolConfi
 		}
 		oi["placements"] = placements
 
-		ois[i] = oi
+		ois = append(ois, oi)
 	}
 
 	return ois
@@ -488,6 +524,9 @@ func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m in
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
+			if name == "" {
+				continue
+			}
 			hash := resourceMachinePoolEdgeHash(machinePoolResource)
 
 			machinePool := toMachinePoolEdge(machinePoolResource)

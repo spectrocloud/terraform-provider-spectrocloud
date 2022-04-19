@@ -63,6 +63,10 @@ func resourceClusterTke() *schema.Resource {
 										Optional: true,
 										Default:  "spectro",
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -181,6 +185,10 @@ func resourceClusterTke() *schema.Resource {
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"tag": {
 							Type:     schema.TypeString,
@@ -488,8 +496,11 @@ func flattenMachinePoolConfigsTke(machinePools []*models.V1TencentMachinePoolCon
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi["additional_labels"] = machinePool.AdditionalLabels
-		oi["taints"] = flattenClusterTaints(machinePool.Taints)
+		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
+			oi["additional_labels"] = make(map[string]interface{})
+		} else {
+			oi["additional_labels"] = machinePool.AdditionalLabels
+		}
 
 		if machinePool.IsControlPlane {
 			continue

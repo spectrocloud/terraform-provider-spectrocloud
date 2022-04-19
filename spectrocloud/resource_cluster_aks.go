@@ -60,6 +60,10 @@ func resourceClusterAks() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"tag": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -121,6 +125,10 @@ func resourceClusterAks() *schema.Resource {
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"tag": {
 							Type:     schema.TypeString,

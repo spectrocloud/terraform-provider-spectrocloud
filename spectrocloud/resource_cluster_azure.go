@@ -60,6 +60,10 @@ func resourceClusterAzure() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"tag": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -135,6 +139,10 @@ func resourceClusterAzure() *schema.Resource {
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"tag": {
 							Type:     schema.TypeString,
