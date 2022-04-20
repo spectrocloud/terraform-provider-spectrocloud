@@ -72,6 +72,7 @@ func flattenClusterRBAC(items []*models.V1ClusterRbac) []interface{} {
 			flattenRole := make(map[string]interface{})
 			flattenRole["kind"] = binding.Role.Kind
 			flattenRole["name"] = binding.Role.Name
+			flattenRbac["role"] = flattenRole
 
 			subjects := make([]interface{}, 0)
 			for _, subject := range binding.Subjects {

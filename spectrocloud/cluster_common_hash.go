@@ -127,6 +127,10 @@ func resourceMachinePoolTkeHash(v interface{}) int {
 func resourceMachinePoolVsphereHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	//d := m["disk"].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
@@ -134,10 +138,12 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 
 	if v, found := m["instance_type"]; found {
-		ins := v.([]interface{})[0].(map[string]interface{})
-		buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
+		if len(v.([]interface{})) > 0 {
+			ins := v.([]interface{})[0].(map[string]interface{})
+			buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
+			buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
+			buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
+		}
 	}
 
 	return int(hash(buf.String()))
@@ -169,9 +175,11 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	if v, found := m["instance_type"]; found {
-		ins := v.([]interface{})[0].(map[string]interface{})
-		buf.WriteString(fmt.Sprintf("%d-", ins["min_cpu"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["min_memory_mb"].(int)))
+		if len(v.([]interface{})) > 0 {
+			ins := v.([]interface{})[0].(map[string]interface{})
+			buf.WriteString(fmt.Sprintf("%d-", ins["min_cpu"].(int)))
+			buf.WriteString(fmt.Sprintf("%d-", ins["min_memory_mb"].(int)))
+		}
 	}
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 
@@ -181,6 +189,10 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 func resourceMachinePoolLibvirtHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	//d := m["disk"].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
@@ -188,23 +200,20 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 
 	if v, found := m["instance_type"]; found {
-		ins := v.([]interface{})[0].(map[string]interface{})
-		buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
-		buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(string)))
-		if ins["attached_disks"] != nil {
-			for _, disk := range ins["attached_disks"].([]interface{}) {
-				for j, prop := range disk.(map[string]interface{}) {
-					switch {
-					case j == "managed":
-						buf.WriteString(fmt.Sprintf("%s-%s", j, prop.(bool)))
-						break
-					case j == "size_in_gb":
-						buf.WriteString(fmt.Sprintf("%s-%s", j, prop.(int)))
-						break
-					default:
-						buf.WriteString(fmt.Sprintf("%s-%s", j, prop.(string)))
+		if len(v.([]interface{})) > 0 {
+			ins := v.([]interface{})[0].(map[string]interface{})
+			buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
+			buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
+			buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
+			buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(string)))
+			if ins["attached_disks"] != nil {
+				for _, disk := range ins["attached_disks"].([]interface{}) {
+					diskMap := disk.(map[string]interface{})
+					if diskMap["managed"] != nil {
+						buf.WriteString(fmt.Sprintf("%s-%s", "managed", diskMap["managed"].(bool)))
+					}
+					if diskMap["size_in_gb"] != nil {
+						buf.WriteString(fmt.Sprintf("%s-%s", "size_in_gb", diskMap["size_in_gb"].(int)))
 					}
 				}
 			}
@@ -217,6 +226,10 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 func resourceMachinePoolEdgeHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
@@ -229,25 +242,46 @@ func HashStringMapList(v interface{}) string {
 	var b bytes.Buffer
 	m := v.([]interface{})
 
+	if len(m) == 0 {
+		return ""
+	}
+
+	hashes := make([]string, 0)
+
 	for _, i := range m {
-		b.WriteString(HashStringMap(i))
+		hashes = append(hashes, HashStringMap(i))
+	}
+
+	sortedHashes := make([]string, len(hashes), len(hashes))
+	copy(sortedHashes, hashes)
+	sort.Strings(sortedHashes)
+
+	for _, i := range sortedHashes {
+		b.WriteString(i)
 	}
 
 	return b.String()
 }
 
 func HashStringMap(v interface{}) string {
+	if v == nil || len(v.(map[string]interface{})) == 0 {
+		return ""
+	}
+
 	var b bytes.Buffer
 	m := v.(map[string]interface{})
 
-	keys := make([]string, 0, len(m))
+	keys := make([]string, 0)
 	for k := range m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
 
-	for _, k := range keys {
-		b.WriteString(fmt.Sprintf("%s-", m[k].(string)))
+	sortedKeys := make([]string, len(keys), len(keys))
+	copy(sortedKeys, keys)
+	sort.Strings(sortedKeys)
+
+	for _, k := range sortedKeys {
+		b.WriteString(fmt.Sprintf("%s-%s", k, m[k].(string)))
 	}
 
 	return b.String()

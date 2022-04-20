@@ -38,6 +38,10 @@ func dataSourceClusterProfile() *schema.Resource {
 							Optional: true,
 							Default:  "spectro",
 						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"uid": {
 							Type:     schema.TypeString,
 							Computed: true,
@@ -147,7 +151,10 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 			}
 		}
 
-		packs := flattenPacks(profile.Spec.Published.Packs, packManifests)
+		packs, err := flattenPacks(c, profile.Spec.Published.Packs, packManifests)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("pack", packs); err != nil {
 			return diag.FromErr(err)
 		}

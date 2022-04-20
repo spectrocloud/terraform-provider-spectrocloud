@@ -107,6 +107,38 @@ func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1P
 	return packs, nil
 }
 
+func (h *V1Client) GetPack(uid string) (*models.V1PackTagEntity, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1PacksUIDParamsWithContext(h.ctx).WithUID(uid)
+	response, err := client.V1PacksUID(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Payload, nil
+}
+
+func (h *V1Client) GetPackRegistry(uid string) string {
+	if uid == "uid" {
+		registry, err := h.GetPackRegistryCommonByName("Public Repo")
+		if err != nil {
+			return ""
+		}
+		return registry.UID
+	}
+
+	pack, err := h.GetPack(uid)
+	if err != nil {
+		return ""
+	}
+
+	return pack.RegistryUID
+}
+
 func (h *V1Client) UpdateClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity) error {
 	client, err := h.getClusterClient()
 	if err != nil {

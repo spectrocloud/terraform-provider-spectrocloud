@@ -63,6 +63,10 @@ func resourceClusterTke() *schema.Resource {
 										Optional: true,
 										Default:  "spectro",
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -181,6 +185,10 @@ func resourceClusterTke() *schema.Resource {
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"tag": {
 							Type:     schema.TypeString,
@@ -460,58 +468,18 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 	configUID := cluster.Spec.CloudConfigRef.UID
 	d.Set("cloud_config_id", configUID)
 
-	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
-		return diag.FromErr(err)
-	}
-
 	var config *models.V1TencentCloudConfig
 	if config, err = c.GetCloudConfigTke(configUID); err != nil {
 		return diag.FromErr(err)
 	}
-
-	kubecfg, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("kubeconfig", kubecfg); err != nil {
-		return diag.FromErr(err)
-	}
-
 	mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
 	if err := d.Set("machine_pool", mp); err != nil {
 		return diag.FromErr(err)
 	}
 
-	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.Config != nil {
-		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.DriverSpec != nil {
-		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if rbac, err := c.GetClusterRbacConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if rbac != nil && rbac.Items != nil {
-		if err := d.Set("cluster_rbac_binding", flattenClusterRBAC(rbac.Items)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if namespace, err := c.GetClusterNamespaceConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if namespace != nil && namespace.Items != nil {
-		if err := d.Set("namespaces", flattenClusterNamespaces(namespace.Items)); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := readCommonFields(c, d, cluster)
+	if done {
+		return diagnostics
 	}
 
 	return diags
@@ -528,8 +496,11 @@ func flattenMachinePoolConfigsTke(machinePools []*models.V1TencentMachinePoolCon
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		oi["additional_labels"] = machinePool.AdditionalLabels
-		oi["taints"] = flattenClusterTaints(machinePool.Taints)
+		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
+			oi["additional_labels"] = make(map[string]interface{})
+		} else {
+			oi["additional_labels"] = machinePool.AdditionalLabels
+		}
 
 		if machinePool.IsControlPlane {
 			continue
@@ -609,34 +580,9 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 		}
 	}
 
-	if d.HasChange("namespaces") {
-		if err := updateClusterNamespaces(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("cluster_rbac_binding") {
-		if err := updateClusterRBAC(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChanges("cluster_profile") {
-		if err := updateProfiles(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("backup_policy") {
-		if err := updateBackupPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("scan_policy") {
-		if err := updateScanPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := updateCommonFields(d, c)
+	if done {
+		return diagnostics
 	}
 
 	resourceClusterTkeRead(ctx, d, m)
@@ -730,11 +676,6 @@ func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfi
 		azs = append(azs, k)
 	}
 
-	additionalLabels := make(map[string]string)
-	if m["additional_labels"] != nil {
-		additionalLabels = expandStringMap(m["additional_labels"].(map[string]interface{}))
-	}
-
 	min := int32(m["count"].(int))
 	max := int32(m["count"].(int))
 
@@ -753,7 +694,7 @@ func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfi
 			Azs:            azs,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels: additionalLabels,
+			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,

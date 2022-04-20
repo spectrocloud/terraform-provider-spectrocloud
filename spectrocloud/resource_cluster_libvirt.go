@@ -67,6 +67,10 @@ func resourceClusterLibvirt() *schema.Resource {
 										Optional: true,
 										Default:  "spectro",
 									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -161,12 +165,68 @@ func resourceClusterLibvirt() *schema.Resource {
 					},
 				},
 			},
+			"pack": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
 				Set:      resourceMachinePoolLibvirtHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+							//ForceNew: true,
+						},
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"control_plane": {
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -178,11 +238,6 @@ func resourceClusterLibvirt() *schema.Resource {
 							Optional: true,
 							Default:  false,
 
-							//ForceNew: true,
-						},
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
 							//ForceNew: true,
 						},
 						"count": {
@@ -268,7 +323,7 @@ func resourceClusterLibvirt() *schema.Resource {
 									},
 									"network": {
 										Type:     schema.TypeString,
-										Required: true,
+										Optional: true,
 									},
 								},
 							},
@@ -341,6 +396,68 @@ func resourceClusterLibvirt() *schema.Resource {
 					},
 				},
 			},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -379,7 +496,7 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	resourceClusterLibvirtRead(ctx, d, m)
+	diags = resourceClusterLibvirtRead(ctx, d, m)
 
 	return diags
 }
@@ -402,35 +519,13 @@ func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	// Update the kubeconfig
-	kubeconfig, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
+	diagnostics, errorSet := readCommonFields(c, d, cluster)
+	if errorSet {
+		return diagnostics
 	}
 
-	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("kubeconfig", kubeconfig); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.Config != nil {
-		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.DriverSpec != nil {
-		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	return flattenCloudConfigLibvirt(cluster.Spec.CloudConfigRef.UID, d, c)
+	diags = flattenCloudConfigLibvirt(cluster.Spec.CloudConfigRef.UID, d, c)
+	return diags
 }
 
 func flattenCloudConfigLibvirt(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
@@ -453,10 +548,21 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, len(machinePools))
+	ois := make([]interface{}, 0, 1)
 
-	for i, machinePool := range machinePools {
+	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
+
+		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
+			oi["additional_labels"] = make(map[string]interface{})
+		} else {
+			oi["additional_labels"] = machinePool.AdditionalLabels
+		}
+
+		taints := flattenClusterTaints(machinePool.Taints)
+		if len(taints) > 0 {
+			oi["taints"] = taints
+		}
 
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
@@ -511,7 +617,7 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 		}
 		oi["placements"] = placements
 
-		ois[i] = oi
+		ois = append(ois, oi)
 	}
 
 	return ois
@@ -546,6 +652,9 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
+			if name == "" {
+				continue
+			}
 			hash := resourceMachinePoolLibvirtHash(machinePoolResource)
 
 			machinePool := toMachinePoolLibvirt(machinePoolResource)
@@ -578,25 +687,12 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 		}
 	}
 
-	if d.HasChanges("cluster_profile") {
-		if err := updateProfiles(c, d); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, errorSet := updateCommonFields(d, c)
+	if errorSet {
+		return diagnostics
 	}
 
-	if d.HasChange("backup_policy") {
-		if err := updateBackupPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("scan_policy") {
-		if err := updateScanPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	resourceClusterLibvirtRead(ctx, d, m)
+	diags = resourceClusterLibvirtRead(ctx, d, m)
 
 	return diags
 }
@@ -689,10 +785,12 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 			InstanceType:     &instanceType,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			IsControlPlane: controlPlane,
-			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
+			AdditionalLabels: toAdditionalNodePoolLabels(m),
+			Taints:           toClusterTaints(m),
+			IsControlPlane:   controlPlane,
+			Labels:           labels,
+			Name:             ptr.StringPtr(m["name"].(string)),
+			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: m["update_strategy"].(string),
 			},
@@ -713,8 +811,10 @@ func getAdditionalDisks(ins map[string]interface{}) []*models.V1LibvirtDiskSpec 
 				switch {
 				case j == "managed":
 					managed = prop.(bool)
+					break
 				case j == "size_in_gb":
 					size = int32(prop.(int))
+					break
 				default:
 					return nil
 				}
