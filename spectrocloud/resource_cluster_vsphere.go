@@ -483,14 +483,6 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfig, err := c.GetVsphereClouldConfigValues(configUID)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		cloudConfigFlatten := flattenClusterConfigsVsphere(cloudConfig)
-		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
-			return diag.FromErr(err)
-		}
 		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
@@ -506,6 +498,23 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 }
 
 func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	d.Set("cloud_config_id", configUID)
+	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
+		return diag.FromErr(err)
+	} else {
+		cloudConfig, err := c.GetVsphereClouldConfigValues(configUID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		cloudConfigFlatten := flattenClusterConfigsVsphere(cloudConfig)
+		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
+			return diag.FromErr(err)
+		}
+		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
+		if err := d.Set("machine_pool", mp); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	return diag.Diagnostics{}
 }
