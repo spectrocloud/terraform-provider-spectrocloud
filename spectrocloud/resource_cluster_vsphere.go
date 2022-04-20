@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -497,8 +498,54 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 }
 
 func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	d.Set("cloud_config_id", configUID)
+	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
+		return diag.FromErr(err)
+	} else {
+		cloudConfig, err := c.GetVsphereClouldConfigValues(configUID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		cloudConfigFlatten := flattenClusterConfigsVsphere(cloudConfig)
+		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
+			return diag.FromErr(err)
+		}
+		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
+		if err := d.Set("machine_pool", mp); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	return diag.Diagnostics{}
+}
+
+func flattenClusterConfigsVsphere(cloudConfig *models.V1VsphereCloudConfig) interface{} {
+
+	cloudConfigFlatten := make([]interface{}, 0)
+	if cloudConfig == nil {
+		return cloudConfigFlatten
+	}
+
+	ret := make(map[string]interface{})
+
+	cpEndpoint := cloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint
+	placement := cloudConfig.Spec.ClusterConfig.Placement
+	ret["datacenter"] = placement.Datacenter
+	ret["folder"] = placement.Folder
+	ret["ssh_key"] = strings.TrimSpace(cloudConfig.Spec.ClusterConfig.SSHKeys[0])
+	ret["static_ip"] = cloudConfig.Spec.ClusterConfig.StaticIP
+
+	if cpEndpoint.Type != "" {
+		ret["network_type"] = cpEndpoint.Type
+	}
+
+	if cpEndpoint.DdnsSearchDomain != "" {
+		ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
+	}
+
+	cloudConfigFlatten = append(cloudConfigFlatten, ret)
+
+	return cloudConfigFlatten
 }
 
 func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoolConfig) []interface{} {
@@ -570,6 +617,11 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
+
+	if d.HasChange("cloud_config") {
+		cloudConfig := toCloudConfigUpdate(d.Get("cloud_config").([]interface{})[0].(map[string]interface{}))
+		c.UpdateVsphereCloudConfigValues(cloudConfigId, cloudConfig)
+	}
 
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
@@ -653,7 +705,6 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereClusterEnt
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
-	staticIP := cloudConfig["static_ip"].(bool)
 	cluster := &models.V1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -664,23 +715,8 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereClusterEnt
 			CloudAccountUID: d.Get("cloud_account_id").(string),
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1VsphereClusterConfigEntity{
-				NtpServers: nil,
-				Placement: &models.V1VspherePlacementConfigEntity{
-					Datacenter: cloudConfig["datacenter"].(string),
-					Folder:     cloudConfig["folder"].(string),
-				},
-				SSHKeys:  []string{cloudConfig["ssh_key"].(string)},
-				StaticIP: staticIP,
-			},
+			CloudConfig:     toCloudConfigCreate(cloudConfig),
 		},
-	}
-
-	if !staticIP {
-		cluster.Spec.CloudConfig.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
-			DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-			Type:             cloudConfig["network_type"].(string),
-		}
 	}
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
@@ -698,6 +734,36 @@ func toVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereClusterEnt
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster
+}
+
+func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
+	staticIP := cloudConfig["static_ip"].(bool)
+
+	V1VsphereClusterConfigEntity := &models.V1VsphereClusterConfigEntity{
+		NtpServers: nil,
+		Placement: &models.V1VspherePlacementConfigEntity{
+			Datacenter: cloudConfig["datacenter"].(string),
+			Folder:     cloudConfig["folder"].(string),
+		},
+		// ssh key trim is needed for UI to display key correctly.
+		SSHKeys:  []string{strings.TrimSpace(cloudConfig["ssh_key"].(string))},
+		StaticIP: staticIP,
+	}
+
+	if !staticIP {
+		V1VsphereClusterConfigEntity.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
+			DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
+			Type:             cloudConfig["network_type"].(string),
+		}
+	}
+
+	return V1VsphereClusterConfigEntity
+}
+
+func toCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1VsphereCloudClusterConfigEntity {
+	return &models.V1VsphereCloudClusterConfigEntity{
+		toCloudConfigCreate(cloudConfig),
+	}
 }
 
 func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolConfigEntity {
