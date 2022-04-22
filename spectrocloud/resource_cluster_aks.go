@@ -155,6 +155,11 @@ func resourceClusterAks() *schema.Resource {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
+						"update_strategy": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "RollingUpdateScaleOut",
+						},
 						"instance_type": {
 							Type:     schema.TypeString,
 							Required: true,

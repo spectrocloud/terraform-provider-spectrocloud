@@ -24,6 +24,7 @@ func toClusterRBAC(clusterRbacBinding interface{}) *models.V1ClusterRbacInputEnt
 
 	role, _ := m["role"].(map[string]interface{})
 
+	namespace := m["namespace"].(string)
 	bindings := make([]*models.V1ClusterRbacBinding, 0)
 	subjects := make([]*models.V1ClusterRbacSubjects, 0)
 
@@ -47,7 +48,7 @@ func toClusterRBAC(clusterRbacBinding interface{}) *models.V1ClusterRbacInputEnt
 			Kind: role["kind"].(string),
 			Name: role["name"].(string),
 		},
-		Namespace: m["namespace"].(string),
+		Namespace: namespace,
 		Subjects:  subjects,
 	})
 
