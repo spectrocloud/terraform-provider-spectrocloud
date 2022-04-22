@@ -8,13 +8,39 @@ import (
 
 func toClusterRBACs(d *schema.ResourceData) []*models.V1ClusterRbacInputEntity {
 	clusterRbacs := make([]*models.V1ClusterRbacInputEntity, 0)
+	clusterRbacBindings := make([]*models.V1ClusterRbacBinding, 0)
+	rbacBindings := make([]*models.V1ClusterRbacBinding, 0)
+
 	if d.Get("cluster_rbac_binding") == nil {
 		return nil
 	}
 	for _, clusterRbac := range d.Get("cluster_rbac_binding").([]interface{}) {
 		b := toClusterRBAC(clusterRbac)
-		clusterRbacs = append(clusterRbacs, b)
+		for _, binding := range b.Spec.Bindings {
+			switch binding.Role.Kind {
+			case "ClusterRole":
+				clusterRbacBindings = append(clusterRbacBindings, binding)
+				break
+			case "Role":
+				rbacBindings = append(rbacBindings, binding)
+				break
+			default:
+				break
+			}
+		}
 	}
+
+	clusterRbacs = append(clusterRbacs, &models.V1ClusterRbacInputEntity{
+		Spec: &models.V1ClusterRbacSpec{
+			Bindings: clusterRbacBindings,
+		},
+	})
+
+	clusterRbacs = append(clusterRbacs, &models.V1ClusterRbacInputEntity{
+		Spec: &models.V1ClusterRbacSpec{
+			Bindings: rbacBindings,
+		},
+	})
 
 	return clusterRbacs
 }
