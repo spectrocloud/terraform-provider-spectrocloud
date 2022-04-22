@@ -16,6 +16,8 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 
@@ -34,6 +36,8 @@ func resourceMachinePoolAksHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
 	buf.WriteString(fmt.Sprintf("%t-", m["is_system_node_pool"].(bool)))
@@ -49,6 +53,8 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 
@@ -62,6 +68,8 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
@@ -80,6 +88,8 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+
 	if m["min"] != nil {
 		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
 	}
@@ -107,6 +117,8 @@ func resourceMachinePoolTkeHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+
 	if m["min"] != nil {
 		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
 	}
@@ -136,6 +148,7 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	if v, found := m["instance_type"]; found {
 		if len(v.([]interface{})) > 0 {
@@ -157,6 +170,7 @@ func resourceMachinePoolOpenStackHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["subnet_id"].(string)))
@@ -174,6 +188,8 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+
 	if v, found := m["instance_type"]; found {
 		if len(v.([]interface{})) > 0 {
 			ins := v.([]interface{})[0].(map[string]interface{})
@@ -198,6 +214,7 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	if v, found := m["instance_type"]; found {
 		if len(v.([]interface{})) > 0 {
@@ -234,6 +251,7 @@ func resourceMachinePoolEdgeHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	return int(hash(buf.String()))
 }
