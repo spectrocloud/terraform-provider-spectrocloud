@@ -30,17 +30,21 @@ func toClusterRBACs(d *schema.ResourceData) []*models.V1ClusterRbacInputEntity {
 		}
 	}
 
-	clusterRbacs = append(clusterRbacs, &models.V1ClusterRbacInputEntity{
-		Spec: &models.V1ClusterRbacSpec{
-			Bindings: clusterRbacBindings,
-		},
-	})
+	if len(clusterRbacBindings) > 0 {
+		clusterRbacs = append(clusterRbacs, &models.V1ClusterRbacInputEntity{
+			Spec: &models.V1ClusterRbacSpec{
+				Bindings: clusterRbacBindings,
+			},
+		})
+	}
 
-	clusterRbacs = append(clusterRbacs, &models.V1ClusterRbacInputEntity{
-		Spec: &models.V1ClusterRbacSpec{
-			Bindings: rbacBindings,
-		},
-	})
+	if len(rbacBindings) > 0 {
+		clusterRbacs = append(clusterRbacs, &models.V1ClusterRbacInputEntity{
+			Spec: &models.V1ClusterRbacSpec{
+				Bindings: rbacBindings,
+			},
+		})
+	}
 
 	return clusterRbacs
 }
