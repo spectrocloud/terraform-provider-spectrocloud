@@ -280,6 +280,30 @@ func resourceClusterLibvirt() *schema.Resource {
 										Type:     schema.TypeString,
 										Optional: true,
 									},
+									"cache_passthrough": {
+										Type:     schema.TypeBool,
+										Optional: true,
+									},
+									"gpu_config": {
+										Type:     schema.TypeSet,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"device_model": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"vendor": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"num_gpus": {
+													Type:     schema.TypeInt,
+													Required: true,
+												},
+											},
+										},
+									},
 									"disk_size_gb": {
 										Type:     schema.TypeInt,
 										Required: true,
@@ -590,6 +614,25 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 			if len(machinePool.InstanceType.Cpuset) > 0 {
 				s["cpus_sets"] = machinePool.InstanceType.Cpuset
 			}
+
+			if machinePool.InstanceType.CPUPassthroughSpec != nil && (*machinePool.InstanceType.CPUPassthroughSpec).IsEnabled {
+				s["cache_passthrough"] = (*machinePool.InstanceType.CPUPassthroughSpec).CachePassthrough
+			}
+
+			if machinePool.InstanceType.GpuConfig != nil {
+				config := make(map[string]interface{})
+				gpuConfig := *machinePool.InstanceType.GpuConfig
+
+				if gpuConfig.DeviceModel == "" || gpuConfig.VendorName == "" || gpuConfig.NumGPUs == 0 {
+					s["gpu_config"] = nil
+				} else {
+					config["device_model"] = gpuConfig.DeviceModel
+					config["vendor"] = gpuConfig.VendorName
+					config["num_gpus"] = gpuConfig.NumGPUs
+					s["gpu_config"] = config
+				}
+			}
+
 			s["memory_mb"] = int(*machinePool.InstanceType.MemoryInMB)
 			s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
 
@@ -771,9 +814,32 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 	}
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
+
+	var gpuConfig *models.V1GPUConfig
+	if ins["gpu_config"] != nil {
+		config, _ := ins["gpu_config"].(map[string]interface{})
+		if config != nil {
+			gpuConfig = &models.V1GPUConfig{
+				DeviceModel: config["device_model"].(string),
+				NumGPUs:     int32(config["num_gpus"].(int)),
+				VendorName:  config["vendor"].(string),
+			}
+		}
+	}
+
+	var cpuPassthroughSpec *models.V1CPUPassthroughSpec
+	if ins["cache_passthrough"] != nil {
+		cpuPassthroughSpec = &models.V1CPUPassthroughSpec{
+			CachePassthrough: ins["cache_passthrough"].(bool),
+			IsEnabled:        true,
+		}
+	}
+
 	instanceType := models.V1LibvirtInstanceType{
-		MemoryInMB: ptr.Int32Ptr(int32(ins["memory_mb"].(int))),
-		NumCPUs:    ptr.Int32Ptr(int32(ins["cpu"].(int))),
+		MemoryInMB:         ptr.Int32Ptr(int32(ins["memory_mb"].(int))),
+		NumCPUs:            ptr.Int32Ptr(int32(ins["cpu"].(int))),
+		GpuConfig:          gpuConfig,
+		CPUPassthroughSpec: cpuPassthroughSpec,
 	}
 
 	if ins["cpus_sets"] != nil && len(ins["cpus_sets"].(string)) > 0 {
