@@ -107,6 +107,10 @@ func resourceClusterTke() *schema.Resource {
 					},
 				},
 			},
+			"apply_setting": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -621,7 +625,7 @@ func toTkeCluster(d *schema.ResourceData) *models.V1SpectroTencentClusterEntity 
 		},
 	}
 
-	access := &models.V1EndpointAccess{}
+	access := &models.V1TkeEndpointAccess{}
 	switch cloudConfig["endpoint_access"].(string) {
 	case "public":
 		access.Public = true

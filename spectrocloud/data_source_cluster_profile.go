@@ -28,6 +28,11 @@ func dataSourceClusterProfile() *schema.Resource {
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
+			"version": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
 			"pack": {
 				Type:     schema.TypeList,
 				Computed: true,
@@ -109,19 +114,17 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 
-	var profile *models.V1ClusterProfile
-	for _, p := range profiles {
-
-		if v, ok := d.GetOk("id"); ok && v.(string) == p.Metadata.UID {
-			profile = p
-			break
-		} else if v, ok := d.GetOk("name"); ok && v.(string) == p.Metadata.Name {
-			profile = p
-			break
-		}
+	version := "1.0.0" //default
+	if ver, ok_version := d.GetOk("version"); ok_version {
+		version = ver.(string)
 	}
 
-	if profile == nil {
+	profile, err := c.GetClusterProfile(getProfileUID(profiles, d, version))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if profile == nil || profile.Metadata == nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  "Unable to find cluster profile",
@@ -161,4 +164,17 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	}
 
 	return diags
+}
+
+func getProfileUID(profiles []*models.V1ClusterProfile, d *schema.ResourceData, version string) string {
+	for _, p := range profiles {
+		if v, ok := d.GetOk("id"); ok && v.(string) == p.Metadata.UID {
+			return p.Metadata.UID
+		} else if v, ok := d.GetOk("name"); ok && v.(string) == p.Metadata.Name {
+			if p.Spec.Version == version || (p.Spec.Version == "" && version == "1.0.0") {
+				return p.Metadata.UID
+			}
+		}
+	}
+	return ""
 }

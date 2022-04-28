@@ -1,0 +1,45 @@
+package spectrocloud
+
+import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"log"
+	"strconv"
+	"time"
+)
+
+var resourceClusterProfileUpdatePendingStates = []string{
+	"false",
+}
+
+func waitForProfileDownload(ctx context.Context, c *client.V1Client, id string, timeout time.Duration) error {
+	stateConf := &resource.StateChangeConf{
+		Pending:    resourceClusterProfileUpdatePendingStates,
+		Target:     nil, // wait for deleted
+		Refresh:    resourceClusterProfileStateRefreshFunc(c, id),
+		Timeout:    timeout,
+		MinTimeout: 10 * time.Second,
+		Delay:      30 * time.Second,
+	}
+
+	_, err := stateConf.WaitForStateContext(ctx)
+
+	return err
+}
+
+func resourceClusterProfileStateRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		cluster, err := c.GetCluster(id)
+		if err != nil {
+			return nil, "", err
+		} else if cluster == nil {
+			return nil, "Cluster deleted", nil
+		}
+
+		state := strconv.FormatBool(cluster.Status.SpcApply.CanBeApplied)
+		log.Printf("Cluster SpcApply state (%s): %s", id, state)
+
+		return cluster, state, nil
+	}
+}

@@ -35,6 +35,11 @@ func resourceClusterProfile() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"version": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "1.0.0", // default as in UI
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -305,6 +310,7 @@ func toClusterProfileCreate(d *schema.ResourceData) (*models.V1ClusterProfileEnt
 				CloudType: models.V1CloudType(d.Get("cloud").(string)),
 				Type:      models.V1ProfileType(d.Get("type").(string)),
 			},
+			Version: d.Get("version").(string),
 		},
 	}
 
@@ -377,6 +383,7 @@ func toClusterProfileUpdate(d *schema.ResourceData) (*models.V1ClusterProfileUpd
 			Template: &models.V1ClusterProfileTemplateUpdate{
 				Type: models.V1ProfileType(d.Get("type").(string)),
 			},
+			Version: d.Get("version").(string),
 		},
 	}
 

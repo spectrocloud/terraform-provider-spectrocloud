@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
@@ -40,6 +41,17 @@ func toProfiles(d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity 
 	return resp
 }
 
+func toSpcApplySettings(d *schema.ResourceData) *models.V1SpcApplySettings {
+	if d.Get("apply_setting") != nil {
+		setting := d.Get("apply_setting").(string)
+		return &models.V1SpcApplySettings{
+			ActionType: setting,
+		}
+	}
+
+	return nil
+}
+
 func toPack(pSrc interface{}) *models.V1PackValuesEntity {
 	p := pSrc.(map[string]interface{})
 
@@ -75,10 +87,21 @@ func toPack(pSrc interface{}) *models.V1PackValuesEntity {
 func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	log.Printf("Updating profiles")
 	body := &models.V1SpectroClusterProfiles{
-		Profiles: toProfiles(d),
+		Profiles:         toProfiles(d),
+		SpcApplySettings: toSpcApplySettings(d),
 	}
 	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
 		return err
 	}
+
+	if _, found := toTags(d)["skip_apply"]; found {
+		return nil
+	}
+
+	ctx := context.Background()
+	if err := waitForProfileDownload(ctx, c, d.Id(), d.Timeout(schema.TimeoutUpdate)); err != nil {
+		return err
+	}
+
 	return nil
 }
