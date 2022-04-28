@@ -223,6 +223,18 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 			buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
 			buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
 			buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(string)))
+			if ins["cache_passthrough"] != nil {
+				buf.WriteString(fmt.Sprintf("%s-%s", "cache_passthrough", ins["cache_passthrough"].(bool)))
+			}
+			if ins["gpu_config"] != nil {
+				config, _ := ins["gpu_config"].(map[string]interface{})
+				if config != nil {
+					buf.WriteString(fmt.Sprintf("%d-", config["num_gpus"].(int)))
+					buf.WriteString(fmt.Sprintf("%d-", config["device_model"].(string)))
+					buf.WriteString(fmt.Sprintf("%d-", config["vendor"].(string)))
+				}
+			}
+
 			if ins["attached_disks"] != nil {
 				for _, disk := range ins["attached_disks"].([]interface{}) {
 					diskMap := disk.(map[string]interface{})

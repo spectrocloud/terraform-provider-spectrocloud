@@ -621,7 +621,7 @@ func toTkeCluster(d *schema.ResourceData) *models.V1SpectroTencentClusterEntity 
 		},
 	}
 
-	access := &models.V1EndpointAccess{}
+	access := &models.V1TkeEndpointAccess{}
 	switch cloudConfig["endpoint_access"].(string) {
 	case "public":
 		access.Public = true
