@@ -78,6 +78,10 @@ func resourceClusterGcp() *schema.Resource {
 					},
 				},
 			},
+			"apply_setting": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
 				Required: true,

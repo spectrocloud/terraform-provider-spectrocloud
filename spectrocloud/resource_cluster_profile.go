@@ -35,6 +35,11 @@ func resourceClusterProfile() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"version": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "1.0.0", // default as in UI
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -305,6 +310,7 @@ func toClusterProfileCreate(d *schema.ResourceData) (*models.V1ClusterProfileEnt
 				CloudType: models.V1CloudType(d.Get("cloud").(string)),
 				Type:      models.V1ProfileType(d.Get("type").(string)),
 			},
+			Version: d.Get("version").(string),
 		},
 	}
 
@@ -377,6 +383,7 @@ func toClusterProfileUpdate(d *schema.ResourceData) (*models.V1ClusterProfileUpd
 			Template: &models.V1ClusterProfileTemplateUpdate{
 				Type: models.V1ProfileType(d.Get("type").(string)),
 			},
+			Version: d.Get("version").(string),
 		},
 	}
 
@@ -399,6 +406,10 @@ func toClusterProfilePackUpdate(pSrc interface{}) (*models.V1PackManifestUpdateE
 	pName := p["name"].(string)
 	pTag := p["tag"].(string)
 	pUID := p["uid"].(string)
+	pRegistryUID := ""
+	if p["registry_uid"] != nil {
+		pRegistryUID = p["registry_uid"].(string)
+	}
 	pType := models.V1PackType(p["type"].(string))
 
 	switch pType {
@@ -414,10 +425,11 @@ func toClusterProfilePackUpdate(pSrc interface{}) (*models.V1PackManifestUpdateE
 
 	pack := &models.V1PackManifestUpdateEntity{
 		//Layer:  p["layer"].(string),
-		Name: ptr.StringPtr(pName),
-		Tag:  p["tag"].(string),
-		UID:  pUID,
-		Type: pType,
+		Name:        ptr.StringPtr(pName),
+		Tag:         p["tag"].(string),
+		RegistryUID: pRegistryUID,
+		UID:         pUID,
+		Type:        pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}

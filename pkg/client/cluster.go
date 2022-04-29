@@ -46,6 +46,29 @@ func (h *V1Client) GetCluster(uid string) (*models.V1SpectroCluster, error) {
 	return success.Payload, nil
 }
 
+func (h *V1Client) GetClusterNotification(uid string) (bool, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return false, err
+	}
+
+	params := clusterC.NewV1SpectroClustersGetProfileUpdatesParamsWithContext(h.ctx).WithUID(uid)
+	success, err := client.V1SpectroClustersGetProfileUpdates(params)
+	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	// special check if the cluster is marked deleted
+	payload := success.Payload
+	if len(payload.Profiles) > 0 {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
 func (h *V1Client) GetClusterKubeConfig(uid string) (string, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
