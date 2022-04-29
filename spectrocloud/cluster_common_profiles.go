@@ -44,8 +44,10 @@ func toProfiles(d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity 
 func toSpcApplySettings(d *schema.ResourceData) *models.V1SpcApplySettings {
 	if d.Get("apply_setting") != nil {
 		setting := d.Get("apply_setting").(string)
-		return &models.V1SpcApplySettings{
-			ActionType: setting,
+		if setting != "" {
+			return &models.V1SpcApplySettings{
+				ActionType: setting,
+			}
 		}
 	}
 

@@ -191,7 +191,11 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
-	if d.HasChanges("cluster_profile") {
+	profileUpdate, err := c.GetClusterNotification(d.Id())
+	if err != nil {
+		return diag.FromErr(err), true
+	}
+	if d.HasChanges("cluster_profile") || profileUpdate {
 		if err := updateProfiles(c, d); err != nil {
 			return diag.FromErr(err), true
 		}

@@ -16,7 +16,7 @@ var resourceClusterProfileUpdatePendingStates = []string{
 func waitForProfileDownload(ctx context.Context, c *client.V1Client, id string, timeout time.Duration) error {
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterProfileUpdatePendingStates,
-		Target:     nil, // wait for deleted
+		Target:     []string{"true"}, // canBeApplied=true
 		Refresh:    resourceClusterProfileStateRefreshFunc(c, id),
 		Timeout:    timeout,
 		MinTimeout: 10 * time.Second,
