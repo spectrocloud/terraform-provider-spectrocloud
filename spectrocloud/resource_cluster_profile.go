@@ -406,6 +406,10 @@ func toClusterProfilePackUpdate(pSrc interface{}) (*models.V1PackManifestUpdateE
 	pName := p["name"].(string)
 	pTag := p["tag"].(string)
 	pUID := p["uid"].(string)
+	pRegistryUID := ""
+	if p["registry_uid"] != nil {
+		pRegistryUID = p["registry_uid"].(string)
+	}
 	pType := models.V1PackType(p["type"].(string))
 
 	switch pType {
@@ -421,10 +425,11 @@ func toClusterProfilePackUpdate(pSrc interface{}) (*models.V1PackManifestUpdateE
 
 	pack := &models.V1PackManifestUpdateEntity{
 		//Layer:  p["layer"].(string),
-		Name: ptr.StringPtr(pName),
-		Tag:  p["tag"].(string),
-		UID:  pUID,
-		Type: pType,
+		Name:        ptr.StringPtr(pName),
+		Tag:         p["tag"].(string),
+		RegistryUID: pRegistryUID,
+		UID:         pUID,
+		Type:        pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}
