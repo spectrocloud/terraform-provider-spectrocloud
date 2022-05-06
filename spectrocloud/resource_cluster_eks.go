@@ -126,6 +126,20 @@ func resourceClusterEks() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"os_patch_on_boot": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"os_patch_schedule": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+			},
+			"os_patch_after": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+			},
 			"kubeconfig": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -853,7 +867,8 @@ func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = &models.V1ClusterConfigEntity{
-		Resources: toClusterResourceConfig(d),
+		Resources:               toClusterResourceConfig(d),
+		MachineManagementConfig: toMachineManagementConfig(d),
 	}
 
 	fargateProfiles := make([]*models.V1FargateProfile, 0)
