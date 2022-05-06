@@ -8,7 +8,7 @@ import (
 
 func updateClusterOsPatchConfig(c *client.V1Client, d *schema.ResourceData) error {
 	machineConfig := toMachineManagementConfig(d)
-	if machineConfig != nil && machineConfig.OsPatchConfig != nil {
+	if machineConfig != nil {
 		return c.UpdateClusterOsPatchConfig(d.Id(), toUpdateOsPatchEntityClusterRbac(machineConfig.OsPatchConfig))
 	}
 	return nil
