@@ -393,7 +393,11 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		if machinePool.UpdateStrategy.Type != "" {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		} else {
+			oi["update_strategy"] = "RollingUpdateScaleOut"
+		}
 		oi["instance_type"] = *machinePool.InstanceType
 
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)

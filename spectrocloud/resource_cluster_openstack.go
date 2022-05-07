@@ -471,7 +471,11 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachin
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		if machinePool.UpdateStrategy.Type != "" {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		} else {
+			oi["update_strategy"] = "RollingUpdateScaleOut"
+		}
 
 		oi["subnet_id"] = machinePool.Subnet.ID
 		oi["azs"] = machinePool.Azs
