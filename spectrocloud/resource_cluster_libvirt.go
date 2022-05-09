@@ -596,7 +596,11 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		if machinePool.UpdateStrategy.Type != "" {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		} else {
+			oi["update_strategy"] = "RollingUpdateScaleOut"
+		}
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})

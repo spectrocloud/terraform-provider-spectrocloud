@@ -430,7 +430,11 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		if machinePool.UpdateStrategy.Type != "" {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		} else {
+			oi["update_strategy"] = "RollingUpdateScaleOut"
+		}
 		oi["instance_type"] = machinePool.InstanceType
 
 		oi["azs"] = machinePool.Azs

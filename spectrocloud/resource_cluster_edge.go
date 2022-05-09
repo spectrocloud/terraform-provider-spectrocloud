@@ -483,7 +483,11 @@ func flattenMachinePoolConfigsEdge(machinePools []*models.V1EdgeMachinePoolConfi
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
-		oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		if machinePool.UpdateStrategy.Type != "" {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		} else {
+			oi["update_strategy"] = "RollingUpdateScaleOut"
+		}
 
 		placements := make([]interface{}, len(machinePool.Hosts))
 		for j, p := range machinePool.Hosts {

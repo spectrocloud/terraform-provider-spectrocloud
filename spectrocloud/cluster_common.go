@@ -191,11 +191,13 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
-	profileUpdate, err := c.GetClusterNotification(d.Id())
-	if err != nil {
-		return diag.FromErr(err), true
+	if d.HasChange("os_patch_on_boot") || d.HasChange("os_patch_schedule") || d.HasChange("os_patch_after") {
+		if err := updateClusterOsPatchConfig(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
 	}
-	if d.HasChanges("cluster_profile") || profileUpdate {
+
+	if d.HasChanges("cluster_profile") {
 		if err := updateProfiles(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
