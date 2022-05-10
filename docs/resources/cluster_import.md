@@ -77,6 +77,10 @@ Required:
 - **tag** (String)
 - **values** (String)
 
+Optional:
+
+- **registry_uid** (String)
+
 
 <a id="nestedblock--timeouts"></a>
 ### Nested Schema for `timeouts`

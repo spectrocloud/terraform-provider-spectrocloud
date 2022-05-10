@@ -22,6 +22,7 @@ description: |-
 
 ### Optional
 
+- **apply_setting** (String)
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **cluster_rbac_binding** (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
@@ -74,6 +75,7 @@ Optional:
 - **max_price** (String)
 - **min** (Number)
 - **taints** (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
+- **update_strategy** (String)
 
 <a id="nestedblock--machine_pool--taints"></a>
 ### Nested Schema for `machine_pool.taints`
@@ -124,6 +126,7 @@ Required:
 Optional:
 
 - **manifest** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack--manifest))
+- **registry_uid** (String)
 - **tag** (String)
 - **type** (String)
 - **values** (String)
@@ -183,6 +186,10 @@ Required:
 - **name** (String)
 - **tag** (String)
 - **values** (String)
+
+Optional:
+
+- **registry_uid** (String)
 
 
 <a id="nestedblock--scan_policy"></a>

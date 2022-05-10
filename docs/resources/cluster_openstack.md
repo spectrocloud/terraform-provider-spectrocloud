@@ -90,6 +90,7 @@ resource "spectrocloud_cluster_openstack" "cluster" {
 
 ### Optional
 
+- **apply_setting** (String)
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **id** (String) The ID of this resource.
@@ -179,6 +180,10 @@ Required:
 - **tag** (String)
 - **values** (String)
 
+Optional:
+
+- **registry_uid** (String)
+
 
 
 <a id="nestedblock--pack"></a>
@@ -189,6 +194,10 @@ Required:
 - **name** (String)
 - **tag** (String)
 - **values** (String)
+
+Optional:
+
+- **registry_uid** (String)
 
 
 <a id="nestedblock--scan_policy"></a>

@@ -98,6 +98,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
 
 ### Optional
 
+- **apply_setting** (String)
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cloud_account_id** (String)
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
@@ -105,6 +106,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
 - **os_patch_after** (String)
 - **os_patch_on_boot** (Boolean)
 - **os_patch_schedule** (String)
+- **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
@@ -198,6 +200,24 @@ Required:
 - **tag** (String)
 - **values** (String)
 
+Optional:
+
+- **registry_uid** (String)
+
+
+
+<a id="nestedblock--pack"></a>
+### Nested Schema for `pack`
+
+Required:
+
+- **name** (String)
+- **tag** (String)
+- **values** (String)
+
+Optional:
+
+- **registry_uid** (String)
 
 
 <a id="nestedblock--scan_policy"></a>
