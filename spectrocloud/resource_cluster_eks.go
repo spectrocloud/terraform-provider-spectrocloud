@@ -198,6 +198,11 @@ func resourceClusterEks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"encryption_config_arn": {
+							Type:     schema.TypeString,
+							ForceNew: true,
+							Optional: true,
+						},
 					},
 				},
 			},
@@ -553,6 +558,12 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
+	if config.Spec.ClusterConfig.EncryptionConfig != nil {
+		if err := d.Set("encryption_config_arn", config.Spec.ClusterConfig.EncryptionConfig.Provider); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	mp := flattenMachinePoolConfigsEks(config.Spec.MachinePoolConfig)
 	if err := d.Set("machine_pool", mp); err != nil {
 		return diag.FromErr(err)
@@ -808,10 +819,19 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
+// to create
 func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("Eks_client_secret").(string))
+	var encryptionConfig *models.V1EncryptionConfig
+
+	if cloudConfig["encryption_config_arn"] != nil {
+		encryptionConfig = &models.V1EncryptionConfig{
+			IsEnabled: true,
+			Provider:  cloudConfig["encryption_config_arn"].(string),
+		}
+	}
 
 	cluster := &models.V1SpectroEksClusterEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -824,10 +844,11 @@ func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 			Profiles:        toProfiles(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
-				BastionDisabled: true,
-				VpcID:           cloudConfig["vpc_id"].(string),
-				Region:          ptr.StringPtr(cloudConfig["region"].(string)),
-				SSHKeyName:      cloudConfig["ssh_key_name"].(string),
+				BastionDisabled:  true,
+				VpcID:            cloudConfig["vpc_id"].(string),
+				Region:           ptr.StringPtr(cloudConfig["region"].(string)),
+				SSHKeyName:       cloudConfig["ssh_key_name"].(string),
+				EncryptionConfig: encryptionConfig,
 			},
 		},
 	}
