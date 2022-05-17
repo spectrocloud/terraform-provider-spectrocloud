@@ -42,7 +42,7 @@ func New(_ string) func() *schema.Provider {
 					Optional:    true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_TRACE", nil),
 				},
-				"retry_attemps": &schema.Schema{
+				"retry_attempts": &schema.Schema{
 					Type:        schema.TypeInt,
 					Optional:    true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_RETRY_ATTEMPTS", nil),
