@@ -9,7 +9,7 @@ import (
 )
 
 func (h *V1Client) GetRole(roleName string) (*models.V1Role, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (h *V1Client) GetRole(roleName string) (*models.V1Role, error) {
 }
 
 func (h *V1Client) GetUser(name string) (*models.V1User, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (h *V1Client) GetUser(name string) (*models.V1User, error) {
 }
 
 func (h *V1Client) CreateTeam(team *models.V1Team) (string, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +66,7 @@ func (h *V1Client) CreateTeam(team *models.V1Team) (string, error) {
 }
 
 func (h *V1Client) UpdateTeam(uid string, team *models.V1Team) error {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (h *V1Client) UpdateTeam(uid string, team *models.V1Team) error {
 }
 
 func (h *V1Client) DeleteTeam(uid string) error {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (h *V1Client) DeleteTeam(uid string) error {
 }
 
 func (h *V1Client) AssociateTeamProjectRole(uid string, body *models.V1ProjectRolesPatch) error {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (h *V1Client) AssociateTeamProjectRole(uid string, body *models.V1ProjectRo
 }
 
 func (h *V1Client) GetTeamProjectRoleAssociation(uid string) (*models.V1ProjectRolesEntity, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (h *V1Client) GetTeamProjectRoleAssociation(uid string) (*models.V1ProjectR
 }
 
 func (h *V1Client) GetTeam(uid string) (*models.V1Team, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return nil, err
 	}

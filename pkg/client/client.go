@@ -132,7 +132,7 @@ func (h *V1Client) getClusterClient() (clusterC.ClientService, error) {
 	return clusterC.New(httpTransport, strfmt.Default), nil
 }
 
-func (h *V1Client) getUserClient() (userC.ClientService, error) {
+func (h *V1Client) GetUserClient() (userC.ClientService, error) {
 	httpTransport, err := h.getTransport()
 	if err != nil {
 		return nil, err
