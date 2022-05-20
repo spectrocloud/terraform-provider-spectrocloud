@@ -25,10 +25,19 @@ variable "aws_vpc_id" {
   default = ""
 }
 
+# Provisioning Option A (Dynamic)
+variable "azs" {
+  default = []
+  type    = list(string)
+}
+
+# Provisioning Option B (Static)
 variable "master_azs_subnets_map" {
-  type = map(string)
+  default = {}
+  type    = map(string)
 }
 
 variable "worker_azs_subnets_map" {
-  type = map(string)
+  default = {}
+  type    = map(string)
 }
