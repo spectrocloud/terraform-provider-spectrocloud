@@ -35,6 +35,51 @@ func resourceClusterImport() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"cluster_profile": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"cluster_profile_id", "pack"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"pack": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"tag": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"values": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 			"cloud": {
 				Type:             schema.TypeString,
 				ForceNew:         true,
@@ -182,6 +227,8 @@ func cloudClusterImportFunc(c *client.V1Client, d *schema.ResourceData) (string,
 		return c.ImportClusterGcp(meta)
 	case "vsphere":
 		return c.ImportClusterVsphere(meta)
+	case "generic":
+		return c.ImportClusterGeneric(meta)
 	}
 	return "", fmt.Errorf("failed to find cloud type %s", cloudType)
 }
@@ -213,20 +260,11 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 }
 
 func toCloudClusterProfiles(d *schema.ResourceData) *models.V1SpectroClusterProfiles {
-	if clusterProfileUid := d.Get("cluster_profile_id"); clusterProfileUid != nil {
-		profileEntities := make([]*models.V1SpectroClusterProfileEntity, 0)
-		packValues := make([]*models.V1PackValuesEntity, 0)
-		for _, pack := range d.Get("pack").([]interface{}) {
-			p := toPack(pack)
-			packValues = append(packValues, p)
-		}
-
-		profileEntities = append(profileEntities, &models.V1SpectroClusterProfileEntity{
-			PackValues: packValues,
-			UID:        clusterProfileUid.(string),
-		})
+	profiles := d.Get("cluster_profile").([]interface{})
+	clusterProfileUid := d.Get("cluster_profile_id")
+	if (clusterProfileUid != nil && len(clusterProfileUid.(string)) > 0) ||  len(profiles) > 0 {
 		return &models.V1SpectroClusterProfiles{
-			Profiles: profileEntities,
+			Profiles: toProfiles(d),
 		}
 	}
 	return nil
@@ -235,7 +273,7 @@ func toCloudClusterProfiles(d *schema.ResourceData) *models.V1SpectroClusterProf
 func validateCloudType(data interface{}, path cty.Path) diag.Diagnostics {
 	var diags diag.Diagnostics
 	inCloudType := data.(string)
-	for _, cloudType := range []string{"aws", "azure", "gcp", "vsphere"} {
+	for _, cloudType := range []string{"aws", "azure", "gcp", "vsphere", "generic"} {
 		if cloudType == inCloudType {
 			return diags
 		}
@@ -246,5 +284,6 @@ func validateCloudType(data interface{}, path cty.Path) diag.Diagnostics {
 func toClusterMeta(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
 	return &models.V1ObjectMetaInputEntity{
 		Name: d.Get("name").(string),
+		Labels: toTags(d),
 	}
 }
