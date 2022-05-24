@@ -173,6 +173,25 @@ func (h *V1Client) ImportClusterVsphere(meta *models.V1ObjectMetaInputEntity) (s
 	return *success.Payload.UID, nil
 }
 
+func (h *V1Client) ImportClusterGeneric(meta *models.V1ObjectMetaInputEntity) (string, error) {
+	client, err := h.getClusterClient()
+	if err != nil {
+		return "", err
+	}
+
+	params := clusterC.NewV1SpectroClustersGenericImportParamsWithContext(h.ctx).WithBody(
+		&models.V1SpectroGenericClusterImportEntity{
+			Metadata: meta,
+		},
+	)
+	success, err := client.V1SpectroClustersGenericImport(params)
+	if err != nil {
+		return "", err
+	}
+
+	return *success.Payload.UID, nil
+}
+
 func (h *V1Client) GetVsphereClouldConfigValues(uid string) (*models.V1VsphereCloudConfig, error) {
 	client, err := h.getClusterClient()
 	if err != nil {
