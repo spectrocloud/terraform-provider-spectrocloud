@@ -23,7 +23,7 @@ type ResultStat struct {
 
 func Test1Scenario(t *testing.T) {
 	cases := []Retry{
-		{100, 2, 429},
+		{290, 3, 429},
 	}
 
 	for _, c := range cases {
@@ -56,7 +56,7 @@ func GetProjects1Test(t *testing.T, h *client.V1Client, retry Retry) {
 	go produceResults(retry, userClient, params, ch, done)
 
 	stat := consumeResults(t, retry, ch, done)
-	fmt.Printf("Done: %d, %d, %d, %d.", stat.CODE_MINUS_ONE, stat.CODE_NORMAL, stat.CODE_EXPECTED, stat.CODE_INTERNAL_ERROR)
+	fmt.Printf("\nDone: %d, %d, %d, %d.\n", stat.CODE_MINUS_ONE, stat.CODE_NORMAL, stat.CODE_EXPECTED, stat.CODE_INTERNAL_ERROR)
 }
 
 func consumeResults(t *testing.T, retry Retry, ch chan int, done chan bool) ResultStat {
@@ -97,14 +97,18 @@ func produceResults(retry Retry, userClient userC.ClientService, params *userC.V
 			if err != nil {
 				if _, ok := err.(*transport.TcpError); ok {
 					chnl <- -1
+					return
 				}
 				if _, ok := err.(*transport.TransportError); ok && err.(*transport.TransportError).HttpCode == retry.expected_code {
 					chnl <- retry.expected_code
+					return
 				} else {
 					chnl <- 500
+					return
 				}
 			} else {
 				chnl <- 200
+				return
 			}
 		}(ch)
 	}
