@@ -560,10 +560,9 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	if config.Spec.ClusterConfig.EncryptionConfig != nil {
-		if err := d.Set("encryption_config_arn", config.Spec.ClusterConfig.EncryptionConfig.Provider); err != nil {
-			return diag.FromErr(err)
-		}
+	cloudConfigFlatten := flattenClusterConfigsEKS(config)
+	if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
+		return diag.FromErr(err)
 	}
 
 	mp := flattenMachinePoolConfigsEks(config.Spec.MachinePoolConfig)
@@ -582,6 +581,44 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	return diags
+}
+
+func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} {
+
+	cloudConfigFlatten := make([]interface{}, 0)
+	if cloudConfig == nil {
+		return cloudConfigFlatten
+	}
+
+	ret := make(map[string]interface{})
+
+	ret["az_subnets"] = cloudConfig.Spec.ClusterConfig.Region
+
+	for _, pool := range cloudConfig.Spec.MachinePoolConfig {
+		if pool.Name == "master-pool" {
+			ret["az_subnets"] = pool.SubnetIds
+		}
+	}
+
+	if cloudConfig.Spec.ClusterConfig.EncryptionConfig != nil && cloudConfig.Spec.ClusterConfig.EncryptionConfig.IsEnabled {
+		ret["encryption_config_arn"] = cloudConfig.Spec.ClusterConfig.EncryptionConfig.Provider
+	}
+
+	if cloudConfig.Spec.ClusterConfig.EndpointAccess.Private && cloudConfig.Spec.ClusterConfig.EndpointAccess.Public {
+		ret["endpoint_access"] = "private_and_public"
+	}
+	if cloudConfig.Spec.ClusterConfig.EndpointAccess.Private && !cloudConfig.Spec.ClusterConfig.EndpointAccess.Public {
+		ret["endpoint_access"] = "private"
+	}
+	if !cloudConfig.Spec.ClusterConfig.EndpointAccess.Private && cloudConfig.Spec.ClusterConfig.EndpointAccess.Public {
+		ret["endpoint_access"] = "public"
+	}
+	ret["region"] = *cloudConfig.Spec.ClusterConfig.Region
+	ret["vpc_id"] = cloudConfig.Spec.ClusterConfig.VpcID
+
+	cloudConfigFlatten = append(cloudConfigFlatten, ret)
+
+	return cloudConfigFlatten
 }
 
 func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig) []interface{} {
