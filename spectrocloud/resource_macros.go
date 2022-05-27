@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceMacros() *schema.Resource {
+func resourceMacro() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceMacrosUpdate,
 		ReadContext:   resourceMacrosRead,
@@ -67,7 +67,7 @@ func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 
 	name := d.Get("name").(string)
-	d.SetId(c.MacrosHash(name))
+	d.SetId(c.StringHash(name))
 
 	return diags
 }
@@ -75,7 +75,7 @@ func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interfa
 func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	var macros *models.V1Macro
+	var macro *models.V1Macro
 	var err error
 	uid := ""
 
@@ -86,14 +86,24 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 		}
 	}
 
-	macros, err = c.GetMacro(d.Id(), uid)
+	macro, err = c.GetMacro(d.Get("name").(string), uid)
 
 	if err != nil {
 		return diag.FromErr(err)
-	} else if macros == nil {
+	} else if macro == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")
 		return diags
+	}
+
+	d.SetId(c.StringHash(d.Get("name").(string)))
+
+	if err := d.Set("name", macro.Name); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set("value", macro.Value); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return diags
@@ -125,7 +135,7 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 		}
 	}
 
-	resourceMacrosRead(ctx, d, m)
+	//resourceMacrosRead(ctx, d, m)
 
 	return diags
 }
@@ -147,6 +157,8 @@ func resourceMacrosDelete(ctx context.Context, d *schema.ResourceData, m interfa
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	//resourceMacrosRead(ctx, d, m)
 
 	return diags
 }

@@ -56,7 +56,7 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_project": resourceProject(),
 
-				"spectrocloud_macros": resourceMacros(),
+				"spectrocloud_macro": resourceMacro(),
 
 				"spectrocloud_cluster_profile": resourceClusterProfile(),
 

@@ -35,14 +35,16 @@ func (h *V1Client) CreateMacros(uid string, body *models.V1Macros) error {
 	return nil
 }
 
-func (h *V1Client) GetMacro(id string, projectUID string) (*models.V1Macro, error) {
+func (h *V1Client) GetMacro(name string, projectUID string) (*models.V1Macro, error) {
 	macros, err := h.GetMacros(projectUID)
 	if err != nil {
 		return nil, err
 	}
 
+	id := h.StringHash(name)
+
 	for _, macro := range macros {
-		if h.MacrosHash(macro.Name) == id {
+		if h.StringHash(macro.Name) == id {
 			return macro, nil
 		}
 	}
@@ -83,7 +85,7 @@ func (h *V1Client) GetMacros(projectUID string) ([]*models.V1Macro, error) {
 	return macros, nil
 }
 
-func (h *V1Client) MacrosHash(name string) string {
+func (h *V1Client) StringHash(name string) string {
 	return strconv.FormatUint(uint64(hash(name)), 10)
 }
 
