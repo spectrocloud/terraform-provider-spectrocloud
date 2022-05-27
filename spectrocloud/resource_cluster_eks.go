@@ -167,17 +167,19 @@ func resourceClusterEks() *schema.Resource {
 							Optional: true,
 						},
 						"azs": {
-							Type:     schema.TypeList,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeList,
+							Description: "Mutually exclusive with `az_subnets`. Use for Dynamic provisioning.",
+							Optional:    true,
+							ForceNew:    true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
 						"az_subnets": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeMap,
+							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
+							Optional:    true,
+							ForceNew:    true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},

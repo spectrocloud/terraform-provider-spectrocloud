@@ -738,16 +738,6 @@ github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4k
 github.com/sony/gobreaker v0.4.1/go.mod h1:ZKptC7FHNvhBz7dN2LGjPVBz2sZJmc0/PkyDJOjmxWY=
 github.com/spectrocloud/gomi v1.14.1-0.20211203081134-89d0a1620fd9 h1:0fHhTE9a+vRUpzPiwJEn/8rPlkzwSdpMbmfJdnvukJ0=
 github.com/spectrocloud/gomi v1.14.1-0.20211203081134-89d0a1620fd9/go.mod h1:AtulJf3ryKRaI6gjMNt0vfz1fbuu7MolXK/rBS5XTBU=
-github.com/spectrocloud/hapi v1.14.1-0.20220315085808-c28eca5ef1d9 h1:0cJGAqBLcpRk6PVrX/eMYV0Od+UmyfOMLyHZyc4fofA=
-github.com/spectrocloud/hapi v1.14.1-0.20220315085808-c28eca5ef1d9/go.mod h1:rDz4cJGZylomt9DjCzyHaBpEcHajCyj/V2X5BkJB8kU=
-github.com/spectrocloud/hapi v1.14.1-0.20220325143208-2194e1f4c895 h1:vWksqClSRmuHfcN939ChWEXWWmbKzSBBNOp/Xr5OkIk=
-github.com/spectrocloud/hapi v1.14.1-0.20220325143208-2194e1f4c895/go.mod h1:rDz4cJGZylomt9DjCzyHaBpEcHajCyj/V2X5BkJB8kU=
-github.com/spectrocloud/hapi v1.14.1-0.20220326090351-4f2d1c58bfde h1:qOH9q4maNQ1Ocl35macvoQ0GfO/5KTjeAhQfQwI54qI=
-github.com/spectrocloud/hapi v1.14.1-0.20220326090351-4f2d1c58bfde/go.mod h1:rDz4cJGZylomt9DjCzyHaBpEcHajCyj/V2X5BkJB8kU=
-github.com/spectrocloud/hapi v1.14.1-0.20220331132632-417462eb034a h1:KitsXFrS/m9u3Mol82tbgxSs44BSpgtrdjsrdmONUiQ=
-github.com/spectrocloud/hapi v1.14.1-0.20220331132632-417462eb034a/go.mod h1:rDz4cJGZylomt9DjCzyHaBpEcHajCyj/V2X5BkJB8kU=
-github.com/spectrocloud/hapi v1.14.1-0.20220404112330-4d1faaf946f8 h1:ZQSrl8keoFRm1njXMQDyNMtjMfSXRhSv4tNn7xZF4fU=
-github.com/spectrocloud/hapi v1.14.1-0.20220404112330-4d1faaf946f8/go.mod h1:rDz4cJGZylomt9DjCzyHaBpEcHajCyj/V2X5BkJB8kU=
 github.com/spectrocloud/hapi v1.14.1-0.20220427143430-f726b0cf6f2d h1:Qs5lrlLIRbHjVNHWGglcSdS3jLH/DkQ/os7+1cC0h1o=
 github.com/spectrocloud/hapi v1.14.1-0.20220427143430-f726b0cf6f2d/go.mod h1:rDz4cJGZylomt9DjCzyHaBpEcHajCyj/V2X5BkJB8kU=
 github.com/spectrocloud/hapi v1.14.1-0.20220516104117-4e6db5253ef2 h1:Y0ABL17uD23E+hOgxy5UcZ4px0vpFkJ/L5GVzninWdE=
