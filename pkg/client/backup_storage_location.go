@@ -6,7 +6,7 @@ import (
 )
 
 func (h *V1Client) ListBackupStorageLocation(projectScope bool) ([]*models.V1UserAssetsLocation, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func (h *V1Client) ListBackupStorageLocation(projectScope bool) ([]*models.V1Use
 }
 
 func (h *V1Client) GetBackupStorageLocation(uid string) (*models.V1UserAssetsLocation, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (h *V1Client) GetBackupStorageLocation(uid string) (*models.V1UserAssetsLoc
 }
 
 func (h *V1Client) GetS3BackupStorageLocation(uid string) (*models.V1UserAssetsLocationS3, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (h *V1Client) GetS3BackupStorageLocation(uid string) (*models.V1UserAssetsL
 }
 
 func (h *V1Client) CreateS3BackupStorageLocation(bsl *models.V1UserAssetsLocationS3) (string, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return "", err
 	}
@@ -78,7 +78,7 @@ func (h *V1Client) CreateS3BackupStorageLocation(bsl *models.V1UserAssetsLocatio
 }
 
 func (h *V1Client) UpdateS3BackupStorageLocation(uid string, bsl *models.V1UserAssetsLocationS3) error {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (h *V1Client) UpdateS3BackupStorageLocation(uid string, bsl *models.V1UserA
 }
 
 func (h *V1Client) DeleteS3BackupStorageLocation(uid string) error {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}

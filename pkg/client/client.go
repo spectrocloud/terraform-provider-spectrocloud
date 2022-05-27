@@ -48,9 +48,10 @@ type V1Client struct {
 	password       string
 	apikey         string
 	transportDebug bool
+	retryAttempts  int
 }
 
-func New(hubbleHost, email, password, projectUID string, apikey string, transportDebug bool) *V1Client {
+func New(hubbleHost, email, password, projectUID string, apikey string, transportDebug bool, retryAttemps int) *V1Client {
 	ctx := context.Background()
 	if projectUID != "" {
 		ctx = GetProjectContextWithCtx(ctx, projectUID)
@@ -62,7 +63,7 @@ func New(hubbleHost, email, password, projectUID string, apikey string, transpor
 	authHttpTransport.RetryAttempts = 0
 	//authHttpTransport.Debug = true
 	AuthClient = authC.New(authHttpTransport, strfmt.Default)
-	return &V1Client{ctx, email, password, apikey, transportDebug}
+	return &V1Client{ctx, email, password, apikey, transportDebug, retryAttemps}
 }
 
 func (h *V1Client) getNewAuthToken() (*AuthToken, error) {
@@ -116,7 +117,7 @@ func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
 	} else {
 		httpTransport.DefaultAuthentication = openapiclient.APIKeyAuth(authTokenKey, authTokenInput, authToken.token.Authorization)
 	}
-	httpTransport.RetryAttempts = 0
+	httpTransport.RetryAttempts = h.retryAttempts
 	httpTransport.Debug = h.transportDebug
 	return httpTransport, nil
 }
@@ -131,7 +132,7 @@ func (h *V1Client) getClusterClient() (clusterC.ClientService, error) {
 	return clusterC.New(httpTransport, strfmt.Default), nil
 }
 
-func (h *V1Client) getUserClient() (userC.ClientService, error) {
+func (h *V1Client) GetUserClient() (userC.ClientService, error) {
 	httpTransport, err := h.getTransport()
 	if err != nil {
 		return nil, err

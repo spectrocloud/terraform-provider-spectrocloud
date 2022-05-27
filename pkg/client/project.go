@@ -8,7 +8,7 @@ import (
 )
 
 func (h *V1Client) CreateProject(body *models.V1ProjectEntity) (string, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return "", err
 	}
@@ -38,7 +38,7 @@ func (h *V1Client) GetProject(uid string) (*models.V1Project, error) {
 }
 
 func (h *V1Client) GetProjects() (*models.V1Projects, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (h *V1Client) GetProjects() (*models.V1Projects, error) {
 }
 
 func (h *V1Client) UpdateProject(uid string, body *models.V1ProjectEntity) error {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (h *V1Client) UpdateProject(uid string, body *models.V1ProjectEntity) error
 }
 
 func (h *V1Client) DeleteProject(uid string) error {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
