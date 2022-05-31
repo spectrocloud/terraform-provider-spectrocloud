@@ -9,7 +9,7 @@ import (
 )
 
 func (h *V1Client) CreateMacros(uid string, body *models.V1Macros) error {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (h *V1Client) GetMacro(name string, projectUID string) (*models.V1Macro, er
 }
 
 func (h *V1Client) GetMacros(projectUID string) ([]*models.V1Macro, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (h *V1Client) StringHash(name string) string {
 }
 
 func (h *V1Client) UpdateMacros(macros []*models.V1Macro, uid string) error {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}

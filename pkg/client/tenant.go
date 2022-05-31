@@ -5,7 +5,7 @@ import (
 )
 
 func (h *V1Client) GetTenantUID() (string, error) {
-	client, err := h.getUserClient()
+	client, err := h.GetUserClient()
 	if err != nil {
 		return "", err
 	}
