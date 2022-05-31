@@ -135,7 +135,7 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 		}
 	}
 
-	//resourceMacrosRead(ctx, d, m)
+	resourceMacrosRead(ctx, d, m)
 
 	return diags
 }
@@ -158,7 +158,7 @@ func resourceMacrosDelete(ctx context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	//resourceMacrosRead(ctx, d, m)
+	resourceMacrosRead(ctx, d, m)
 
 	return diags
 }
