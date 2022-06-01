@@ -523,7 +523,7 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, len(machinePools))
+	ois := make([]interface{}, 0)
 
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
