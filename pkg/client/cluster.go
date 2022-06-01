@@ -72,8 +72,8 @@ func (h *V1Client) GetClusterImportManifest(uid string) (string, error) {
 	}
 
 	builder := new(strings.Builder)
-	params := clusterC.NewV1SpectroClustersUIDInstallerManifestParamsWithContext(h.ctx).WithUID(uid)
-	_, err = client.V1SpectroClustersUIDInstallerManifest(params, builder)
+	params := clusterC.NewV1SpectroClustersUIDImportManifestParamsWithContext(h.ctx).WithUID(uid)
+	_, err = client.V1SpectroClustersUIDImportManifest(params, builder)
 	if err != nil {
 		return "", err
 	}

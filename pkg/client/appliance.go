@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client/herr"
 )
 
 func (h *V1Client) GetApplianceByName(deviceName string) (*models.V1EdgeHostDevice, error) {
@@ -38,6 +39,9 @@ func (h *V1Client) GetAppliance(uid string) (*models.V1EdgeHostDevice, error) {
 	params := clusterC.NewV1EdgeHostDevicesUIDGetParamsWithContext(h.ctx).WithUID(uid)
 	response, err := client.V1EdgeHostDevicesUIDGet(params)
 	if err != nil {
+		if herr.IsNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -66,7 +70,7 @@ func (h *V1Client) UpdateAppliance(uid string, appliance *models.V1EdgeHostDevic
 
 	params := clusterC.NewV1EdgeHostDevicesUIDUpdateParams().WithContext(h.ctx).WithBody(appliance).WithUID(uid)
 	_, err = client.V1EdgeHostDevicesUIDUpdate(params)
-	if err != nil {
+	if err != nil && !herr.IsEdgeHostDeviceNotRegistered(err){
 		return err
 	}
 
