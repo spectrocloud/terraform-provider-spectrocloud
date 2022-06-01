@@ -110,6 +110,9 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 		appliance, err := c.GetAppliance(id.(string))
 		if err != nil {
 			return diag.FromErr(err)
+		} else if appliance == nil {
+			d.SetId("")
+			return diags
 		}
 		d.SetId(appliance.Metadata.UID)
 		d.Set("name", appliance.Metadata.Name)

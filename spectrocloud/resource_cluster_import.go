@@ -204,12 +204,19 @@ func resourceCloudClusterImportManoifests(cluster *models.V1SpectroCluster, d *s
 			return err
 		}
 
-		importManifest, err := c.GetClusterImportManifest(cluster.Metadata.UID)
-		if err != nil {
-			return err
-		}
-		if err := d.Set("cluster_import_manifest", importManifest); err != nil {
-			return err
+		//only if apply tag is true as downloading manifest from upstream changes cluster state to
+		// Importing from Pending which isn't desired until intention is to apply the manifest locally
+		if len(cluster.Metadata.Labels) > 0 {
+			if v, ok := cluster.Metadata.Labels["apply"]; ok && v == "true" {
+				importManifest, err := c.GetClusterImportManifest(cluster.Metadata.UID)
+				if err != nil {
+					return err
+				}
+
+				if err := d.Set("cluster_import_manifest", importManifest); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
