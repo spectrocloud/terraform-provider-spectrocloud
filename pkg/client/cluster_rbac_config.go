@@ -78,11 +78,13 @@ func toUpdateRbac(config *models.V1ClusterRbac) *models.V1ClusterRbacResourcesUp
 
 	}
 
-	rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
-		Spec: &models.V1ClusterRbacSpec{
-			Bindings: clusterRoleBindings,
-		},
-	})
+	if len(clusterRoleBindings) > 0 {
+		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
+			Spec: &models.V1ClusterRbacSpec{
+				Bindings: clusterRoleBindings,
+			},
+		})
+	}
 
 	if len(roleBindings) > 0 {
 		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
