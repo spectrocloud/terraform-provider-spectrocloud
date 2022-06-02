@@ -62,9 +62,6 @@ func (h *V1Client) GetClusterByName(name string) (*models.V1SpectroCluster, erro
 
 	for _, cluster := range success.Payload.Items {
 		if cluster.Metadata.Name == name {
-			if cluster.Status.State == "Deleted" {
-				return nil, nil
-			}
 			return cluster, nil
 		}
 	}
