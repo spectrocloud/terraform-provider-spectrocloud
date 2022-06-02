@@ -46,7 +46,6 @@ func resourceClusterImport() *schema.Resource {
 			"cluster_profile": {
 				Type:          schema.TypeList,
 				Optional:      true,
-				ConflictsWith: []string{"cluster_profile_id", "pack"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
@@ -97,34 +96,6 @@ func resourceClusterImport() *schema.Resource {
 			"cluster_import_manifest": {
 				Type:     schema.TypeString,
 				Computed: true,
-			},
-			"cluster_profile_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"pack": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"registry_uid": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"tag": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"values": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
 			},
 		},
 	}
@@ -244,22 +215,7 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
-	clusterProfileId := d.Get("cluster_profile_id").(string)
-	profiles := make([]*models.V1SpectroClusterProfileEntity, 0)
-	packValues := make([]*models.V1PackValuesEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		p := toPack(pack)
-		packValues = append(packValues, p)
-	}
-
-	profiles = append(profiles, &models.V1SpectroClusterProfileEntity{
-		PackValues: packValues,
-		UID:        clusterProfileId,
-	})
-
-	err := c.UpdateClusterProfileValues(d.Id(), &models.V1SpectroClusterProfiles{
-		Profiles: profiles,
-	})
+	err := c.UpdateClusterProfileValues(d.Id(), toCloudClusterProfiles(d))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -267,9 +223,7 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 }
 
 func toCloudClusterProfiles(d *schema.ResourceData) *models.V1SpectroClusterProfiles {
-	profiles := d.Get("cluster_profile").([]interface{})
-	clusterProfileUid := d.Get("cluster_profile_id")
-	if (clusterProfileUid != nil && len(clusterProfileUid.(string)) > 0) ||  len(profiles) > 0 {
+	if profiles := d.Get("cluster_profile").([]interface{}); len(profiles) > 0 {
 		return &models.V1SpectroClusterProfiles{
 			Profiles: toProfiles(d),
 		}
