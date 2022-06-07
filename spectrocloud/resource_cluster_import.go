@@ -44,8 +44,8 @@ func resourceClusterImport() *schema.Resource {
 				},
 			},
 			"cluster_profile": {
-				Type:          schema.TypeList,
-				Optional:      true,
+				Type:     schema.TypeList,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
@@ -162,6 +162,8 @@ func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m int
 			return flattenCloudConfigGcp(cluster.Spec.CloudConfigRef.UID, d, c)
 		case "vsphere":
 			return flattenCloudConfigVsphere(cluster.Spec.CloudConfigRef.UID, d, c)
+		case "generic":
+			return flattenCloudConfigGeneric(cluster.Spec.CloudConfigRef.UID, d, c)
 		}
 		return diag.FromErr(fmt.Errorf("failed to import cluster as cloud type '%s' is invalid", cloudType))
 	}
@@ -242,9 +244,14 @@ func validateCloudType(data interface{}, path cty.Path) diag.Diagnostics {
 	return diag.FromErr(fmt.Errorf("cloud type '%s' is invalid. valid cloud types are %v", inCloudType, "cloud_types"))
 }
 
+func flattenCloudConfigGeneric(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	d.Set("cloud_config_id", configUID)
+	return diag.Diagnostics{}
+}
+
 func toClusterMeta(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
 	return &models.V1ObjectMetaInputEntity{
-		Name: d.Get("name").(string),
+		Name:   d.Get("name").(string),
 		Labels: toTags(d),
 	}
 }

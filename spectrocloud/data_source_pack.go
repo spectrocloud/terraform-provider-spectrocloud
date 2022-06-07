@@ -95,6 +95,15 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		filters = append(filters, fmt.Sprintf("metadata.uid=%s", v.(string)))
 	} else {
 		if v, ok := d.GetOk("name"); ok {
+
+			/*
+				Cluster profile now supports packs duplication, but pack name has to be unique and will be double dashed
+				and first part would be any random name to make overall pack name unique and 2nd part is actual pack name.
+				Thus, splitting pack name with '--' to get the correct pack name to find pack uuid
+			*/
+			if strings.Contains(v.(string), "--") {
+				v = strings.Split(v.(string), "--")[1]
+			}
 			filters = append(filters, fmt.Sprintf("spec.name=%s", v.(string)))
 		}
 		if v, ok := d.GetOk("version"); ok {
