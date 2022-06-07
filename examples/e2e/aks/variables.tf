@@ -8,7 +8,12 @@ variable "backup_storage_location_name" {
   default = ""
 }
 
-variable "cluster_name" {
+variable "cluster1_name" {
+  type    = string
+  default = ""
+}
+
+variable "cluster2_name" {
   type    = string
   default = ""
 }

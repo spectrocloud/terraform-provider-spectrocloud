@@ -80,8 +80,8 @@ resource "spectrocloud_cluster_profile" "addon_profile" {
  pack {
     name   = data.spectrocloud_pack.fluentbit.name
     tag    = local.fluentbit_version
-    uid    = data.spectrocloud_pack.prometheus-operator.id
-    values = data.spectrocloud_pack.prometheus-operator.values
+    uid    = data.spectrocloud_pack.fluentbit.id
+    values = data.spectrocloud_pack.fluentbit.values
  }
 
   pack {
