@@ -12,9 +12,9 @@ locals {
   EOT
 }
 
-resource "spectrocloud_cluster_profile" "profile" {
-  name        = "aks-from-terraform"
-  description = "Basic Cluster Profile"
+resource "spectrocloud_cluster_profile" "infra_profile" {
+  name        = "aks-infra"
+  description = "Infra Cluster Profile"
   tags        = ["owner:dmitry"]
   cloud       = "aks"
   type        = "cluster"
@@ -46,6 +46,14 @@ resource "spectrocloud_cluster_profile" "profile" {
     uid    = data.spectrocloud_pack.csi.id
     values = data.spectrocloud_pack.csi.values
   }
+}
+
+resource "spectrocloud_cluster_profile" "addon_profile" {
+  name        = "application-standard"
+  description = "Application Cluster Profile"
+  tags        = ["owner:dmitry"]
+  cloud       = "all"
+  type        = "add-on"
 
   pack {
     name   = data.spectrocloud_pack.istio.name
@@ -72,8 +80,8 @@ resource "spectrocloud_cluster_profile" "profile" {
  pack {
     name   = data.spectrocloud_pack.fluentbit.name
     tag    = local.fluentbit_version
-    uid    = data.spectrocloud_pack.prometheus-operator.id
-    values = data.spectrocloud_pack.prometheus-operator.values
+    uid    = data.spectrocloud_pack.fluentbit.id
+    values = data.spectrocloud_pack.fluentbit.values
  }
 
   pack {
