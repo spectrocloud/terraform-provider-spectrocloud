@@ -154,7 +154,11 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 			}
 		}
 
-		packs, err := flattenPacks(c, profile.Spec.Published.Packs, packManifests)
+		diagPacks, diagnostics, done := GetDiagPacks(d, err)
+		if done {
+			return diagnostics
+		}
+		packs, err := flattenPacks(c, diagPacks, profile.Spec.Published.Packs, packManifests)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -164,6 +168,18 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	}
 
 	return diags
+}
+
+func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEntity, diag.Diagnostics, bool) {
+	diagPacks := make([]*models.V1PackManifestEntity, 0)
+	for _, pack := range d.Get("pack").([]interface{}) {
+		if p, e := toClusterProfilePackCreate(pack); e != nil {
+			return nil, diag.FromErr(err), true
+		} else {
+			diagPacks = append(diagPacks, p)
+		}
+	}
+	return diagPacks, nil, false
 }
 
 func getProfileUID(profiles []*models.V1ClusterProfile, d *schema.ResourceData, version string) string {
