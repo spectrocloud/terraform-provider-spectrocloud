@@ -65,7 +65,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
-	project, err := c.GetProject(d.Id())
+	project, err := c.GetProjectByUID(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	} else if project == nil {

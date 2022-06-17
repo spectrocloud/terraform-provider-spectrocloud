@@ -122,8 +122,8 @@ func (h *V1Client) GetPack(uid string) (*models.V1PackTagEntity, error) {
 	return response.Payload, nil
 }
 
-func (h *V1Client) GetPackRegistry(uid string) string {
-	if uid == "uid" {
+func (h *V1Client) GetPackRegistry(pack *models.V1PackRef) string {
+	if pack.PackUID == "uid" || pack.Type == "manifest" {
 		registry, err := h.GetPackRegistryCommonByName("Public Repo")
 		if err != nil {
 			return ""
@@ -131,12 +131,12 @@ func (h *V1Client) GetPackRegistry(uid string) string {
 		return registry.UID
 	}
 
-	pack, err := h.GetPack(uid)
+	PackTagEntity, err := h.GetPack(pack.PackUID)
 	if err != nil {
 		return ""
 	}
 
-	return pack.RegistryUID
+	return PackTagEntity.RegistryUID
 }
 
 func (h *V1Client) UpdateClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity) error {
