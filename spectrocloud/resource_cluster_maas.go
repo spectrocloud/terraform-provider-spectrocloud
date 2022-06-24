@@ -300,7 +300,7 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toMaasCluster(d)
+	cluster := toMaasCluster(c, d)
 
 	uid, err := c.CreateClusterMaas(cluster)
 	if err != nil {
@@ -525,7 +525,7 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-func toMaasCluster(d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
+func toMaasCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	DomainVal := cloudConfig["domain"].(string)
@@ -538,7 +538,7 @@ func toMaasCluster(d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
 		},
 		Spec: &models.V1SpectroMaasClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
 				Domain: &DomainVal,

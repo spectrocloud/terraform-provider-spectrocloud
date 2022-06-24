@@ -448,7 +448,7 @@ func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceDat
 
 	var diags diag.Diagnostics
 
-	cluster := toEdgeVsphereCluster(d)
+	cluster := toEdgeVsphereCluster(c, d)
 
 	uid, err := c.CreateClusterEdgeVsphere(cluster)
 	if err != nil {
@@ -660,7 +660,7 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 	return diags
 }
 
-func toEdgeVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereClusterEntity {
+func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroVsphereClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	staticIP := cloudConfig["static_ip"].(bool)
@@ -679,7 +679,7 @@ func toEdgeVsphereCluster(d *schema.ResourceData) *models.V1SpectroVsphereCluste
 		Spec: &models.V1SpectroVsphereClusterEntitySpec{
 			EdgeHostUID: d.Get("edge_host_uid").(string),
 
-			Profiles: toProfiles(d),
+			Profiles: toProfiles(c, d),
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1VsphereClusterConfigEntity{
 				NtpServers: nil,

@@ -388,7 +388,7 @@ func resourceClusterEdgeCreate(ctx context.Context, d *schema.ResourceData, m in
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toEdgeCluster(d)
+	cluster := toEdgeCluster(c, d)
 
 	uid, err := c.CreateClusterEdge(cluster)
 	if err != nil {
@@ -577,7 +577,7 @@ func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-func toEdgeCluster(d *schema.ResourceData) *models.V1SpectroEdgeClusterEntity {
+func toEdgeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroEdgeClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	cluster := &models.V1SpectroEdgeClusterEntity{
@@ -587,7 +587,7 @@ func toEdgeCluster(d *schema.ResourceData) *models.V1SpectroEdgeClusterEntity {
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroEdgeClusterEntitySpec{
-			Profiles: toProfiles(d),
+			Profiles: toProfiles(c, d),
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1EdgeClusterConfig{
 				SSHKeys: []string{cloudConfig["ssh_key"].(string)},

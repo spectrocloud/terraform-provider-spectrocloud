@@ -258,7 +258,7 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toAksCluster(d)
+	cluster := toAksCluster(c, d)
 
 	uid, err := c.CreateClusterAks(cluster)
 	if err != nil {
@@ -458,7 +458,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toAksCluster(d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
+func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	cluster := &models.V1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -468,7 +468,7 @@ func toAksCluster(d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
 		},
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
 				ControlPlaneSubnet: nil,

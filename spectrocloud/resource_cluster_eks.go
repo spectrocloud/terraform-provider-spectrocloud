@@ -502,7 +502,7 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toEksCluster(d)
+	cluster := toEksCluster(c, d)
 
 	uid, err := c.CreateClusterEks(cluster)
 	if err != nil {
@@ -859,7 +859,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 // to create
-func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
+func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("Eks_client_secret").(string))
@@ -880,7 +880,7 @@ func toEksCluster(d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
 		},
 		Spec: &models.V1SpectroEksClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
 				BastionDisabled:  true,

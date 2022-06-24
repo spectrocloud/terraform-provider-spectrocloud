@@ -496,7 +496,7 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toLibvirtCluster(d)
+	cluster := toLibvirtCluster(c, d)
 
 	uid, err := c.CreateClusterLibvirt(cluster)
 	if err != nil {
@@ -748,7 +748,7 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-func toLibvirtCluster(d *schema.ResourceData) *models.V1SpectroLibvirtClusterEntity {
+func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroLibvirtClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	cluster := &models.V1SpectroLibvirtClusterEntity{
@@ -758,7 +758,7 @@ func toLibvirtCluster(d *schema.ResourceData) *models.V1SpectroLibvirtClusterEnt
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroLibvirtClusterEntitySpec{
-			Profiles: toProfiles(d),
+			Profiles: toProfiles(c, d),
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1LibvirtClusterConfig{
 				NtpServers: toNtpServers(cloudConfig),

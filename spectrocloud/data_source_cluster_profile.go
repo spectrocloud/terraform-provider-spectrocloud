@@ -136,22 +136,9 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	d.SetId(profile.Metadata.UID)
 	d.Set("name", profile.Metadata.Name)
 	if profile.Spec.Published != nil && len(profile.Spec.Published.Packs) > 0 {
-		packManifests := make(map[string][]string)
-		for _, p := range profile.Spec.Published.Packs {
-			if len(p.Manifests) > 0 {
-				content, err := c.GetClusterProfileManifestPack(d.Id(), *p.Name)
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				if len(content) > 0 {
-					c := make([]string, len(content))
-					for i, co := range content {
-						c[i] = co.Spec.Published.Content
-					}
-					packManifests[p.PackUID] = c
-				}
-			}
+		packManifests, d2, done2 := getPacksContent(profile, c, d)
+		if done2 {
+			return d2
 		}
 
 		diagPacks, diagnostics, done := GetDiagPacks(d, err)
