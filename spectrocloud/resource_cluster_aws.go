@@ -292,7 +292,7 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toAwsCluster(d)
+	cluster := toAwsCluster(c, d)
 
 	uid, err := c.CreateClusterAws(cluster)
 	if err != nil {
@@ -511,7 +511,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toAwsCluster(d *schema.ResourceData) *models.V1SpectroAwsClusterEntity {
+func toAwsCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroAwsClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
@@ -523,7 +523,7 @@ func toAwsCluster(d *schema.ResourceData) *models.V1SpectroAwsClusterEntity {
 		},
 		Spec: &models.V1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),

@@ -283,7 +283,7 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toGcpCluster(d)
+	cluster := toGcpCluster(c, d)
 
 	uid, err := c.CreateClusterGcp(cluster)
 	if err != nil {
@@ -498,7 +498,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toGcpCluster(d *schema.ResourceData) *models.V1SpectroGcpClusterEntity {
+func toGcpCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroGcpClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("gcp_client_secret").(string))
@@ -511,7 +511,7 @@ func toGcpCluster(d *schema.ResourceData) *models.V1SpectroGcpClusterEntity {
 		},
 		Spec: &models.V1SpectroGcpClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1GcpClusterConfig{
 				Network: cloudConfig["network"].(string),

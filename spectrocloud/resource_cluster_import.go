@@ -125,7 +125,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 
 	resourceCloudClusterRead(ctx, d, m)
 
-	if profiles := toCloudClusterProfiles(d); profiles != nil {
+	if profiles := toCloudClusterProfiles(c, d); profiles != nil {
 		if err := c.UpdateClusterProfileValues(uid, profiles); err != nil {
 			return diag.FromErr(err)
 		}
@@ -217,17 +217,17 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
-	err := c.UpdateClusterProfileValues(d.Id(), toCloudClusterProfiles(d))
+	err := c.UpdateClusterProfileValues(d.Id(), toCloudClusterProfiles(c, d))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	return diags
 }
 
-func toCloudClusterProfiles(d *schema.ResourceData) *models.V1SpectroClusterProfiles {
+func toCloudClusterProfiles(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroClusterProfiles {
 	if profiles := d.Get("cluster_profile").([]interface{}); len(profiles) > 0 {
 		return &models.V1SpectroClusterProfiles{
-			Profiles: toProfiles(d),
+			Profiles: toProfiles(c, d),
 		}
 	}
 	return nil

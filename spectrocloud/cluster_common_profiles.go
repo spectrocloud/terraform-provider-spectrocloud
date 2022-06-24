@@ -9,7 +9,15 @@ import (
 	"log"
 )
 
-func toProfiles(d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity {
+func toProfiles(c *client.V1Client, d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity {
+	var cluster *models.V1SpectroCluster
+	var err error
+	if d.Id() != "" {
+		cluster, err = c.GetCluster(d.Id())
+		if err != nil {
+			return nil
+		}
+	}
 	resp := make([]*models.V1SpectroClusterProfileEntity, 0)
 	profiles := d.Get("cluster_profile").([]interface{})
 	if len(profiles) > 0 {
@@ -18,7 +26,7 @@ func toProfiles(d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity 
 
 			packValues := make([]*models.V1PackValuesEntity, 0)
 			for _, pack := range p["pack"].([]interface{}) {
-				p := toPack(pack)
+				p := toPack(cluster, pack)
 				packValues = append(packValues, p)
 			}
 			resp = append(resp, &models.V1SpectroClusterProfileEntity{
@@ -29,7 +37,7 @@ func toProfiles(d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity 
 	} else {
 		packValues := make([]*models.V1PackValuesEntity, 0)
 		for _, pack := range d.Get("pack").([]interface{}) {
-			p := toPack(pack)
+			p := toPack(cluster, pack)
 			packValues = append(packValues, p)
 		}
 		resp = append(resp, &models.V1SpectroClusterProfileEntity{
@@ -54,7 +62,7 @@ func toSpcApplySettings(d *schema.ResourceData) *models.V1SpcApplySettings {
 	return nil
 }
 
-func toPack(pSrc interface{}) *models.V1PackValuesEntity {
+func toPack(cluster *models.V1SpectroCluster, pSrc interface{}) *models.V1PackValuesEntity {
 	p := pSrc.(map[string]interface{})
 
 	pack := &models.V1PackValuesEntity{
@@ -75,9 +83,20 @@ func toPack(pSrc interface{}) *models.V1PackValuesEntity {
 		manifests := make([]*models.V1ManifestRefUpdateEntity, len(manifestsData))
 		for i := 0; i < len(manifestsData); i++ {
 			data := manifestsData[i].(map[string]interface{})
+			uid := ""
+			if cluster != nil {
+				packs := make([]*models.V1PackRef, 0)
+				for _, profile := range cluster.Spec.ClusterProfileTemplates {
+					for _, pack := range profile.Packs {
+						packs = append(packs, pack)
+					}
+				}
+				uid = getManifestUID(data["name"].(string), packs)
+			}
 			manifests[i] = &models.V1ManifestRefUpdateEntity{
 				Name:    ptr.StringPtr(data["name"].(string)),
 				Content: data["content"].(string),
+				UID:     uid,
 			}
 		}
 		pack.Manifests = manifests
@@ -89,7 +108,7 @@ func toPack(pSrc interface{}) *models.V1PackValuesEntity {
 func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	log.Printf("Updating profiles")
 	body := &models.V1SpectroClusterProfiles{
-		Profiles:         toProfiles(d),
+		Profiles:         toProfiles(c, d),
 		SpcApplySettings: toSpcApplySettings(d),
 	}
 	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
