@@ -131,6 +131,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_registry":      dataSourceRegistry(), // registry datasource for all types.
 
 				"spectrocloud_appliance": dataSourceAppliance(),
+				"spectrocloud_cluster":   dataSourceCluster(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}

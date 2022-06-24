@@ -15,10 +15,6 @@ func dataSourceCloudAccountAws() *schema.Resource {
 		ReadContext: dataSourceCloudAccountAwsRead,
 
 		Schema: map[string]*schema.Schema{
-			"aws_access_key": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
 			"id": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -69,7 +65,6 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 
 	d.SetId(account.Metadata.UID)
 	d.Set("name", account.Metadata.Name)
-	d.Set("aws_access_key", account.Spec.AccessKey)
 
 	return diags
 }
