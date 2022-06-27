@@ -387,7 +387,7 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 	}
 
 	manifests := make([]*models.V1ManifestInputEntity, 0)
-	if len(manifests) > 0 {
+	if len(p["manifest"].([]interface{})) > 0 {
 		for _, manifest := range p["manifest"].([]interface{}) {
 			m := manifest.(map[string]interface{})
 			manifests = append(manifests, &models.V1ManifestInputEntity{
