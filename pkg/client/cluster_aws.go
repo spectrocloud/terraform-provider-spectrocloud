@@ -8,12 +8,12 @@ import (
 )
 
 func (h *V1Client) CreateClusterAws(cluster *models.V1SpectroAwsClusterEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1SpectroClustersAwsCreateParamsWithContext(h.ctx).WithBody(cluster)
+	params := clusterC.NewV1SpectroClustersAwsCreateParamsWithContext(h.Ctx).WithBody(cluster)
 	success, err := client.V1SpectroClustersAwsCreate(params)
 	if err != nil {
 		return "", err
@@ -23,23 +23,23 @@ func (h *V1Client) CreateClusterAws(cluster *models.V1SpectroAwsClusterEntity) (
 }
 
 func (h *V1Client) CreateMachinePoolAws(cloudConfigId string, machinePool *models.V1AwsMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsAwsMachinePoolCreateParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
+	params := clusterC.NewV1CloudConfigsAwsMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
 	_, err = client.V1CloudConfigsAwsMachinePoolCreate(params)
 	return err
 }
 
 func (h *V1Client) UpdateMachinePoolAws(cloudConfigId string, machinePool *models.V1AwsMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsAwsMachinePoolUpdateParamsWithContext(h.ctx).
+	params := clusterC.NewV1CloudConfigsAwsMachinePoolUpdateParamsWithContext(h.Ctx).
 		WithConfigUID(cloudConfigId).
 		WithMachinePoolName(*machinePool.PoolConfig.Name).
 		WithBody(machinePool)
@@ -48,12 +48,12 @@ func (h *V1Client) UpdateMachinePoolAws(cloudConfigId string, machinePool *model
 }
 
 func (h *V1Client) DeleteMachinePoolAws(cloudConfigId string, machinePoolName string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsAwsMachinePoolDeleteParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
+	params := clusterC.NewV1CloudConfigsAwsMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
 	_, err = client.V1CloudConfigsAwsMachinePoolDelete(params)
 	return err
 }
@@ -61,12 +61,12 @@ func (h *V1Client) DeleteMachinePoolAws(cloudConfigId string, machinePoolName st
 // Cloud Account
 
 func (h *V1Client) CreateCloudAccountAws(account *models.V1AwsAccount) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1CloudAccountsAwsCreateParamsWithContext(h.ctx).WithBody(account)
+	params := clusterC.NewV1CloudAccountsAwsCreateParamsWithContext(h.Ctx).WithBody(account)
 	success, err := client.V1CloudAccountsAwsCreate(params)
 	if err != nil {
 		return "", err
@@ -76,35 +76,35 @@ func (h *V1Client) CreateCloudAccountAws(account *models.V1AwsAccount) (string, 
 }
 
 func (h *V1Client) UpdateCloudAccountAws(account *models.V1AwsAccount) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
 	uid := account.Metadata.UID
-	params := clusterC.NewV1CloudAccountsAwsUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(account)
+	params := clusterC.NewV1CloudAccountsAwsUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(account)
 	_, err = client.V1CloudAccountsAwsUpdate(params)
 	return err
 }
 
 func (h *V1Client) DeleteCloudAccountAws(uid string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudAccountsAwsDeleteParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1CloudAccountsAwsDeleteParamsWithContext(h.Ctx).WithUID(uid)
 	_, err = client.V1CloudAccountsAwsDelete(params)
 	return err
 }
 
 func (h *V1Client) GetCloudAccountAws(uid string) (*models.V1AwsAccount, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudAccountsAwsGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1CloudAccountsAwsGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsAwsGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		// TODO(saamalik) check with team if this is proper?
@@ -117,12 +117,12 @@ func (h *V1Client) GetCloudAccountAws(uid string) (*models.V1AwsAccount, error) 
 }
 
 func (h *V1Client) GetCloudAccountsAws() ([]*models.V1AwsAccount, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudAccountsAwsListParamsWithContext(h.ctx)
+	params := clusterC.NewV1CloudAccountsAwsListParamsWithContext(h.Ctx)
 	response, err := client.V1CloudAccountsAwsList(params)
 	if err != nil {
 		return nil, err
@@ -137,12 +137,12 @@ func (h *V1Client) GetCloudAccountsAws() ([]*models.V1AwsAccount, error) {
 }
 
 func (h *V1Client) GetCloudConfigAws(configUID string) (*models.V1AwsCloudConfig, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudConfigsAwsGetParamsWithContext(h.ctx).WithConfigUID(configUID)
+	params := clusterC.NewV1CloudConfigsAwsGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsAwsGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		// TODO(saamalik) check with team if this is proper?
@@ -155,12 +155,12 @@ func (h *V1Client) GetCloudConfigAws(configUID string) (*models.V1AwsCloudConfig
 }
 
 func (h *V1Client) ImportClusterAws(meta *models.V1ObjectMetaInputEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1SpectroClustersAwsImportParamsWithContext(h.ctx).WithBody(
+	params := clusterC.NewV1SpectroClustersAwsImportParamsWithContext(h.Ctx).WithBody(
 		&models.V1SpectroAwsClusterImportEntity{
 			Metadata: meta,
 		},

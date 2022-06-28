@@ -8,12 +8,12 @@ import (
 )
 
 func (h *V1Client) CreateClusterAks(cluster *models.V1SpectroAzureClusterEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1SpectroClustersAksCreateParamsWithContext(h.ctx).WithBody(cluster)
+	params := clusterC.NewV1SpectroClustersAksCreateParamsWithContext(h.Ctx).WithBody(cluster)
 	success, err := client.V1SpectroClustersAksCreate(params)
 	if err != nil {
 		return "", err
@@ -23,23 +23,23 @@ func (h *V1Client) CreateClusterAks(cluster *models.V1SpectroAzureClusterEntity)
 }
 
 func (h *V1Client) CreateMachinePoolAks(cloudConfigId string, machinePool *models.V1AzureMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsAksMachinePoolCreateParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
+	params := clusterC.NewV1CloudConfigsAksMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
 	_, err = client.V1CloudConfigsAksMachinePoolCreate(params)
 	return err
 }
 
 func (h *V1Client) UpdateMachinePoolAks(cloudConfigId string, machinePool *models.V1AzureMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsAksMachinePoolUpdateParamsWithContext(h.ctx).
+	params := clusterC.NewV1CloudConfigsAksMachinePoolUpdateParamsWithContext(h.Ctx).
 		WithConfigUID(cloudConfigId).
 		WithMachinePoolName(*machinePool.PoolConfig.Name).
 		WithBody(machinePool)
@@ -48,23 +48,23 @@ func (h *V1Client) UpdateMachinePoolAks(cloudConfigId string, machinePool *model
 }
 
 func (h *V1Client) DeleteMachinePoolAks(cloudConfigId string, machinePoolName string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsAksMachinePoolDeleteParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
+	params := clusterC.NewV1CloudConfigsAksMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
 	_, err = client.V1CloudConfigsAksMachinePoolDelete(params)
 	return err
 }
 
 func (h *V1Client) GetCloudConfigAks(configUID string) (*models.V1AzureCloudConfig, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudConfigsAksGetParamsWithContext(h.ctx).WithConfigUID(configUID)
+	params := clusterC.NewV1CloudConfigsAksGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsAksGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		// TODO(saamalik) check with team if this is proper?

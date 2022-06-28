@@ -8,7 +8,7 @@ import (
 )
 
 func (h *V1Client) GetPackRegistryCommonByName(registryName string) (*models.V1RegistryMetadata, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func (h *V1Client) GetPackRegistryCommonByName(registryName string) (*models.V1R
 }
 
 func (h *V1Client) GetPackRegistryByName(registryName string) (*models.V1PackRegistry, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (h *V1Client) GetPackRegistryByName(registryName string) (*models.V1PackReg
 }
 
 func (h *V1Client) GetHelmRegistryByName(registryName string) (*models.V1HelmRegistry, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (h *V1Client) GetHelmRegistryByName(registryName string) (*models.V1HelmReg
 }
 
 func (h *V1Client) GetHelmRegistry(uid string) (*models.V1HelmRegistry, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (h *V1Client) GetHelmRegistry(uid string) (*models.V1HelmRegistry, error) {
 }
 
 func (h *V1Client) CreateHelmRegistry(registry *models.V1HelmRegistryEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +100,7 @@ func (h *V1Client) CreateHelmRegistry(registry *models.V1HelmRegistryEntity) (st
 }
 
 func (h *V1Client) UpdateHelmRegistry(uid string, registry *models.V1HelmRegistry) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (h *V1Client) UpdateHelmRegistry(uid string, registry *models.V1HelmRegistr
 }
 
 func (h *V1Client) DeleteHelmRegistry(uid string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (h *V1Client) DeleteHelmRegistry(uid string) error {
 }
 
 func (h *V1Client) GetOciRegistryByName(registryName string) (*models.V1OciRegistry, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func (h *V1Client) GetOciRegistryByName(registryName string) (*models.V1OciRegis
 }
 
 func (h *V1Client) GetOciRegistry(uid string) (*models.V1EcrRegistry, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (h *V1Client) GetOciRegistry(uid string) (*models.V1EcrRegistry, error) {
 }
 
 func (h *V1Client) CreateOciEcrRegistry(registry *models.V1EcrRegistry) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
@@ -178,7 +178,7 @@ func (h *V1Client) CreateOciEcrRegistry(registry *models.V1EcrRegistry) (string,
 }
 
 func (h *V1Client) UpdateEcrRegistry(uid string, registry *models.V1EcrRegistry) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (h *V1Client) UpdateEcrRegistry(uid string, registry *models.V1EcrRegistry)
 }
 
 func (h *V1Client) DeleteRegistry(uid string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}

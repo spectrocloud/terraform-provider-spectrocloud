@@ -8,7 +8,7 @@ import (
 )
 
 func (h *V1Client) CreateIpPool(pcgUID string, pool *models.V1IPPoolInputEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", nil
 	}
@@ -22,7 +22,7 @@ func (h *V1Client) CreateIpPool(pcgUID string, pool *models.V1IPPoolInputEntity)
 }
 
 func (h *V1Client) GetIpPool(pcgUID, poolUID string) (*models.V1IPPoolEntity, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (h *V1Client) GetIpPool(pcgUID, poolUID string) (*models.V1IPPoolEntity, er
 }
 
 func (h *V1Client) UpdateIpPool(pcgUID, poolUID string, pool *models.V1IPPoolInputEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
@@ -55,7 +55,7 @@ func (h *V1Client) UpdateIpPool(pcgUID, poolUID string, pool *models.V1IPPoolInp
 }
 
 func (h *V1Client) DeleteIpPool(pcgUID, poolUID string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}

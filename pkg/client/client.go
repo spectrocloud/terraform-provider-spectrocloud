@@ -44,7 +44,7 @@ type AuthToken struct {
 }
 
 type V1Client struct {
-	ctx            context.Context
+	Ctx            context.Context
 	email          string
 	password       string
 	apikey         string
@@ -124,7 +124,7 @@ func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
 }
 
 // Clients
-func (h *V1Client) getClusterClient() (clusterC.ClientService, error) {
+func (h *V1Client) GetClusterClient() (clusterC.ClientService, error) {
 	httpTransport, err := h.getTransport()
 	if err != nil {
 		return nil, err

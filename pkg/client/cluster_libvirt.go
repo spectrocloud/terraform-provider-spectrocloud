@@ -8,12 +8,12 @@ import (
 )
 
 func (h *V1Client) CreateClusterLibvirt(cluster *models.V1SpectroLibvirtClusterEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1SpectroClustersLibvirtCreateParamsWithContext(h.ctx).WithBody(cluster)
+	params := clusterC.NewV1SpectroClustersLibvirtCreateParamsWithContext(h.Ctx).WithBody(cluster)
 	success, err := client.V1SpectroClustersLibvirtCreate(params)
 	if err != nil {
 		return "", err
@@ -23,23 +23,23 @@ func (h *V1Client) CreateClusterLibvirt(cluster *models.V1SpectroLibvirtClusterE
 }
 
 func (h *V1Client) CreateMachinePoolLibvirt(cloudConfigId string, machinePool *models.V1LibvirtMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsLibvirtMachinePoolCreateParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
+	params := clusterC.NewV1CloudConfigsLibvirtMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
 	_, err = client.V1CloudConfigsLibvirtMachinePoolCreate(params)
 	return err
 }
 
 func (h *V1Client) UpdateMachinePoolLibvirt(cloudConfigId string, machinePool *models.V1LibvirtMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsLibvirtMachinePoolUpdateParamsWithContext(h.ctx).
+	params := clusterC.NewV1CloudConfigsLibvirtMachinePoolUpdateParamsWithContext(h.Ctx).
 		WithConfigUID(cloudConfigId).
 		WithMachinePoolName(*machinePool.PoolConfig.Name).
 		WithBody(machinePool)
@@ -48,23 +48,23 @@ func (h *V1Client) UpdateMachinePoolLibvirt(cloudConfigId string, machinePool *m
 }
 
 func (h *V1Client) DeleteMachinePoolLibvirt(cloudConfigId string, machinePoolName string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsLibvirtMachinePoolDeleteParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
+	params := clusterC.NewV1CloudConfigsLibvirtMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
 	_, err = client.V1CloudConfigsLibvirtMachinePoolDelete(params)
 	return err
 }
 
 func (h *V1Client) GetCloudConfigLibvirt(configUID string) (*models.V1LibvirtCloudConfig, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudConfigsLibvirtGetParamsWithContext(h.ctx).WithConfigUID(configUID)
+	params := clusterC.NewV1CloudConfigsLibvirtGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsLibvirtGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		return nil, nil

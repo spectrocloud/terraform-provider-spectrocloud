@@ -7,12 +7,12 @@ import (
 )
 
 func (h *V1Client) UpdateClusterOsPatchConfig(uid string, config *models.V1OsPatchEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1SpectroClustersUIDOsPatchUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	params := clusterC.NewV1SpectroClustersUIDOsPatchUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(config)
 	_, err = client.V1SpectroClustersUIDOsPatchUpdate(params)
 	return err
 }

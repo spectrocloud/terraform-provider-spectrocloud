@@ -1,6 +1,6 @@
 locals {
   falco_version = "1.16.3"
-  prometheus_version = "30.2.0"
+  prometheus_version = "30.0.3"
   fluentbit_version = "1.3.5"
 }
 

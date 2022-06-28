@@ -8,12 +8,12 @@ import (
 )
 
 func (h *V1Client) CreateClusterGcp(cluster *models.V1SpectroGcpClusterEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1SpectroClustersGcpCreateParamsWithContext(h.ctx).WithBody(cluster)
+	params := clusterC.NewV1SpectroClustersGcpCreateParamsWithContext(h.Ctx).WithBody(cluster)
 	success, err := client.V1SpectroClustersGcpCreate(params)
 	if err != nil {
 		return "", err
@@ -23,23 +23,23 @@ func (h *V1Client) CreateClusterGcp(cluster *models.V1SpectroGcpClusterEntity) (
 }
 
 func (h *V1Client) CreateMachinePoolGcp(cloudConfigId string, machinePool *models.V1GcpMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsGcpMachinePoolCreateParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
+	params := clusterC.NewV1CloudConfigsGcpMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
 	_, err = client.V1CloudConfigsGcpMachinePoolCreate(params)
 	return err
 }
 
 func (h *V1Client) UpdateMachinePoolGcp(cloudConfigId string, machinePool *models.V1GcpMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsGcpMachinePoolUpdateParamsWithContext(h.ctx).
+	params := clusterC.NewV1CloudConfigsGcpMachinePoolUpdateParamsWithContext(h.Ctx).
 		WithConfigUID(cloudConfigId).
 		WithMachinePoolName(*machinePool.PoolConfig.Name).
 		WithBody(machinePool)
@@ -48,12 +48,12 @@ func (h *V1Client) UpdateMachinePoolGcp(cloudConfigId string, machinePool *model
 }
 
 func (h *V1Client) DeleteMachinePoolGcp(cloudConfigId string, machinePoolName string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsGcpMachinePoolDeleteParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
+	params := clusterC.NewV1CloudConfigsGcpMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
 	_, err = client.V1CloudConfigsGcpMachinePoolDelete(params)
 	return err
 }
@@ -61,12 +61,12 @@ func (h *V1Client) DeleteMachinePoolGcp(cloudConfigId string, machinePoolName st
 // Cloud Account
 
 func (h *V1Client) CreateCloudAccountGcp(account *models.V1GcpAccountEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1CloudAccountsGcpCreateParamsWithContext(h.ctx).WithBody(account)
+	params := clusterC.NewV1CloudAccountsGcpCreateParamsWithContext(h.Ctx).WithBody(account)
 	success, err := client.V1CloudAccountsGcpCreate(params)
 	if err != nil {
 		return "", err
@@ -76,35 +76,35 @@ func (h *V1Client) CreateCloudAccountGcp(account *models.V1GcpAccountEntity) (st
 }
 
 func (h *V1Client) UpdateCloudAccountGcp(account *models.V1GcpAccountEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
 	uid := account.Metadata.UID
-	params := clusterC.NewV1CloudAccountsGcpUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(account)
+	params := clusterC.NewV1CloudAccountsGcpUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(account)
 	_, err = client.V1CloudAccountsGcpUpdate(params)
 	return err
 }
 
 func (h *V1Client) DeleteCloudAccountGcp(uid string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudAccountsGcpDeleteParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1CloudAccountsGcpDeleteParamsWithContext(h.Ctx).WithUID(uid)
 	_, err = client.V1CloudAccountsGcpDelete(params)
 	return err
 }
 
 func (h *V1Client) GetCloudAccountGcp(uid string) (*models.V1GcpAccount, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudAccountsGcpGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1CloudAccountsGcpGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsGcpGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		// TODO(saamalik) check with team if this is proper?
@@ -117,12 +117,12 @@ func (h *V1Client) GetCloudAccountGcp(uid string) (*models.V1GcpAccount, error) 
 }
 
 func (h *V1Client) GetCloudAccountsGcp() ([]*models.V1GcpAccount, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudAccountsGcpListParamsWithContext(h.ctx)
+	params := clusterC.NewV1CloudAccountsGcpListParamsWithContext(h.Ctx)
 	response, err := client.V1CloudAccountsGcpList(params)
 	if err != nil {
 		return nil, err
@@ -137,12 +137,12 @@ func (h *V1Client) GetCloudAccountsGcp() ([]*models.V1GcpAccount, error) {
 }
 
 func (h *V1Client) GetCloudConfigGcp(configUID string) (*models.V1GcpCloudConfig, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudConfigsGcpGetParamsWithContext(h.ctx).WithConfigUID(configUID)
+	params := clusterC.NewV1CloudConfigsGcpGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsGcpGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		// TODO(saamalik) check with team if this is proper?
@@ -155,12 +155,12 @@ func (h *V1Client) GetCloudConfigGcp(configUID string) (*models.V1GcpCloudConfig
 }
 
 func (h *V1Client) ImportClusterGcp(meta *models.V1ObjectMetaInputEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1SpectroClustersGcpImportParamsWithContext(h.ctx).WithBody(
+	params := clusterC.NewV1SpectroClustersGcpImportParamsWithContext(h.Ctx).WithBody(
 		&models.V1SpectroGcpClusterImportEntity{
 			Metadata: meta,
 		},

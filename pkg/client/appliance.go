@@ -8,14 +8,14 @@ import (
 )
 
 func (h *V1Client) GetApplianceByName(deviceName string) (*models.V1EdgeHostDevice, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
 	//limit := int64(0)
 	//params := clusterC.NewV1EdgeHostDevicesListParamsWithContext(h.ctx).WithLimit(&limit)
-	params := clusterC.NewV1EdgeHostDevicesListParamsWithContext(h.ctx)
+	params := clusterC.NewV1EdgeHostDevicesListParamsWithContext(h.Ctx)
 	appliances, err := client.V1EdgeHostDevicesList(params)
 	if err != nil {
 		return nil, err
@@ -31,12 +31,12 @@ func (h *V1Client) GetApplianceByName(deviceName string) (*models.V1EdgeHostDevi
 }
 
 func (h *V1Client) GetAppliance(uid string) (*models.V1EdgeHostDevice, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1EdgeHostDevicesUIDGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1EdgeHostDevicesUIDGetParamsWithContext(h.Ctx).WithUID(uid)
 	response, err := client.V1EdgeHostDevicesUIDGet(params)
 	if err != nil {
 		if herr.IsNotFound(err) {
@@ -49,12 +49,12 @@ func (h *V1Client) GetAppliance(uid string) (*models.V1EdgeHostDevice, error) {
 }
 
 func (h *V1Client) CreateAppliance(createHostDevice *models.V1EdgeHostDeviceEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1EdgeHostDevicesCreateParams().WithContext(h.ctx).WithBody(createHostDevice)
+	params := clusterC.NewV1EdgeHostDevicesCreateParams().WithContext(h.Ctx).WithBody(createHostDevice)
 	if resp, err := client.V1EdgeHostDevicesCreate(params); err != nil {
 		return "", err
 	} else {
@@ -63,14 +63,14 @@ func (h *V1Client) CreateAppliance(createHostDevice *models.V1EdgeHostDeviceEnti
 }
 
 func (h *V1Client) UpdateAppliance(uid string, appliance *models.V1EdgeHostDevice) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1EdgeHostDevicesUIDUpdateParams().WithContext(h.ctx).WithBody(appliance).WithUID(uid)
+	params := clusterC.NewV1EdgeHostDevicesUIDUpdateParams().WithContext(h.Ctx).WithBody(appliance).WithUID(uid)
 	_, err = client.V1EdgeHostDevicesUIDUpdate(params)
-	if err != nil && !herr.IsEdgeHostDeviceNotRegistered(err){
+	if err != nil && !herr.IsEdgeHostDeviceNotRegistered(err) {
 		return err
 	}
 
@@ -78,12 +78,12 @@ func (h *V1Client) UpdateAppliance(uid string, appliance *models.V1EdgeHostDevic
 }
 
 func (h *V1Client) DeleteAppliance(uid string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1EdgeHostDevicesUIDDeleteParams().WithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1EdgeHostDevicesUIDDeleteParams().WithContext(h.Ctx).WithUID(uid)
 	_, err = client.V1EdgeHostDevicesUIDDelete(params)
 	if err != nil {
 		return err

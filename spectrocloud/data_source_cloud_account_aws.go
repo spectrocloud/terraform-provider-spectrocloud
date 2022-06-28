@@ -27,6 +27,12 @@ func dataSourceCloudAccountAws() *schema.Resource {
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
+			"depends": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ExactlyOneOf: []string{"id", "name"},
+			},
 		},
 	}
 }

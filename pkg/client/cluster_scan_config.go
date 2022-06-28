@@ -9,12 +9,12 @@ import (
 )
 
 func (h *V1Client) GetClusterScanConfig(uid string) (*models.V1ClusterComplianceScan, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1ClusterFeatureComplianceScanGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1ClusterFeatureComplianceScanGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1ClusterFeatureComplianceScanGet(params)
 	if err != nil {
 		if herr.IsNotFound(err) {
@@ -27,23 +27,23 @@ func (h *V1Client) GetClusterScanConfig(uid string) (*models.V1ClusterCompliance
 }
 
 func (h *V1Client) CreateClusterScanConfig(uid string, config *models.V1ClusterComplianceScheduleConfig) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1ClusterFeatureComplianceScanCreateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	params := clusterC.NewV1ClusterFeatureComplianceScanCreateParamsWithContext(h.Ctx).WithUID(uid).WithBody(config)
 	_, err = client.V1ClusterFeatureComplianceScanCreate(params)
 	return err
 }
 
 func (h *V1Client) UpdateClusterScanConfig(uid string, config *models.V1ClusterComplianceScheduleConfig) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1ClusterFeatureComplianceScanUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	params := clusterC.NewV1ClusterFeatureComplianceScanUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(config)
 	_, err = client.V1ClusterFeatureComplianceScanUpdate(params)
 	return err
 }

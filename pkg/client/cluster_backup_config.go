@@ -9,12 +9,12 @@ import (
 )
 
 func (h *V1Client) GetClusterBackupConfig(uid string) (*models.V1ClusterBackup, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1ClusterFeatureBackupGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1ClusterFeatureBackupGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1ClusterFeatureBackupGet(params)
 	if err != nil {
 		if herr.IsNotFound(err) || herr.IsBackupNotConfigured(err) {
@@ -27,23 +27,23 @@ func (h *V1Client) GetClusterBackupConfig(uid string) (*models.V1ClusterBackup, 
 }
 
 func (h *V1Client) CreateClusterBackupConfig(uid string, config *models.V1ClusterBackupConfig) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1ClusterFeatureBackupCreateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	params := clusterC.NewV1ClusterFeatureBackupCreateParamsWithContext(h.Ctx).WithUID(uid).WithBody(config)
 	_, err = client.V1ClusterFeatureBackupCreate(params)
 	return err
 }
 
 func (h *V1Client) UpdateClusterBackupConfig(uid string, config *models.V1ClusterBackupConfig) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1ClusterFeatureBackupUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	params := clusterC.NewV1ClusterFeatureBackupUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(config)
 	_, err = client.V1ClusterFeatureBackupUpdate(params)
 	return err
 }
