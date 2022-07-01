@@ -1,7 +1,7 @@
-data "spectrocloud_cluster_profile" "profile1" {
-  name = "niktest_profile"
+data "spectrocloud_workspace" "workspace" {
+  name = "wsp-tf"
 }
 
 output "same" {
-  value = data.spectrocloud_cluster_profile.profile1
+  value = data.spectrocloud_workspace.workspace
 }
