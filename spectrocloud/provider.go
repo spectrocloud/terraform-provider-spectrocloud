@@ -105,6 +105,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_registry_helm": resourceRegistryHelm(),
 
 				"spectrocloud_appliance": resourceAppliance(),
+
+				"spectrocloud_workspace": resourceWorkspace(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_user":    dataSourceUser(),
@@ -132,6 +134,7 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_appliance": dataSourceAppliance(),
 				"spectrocloud_cluster":   dataSourceCluster(),
+				"spectrocloud_workspace": dataSourceWorkspace(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}

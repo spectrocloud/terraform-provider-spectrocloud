@@ -275,6 +275,16 @@ func resourceMachinePoolEdgeHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceClusterHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	buf.WriteString(fmt.Sprintf("%s-", m["uid"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+
+	return int(hash(buf.String()))
+}
+
 func HashStringMapList(v interface{}) string {
 	var b bytes.Buffer
 	m := v.([]interface{})
