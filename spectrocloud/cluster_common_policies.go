@@ -27,12 +27,17 @@ func toBackupPolicy(d *schema.ResourceData) *models.V1ClusterBackupConfig {
 			}
 		}
 
+		include := true
+		if policy["include_cluster_resources"] != nil {
+			include = policy["include_cluster_resources"].(bool)
+		}
+
 		return &models.V1ClusterBackupConfig{
 			BackupLocationUID:       policy["backup_location_id"].(string),
 			BackupPrefix:            policy["prefix"].(string),
 			DurationInHours:         int64(policy["expiry_in_hour"].(int)),
 			IncludeAllDisks:         policy["include_disks"].(bool),
-			IncludeClusterResources: policy["include_cluster_resources"].(bool),
+			IncludeClusterResources: include,
 			Namespaces:              namespaces,
 			Schedule: &models.V1ClusterFeatureSchedule{
 				ScheduledRunTime: policy["schedule"].(string),
