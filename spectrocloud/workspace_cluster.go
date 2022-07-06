@@ -15,10 +15,8 @@ func toClusterRefs(d *schema.ResourceData) []*models.V1WorkspaceClusterRef {
 	for _, cluster := range clusters.(*schema.Set).List() {
 		clusterValue := cluster.(map[string]interface{})
 		uid := clusterValue["uid"].(string)
-		name := clusterValue["name"].(string)
 		clusterRefs = append(clusterRefs, &models.V1WorkspaceClusterRef{
-			ClusterName: name,
-			ClusterUID:  uid,
+			ClusterUID: uid,
 		})
 	}
 

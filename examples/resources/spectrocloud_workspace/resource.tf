@@ -6,7 +6,6 @@ resource "spectrocloud_workspace" "workspace" {
   name = "wsp-tf"
 
   clusters {
-    name = data.spectrocloud_cluster.cluster1.name
     uid = data.spectrocloud_cluster.cluster1.id
   }
 

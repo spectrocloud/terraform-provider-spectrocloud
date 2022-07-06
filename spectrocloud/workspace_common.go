@@ -13,7 +13,6 @@ func flattenWorkspaceClusters(workspace *models.V1Workspace) []interface{} {
 		for _, cluster := range clusters {
 			wsp_cluster := make(map[string]interface{})
 
-			wsp_cluster["name"] = cluster.ClusterName
 			wsp_cluster["uid"] = cluster.ClusterUID
 
 			wsp_clusters = append(wsp_clusters, wsp_cluster)

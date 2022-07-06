@@ -43,10 +43,6 @@ func resourceWorkspace() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"name": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
 					},
 				},
 			},

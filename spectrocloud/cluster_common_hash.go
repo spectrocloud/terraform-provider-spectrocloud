@@ -280,7 +280,6 @@ func resourceClusterHash(v interface{}) int {
 	m := v.(map[string]interface{})
 
 	buf.WriteString(fmt.Sprintf("%s-", m["uid"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 
 	return int(hash(buf.String()))
 }
