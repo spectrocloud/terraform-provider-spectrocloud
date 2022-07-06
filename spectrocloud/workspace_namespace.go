@@ -46,11 +46,22 @@ func toWorkspaceNamespace(clusterRbacBinding interface{}) *models.V1WorkspaceClu
 		blacklist = append(blacklist, image.(string))
 	}
 
+	name := m["name"].(string)
+	IsRegex := false
+
+	first := string(name[0])
+	last := string(name[len(name)-1])
+
+	if first == "/" && last == "/" {
+		IsRegex = true
+	}
+
 	ns := &models.V1WorkspaceClusterNamespace{
 		Image: &models.V1WorkspaceNamespaceImage{
 			BlackListedImages: blacklist,
 		},
-		Name: m["name"].(string),
+		Name:    name,
+		IsRegex: IsRegex,
 		NamespaceResourceAllocation: &models.V1WorkspaceNamespaceResourceAllocation{
 			ClusterResourceAllocations: nil,
 			DefaultResourceAllocation:  resource_alloc,

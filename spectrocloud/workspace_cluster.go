@@ -24,19 +24,3 @@ func toClusterRefs(d *schema.ResourceData) []*models.V1WorkspaceClusterRef {
 
 	return clusterRefs
 }
-
-func toWorkspacePolicies(d *schema.ResourceData) *models.V1WorkspacePolicies {
-	policies := toPolicies(d)
-
-	if policies.BackupPolicy == nil {
-		return nil
-	}
-
-	return &models.V1WorkspacePolicies{
-		BackupPolicy: &models.V1WorkspaceBackupConfigEntity{
-			BackupConfig:       policies.BackupPolicy,
-			ClusterUids:        nil,
-			IncludeAllClusters: false,
-		},
-	}
-}

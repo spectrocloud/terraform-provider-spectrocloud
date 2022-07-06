@@ -1,6 +1,8 @@
 package spectrocloud
 
-import "github.com/spectrocloud/hapi/models"
+import (
+	"github.com/spectrocloud/hapi/models"
+)
 
 func flattenWorkspaceClusters(workspace *models.V1Workspace) []interface{} {
 	clusters := workspace.Spec.ClusterRefs
@@ -23,20 +25,15 @@ func flattenWorkspaceClusters(workspace *models.V1Workspace) []interface{} {
 	}
 }
 
-func flattenWorkspaceBackupPolicy(workspace *models.V1Workspace) []interface{} {
+func flattenWorkspaceBackupPolicy(backup *models.V1WorkspaceBackup) []interface{} {
 	result := make([]interface{}, 0, 1)
-	data := make(map[string]interface{})
-	if workspace.Spec.Policies == nil || workspace.Spec.Policies.BackupPolicy == nil {
+	if backup.Spec.Config == nil && backup.Spec.Config.BackupConfig == nil {
 		return result
 	}
-	backupConfig := workspace.Spec.Policies.BackupPolicy.BackupConfig
-	data["schedule"] = backupConfig.Schedule
-	data["backup_location_id"] = backupConfig.BackupLocationUID
-	data["prefix"] = backupConfig.BackupPrefix
-	data["namespaces"] = backupConfig.Namespaces
-	data["expiry_in_hour"] = backupConfig.DurationInHours
-	data["include_disks"] = backupConfig.IncludeAllDisks
-	data["include_cluster_resources"] = backupConfig.IncludeClusterResources
-	result = append(result, data)
+
+	result = flattenBackupPolicy(backup.Spec.Config.BackupConfig)
+	data := result[0].(map[string]interface{})
+	data["cluster_uids"] = backup.Spec.Config.ClusterUids
+	data["include_all_clusters"] = backup.Spec.Config.IncludeAllClusters
 	return result
 }

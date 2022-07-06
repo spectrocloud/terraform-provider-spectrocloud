@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	hashboardC "github.com/spectrocloud/hapi/hashboard/client/v1"
 	"github.com/spectrocloud/hapi/models"
@@ -90,6 +91,17 @@ func (h *V1Client) UpdateWorkspaceRBACS(uid string, rbac_uid string, wo *models.
 	return nil
 }
 
+func (h *V1Client) UpdateWorkspaceBackupConfig(uid string, config *models.V1WorkspaceBackupConfigEntity) error {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return err
+	}
+
+	params := clusterC.NewV1WorkspaceOpsBackupUpdateParams().WithContext(h.Ctx).WithUID(uid).WithBody(config)
+	_, err = client.V1WorkspaceOpsBackupUpdate(params)
+	return err
+}
+
 func (h *V1Client) DeleteWorkspace(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
@@ -101,4 +113,27 @@ func (h *V1Client) DeleteWorkspace(uid string) error {
 		return err
 	}
 	return nil
+}
+
+func (h *V1Client) GetWorkspaceBackup(uid string) (*models.V1WorkspaceBackup, error) {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1WorkspaceOpsBackupGetParams().WithContext(h.Ctx).WithUID(uid)
+	success, err := client.V1WorkspaceOpsBackupGet(params)
+	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	workspace := success.Payload
+
+	return workspace, nil
+}
+
+func (h *V1Client) WorkspaceBackupDelete() error {
+	return errors.New("Not implemented yet.")
 }

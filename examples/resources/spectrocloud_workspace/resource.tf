@@ -69,8 +69,12 @@ resource "spectrocloud_workspace" "workspace" {
     backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
     prefix                    = "prod-backup"
     expiry_in_hour            = 7200
-    include_disks             = true
-    //include_cluster_resources = true
+    include_disks             = false
+    include_cluster_resources = true
+
+    //namespaces = ["test5ns"]
+    include_all_clusters = true
+    cluster_uids = [data.spectrocloud_cluster.cluster1.id]
   }
 
 }

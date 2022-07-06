@@ -90,6 +90,24 @@ func resourceWorkspace() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"cluster_uids": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"include_all_clusters": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"include_cluster_resources": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
 					},
 				},
 			},
@@ -205,7 +223,11 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("backup_policy", flattenWorkspaceBackupPolicy(workspace)); err != nil {
+	backup, err := c.GetWorkspaceBackup(uid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("backup_policy", flattenWorkspaceBackupPolicy(backup)); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -255,13 +277,17 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 		}
 	}
 
-	/*
-		if d.HasChange("backup_policy") {
-			if err := updateBackupPolicy(c, d); err != nil {
+	if d.HasChange("backup_policy") {
+		if len(d.Get("backup_policy").([]interface{})) == 0 {
+			if err := c.WorkspaceBackupDelete(); err != nil {
 				return diag.FromErr(err)
 			}
 		}
-	*/
+		if err := updateWorkspaceBackupPolicy(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	resourceWorkspaceRead(ctx, d, m)
 
 	return diags

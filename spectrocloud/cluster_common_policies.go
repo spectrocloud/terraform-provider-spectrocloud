@@ -15,13 +15,12 @@ func toPolicies(d *schema.ResourceData) *models.V1SpectroClusterPolicies {
 
 func toBackupPolicy(d *schema.ResourceData) *models.V1ClusterBackupConfig {
 	if policies, found := d.GetOk("backup_policy"); found {
-		//policy := policies.([]interface{})[0]
 		policy := policies.([]interface{})[0].(map[string]interface{})
 
-		namespaces := make([]string, 0, 1)
+		namespaces := make([]string, 0)
 		if policy["namespaces"] != nil {
-			if nss, ok := policy["namespaces"].([]interface{}); ok {
-				for _, ns := range nss {
+			if nss, ok := policy["namespaces"]; ok {
+				for _, ns := range nss.(*schema.Set).List() {
 					namespaces = append(namespaces, ns.(string))
 				}
 			}
@@ -63,7 +62,7 @@ func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
 
 func updateBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	if policy := toBackupPolicy(d); policy != nil {
-		return c.ApplyClusterBackupConfig(d.Id(), policy)
+		return c.UpdateClusterBackupConfig(d.Id(), policy)
 	}
 	return nil
 }
