@@ -9,12 +9,12 @@ import (
 )
 
 func (h *V1Client) GetClusterRbacConfig(uid string) (*models.V1ClusterRbacs, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1SpectroClustersUIDConfigRbacsGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1SpectroClustersUIDConfigRbacsGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1SpectroClustersUIDConfigRbacsGet(params)
 	if err != nil {
 		if herr.IsNotFound(err) {
@@ -27,23 +27,23 @@ func (h *V1Client) GetClusterRbacConfig(uid string) (*models.V1ClusterRbacs, err
 }
 
 func (h *V1Client) CreateClusterRbacConfig(uid string, config *models.V1ClusterRbac) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1WorkspacesClusterRbacCreateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	params := clusterC.NewV1WorkspacesClusterRbacCreateParamsWithContext(h.Ctx).WithUID(uid).WithBody(config)
 	_, err = client.V1WorkspacesClusterRbacCreate(params)
 	return err
 }
 
 func (h *V1Client) UpdateClusterRbacConfig(uid string, config *models.V1ClusterRbacResourcesUpdateEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1SpectroClustersUIDConfigRbacsUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	params := clusterC.NewV1SpectroClustersUIDConfigRbacsUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(config)
 	_, err = client.V1SpectroClustersUIDConfigRbacsUpdate(params)
 	return err
 }
@@ -78,11 +78,13 @@ func toUpdateRbac(config *models.V1ClusterRbac) *models.V1ClusterRbacResourcesUp
 
 	}
 
-	rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
-		Spec: &models.V1ClusterRbacSpec{
-			Bindings: clusterRoleBindings,
-		},
-	})
+	if len(clusterRoleBindings) > 0 {
+		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
+			Spec: &models.V1ClusterRbacSpec{
+				Bindings: clusterRoleBindings,
+			},
+		})
+	}
 
 	if len(roleBindings) > 0 {
 		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{

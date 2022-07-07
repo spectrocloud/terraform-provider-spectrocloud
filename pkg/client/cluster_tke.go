@@ -8,12 +8,12 @@ import (
 )
 
 func (h *V1Client) CreateClusterTke(cluster *models.V1SpectroTencentClusterEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1SpectroClustersTkeCreateParamsWithContext(h.ctx).WithBody(cluster)
+	params := clusterC.NewV1SpectroClustersTkeCreateParamsWithContext(h.Ctx).WithBody(cluster)
 	success, err := client.V1SpectroClustersTkeCreate(params)
 	if err != nil {
 		return "", err
@@ -23,23 +23,23 @@ func (h *V1Client) CreateClusterTke(cluster *models.V1SpectroTencentClusterEntit
 }
 
 func (h *V1Client) CreateMachinePoolTke(cloudConfigId string, machinePool *models.V1TencentMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsTkeMachinePoolCreateParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
+	params := clusterC.NewV1CloudConfigsTkeMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
 	_, err = client.V1CloudConfigsTkeMachinePoolCreate(params)
 	return err
 }
 
 func (h *V1Client) UpdateMachinePoolTke(cloudConfigId string, machinePool *models.V1TencentMachinePoolConfigEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsTkeMachinePoolUpdateParamsWithContext(h.ctx).
+	params := clusterC.NewV1CloudConfigsTkeMachinePoolUpdateParamsWithContext(h.Ctx).
 		WithConfigUID(cloudConfigId).
 		WithMachinePoolName(*machinePool.PoolConfig.Name).
 		WithBody(machinePool)
@@ -48,23 +48,23 @@ func (h *V1Client) UpdateMachinePoolTke(cloudConfigId string, machinePool *model
 }
 
 func (h *V1Client) DeleteMachinePoolTke(cloudConfigId string, machinePoolName string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsTkeMachinePoolDeleteParamsWithContext(h.ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
+	params := clusterC.NewV1CloudConfigsTkeMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
 	_, err = client.V1CloudConfigsTkeMachinePoolDelete(params)
 	return err
 }
 
 func (h *V1Client) GetCloudConfigTke(configUID string) (*models.V1TencentCloudConfig, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudConfigsTkeGetParamsWithContext(h.ctx).WithConfigUID(configUID)
+	params := clusterC.NewV1CloudConfigsTkeGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsTkeGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		return nil, nil
@@ -76,12 +76,12 @@ func (h *V1Client) GetCloudConfigTke(configUID string) (*models.V1TencentCloudCo
 }
 
 func (h *V1Client) CreateCloudAccountTke(account *models.V1TencentAccount) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1CloudAccountsTencentCreateParamsWithContext(h.ctx).WithBody(account)
+	params := clusterC.NewV1CloudAccountsTencentCreateParamsWithContext(h.Ctx).WithBody(account)
 	success, err := client.V1CloudAccountsTencentCreate(params)
 	if err != nil {
 		return "", err
@@ -91,35 +91,35 @@ func (h *V1Client) CreateCloudAccountTke(account *models.V1TencentAccount) (stri
 }
 
 func (h *V1Client) UpdateCloudAccountTencent(account *models.V1TencentAccount) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
 	uid := account.Metadata.UID
-	params := clusterC.NewV1CloudAccountsTencentUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(account)
+	params := clusterC.NewV1CloudAccountsTencentUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(account)
 	_, err = client.V1CloudAccountsTencentUpdate(params)
 	return err
 }
 
 func (h *V1Client) DeleteCloudAccountTke(uid string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudAccountsTencentDeleteParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1CloudAccountsTencentDeleteParamsWithContext(h.Ctx).WithUID(uid)
 	_, err = client.V1CloudAccountsTencentDelete(params)
 	return err
 }
 
 func (h *V1Client) GetCloudAccountTke(uid string) (*models.V1TencentAccount, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudAccountsTencentGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1CloudAccountsTencentGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsTencentGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		return nil, nil
@@ -131,12 +131,12 @@ func (h *V1Client) GetCloudAccountTke(uid string) (*models.V1TencentAccount, err
 }
 
 func (h *V1Client) GetCloudAccountsTke() ([]*models.V1TencentAccount, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudAccountsTencentListParamsWithContext(h.ctx)
+	params := clusterC.NewV1CloudAccountsTencentListParamsWithContext(h.Ctx)
 	response, err := client.V1CloudAccountsTencentList(params)
 	if err != nil {
 		return nil, err

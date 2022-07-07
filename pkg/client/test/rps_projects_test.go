@@ -2,28 +2,14 @@ package test
 
 import (
 	"fmt"
-	"github.com/spectrocloud/hapi/apiutil/transport"
 	userC "github.com/spectrocloud/hapi/user/client/v1"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"testing"
 )
 
-type Retry struct {
-	runs          int
-	retries       int
-	expected_code int
-}
-
-type ResultStat struct {
-	CODE_MINUS_ONE      int
-	CODE_NORMAL         int
-	CODE_EXPECTED       int
-	CODE_INTERNAL_ERROR int
-}
-
 func Test1Scenario(t *testing.T) {
 	cases := []Retry{
-		{290, 3, 429},
+		{190, 3, 429},
 	}
 
 	for _, c := range cases {
@@ -53,64 +39,9 @@ func GetProjects1Test(t *testing.T, h *client.V1Client, retry Retry) {
 	ch := make(chan int)
 	done := make(chan bool)
 
-	go produceResults(retry, userClient, params, ch, done)
+	method, in := prepareUserMethod(userClient, params, "V1ProjectsList")
+	go produceResults(retry, method, in, ch, done)
 
 	stat := consumeResults(t, retry, ch, done)
 	fmt.Printf("\nDone: %d, %d, %d, %d.\n", stat.CODE_MINUS_ONE, stat.CODE_NORMAL, stat.CODE_EXPECTED, stat.CODE_INTERNAL_ERROR)
-}
-
-func consumeResults(t *testing.T, retry Retry, ch chan int, done chan bool) ResultStat {
-	stat := ResultStat{
-		CODE_MINUS_ONE:      0,
-		CODE_NORMAL:         0,
-		CODE_EXPECTED:       0,
-		CODE_INTERNAL_ERROR: 0,
-	}
-
-	for i := 0; i < retry.runs; i++ {
-		v := <-ch
-		switch v {
-		case -1:
-			stat.CODE_MINUS_ONE++
-			break
-		case retry.expected_code:
-			stat.CODE_EXPECTED++
-			break
-		case 200:
-			stat.CODE_NORMAL++
-			break
-		case 500:
-			stat.CODE_INTERNAL_ERROR++
-			break
-		default:
-			t.Fail()
-		}
-	}
-	<-done
-	return stat
-}
-
-func produceResults(retry Retry, userClient userC.ClientService, params *userC.V1ProjectsListParams, ch chan int, done chan bool) {
-	for i := 0; i < retry.runs; i++ {
-		go func(chnl chan int) {
-			_, err := userClient.V1ProjectsList(params)
-			if err != nil {
-				if _, ok := err.(*transport.TcpError); ok {
-					chnl <- -1
-					return
-				}
-				if _, ok := err.(*transport.TransportError); ok && err.(*transport.TransportError).HttpCode == retry.expected_code {
-					chnl <- retry.expected_code
-					return
-				} else {
-					chnl <- 500
-					return
-				}
-			} else {
-				chnl <- 200
-				return
-			}
-		}(ch)
-	}
-	done <- true
 }

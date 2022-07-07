@@ -15,6 +15,7 @@ import (
 
 	authC "github.com/spectrocloud/hapi/auth/client/v1"
 
+	hashboardC "github.com/spectrocloud/hapi/hashboard/client/v1"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 	userC "github.com/spectrocloud/hapi/user/client/v1"
 )
@@ -43,7 +44,7 @@ type AuthToken struct {
 }
 
 type V1Client struct {
-	ctx            context.Context
+	Ctx            context.Context
 	email          string
 	password       string
 	apikey         string
@@ -123,7 +124,7 @@ func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
 }
 
 // Clients
-func (h *V1Client) getClusterClient() (clusterC.ClientService, error) {
+func (h *V1Client) GetClusterClient() (clusterC.ClientService, error) {
 	httpTransport, err := h.getTransport()
 	if err != nil {
 		return nil, err
@@ -139,4 +140,13 @@ func (h *V1Client) GetUserClient() (userC.ClientService, error) {
 	}
 
 	return userC.New(httpTransport, strfmt.Default), nil
+}
+
+func (h *V1Client) GetHashboard() (hashboardC.ClientService, error) {
+	httpTransport, err := h.getTransport()
+	if err != nil {
+		return nil, err
+	}
+
+	return hashboardC.New(httpTransport, strfmt.Default), nil
 }

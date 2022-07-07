@@ -12,7 +12,7 @@ require (
 	github.com/prometheus/common v0.23.0
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/gomi v1.14.1-0.20211203081134-89d0a1620fd9
-	github.com/spectrocloud/hapi v1.14.1-0.20220523061209-3e105f1f46af
+	github.com/spectrocloud/hapi v1.14.1-0.20220705155703-54c49804c4d1
 )
 
 //replace github.com/spectrocloud/hapi => ../hapi

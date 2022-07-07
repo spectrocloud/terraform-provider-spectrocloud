@@ -300,7 +300,7 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toOpenStackCluster(d)
+	cluster := toOpenStackCluster(c, d)
 
 	uid, err := c.CreateClusterOpenStack(cluster)
 	if err != nil {
@@ -333,7 +333,7 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	return diags
 }
 
-func toOpenStackCluster(d *schema.ResourceData) *models.V1SpectroOpenStackClusterEntity {
+func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroOpenStackClusterEntity {
 
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
@@ -345,7 +345,7 @@ func toOpenStackCluster(d *schema.ResourceData) *models.V1SpectroOpenStackCluste
 		},
 		Spec: &models.V1SpectroOpenStackClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1OpenStackClusterConfig{
 				Region:     cloudConfig["region"].(string),

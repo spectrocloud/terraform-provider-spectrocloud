@@ -77,6 +77,7 @@ func resourceClusterProfile() *schema.Resource {
 						},
 						"registry_uid": {
 							Type:     schema.TypeString,
+							Computed: true,
 							Optional: true,
 						},
 						"uid": {
@@ -185,29 +186,18 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	// make a map of all the content
-	packManifests := make(map[string][]string)
-	for _, p := range cp.Spec.Published.Packs {
-		if len(p.Manifests) > 0 {
-			content, err := c.GetClusterProfileManifestPack(d.Id(), *p.Name)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			if len(content) > 0 {
-				// TODO at some point support multiple manifests... or I hope it's just returned in
-				// the original call
-				c := make([]string, len(content))
-				for i, co := range content {
-					c[i] = co.Spec.Published.Content
-				}
-				packManifests[p.PackUID] = c
-			}
-		}
+	packManifests, d2, done2 := getPacksContent(cp, c, d)
+	if done2 {
+		return d2
 	}
 
 	_ = d.Set("name", cp.Metadata.Name)
-	packs, err := flattenPacks(c, cp.Spec.Published.Packs, packManifests)
+
+	diagPacks, diagnostics, done := GetDiagPacks(d, err)
+	if done {
+		return diagnostics
+	}
+	packs, err := flattenPacks(c, diagPacks, cp.Spec.Published.Packs, packManifests)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -218,7 +208,28 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func flattenPacks(c *client.V1Client, packs []*models.V1PackRef, manifestContent map[string][]string) ([]interface{}, error) {
+func getPacksContent(cp *models.V1ClusterProfile, c *client.V1Client, d *schema.ResourceData) (map[string]map[string]string, diag.Diagnostics, bool) {
+	packManifests := make(map[string]map[string]string)
+	for _, p := range cp.Spec.Published.Packs {
+		if len(p.Manifests) > 0 {
+			content, err := c.GetClusterProfileManifestPack(d.Id(), *p.Name)
+			if err != nil {
+				return nil, diag.FromErr(err), true
+			}
+
+			if len(content) > 0 {
+				c := make(map[string]string)
+				for _, co := range content {
+					c[co.Metadata.Name] = co.Spec.Published.Content
+				}
+				packManifests[p.PackUID] = c
+			}
+		}
+	}
+	return packManifests, nil, false
+}
+
+func flattenPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, packs []*models.V1PackRef, manifestContent map[string]map[string]string) ([]interface{}, error) {
 	if packs == nil {
 		return make([]interface{}, 0), nil
 	}
@@ -228,7 +239,9 @@ func flattenPacks(c *client.V1Client, packs []*models.V1PackRef, manifestContent
 		p := make(map[string]interface{})
 
 		p["uid"] = pack.PackUID
-		p["registry_uid"] = c.GetPackRegistry(pack.PackUID)
+		/*if isRegistryUID(diagPacks, *pack.Name) {
+			p["registry_uid"] = c.GetPackRegistry(pack)
+		}*/
 		p["name"] = *pack.Name
 		p["tag"] = pack.Tag
 		p["values"] = pack.Values
@@ -240,7 +253,7 @@ func flattenPacks(c *client.V1Client, packs []*models.V1PackRef, manifestContent
 				mj := make(map[string]interface{})
 				mj["name"] = m.Name
 				mj["uid"] = m.UID
-				mj["content"] = manifestContent[pack.PackUID][j]
+				mj["content"] = manifestContent[pack.PackUID][m.Name]
 
 				ma[j] = mj
 			}
@@ -253,6 +266,15 @@ func flattenPacks(c *client.V1Client, packs []*models.V1PackRef, manifestContent
 	return ps, nil
 }
 
+func isRegistryUID(diagPacks []*models.V1PackManifestEntity, name string) bool {
+	for _, pack := range diagPacks {
+		if *pack.Name == name && pack.RegistryUID != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -261,7 +283,11 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	if d.HasChanges("name") || d.HasChanges("pack") {
 		log.Printf("Updating packs")
-		cluster, err := toClusterProfileUpdate(d)
+		cp, err := c.GetClusterProfile(d.Id())
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		cluster, err := toClusterProfileUpdate(d, cp)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -361,19 +387,21 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 	}
 
 	manifests := make([]*models.V1ManifestInputEntity, 0)
-	for _, manifest := range p["manifest"].([]interface{}) {
-		m := manifest.(map[string]interface{})
-		manifests = append(manifests, &models.V1ManifestInputEntity{
-			Content: strings.TrimSpace(m["content"].(string)),
-			Name:    m["name"].(string),
-		})
+	if len(p["manifest"].([]interface{})) > 0 {
+		for _, manifest := range p["manifest"].([]interface{}) {
+			m := manifest.(map[string]interface{})
+			manifests = append(manifests, &models.V1ManifestInputEntity{
+				Content: strings.TrimSpace(m["content"].(string)),
+				Name:    m["name"].(string),
+			})
+		}
 	}
 	pack.Manifests = manifests
 
 	return pack, nil
 }
 
-func toClusterProfileUpdate(d *schema.ResourceData) (*models.V1ClusterProfileUpdateEntity, error) {
+func toClusterProfileUpdate(d *schema.ResourceData, cluster *models.V1ClusterProfile) (*models.V1ClusterProfileUpdateEntity, error) {
 	cp := &models.V1ClusterProfileUpdateEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
@@ -386,10 +414,9 @@ func toClusterProfileUpdate(d *schema.ResourceData) (*models.V1ClusterProfileUpd
 			Version: d.Get("version").(string),
 		},
 	}
-
 	packs := make([]*models.V1PackManifestUpdateEntity, 0)
 	for _, pack := range d.Get("pack").([]interface{}) {
-		if p, e := toClusterProfilePackUpdate(pack); e != nil {
+		if p, e := toClusterProfilePackUpdate(pack, cluster.Spec.Published.Packs); e != nil {
 			return nil, e
 		} else {
 			packs = append(packs, p)
@@ -400,7 +427,7 @@ func toClusterProfileUpdate(d *schema.ResourceData) (*models.V1ClusterProfileUpd
 	return cp, nil
 }
 
-func toClusterProfilePackUpdate(pSrc interface{}) (*models.V1PackManifestUpdateEntity, error) {
+func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*models.V1PackManifestUpdateEntity, error) {
 	p := pSrc.(map[string]interface{})
 
 	pName := p["name"].(string)
@@ -440,10 +467,22 @@ func toClusterProfilePackUpdate(pSrc interface{}) (*models.V1PackManifestUpdateE
 		manifests = append(manifests, &models.V1ManifestRefUpdateEntity{
 			Content: strings.TrimSpace(m["content"].(string)),
 			Name:    ptr.StringPtr(m["name"].(string)),
-			UID:     m["uid"].(string),
+			UID:     getManifestUID(m["name"].(string), packs),
 		})
 	}
 	pack.Manifests = manifests
 
 	return pack, nil
+}
+
+func getManifestUID(name string, packs []*models.V1PackRef) string {
+	for _, pack := range packs {
+		for _, manifest := range pack.Manifests {
+			if manifest.Name == name {
+				return manifest.UID
+			}
+		}
+	}
+
+	return ""
 }

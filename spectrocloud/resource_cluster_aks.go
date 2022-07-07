@@ -168,6 +168,14 @@ func resourceClusterAks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"min": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"max": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
 						"disk_size_gb": {
 							Type:     schema.TypeInt,
 							Required: true,
@@ -258,7 +266,7 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toAksCluster(d)
+	cluster := toAksCluster(c, d)
 
 	uid, err := c.CreateClusterAks(cluster)
 	if err != nil {
@@ -458,8 +466,10 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toAksCluster(d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
-	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
+	config := d.Get("cloud_config").([]interface{})
+	cloudConfig := config[0]
+	cloudConfigMap := cloudConfig.(map[string]interface{})
 	cluster := &models.V1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -468,14 +478,14 @@ func toAksCluster(d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
 		},
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
 				ControlPlaneSubnet: nil,
-				Location:           ptr.StringPtr(cloudConfig["region"].(string)),
-				ResourceGroup:      cloudConfig["resource_group"].(string),
-				SSHKey:             ptr.StringPtr(cloudConfig["ssh_key"].(string)),
-				SubscriptionID:     ptr.StringPtr(cloudConfig["subscription_id"].(string)),
+				Location:           ptr.StringPtr(cloudConfigMap["region"].(string)),
+				ResourceGroup:      cloudConfigMap["resource_group"].(string),
+				SSHKey:             ptr.StringPtr(cloudConfigMap["ssh_key"].(string)),
+				SubscriptionID:     ptr.StringPtr(cloudConfigMap["subscription_id"].(string)),
 			},
 		},
 	}
@@ -498,6 +508,17 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		labels = append(labels, "master")
 	}
 
+	min := int32(m["count"].(int))
+	max := int32(m["count"].(int))
+
+	if m["min"] != nil {
+		min = int32(m["min"].(int))
+	}
+
+	if m["max"] != nil {
+		max = int32(m["max"].(int))
+	}
+
 	mp := &models.V1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			InstanceType: m["instance_type"].(string),
@@ -518,8 +539,8 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 			Labels:         labels,
 			Name:           ptr.StringPtr(m["name"].(string)),
 			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			MinSize:        int32(m["count"].(int)),
-			MaxSize:        int32(m["count"].(int)),
+			MinSize:        min,
+			MaxSize:        max,
 		},
 	}
 

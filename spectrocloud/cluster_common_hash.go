@@ -38,6 +38,13 @@ func resourceMachinePoolAksHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
+	if m["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
+	}
+	if m["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
+	}
+
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
 	buf.WriteString(fmt.Sprintf("%t-", m["is_system_node_pool"].(bool)))
@@ -264,6 +271,15 @@ func resourceMachinePoolEdgeHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+
+	return int(hash(buf.String()))
+}
+
+func resourceClusterHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	buf.WriteString(fmt.Sprintf("%s-", m["uid"].(string)))
 
 	return int(hash(buf.String()))
 }

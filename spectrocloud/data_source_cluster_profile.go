@@ -136,25 +136,16 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	d.SetId(profile.Metadata.UID)
 	d.Set("name", profile.Metadata.Name)
 	if profile.Spec.Published != nil && len(profile.Spec.Published.Packs) > 0 {
-		packManifests := make(map[string][]string)
-		for _, p := range profile.Spec.Published.Packs {
-			if len(p.Manifests) > 0 {
-				content, err := c.GetClusterProfileManifestPack(d.Id(), *p.Name)
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				if len(content) > 0 {
-					c := make([]string, len(content))
-					for i, co := range content {
-						c[i] = co.Spec.Published.Content
-					}
-					packManifests[p.PackUID] = c
-				}
-			}
+		packManifests, d2, done2 := getPacksContent(profile, c, d)
+		if done2 {
+			return d2
 		}
 
-		packs, err := flattenPacks(c, profile.Spec.Published.Packs, packManifests)
+		diagPacks, diagnostics, done := GetDiagPacks(d, err)
+		if done {
+			return diagnostics
+		}
+		packs, err := flattenPacks(c, diagPacks, profile.Spec.Published.Packs, packManifests)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -164,6 +155,18 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	}
 
 	return diags
+}
+
+func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEntity, diag.Diagnostics, bool) {
+	diagPacks := make([]*models.V1PackManifestEntity, 0)
+	for _, pack := range d.Get("pack").([]interface{}) {
+		if p, e := toClusterProfilePackCreate(pack); e != nil {
+			return nil, diag.FromErr(err), true
+		} else {
+			diagPacks = append(diagPacks, p)
+		}
+	}
+	return diagPacks, nil, false
 }
 
 func getProfileUID(profiles []*models.V1ClusterProfile, d *schema.ResourceData, version string) string {

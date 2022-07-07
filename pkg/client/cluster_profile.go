@@ -11,23 +11,23 @@ import (
 )
 
 func (h *V1Client) DeleteClusterProfile(uid string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1ClusterProfilesDeleteParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1ClusterProfilesDeleteParamsWithContext(h.Ctx).WithUID(uid)
 	_, err = client.V1ClusterProfilesDelete(params)
 	return err
 }
 
 func (h *V1Client) GetClusterProfile(uid string) (*models.V1ClusterProfile, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1ClusterProfilesGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1ClusterProfilesGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1ClusterProfilesGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		// TODO(saamalik) check with team if this is proper?
@@ -40,13 +40,13 @@ func (h *V1Client) GetClusterProfile(uid string) (*models.V1ClusterProfile, erro
 }
 
 func (h *V1Client) GetClusterProfileManifestPack(clusterProfileUID, packName string) ([]*models.V1ManifestEntity, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
 	//params := clusterC.NewV1ClusterProfilesGetParamsWithContext(h.ctx).WithUID(uid)
-	params := clusterC.NewV1ClusterProfilesUIDPacksUIDManifestsParamsWithContext(h.ctx).
+	params := clusterC.NewV1ClusterProfilesUIDPacksUIDManifestsParamsWithContext(h.Ctx).
 		WithUID(clusterProfileUID).WithPackName(packName)
 	success, err := client.V1ClusterProfilesUIDPacksUIDManifests(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
@@ -60,13 +60,13 @@ func (h *V1Client) GetClusterProfileManifestPack(clusterProfileUID, packName str
 }
 
 func (h *V1Client) GetClusterProfiles() ([]*models.V1ClusterProfile, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
 	limit := int64(0)
-	params := clusterC.NewV1ClusterProfilesListParamsWithContext(h.ctx).WithLimit(&limit)
+	params := clusterC.NewV1ClusterProfilesListParamsWithContext(h.Ctx).WithLimit(&limit)
 	response, err := client.V1ClusterProfilesList(params)
 	if err != nil {
 		return nil, err
@@ -81,12 +81,12 @@ func (h *V1Client) GetClusterProfiles() ([]*models.V1ClusterProfile, error) {
 }
 
 func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1PackSummary, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1PacksSummaryListParamsWithContext(h.ctx)
+	params := clusterC.NewV1PacksSummaryListParamsWithContext(h.Ctx)
 	if filters != nil {
 		filterString := ptr.StringPtr(strings.Join(filters, "AND"))
 		params = params.WithFilters(filterString)
@@ -108,12 +108,12 @@ func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1P
 }
 
 func (h *V1Client) GetPack(uid string) (*models.V1PackTagEntity, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1PacksUIDParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1PacksUIDParamsWithContext(h.Ctx).WithUID(uid)
 	response, err := client.V1PacksUID(params)
 	if err != nil {
 		return nil, err
@@ -122,8 +122,8 @@ func (h *V1Client) GetPack(uid string) (*models.V1PackTagEntity, error) {
 	return response.Payload, nil
 }
 
-func (h *V1Client) GetPackRegistry(uid string) string {
-	if uid == "uid" {
+func (h *V1Client) GetPackRegistry(pack *models.V1PackRef) string {
+	if pack.PackUID == "uid" || pack.Type == "manifest" {
 		registry, err := h.GetPackRegistryCommonByName("Public Repo")
 		if err != nil {
 			return ""
@@ -131,33 +131,33 @@ func (h *V1Client) GetPackRegistry(uid string) string {
 		return registry.UID
 	}
 
-	pack, err := h.GetPack(uid)
+	PackTagEntity, err := h.GetPack(pack.PackUID)
 	if err != nil {
 		return ""
 	}
 
-	return pack.RegistryUID
+	return PackTagEntity.RegistryUID
 }
 
 func (h *V1Client) UpdateClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
 	uid := clusterProfile.Metadata.UID
-	params := clusterC.NewV1ClusterProfilesUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(clusterProfile)
+	params := clusterC.NewV1ClusterProfilesUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(clusterProfile)
 	_, err = client.V1ClusterProfilesUpdate(params)
 	return err
 }
 
 func (h *V1Client) CreateClusterProfile(clusterProfile *models.V1ClusterProfileEntity) (string, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1ClusterProfilesCreateParamsWithContext(h.ctx).WithBody(clusterProfile)
+	params := clusterC.NewV1ClusterProfilesCreateParamsWithContext(h.Ctx).WithBody(clusterProfile)
 	success, err := client.V1ClusterProfilesCreate(params)
 	if err != nil {
 		return "", err
@@ -167,12 +167,12 @@ func (h *V1Client) CreateClusterProfile(clusterProfile *models.V1ClusterProfileE
 }
 
 func (h *V1Client) PublishClusterProfile(uid string) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1ClusterProfilesPublishParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1ClusterProfilesPublishParamsWithContext(h.Ctx).WithUID(uid)
 	_, err = client.V1ClusterProfilesPublish(params)
 	if err != nil {
 		return err

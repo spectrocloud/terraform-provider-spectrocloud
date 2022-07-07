@@ -9,12 +9,12 @@ import (
 )
 
 func (h *V1Client) GetClusterNamespaceConfig(uid string) (*models.V1ClusterNamespaceResources, error) {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1SpectroClustersUIDConfigNamespacesGetParamsWithContext(h.ctx).WithUID(uid)
+	params := clusterC.NewV1SpectroClustersUIDConfigNamespacesGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1SpectroClustersUIDConfigNamespacesGet(params)
 	if err != nil {
 		if herr.IsNotFound(err) {
@@ -28,12 +28,12 @@ func (h *V1Client) GetClusterNamespaceConfig(uid string) (*models.V1ClusterNames
 
 // no create for namespecase, there is only update.
 func (h *V1Client) UpdateClusterNamespaceConfig(uid string, config *models.V1ClusterNamespaceResourcesUpdateEntity) error {
-	client, err := h.getClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1SpectroClustersUIDConfigNamespacesUpdateParamsWithContext(h.ctx).WithUID(uid).WithBody(config)
+	params := clusterC.NewV1SpectroClustersUIDConfigNamespacesUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(config)
 	_, err = client.V1SpectroClustersUIDConfigNamespacesUpdate(params)
 	return err
 }

@@ -319,7 +319,7 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toAzureCluster(d)
+	cluster := toAzureCluster(c, d)
 
 	uid, err := c.CreateClusterAzure(cluster)
 	if err != nil {
@@ -541,7 +541,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func toAzureCluster(d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
+func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
@@ -554,7 +554,7 @@ func toAzureCluster(d *schema.ResourceData) *models.V1SpectroAzureClusterEntity 
 		},
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(d),
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
 				Location:       ptr.StringPtr(cloudConfig["region"].(string)),

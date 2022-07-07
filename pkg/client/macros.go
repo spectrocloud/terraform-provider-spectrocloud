@@ -15,7 +15,7 @@ func (h *V1Client) CreateMacros(uid string, body *models.V1Macros) error {
 	}
 
 	if uid != "" {
-		params := userC.NewV1ProjectsUIDMacrosUpdateParams().WithContext(h.ctx).WithUID(uid).WithBody(body)
+		params := userC.NewV1ProjectsUIDMacrosUpdateParams().WithContext(h.Ctx).WithUID(uid).WithBody(body)
 		_, err := client.V1ProjectsUIDMacrosUpdate(params)
 		if err != nil {
 			return err
@@ -25,7 +25,7 @@ func (h *V1Client) CreateMacros(uid string, body *models.V1Macros) error {
 		if err != nil {
 			return err
 		}
-		params := userC.NewV1TenantsUIDMacrosUpdateParams().WithContext(h.ctx).WithTenantUID(tenantUID).WithBody(body)
+		params := userC.NewV1TenantsUIDMacrosUpdateParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(body)
 		_, err = client.V1TenantsUIDMacrosUpdate(params)
 		if err != nil {
 			return err
@@ -61,7 +61,7 @@ func (h *V1Client) GetMacros(projectUID string) ([]*models.V1Macro, error) {
 	var macros []*models.V1Macro
 
 	if projectUID != "" {
-		params := userC.NewV1ProjectsUIDMacrosListParams().WithContext(h.ctx).WithUID(projectUID)
+		params := userC.NewV1ProjectsUIDMacrosListParams().WithContext(h.Ctx).WithUID(projectUID)
 		macrosListOk, err := client.V1ProjectsUIDMacrosList(params)
 		if err != nil {
 			return nil, err
@@ -100,7 +100,7 @@ func (h *V1Client) UpdateMacros(macros []*models.V1Macro, uid string) error {
 	}
 
 	if uid != "" {
-		params := userC.NewV1ProjectsUIDMacrosUpdateParams().WithContext(h.ctx).WithUID(uid).WithBody(body)
+		params := userC.NewV1ProjectsUIDMacrosUpdateParams().WithContext(h.Ctx).WithUID(uid).WithBody(body)
 		_, err := client.V1ProjectsUIDMacrosUpdate(params)
 		return err
 
@@ -110,7 +110,7 @@ func (h *V1Client) UpdateMacros(macros []*models.V1Macro, uid string) error {
 			return err
 		}
 
-		params := userC.NewV1TenantsUIDMacrosUpdateParams().WithContext(h.ctx).WithTenantUID(tenantUID).WithBody(body)
+		params := userC.NewV1TenantsUIDMacrosUpdateParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(body)
 		_, err = client.V1TenantsUIDMacrosUpdate(params)
 		return err
 
