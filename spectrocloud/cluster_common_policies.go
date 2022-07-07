@@ -15,16 +15,20 @@ func toPolicies(d *schema.ResourceData) *models.V1SpectroClusterPolicies {
 
 func toBackupPolicy(d *schema.ResourceData) *models.V1ClusterBackupConfig {
 	if policies, found := d.GetOk("backup_policy"); found {
-		//policy := policies.([]interface{})[0]
 		policy := policies.([]interface{})[0].(map[string]interface{})
 
-		namespaces := make([]string, 0, 1)
+		namespaces := make([]string, 0)
 		if policy["namespaces"] != nil {
-			if nss, ok := policy["namespaces"].([]interface{}); ok {
-				for _, ns := range nss {
+			if nss, ok := policy["namespaces"]; ok {
+				for _, ns := range nss.(*schema.Set).List() {
 					namespaces = append(namespaces, ns.(string))
 				}
 			}
+		}
+
+		include := true
+		if policy["include_cluster_resources"] != nil {
+			include = policy["include_cluster_resources"].(bool)
 		}
 
 		return &models.V1ClusterBackupConfig{
@@ -32,7 +36,7 @@ func toBackupPolicy(d *schema.ResourceData) *models.V1ClusterBackupConfig {
 			BackupPrefix:            policy["prefix"].(string),
 			DurationInHours:         int64(policy["expiry_in_hour"].(int)),
 			IncludeAllDisks:         policy["include_disks"].(bool),
-			IncludeClusterResources: policy["include_cluster_resources"].(bool),
+			IncludeClusterResources: include,
 			Namespaces:              namespaces,
 			Schedule: &models.V1ClusterFeatureSchedule{
 				ScheduledRunTime: policy["schedule"].(string),
@@ -58,7 +62,7 @@ func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
 
 func updateBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	if policy := toBackupPolicy(d); policy != nil {
-		return c.ApplyClusterBackupConfig(d.Id(), policy)
+		return c.UpdateClusterBackupConfig(d.Id(), policy)
 	}
 	return nil
 }
