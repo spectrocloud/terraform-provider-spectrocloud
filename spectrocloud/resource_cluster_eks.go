@@ -615,6 +615,7 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	}
 	ret["region"] = *cloudConfig.Spec.ClusterConfig.Region
 	ret["vpc_id"] = cloudConfig.Spec.ClusterConfig.VpcID
+	ret["ssh_key_name"] = cloudConfig.Spec.ClusterConfig.SSHKeyName
 
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
