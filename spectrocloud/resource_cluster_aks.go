@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
@@ -273,25 +272,9 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	d.SetId(uid)
-
-	if _, found := toTags(d)["skip_completion"]; found {
-		return diags
-	}
-
-	stateConf := &resource.StateChangeConf{
-		Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{"Running"},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c)
+	if isError {
+		return diagnostics
 	}
 
 	resourceClusterAksRead(ctx, d, m)
