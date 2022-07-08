@@ -388,7 +388,13 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	kubecfg, err := c.GetClusterKubeConfig(uid)
+	
+        configUID := cluster.Spec.CloudConfigRef.UID
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
+
+        kubecfg, err := c.GetClusterKubeConfig(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
