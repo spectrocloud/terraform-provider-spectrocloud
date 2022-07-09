@@ -3,7 +3,7 @@ terraform {
 
   required_providers {
     spectrocloud = {
-      version = "= 0.7.4"
+      version = "~> 0.7.7"
       source  = "spectrocloud/spectrocloud"
     }
   }
@@ -14,6 +14,7 @@ variable "sc_api_key" {
   sensitive   = true
 }
 variable "sc_project_name" {}
+variable "sc_project_id" {}
 
 provider "spectrocloud" {
   host         = var.sc_host
