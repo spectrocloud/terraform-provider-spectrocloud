@@ -30,8 +30,10 @@ func toTags(d *schema.ResourceData) map[string]string {
 				tags[tag] = "spectro__tag"
 			}
 		}
+		return tags
+	} else {
+		return nil
 	}
-	return tags
 }
 
 func toNtpServers(in map[string]interface{}) []string {
@@ -55,8 +57,10 @@ func flattenTags(labels map[string]string) []interface{} {
 				tags = append(tags, fmt.Sprintf("%s:%s", k, v))
 			}
 		}
+		return tags
+	} else {
+		return nil
 	}
-	return tags
 }
 
 func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfigEntity {

@@ -182,8 +182,11 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
-	if err := d.Set("tags", flattenTags(cp.Metadata.Labels)); err != nil {
-		return diag.FromErr(err)
+	tags := flattenTags(cp.Metadata.Labels)
+	if tags != nil {
+		if err := d.Set("tags", tags); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	packManifests, d2, done2 := getPacksContent(cp, c, d)
@@ -239,9 +242,9 @@ func flattenPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, 
 		p := make(map[string]interface{})
 
 		p["uid"] = pack.PackUID
-		/*if isRegistryUID(diagPacks, *pack.Name) {
+		if isRegistryUID(diagPacks, *pack.Name) {
 			p["registry_uid"] = c.GetPackRegistry(pack)
-		}*/
+		}
 		p["name"] = *pack.Name
 		p["tag"] = pack.Tag
 		p["values"] = pack.Values
@@ -281,7 +284,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if d.HasChanges("name") || d.HasChanges("pack") {
+	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
 		if err != nil {
