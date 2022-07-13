@@ -139,10 +139,14 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		})
 		return diags
 	} else if len(packs) > 1 {
+		packs_map := make(map[string]string, 0)
+		for _, pack := range packs {
+			packs_map[pack.Spec.RegistryUID] = pack.Spec.Name
+		}
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("%s: Multiple packs returned", packName),
-			Detail:   fmt.Sprintf("Found %d matching packs. Restrict packs criteria to a single match", len(packs)),
+			Detail:   fmt.Sprintf("Found %d matching packs. Restrict packs criteria to a single match. %s", len(packs), packs_map),
 		})
 		return diags
 	}
