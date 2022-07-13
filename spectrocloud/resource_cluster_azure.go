@@ -231,6 +231,17 @@ func resourceClusterAzure() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"is_system_node_pool": {
+							Type:     schema.TypeBool,
+							Required: true,
+						},
+						"os_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+								return false
+							},
+						},
 					},
 				},
 			},
@@ -419,6 +430,7 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 			oi["update_strategy"] = "RollingUpdateScaleOut"
 		}
 		oi["instance_type"] = machinePool.InstanceType
+		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 
 		oi["azs"] = machinePool.Azs
 
@@ -584,6 +596,15 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 		azs = append(azs, az.(string))
 	}
 
+	osType := models.V1OsTypeLinux
+
+	if m["os_type"] != "" {
+		os_type := m["os_type"].(string)
+		if os_type == "Windows" {
+			osType = models.V1OsTypeWindows
+		}
+	}
+
 	mp := &models.V1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			Azs:          azs,
@@ -593,8 +614,12 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 				ManagedDisk: &models.V1ManagedDisk{
 					StorageAccountType: diskType,
 				},
-				OsType: "linux",
+				OsType: osType,
 			},
+			IsSystemNodePool: m["is_system_node_pool"].(bool),
+		},
+		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
+			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: controlPlane,

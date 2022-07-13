@@ -19,7 +19,13 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%t-", m["is_system_node_pool"].(bool)))
+
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+
+	if m["os_type"] != "" {
+		buf.WriteString(fmt.Sprintf("%s-", m["os_type"].(string)))
+	}
 
 	// TODO(saamalik) fix for disk
 	//buf.WriteString(fmt.Sprintf("%d-", d["size_gb"].(int)))
