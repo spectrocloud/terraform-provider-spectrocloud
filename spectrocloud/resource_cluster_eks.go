@@ -536,7 +536,9 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
 
 	var config *models.V1EksCloudConfig
 	if config, err = c.GetCloudConfigEks(configUID); err != nil {
@@ -616,16 +618,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
-			oi["additional_labels"] = make(map[string]interface{})
-		} else {
-			oi["additional_labels"] = machinePool.AdditionalLabels
-		}
-
-		taints := flattenClusterTaints(machinePool.Taints)
-		if len(taints) > 0 {
-			oi["taints"] = taints
-		}
+		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
 		if *machinePool.IsControlPlane {
 			continue

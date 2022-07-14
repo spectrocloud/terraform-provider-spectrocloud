@@ -154,6 +154,33 @@ func resourceClusterAks() *schema.Resource {
 							Required: true,
 							//ForceNew: true,
 						},
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"count": {
 							Type:     schema.TypeInt,
 							Required: true,
@@ -255,6 +282,68 @@ func resourceClusterAks() *schema.Resource {
 					},
 				},
 			},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -300,47 +389,23 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
-
-	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
+	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-
-	var config *models.V1AzureCloudConfig
-	if config, err = c.GetCloudConfigAks(configUID); err != nil {
+	if config, err := c.GetCloudConfigAks(configUID); err != nil {
 		return diag.FromErr(err)
-	}
-
-	// Update the kubeconfig
-	kubecfg, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("kubeconfig", kubecfg); err != nil {
-		return diag.FromErr(err)
-	}
-
-	mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
-	if err := d.Set("machine_pool", mp); err != nil {
-		return diag.FromErr(err)
-	}
-
-	//read backup policy and scan policy
-	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.Config != nil {
-		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
+	} else {
+		mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
+		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
-	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.DriverSpec != nil {
-		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := readCommonFields(c, d, cluster)
+	if done {
+		return diagnostics
 	}
+
 	return diags
 }
 
@@ -352,6 +417,8 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 	ois := make([]interface{}, 0)
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
+
+		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
 		if *machinePool.IsControlPlane {
 			continue
@@ -518,12 +585,14 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			IsControlPlane: controlPlane,
-			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			MinSize:        min,
-			MaxSize:        max,
+			AdditionalLabels: toAdditionalNodePoolLabels(m),
+			Taints:           toClusterTaints(m),
+			IsControlPlane:   controlPlane,
+			Labels:           labels,
+			Name:             ptr.StringPtr(m["name"].(string)),
+			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			MinSize:          min,
+			MaxSize:          max,
 		},
 	}
 

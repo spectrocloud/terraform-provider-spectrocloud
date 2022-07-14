@@ -459,15 +459,16 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
-
-	var config *models.V1TencentCloudConfig
-	if config, err = c.GetCloudConfigTke(configUID); err != nil {
+	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
-	if err := d.Set("machine_pool", mp); err != nil {
+	if config, err := c.GetCloudConfigTke(configUID); err != nil {
 		return diag.FromErr(err)
+	} else {
+		mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
+		if err := d.Set("machine_pool", mp); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	diagnostics, done := readCommonFields(c, d, cluster)
@@ -489,11 +490,7 @@ func flattenMachinePoolConfigsTke(machinePools []*models.V1TencentMachinePoolCon
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
-			oi["additional_labels"] = make(map[string]interface{})
-		} else {
-			oi["additional_labels"] = machinePool.AdditionalLabels
-		}
+		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
 		if machinePool.IsControlPlane {
 			continue
