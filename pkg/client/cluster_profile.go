@@ -139,6 +139,18 @@ func (h *V1Client) GetPackRegistry(pack *models.V1PackRef) string {
 	return PackTagEntity.RegistryUID
 }
 
+func (h *V1Client) PatchClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity, metadata *models.V1ProfileMetaEntity) error {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return nil
+	}
+
+	uid := clusterProfile.Metadata.UID
+	params := clusterC.NewV1ClusterProfilesUIDMetadataUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(metadata)
+	_, err = client.V1ClusterProfilesUIDMetadataUpdate(params)
+	return err
+}
+
 func (h *V1Client) UpdateClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {

@@ -294,7 +294,14 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		if err != nil {
 			return diag.FromErr(err)
 		}
+		metadata, err := toClusterProfilePatch(d, cp)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := c.UpdateClusterProfile(cluster); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := c.PatchClusterProfile(cluster, metadata); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := c.PublishClusterProfile(cluster.Metadata.UID); err != nil {
@@ -428,6 +435,20 @@ func toClusterProfileUpdate(d *schema.ResourceData, cluster *models.V1ClusterPro
 	cp.Spec.Template.Packs = packs
 
 	return cp, nil
+}
+
+func toClusterProfilePatch(d *schema.ResourceData, cluster *models.V1ClusterProfile) (*models.V1ProfileMetaEntity, error) {
+	metadata := &models.V1ProfileMetaEntity{
+		Metadata: &models.V1ObjectMetaInputEntity{
+			Name:   d.Get("name").(string),
+			Labels: toTags(d),
+		},
+		Spec: &models.V1ClusterProfileSpecEntity{
+			Version: d.Get("version").(string),
+		},
+	}
+
+	return metadata, nil
 }
 
 func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*models.V1PackManifestUpdateEntity, error) {
