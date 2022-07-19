@@ -220,3 +220,11 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 	}
 	return diag.Diagnostics{}, false
 }
+
+func flattenUpdateStrategy(updateStrategy *models.V1UpdateStrategy, oi map[string]interface{}) {
+	if updateStrategy.Type != "" {
+		oi["update_strategy"] = updateStrategy.Type
+	} else {
+		oi["update_strategy"] = "RollingUpdateScaleOut"
+	}
+}

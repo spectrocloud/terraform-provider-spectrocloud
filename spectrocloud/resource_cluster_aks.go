@@ -90,6 +90,20 @@ func resourceClusterAks() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"os_patch_on_boot": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"os_patch_schedule": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+			},
+			"os_patch_after": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+			},
 			"kubeconfig": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -426,6 +440,8 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
 		oi["instance_type"] = machinePool.InstanceType
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
@@ -493,22 +509,9 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		}
 	}
 
-	if d.HasChanges("cluster_profile") {
-		if err := updateProfiles(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("backup_policy") {
-		if err := updateBackupPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("scan_policy") {
-		if err := updateScanPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := updateCommonFields(d, c)
+	if done {
+		return diagnostics
 	}
 
 	resourceClusterAksRead(ctx, d, m)
@@ -546,6 +549,8 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
+
 	return cluster
 }
 
@@ -591,8 +596,11 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 			Labels:           labels,
 			Name:             ptr.StringPtr(m["name"].(string)),
 			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
-			MinSize:          min,
-			MaxSize:          max,
+			UpdateStrategy: &models.V1UpdateStrategy{
+				Type: m["update_strategy"].(string),
+			},
+			MinSize: min,
+			MaxSize: max,
 		},
 	}
 

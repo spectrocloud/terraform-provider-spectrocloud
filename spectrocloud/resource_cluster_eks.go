@@ -626,11 +626,8 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
-		if machinePool.UpdateStrategy.Type != "" {
-			oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		} else {
-			oi["update_strategy"] = "RollingUpdateScaleOut"
-		}
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
@@ -976,8 +973,11 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			Labels:           labels,
 			Name:             ptr.StringPtr(m["name"].(string)),
 			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
-			MinSize:          min,
-			MaxSize:          max,
+			UpdateStrategy: &models.V1UpdateStrategy{
+				Type: m["update_strategy"].(string),
+			},
+			MinSize: min,
+			MaxSize: max,
 		},
 	}
 

@@ -446,11 +446,8 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
-		if machinePool.UpdateStrategy.Type != "" {
-			oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		} else {
-			oi["update_strategy"] = "RollingUpdateScaleOut"
-		}
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
 		oi["instance_type"] = *machinePool.InstanceType
 
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
@@ -528,22 +525,9 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("cluster_profile") {
-		if err := updateProfiles(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("backup_policy") {
-		if err := updateBackupPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("scan_policy") {
-		if err := updateScanPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := updateCommonFields(d, c)
+	if done {
+		return diagnostics
 	}
 
 	resourceClusterGcpRead(ctx, d, m)
