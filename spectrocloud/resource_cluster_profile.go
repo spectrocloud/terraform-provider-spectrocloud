@@ -40,6 +40,11 @@ func resourceClusterProfile() *schema.Resource {
 				Optional: true,
 				Default:  "1.0.0", // default as in UI
 			},
+			"context": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "project",
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -154,13 +159,14 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	// Create
-	uid, err := c.CreateClusterProfile(clusterProfile)
+	ProfileContext := d.Get("context").(string)
+	uid, err := c.CreateClusterProfile(clusterProfile, ProfileContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	// And then publish
-	if err = c.PublishClusterProfile(uid); err != nil {
+	if err = c.PublishClusterProfile(uid, ProfileContext); err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
@@ -298,13 +304,15 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.UpdateClusterProfile(cluster); err != nil {
+
+		ProfileContext := d.Get("context").(string)
+		if err := c.UpdateClusterProfile(cluster, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PatchClusterProfile(cluster, metadata); err != nil {
+		if err := c.PatchClusterProfile(cluster, metadata, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PublishClusterProfile(cluster.Metadata.UID); err != nil {
+		if err := c.PublishClusterProfile(cluster.Metadata.UID, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
 	}

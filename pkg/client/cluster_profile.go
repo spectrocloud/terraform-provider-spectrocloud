@@ -16,7 +16,23 @@ func (h *V1Client) DeleteClusterProfile(uid string) error {
 		return nil
 	}
 
-	params := clusterC.NewV1ClusterProfilesDeleteParamsWithContext(h.Ctx).WithUID(uid)
+	profile, err := h.GetClusterProfile(uid)
+	if err != nil {
+		return nil
+	}
+
+	var params *clusterC.V1ClusterProfilesDeleteParams
+	switch profile.Metadata.Annotations["scope"] {
+	case "project":
+		params = clusterC.NewV1ClusterProfilesDeleteParamsWithContext(h.Ctx).WithUID(uid)
+		break
+	case "tenant":
+		params = clusterC.NewV1ClusterProfilesDeleteParams().WithUID(uid)
+		break
+	default:
+		break
+	}
+
 	_, err = client.V1ClusterProfilesDelete(params)
 	return err
 }
@@ -139,37 +155,67 @@ func (h *V1Client) GetPackRegistry(pack *models.V1PackRef) string {
 	return PackTagEntity.RegistryUID
 }
 
-func (h *V1Client) PatchClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity, metadata *models.V1ProfileMetaEntity) error {
+func (h *V1Client) PatchClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity, metadata *models.V1ProfileMetaEntity, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
 	uid := clusterProfile.Metadata.UID
-	params := clusterC.NewV1ClusterProfilesUIDMetadataUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(metadata)
+	var params *clusterC.V1ClusterProfilesUIDMetadataUpdateParams
+	switch ProfileContext {
+	case "project":
+		params = clusterC.NewV1ClusterProfilesUIDMetadataUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(metadata)
+		break
+	case "tenant":
+		params = clusterC.NewV1ClusterProfilesUIDMetadataUpdateParams().WithUID(uid).WithBody(metadata)
+		break
+	default:
+		break
+	}
 	_, err = client.V1ClusterProfilesUIDMetadataUpdate(params)
 	return err
 }
 
-func (h *V1Client) UpdateClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity) error {
+func (h *V1Client) UpdateClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
 	uid := clusterProfile.Metadata.UID
-	params := clusterC.NewV1ClusterProfilesUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(clusterProfile)
+	var params *clusterC.V1ClusterProfilesUpdateParams
+	switch ProfileContext {
+	case "project":
+		params = clusterC.NewV1ClusterProfilesUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(clusterProfile)
+		break
+	case "tenant":
+		params = clusterC.NewV1ClusterProfilesUpdateParams().WithUID(uid).WithBody(clusterProfile)
+		break
+	default:
+		break
+	}
 	_, err = client.V1ClusterProfilesUpdate(params)
 	return err
 }
 
-func (h *V1Client) CreateClusterProfile(clusterProfile *models.V1ClusterProfileEntity) (string, error) {
+func (h *V1Client) CreateClusterProfile(clusterProfile *models.V1ClusterProfileEntity, ProfileContext string) (string, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1ClusterProfilesCreateParamsWithContext(h.Ctx).WithBody(clusterProfile)
+	var params *clusterC.V1ClusterProfilesCreateParams
+	switch ProfileContext {
+	case "project":
+		params = clusterC.NewV1ClusterProfilesCreateParamsWithContext(h.Ctx).WithBody(clusterProfile)
+		break
+	case "tenant":
+		params = clusterC.NewV1ClusterProfilesCreateParams().WithBody(clusterProfile)
+		break
+	default:
+		break
+	}
 	success, err := client.V1ClusterProfilesCreate(params)
 	if err != nil {
 		return "", err
@@ -178,13 +224,23 @@ func (h *V1Client) CreateClusterProfile(clusterProfile *models.V1ClusterProfileE
 	return *success.Payload.UID, nil
 }
 
-func (h *V1Client) PublishClusterProfile(uid string) error {
+func (h *V1Client) PublishClusterProfile(uid string, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return err
 	}
 
-	params := clusterC.NewV1ClusterProfilesPublishParamsWithContext(h.Ctx).WithUID(uid)
+	var params *clusterC.V1ClusterProfilesPublishParams
+	switch ProfileContext {
+	case "project":
+		params = clusterC.NewV1ClusterProfilesPublishParamsWithContext(h.Ctx).WithUID(uid)
+		break
+	case "tenant":
+		params = clusterC.NewV1ClusterProfilesPublishParams().WithUID(uid)
+		break
+	default:
+		break
+	}
 	_, err = client.V1ClusterProfilesPublish(params)
 	if err != nil {
 		return err
