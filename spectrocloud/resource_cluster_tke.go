@@ -693,7 +693,7 @@ func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfi
 			Name:             ptr.StringPtr(m["name"].(string)),
 			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: m["update_strategy"].(string),
+				Type: getUpdateStrategy(m),
 			},
 			MinSize: min,
 			MaxSize: max,

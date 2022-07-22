@@ -738,7 +738,7 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachineP
 			Name:             ptr.StringPtr(m["name"].(string)),
 			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: m["update_strategy"].(string),
+				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
