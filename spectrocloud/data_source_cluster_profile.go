@@ -144,8 +144,16 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	}
 
 	d.SetId(profile.Metadata.UID)
-	d.Set("name", profile.Metadata.Name)
-	d.Set("context", profile.Metadata.Annotations["scope"])
+	if err := d.Set("name", profile.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("version", profile.Spec.Version); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("context", profile.Metadata.Annotations["scope"]); err != nil {
+		return diag.FromErr(err)
+	}
+
 	if profile.Spec.Published != nil && len(profile.Spec.Published.Packs) > 0 {
 		packManifests, d2, done2 := getPacksContent(profile, c, d)
 		if done2 {
