@@ -13,3 +13,5 @@ terraform.tfvars
 kubeconfig_*
 
 .local
+dist
+providers
