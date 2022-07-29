@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -34,9 +35,10 @@ func dataSourceClusterProfile() *schema.Resource {
 				Computed: true,
 			},
 			"context": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
 			},
 			"pack": {
 				Type:     schema.TypeList,

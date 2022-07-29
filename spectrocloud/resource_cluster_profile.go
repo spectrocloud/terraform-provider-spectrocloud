@@ -41,9 +41,10 @@ func resourceClusterProfile() *schema.Resource {
 				Default:  "1.0.0", // default as in UI
 			},
 			"context": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "project",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
 			},
 			"tags": {
 				Type:     schema.TypeSet,
