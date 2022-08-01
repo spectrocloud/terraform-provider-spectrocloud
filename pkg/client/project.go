@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 
 	hashboardC "github.com/spectrocloud/hapi/hashboard/client/v1"
@@ -63,6 +64,31 @@ func (h *V1Client) GetProjects() (*models.V1ProjectsMetadata, error) {
 
 	projects, err := client.V1ProjectsMetadata(params)
 	if err != nil || projects == nil {
+		// to support 2.6 projects list
+		if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
+			limit := int64(0)
+			userClient, err := h.GetUserClient()
+			if err != nil {
+				return nil, err
+			}
+			oldParams := userC.NewV1ProjectsListParams().WithLimit(&limit)
+			oldProjects, err := userClient.V1ProjectsList(oldParams)
+			if err != nil || oldProjects == nil {
+				return nil, err
+			}
+			ret := make([]*models.V1ProjectMetadata, 0)
+			for _, pr := range oldProjects.Payload.Items {
+				ret = append(ret, &models.V1ProjectMetadata{
+					Metadata: &models.V1ObjectEntity{
+						UID:  pr.Metadata.UID,
+						Name: pr.Metadata.Name,
+					},
+				})
+			}
+			return &models.V1ProjectsMetadata{
+				Items: ret,
+			}, nil
+		}
 		return nil, err
 	}
 
