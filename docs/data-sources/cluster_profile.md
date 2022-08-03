@@ -25,8 +25,10 @@ output "same" {
 
 ### Optional
 
+- **context** (String)
 - **id** (String) The ID of this resource.
 - **name** (String)
+- **version** (String)
 
 ### Read-only
 
@@ -39,6 +41,7 @@ Read-only:
 
 - **manifest** (List of Object) (see [below for nested schema](#nestedobjatt--pack--manifest))
 - **name** (String)
+- **registry_uid** (String)
 - **tag** (String)
 - **type** (String)
 - **uid** (String)

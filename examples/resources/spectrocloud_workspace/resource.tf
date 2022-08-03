@@ -1,4 +1,4 @@
-data "spectrocloud_cluster" cluster1 {
+data "spectrocloud_cluster" "cluster1" {
   name = "vsphere-picard-2"
 }
 
@@ -73,11 +73,11 @@ resource "spectrocloud_workspace" "workspace" {
 
     //namespaces = ["test5ns"]
     include_all_clusters = true
-    cluster_uids = [data.spectrocloud_cluster.cluster1.id]
+    cluster_uids         = [data.spectrocloud_cluster.cluster1.id]
   }
 
 }
 
-data "spectrocloud_backup_storage_location" bsl {
+data "spectrocloud_backup_storage_location" "bsl" {
   name = "backups-nikolay"
 }

@@ -57,9 +57,9 @@ resource "spectrocloud_cluster_import" "cluster" {
 
 ### Optional
 
-- **cluster_profile_id** (String)
+- **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **id** (String) The ID of this resource.
-- **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
+- **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-only
@@ -68,14 +68,30 @@ resource "spectrocloud_cluster_import" "cluster" {
 - **cluster_import_manifest** (String)
 - **cluster_import_manifest_apply_command** (String)
 
-<a id="nestedblock--pack"></a>
-### Nested Schema for `pack`
+<a id="nestedblock--cluster_profile"></a>
+### Nested Schema for `cluster_profile`
+
+Required:
+
+- **id** (String) The ID of this resource.
+
+Optional:
+
+- **pack** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack))
+
+<a id="nestedblock--cluster_profile--pack"></a>
+### Nested Schema for `cluster_profile.pack`
 
 Required:
 
 - **name** (String)
 - **tag** (String)
 - **values** (String)
+
+Optional:
+
+- **registry_uid** (String)
+
 
 
 <a id="nestedblock--timeouts"></a>

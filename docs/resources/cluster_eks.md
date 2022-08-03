@@ -99,6 +99,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
 
 ### Optional
 
+- **apply_setting** (String)
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **cluster_profile_id** (String, Deprecated)
@@ -106,6 +107,9 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - **fargate_profile** (Block List) (see [below for nested schema](#nestedblock--fargate_profile))
 - **id** (String) The ID of this resource.
 - **namespaces** (Block List) (see [below for nested schema](#nestedblock--namespaces))
+- **os_patch_after** (String)
+- **os_patch_on_boot** (Boolean)
+- **os_patch_schedule** (String)
 - **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - **tags** (Set of String)
@@ -125,8 +129,9 @@ Required:
 
 Optional:
 
-- **az_subnets** (Map of String)
-- **azs** (List of String)
+- **az_subnets** (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
+- **azs** (List of String) Mutually exclusive with `az_subnets`. Use for Dynamic provisioning.
+- **encryption_config_arn** (String)
 - **endpoint_access** (String)
 - **public_access_cidrs** (Set of String)
 - **ssh_key_name** (String)
@@ -153,6 +158,7 @@ Optional:
 - **max_price** (String)
 - **min** (Number)
 - **taints** (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
+- **update_strategy** (String)
 
 <a id="nestedblock--machine_pool--taints"></a>
 ### Nested Schema for `machine_pool.taints`
@@ -203,6 +209,7 @@ Required:
 Optional:
 
 - **manifest** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack--manifest))
+- **registry_uid** (String)
 - **tag** (String)
 - **type** (String)
 - **values** (String)
@@ -288,6 +295,10 @@ Required:
 - **name** (String)
 - **tag** (String)
 - **values** (String)
+
+Optional:
+
+- **registry_uid** (String)
 
 
 <a id="nestedblock--scan_policy"></a>
