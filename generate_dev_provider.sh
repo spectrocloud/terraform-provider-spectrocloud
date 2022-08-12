@@ -18,6 +18,8 @@ elif [ $(uname -m) == "i386" ]; then
   OS_ARCH="386"
 elif [ $(uname -m) == "i686" ]; then
   OS_ARCH="386"
+elif [ $(uname -m) == "arm64" ]; then
+  OS_ARCH="arm64"
 fi
 OS_VERSION=${OS}_${OS_ARCH}
 
