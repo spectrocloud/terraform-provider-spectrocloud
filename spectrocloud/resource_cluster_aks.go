@@ -172,32 +172,12 @@ func resourceClusterAks() *schema.Resource {
 							Optional: true,
 						},
 
-						"cp_subnet_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-
-						"cp_cidr": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-
-						"cp_security_group": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-
 						"worker_subnet_name": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
 
 						"worker_cidr": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-
-						"worker_security_group": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
@@ -605,21 +585,11 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 		vnetcidr = cloudConfigMap["vnet_cidr_block"].(string)
 	}
 
-	var controlPlaneSubnet *models.V1Subnet
-	if cloudConfigMap["cp_subnet_name"] != nil && cloudConfigMap["cp_cidr"] != nil || cloudConfigMap["cp_security_group"] != nil {
-		controlPlaneSubnet = &models.V1Subnet{
-			Name:              cloudConfigMap["cp_subnet_name"].(string),
-			CidrBlock:         cloudConfigMap["cp_cidr"].(string),
-			SecurityGroupName: cloudConfigMap["cp_security_group"].(string),
-		}
-	}
-
 	var workerSubnet *models.V1Subnet
-	if cloudConfigMap["worker_subnet_name"] != nil && cloudConfigMap["worker_cidr"] != nil || cloudConfigMap["worker_security_group"] != nil {
+	if cloudConfigMap["worker_subnet_name"] != nil && cloudConfigMap["worker_cidr"] != nil {
 		workerSubnet = &models.V1Subnet{
-			Name:              cloudConfigMap["worker_subnet_name"].(string),
-			CidrBlock:         cloudConfigMap["worker_cidr"].(string),
-			SecurityGroupName: cloudConfigMap["worker_security_group"].(string),
+			Name:      cloudConfigMap["worker_subnet_name"].(string),
+			CidrBlock: cloudConfigMap["worker_cidr"].(string),
 		}
 	}
 
@@ -640,7 +610,7 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 				SubscriptionID:     ptr.StringPtr(cloudConfigMap["subscription_id"].(string)),
 				VnetName:           vnetname,
 				VnetCidrBlock:      vnetcidr,
-				ControlPlaneSubnet: controlPlaneSubnet,
+				ControlPlaneSubnet: workerSubnet,
 				WorkerSubnet:       workerSubnet,
 			},
 		},
