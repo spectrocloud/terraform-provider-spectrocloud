@@ -97,6 +97,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cluster_import": resourceClusterImport(),
 
+				"spectrocloud_addon_deployment": resourceAddonDeployment(),
+
 				"spectrocloud_privatecloudgateway_ippool": resourcePrivateCloudGatewayIpPool(),
 
 				"spectrocloud_backup_storage_location": resourceBackupStorageLocation(),

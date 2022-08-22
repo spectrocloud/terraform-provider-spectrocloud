@@ -18,6 +18,10 @@ func toProfiles(c *client.V1Client, d *schema.ResourceData) []*models.V1SpectroC
 			return nil
 		}
 	}
+	return toProfilesCommon(d, cluster)
+}
+
+func toProfilesCommon(d *schema.ResourceData, cluster *models.V1SpectroCluster) []*models.V1SpectroClusterProfileEntity {
 	resp := make([]*models.V1SpectroClusterProfileEntity, 0)
 	profiles := d.Get("cluster_profile").([]interface{})
 	if len(profiles) > 0 {
