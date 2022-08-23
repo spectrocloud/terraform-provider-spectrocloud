@@ -157,6 +157,10 @@ func resourceClusterVsphere() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"image_template_folder": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 
 						"ssh_key": {
 							Type:     schema.TypeString,
@@ -745,16 +749,7 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
 	staticIP := cloudConfig["static_ip"].(bool)
 
-	V1VsphereClusterConfigEntity := &models.V1VsphereClusterConfigEntity{
-		NtpServers: nil,
-		Placement: &models.V1VspherePlacementConfigEntity{
-			Datacenter: cloudConfig["datacenter"].(string),
-			Folder:     cloudConfig["folder"].(string),
-		},
-		// ssh key trim is needed for UI to display key correctly.
-		SSHKeys:  []string{strings.TrimSpace(cloudConfig["ssh_key"].(string))},
-		StaticIP: staticIP,
-	}
+	V1VsphereClusterConfigEntity := getClusterConfigEntity(cloudConfig)
 
 	if !staticIP {
 		V1VsphereClusterConfigEntity.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{

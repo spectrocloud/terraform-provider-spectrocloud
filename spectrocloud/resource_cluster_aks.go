@@ -160,6 +160,27 @@ func resourceClusterAks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+
+						// fields for static placement are having flat structure as backend currently doesn't support multiple subnets.
+						"vnet_name": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+
+						"vnet_cidr_block": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+
+						"worker_subnet_name": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+
+						"worker_cidr": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 					},
 				},
 			},
@@ -552,6 +573,26 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 	config := d.Get("cloud_config").([]interface{})
 	cloudConfig := config[0]
 	cloudConfigMap := cloudConfig.(map[string]interface{})
+
+	// static placement support
+	var vnetname string
+	if cloudConfigMap["vnet_name"] != nil {
+		vnetname = cloudConfigMap["vnet_name"].(string)
+	}
+
+	var vnetcidr string
+	if cloudConfigMap["vnet_cidr_block"] != nil {
+		vnetcidr = cloudConfigMap["vnet_cidr_block"].(string)
+	}
+
+	var workerSubnet *models.V1Subnet
+	if cloudConfigMap["worker_subnet_name"] != nil && cloudConfigMap["worker_cidr"] != nil {
+		workerSubnet = &models.V1Subnet{
+			Name:      cloudConfigMap["worker_subnet_name"].(string),
+			CidrBlock: cloudConfigMap["worker_cidr"].(string),
+		}
+	}
+
 	cluster := &models.V1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -563,11 +604,14 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
-				ControlPlaneSubnet: nil,
 				Location:           ptr.StringPtr(cloudConfigMap["region"].(string)),
 				ResourceGroup:      cloudConfigMap["resource_group"].(string),
 				SSHKey:             ptr.StringPtr(cloudConfigMap["ssh_key"].(string)),
 				SubscriptionID:     ptr.StringPtr(cloudConfigMap["subscription_id"].(string)),
+				VnetName:           vnetname,
+				VnetCidrBlock:      vnetcidr,
+				ControlPlaneSubnet: workerSubnet,
+				WorkerSubnet:       workerSubnet,
 			},
 		},
 	}
