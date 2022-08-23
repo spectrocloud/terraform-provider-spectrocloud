@@ -47,10 +47,20 @@ Create or append to a `terraform.tfvars` file:
 
 ```terraform
 # Spectro Cloud credentials
-sc_host         = "api.dev.spectrocloud.com" #e.g: api.spectrocloud.com (for SaaS)
-sc_username     = "nikolay@spectrocloud.com" #e.g: user1@abc.com
-sc_password     = "your_password"        #e.g: supereSecure1!
-sc_project_name = "Default"                  #e.g: Default
+sc_host         = "console.spectrocloud.com"
+sc_username     = "user@spectrocloud.com" 
+sc_password     = "your_password!"        
+sc_project_name = "Default"                  
+```
+
+Or use API key instead.
+
+```terraform
+# Spectro Cloud credentials
+sc_host         = "console.spectrocloud.com" 
+sc_username     = "user@spectrocloud.com" 
+sc_api_key      = "your_api_key"        
+sc_project_name = "Default"                  
 ```
 
 ->
@@ -82,5 +92,6 @@ provider GitHub [discussion board](https://github.com/spectrocloud/terraform-pro
 - **ignore_insecure_tls_error** (Boolean)
 - **password** (String, Sensitive)
 - **project_name** (String)
+- **retry_attempts** (Number)
 - **trace** (Boolean)
 - **username** (String)

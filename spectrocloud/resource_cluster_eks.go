@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/gomi/pkg/ptr"
@@ -509,25 +508,9 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	d.SetId(uid)
-
-	if _, found := toTags(d)["skip_completion"]; found {
-		return diags
-	}
-
-	stateConf := &resource.StateChangeConf{
-		Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{"Running"},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c)
+	if isError {
+		return diagnostics
 	}
 
 	resourceClusterEksRead(ctx, d, m)
@@ -553,7 +536,9 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
 
 	var config *models.V1EksCloudConfig
 	if config, err = c.GetCloudConfigEks(configUID); err != nil {
@@ -615,6 +600,7 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	}
 	ret["region"] = *cloudConfig.Spec.ClusterConfig.Region
 	ret["vpc_id"] = cloudConfig.Spec.ClusterConfig.VpcID
+	ret["ssh_key_name"] = cloudConfig.Spec.ClusterConfig.SSHKeyName
 
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
@@ -632,16 +618,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
-			oi["additional_labels"] = make(map[string]interface{})
-		} else {
-			oi["additional_labels"] = machinePool.AdditionalLabels
-		}
-
-		taints := flattenClusterTaints(machinePool.Taints)
-		if len(taints) > 0 {
-			oi["taints"] = taints
-		}
+		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
 		if *machinePool.IsControlPlane {
 			continue
@@ -649,11 +626,8 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
-		if machinePool.UpdateStrategy.Type != "" {
-			oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		} else {
-			oi["update_strategy"] = "RollingUpdateScaleOut"
-		}
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
@@ -999,8 +973,11 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			Labels:           labels,
 			Name:             ptr.StringPtr(m["name"].(string)),
 			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
-			MinSize:          min,
-			MaxSize:          max,
+			UpdateStrategy: &models.V1UpdateStrategy{
+				Type: getUpdateStrategy(m),
+			},
+			MinSize: min,
+			MaxSize: max,
 		},
 	}
 

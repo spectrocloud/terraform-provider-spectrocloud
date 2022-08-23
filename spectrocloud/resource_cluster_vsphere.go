@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
@@ -62,6 +61,11 @@ func resourceClusterVsphere() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "spectro",
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -72,11 +76,34 @@ func resourceClusterVsphere() *schema.Resource {
 									},
 									"tag": {
 										Type:     schema.TypeString,
-										Required: true,
+										Optional: true,
 									},
 									"values": {
 										Type:     schema.TypeString,
 										Required: true,
+									},
+									"manifest": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"content": {
+													Type:     schema.TypeString,
+													Required: true,
+													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+														// UI strips the trailing newline on save
+														if strings.TrimSpace(old) == strings.TrimSpace(new) {
+															return true
+														}
+														return false
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -437,25 +464,9 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	d.SetId(uid)
-
-	if _, found := toTags(d)["skip_completion"]; found {
-		return diags
-	}
-
-	stateConf := &resource.StateChangeConf{
-		Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{"Running"},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c)
+	if isError {
+		return diagnostics
 	}
 
 	resourceClusterVsphereRead(ctx, d, m)
@@ -563,26 +574,13 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		if machinePool.AdditionalLabels == nil || len(machinePool.AdditionalLabels) == 0 {
-			oi["additional_labels"] = make(map[string]interface{})
-		} else {
-			oi["additional_labels"] = machinePool.AdditionalLabels
-		}
-
-		taints := flattenClusterTaints(machinePool.Taints)
-		if len(taints) > 0 {
-			oi["taints"] = taints
-		}
+		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
-		if machinePool.UpdateStrategy.Type != "" {
-			oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		} else {
-			oi["update_strategy"] = "RollingUpdateScaleOut"
-		}
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
@@ -827,7 +825,7 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolC
 			Name:             ptr.StringPtr(m["name"].(string)),
 			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: m["update_strategy"].(string),
+				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},

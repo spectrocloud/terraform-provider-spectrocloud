@@ -40,6 +40,12 @@ func resourceClusterProfile() *schema.Resource {
 				Optional: true,
 				Default:  "1.0.0", // default as in UI
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -154,13 +160,14 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	// Create
-	uid, err := c.CreateClusterProfile(clusterProfile)
+	ProfileContext := d.Get("context").(string)
+	uid, err := c.CreateClusterProfile(clusterProfile, ProfileContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	// And then publish
-	if err = c.PublishClusterProfile(uid); err != nil {
+	if err = c.PublishClusterProfile(uid, ProfileContext); err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
@@ -182,8 +189,11 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
-	if err := d.Set("tags", flattenTags(cp.Metadata.Labels)); err != nil {
-		return diag.FromErr(err)
+	tags := flattenTags(cp.Metadata.Labels)
+	if tags != nil {
+		if err := d.Set("tags", tags); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	packManifests, d2, done2 := getPacksContent(cp, c, d)
@@ -239,9 +249,9 @@ func flattenPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, 
 		p := make(map[string]interface{})
 
 		p["uid"] = pack.PackUID
-		/*if isRegistryUID(diagPacks, *pack.Name) {
+		if isRegistryUID(diagPacks, *pack.Name) {
 			p["registry_uid"] = c.GetPackRegistry(pack)
-		}*/
+		}
 		p["name"] = *pack.Name
 		p["tag"] = pack.Tag
 		p["values"] = pack.Values
@@ -281,7 +291,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if d.HasChanges("name") || d.HasChanges("pack") {
+	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
 		if err != nil {
@@ -291,10 +301,19 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.UpdateClusterProfile(cluster); err != nil {
+		metadata, err := toClusterProfilePatch(d, cp)
+		if err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PublishClusterProfile(cluster.Metadata.UID); err != nil {
+
+		ProfileContext := d.Get("context").(string)
+		if err := c.UpdateClusterProfile(cluster, ProfileContext); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := c.PatchClusterProfile(cluster, metadata, ProfileContext); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := c.PublishClusterProfile(cluster.Metadata.UID, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -425,6 +444,20 @@ func toClusterProfileUpdate(d *schema.ResourceData, cluster *models.V1ClusterPro
 	cp.Spec.Template.Packs = packs
 
 	return cp, nil
+}
+
+func toClusterProfilePatch(d *schema.ResourceData, cluster *models.V1ClusterProfile) (*models.V1ProfileMetaEntity, error) {
+	metadata := &models.V1ProfileMetaEntity{
+		Metadata: &models.V1ObjectMetaInputEntity{
+			Name:   d.Get("name").(string),
+			Labels: toTags(d),
+		},
+		Spec: &models.V1ClusterProfileSpecEntity{
+			Version: d.Get("version").(string),
+		},
+	}
+
+	return metadata, nil
 }
 
 func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*models.V1PackManifestUpdateEntity, error) {

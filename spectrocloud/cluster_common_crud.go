@@ -18,9 +18,34 @@ var resourceClusterDeletePendingStates = []string{
 	"Importing",
 }
 var resourceClusterCreatePendingStates = []string{
+	"Unknown",
 	"Pending",
 	"Provisioning",
 	"Importing",
+}
+
+func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+	d.SetId(uid)
+
+	if _, found := toTags(d)["skip_completion"]; found {
+		return diags, true
+	}
+
+	stateConf := &resource.StateChangeConf{
+		Pending:    resourceClusterCreatePendingStates,
+		Target:     []string{"Running"},
+		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
+		MinTimeout: 10 * time.Second,
+		Delay:      30 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err := stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		return diag.FromErr(err), true
+	}
+	return nil, false
 }
 
 //var resourceClusterUpdatePendingStates = []string{

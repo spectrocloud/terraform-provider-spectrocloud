@@ -11,7 +11,10 @@ import (
 func resourceMachinePoolAzureHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
@@ -19,7 +22,13 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%t-", m["is_system_node_pool"].(bool)))
+
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+
+	if m["os_type"] != "" {
+		buf.WriteString(fmt.Sprintf("%s-", m["os_type"].(string)))
+	}
 
 	// TODO(saamalik) fix for disk
 	//buf.WriteString(fmt.Sprintf("%d-", d["size_gb"].(int)))
@@ -34,6 +43,10 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 func resourceMachinePoolAksHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
@@ -55,7 +68,10 @@ func resourceMachinePoolAksHash(v interface{}) int {
 func resourceMachinePoolGcpHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
@@ -71,6 +87,10 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 func resourceMachinePoolAwsHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
@@ -173,6 +193,9 @@ func resourceMachinePoolOpenStackHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
@@ -190,7 +213,10 @@ func resourceMachinePoolOpenStackHash(v interface{}) int {
 func resourceMachinePoolMaasHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))

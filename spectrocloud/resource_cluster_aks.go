@@ -3,10 +3,10 @@ package spectrocloud
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
@@ -56,6 +56,11 @@ func resourceClusterAks() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "spectro",
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -66,11 +71,34 @@ func resourceClusterAks() *schema.Resource {
 									},
 									"tag": {
 										Type:     schema.TypeString,
-										Required: true,
+										Optional: true,
 									},
 									"values": {
 										Type:     schema.TypeString,
 										Required: true,
+									},
+									"manifest": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"content": {
+													Type:     schema.TypeString,
+													Required: true,
+													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+														// UI strips the trailing newline on save
+														if strings.TrimSpace(old) == strings.TrimSpace(new) {
+															return true
+														}
+														return false
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -90,6 +118,20 @@ func resourceClusterAks() *schema.Resource {
 			"cloud_config_id": {
 				Type:     schema.TypeString,
 				Computed: true,
+			},
+			"os_patch_on_boot": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"os_patch_schedule": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+			},
+			"os_patch_after": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 			},
 			"kubeconfig": {
 				Type:     schema.TypeString,
@@ -154,6 +196,33 @@ func resourceClusterAks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+						},
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
 						},
 						"count": {
 							Type:     schema.TypeInt,
@@ -256,6 +325,68 @@ func resourceClusterAks() *schema.Resource {
 					},
 				},
 			},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -273,25 +404,9 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	d.SetId(uid)
-
-	if _, found := toTags(d)["skip_completion"]; found {
-		return diags
-	}
-
-	stateConf := &resource.StateChangeConf{
-		Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{"Running"},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c)
+	if isError {
+		return diagnostics
 	}
 
 	resourceClusterAksRead(ctx, d, m)
@@ -317,47 +432,23 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
-	d.Set("cloud_config_id", configUID)
-
-	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
+	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-
-	var config *models.V1AzureCloudConfig
-	if config, err = c.GetCloudConfigAks(configUID); err != nil {
+	if config, err := c.GetCloudConfigAks(configUID); err != nil {
 		return diag.FromErr(err)
-	}
-
-	// Update the kubeconfig
-	kubecfg, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("kubeconfig", kubecfg); err != nil {
-		return diag.FromErr(err)
-	}
-
-	mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
-	if err := d.Set("machine_pool", mp); err != nil {
-		return diag.FromErr(err)
-	}
-
-	//read backup policy and scan policy
-	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.Config != nil {
-		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
+	} else {
+		mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
+		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
-	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.DriverSpec != nil {
-		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := readCommonFields(c, d, cluster)
+	if done {
+		return diagnostics
 	}
+
 	return diags
 }
 
@@ -370,12 +461,16 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
+		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+
 		if *machinePool.IsControlPlane {
 			continue
 		}
 
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
 		oi["instance_type"] = machinePool.InstanceType
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
@@ -443,22 +538,9 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		}
 	}
 
-	if d.HasChanges("cluster_profile") {
-		if err := updateProfiles(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("backup_policy") {
-		if err := updateBackupPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("scan_policy") {
-		if err := updateScanPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := updateCommonFields(d, c)
+	if done {
+		return diagnostics
 	}
 
 	resourceClusterAksRead(ctx, d, m)
@@ -496,6 +578,8 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
+
 	return cluster
 }
 
@@ -535,12 +619,17 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			IsControlPlane: controlPlane,
-			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
-			MinSize:        min,
-			MaxSize:        max,
+			AdditionalLabels: toAdditionalNodePoolLabels(m),
+			Taints:           toClusterTaints(m),
+			IsControlPlane:   controlPlane,
+			Labels:           labels,
+			Name:             ptr.StringPtr(m["name"].(string)),
+			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			UpdateStrategy: &models.V1UpdateStrategy{
+				Type: getUpdateStrategy(m),
+			},
+			MinSize: min,
+			MaxSize: max,
 		},
 	}
 

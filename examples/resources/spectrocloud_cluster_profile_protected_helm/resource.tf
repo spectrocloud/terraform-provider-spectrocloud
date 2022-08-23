@@ -6,7 +6,7 @@ resource "spectrocloud_cluster_profile" "profile_resource" {
 
   pack {
     name         = "kubevious-test"
-    registry_uid = "61eef3db38f78bda90792555"
+    registry_uid = data.spectrocloud_registry_oci.registry1.id
     tag          = "0.8.15"
     type         = "helm"
     uid          = ""

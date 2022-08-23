@@ -98,13 +98,17 @@ resource "spectrocloud_cluster_maas" "cluster" {
 
 ### Optional
 
+- **apply_setting** (String)
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cloud_account_id** (String)
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
+- **cluster_rbac_binding** (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - **id** (String) The ID of this resource.
+- **namespaces** (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - **os_patch_after** (String)
 - **os_patch_on_boot** (Boolean)
 - **os_patch_schedule** (String)
+- **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
@@ -135,8 +139,10 @@ Required:
 
 Optional:
 
+- **additional_labels** (Map of String)
 - **control_plane** (Boolean)
 - **control_plane_as_worker** (Boolean)
+- **taints** (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - **update_strategy** (String)
 
 <a id="nestedblock--machine_pool--instance_type"></a>
@@ -158,6 +164,16 @@ Required:
 Read-only:
 
 - **id** (String) The ID of this resource.
+
+
+<a id="nestedblock--machine_pool--taints"></a>
+### Nested Schema for `machine_pool.taints`
+
+Required:
+
+- **effect** (String)
+- **key** (String)
+- **value** (String)
 
 
 
@@ -195,9 +211,74 @@ Optional:
 Required:
 
 - **name** (String)
+- **values** (String)
+
+Optional:
+
+- **manifest** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack--manifest))
+- **registry_uid** (String)
+- **tag** (String)
+- **type** (String)
+
+<a id="nestedblock--cluster_profile--pack--manifest"></a>
+### Nested Schema for `cluster_profile.pack.manifest`
+
+Required:
+
+- **content** (String)
+- **name** (String)
+
+
+
+
+<a id="nestedblock--cluster_rbac_binding"></a>
+### Nested Schema for `cluster_rbac_binding`
+
+Required:
+
+- **type** (String)
+
+Optional:
+
+- **namespace** (String)
+- **role** (Map of String)
+- **subjects** (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding--subjects))
+
+<a id="nestedblock--cluster_rbac_binding--subjects"></a>
+### Nested Schema for `cluster_rbac_binding.subjects`
+
+Required:
+
+- **name** (String)
+- **type** (String)
+
+Optional:
+
+- **namespace** (String)
+
+
+
+<a id="nestedblock--namespaces"></a>
+### Nested Schema for `namespaces`
+
+Required:
+
+- **name** (String)
+- **resource_allocation** (Map of String)
+
+
+<a id="nestedblock--pack"></a>
+### Nested Schema for `pack`
+
+Required:
+
+- **name** (String)
 - **tag** (String)
 - **values** (String)
 
+Optional:
+
+- **registry_uid** (String)
 
 
 <a id="nestedblock--scan_policy"></a>

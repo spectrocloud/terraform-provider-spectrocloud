@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -32,6 +33,12 @@ func dataSourceClusterProfile() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
 			},
 			"pack": {
 				Type:     schema.TypeList,
@@ -119,7 +126,12 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 		version = ver.(string)
 	}
 
-	profile, err := c.GetClusterProfile(getProfileUID(profiles, d, version))
+	ProjectContext := "project"
+	if Pcontext, ok_context := d.GetOk("context"); ok_context {
+		ProjectContext = Pcontext.(string)
+	}
+
+	profile, err := c.GetClusterProfile(getProfileUID(profiles, d, version, ProjectContext))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -134,7 +146,16 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	}
 
 	d.SetId(profile.Metadata.UID)
-	d.Set("name", profile.Metadata.Name)
+	if err := d.Set("name", profile.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("version", profile.Spec.Version); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("context", profile.Metadata.Annotations["scope"]); err != nil {
+		return diag.FromErr(err)
+	}
+
 	if profile.Spec.Published != nil && len(profile.Spec.Published.Packs) > 0 {
 		packManifests, d2, done2 := getPacksContent(profile, c, d)
 		if done2 {
@@ -169,13 +190,15 @@ func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEn
 	return diagPacks, nil, false
 }
 
-func getProfileUID(profiles []*models.V1ClusterProfile, d *schema.ResourceData, version string) string {
+func getProfileUID(profiles []*models.V1ClusterProfile, d *schema.ResourceData, version string, ProfileContext string) string {
 	for _, p := range profiles {
 		if v, ok := d.GetOk("id"); ok && v.(string) == p.Metadata.UID {
 			return p.Metadata.UID
 		} else if v, ok := d.GetOk("name"); ok && v.(string) == p.Metadata.Name {
 			if p.Spec.Version == version || (p.Spec.Version == "" && version == "1.0.0") {
-				return p.Metadata.UID
+				if ProfileContext == p.Metadata.Annotations["scope"] {
+					return p.Metadata.UID
+				}
 			}
 		}
 	}

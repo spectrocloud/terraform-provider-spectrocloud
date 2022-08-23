@@ -3,10 +3,10 @@ package spectrocloud
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
@@ -56,6 +56,11 @@ func resourceClusterAzure() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "spectro",
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -66,11 +71,34 @@ func resourceClusterAzure() *schema.Resource {
 									},
 									"tag": {
 										Type:     schema.TypeString,
-										Required: true,
+										Optional: true,
 									},
 									"values": {
 										Type:     schema.TypeString,
 										Required: true,
+									},
+									"manifest": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"content": {
+													Type:     schema.TypeString,
+													Required: true,
+													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+														// UI strips the trailing newline on save
+														if strings.TrimSpace(old) == strings.TrimSpace(new) {
+															return true
+														}
+														return false
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -165,6 +193,33 @@ func resourceClusterAzure() *schema.Resource {
 				Set:      resourceMachinePoolAzureHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"control_plane": {
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -230,6 +285,17 @@ func resourceClusterAzure() *schema.Resource {
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
+							},
+						},
+						"is_system_node_pool": {
+							Type:     schema.TypeBool,
+							Required: true,
+						},
+						"os_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+								return false
 							},
 						},
 					},
@@ -299,6 +365,68 @@ func resourceClusterAzure() *schema.Resource {
 					},
 				},
 			},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 			//"cloud_config": {
 			//	Type:     schema.TypeString,
 			//	Required: true,
@@ -326,25 +454,9 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 
-	d.SetId(uid)
-
-	if _, found := toTags(d)["skip_completion"]; found {
-		return diags
-	}
-
-	stateConf := &resource.StateChangeConf{
-		Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{"Running"},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
-		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
-	}
-
-	// Wait, catching any errors
-	_, err = stateConf.WaitForStateContext(ctx)
-	if err != nil {
-		return diag.FromErr(err)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c)
+	if isError {
+		return diagnostics
 	}
 
 	resourceClusterAzureRead(ctx, d, m)
@@ -369,40 +481,18 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 		return diags
 	}
 
-	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
-		return diag.FromErr(err)
-	}
-
-	kubecfg, err := c.GetClusterKubeConfig(uid)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set("kubeconfig", kubecfg); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.Config != nil {
-		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
-		return diag.FromErr(err)
-	} else if policy != nil && policy.Spec.DriverSpec != nil {
-		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := readCommonFields(c, d, cluster)
+	if done {
+		return diagnostics
 	}
 
 	return flattenCloudConfigAzure(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
 func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	d.Set("cloud_config_id", configUID)
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
 	if config, err := c.GetCloudConfigAzure(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
@@ -426,16 +516,16 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
+		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
-		if machinePool.UpdateStrategy.Type != "" {
-			oi["update_strategy"] = machinePool.UpdateStrategy.Type
-		} else {
-			oi["update_strategy"] = "RollingUpdateScaleOut"
-		}
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
 		oi["instance_type"] = machinePool.InstanceType
+		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 
 		oi["azs"] = machinePool.Azs
 
@@ -518,22 +608,9 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	//	return diag.FromErr(err)
 	//}
 
-	if d.HasChanges("cluster_profile") {
-		if err := updateProfiles(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("backup_policy") {
-		if err := updateBackupPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChange("scan_policy") {
-		if err := updateScanPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := updateCommonFields(d, c)
+	if done {
+		return diagnostics
 	}
 
 	resourceClusterAzureRead(ctx, d, m)
@@ -601,6 +678,15 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 		azs = append(azs, az.(string))
 	}
 
+	osType := models.V1OsTypeLinux
+
+	if m["os_type"] != "" {
+		os_type := m["os_type"].(string)
+		if os_type == "Windows" {
+			osType = models.V1OsTypeWindows
+		}
+	}
+
 	mp := &models.V1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			Azs:          azs,
@@ -610,16 +696,22 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 				ManagedDisk: &models.V1ManagedDisk{
 					StorageAccountType: diskType,
 				},
-				OsType: "linux",
+				OsType: osType,
 			},
+			IsSystemNodePool: m["is_system_node_pool"].(bool),
+		},
+		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
+			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			IsControlPlane: controlPlane,
-			Labels:         labels,
-			Name:           ptr.StringPtr(m["name"].(string)),
-			Size:           ptr.Int32Ptr(int32(m["count"].(int))),
+			AdditionalLabels: toAdditionalNodePoolLabels(m),
+			Taints:           toClusterTaints(m),
+			IsControlPlane:   controlPlane,
+			Labels:           labels,
+			Name:             ptr.StringPtr(m["name"].(string)),
+			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: m["update_strategy"].(string),
+				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
