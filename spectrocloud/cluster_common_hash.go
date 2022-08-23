@@ -265,6 +265,7 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 					buf.WriteString(fmt.Sprintf("%d-", config["num_gpus"].(int)))
 					buf.WriteString(fmt.Sprintf("%d-", config["device_model"].(string)))
 					buf.WriteString(fmt.Sprintf("%d-", config["vendor"].(string)))
+					buf.WriteString(HashStringMap(config["addresses"]))
 				}
 			}
 

@@ -300,6 +300,13 @@ func resourceClusterLibvirt() *schema.Resource {
 													Type:     schema.TypeInt,
 													Required: true,
 												},
+												"addresses": {
+													Type:     schema.TypeMap,
+													Optional: true,
+													Elem: &schema.Schema{
+														Type: schema.TypeString,
+													},
+												},
 											},
 										},
 									},
@@ -603,6 +610,7 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 					config["device_model"] = gpuConfig.DeviceModel
 					config["vendor"] = gpuConfig.VendorName
 					config["num_gpus"] = gpuConfig.NumGPUs
+					config["addresses"] = gpuConfig.Addresses
 					s["gpu_config"] = config
 				}
 			}
@@ -792,11 +800,17 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 	var gpuConfig *models.V1GPUConfig
 	if ins["gpu_config"] != nil {
 		config, _ := ins["gpu_config"].(map[string]interface{})
+		mapAddresses := make(map[string]string)
+		// "TU104GL [Quadro RTX 4000]": "11:00.0", ...
+		if config["addresses"] != nil && len(config["addresses"].(map[string]interface{})) > 0 {
+			mapAddresses = expandStringMap(config["addresses"].(map[string]interface{}))
+		}
 		if config != nil {
 			gpuConfig = &models.V1GPUConfig{
 				DeviceModel: config["device_model"].(string),
 				NumGPUs:     int32(config["num_gpus"].(int)),
 				VendorName:  config["vendor"].(string),
+				Addresses:   mapAddresses,
 			}
 		}
 	}
