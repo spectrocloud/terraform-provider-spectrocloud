@@ -842,7 +842,7 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 
 func getGPUConfig(ins map[string]interface{}) *models.V1GPUConfig {
 	if ins["gpu_config"] != nil {
-		for _, t := range ins["attached_disks"].([]interface{}) {
+		for _, t := range ins["gpu_config"].([]interface{}) {
 			config := t.(map[string]interface{})
 			mapAddresses := make(map[string]string)
 			// "TU104GL [Quadro RTX 4000]": "11:00.0", ...
