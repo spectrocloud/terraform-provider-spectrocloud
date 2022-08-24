@@ -577,13 +577,18 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 
 	ret := make(map[string]interface{})
 
-	//ret["az_subnets"] = cloudConfig.Spec.ClusterConfig
+	ret["region"] = cloudConfig.Spec.ClusterConfig.Region
 
-	/*for _, pool := range cloudConfig.Spec.MachinePoolConfig {
+	ret["public_access_cidrs"] = make([]string, 0)
+	if cloudConfig.Spec.ClusterConfig.EndpointAccess.PublicCIDRs != nil {
+		ret["public_access_cidrs"] = cloudConfig.Spec.ClusterConfig.EndpointAccess.PublicCIDRs
+	}
+
+	for _, pool := range cloudConfig.Spec.MachinePoolConfig {
 		if pool.Name == "master-pool" {
 			ret["az_subnets"] = pool.SubnetIds
 		}
-	}*/
+	}
 
 	if cloudConfig.Spec.ClusterConfig.EncryptionConfig != nil && cloudConfig.Spec.ClusterConfig.EncryptionConfig.IsEnabled {
 		ret["encryption_config_arn"] = cloudConfig.Spec.ClusterConfig.EncryptionConfig.Provider
@@ -890,15 +895,15 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroE
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
-	/*cpPool := map[string]interface{}{
+	cpPool := map[string]interface{}{
 		"control_plane": true,
 		"name":          "master-pool",
 		"az_subnets":    cloudConfig["az_subnets"],
 		"instance_type": "t3.large",
 		"disk_size_gb":  60,
-		"count":         2,
+		"count":         0,
 	}
-	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))*/
+	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
