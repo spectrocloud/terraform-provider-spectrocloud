@@ -53,10 +53,10 @@ function generateSpectrocloudProvider() {
 
 function generateProvidersPlugins() {
   # copy spectrocloud generated provider
-  chmod +x dist/terraform-provider-spectrocloud_"$OS_VERSION"/terraform-provider-spectrocloud_"$OS_VERSION"
+tfdir=$(find dist -type d | grep terraform-provider-spectrocloud_"$OS_VERSION")
+  chmod -R +x $tfdir 
   mkdir -p providers/plugins/registry.terraform.io/spectrocloud/spectrocloud/"$PROVIDER_VERSION"/"$OS_VERSION"
-  cp dist/terraform-provider-spectrocloud_"$OS_VERSION"/terraform-provider-spectrocloud_"$OS_VERSION" providers/plugins/registry.terraform.io/spectrocloud/spectrocloud/"$PROVIDER_VERSION"/"$OS_VERSION"/
-
+  cp $tfdir/* providers/plugins/registry.terraform.io/spectrocloud/spectrocloud/"$PROVIDER_VERSION"/"$OS_VERSION"/ 
   # copy other downloded providers
   cp -R .terraform.d/plugins providers/
   rm -rf .terraform.d
