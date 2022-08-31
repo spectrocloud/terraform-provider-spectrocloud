@@ -131,10 +131,10 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 
 	// TODO: implement wait for.
 	d.SetId(clusterUid + addonDeployment.Profiles[0].UID)
-	/*diagnostics, isError := waitForAddonDeploymentCreation(ctx, d, cluster, diags, c)
+	diagnostics, isError := waitForAddonDeploymentCreation(ctx, d, cluster, diags, c)
 	if isError {
 		return diagnostics
-	}*/
+	}
 
 	resourceAddonDeploymentRead(ctx, d, m)
 
@@ -193,12 +193,11 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 
-		// TODO: implement wait for.
 		d.SetId(clusterUid + addonDeployment.Profiles[0].UID)
-		/*diagnostics, isError := waitForAddonDeploymentCreation(ctx, d, cluster, diags, c)
+		diagnostics, isError := waitForAddonDeploymentCreation(ctx, d, cluster, diags, c)
 		if isError {
 			return diagnostics
-		}*/
+		}
 
 		resourceAddonDeploymentRead(ctx, d, m)
 

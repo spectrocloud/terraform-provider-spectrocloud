@@ -7,7 +7,7 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-//read common fields like kubeconfig, tags, backup policy, scan policy, cluster_rbac_binding, namespaces
+// read common fields like kubeconfig, tags, backup policy, scan policy, cluster_rbac_binding, namespaces
 func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
 	kubecfg, err := c.GetClusterKubeConfig(d.Id())
 	if err != nil {
@@ -52,6 +52,14 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 			return diag.FromErr(err), true
 		}
 	}
+
+	hostconfig := cluster.Spec.ClusterConfig.HostClusterConfig
+	if hostconfig != nil {
+		if err := d.Set("host_config", flattenHostConfig(hostconfig)); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
 	return diag.Diagnostics{}, false
 }
 
@@ -95,6 +103,12 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 
 	if d.HasChange("scan_policy") {
 		if err := updateScanPolicy(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if d.HasChange("host_config") {
+		if err := updateHostConfig(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
 	}
