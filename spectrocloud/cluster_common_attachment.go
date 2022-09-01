@@ -11,29 +11,20 @@ import (
 	"time"
 )
 
-var resourceAddonDeploymentDeletePendingStates = []string{
-	"Pending",
-	"Provisioning",
-	"Running",
-	"Deleting",
-	"Importing",
-}
 var resourceAddonDeploymentCreatePendingStates = []string{
-	"Unknown",
-	"Pending",
-	"Provisioning",
-	"Importing",
+	"Node:False",
+	"Pack:False",
 }
 
 func waitForAddonDeploymentCreation(ctx context.Context, d *schema.ResourceData, cluster *models.V1SpectroCluster, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
-	if _, found := toTags(d)["wait_apply"]; found {
+	if _, found := toTags(d)["skip_packs"]; found {
 		return diags, true
 	}
 
 	stateConf := &resource.StateChangeConf{
-		Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{"Running"},
-		Refresh:    resourceAddonDeploymentStateRefreshFunc(c, d.Id()),
+		Pending:    resourceAddonDeploymentCreatePendingStates,
+		Target:     []string{"True"},
+		Refresh:    resourceAddonDeploymentStateRefreshFunc(c, cluster.Metadata.UID),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
@@ -47,27 +38,6 @@ func waitForAddonDeploymentCreation(ctx context.Context, d *schema.ResourceData,
 	return nil, false
 }
 
-//var resourceClusterUpdatePendingStates = []string{
-//	"backing-up",
-//	"modifying",
-//	"resetting-master-credentials",
-//	"upgrading",
-//}
-func waitForAddonDeploymentDeletion(ctx context.Context, c *client.V1Client, id string, timeout time.Duration) error {
-	stateConf := &resource.StateChangeConf{
-		Pending:    resourceClusterDeletePendingStates,
-		Target:     nil, // wait for deleted
-		Refresh:    resourceAddonDeploymentStateRefreshFunc(c, id),
-		Timeout:    timeout,
-		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
-	}
-
-	_, err := stateConf.WaitForStateContext(ctx)
-
-	return err
-}
-
 func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(id)
@@ -77,10 +47,20 @@ func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, id string) reso
 			return nil, "Deleted", nil
 		}
 
-		state := cluster.Status.State
-		log.Printf("Cluster state (%s): %s", id, state)
+		for _, pack_status := range cluster.Status.Packs {
+			if *pack_status.Condition.Status != "True" {
+				log.Printf("Pack state (%s): %s, %s", id, pack_status.Name, *pack_status.Condition.Status)
+				return cluster, "Pack:" + *pack_status.Condition.Status, nil
+			}
+		}
+		for _, node_condition := range cluster.Status.Conditions {
+			if *node_condition.Status != "True" {
+				log.Printf("Node state (%s): %s", id, *node_condition.Status)
+				return cluster, "Node:" + *node_condition.Status, nil
+			}
+		}
 
-		return cluster, state, nil
+		return cluster, "True", nil
 	}
 }
 
@@ -101,10 +81,6 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 		ProfileUids: profile_uids,
 	})
 	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := waitForAddonDeploymentDeletion(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
 		return diag.FromErr(err)
 	}
 
