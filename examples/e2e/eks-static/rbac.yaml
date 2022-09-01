@@ -1,0 +1,27 @@
+charts:
+  spectro-rbac:
+    # Specify one or more ClusterRoleBinding
+    # Note that the _name_ attribute is optional
+    clusterRoleBindings:
+    - role: admin
+      name: special-override-name
+      subjects:
+      - {type: User, name: user5}
+      - {type: Group, name: group5}
+    roleBindings:
+    # Specify one or more RoleBindings
+    # Note that the _name_ attribute in the subjects is optional
+    - namespace: team-hello
+      createNamespace: true
+      roles:
+      - role: admin
+        name: special-override-name-role
+        kind: ClusterRole
+        subjects:
+        - {type: User, name: user3}
+        - {type: Group, name: group3}
+      - role: view
+        kind: ClusterRole
+        subjects:
+        - {type: User, name: user4}
+        - {type: Group, name: group4}
