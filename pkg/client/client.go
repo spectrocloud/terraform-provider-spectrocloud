@@ -3,10 +3,10 @@ package client
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	openapiclient "github.com/go-openapi/runtime/client"
-	"github.com/prometheus/common/log"
 
 	"github.com/go-openapi/strfmt"
 
@@ -79,7 +79,7 @@ func (h *V1Client) getNewAuthToken() (*AuthToken, error) {
 		})
 	res, err := AuthClient.V1Authenticate(authParam)
 	if err != nil {
-		log.Error("Error", err)
+		log.Fatal(err.Error())
 		return nil, err
 	}
 
@@ -105,7 +105,7 @@ func GetProjectContextWithCtx(c context.Context, projectUid string) context.Cont
 func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
 	if h.apikey == "" && (authToken == nil || authToken.expiry.Before(time.Now())) {
 		if tkn, err := h.getNewAuthToken(); err != nil {
-			log.Error("Failed to get auth token ", err)
+			log.Fatal("Failed to get auth token ", err.Error())
 			return nil, err
 		} else {
 			authToken = tkn

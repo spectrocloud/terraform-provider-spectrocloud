@@ -284,7 +284,7 @@ func resourceClusterLibvirt() *schema.Resource {
 										Optional: true,
 									},
 									"gpu_config": {
-										Type:     schema.TypeSet,
+										Type:     schema.TypeList,
 										Optional: true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
@@ -299,6 +299,13 @@ func resourceClusterLibvirt() *schema.Resource {
 												"num_gpus": {
 													Type:     schema.TypeInt,
 													Required: true,
+												},
+												"addresses": {
+													Type:     schema.TypeMap,
+													Optional: true,
+													Elem: &schema.Schema{
+														Type: schema.TypeString,
+													},
 												},
 											},
 										},
@@ -593,20 +600,21 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 				s["cache_passthrough"] = (*machinePool.InstanceType.CPUPassthroughSpec).CachePassthrough
 			}
 
+			config := make([]interface{}, 0)
 			if machinePool.InstanceType.GpuConfig != nil {
-				config := make(map[string]interface{})
 				gpuConfig := *machinePool.InstanceType.GpuConfig
 
-				if gpuConfig.DeviceModel == "" || gpuConfig.VendorName == "" || gpuConfig.NumGPUs == 0 {
-					s["gpu_config"] = nil
-				} else {
-					config["device_model"] = gpuConfig.DeviceModel
-					config["vendor"] = gpuConfig.VendorName
-					config["num_gpus"] = gpuConfig.NumGPUs
-					s["gpu_config"] = config
+				if !(gpuConfig.DeviceModel == "" || gpuConfig.VendorName == "") && gpuConfig.NumGPUs != 0 {
+					aconfig := make(map[string]interface{})
+
+					aconfig["device_model"] = gpuConfig.DeviceModel
+					aconfig["vendor"] = gpuConfig.VendorName
+					aconfig["num_gpus"] = gpuConfig.NumGPUs
+					aconfig["addresses"] = gpuConfig.Addresses
 				}
 			}
 
+			s["gpu_config"] = config
 			s["memory_mb"] = int(*machinePool.InstanceType.MemoryInMB)
 			s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
 
@@ -789,18 +797,6 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
 
-	var gpuConfig *models.V1GPUConfig
-	if ins["gpu_config"] != nil {
-		config, _ := ins["gpu_config"].(map[string]interface{})
-		if config != nil {
-			gpuConfig = &models.V1GPUConfig{
-				DeviceModel: config["device_model"].(string),
-				NumGPUs:     int32(config["num_gpus"].(int)),
-				VendorName:  config["vendor"].(string),
-			}
-		}
-	}
-
 	var cpuPassthroughSpec *models.V1CPUPassthroughSpec
 	if ins["cache_passthrough"] != nil {
 		cpuPassthroughSpec = &models.V1CPUPassthroughSpec{
@@ -812,7 +808,7 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 	instanceType := models.V1LibvirtInstanceType{
 		MemoryInMB:         ptr.Int32Ptr(int32(ins["memory_mb"].(int))),
 		NumCPUs:            ptr.Int32Ptr(int32(ins["cpu"].(int))),
-		GpuConfig:          gpuConfig,
+		GpuConfig:          getGPUConfig(ins),
 		CPUPassthroughSpec: cpuPassthroughSpec,
 	}
 
@@ -842,6 +838,28 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 		},
 	}
 	return mp
+}
+
+func getGPUConfig(ins map[string]interface{}) *models.V1GPUConfig {
+	if ins["gpu_config"] != nil {
+		for _, t := range ins["gpu_config"].([]interface{}) {
+			config := t.(map[string]interface{})
+			mapAddresses := make(map[string]string)
+			// "TU104GL [Quadro RTX 4000]": "11:00.0", ...
+			if config["addresses"] != nil && len(config["addresses"].(map[string]interface{})) > 0 {
+				mapAddresses = expandStringMap(config["addresses"].(map[string]interface{}))
+			}
+			if config != nil {
+				return &models.V1GPUConfig{
+					DeviceModel: config["device_model"].(string),
+					NumGPUs:     int32(config["num_gpus"].(int)),
+					VendorName:  config["vendor"].(string),
+					Addresses:   mapAddresses,
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func getAdditionalDisks(ins map[string]interface{}) []*models.V1LibvirtDiskSpec {
