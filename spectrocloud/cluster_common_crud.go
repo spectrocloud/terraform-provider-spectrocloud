@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+var resourceClusterReadyPendingStates = []string{
+	"NotReady",
+}
+
 var resourceClusterDeletePendingStates = []string{
 	"Pending",
 	"Provisioning",
@@ -24,11 +28,49 @@ var resourceClusterCreatePendingStates = []string{
 	"Importing",
 }
 
+func waitForClusterReady(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+	d.SetId(uid)
+
+	stateConf := &resource.StateChangeConf{
+		Pending:    resourceClusterReadyPendingStates,
+		Target:     []string{"Ready"},
+		Refresh:    resourceClusterReadyRefreshFunc(c, d.Id()),
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
+		MinTimeout: 10 * time.Second,
+		Delay:      30 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err := stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		return diag.FromErr(err), true
+	}
+	return nil, false
+}
+
+func resourceClusterReadyRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		err, cluster := c.GetClusterWithoutStatus(id)
+		if err != nil {
+			return nil, "", err
+		} else if cluster == nil || cluster.Status == nil {
+			return nil, "NotReady", nil
+		}
+
+		return cluster, "Ready", nil
+	}
+}
+
 func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
 	if _, found := toTags(d)["skip_completion"]; found {
 		return diags, true
+	}
+
+	diagnostics, isError := waitForClusterReady(ctx, d, uid, diags, c)
+	if isError {
+		return diagnostics, true
 	}
 
 	stateConf := &resource.StateChangeConf{
@@ -48,12 +90,12 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid str
 	return nil, false
 }
 
-//var resourceClusterUpdatePendingStates = []string{
-//	"backing-up",
-//	"modifying",
-//	"resetting-master-credentials",
-//	"upgrading",
-//}
+//	var resourceClusterUpdatePendingStates = []string{
+//		"backing-up",
+//		"modifying",
+//		"resetting-master-credentials",
+//		"upgrading",
+//	}
 func waitForClusterDeletion(ctx context.Context, c *client.V1Client, id string, timeout time.Duration) error {
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceClusterDeletePendingStates,

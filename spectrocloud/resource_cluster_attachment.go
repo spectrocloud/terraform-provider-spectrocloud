@@ -107,6 +107,8 @@ func resourceAddonDeployment() *schema.Resource {
 
 func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
 
 	clusterUid := d.Get("cluster_uid").(string)
 
@@ -117,12 +119,14 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 
 	addonDeployment := toAddonDeployment(c, d)
 
-	if d.Id() != "" || isProfileAttached(cluster, addonDeployment.Profiles[0].UID) {
-		return diag.FromErr(errors.New(fmt.Sprintf("Profile is already attached: %s", addonDeployment.Profiles[0].UID)))
+	diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c)
+	if isError {
+		return diagnostics
 	}
 
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
+	if isProfileAttached(cluster, addonDeployment.Profiles[0].UID) {
+		return diag.FromErr(errors.New(fmt.Sprintf("Cluster: %s: Profile is already attached: %s", cluster.Metadata.UID, addonDeployment.Profiles[0].UID)))
+	}
 
 	err = c.CreateOrUpdateAddonDeployment(cluster.Metadata.UID, addonDeployment)
 	if err != nil {
@@ -131,7 +135,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 
 	// TODO: implement wait for.
 	d.SetId(clusterUid + addonDeployment.Profiles[0].UID)
-	diagnostics, isError := waitForAddonDeploymentCreation(ctx, d, cluster, diags, c)
+	diagnostics, isError = waitForAddonDeploymentCreation(ctx, d, cluster.Metadata.UID, addonDeployment.Profiles[0].UID, diags, c)
 	if isError {
 		return diagnostics
 	}
@@ -194,7 +198,7 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 		}
 
 		d.SetId(clusterUid + addonDeployment.Profiles[0].UID)
-		diagnostics, isError := waitForAddonDeploymentCreation(ctx, d, cluster, diags, c)
+		diagnostics, isError := waitForAddonDeploymentCreation(ctx, d, cluster.Metadata.UID, addonDeployment.Profiles[0].UID, diags, c)
 		if isError {
 			return diagnostics
 		}

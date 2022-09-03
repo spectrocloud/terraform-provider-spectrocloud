@@ -18,7 +18,7 @@ func (h *V1Client) CreateOrUpdateAddonDeployment(uid string, body *models.V1Spec
 	return err
 }
 
-func (h *V1Client) DeleteAddonDeploymentValues(uid string, body *models.V1SpectroClusterProfilesDeleteEntity) error {
+func (h *V1Client) DeleteAddonDeployment(uid string, body *models.V1SpectroClusterProfilesDeleteEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
