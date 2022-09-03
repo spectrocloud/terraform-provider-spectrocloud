@@ -6,8 +6,8 @@ description: |-
 ---
 
 # Resource `spectrocloud_cluster_eks`
-
-
+[Spectro Cloud EKS Static Placement Example](examples/e2e/eks-static)
+[Spectro Cloud EKS Dynamic Placement Example](examples/e2e/eks)
 
 ## Example Usage
 
