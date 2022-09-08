@@ -133,8 +133,12 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	// TODO: implement wait for.
-	d.SetId(clusterUid + addonDeployment.Profiles[0].UID)
+	clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
+
 	diagnostics, isError = waitForAddonDeploymentCreation(ctx, d, cluster.Metadata.UID, addonDeployment.Profiles[0].UID, diags, c)
 	if isError {
 		return diagnostics
@@ -143,6 +147,10 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 	resourceAddonDeploymentRead(ctx, d, m)
 
 	return diags
+}
+
+func getAddonDeploymentId(clusterUid string, clusterProfile *models.V1ClusterProfile) string {
+	return clusterUid + clusterProfile.Metadata.Name
 }
 
 func isProfileAttached(cluster *models.V1SpectroCluster, uid string) bool {
@@ -197,7 +205,11 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 
-		d.SetId(clusterUid + addonDeployment.Profiles[0].UID)
+		clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
 		diagnostics, isError := waitForAddonDeploymentCreation(ctx, d, cluster.Metadata.UID, addonDeployment.Profiles[0].UID, diags, c)
 		if isError {
 			return diagnostics

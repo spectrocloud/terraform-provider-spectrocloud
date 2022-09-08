@@ -21,7 +21,12 @@ var resourceAddonDeploymentCreatePendingStates = []string{
 }
 
 func waitForAddonDeploymentCreation(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
-	if _, found := toTags(d)["skip_packs"]; found {
+	cluster, err := c.GetCluster(cluster_uid)
+	if err != nil {
+		return diags, true
+	}
+
+	if _, found := cluster.Metadata.Labels["skip_packs"]; found {
 		return diags, true
 	}
 
@@ -35,7 +40,7 @@ func waitForAddonDeploymentCreation(ctx context.Context, d *schema.ResourceData,
 	}
 
 	// Wait, catching any errors
-	_, err := stateConf.WaitForStateContext(ctx)
+	_, err = stateConf.WaitForStateContext(ctx)
 	if err != nil {
 		return diag.FromErr(err), true
 	}
