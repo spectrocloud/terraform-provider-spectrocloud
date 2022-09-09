@@ -398,9 +398,10 @@ func resourceClusterEks() *schema.Resource {
 							Default:  true,
 						},
 						"namespaces": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Set:      schema.HashString,
+							Type:        schema.TypeSet,
+							Optional:    true,
+							Description: "Provide namespaces that need to be backed up. If left empty then all the Namespaces will be backed up.",
+							Set:         schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -430,8 +431,9 @@ func resourceClusterEks() *schema.Resource {
 				},
 			},
 			"cluster_rbac_binding": {
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "A Cluster Role binding defines the permissions defined across a cluster.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"type": {
@@ -455,8 +457,9 @@ func resourceClusterEks() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"type": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Available types: `Users`, `Groups`, Service Account",
 									},
 									"name": {
 										Type:     schema.TypeString,

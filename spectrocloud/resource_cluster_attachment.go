@@ -128,7 +128,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(errors.New(fmt.Sprintf("Cluster: %s: Profile is already attached: %s", cluster.Metadata.UID, addonDeployment.Profiles[0].UID)))
 	}
 
-	err = c.CreateOrUpdateAddonDeployment(cluster.Metadata.UID, addonDeployment)
+	err = c.CreateAddonDeployment(cluster.Metadata.UID, addonDeployment)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -200,7 +200,8 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 
 		addonDeployment := toAddonDeployment(c, d)
 
-		err = c.CreateOrUpdateAddonDeployment(cluster.Metadata.UID, addonDeployment)
+		newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+		err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
 		if err != nil {
 			return diag.FromErr(err)
 		}
