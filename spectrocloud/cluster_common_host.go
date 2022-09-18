@@ -77,7 +77,9 @@ func toLoadBalancerConfig(config map[string]interface{}) *models.V1LoadBalancerC
 
 func flattenHostConfig(hostConfig *models.V1HostClusterConfig) []interface{} {
 	result := make(map[string]interface{})
-	if hostConfig != nil {
+	configs := make([]interface{}, 0)
+
+	if hostConfig != nil && *hostConfig.IsHostCluster {
 		if hostConfig.ClusterEndpoint != nil {
 			result["host_endpoint_type"] = hostConfig.ClusterEndpoint.Type
 		}
@@ -92,10 +94,9 @@ func flattenHostConfig(hostConfig *models.V1HostClusterConfig) []interface{} {
 				result["load_balancer_source_ranges"] = flattenSourceRanges(hostConfig)
 			}
 		}
+		configs = append(configs, result)
 	}
 
-	configs := make([]interface{}, 0)
-	configs = append(configs, result)
 	return configs
 }
 
