@@ -79,7 +79,7 @@ func flattenHostConfig(hostConfig *models.V1HostClusterConfig) []interface{} {
 	result := make(map[string]interface{})
 	configs := make([]interface{}, 0)
 
-	if hostConfig != nil && *hostConfig.IsHostCluster {
+	if hostConfig != nil && hostConfig.ClusterEndpoint != nil {
 		if hostConfig.ClusterEndpoint != nil {
 			result["host_endpoint_type"] = hostConfig.ClusterEndpoint.Type
 		}

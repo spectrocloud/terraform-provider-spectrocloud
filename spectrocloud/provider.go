@@ -91,10 +91,13 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cluster_libvirt": resourceClusterLibvirt(),
 
+				"spectrocloud_cluster_edge_native": resourceClusterEdgeNative(),
+
 				"spectrocloud_cluster_edge": resourceClusterEdge(),
 
 				"spectrocloud_cluster_edge_vsphere": resourceClusterEdgeVsphere(),
 
+				"spectrocloud_cluster_nested": resourceClusterNested(),
 				"spectrocloud_cluster_import": resourceClusterImport(),
 
 				"spectrocloud_addon_deployment": resourceAddonDeployment(),
