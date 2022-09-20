@@ -192,7 +192,7 @@ func resourceClusterLibvirt() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
 				// disable hash to preserve machine pool order PE-255
 				//Set:      resourceMachinePoolLibvirtHash,
@@ -779,7 +779,7 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 	}
 
 	machinePoolConfigs := make([]*models.V1LibvirtMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolLibvirt(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}

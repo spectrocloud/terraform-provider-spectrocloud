@@ -691,7 +691,7 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 	}
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEdgeVsphere(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
