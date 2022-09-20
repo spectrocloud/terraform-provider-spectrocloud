@@ -117,7 +117,7 @@ func resourceClusterAws() *schema.Resource {
 			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 				ForceNew: true,
 			},
 			"cloud_config_id": {
