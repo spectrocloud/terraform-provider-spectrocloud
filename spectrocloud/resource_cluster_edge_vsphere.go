@@ -3,7 +3,6 @@ package spectrocloud
 import (
 	"context"
 	"log"
-	"sort"
 	"strings"
 	"time"
 
@@ -696,9 +695,9 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
-	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
+	/*sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
 		return machinePoolConfigs[i].PoolConfig.IsControlPlane
-	})
+	})*/
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
