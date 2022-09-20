@@ -115,7 +115,10 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 			return diags
 		}
 		d.SetId(appliance.Metadata.UID)
-		d.Set("name", appliance.Metadata.Name)
+		/*err = d.Set("name", appliance.Metadata.Name)
+		if err != nil {
+			return diag.FromErr(err)
+		}*/
 	}
 	return diags
 }

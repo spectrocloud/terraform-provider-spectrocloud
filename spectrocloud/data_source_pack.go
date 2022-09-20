@@ -159,11 +159,26 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 	}
 
 	d.SetId(pack.Metadata.UID)
-	d.Set("name", pack.Spec.Name)
-	d.Set("cloud", clouds)
-	d.Set("version", pack.Spec.Version)
-	d.Set("registry_uid", pack.Spec.RegistryUID)
-	d.Set("values", pack.Spec.Values)
+	err = d.Set("name", pack.Spec.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("cloud", clouds)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("version", pack.Spec.Version)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("registry_uid", pack.Spec.RegistryUID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("values", pack.Spec.Values)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }

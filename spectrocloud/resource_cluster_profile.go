@@ -201,7 +201,10 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return d2
 	}
 
-	_ = d.Set("name", cp.Metadata.Name)
+	err = d.Set("name", cp.Metadata.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	diagPacks, diagnostics, done := GetDiagPacks(d, err)
 	if done {

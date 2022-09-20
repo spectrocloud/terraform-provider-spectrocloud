@@ -36,7 +36,10 @@ func dataSourceRegistryRead(_ context.Context, d *schema.ResourceData, m interfa
 			return diag.FromErr(err)
 		}
 		d.SetId(registry.UID)
-		d.Set("name", registry.Name)
+		err = d.Set("name", registry.Name)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }

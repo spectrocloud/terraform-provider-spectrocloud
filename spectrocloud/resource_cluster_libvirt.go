@@ -194,7 +194,8 @@ func resourceClusterLibvirt() *schema.Resource {
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Set:      resourceMachinePoolLibvirtHash,
+				// disable hash to preserve machine pool order PE-255
+				//Set:      resourceMachinePoolLibvirtHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {

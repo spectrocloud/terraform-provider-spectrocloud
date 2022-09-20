@@ -204,9 +204,10 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
-				Set:      resourceMachinePoolVsphereHash,
+				// disable hash to preserve machine pool order PE-255
+				//Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
