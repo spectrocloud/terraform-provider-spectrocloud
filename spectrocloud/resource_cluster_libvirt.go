@@ -698,16 +698,16 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.(*schema.Set)
-		ns := nraw.(*schema.Set)
+		os := oraw.([]interface{})
+		ns := nraw.([]interface{})
 
 		osMap := make(map[string]interface{})
-		for _, mp := range os.List() {
+		for _, mp := range os {
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
-		for _, mp := range ns.List() {
+		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
 			if name == "" {
