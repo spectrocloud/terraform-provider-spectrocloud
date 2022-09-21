@@ -650,6 +650,11 @@ func toMachinePoolNested(machinePool interface{}) *models.V1NestedMachinePoolCon
 	Placement := m["placement"].([]interface{})[0].(map[string]interface{})
 	mp := &models.V1NestedMachinePoolConfigEntity{
 		CloudConfig: &models.V1NestedMachinePoolCloudConfigEntity{
+			// hardcode for now
+			InstanceType: &models.V1NestedInstanceType{
+				MinCPU:      2,
+				MinMemInMiB: 4096,
+			},
 			ResourcePool: ptr.StringPtr(Placement["resource_pool"].(string)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
