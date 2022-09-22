@@ -13,7 +13,7 @@ func toProfiles(c *client.V1Client, d *schema.ResourceData) []*models.V1SpectroC
 	var cluster *models.V1SpectroCluster
 	var err error
 	if d.Id() != "" {
-		cluster, err = c.GetCluster(d.Id())
+		err, cluster = c.GetClusterWithoutStatus(d.Id())
 		if err != nil {
 			return nil
 		}

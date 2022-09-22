@@ -427,6 +427,35 @@ func resourceClusterAzure() *schema.Resource {
 					},
 				},
 			},
+			"host_config": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host_endpoint_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "Ingress",
+						},
+						"ingress_host": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"external_ips": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"external_traffic_policy": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"load_balancer_source_ranges": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
 			//"cloud_config": {
 			//	Type:     schema.TypeString,
 			//	Required: true,

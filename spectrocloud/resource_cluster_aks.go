@@ -167,6 +167,11 @@ func resourceClusterAks() *schema.Resource {
 							Optional: true,
 						},
 
+						"vnet_resource_group": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+
 						"vnet_cidr_block": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -408,6 +413,35 @@ func resourceClusterAks() *schema.Resource {
 					},
 				},
 			},
+			"host_config": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host_endpoint_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "Ingress",
+						},
+						"ingress_host": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"external_ips": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"external_traffic_policy": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"load_balancer_source_ranges": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -580,6 +614,11 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 		vnetname = cloudConfigMap["vnet_name"].(string)
 	}
 
+	var vnetResourceGroup string
+	if cloudConfigMap["vnet_resource_group"] != nil {
+		vnetResourceGroup = cloudConfigMap["vnet_resource_group"].(string)
+	}
+
 	var vnetcidr string
 	if cloudConfigMap["vnet_cidr_block"] != nil {
 		vnetcidr = cloudConfigMap["vnet_cidr_block"].(string)
@@ -609,6 +648,7 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 				SSHKey:             ptr.StringPtr(cloudConfigMap["ssh_key"].(string)),
 				SubscriptionID:     ptr.StringPtr(cloudConfigMap["subscription_id"].(string)),
 				VnetName:           vnetname,
+				VnetResourceGroup:  vnetResourceGroup,
 				VnetCidrBlock:      vnetcidr,
 				ControlPlaneSubnet: workerSubnet,
 				WorkerSubnet:       workerSubnet,
