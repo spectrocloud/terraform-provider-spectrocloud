@@ -5,53 +5,53 @@ import (
 	"crypto/tls"
 	"net/http"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
 func New(_ string) func() *schema.Provider {
 	return func() *schema.Provider {
 		p := &schema.Provider{
 			Schema: map[string]*schema.Schema{
-				"host": &schema.Schema{
+				"host": {
 					Type:        schema.TypeString,
 					Optional:    true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_HOST", "api.spectrocloud.com"),
 				},
-				"username": &schema.Schema{
+				"username": {
 					Type:        schema.TypeString,
 					Optional:    true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_USERNAME", nil),
 				},
-				"password": &schema.Schema{
+				"password": {
 					Type:        schema.TypeString,
 					Optional:    true,
 					Sensitive:   true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_PASSWORD", nil),
 				},
-				"api_key": &schema.Schema{
+				"api_key": {
 					Type:        schema.TypeString,
 					Optional:    true,
 					Sensitive:   true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_APIKEY", nil),
 				},
-				"trace": &schema.Schema{
+				"trace": {
 					Type:        schema.TypeBool,
 					Optional:    true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_TRACE", nil),
 				},
-				"retry_attempts": &schema.Schema{
+				"retry_attempts": {
 					Type:        schema.TypeInt,
 					Optional:    true,
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_RETRY_ATTEMPTS", nil),
 				},
-				"project_name": &schema.Schema{
+				"project_name": {
 					Type:     schema.TypeString,
 					Optional: true,
 				},
-				"ignore_insecure_tls_error": &schema.Schema{
+				"ignore_insecure_tls_error": {
 					Type:     schema.TypeBool,
 					Optional: true,
 				},
@@ -98,6 +98,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cluster_edge_vsphere": resourceClusterEdgeVsphere(),
 
 				"spectrocloud_cluster_nested": resourceClusterNested(),
+
 				"spectrocloud_cluster_import": resourceClusterImport(),
 
 				"spectrocloud_addon_deployment": resourceAddonDeployment(),
