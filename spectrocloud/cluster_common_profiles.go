@@ -2,11 +2,12 @@ package spectrocloud
 
 import (
 	"context"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"log"
 )
 
 func toProfiles(c *client.V1Client, d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity {
@@ -39,15 +40,20 @@ func toProfilesCommon(d *schema.ResourceData, cluster *models.V1SpectroCluster) 
 			})
 		}
 	} else {
-		packValues := make([]*models.V1PackValuesEntity, 0)
-		for _, pack := range d.Get("pack").([]interface{}) {
-			p := toPack(cluster, pack)
-			packValues = append(packValues, p)
+		clusterProfileId := d.Get("cluster_profile_id")
+
+		// consider removing backward compatibility for cluster_profile_id
+		if clusterProfileId != nil {
+			packValues := make([]*models.V1PackValuesEntity, 0)
+			for _, pack := range d.Get("pack").([]interface{}) {
+				p := toPack(cluster, pack)
+				packValues = append(packValues, p)
+			}
+			resp = append(resp, &models.V1SpectroClusterProfileEntity{
+				UID:        clusterProfileId.(string),
+				PackValues: packValues,
+			})
 		}
-		resp = append(resp, &models.V1SpectroClusterProfileEntity{
-			UID:        d.Get("cluster_profile_id").(string),
-			PackValues: packValues,
-		})
 	}
 
 	return resp

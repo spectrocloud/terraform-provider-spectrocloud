@@ -53,9 +53,9 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	hostconfig := cluster.Spec.ClusterConfig.HostClusterConfig
-	if hostconfig != nil {
-		flattenHostConfig := flattenHostConfig(hostconfig)
+	hostConfig := cluster.Spec.ClusterConfig.HostClusterConfig
+	if hostConfig != nil && *hostConfig.IsHostCluster {
+		flattenHostConfig := flattenHostConfig(hostConfig)
 		if len(flattenHostConfig) > 0 {
 			if err := d.Set("host_config", flattenHostConfig); err != nil {
 				return diag.FromErr(err), true

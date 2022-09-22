@@ -33,6 +33,11 @@ func resourceClusterNested() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"host_cluster_uid": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -90,10 +95,7 @@ func resourceClusterNested() *schema.Resource {
 													Required: true,
 													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 														// UI strips the trailing newline on save
-														if strings.TrimSpace(old) == strings.TrimSpace(new) {
-															return true
-														}
-														return false
+														return strings.TrimSpace(old) == strings.TrimSpace(new)
 													},
 												},
 											},
@@ -228,7 +230,6 @@ func resourceClusterNested() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-
 							//ForceNew: true,
 						},
 						"name": {
@@ -245,21 +246,9 @@ func resourceClusterNested() *schema.Resource {
 							Optional: true,
 							Default:  "RollingUpdateScaleOut",
 						},
-						"placement": {
-							Type:     schema.TypeList,
+						"resource_pool": {
+							Type:     schema.TypeString,
 							Required: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"id": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"resource_pool": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
 						},
 					},
 				},
@@ -386,35 +375,6 @@ func resourceClusterNested() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-						},
-					},
-				},
-			},
-			"host_config": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"host_endpoint_type": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "Ingress",
-						},
-						"ingress_host": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"external_ips": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"external_traffic_policy": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"load_balancer_source_ranges": {
-							Type:     schema.TypeString,
-							Optional: true,
 						},
 					},
 				},
@@ -607,6 +567,12 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 		},
 		Spec: &models.V1SpectroNestedClusterEntitySpec{
 			CloudConfig: &models.V1NestedClusterConfig{
+				// these values get overridden by the capvc-controller,
+				// so it is okay to provide dummy values initially
+				ControlPlaneEndpoint: &models.V1APIEndpoint{
+					Host: ptr.StringPtr("nested-cluster"),
+					Port: ptr.Int32Ptr(443),
+				},
 				HelmRelease: &models.V1VirtualClusterHelmRelease{
 					Chart: &models.V1VirtualClusterHelmChart{
 						Name:    ChartName,
@@ -618,11 +584,14 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 				KubernetesVersion: KubernetesVersion,
 			},
 			ClusterConfig:     toClusterConfig(d),
+			HostClusterUID:    d.Get("host_cluster_uid").(string),
 			Machinepoolconfig: nil,
 			Profiles:          toProfiles(c, d),
 			Policies:          toPolicies(d),
 		},
 	}
+	// Hubble raises an error if a nested cluster provides hostClusterConfig
+	cluster.Spec.ClusterConfig.HostClusterConfig = nil
 
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1NestedMachinePoolConfigEntity, 0)
@@ -630,9 +599,7 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 		mp := toMachinePoolNested(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
-
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster
 }

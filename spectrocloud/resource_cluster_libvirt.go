@@ -2,10 +2,11 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -503,10 +504,6 @@ func resourceClusterLibvirt() *schema.Resource {
 							Default:  "Ingress",
 						},
 						"ingress_host": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"external_ips": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},

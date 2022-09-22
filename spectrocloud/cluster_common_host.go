@@ -1,10 +1,11 @@
 package spectrocloud
 
 import (
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"strings"
 )
 
 func toClusterHostConfigs(d *schema.ResourceData) *models.V1HostClusterConfig {
@@ -60,9 +61,6 @@ func toIngressConfig(config map[string]interface{}) *models.V1IngressConfig {
 func toLoadBalancerConfig(config map[string]interface{}) *models.V1LoadBalancerConfig {
 
 	loadBalancerConfig := &models.V1LoadBalancerConfig{}
-	if config["external_ips"] != nil {
-		loadBalancerConfig.ExternalIPs = strings.Split(config["external_ips"].(string), ",")
-	}
 
 	if config["external_traffic_policy"] != nil {
 		loadBalancerConfig.ExternalTrafficPolicy = config["external_traffic_policy"].(string)
@@ -89,7 +87,6 @@ func flattenHostConfig(hostConfig *models.V1HostClusterConfig) []interface{} {
 
 			}
 			if hostConfig.ClusterEndpoint.Config.LoadBalancerConfig != nil {
-				result["external_ips"] = flattenExternalIPs(hostConfig)
 				result["external_traffic_policy"] = hostConfig.ClusterEndpoint.Config.LoadBalancerConfig.ExternalTrafficPolicy
 				result["load_balancer_source_ranges"] = flattenSourceRanges(hostConfig)
 			}
