@@ -23,22 +23,22 @@ func (h *V1Client) DeleteCluster(uid string) error {
 }
 
 func (h *V1Client) GetCluster(uid string) (*models.V1SpectroCluster, error) {
-	err, cluster := h.GetClusterWithoutStatus(uid)
+	cluster, err := h.GetClusterWithoutStatus(uid)
 	if err != nil {
 		return nil, err
 	}
 
-	if cluster.Status.State == "Deleted" {
+	if cluster == nil || cluster.Status.State == "Deleted" {
 		return nil, nil
 	}
 
 	return cluster, nil
 }
 
-func (h *V1Client) GetClusterWithoutStatus(uid string) (error, *models.V1SpectroCluster) {
+func (h *V1Client) GetClusterWithoutStatus(uid string) (*models.V1SpectroCluster, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	params := clusterC.NewV1SpectroClustersGetParamsWithContext(h.Ctx).WithUID(uid)
@@ -47,12 +47,12 @@ func (h *V1Client) GetClusterWithoutStatus(uid string) (error, *models.V1Spectro
 		// TODO(saamalik) check with team if this is proper?
 		return nil, nil
 	} else if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// special check if the cluster is marked deleted
 	cluster := success.Payload
-	return nil, cluster
+	return cluster, nil
 }
 
 func (h *V1Client) GetClusterByName(name string) (*models.V1SpectroCluster, error) {

@@ -70,7 +70,10 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
+	err = d.Set("name", account.Metadata.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }

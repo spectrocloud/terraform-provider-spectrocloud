@@ -3,7 +3,6 @@ package spectrocloud
 import (
 	"context"
 	"log"
-	"sort"
 	"strings"
 	"time"
 
@@ -205,9 +204,10 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
-				Set:      resourceMachinePoolVsphereHash,
+				// disable hash to preserve machine pool order PE-255
+				//Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -456,10 +456,6 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"external_ips": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
 						"external_traffic_policy": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -603,16 +599,16 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.(*schema.Set)
-		ns := nraw.(*schema.Set)
+		os := oraw.([]interface{})
+		ns := nraw.([]interface{})
 
 		osMap := make(map[string]interface{})
-		for _, mp := range os.List() {
+		for _, mp := range os {
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
-		for _, mp := range ns.List() {
+		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
 			hash := resourceMachinePoolVsphereHash(machinePoolResource)
@@ -691,14 +687,14 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 	}
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEdgeVsphere(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
-	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
+	/*sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
 		return machinePoolConfigs[i].PoolConfig.IsControlPlane
-	})
+	})*/
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)

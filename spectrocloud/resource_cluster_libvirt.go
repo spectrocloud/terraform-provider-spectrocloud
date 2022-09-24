@@ -2,11 +2,11 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"log"
-	"sort"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -193,9 +193,10 @@ func resourceClusterLibvirt() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
-				Set:      resourceMachinePoolLibvirtHash,
+				// disable hash to preserve machine pool order PE-255
+				//Set:      resourceMachinePoolLibvirtHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -506,10 +507,6 @@ func resourceClusterLibvirt() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"external_ips": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
 						"external_traffic_policy": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -698,16 +695,16 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.(*schema.Set)
-		ns := nraw.(*schema.Set)
+		os := oraw.([]interface{})
+		ns := nraw.([]interface{})
 
 		osMap := make(map[string]interface{})
-		for _, mp := range os.List() {
+		for _, mp := range os {
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
-		for _, mp := range ns.List() {
+		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
 			if name == "" {
@@ -779,15 +776,15 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 	}
 
 	machinePoolConfigs := make([]*models.V1LibvirtMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolLibvirt(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
 	// sort
-	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
+	/*sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
 		return machinePoolConfigs[i].PoolConfig.IsControlPlane
-	})
+	})*/
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)

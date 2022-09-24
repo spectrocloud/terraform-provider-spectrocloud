@@ -3,7 +3,6 @@ package spectrocloud
 import (
 	"context"
 	"log"
-	"sort"
 	"strings"
 	"time"
 
@@ -14,21 +13,27 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-func resourceClusterOpenStack() *schema.Resource {
+func resourceClusterNested() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceClusterOpenStackCreate,
-		ReadContext:   resourceClusterOpenStackRead,
-		UpdateContext: resourceClusterOpenStackUpdate,
+		CreateContext: resourceClusterNestedCreate,
+		ReadContext:   resourceClusterNestedRead,
+		UpdateContext: resourceClusterNestedUpdate,
 		DeleteContext: resourceClusterDelete,
 
 		Timeouts: &schema.ResourceTimeout{
-			Create: schema.DefaultTimeout(180 * time.Minute),
-			Update: schema.DefaultTimeout(180 * time.Minute),
-			Delete: schema.DefaultTimeout(180 * time.Minute),
+			Create: schema.DefaultTimeout(60 * time.Minute),
+			Update: schema.DefaultTimeout(60 * time.Minute),
+			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
+		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"host_cluster_uid": {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
@@ -42,9 +47,8 @@ func resourceClusterOpenStack() *schema.Resource {
 				},
 			},
 			"cluster_profile": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				ConflictsWith: []string{"pack"},
+				Type:     schema.TypeList,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
@@ -91,10 +95,7 @@ func resourceClusterOpenStack() *schema.Resource {
 													Required: true,
 													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 														// UI strips the trailing newline on save
-														if strings.TrimSpace(old) == strings.TrimSpace(new) {
-															return true
-														}
-														return false
+														return strings.TrimSpace(old) == strings.TrimSpace(new)
 													},
 												},
 											},
@@ -109,11 +110,6 @@ func resourceClusterOpenStack() *schema.Resource {
 			"apply_setting": {
 				Type:     schema.TypeString,
 				Optional: true,
-			},
-			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
 			},
 			"cloud_config_id": {
 				Type:     schema.TypeString,
@@ -140,46 +136,29 @@ func resourceClusterOpenStack() *schema.Resource {
 			"cloud_config": {
 				Type:     schema.TypeList,
 				ForceNew: true,
-				Required: true,
+				Optional: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"domain": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"region": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"project": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"ssh_key": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"network_id": {
+						"chart_name": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"subnet_id": {
+						"chart_repo": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"dns_servers": {
-							Type:     schema.TypeSet,
-							Required: true,
-							ForceNew: true,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"subnet_cidr": {
+						"chart_version": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
+						},
+						"chart_values": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"k8s_version": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 					},
 				},
@@ -209,8 +188,9 @@ func resourceClusterOpenStack() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeList,
-				Required: true,
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      resourceMachinePoolNestedHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"additional_labels": {
@@ -244,15 +224,18 @@ func resourceClusterOpenStack() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
+							//ForceNew: true,
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
+							//ForceNew: true,
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
+							//ForceNew: true,
 						},
 						"count": {
 							Type:     schema.TypeInt,
@@ -263,20 +246,9 @@ func resourceClusterOpenStack() *schema.Resource {
 							Optional: true,
 							Default:  "RollingUpdateScaleOut",
 						},
-						"instance_type": {
+						"resource_pool": {
 							Type:     schema.TypeString,
 							Required: true,
-						},
-						"azs": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"subnet_id": {
-							Type:     schema.TypeString,
-							Optional: true,
 						},
 					},
 				},
@@ -407,44 +379,19 @@ func resourceClusterOpenStack() *schema.Resource {
 					},
 				},
 			},
-			"host_config": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"host_endpoint_type": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "Ingress",
-						},
-						"ingress_host": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"external_traffic_policy": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"load_balancer_source_ranges": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-			},
 		},
 	}
 }
 
-func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterNestedCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toOpenStackCluster(c, d)
+	cluster := toNestedCluster(c, d)
 
-	uid, err := c.CreateClusterOpenStack(cluster)
+	uid, err := c.CreateClusterNested(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -454,81 +401,19 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 		return diagnostics
 	}
 
-	resourceClusterOpenStackRead(ctx, d, m)
+	resourceClusterNestedRead(ctx, d, m)
 
 	return diags
 }
 
-func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroOpenStackClusterEntity {
-
-	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-
-	cluster := &models.V1SpectroOpenStackClusterEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
-			Labels: toTags(d),
-		},
-		Spec: &models.V1SpectroOpenStackClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
-			Policies:        toPolicies(d),
-			CloudConfig: &models.V1OpenStackClusterConfig{
-				Region:     cloudConfig["region"].(string),
-				SSHKeyName: cloudConfig["ssh_key"].(string),
-				Domain: &models.V1OpenStackResource{
-					ID:   cloudConfig["domain"].(string),
-					Name: cloudConfig["domain"].(string),
-				},
-				Network: &models.V1OpenStackResource{
-					ID: cloudConfig["network_id"].(string),
-				},
-				Project: &models.V1OpenStackResource{
-					Name: cloudConfig["project"].(string),
-				},
-				Subnet: &models.V1OpenStackResource{
-					ID: cloudConfig["subnet_id"].(string),
-				},
-				NodeCidr: cloudConfig["subnet_cidr"].(string),
-			},
-		},
-	}
-
-	if cloudConfig["dns_servers"] != nil {
-		dnsServers := make([]string, 0)
-		for _, dns := range cloudConfig["dns_servers"].(*schema.Set).List() {
-			dnsServers = append(dnsServers, dns.(string))
-		}
-
-		cluster.Spec.CloudConfig.DNSNameservers = dnsServers
-	}
-
-	machinePoolConfigs := make([]*models.V1OpenStackMachinePoolConfigEntity, 0)
-
-	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolOpenStack(machinePool)
-		machinePoolConfigs = append(machinePoolConfigs, mp)
-	}
-
-	// sort
-	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
-		return machinePoolConfigs[i].PoolConfig.IsControlPlane
-	})
-
-	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-	cluster.Spec.ClusterConfig = toClusterConfig(d)
-
-	return cluster
-}
-
 //goland:noinspection GoUnhandledErrorResult
-func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterNestedRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-
+	//
 	uid := d.Id()
-
+	//
 	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -538,36 +423,40 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 		return diags
 	}
 
-	configUID := cluster.Spec.CloudConfigRef.UID
-	if err := d.Set("cloud_config_id", configUID); err != nil {
-		return diag.FromErr(err)
-	}
-	if config, err := c.GetCloudConfigOpenStack(configUID); err != nil {
-		return diag.FromErr(err)
-	} else {
-		mp := flattenMachinePoolConfigsOpenStack(config.Spec.MachinePoolConfig)
-		if err := d.Set("machine_pool", mp); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
 	diagnostics, done := readCommonFields(c, d, cluster)
 	if done {
 		return diagnostics
 	}
 
-	return diags
+	return flattenCloudConfigNested(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachinePoolConfig) []interface{} {
+func flattenCloudConfigNested(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	err := d.Set("cloud_config_id", configUID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if config, err := c.GetCloudConfigNested(configUID); err != nil {
+		return diag.FromErr(err)
+	} else {
+		mp := flattenMachinePoolConfigsNested(config.Spec.MachinePoolConfig)
+		if err := d.Set("machine_pool", mp); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	return diag.Diagnostics{}
+}
+
+func flattenMachinePoolConfigsNested(machinePools []*models.V1NestedMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0)
+	ois := make([]interface{}, len(machinePools))
 
-	for _, machinePool := range machinePools {
+	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
 		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
@@ -578,17 +467,15 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachin
 		oi["count"] = int(machinePool.Size)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
-		oi["subnet_id"] = machinePool.Subnet.ID
-		oi["azs"] = machinePool.Azs
-		oi["instance_type"] = machinePool.FlavorConfig.Name
+		oi["resource_pool"] = machinePool.ResourcePool
 
-		ois = append(ois, oi)
+		ois[i] = oi
 	}
 
 	return ois
 }
 
-func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
@@ -605,31 +492,30 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.([]interface{})
-		ns := nraw.([]interface{})
+		os := oraw.(*schema.Set)
+		ns := nraw.(*schema.Set)
 
 		osMap := make(map[string]interface{})
-		for _, mp := range os {
+		for _, mp := range os.List() {
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
-		for _, mp := range ns {
+		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolOpenStackHash(machinePoolResource)
+			hash := resourceMachinePoolNestedHash(machinePoolResource)
 
-			machinePool := toMachinePoolOpenStack(machinePoolResource)
+			machinePool := toMachinePoolNested(machinePoolResource)
 
 			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolOpenStack(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
+				err = c.CreateMachinePoolNested(cloudConfigId, machinePool)
+			} else if hash != resourceMachinePoolNestedHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool)
+				err = c.UpdateMachinePoolNested(cloudConfigId, machinePool)
 			}
-
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -643,7 +529,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolNested(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -654,48 +540,124 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 		return diagnostics
 	}
 
-	resourceClusterOpenStackRead(ctx, d, m)
+	resourceClusterNestedRead(ctx, d, m)
 
 	return diags
 }
 
-func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachinePoolConfigEntity {
-	m := machinePool.(map[string]interface{})
+func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroNestedClusterEntity {
+	var chartName, chartRepo, chartVersion, chartValues, kubernetesVersion string
+
+	val, ok := d.GetOk("cloud_config")
+	if ok {
+		cloudConfig := val.([]interface{})[0].(map[string]interface{})
+		chartName = cloudConfig["chart_name"].(string)
+		chartRepo = cloudConfig["chart_repo"].(string)
+		chartVersion = cloudConfig["chart_version"].(string)
+		chartValues = cloudConfig["chart_values"].(string)
+		kubernetesVersion = cloudConfig["k8s_version"].(string)
+	}
+
+	cluster := &models.V1SpectroNestedClusterEntity{
+		Metadata: &models.V1ObjectMeta{
+			Name:   d.Get("name").(string),
+			UID:    d.Id(),
+			Labels: toTags(d),
+		},
+		Spec: &models.V1SpectroNestedClusterEntitySpec{
+			CloudConfig: &models.V1NestedClusterConfig{
+				// these values get overridden by the capvc-controller,
+				// so it is okay to provide dummy values initially
+				ControlPlaneEndpoint: &models.V1APIEndpoint{
+					Host: ptr.StringPtr("nested-cluster"),
+					Port: ptr.Int32Ptr(443),
+				},
+				HelmRelease: &models.V1VirtualClusterHelmRelease{
+					Chart: &models.V1VirtualClusterHelmChart{
+						Name:    chartName,
+						Repo:    chartRepo,
+						Version: chartVersion,
+					},
+					Values: chartValues,
+				},
+				KubernetesVersion: kubernetesVersion,
+			},
+			ClusterConfig:     toClusterConfig(d),
+			HostClusterUID:    d.Get("host_cluster_uid").(string),
+			Machinepoolconfig: nil,
+			Profiles:          toProfiles(c, d),
+			Policies:          toPolicies(d),
+		},
+	}
+	// Hubble raises an error if a nested cluster provides hostClusterConfig
+	cluster.Spec.ClusterConfig.HostClusterConfig = nil
+
+	// Specification of machine_pool is optional
+	machinePoolConfigs := make([]*models.V1NestedMachinePoolConfigEntity, 0)
+	machinePool, ok := d.GetOk("machine_pool")
+	if ok {
+		for _, machinePool := range machinePool.(*schema.Set).List() {
+			mp := toMachinePoolNested(machinePool)
+			machinePoolConfigs = append(machinePoolConfigs, mp)
+		}
+	} else {
+		mp := toMachinePoolNested(nil)
+		machinePoolConfigs = append(machinePoolConfigs, mp)
+	}
+	cluster.Spec.Machinepoolconfig = machinePoolConfigs
+
+	return cluster
+}
+
+func toMachinePoolNested(machinePool interface{}) *models.V1NestedMachinePoolConfigEntity {
+	var controlPlane, controlPlaneAsWorker bool
+	var count int
+	var name, resourcePool string
+	var m map[string]interface{}
+
+	if machinePool == nil {
+		controlPlane = true
+		controlPlaneAsWorker = true
+		count = 1
+		name = "nested"
+		resourcePool = "nested"
+	} else {
+		m = machinePool.(map[string]interface{})
+		controlPlane = m["control_plane"].(bool)
+		controlPlaneAsWorker = m["control_plane_as_worker"].(bool)
+		count = m["count"].(int)
+		name = m["name"].(string)
+		placement := m["placement"].([]interface{})[0].(map[string]interface{})
+		resourcePool = placement["resource_pool"].(string)
+	}
 
 	labels := make([]string, 0)
-	controlPlane := m["control_plane"].(bool)
-	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
 	if controlPlane {
 		labels = append(labels, "master")
 	}
 
-	azs := make([]string, 0)
-	for _, val := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, val.(string))
-	}
-
-	mp := &models.V1OpenStackMachinePoolConfigEntity{
-		CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
-			Azs: azs,
-			Subnet: &models.V1OpenStackResource{
-				ID: m["subnet_id"].(string),
+	mp := &models.V1NestedMachinePoolConfigEntity{
+		CloudConfig: &models.V1NestedMachinePoolCloudConfigEntity{
+			// hardcode for now
+			InstanceType: &models.V1NestedInstanceType{
+				MinCPU:      2,
+				MinMemInMiB: 4096,
 			},
-			FlavorConfig: &models.V1OpenstackFlavorConfig{
-				Name: ptr.StringPtr(m["instance_type"].(string)),
-			},
+			ResourcePool: ptr.StringPtr(resourcePool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:             ptr.StringPtr(name),
+			Size:             ptr.Int32Ptr(int32(count)),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
+
 	return mp
 }

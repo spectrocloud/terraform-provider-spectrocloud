@@ -179,6 +179,13 @@ func resourceClusterEks() *schema.Resource {
 							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
 							Optional:    true,
 							ForceNew:    true,
+							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+								// UI strips the trailing newline on save
+								if strings.TrimSpace(old) == strings.TrimSpace(new) {
+									return true
+								}
+								return false
+							},
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -505,10 +512,6 @@ func resourceClusterEks() *schema.Resource {
 							Default:  "Ingress",
 						},
 						"ingress_host": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"external_ips": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},

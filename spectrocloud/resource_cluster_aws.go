@@ -117,7 +117,7 @@ func resourceClusterAws() *schema.Resource {
 			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 				ForceNew: true,
 			},
 			"cloud_config_id": {
@@ -410,10 +410,6 @@ func resourceClusterAws() *schema.Resource {
 							Default:  "Ingress",
 						},
 						"ingress_host": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"external_ips": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},

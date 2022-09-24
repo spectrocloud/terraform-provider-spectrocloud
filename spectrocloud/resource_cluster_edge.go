@@ -391,10 +391,6 @@ func resourceClusterEdge() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"external_ips": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
 						"external_traffic_policy": {
 							Type:     schema.TypeString,
 							Optional: true,

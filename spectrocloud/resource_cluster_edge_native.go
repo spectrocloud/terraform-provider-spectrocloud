@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
@@ -14,19 +16,20 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-func resourceClusterOpenStack() *schema.Resource {
+func resourceClusterEdgeNative() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceClusterOpenStackCreate,
-		ReadContext:   resourceClusterOpenStackRead,
-		UpdateContext: resourceClusterOpenStackUpdate,
+		CreateContext: resourceClusterEdgeNativeCreate,
+		ReadContext:   resourceClusterEdgeNativeRead,
+		UpdateContext: resourceClusterEdgeNativeUpdate,
 		DeleteContext: resourceClusterDelete,
 
 		Timeouts: &schema.ResourceTimeout{
-			Create: schema.DefaultTimeout(180 * time.Minute),
-			Update: schema.DefaultTimeout(180 * time.Minute),
-			Delete: schema.DefaultTimeout(180 * time.Minute),
+			Create: schema.DefaultTimeout(60 * time.Minute),
+			Update: schema.DefaultTimeout(60 * time.Minute),
+			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
+		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -42,14 +45,17 @@ func resourceClusterOpenStack() *schema.Resource {
 				},
 			},
 			"cluster_profile": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				ConflictsWith: []string{"pack"},
+				Type:     schema.TypeList,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"type": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"pack": {
 							Type:     schema.TypeList,
@@ -61,17 +67,17 @@ func resourceClusterOpenStack() *schema.Resource {
 										Optional: true,
 										Default:  "spectro",
 									},
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
 									"registry_uid": {
 										Type:     schema.TypeString,
 										Optional: true,
 									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
 									"tag": {
 										Type:     schema.TypeString,
-										Optional: true,
+										Required: true,
 									},
 									"values": {
 										Type:     schema.TypeString,
@@ -112,7 +118,7 @@ func resourceClusterOpenStack() *schema.Resource {
 			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 			"cloud_config_id": {
@@ -144,42 +150,21 @@ func resourceClusterOpenStack() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"domain": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"region": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"project": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
 						"ssh_key": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"network_id": {
+						"host": {
 							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"subnet_id": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"dns_servers": {
-							Type:     schema.TypeSet,
 							Required: true,
-							ForceNew: true,
+						},
+						"ntp_servers": {
+							Type:     schema.TypeSet,
+							Optional: true,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-						},
-						"subnet_cidr": {
-							Type:     schema.TypeString,
-							Required: true,
 						},
 					},
 				},
@@ -209,10 +194,16 @@ func resourceClusterOpenStack() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Required: true,
+				Set:      resourceMachinePoolEdgeNativeHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+							//ForceNew: true,
+						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
 							Optional: true,
@@ -244,15 +235,14 @@ func resourceClusterOpenStack() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
+							//ForceNew: true,
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-						},
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+
+							//ForceNew: true,
 						},
 						"count": {
 							Type:     schema.TypeInt,
@@ -263,24 +253,79 @@ func resourceClusterOpenStack() *schema.Resource {
 							Optional: true,
 							Default:  "RollingUpdateScaleOut",
 						},
-						"instance_type": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"azs": {
-							Type:     schema.TypeSet,
+						"host_uids": {
+							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
-						"subnet_id": {
-							Type:     schema.TypeString,
-							Optional: true,
+						"instance_type": {
+							Type:     schema.TypeList,
+							Required: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"disk_size_gb": {
+										Type:     schema.TypeInt,
+										Required: true,
+									},
+									"memory_mb": {
+										Type:     schema.TypeInt,
+										Required: true,
+									},
+									"cpu": {
+										Type:     schema.TypeInt,
+										Required: true,
+									},
+								},
+							},
+						},
+						"placements": {
+							Type:     schema.TypeList,
+							Required: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"appliance_id": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"network_type": {
+										Type:         schema.TypeString,
+										ValidateFunc: validation.StringInSlice([]string{"default", "bridge"}, false),
+										Required:     true,
+									},
+									"network_names": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"image_storage_pool": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"target_storage_pool": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"data_storage_pool": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"network": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
 						},
 					},
 				},
 			},
+
 			"backup_policy": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -436,15 +481,15 @@ func resourceClusterOpenStack() *schema.Resource {
 	}
 }
 
-func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toOpenStackCluster(c, d)
+	cluster := toEdgeNativeCluster(c, d)
 
-	uid, err := c.CreateClusterOpenStack(cluster)
+	uid, err := c.CreateClusterEdgeNative(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -454,81 +499,19 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 		return diagnostics
 	}
 
-	resourceClusterOpenStackRead(ctx, d, m)
+	diags = resourceClusterEdgeNativeRead(ctx, d, m)
 
 	return diags
 }
 
-func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroOpenStackClusterEntity {
-
-	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-
-	cluster := &models.V1SpectroOpenStackClusterEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
-			Labels: toTags(d),
-		},
-		Spec: &models.V1SpectroOpenStackClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
-			Policies:        toPolicies(d),
-			CloudConfig: &models.V1OpenStackClusterConfig{
-				Region:     cloudConfig["region"].(string),
-				SSHKeyName: cloudConfig["ssh_key"].(string),
-				Domain: &models.V1OpenStackResource{
-					ID:   cloudConfig["domain"].(string),
-					Name: cloudConfig["domain"].(string),
-				},
-				Network: &models.V1OpenStackResource{
-					ID: cloudConfig["network_id"].(string),
-				},
-				Project: &models.V1OpenStackResource{
-					Name: cloudConfig["project"].(string),
-				},
-				Subnet: &models.V1OpenStackResource{
-					ID: cloudConfig["subnet_id"].(string),
-				},
-				NodeCidr: cloudConfig["subnet_cidr"].(string),
-			},
-		},
-	}
-
-	if cloudConfig["dns_servers"] != nil {
-		dnsServers := make([]string, 0)
-		for _, dns := range cloudConfig["dns_servers"].(*schema.Set).List() {
-			dnsServers = append(dnsServers, dns.(string))
-		}
-
-		cluster.Spec.CloudConfig.DNSNameservers = dnsServers
-	}
-
-	machinePoolConfigs := make([]*models.V1OpenStackMachinePoolConfigEntity, 0)
-
-	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolOpenStack(machinePool)
-		machinePoolConfigs = append(machinePoolConfigs, mp)
-	}
-
-	// sort
-	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
-		return machinePoolConfigs[i].PoolConfig.IsControlPlane
-	})
-
-	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-	cluster.Spec.ClusterConfig = toClusterConfig(d)
-
-	return cluster
-}
-
 //goland:noinspection GoUnhandledErrorResult
-func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-
+	//
 	uid := d.Id()
-
+	//
 	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -538,34 +521,37 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 		return diags
 	}
 
-	configUID := cluster.Spec.CloudConfigRef.UID
-	if err := d.Set("cloud_config_id", configUID); err != nil {
-		return diag.FromErr(err)
+	// Update the kubeconfig
+	diagnostics, errorSet := readCommonFields(c, d, cluster)
+	if errorSet {
+		return diagnostics
 	}
-	if config, err := c.GetCloudConfigOpenStack(configUID); err != nil {
+
+	diags = flattenCloudConfigEdgeNative(cluster.Spec.CloudConfigRef.UID, d, c)
+	return diags
+}
+
+func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	d.Set("cloud_config_id", configUID)
+	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		mp := flattenMachinePoolConfigsOpenStack(config.Spec.MachinePoolConfig)
+		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
-	diagnostics, done := readCommonFields(c, d, cluster)
-	if done {
-		return diagnostics
-	}
-
-	return diags
+	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0)
+	ois := make([]interface{}, 0, 1)
 
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
@@ -575,12 +561,21 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachin
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
-		oi["count"] = int(machinePool.Size)
+		oi["count"] = machinePool.Size
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
-		oi["subnet_id"] = machinePool.Subnet.ID
-		oi["azs"] = machinePool.Azs
-		oi["instance_type"] = machinePool.FlavorConfig.Name
+		// TODO: check commented below
+		/*if machinePool.InstanceType != nil {
+			s := make(map[string]interface{})
+			s["disk_size_gb"] = int(*machinePool.RootDiskInGB)
+			s["memory_mb"] = int(*machinePool.InstanceType.MemoryInMB)
+			s["name"] =
+				s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
+
+			oi["instance_type"] = []interface{}{s}
+		}
+
+		oi["placements"] = placements*/
 
 		ois = append(ois, oi)
 	}
@@ -588,7 +583,7 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachin
 	return ois
 }
 
-func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
@@ -605,29 +600,32 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.([]interface{})
-		ns := nraw.([]interface{})
+		os := oraw.(*schema.Set)
+		ns := nraw.(*schema.Set)
 
 		osMap := make(map[string]interface{})
-		for _, mp := range os {
+		for _, mp := range os.List() {
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
-		for _, mp := range ns {
+		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolOpenStackHash(machinePoolResource)
+			if name == "" {
+				continue
+			}
+			hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
 
-			machinePool := toMachinePoolOpenStack(machinePoolResource)
+			machinePool := toMachinePoolEdgeNative(machinePoolResource)
 
 			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolOpenStack(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
+				err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
+			} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool)
+				err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
 			}
 
 			if err != nil {
@@ -643,23 +641,64 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
 
-	diagnostics, done := updateCommonFields(d, c)
-	if done {
+	diagnostics, errorSet := updateCommonFields(d, c)
+	if errorSet {
 		return diagnostics
 	}
 
-	resourceClusterOpenStackRead(ctx, d, m)
+	diags = resourceClusterEdgeNativeRead(ctx, d, m)
 
 	return diags
 }
 
-func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachinePoolConfigEntity {
+func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroEdgeNativeClusterEntity {
+	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+
+	cluster := &models.V1SpectroEdgeNativeClusterEntity{
+		Metadata: &models.V1ObjectMeta{
+			Name:   d.Get("name").(string),
+			UID:    d.Id(),
+			Labels: toTags(d),
+		},
+		Spec: &models.V1SpectroEdgeNativeClusterEntitySpec{
+			Profiles: toProfiles(c, d),
+			Policies: toPolicies(d),
+			CloudConfig: &models.V1EdgeNativeClusterConfig{
+				NtpServers: toNtpServers(cloudConfig),
+				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
+				ControlPlaneEndpoint: &models.V1EdgeNativeControlPlaneEndPoint{
+					DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
+					Host:             cloudConfig["host"].(string),
+					Type:             "IP", // only IP type for now no DDNS
+				},
+			},
+		},
+	}
+
+	machinePoolConfigs := make([]*models.V1EdgeNativeMachinePoolConfigEntity, 0)
+	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+		mp := toMachinePoolEdgeNative(machinePool)
+		machinePoolConfigs = append(machinePoolConfigs, mp)
+	}
+
+	// sort
+	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
+		return machinePoolConfigs[i].PoolConfig.IsControlPlane
+	})
+
+	cluster.Spec.Machinepoolconfig = machinePoolConfigs
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
+
+	return cluster
+}
+
+func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -669,21 +708,19 @@ func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachineP
 		labels = append(labels, "master")
 	}
 
-	azs := make([]string, 0)
-	for _, val := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, val.(string))
-	}
+	// TODO: review instance type usage.
+	/*
+		ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
 
-	mp := &models.V1OpenStackMachinePoolConfigEntity{
-		CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
-			Azs: azs,
-			Subnet: &models.V1OpenStackResource{
-				ID: m["subnet_id"].(string),
-			},
-			FlavorConfig: &models.V1OpenstackFlavorConfig{
-				Name: ptr.StringPtr(m["instance_type"].(string)),
-			},
-		},
+		instanceType := models.V1EdgeNativeInstanceType{
+			Name:      ins["name"].(string),
+			MemoryMiB: int32(ins["memory_mb"].(int)),
+			NumCPUs:   int32(ins["cpu"].(int)),
+			DiskGiB:   int32(ins["disk_gb"].(int)),
+		}*/
+
+	mp := &models.V1EdgeNativeMachinePoolConfigEntity{
+		CloudConfig: toEdgeHosts(m),
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
@@ -698,4 +735,20 @@ func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachineP
 		},
 	}
 	return mp
+}
+
+func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudConfigEntity {
+	if m["hosts_uids"] == nil {
+		return nil
+	}
+	edgeHosts := make([]*models.V1EdgeNativeMachinePoolHostEntity, 0)
+	for _, host := range m["hosts_uids"].(*schema.Set).List() {
+		edgeHosts = append(edgeHosts, &models.V1EdgeNativeMachinePoolHostEntity{
+			HostUID: ptr.StringPtr(host.(string)),
+		})
+	}
+
+	return &models.V1EdgeNativeMachinePoolCloudConfigEntity{
+		EdgeHosts: edgeHosts,
+	}
 }

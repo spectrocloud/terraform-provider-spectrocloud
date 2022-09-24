@@ -66,7 +66,10 @@ func dataSourceBackupStorageLocationRead(_ context.Context, d *schema.ResourceDa
 	}
 
 	d.SetId(bsl.Metadata.UID)
-	d.Set("name", bsl.Metadata.Name)
+	err = d.Set("name", bsl.Metadata.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }
