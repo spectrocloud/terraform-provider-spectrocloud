@@ -136,7 +136,7 @@ func resourceClusterNested() *schema.Resource {
 			"cloud_config": {
 				Type:     schema.TypeList,
 				ForceNew: true,
-				Required: true,
+				Optional: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -189,7 +189,7 @@ func resourceClusterNested() *schema.Resource {
 			},
 			"machine_pool": {
 				Type:     schema.TypeSet,
-				Required: true,
+				Optional: true,
 				Set:      resourceMachinePoolNestedHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -516,7 +516,6 @@ func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m 
 				log.Printf("Change in machine pool %s", name)
 				err = c.UpdateMachinePoolNested(cloudConfigId, machinePool)
 			}
-
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -535,10 +534,6 @@ func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m 
 			}
 		}
 	}
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
@@ -551,13 +546,17 @@ func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroNestedClusterEntity {
-	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+	var chartName, chartRepo, chartVersion, chartValues, kubernetesVersion string
 
-	ChartName := cloudConfig["chart_name"].(string)
-	ChartRepo := cloudConfig["chart_repo"].(string)
-	ChartVersion := cloudConfig["chart_version"].(string)
-	ChartValues := cloudConfig["chart_values"].(string)
-	KubernetesVersion := cloudConfig["k8s_version"].(string)
+	val, ok := d.GetOk("cloud_config")
+	if ok {
+		cloudConfig := val.([]interface{})[0].(map[string]interface{})
+		chartName = cloudConfig["chart_name"].(string)
+		chartRepo = cloudConfig["chart_repo"].(string)
+		chartVersion = cloudConfig["chart_version"].(string)
+		chartValues = cloudConfig["chart_values"].(string)
+		kubernetesVersion = cloudConfig["k8s_version"].(string)
+	}
 
 	cluster := &models.V1SpectroNestedClusterEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -575,13 +574,13 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 				},
 				HelmRelease: &models.V1VirtualClusterHelmRelease{
 					Chart: &models.V1VirtualClusterHelmChart{
-						Name:    ChartName,
-						Repo:    ChartRepo,
-						Version: ChartVersion,
+						Name:    chartName,
+						Repo:    chartRepo,
+						Version: chartVersion,
 					},
-					Values: ChartValues,
+					Values: chartValues,
 				},
-				KubernetesVersion: KubernetesVersion,
+				KubernetesVersion: kubernetesVersion,
 			},
 			ClusterConfig:     toClusterConfig(d),
 			HostClusterUID:    d.Get("host_cluster_uid").(string),
@@ -593,10 +592,16 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 	// Hubble raises an error if a nested cluster provides hostClusterConfig
 	cluster.Spec.ClusterConfig.HostClusterConfig = nil
 
-	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
+	// Specification of machine_pool is optional
 	machinePoolConfigs := make([]*models.V1NestedMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolNested(machinePool)
+	machinePool, ok := d.GetOk("machine_pool")
+	if ok {
+		for _, machinePool := range machinePool.(*schema.Set).List() {
+			mp := toMachinePoolNested(machinePool)
+			machinePoolConfigs = append(machinePoolConfigs, mp)
+		}
+	} else {
+		mp := toMachinePoolNested(nil)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
@@ -605,16 +610,32 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 }
 
 func toMachinePoolNested(machinePool interface{}) *models.V1NestedMachinePoolConfigEntity {
-	m := machinePool.(map[string]interface{})
+	var controlPlane, controlPlaneAsWorker bool
+	var count int
+	var name, resourcePool string
+	var m map[string]interface{}
+
+	if machinePool == nil {
+		controlPlane = true
+		controlPlaneAsWorker = true
+		count = 1
+		name = "nested"
+		resourcePool = "nested"
+	} else {
+		m = machinePool.(map[string]interface{})
+		controlPlane = m["control_plane"].(bool)
+		controlPlaneAsWorker = m["control_plane_as_worker"].(bool)
+		count = m["count"].(int)
+		name = m["name"].(string)
+		placement := m["placement"].([]interface{})[0].(map[string]interface{})
+		resourcePool = placement["resource_pool"].(string)
+	}
 
 	labels := make([]string, 0)
-	controlPlane := m["control_plane"].(bool)
-	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
 	if controlPlane {
 		labels = append(labels, "master")
 	}
 
-	Placement := m["placement"].([]interface{})[0].(map[string]interface{})
 	mp := &models.V1NestedMachinePoolConfigEntity{
 		CloudConfig: &models.V1NestedMachinePoolCloudConfigEntity{
 			// hardcode for now
@@ -622,20 +643,21 @@ func toMachinePoolNested(machinePool interface{}) *models.V1NestedMachinePoolCon
 				MinCPU:      2,
 				MinMemInMiB: 4096,
 			},
-			ResourcePool: ptr.StringPtr(Placement["resource_pool"].(string)),
+			ResourcePool: ptr.StringPtr(resourcePool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:             ptr.StringPtr(name),
+			Size:             ptr.Int32Ptr(int32(count)),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
+
 	return mp
 }

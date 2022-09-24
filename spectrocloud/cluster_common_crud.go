@@ -2,12 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"log"
-	"time"
 )
 
 var resourceClusterReadyPendingStates = []string{
@@ -50,13 +51,12 @@ func waitForClusterReady(ctx context.Context, d *schema.ResourceData, uid string
 
 func resourceClusterReadyRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		err, cluster := c.GetClusterWithoutStatus(id)
+		cluster, err := c.GetClusterWithoutStatus(id)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil || cluster.Status == nil {
 			return nil, "NotReady", nil
 		}
-
 		return cluster, "Ready", nil
 	}
 }
