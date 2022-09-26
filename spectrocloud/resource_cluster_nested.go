@@ -627,8 +627,7 @@ func toMachinePoolNested(machinePool interface{}) *models.V1NestedMachinePoolCon
 		controlPlaneAsWorker = m["control_plane_as_worker"].(bool)
 		count = m["count"].(int)
 		name = m["name"].(string)
-		placement := m["placement"].([]interface{})[0].(map[string]interface{})
-		resourcePool = placement["resource_pool"].(string)
+		resourcePool = m["resource_pool"].(string)
 	}
 
 	labels := make([]string, 0)
