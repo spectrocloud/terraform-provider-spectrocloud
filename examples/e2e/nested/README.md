@@ -8,7 +8,14 @@ will provision the following resources on Spectro Cloud:
 ## Instructions:
 
 Clone this repository to a local directory, and then change directory to `examples/e2e/nested`. Proceed with the following:
-1. Provision host cluster as a prerequisite to use nested cluster. See example: `examples/e2e/eks_host`.
+1. Provision host cluster as a prerequisite to use nested cluster. 
+To achieve it add host configuration block to existing cluster or provision it from scratch using one of existing examples:
+<pre>
+  host_config {
+    host_endpoint_type = "LoadBalancer" 
+    ingress_host       = "*.dev.spectrocloud.com"
+  }
+</pre>
 2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file `terraform.tfvars`.
 3. Specify and update all the placeholder values in the `terraform.tfvars` file.
 4. Initialize and run terraform: `terraform init && terraform apply`.
