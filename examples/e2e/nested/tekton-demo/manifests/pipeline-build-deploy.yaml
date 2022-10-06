@@ -1,0 +1,133 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: deploy-locally
+  namespace: tekton-trigger-demo
+spec:
+  resources:
+    inputs:
+      - name: image-source
+        type: image
+    # outputs:
+    # - name: event-to-sink
+    #   type: cloudEvent
+  steps:
+    - name: run-kubectl
+      image: lachlanevenson/k8s-kubectl
+      command: ["kubectl"]
+      args:
+        - "run"
+        - "tekton-triggers-built-me"
+        - "--image"
+        - "$(resources.inputs.image-source.url)"
+        - "--env=PORT=8080"
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-docker-image
+  namespace: tekton-trigger-demo
+spec:
+  params:
+  - name: pathToContext
+    description:
+      The build directory used by img
+    default: /workspace/source-repo
+  - name: pathToDockerFile
+    type: string
+    description: The path to the dockerfile to build
+    default: $(resources.inputs.source-repo.path)/Dockerfile
+  resources:
+    inputs:
+      - name: source-repo
+        type: git
+    outputs:
+      - name: builtImage
+        type: image
+  steps:
+    - name: build-and-push
+      image: gcr.io/kaniko-project/executor:v0.16.0
+      command:
+        - /kaniko/executor
+      args:
+        - --dockerfile=$(params.pathToDockerFile)
+        - --destination=$(resources.outputs.builtImage.url)
+        - --context=$(params.pathToContext)
+---
+# Finally, we need something to receive our cloudevent announcing success!
+# That is this services only purpose
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: event-display
+#   namespace: tekton-trigger-demo
+#   labels:
+#     app: event-display
+# spec:
+#   type: ClusterIP
+#   ports:
+#     - name: listener
+#       port: 8080
+#       protocol: TCP
+#   selector:
+#     app: event-display
+# ---
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: event-display
+#   namespace: tekton-trigger-demo
+#   labels:
+#     app: event-display
+# spec:
+#   hostname: event-display
+#   containers:
+#   - image: gcr.io/knative-releases/github.com/knative/eventing-sources/cmd/event_display
+#     name: web
+---
+# The tekton-trigger-demo Pipeline will run through several tasks:
+# - source is pulled from git
+# - source is built into an image by img
+# - image output is pushed to ECR
+# - cloudevent emitted
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: tekton-trigger-demo-pipeline
+  namespace: tekton-trigger-demo
+spec:
+  resources:
+    - name: source-repo
+      type: git
+    - name: image-source
+      type: image
+    # - name: event-to-sink
+    #   type: cloudEvent
+  tasks:
+    - name: build-docker-image
+      taskRef:
+        name: build-docker-image
+      params:
+        - name: pathToContext
+          value: /workspace/source-repo
+      resources:
+        inputs:
+          - name: source-repo
+            resource: source-repo
+        outputs:
+          - name: builtImage
+            resource: image-source
+    - name: deploy-locally
+      taskRef:
+        name: deploy-locally
+      resources:
+        inputs:
+          - name: image-source
+            resource: image-source
+            from:
+              - build-docker-image
+        # outputs:
+        #   - name: event-to-sink
+        #     resource: event-to-sink
+---
