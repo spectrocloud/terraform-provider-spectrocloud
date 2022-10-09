@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -33,17 +32,76 @@ func resourceClusterNested() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"host_cluster_uid": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Set:      schema.HashString,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
+				},
+			},
+			"cluster_config": {
+				Type:     schema.TypeList,
+				Required: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"host_cluster_config": {
+							Type:     schema.TypeList,
+							Required: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"host_cluster": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"uid": {
+													Type:     schema.TypeString,
+													Optional: true,
+												},
+											},
+										},
+									},
+									"cluster_group": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"uid": {
+													Type:     schema.TypeString,
+													Optional: true,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						"resources": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"max_cpu": {
+										Type:     schema.TypeInt,
+										Optional: true,
+									},
+									"max_mem_in_mb": {
+										Type:     schema.TypeInt,
+										Optional: true,
+									},
+									"min_cpu": {
+										Type:     schema.TypeInt,
+										Optional: true,
+									},
+									"min_mem_in_mb": {
+										Type:     schema.TypeInt,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 			"cluster_profile": {
@@ -181,72 +239,6 @@ func resourceClusterNested() *schema.Resource {
 							Required: true,
 						},
 						"values": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
-			},
-			"machine_pool": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Set:      resourceMachinePoolNestedHash,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"additional_labels": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"taints": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"key": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"value": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"effect": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
-						},
-						"control_plane": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-							//ForceNew: true,
-						},
-						"control_plane_as_worker": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-							//ForceNew: true,
-						},
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-							//ForceNew: true,
-						},
-						"count": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"update_strategy": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "RollingUpdateScaleOut",
-						},
-						"resource_pool": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -436,43 +428,8 @@ func flattenCloudConfigNested(configUID string, d *schema.ResourceData, c *clien
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigNested(configUID); err != nil {
-		return diag.FromErr(err)
-	} else {
-		mp := flattenMachinePoolConfigsNested(config.Spec.MachinePoolConfig)
-		if err := d.Set("machine_pool", mp); err != nil {
-			return diag.FromErr(err)
-		}
-	}
 
 	return diag.Diagnostics{}
-}
-
-func flattenMachinePoolConfigsNested(machinePools []*models.V1NestedMachinePoolConfig) []interface{} {
-
-	if machinePools == nil {
-		return make([]interface{}, 0)
-	}
-
-	ois := make([]interface{}, len(machinePools))
-
-	for i, machinePool := range machinePools {
-		oi := make(map[string]interface{})
-
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
-
-		oi["control_plane"] = machinePool.IsControlPlane
-		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
-		oi["name"] = machinePool.Name
-		oi["count"] = int(machinePool.Size)
-		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
-
-		oi["resource_pool"] = machinePool.ResourcePool
-
-		ois[i] = oi
-	}
-
-	return ois
 }
 
 func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -546,8 +503,27 @@ func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroNestedClusterEntity {
-	var chartName, chartRepo, chartVersion, chartValues, kubernetesVersion string
+	// parse ClusterConfig
+	clusterConfigObj := d.Get("cluster_config")
+	clusterConfig := clusterConfigObj.([]interface{})[0].(map[string]interface{})
 
+	var hostClusterUid, clusterGroupUid string
+	hostClusterConfig := clusterConfig["host_cluster_config"].([]interface{})[0].(map[string]interface{})
+
+	hostClusterObj := hostClusterConfig["host_cluster"].([]interface{})
+	if len(hostClusterObj) > 0 {
+		hostCluster := hostClusterObj[0].(map[string]interface{})
+		hostClusterUid = hostCluster["uid"].(string)
+	}
+
+	clusterGroupObj := hostClusterConfig["cluster_group"].([]interface{})
+	if len(clusterGroupObj) > 0 {
+		clusterGroup := clusterGroupObj[0].(map[string]interface{})
+		clusterGroupUid = clusterGroup["uid"].(string)
+	}
+
+	// parse CloudConfig
+	var chartName, chartRepo, chartVersion, chartValues, kubernetesVersion string
 	val, ok := d.GetOk("cloud_config")
 	if ok {
 		cloudConfig := val.([]interface{})[0].(map[string]interface{})
@@ -558,6 +534,7 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 		kubernetesVersion = cloudConfig["k8s_version"].(string)
 	}
 
+	// init cluster
 	cluster := &models.V1SpectroNestedClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -566,12 +543,6 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 		},
 		Spec: &models.V1SpectroNestedClusterEntitySpec{
 			CloudConfig: &models.V1NestedClusterConfig{
-				// these values get overridden by the capvc-controller,
-				// so it is okay to provide dummy values initially
-				ControlPlaneEndpoint: &models.V1APIEndpoint{
-					Host: ptr.StringPtr("nested-cluster"),
-					Port: ptr.Int32Ptr(443),
-				},
 				HelmRelease: &models.V1VirtualClusterHelmRelease{
 					Chart: &models.V1VirtualClusterHelmChart{
 						Name:    chartName,
@@ -582,80 +553,47 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 				},
 				KubernetesVersion: kubernetesVersion,
 			},
-			ClusterConfig:     toClusterConfig(d),
-			HostClusterUID:    d.Get("host_cluster_uid").(string),
+			ClusterConfig: &models.V1ClusterConfigEntity{
+				HostClusterConfig: &models.V1HostClusterConfig{
+					ClusterGroup: &models.V1ObjectReference{
+						UID: clusterGroupUid,
+					},
+					HostCluster: &models.V1ObjectReference{
+						UID: hostClusterUid,
+					},
+				},
+			},
 			Machinepoolconfig: nil,
 			Profiles:          toProfiles(c, d),
 			Policies:          toPolicies(d),
 		},
 	}
-	// Hubble raises an error if a nested cluster provides hostClusterConfig
-	cluster.Spec.ClusterConfig.HostClusterConfig = nil
 
-	// Specification of machine_pool is optional
+	// init cluster resources (machinepool)
 	machinePoolConfigs := make([]*models.V1NestedMachinePoolConfigEntity, 0)
-	machinePool, ok := d.GetOk("machine_pool")
-	if ok {
-		for _, machinePool := range machinePool.(*schema.Set).List() {
-			mp := toMachinePoolNested(machinePool)
-			machinePoolConfigs = append(machinePoolConfigs, mp)
-		}
-	} else {
-		mp := toMachinePoolNested(nil)
-		machinePoolConfigs = append(machinePoolConfigs, mp)
-	}
+	mp := toMachinePoolNested(clusterConfigObj)
+	machinePoolConfigs = append(machinePoolConfigs, mp)
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
 	return cluster
 }
 
-func toMachinePoolNested(machinePool interface{}) *models.V1NestedMachinePoolConfigEntity {
-	var controlPlane, controlPlaneAsWorker bool
-	var count int
-	var name, resourcePool string
-	var m map[string]interface{}
-
-	if machinePool == nil {
-		controlPlane = true
-		controlPlaneAsWorker = true
-		count = 1
-		name = "nested"
-		resourcePool = "nested"
-	} else {
-		m = machinePool.(map[string]interface{})
-		controlPlane = m["control_plane"].(bool)
-		controlPlaneAsWorker = m["control_plane_as_worker"].(bool)
-		count = m["count"].(int)
-		name = m["name"].(string)
-		placement := m["placement"].([]interface{})[0].(map[string]interface{})
-		resourcePool = placement["resource_pool"].(string)
-	}
-
-	labels := make([]string, 0)
-	if controlPlane {
-		labels = append(labels, "master")
-	}
+func toMachinePoolNested(machinePoolObj interface{}) *models.V1NestedMachinePoolConfigEntity {
+	machinePool := machinePoolObj.([]interface{})[0].(map[string]interface{})
+	resources := machinePool["resources"].([]interface{})[0].(map[string]interface{})
+	maxCpu := resources["max_cpu"].(int)
+	maxMemInMb := resources["max_mem_in_mb"].(int)
+	minCpu := resources["min_cpu"].(int)
+	minMemInMb := resources["min_mem_in_mb"].(int)
 
 	mp := &models.V1NestedMachinePoolConfigEntity{
 		CloudConfig: &models.V1NestedMachinePoolCloudConfigEntity{
-			// hardcode for now
 			InstanceType: &models.V1NestedInstanceType{
-				MinCPU:      2,
-				MinMemInMiB: 4096,
+				MaxCPU:      int32(maxCpu),
+				MaxMemInMiB: int32(maxMemInMb),
+				MinCPU:      int32(minCpu),
+				MinMemInMiB: int32(minMemInMb),
 			},
-			ResourcePool: ptr.StringPtr(resourcePool),
-		},
-		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels: toAdditionalNodePoolLabels(m),
-			Taints:           toClusterTaints(m),
-			IsControlPlane:   controlPlane,
-			Labels:           labels,
-			Name:             ptr.StringPtr(name),
-			Size:             ptr.Int32Ptr(int32(count)),
-			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: getUpdateStrategy(m),
-			},
-			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
 

@@ -23,16 +23,14 @@ func (h *V1Client) CreateClusterNested(cluster *models.V1SpectroNestedClusterEnt
 }
 
 func (h *V1Client) CreateMachinePoolNested(cloudConfigId string, machinePool *models.V1NestedMachinePoolConfigEntity) error {
-	/*client, err := h.GetClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
 	params := clusterC.NewV1CloudConfigsNestedMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
 	_, err = client.V1CloudConfigsNestedMachinePoolCreate(params)
-	return err*/
-
-	return nil // TODO: not implemented.
+	return err
 }
 
 func (h *V1Client) UpdateMachinePoolNested(cloudConfigId string, machinePool *models.V1NestedMachinePoolConfigEntity) error {
@@ -43,23 +41,20 @@ func (h *V1Client) UpdateMachinePoolNested(cloudConfigId string, machinePool *mo
 
 	params := clusterC.NewV1CloudConfigsNestedMachinePoolUpdateParamsWithContext(h.Ctx).
 		WithConfigUID(cloudConfigId).
-		WithMachinePoolName(*machinePool.PoolConfig.Name).
 		WithBody(machinePool)
 	_, err = client.V1CloudConfigsNestedMachinePoolUpdate(params)
 	return err
 }
 
 func (h *V1Client) DeleteMachinePoolNested(cloudConfigId string, machinePoolName string) error {
-	/*client, err := h.GetClusterClient()
+	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
 	params := clusterC.NewV1CloudConfigsNestedMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
 	_, err = client.V1CloudConfigsNestedMachinePoolDelete(params)
-	return err*/
-
-	return nil //TODO: not implemented.
+	return err
 }
 
 func (h *V1Client) GetCloudConfigNested(configUID string) (*models.V1NestedCloudConfig, error) {
