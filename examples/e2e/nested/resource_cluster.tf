@@ -1,28 +1,37 @@
 
 resource "spectrocloud_cluster_nested" "cluster" {
-  name = "nested-cluster-tf-2"
-  host_cluster_uid = data.spectrocloud_cluster.host_cluster.id
-  #tags = ["skip_completion"]
+  name = "nested-cluster-demo"
 
-  # Attach addon profile optionally.
+
+  cluster_config {
+    host_cluster_config {
+      host_cluster {
+        uid = var.host_cluster_uid
+      }
+      # cluster_group {
+      #   uid = var.cluster_group_uid
+      # }
+    }
+    resources {
+      max_cpu = 2
+      max_mem_in_mb = 6
+      min_cpu = 0
+      min_mem_in_mb = 0
+    }
+  }
+
+  # uncomment the following 3 lines to deploy the tekton demo stack
   # cluster_profile {
   #   id = spectrocloud_cluster_profile.profile.id
   # }
 
-  cloud_config {
-    chart_name = ""
-    chart_repo = ""
-    chart_version = ""
-    chart_values = ""
-    k8s_version = "1.23.0"
-  }
-
-  machine_pool {
-    control_plane           = true
-    control_plane_as_worker = true
-    name                    = "master-pool"
-    count                   = 1
-    resource_pool           = var.resource_pool
-  }
+  # optional nested cluster config
+  # cloud_config {
+  #   chart_name = var.chart_name
+  #   chart_repo = var.chart_repo
+  #   chart_version = var.chart_version
+  #   chart_values = var.chart_values
+  #   k8s_version = var.k8s_version
+  # }
 
 }

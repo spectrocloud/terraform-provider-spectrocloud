@@ -1,14 +1,31 @@
+# Pack Registry
+variable "registry_name" {
+  default = "Public"
+}
+
 # Cluster
-variable "resource_pool" {}
-variable "control_plane_endpoint_url" {
-  default = "test"
+variable "host_cluster_uid" {}
+variable "chart_name" {
+  default = ""
 }
-variable "control_plane_endpoint_port" {
-  default = 443
+variable "chart_repo" {
+  default = ""
 }
-variable "helm_release" {
-  default = "test"
+variable "chart_values" {
+  default = ""
+}
+variable "chart_version" {
+  default = ""
 }
 variable "k8s_version" {
-  default = "1.23.0"
+  default = ""
 }
+
+# CI/CD
+variable "docker_config" {}
+variable "external_domain" {}
+variable "github_access_token" {}
+variable "github_org" {}
+variable "github_repo" {}
+variable "github_user" {}
+variable "image_source" {}

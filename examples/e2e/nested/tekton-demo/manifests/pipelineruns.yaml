@@ -1,0 +1,23 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: tekton-create-ingress-pipelinerun
+  namespace: tekton-trigger-demo
+spec:
+  pipelineRef:
+    name: tekton-create-ingress-pipeline
+  serviceAccountName: tekton-triggers-setup
+  timeout: 30s
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: tekton-create-webhook-pipelinerun
+  namespace: tekton-trigger-demo
+spec:
+  pipelineRef:
+    name: tekton-create-webhook-pipeline
+  serviceAccountName: tekton-triggers-setup
+  timeout: 10s
+---

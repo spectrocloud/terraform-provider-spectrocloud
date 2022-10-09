@@ -1,0 +1,21 @@
+# Spectro Cloud
+sc_host         = "" # Palette URL, excluding scheme, e.g., "dev.console.spectrocloud.com"
+sc_username     = ""
+sc_api_key      = ""
+// sc_password  = ""
+sc_project_name = "Default"
+
+# Pack Registry
+registry_name = "Public Repo"
+
+# Cluster
+host_cluster_uid = ""
+
+# CI/CD
+docker_config = "" # base64 encoded docker config.json
+external_domain = "" # DNS name matching Host Cluster's DNS Pattern, e.g., tekton-trigger-demo.tgdev.te.spectrocloud.com
+github_access_token = ""
+github_org = ""
+github_repo = "ulmaceae"
+github_user = ""
+image_source = "<your-dockerhub-username>/ulmaceae:tekton-trigger-demo"
