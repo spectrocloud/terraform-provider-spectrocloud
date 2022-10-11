@@ -3,11 +3,8 @@ package spectrocloud
 import (
 	"context"
 	"log"
-	"sort"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -253,6 +250,14 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Optional: true,
 							Default:  "RollingUpdateScaleOut",
 						},
+						"min": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"max": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
 						"host_uids": {
 							Type:     schema.TypeList,
 							Optional: true,
@@ -260,7 +265,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"instance_type": {
+						/*"instance_type": {
 							Type:     schema.TypeList,
 							Required: true,
 							MaxItems: 1,
@@ -284,8 +289,8 @@ func resourceClusterEdgeNative() *schema.Resource {
 									},
 								},
 							},
-						},
-						"placements": {
+						},*/
+						/*"placements": {
 							Type:     schema.TypeList,
 							Required: true,
 							Elem: &schema.Resource{
@@ -321,7 +326,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 									},
 								},
 							},
-						},
+						},*/
 					},
 				},
 			},
@@ -551,7 +556,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0, 1)
+	ois := make([]interface{}, 0)
 
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
@@ -564,6 +569,8 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["count"] = machinePool.Size
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
+		oi["min"] = int(machinePool.MinSize)
+		oi["max"] = int(machinePool.MaxSize)
 		// TODO: check commented below
 		/*if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
@@ -673,9 +680,9 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1S
 				NtpServers: toNtpServers(cloudConfig),
 				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
 				ControlPlaneEndpoint: &models.V1EdgeNativeControlPlaneEndPoint{
-					DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-					Host:             cloudConfig["host"].(string),
-					Type:             "IP", // only IP type for now no DDNS
+					//DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
+					Host: cloudConfig["host"].(string),
+					Type: "IP", // only IP type for now no DDNS
 				},
 			},
 		},
@@ -686,12 +693,6 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1S
 		mp := toMachinePoolEdgeNative(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
-
-	// sort
-	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
-		return machinePoolConfigs[i].PoolConfig.IsControlPlane
-	})
-
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
@@ -719,6 +720,17 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 			DiskGiB:   int32(ins["disk_gb"].(int)),
 		}*/
 
+	min := int32(m["count"].(int))
+	max := int32(m["count"].(int))
+
+	if m["min"] != nil {
+		min = int32(m["min"].(int))
+	}
+
+	if m["max"] != nil {
+		max = int32(m["max"].(int))
+	}
+
 	mp := &models.V1EdgeNativeMachinePoolConfigEntity{
 		CloudConfig: toEdgeHosts(m),
 		PoolConfig: &models.V1MachinePoolConfigEntity{
@@ -732,17 +744,19 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
+			MinSize:                 min,
+			MaxSize:                 max,
 		},
 	}
 	return mp
 }
 
 func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudConfigEntity {
-	if m["hosts_uids"] == nil {
+	if m["host_uids"] == nil {
 		return nil
 	}
 	edgeHosts := make([]*models.V1EdgeNativeMachinePoolHostEntity, 0)
-	for _, host := range m["hosts_uids"].(*schema.Set).List() {
+	for _, host := range m["host_uids"].([]interface{}) {
 		edgeHosts = append(edgeHosts, &models.V1EdgeNativeMachinePoolHostEntity{
 			HostUID: ptr.StringPtr(host.(string)),
 		})

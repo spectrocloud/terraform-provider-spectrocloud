@@ -322,7 +322,6 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 			buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
 			buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
 			buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
-			buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(string)))
 			if ins["cache_passthrough"] != nil {
 				buf.WriteString(fmt.Sprintf("%s-%s", "cache_passthrough", ins["cache_passthrough"].(bool)))
 			}
