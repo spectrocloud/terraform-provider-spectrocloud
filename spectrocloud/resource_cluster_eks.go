@@ -945,10 +945,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroE
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-	cluster.Spec.ClusterConfig = &models.V1ClusterConfigEntity{
-		Resources:               toClusterResourceConfig(d),
-		MachineManagementConfig: toMachineManagementConfig(d),
-	}
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	fargateProfiles := make([]*models.V1FargateProfile, 0)
 	for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
