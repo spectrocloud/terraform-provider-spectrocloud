@@ -6,7 +6,7 @@
 # }
 
 resource "spectrocloud_cloudaccount_aws" "account" {
-  name           = "aws-picard-2"
+  name           = "aws-picard-3"
   aws_access_key = var.aws_access_key
   aws_secret_key = var.aws_secret_key
 }

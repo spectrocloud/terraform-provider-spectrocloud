@@ -35,7 +35,7 @@ data "spectrocloud_pack" "ubuntu" {
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
-  name        = "ProdEKS-tf"
+  name        = "ProdEKS-spot-tf"
   description = "basic eks cp"
   cloud       = "eks"
   type        = "cluster"
@@ -72,18 +72,5 @@ resource "spectrocloud_cluster_profile" "profile" {
     tag    = "1.0.x"
     uid    = data.spectrocloud_pack.aws-ssm-agent.id
     values = data.spectrocloud_pack.aws-ssm-agent.values
-  }
-}
-
-resource "spectrocloud_cluster_profile" "profile-rbac" {
-  name        = "SC-RBAC"
-  description = "rbac"
-  type        = "add-on"
-
-  pack {
-    name   = data.spectrocloud_pack.spectro-rbac.name
-    tag    = data.spectrocloud_pack.spectro-rbac.version
-    uid    = data.spectrocloud_pack.spectro-rbac.id
-    values = data.spectrocloud_pack.spectro-rbac.values
   }
 }

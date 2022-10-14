@@ -5,18 +5,19 @@ resource "spectrocloud_cluster_eks" "cluster" {
     id = spectrocloud_cluster_profile.profile.id
   }
 
-  cluster_profile {
+  /*cluster_profile {
     id = spectrocloud_cluster_profile.profile-rbac.id
     pack {
       name   = "spectro-rbac"
       tag    = "1.0.0"
       values = file("rbac.yaml")
     }
-  }
+  }*/
 
   cloud_account_id = spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
+    endpoint_access = "private"
     ssh_key_name = var.aws_ssh_key_name
     region       = var.aws_region
     vpc_id       = var.aws_vpc_id

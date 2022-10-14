@@ -46,6 +46,16 @@ func dataSourcePack() *schema.Resource {
 				Computed: true,
 				Optional: true,
 			},
+			"addon_type": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Optional: true,
+			},
+			"addon_subtype": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Optional: true,
+			},
 			"registry_uid": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -108,6 +118,12 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		}
 		if v, ok := d.GetOk("version"); ok {
 			filters = append(filters, fmt.Sprintf("spec.version=%s", v.(string)))
+		}
+		if v, ok := d.GetOk("addon_type"); ok {
+			filters = append(filters, fmt.Sprintf("spec.addonType=%s", v.(string)))
+		}
+		if v, ok := d.GetOk("addon_subtype"); ok {
+			filters = append(filters, fmt.Sprintf("spec.addonSubType=%s", v.(string)))
 		}
 		if v, ok := d.GetOk("registry_uid"); ok {
 			registryUID = v.(string)

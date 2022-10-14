@@ -1,17 +1,8 @@
 resource "spectrocloud_cluster_eks" "cluster" {
-  name = "eks-dev1"
+  name = "eks-spot-dev1"
 
   cluster_profile {
     id = spectrocloud_cluster_profile.profile.id
-  }
-
-  cluster_profile {
-    id = spectrocloud_cluster_profile.profile-rbac.id
-    pack {
-      name   = "spectro-rbac"
-      tag    = "1.0.0"
-      values = file("rbac.yaml")
-    }
   }
 
   cloud_account_id = spectrocloud_cloudaccount_aws.account.id
