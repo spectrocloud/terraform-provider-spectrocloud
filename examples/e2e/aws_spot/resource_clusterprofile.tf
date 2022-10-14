@@ -32,28 +32,32 @@
 # }
 
 
-data "spectrocloud_pack" "byom" {
+/*data "spectrocloud_pack" "byom" {
   name = "spectro-byo-manifest"
   # version  = "1.0.x"
-}
+}*/
 
 data "spectrocloud_pack" "csi" {
   name = "csi-aws"
+  #registry_uid = "5e2031962f090e2d3d8a3290"
   # version  = "1.0.x"
 }
 
 data "spectrocloud_pack" "cni" {
   name    = "cni-calico"
+  #registry_uid = "5e2031962f090e2d3d8a3290"
   version = "3.16.0"
 }
 
 data "spectrocloud_pack" "k8s" {
   name    = "kubernetes"
-  version = "1.18.14"
+  #registry_uid = "5e2031962f090e2d3d8a3290"
+  version = "1.21.1"
 }
 
 data "spectrocloud_pack" "ubuntu" {
   name = "ubuntu-aws"
+  #registry_uid = "5e2031962f090e2d3d8a3290"
   # version  = "1.0.x"
 }
 
@@ -64,7 +68,7 @@ resource "spectrocloud_cluster_profile" "profile" {
   cloud       = "aws"
   type        = "cluster"
 
-  pack {
+  /*pack {
     name   = "spectro-byo-manifest"
     tag    = "1.0.x"
     uid    = data.spectrocloud_pack.byom.id
@@ -81,7 +85,7 @@ resource "spectrocloud_cluster_profile" "profile" {
                 app3: wordpress3
               name: wordpress
     EOT
-  }
+  }*/
 
   pack {
     name   = "csi-aws"

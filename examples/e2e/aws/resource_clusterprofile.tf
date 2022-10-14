@@ -58,7 +58,7 @@ data "spectrocloud_pack" "ubuntu" {
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
-  name        = "aws-sample"
+  name        = "aws-picard-3"
   description = "basic cp"
   tags        = ["dev", "department:devops", "owner:bob"]
   cloud       = "aws"

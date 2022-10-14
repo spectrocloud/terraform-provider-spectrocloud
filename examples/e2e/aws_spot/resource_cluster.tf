@@ -1,6 +1,6 @@
 
 resource "spectrocloud_cluster_aws" "cluster" {
-  name               = "aws-picard-4"
+  name               = "aws-dev-west-1"
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
   cloud_account_id   = spectrocloud_cloudaccount_aws.account.id
 
@@ -43,8 +43,8 @@ resource "spectrocloud_cluster_aws" "cluster" {
     name          = "worker-basic"
     count         = 1
     instance_type = "m3.large"
-    capacity_type = "spot"
-    max_price     = "0.035"
+    #capacity_type = "spot"
+    #max_price     = "0.035"
     azs           = [var.aws_region_az]
   }
 

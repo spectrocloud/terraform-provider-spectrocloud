@@ -75,7 +75,7 @@ resource "spectrocloud_cluster_profile" "profile" {
   }
 }
 
-resource "spectrocloud_cluster_profile" "profile-rbac" {
+/*resource "spectrocloud_cluster_profile" "profile-rbac" {
   name        = "SC-RBAC"
   description = "rbac"
   type        = "add-on"
@@ -86,4 +86,4 @@ resource "spectrocloud_cluster_profile" "profile-rbac" {
     uid    = data.spectrocloud_pack.spectro-rbac.id
     values = data.spectrocloud_pack.spectro-rbac.values
   }
-}
+}*/
