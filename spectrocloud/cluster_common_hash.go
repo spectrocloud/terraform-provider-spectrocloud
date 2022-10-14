@@ -309,43 +309,14 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	buf.WriteString(HashStringMap(m["additional_labels"]))
 	buf.WriteString(HashStringMapList(m["taints"]))
 
-	//d := m["disk"].([]interface{})[0].(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
-	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
-	if v, found := m["instance_type"]; found {
-		if len(v.([]interface{})) > 0 {
-			ins := v.([]interface{})[0].(map[string]interface{})
-			buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
-			buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
-			buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
-			if ins["cache_passthrough"] != nil {
-				buf.WriteString(fmt.Sprintf("%s-%s", "cache_passthrough", ins["cache_passthrough"].(bool)))
-			}
-			if ins["gpu_config"] != nil {
-				config, _ := ins["gpu_config"].(map[string]interface{})
-				if config != nil {
-					buf.WriteString(fmt.Sprintf("%d-", config["num_gpus"].(int)))
-					buf.WriteString(fmt.Sprintf("%d-", config["device_model"].(string)))
-					buf.WriteString(fmt.Sprintf("%d-", config["vendor"].(string)))
-					buf.WriteString(HashStringMap(config["addresses"]))
-				}
-			}
-
-			if ins["attached_disks"] != nil {
-				for _, disk := range ins["attached_disks"].([]interface{}) {
-					diskMap := disk.(map[string]interface{})
-					if diskMap["managed"] != nil {
-						buf.WriteString(fmt.Sprintf("%s-%s", "managed", diskMap["managed"].(bool)))
-					}
-					if diskMap["size_in_gb"] != nil {
-						buf.WriteString(fmt.Sprintf("%s-%s", "size_in_gb", diskMap["size_in_gb"].(int)))
-					}
-				}
-			}
+	if _, found := m["host_uids"]; found {
+		for _, host := range m["host_uids"].([]interface{}) {
+			buf.WriteString(fmt.Sprintf("%s-", host.(string)))
 		}
 	}
 

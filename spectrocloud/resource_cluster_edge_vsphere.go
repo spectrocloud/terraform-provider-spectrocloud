@@ -521,7 +521,9 @@ func resourceClusterEdgeVsphereRead(_ context.Context, d *schema.ResourceData, m
 }
 
 func flattenCloudConfigEdgeVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	d.Set("cloud_config_id", configUID)
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
 	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {

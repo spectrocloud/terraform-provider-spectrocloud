@@ -245,7 +245,9 @@ func validateCloudType(data interface{}, path cty.Path) diag.Diagnostics {
 }
 
 func flattenCloudConfigGeneric(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	d.Set("cloud_config_id", configUID)
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
 	return diag.Diagnostics{}
 }
 

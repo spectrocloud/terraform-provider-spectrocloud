@@ -241,22 +241,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 
 							//ForceNew: true,
 						},
-						"count": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
 						"update_strategy": {
 							Type:     schema.TypeString,
 							Optional: true,
 							Default:  "RollingUpdateScaleOut",
-						},
-						"min": {
-							Type:     schema.TypeInt,
-							Optional: true,
-						},
-						"max": {
-							Type:     schema.TypeInt,
-							Optional: true,
 						},
 						"host_uids": {
 							Type:     schema.TypeList,
@@ -265,68 +253,6 @@ func resourceClusterEdgeNative() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						/*"instance_type": {
-							Type:     schema.TypeList,
-							Required: true,
-							MaxItems: 1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"disk_size_gb": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-									"memory_mb": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-									"cpu": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-								},
-							},
-						},*/
-						/*"placements": {
-							Type:     schema.TypeList,
-							Required: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"appliance_id": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"network_type": {
-										Type:         schema.TypeString,
-										ValidateFunc: validation.StringInSlice([]string{"default", "bridge"}, false),
-										Required:     true,
-									},
-									"network_names": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"image_storage_pool": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"target_storage_pool": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"data_storage_pool": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"network": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-								},
-							},
-						},*/
 					},
 				},
 			},
@@ -541,7 +467,9 @@ func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m 
 }
 
 func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	d.Set("cloud_config_id", configUID)
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
 	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
@@ -570,23 +498,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
-		oi["count"] = machinePool.Size
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
-
-		oi["min"] = int(machinePool.MinSize)
-		oi["max"] = int(machinePool.MaxSize)
-		// TODO: check commented below
-		/*if machinePool.InstanceType != nil {
-			s := make(map[string]interface{})
-			s["disk_size_gb"] = int(*machinePool.RootDiskInGB)
-			s["memory_mb"] = int(*machinePool.InstanceType.MemoryInMB)
-			s["name"] =
-				s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
-
-			oi["instance_type"] = []interface{}{s}
-		}
-
-		oi["placements"] = placements*/
 
 		ois = append(ois, oi)
 	}
@@ -713,43 +625,20 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 		labels = append(labels, "master")
 	}
 
-	// TODO: review instance type usage.
-	/*
-		ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
-
-		instanceType := models.V1EdgeNativeInstanceType{
-			Name:      ins["name"].(string),
-			MemoryMiB: int32(ins["memory_mb"].(int)),
-			NumCPUs:   int32(ins["cpu"].(int)),
-			DiskGiB:   int32(ins["disk_gb"].(int)),
-		}*/
-
-	min := int32(m["count"].(int))
-	max := int32(m["count"].(int))
-
-	if m["min"] != nil {
-		min = int32(m["min"].(int))
-	}
-
-	if m["max"] != nil {
-		max = int32(m["max"].(int))
-	}
-
+	cloudConfig := toEdgeHosts(m)
 	mp := &models.V1EdgeNativeMachinePoolConfigEntity{
-		CloudConfig: toEdgeHosts(m),
+		CloudConfig: cloudConfig,
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Size:             ptr.Int32Ptr(int32(len(cloudConfig.EdgeHosts))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
-			MinSize:                 min,
-			MaxSize:                 max,
 		},
 	}
 	return mp
