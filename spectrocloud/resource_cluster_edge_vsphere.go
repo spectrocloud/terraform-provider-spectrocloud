@@ -467,6 +467,10 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 					},
 				},
 			},
+			"skip_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
 		},
 	}
 }

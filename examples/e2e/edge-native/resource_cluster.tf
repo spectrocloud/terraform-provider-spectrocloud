@@ -1,5 +1,6 @@
 resource "spectrocloud_cluster_edge_native" "cluster" {
   name = "edge-native-example"
+  skip_completion = true
 
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id
@@ -7,7 +8,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
 
   cloud_config {
     ssh_key = "spectro2022"
-    host    = "192.168.100.15"
+    vip    = "192.168.100.15"
   }
 
   machine_pool {
@@ -16,7 +17,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     name                    = "master-pool"
     count                   = 1
 
-    host_uids     = [spectrocloud_appliance.appliance1.uid]
+    host_uids     = [spectrocloud_appliance.appliance0.uid]
 
     /*instance_type {
       name = "small"
@@ -32,7 +33,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     max = 3
     count = 3
 
-    host_uids     = [spectrocloud_appliance.appliance2.uid]
+    host_uids     = [spectrocloud_appliance.appliance1.uid]
 
     /*instance_type {
       name = "large"

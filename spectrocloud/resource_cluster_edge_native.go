@@ -151,7 +151,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"host": {
+						"vip": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -482,6 +482,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 					},
 				},
 			},
+			"skip_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -681,7 +685,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1S
 				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
 				ControlPlaneEndpoint: &models.V1EdgeNativeControlPlaneEndPoint{
 					//DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-					Host: cloudConfig["host"].(string),
+					Host: cloudConfig["vip"].(string),
 					Type: "IP", // only IP type for now no DDNS
 				},
 			},

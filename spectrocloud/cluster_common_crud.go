@@ -64,6 +64,10 @@ func resourceClusterReadyRefreshFunc(c *client.V1Client, id string) resource.Sta
 func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
+	if d.Get("skip_completion") != nil && d.Get("skip_completion").(bool) {
+		return diags, true
+	}
+
 	if _, found := toTags(d)["skip_completion"]; found {
 		return diags, true
 	}

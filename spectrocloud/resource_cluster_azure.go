@@ -452,6 +452,10 @@ func resourceClusterAzure() *schema.Resource {
 					},
 				},
 			},
+			"skip_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
 			//"cloud_config": {
 			//	Type:     schema.TypeString,
 			//	Required: true,
