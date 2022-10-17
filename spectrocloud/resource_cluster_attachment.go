@@ -211,7 +211,7 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 			return diag.FromErr(err)
 		}
 		d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
-		diagnostics, isError := waitForAddonDeploymentCreation(ctx, d, cluster.Metadata.UID, addonDeployment.Profiles[0].UID, diags, c)
+		diagnostics, isError := waitForAddonDeploymentUpdate(ctx, d, cluster.Metadata.UID, addonDeployment.Profiles[0].UID, diags, c)
 		if isError {
 			return diagnostics
 		}
