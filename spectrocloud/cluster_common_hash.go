@@ -320,12 +320,6 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 		}
 	}
 
-	if _, found := m["labels"]; found {
-		for _, label := range m["labels"].([]interface{}) {
-			buf.WriteString(fmt.Sprintf("%s-", label.(string)))
-		}
-	}
-
 	return int(hash(buf.String()))
 }
 

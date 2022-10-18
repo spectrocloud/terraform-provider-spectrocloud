@@ -498,8 +498,11 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
-		oi["host_uids"] = machinePool.Hosts
-		oi["labels"] = machinePool.Labels
+		hosts := make([]string, 0)
+		for _, host := range machinePool.Hosts {
+			hosts = append(hosts, *host.HostUID)
+		}
+		oi["host_uids"] = hosts
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
 		ois = append(ois, oi)
@@ -623,9 +626,6 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 	labels := make([]string, 0)
 	controlPlane := m["control_plane"].(bool)
 	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
-	if controlPlane {
-		labels = append(labels, "master")
-	}
 
 	cloudConfig := toEdgeHosts(m)
 	mp := &models.V1EdgeNativeMachinePoolConfigEntity{
