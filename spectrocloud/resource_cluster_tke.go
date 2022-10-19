@@ -676,9 +676,7 @@ func toTkeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroT
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-	cluster.Spec.ClusterConfig = &models.V1ClusterConfigEntity{
-		Resources: toClusterResourceConfig(d),
-	}
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster
 }

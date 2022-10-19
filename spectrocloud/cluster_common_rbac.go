@@ -7,49 +7,65 @@ import (
 )
 
 func toClusterRBACs(d *schema.ResourceData) []*models.V1ClusterRbacInputEntity {
-	clusterRbacs := make([]*models.V1ClusterRbacInputEntity, 0)
-	clusterRbacBindings := make([]*models.V1ClusterRbacBinding, 0)
-	rbacBindings := make([]*models.V1ClusterRbacBinding, 0)
+	bindings := make([]*models.V1ClusterRbacBinding, 0)
 
 	if d.Get("cluster_rbac_binding") == nil {
 		return nil
 	}
 	for _, clusterRbac := range d.Get("cluster_rbac_binding").([]interface{}) {
-		b := toClusterRBAC(clusterRbac)
-		for _, binding := range b.Spec.Bindings {
-			switch binding.Role.Kind {
-			case "ClusterRole":
-				clusterRbacBindings = append(clusterRbacBindings, binding)
-				break
-			case "Role":
-				rbacBindings = append(rbacBindings, binding)
-				break
-			default:
-				break
-			}
+		for _, binding := range toClusterRBAC(clusterRbac) {
+			bindings = append(bindings, binding)
 		}
 	}
 
-	if len(clusterRbacBindings) > 0 {
-		clusterRbacs = append(clusterRbacs, &models.V1ClusterRbacInputEntity{
-			Spec: &models.V1ClusterRbacSpec{
-				Bindings: clusterRbacBindings,
-			},
-		})
-	}
+	rbacs := toRbacInputEntities(&models.V1ClusterRbac{
+		Spec: &models.V1ClusterRbacSpec{
+			Bindings: bindings,
+		},
+	})
 
-	if len(rbacBindings) > 0 {
-		clusterRbacs = append(clusterRbacs, &models.V1ClusterRbacInputEntity{
-			Spec: &models.V1ClusterRbacSpec{
-				Bindings: rbacBindings,
-			},
-		})
-	}
-
-	return clusterRbacs
+	return rbacs
 }
 
-func toClusterRBAC(clusterRbacBinding interface{}) *models.V1ClusterRbacInputEntity {
+func toRbacInputEntities(config *models.V1ClusterRbac) []*models.V1ClusterRbacInputEntity {
+	rbacs := make([]*models.V1ClusterRbacInputEntity, 0)
+
+	clusterRoleBindings := make([]*models.V1ClusterRbacBinding, 0)
+	roleBindings := make([]*models.V1ClusterRbacBinding, 0)
+
+	for _, binding := range config.Spec.Bindings {
+		switch binding.Type {
+		case "ClusterRoleBinding":
+			clusterRoleBindings = append(clusterRoleBindings, binding)
+			break
+		case "RoleBinding":
+			roleBindings = append(roleBindings, binding)
+			break
+		default:
+			break
+		}
+
+	}
+
+	if len(clusterRoleBindings) > 0 {
+		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
+			Spec: &models.V1ClusterRbacSpec{
+				Bindings: clusterRoleBindings,
+			},
+		})
+	}
+
+	if len(roleBindings) > 0 {
+		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
+			Spec: &models.V1ClusterRbacSpec{
+				Bindings: roleBindings,
+			},
+		})
+	}
+	return rbacs
+}
+
+func toClusterRBAC(clusterRbacBinding interface{}) []*models.V1ClusterRbacBinding {
 	m := clusterRbacBinding.(map[string]interface{})
 
 	role, _ := m["role"].(map[string]interface{})
@@ -82,13 +98,7 @@ func toClusterRBAC(clusterRbacBinding interface{}) *models.V1ClusterRbacInputEnt
 		Subjects:  subjects,
 	})
 
-	ret := &models.V1ClusterRbacInputEntity{
-		Spec: &models.V1ClusterRbacSpec{
-			Bindings: bindings,
-		},
-	}
-
-	return ret
+	return bindings
 
 }
 
@@ -124,23 +134,7 @@ func flattenClusterRBAC(items []*models.V1ClusterRbac) []interface{} {
 
 func updateClusterRBAC(c *client.V1Client, d *schema.ResourceData) error {
 	if rbacs := toClusterRBACs(d); rbacs != nil {
-		return c.ApplyClusterRbacConfig(d.Id(), toUpdateClusterRbac(rbacs))
+		return c.ApplyClusterRbacConfig(d.Id(), rbacs)
 	}
 	return nil
-}
-
-func toUpdateClusterRbac(rbacs []*models.V1ClusterRbacInputEntity) *models.V1ClusterRbac {
-	bindings := make([]*models.V1ClusterRbacBinding, 0)
-
-	for _, rbac := range rbacs {
-		for _, binding := range rbac.Spec.Bindings {
-			bindings = append(bindings, binding)
-		}
-	}
-
-	return &models.V1ClusterRbac{
-		Spec: &models.V1ClusterRbacSpec{
-			Bindings: bindings,
-		},
-	}
 }

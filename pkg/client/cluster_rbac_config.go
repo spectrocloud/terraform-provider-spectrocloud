@@ -1,9 +1,8 @@
 package client
 
 import (
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client/herr"
-
 	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client/herr"
 
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 )
@@ -48,53 +47,30 @@ func (h *V1Client) UpdateClusterRbacConfig(uid string, config *models.V1ClusterR
 	return err
 }
 
-func (h *V1Client) ApplyClusterRbacConfig(uid string, config *models.V1ClusterRbac) error {
+func (h *V1Client) ApplyClusterRbacConfig(uid string, config []*models.V1ClusterRbacInputEntity) error {
 	if rbac, err := h.GetClusterRbacConfig(uid); err != nil {
 		return err
 	} else if rbac == nil {
-		return h.CreateClusterRbacConfig(uid, config)
+		return h.CreateClusterRbacConfig(uid, toCreateClusterRbac(config))
 	} else {
-		return h.UpdateClusterRbacConfig(uid, toUpdateRbac(config))
+		return h.UpdateClusterRbacConfig(uid, &models.V1ClusterRbacResourcesUpdateEntity{
+			Rbacs: config,
+		})
 	}
 }
 
-func toUpdateRbac(config *models.V1ClusterRbac) *models.V1ClusterRbacResourcesUpdateEntity {
-	rbacs := make([]*models.V1ClusterRbacInputEntity, 0)
+func toCreateClusterRbac(rbacs []*models.V1ClusterRbacInputEntity) *models.V1ClusterRbac {
+	bindings := make([]*models.V1ClusterRbacBinding, 0)
 
-	clusterRoleBindings := make([]*models.V1ClusterRbacBinding, 0)
-	roleBindings := make([]*models.V1ClusterRbacBinding, 0)
-
-	for _, binding := range config.Spec.Bindings {
-		switch binding.Type {
-		case "ClusterRoleBinding":
-			clusterRoleBindings = append(clusterRoleBindings, binding)
-			break
-		case "RoleBinding":
-			roleBindings = append(roleBindings, binding)
-			break
-		default:
-			break
+	for _, rbac := range rbacs {
+		for _, binding := range rbac.Spec.Bindings {
+			bindings = append(bindings, binding)
 		}
-
 	}
 
-	if len(clusterRoleBindings) > 0 {
-		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
-			Spec: &models.V1ClusterRbacSpec{
-				Bindings: clusterRoleBindings,
-			},
-		})
-	}
-
-	if len(roleBindings) > 0 {
-		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
-			Spec: &models.V1ClusterRbacSpec{
-				Bindings: roleBindings,
-			},
-		})
-	}
-
-	return &models.V1ClusterRbacResourcesUpdateEntity{
-		Rbacs: rbacs,
+	return &models.V1ClusterRbac{
+		Spec: &models.V1ClusterRbacSpec{
+			Bindings: bindings,
+		},
 	}
 }
