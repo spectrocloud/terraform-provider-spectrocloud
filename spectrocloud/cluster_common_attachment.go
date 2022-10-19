@@ -20,7 +20,7 @@ var resourceAddonDeploymentCreatePendingStates = []string{
 	"Profile:NotAttached",
 }
 
-func waitForAddonDeploymentCreation(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+func waitForAddonDeployment(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client, state string) (diag.Diagnostics, bool) {
 	cluster, err := c.GetCluster(cluster_uid)
 	if err != nil {
 		return diags, true
@@ -34,7 +34,7 @@ func waitForAddonDeploymentCreation(ctx context.Context, d *schema.ResourceData,
 		Pending:    resourceAddonDeploymentCreatePendingStates,
 		Target:     []string{"True"},
 		Refresh:    resourceAddonDeploymentStateRefreshFunc(c, cluster_uid, profile_uid),
-		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
+		Timeout:    d.Timeout(state) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
 	}
@@ -45,6 +45,14 @@ func waitForAddonDeploymentCreation(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err), true
 	}
 	return nil, false
+}
+
+func waitForAddonDeploymentCreation(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+	return waitForAddonDeployment(ctx, d, cluster_uid, profile_uid, diags, c, schema.TimeoutCreate)
+}
+
+func waitForAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+	return waitForAddonDeployment(ctx, d, cluster_uid, profile_uid, diags, c, schema.TimeoutUpdate)
 }
 
 func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, cluster_uid string, profile_uid string) resource.StateRefreshFunc {
