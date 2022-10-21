@@ -103,8 +103,9 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **cluster_profile_id** (String, Deprecated)
-- **cluster_rbac_binding** (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- **cluster_rbac_binding** (Block List) A Cluster Role binding defines the permissions defined across a cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - **fargate_profile** (Block List) (see [below for nested schema](#nestedblock--fargate_profile))
+- **host_config** (Block List) (see [below for nested schema](#nestedblock--host_config))
 - **id** (String) The ID of this resource.
 - **namespaces** (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - **os_patch_after** (String)
@@ -112,6 +113,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - **os_patch_schedule** (String)
 - **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
+- **skip_completion** (Boolean)
 - **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
@@ -185,7 +187,7 @@ Optional:
 
 - **include_cluster_resources** (Boolean)
 - **include_disks** (Boolean)
-- **namespaces** (Set of String)
+- **namespaces** (Set of String) Provide namespaces that need to be backed up. If left empty then all the Namespaces will be backed up.
 
 
 <a id="nestedblock--cluster_profile"></a>
@@ -244,7 +246,7 @@ Optional:
 Required:
 
 - **name** (String)
-- **type** (String)
+- **type** (String) Available types: `Users`, `Groups`, Service Account
 
 Optional:
 
@@ -276,6 +278,17 @@ Optional:
 
 - **labels** (Map of String)
 
+
+
+<a id="nestedblock--host_config"></a>
+### Nested Schema for `host_config`
+
+Optional:
+
+- **external_traffic_policy** (String)
+- **host_endpoint_type** (String)
+- **ingress_host** (String)
+- **load_balancer_source_ranges** (String)
 
 
 <a id="nestedblock--namespaces"></a>

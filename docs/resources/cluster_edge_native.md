@@ -1,11 +1,11 @@
 ---
-page_title: "spectrocloud_cluster_edge_vsphere Resource - terraform-provider-spectrocloud"
+page_title: "spectrocloud_cluster_edge_native Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
   
 ---
 
-# Resource `spectrocloud_cluster_edge_vsphere`
+# Resource `spectrocloud_cluster_edge_native`
 
 
 
@@ -16,13 +16,14 @@ description: |-
 ### Required
 
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- **edge_host_uid** (String)
-- **machine_pool** (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
+- **machine_pool** (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
 
 ### Optional
 
+- **apply_setting** (String)
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
+- **cloud_account_id** (String)
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **cluster_rbac_binding** (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - **host_config** (Block List) (see [below for nested schema](#nestedblock--host_config))
@@ -47,17 +48,12 @@ description: |-
 
 Required:
 
-- **datacenter** (String)
-- **folder** (String)
+- **ssh_key** (String)
 - **vip** (String)
 
 Optional:
 
-- **image_template_folder** (String)
-- **network_search_domain** (String)
-- **network_type** (String)
-- **ssh_key** (String)
-- **static_ip** (Boolean)
+- **ntp_servers** (Set of String)
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -65,47 +61,16 @@ Optional:
 
 Required:
 
-- **count** (Number)
-- **instance_type** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - **name** (String)
-- **placement** (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
 
 - **additional_labels** (Map of String)
 - **control_plane** (Boolean)
 - **control_plane_as_worker** (Boolean)
+- **host_uids** (List of String)
 - **taints** (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - **update_strategy** (String)
-
-<a id="nestedblock--machine_pool--instance_type"></a>
-### Nested Schema for `machine_pool.instance_type`
-
-Required:
-
-- **cpu** (Number)
-- **disk_size_gb** (Number)
-- **memory_mb** (Number)
-
-
-<a id="nestedblock--machine_pool--placement"></a>
-### Nested Schema for `machine_pool.placement`
-
-Required:
-
-- **cluster** (String)
-- **datastore** (String)
-- **network** (String)
-- **resource_pool** (String)
-
-Optional:
-
-- **static_ip_pool_id** (String)
-
-Read-only:
-
-- **id** (String) The ID of this resource.
-
 
 <a id="nestedblock--machine_pool--taints"></a>
 ### Nested Schema for `machine_pool.taints`
@@ -145,6 +110,7 @@ Required:
 Optional:
 
 - **pack** (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack))
+- **type** (String)
 
 <a id="nestedblock--cluster_profile--pack"></a>
 ### Nested Schema for `cluster_profile.pack`
