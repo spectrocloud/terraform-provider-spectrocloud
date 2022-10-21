@@ -4,7 +4,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"math"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 func toWorkspaceNamespaces(d *schema.ResourceData) []*models.V1WorkspaceClusterNamespace {
@@ -47,14 +49,7 @@ func toWorkspaceNamespace(clusterRbacBinding interface{}) *models.V1WorkspaceClu
 	}
 
 	name := m["name"].(string)
-	IsRegex := false
-
-	first := string(name[0])
-	last := string(name[len(name)-1])
-
-	if first == "/" && last == "/" {
-		IsRegex = true
-	}
+	IsRegex := IsRegex(name)
 
 	ns := &models.V1WorkspaceClusterNamespace{
 		Image: &models.V1WorkspaceNamespaceImage{
@@ -69,6 +64,30 @@ func toWorkspaceNamespace(clusterRbacBinding interface{}) *models.V1WorkspaceClu
 	}
 
 	return ns
+}
+
+func IsRegex(name string) bool {
+	last := string(name[len(name)-1])
+
+	if !((strings.HasPrefix(name, "~/") || strings.HasPrefix(name, "/")) && last == "/") {
+		return false // not a regular expression since it doesn't start with ~/ / or end with /
+	}
+
+	exp := name
+	if strings.HasPrefix(name, "~/") && len(name) > 3 {
+		exp = name[2 : len(name)-2]
+	}
+	if strings.HasPrefix(name, "/") && len(name) > 2 {
+		exp = name[1 : len(name)-1]
+	}
+
+	_, err := regexp.Compile(exp)
+	if err == nil {
+		return true
+	} else {
+		return false // not a valid regex doesn't compile
+	}
+
 }
 
 func toUpdateWorkspaceNamespaces(d *schema.ResourceData) *models.V1WorkspaceResourceAllocationsEntity {

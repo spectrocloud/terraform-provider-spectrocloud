@@ -45,7 +45,7 @@
 #     values = data.spectrocloud_pack.tekton-operator.values
 #   }
 
-#   # put the cosign secret in its own pack so that it reconciles 
+#   # put the cosign secret in its own pack so that it reconciles
 #   # cleanly on the first pass and exists before the chains operator is deployed
 #   pack {
 #     name = "tekton-cosign-setup"

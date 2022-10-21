@@ -584,8 +584,8 @@ github.com/sirupsen/logrus v1.4.2 h1:SPIRibHv4MatM3XXNO2BJeFLZwZ2LvZgfQ5+UNI2im4
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d h1:ICP3awSALxQrtubNm79v1t/hUEoXi+YUzW26Pwtam0M=
 github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d/go.mod h1:HviEHWZZkcU+iQOxCeSr+IIRypm3HY/XsL1wkte/2SI=
-github.com/spectrocloud/hapi v1.14.1-0.20221005223137-f9ce5552a400 h1:8GsyDKQGvb6Rhz8R3Tigiadl3D3NzfnvJ3iE6/AZDSI=
-github.com/spectrocloud/hapi v1.14.1-0.20221005223137-f9ce5552a400/go.mod h1:mHd7t0RTGnNBysMD9abHK88RN+dL5NWX9LsJ4iOqffo=
+github.com/spectrocloud/hapi v1.14.1-0.20221008045732-f8b08073b3ad h1:IELAn3FoqNh/VaWImWSfqvKRo53ofzD3kNlE4VtH9Lc=
+github.com/spectrocloud/hapi v1.14.1-0.20221008045732-f8b08073b3ad/go.mod h1:mHd7t0RTGnNBysMD9abHK88RN+dL5NWX9LsJ4iOqffo=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
 github.com/spf13/cast v1.2.0/go.mod h1:r2rcYCSwa1IExKTDiTfzaxqT2FNHs8hODu4LnUfgKEg=

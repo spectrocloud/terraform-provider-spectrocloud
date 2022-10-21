@@ -3,11 +3,8 @@ package spectrocloud
 import (
 	"context"
 	"log"
-	"sort"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -154,7 +151,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"host": {
+						"vip": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
@@ -244,10 +241,6 @@ func resourceClusterEdgeNative() *schema.Resource {
 
 							//ForceNew: true,
 						},
-						"count": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
 						"update_strategy": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -258,68 +251,6 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
-							},
-						},
-						"instance_type": {
-							Type:     schema.TypeList,
-							Required: true,
-							MaxItems: 1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"disk_size_gb": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-									"memory_mb": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-									"cpu": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-								},
-							},
-						},
-						"placements": {
-							Type:     schema.TypeList,
-							Required: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"appliance_id": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"network_type": {
-										Type:         schema.TypeString,
-										ValidateFunc: validation.StringInSlice([]string{"default", "bridge"}, false),
-										Required:     true,
-									},
-									"network_names": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"image_storage_pool": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"target_storage_pool": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"data_storage_pool": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"network": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-								},
 							},
 						},
 					},
@@ -477,6 +408,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 					},
 				},
 			},
+			"skip_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -532,7 +467,9 @@ func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m 
 }
 
 func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	d.Set("cloud_config_id", configUID)
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
 	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
@@ -551,7 +488,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0, 1)
+	ois := make([]interface{}, 0)
 
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
@@ -561,21 +498,12 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
-		oi["count"] = machinePool.Size
-		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
-
-		// TODO: check commented below
-		/*if machinePool.InstanceType != nil {
-			s := make(map[string]interface{})
-			s["disk_size_gb"] = int(*machinePool.RootDiskInGB)
-			s["memory_mb"] = int(*machinePool.InstanceType.MemoryInMB)
-			s["name"] =
-				s["cpu"] = int(*machinePool.InstanceType.NumCPUs)
-
-			oi["instance_type"] = []interface{}{s}
+		hosts := make([]string, 0)
+		for _, host := range machinePool.Hosts {
+			hosts = append(hosts, *host.HostUID)
 		}
-
-		oi["placements"] = placements*/
+		oi["host_uids"] = hosts
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
 		ois = append(ois, oi)
 	}
@@ -673,9 +601,9 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1S
 				NtpServers: toNtpServers(cloudConfig),
 				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
 				ControlPlaneEndpoint: &models.V1EdgeNativeControlPlaneEndPoint{
-					DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-					Host:             cloudConfig["host"].(string),
-					Type:             "IP", // only IP type for now no DDNS
+					//DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
+					Host: cloudConfig["vip"].(string),
+					Type: "IP", // only IP type for now no DDNS
 				},
 			},
 		},
@@ -686,12 +614,6 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1S
 		mp := toMachinePoolEdgeNative(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
-
-	// sort
-	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
-		return machinePoolConfigs[i].PoolConfig.IsControlPlane
-	})
-
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
@@ -704,30 +626,17 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 	labels := make([]string, 0)
 	controlPlane := m["control_plane"].(bool)
 	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
-	if controlPlane {
-		labels = append(labels, "master")
-	}
 
-	// TODO: review instance type usage.
-	/*
-		ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
-
-		instanceType := models.V1EdgeNativeInstanceType{
-			Name:      ins["name"].(string),
-			MemoryMiB: int32(ins["memory_mb"].(int)),
-			NumCPUs:   int32(ins["cpu"].(int)),
-			DiskGiB:   int32(ins["disk_gb"].(int)),
-		}*/
-
+	cloudConfig := toEdgeHosts(m)
 	mp := &models.V1EdgeNativeMachinePoolConfigEntity{
-		CloudConfig: toEdgeHosts(m),
+		CloudConfig: cloudConfig,
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Size:             ptr.Int32Ptr(int32(len(cloudConfig.EdgeHosts))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -738,11 +647,11 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 }
 
 func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudConfigEntity {
-	if m["hosts_uids"] == nil {
+	if m["host_uids"] == nil {
 		return nil
 	}
 	edgeHosts := make([]*models.V1EdgeNativeMachinePoolHostEntity, 0)
-	for _, host := range m["hosts_uids"].(*schema.Set).List() {
+	for _, host := range m["host_uids"].([]interface{}) {
 		edgeHosts = append(edgeHosts, &models.V1EdgeNativeMachinePoolHostEntity{
 			HostUID: ptr.StringPtr(host.(string)),
 		})

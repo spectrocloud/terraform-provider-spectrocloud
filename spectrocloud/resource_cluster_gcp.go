@@ -415,6 +415,10 @@ func resourceClusterGcp() *schema.Resource {
 					},
 				},
 			},
+			"skip_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
 		},
 	}
 }

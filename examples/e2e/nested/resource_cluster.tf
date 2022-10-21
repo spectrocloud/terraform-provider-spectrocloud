@@ -2,7 +2,6 @@
 resource "spectrocloud_cluster_nested" "cluster" {
   name = "nested-cluster-demo"
 
-  #tags = ["skip_completion"]
 
   cluster_config {
     host_cluster_config {

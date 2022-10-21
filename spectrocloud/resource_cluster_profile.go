@@ -304,7 +304,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		metadata, err := toClusterProfilePatch(d, cp)
+		metadata, err := toClusterProfilePatch(d)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -340,6 +340,22 @@ func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m i
 }
 
 func toClusterProfileCreate(d *schema.ResourceData) (*models.V1ClusterProfileEntity, error) {
+	cp := toClusterProfileBasic(d)
+
+	packs := make([]*models.V1PackManifestEntity, 0)
+	for _, pack := range d.Get("pack").([]interface{}) {
+		if p, e := toClusterProfilePackCreate(pack); e != nil {
+			return nil, e
+		} else {
+			packs = append(packs, p)
+		}
+	}
+	cp.Spec.Template.Packs = packs
+
+	return cp, nil
+}
+
+func toClusterProfileBasic(d *schema.ResourceData) *models.V1ClusterProfileEntity {
 	description := ""
 	if d.Get("description") != nil {
 		description = d.Get("description").(string)
@@ -361,18 +377,7 @@ func toClusterProfileCreate(d *schema.ResourceData) (*models.V1ClusterProfileEnt
 			Version: d.Get("version").(string),
 		},
 	}
-
-	packs := make([]*models.V1PackManifestEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		if p, e := toClusterProfilePackCreate(pack); e != nil {
-			return nil, e
-		} else {
-			packs = append(packs, p)
-		}
-	}
-	cp.Spec.Template.Packs = packs
-
-	return cp, nil
+	return cp
 }
 
 func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity, error) {
@@ -449,10 +454,17 @@ func toClusterProfileUpdate(d *schema.ResourceData, cluster *models.V1ClusterPro
 	return cp, nil
 }
 
-func toClusterProfilePatch(d *schema.ResourceData, cluster *models.V1ClusterProfile) (*models.V1ProfileMetaEntity, error) {
+func toClusterProfilePatch(d *schema.ResourceData) (*models.V1ProfileMetaEntity, error) {
+	description := ""
+	if d.Get("description") != nil {
+		description = d.Get("description").(string)
+	}
 	metadata := &models.V1ProfileMetaEntity{
 		Metadata: &models.V1ObjectMetaInputEntity{
-			Name:   d.Get("name").(string),
+			Name: d.Get("name").(string),
+			Annotations: map[string]string{
+				"description": description,
+			},
 			Labels: toTags(d),
 		},
 		Spec: &models.V1ClusterProfileSpecEntity{

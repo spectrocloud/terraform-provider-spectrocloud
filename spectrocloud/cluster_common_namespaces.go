@@ -46,6 +46,7 @@ func toClusterNamespace(clusterRbacBinding interface{}) *models.V1ClusterNamespa
 			Name: m["name"].(string),
 		},
 		Spec: &models.V1ClusterNamespaceSpec{
+			IsRegex:            IsRegex(m["name"].(string)),
 			ResourceAllocation: resource_alloc,
 		},
 	}
