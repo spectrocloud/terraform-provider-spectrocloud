@@ -152,13 +152,13 @@ resource "spectrocloud_cluster_profile" "profile" {
 ### Optional
 
 - **cloud** (String)
-- **context** (String) One of: tenant, project(default), system
+- **context** (String)
 - **description** (String)
 - **id** (String) The ID of this resource.
 - **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - **type** (String)
-- **version** (String) 1.0.0 - default.
+- **version** (String)
 
 <a id="nestedblock--pack"></a>
 ### Nested Schema for `pack`

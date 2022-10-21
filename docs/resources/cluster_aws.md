@@ -100,6 +100,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
 
 ### Required
 
+- **cloud_account_id** (String)
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - **machine_pool** (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
@@ -108,10 +109,10 @@ resource "spectrocloud_cluster_aws" "cluster" {
 
 - **apply_setting** (String)
 - **backup_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
-- **cloud_account_id** (String)
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **cluster_profile_id** (String, Deprecated)
 - **cluster_rbac_binding** (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- **host_config** (Block List) (see [below for nested schema](#nestedblock--host_config))
 - **id** (String) The ID of this resource.
 - **namespaces** (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - **os_patch_after** (String)
@@ -119,6 +120,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
 - **os_patch_schedule** (String)
 - **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
+- **skip_completion** (Boolean)
 - **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
@@ -247,6 +249,17 @@ Optional:
 
 - **namespace** (String)
 
+
+
+<a id="nestedblock--host_config"></a>
+### Nested Schema for `host_config`
+
+Optional:
+
+- **external_traffic_policy** (String)
+- **host_endpoint_type** (String)
+- **ingress_host** (String)
+- **load_balancer_source_ranges** (String)
 
 
 <a id="nestedblock--namespaces"></a>
