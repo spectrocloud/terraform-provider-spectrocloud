@@ -13,8 +13,8 @@ resource "spectrocloud_cluster_nested" "cluster" {
       # }
     }
     resources {
-      max_cpu = 2
-      max_mem_in_mb = 6
+      max_cpu = 6
+      max_mem_in_mb = 6000
       min_cpu = 0
       min_mem_in_mb = 0
     }

@@ -16,7 +16,7 @@ description: |-
 ### Required
 
 - **cloud_config** (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- **machine_pool** (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
+- **machine_pool** (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - **name** (String)
 
 ### Optional
@@ -26,6 +26,7 @@ description: |-
 - **cloud_account_id** (String)
 - **cluster_profile** (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - **cluster_rbac_binding** (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- **host_config** (Block List) (see [below for nested schema](#nestedblock--host_config))
 - **id** (String) The ID of this resource.
 - **namespaces** (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - **os_patch_after** (String)
@@ -33,6 +34,7 @@ description: |-
 - **os_patch_schedule** (String)
 - **pack** (Block List) (see [below for nested schema](#nestedblock--pack))
 - **scan_policy** (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
+- **skip_completion** (Boolean)
 - **tags** (Set of String)
 - **timeouts** (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
@@ -86,7 +88,7 @@ Optional:
 - **attached_disks** (Block List) (see [below for nested schema](#nestedblock--machine_pool--instance_type--attached_disks))
 - **cache_passthrough** (Boolean)
 - **cpus_sets** (String)
-- **gpu_config** (Block Set) (see [below for nested schema](#nestedblock--machine_pool--instance_type--gpu_config))
+- **gpu_config** (Block List) (see [below for nested schema](#nestedblock--machine_pool--instance_type--gpu_config))
 
 <a id="nestedblock--machine_pool--instance_type--attached_disks"></a>
 ### Nested Schema for `machine_pool.instance_type.attached_disks`
@@ -108,6 +110,10 @@ Required:
 - **device_model** (String)
 - **num_gpus** (Number)
 - **vendor** (String)
+
+Optional:
+
+- **addresses** (Map of String)
 
 
 
@@ -219,6 +225,17 @@ Optional:
 
 - **namespace** (String)
 
+
+
+<a id="nestedblock--host_config"></a>
+### Nested Schema for `host_config`
+
+Optional:
+
+- **external_traffic_policy** (String)
+- **host_endpoint_type** (String)
+- **ingress_host** (String)
+- **load_balancer_source_ranges** (String)
 
 
 <a id="nestedblock--namespaces"></a>
