@@ -38,6 +38,6 @@ func toMachineManagementConfig(d *schema.ResourceData) *models.V1MachineManageme
 func toClusterResourceConfig(d *schema.ResourceData) *models.V1ClusterResourcesEntity {
 	return &models.V1ClusterResourcesEntity{
 		Namespaces: toClusterNamespaces(d),
-		Rbacs:      toClusterRBACs(d),
+		Rbacs:      toClusterRBACsInputEntities(d),
 	}
 }
