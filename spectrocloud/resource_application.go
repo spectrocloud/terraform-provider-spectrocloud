@@ -32,6 +32,14 @@ func resourceApplication() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"application_profile_uid": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -92,10 +100,10 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	application := toAppDeploymentClusterGroupEntity(d)
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, "" /*clusterUid*/, diags, c)
+	/*diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c)
 	if isError {
 		return diagnostics
-	}
+	}*/
 
 	uid, err := c.CreateApplication(application)
 	if err != nil {
@@ -104,7 +112,7 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	d.SetId(uid)
 
-	diagnostics, isError = waitForApplicationCreation(ctx, d, "" /*cluster.Metadata.UID*/, uid, diags, c)
+	diagnostics, isError := waitForApplicationCreation(ctx, d, diags, c)
 	if isError {
 		return diagnostics
 	}
@@ -162,7 +170,7 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
-		diagnostics, isError := waitForAddonDeploymentUpdate(ctx, d, cluster.Metadata.UID, addonDeployment.Profiles[0].UID, diags, c)
+		diagnostics, isError := waitForApplicationUpdate(ctx, d, diags, c)
 		if isError {
 			return diagnostics
 		}
