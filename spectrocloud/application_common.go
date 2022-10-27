@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -11,6 +12,9 @@ import (
 )
 
 var resourceApplicationCreatePendingStates = []string{
+	"Tier:Error",
+	"PackPending",
+	"Tier:NotReady",
 	"Application:NotReady",
 	"Application:Peding",
 }
@@ -60,14 +64,24 @@ func resourceApplicationStateRefreshFunc(c *client.V1Client, d *schema.ResourceD
 		}
 
 		// wait for tiers to be ready
-		for _, app_tier := range application.Status.AppTiers {
+		/*for _, app_tier := range application.Status.AppTiers {
 			if *app_tier.Condition.Status != "True" {
 				log.Printf("Cluster condition status (%s): %s", d.Id(), *app_tier.Condition.Status)
 				return application, "Application:NotReady", nil
 			}
+		}*/
+
+		for _, tier_status := range application.Status.AppTiers {
+			log.Printf("Cluster (%s): tier:%s, condition status:%s", d.Id(), tier_status.Name, *tier_status.Condition.Status)
+			if *tier_status.Condition.Type == "Error" {
+				return application, "Tier:Error", errors.New(tier_status.Condition.Message)
+			}
+			if *tier_status.Condition.Status != "True" || *tier_status.Condition.Type != "Ready" {
+				return application, "Tier:NotReady", nil
+			}
 		}
 
-		if application.Status.State != "Ready" {
+		if application.Status.State != "Deployed" {
 			return application, "Application:NotReady", nil
 		}
 
