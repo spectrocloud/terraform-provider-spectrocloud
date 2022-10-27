@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -50,13 +48,17 @@ func resourceApplication() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"cluster_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"cluster_group_uid": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 						},
 						"cluster_name": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 						},
 						"limits": {
 							Type:     schema.TypeList,
@@ -74,7 +76,7 @@ func resourceApplication() *schema.Resource {
 									},
 									"storage": {
 										Type:     schema.TypeInt,
-										Required: true,
+										Optional: true,
 									},
 								},
 							},
@@ -97,17 +99,37 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 	if err != nil && cluster == nil {
 		return diag.FromErr(errors.New(fmt.Sprintf("Cluster not found: %s", clusterUid)))
 	}*/
+	var uid string
+	var err error
+	configList := d.Get("config")
+	config := configList.([]interface{})[0].(map[string]interface{})
+	cluster_uid := config["cluster_uid"]
 
-	application := toAppDeploymentClusterGroupEntity(d)
+	if cluster_uid == nil {
+		application := toAppDeploymentClusterGroupEntity(d)
 
-	/*diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c)
-	if isError {
-		return diagnostics
-	}*/
+		/*diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c)
+		if isError {
+			return diagnostics
+		}*/
 
-	uid, err := c.CreateApplication(application)
-	if err != nil {
-		return diag.FromErr(err)
+		uid, err = c.CreateApplicationWithNewSandboxCluster(application)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		application := toAppDeploymentNestedClusterEntity(d)
+
+		/*diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c)
+		if isError {
+			return diagnostics
+		}*/
+
+		uid, err = c.CreateApplicationWithExistingSandboxCluster(application)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
 	}
 
 	d.SetId(uid)
@@ -181,55 +203,4 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	return diags
-}
-
-func toAppDeploymentClusterGroupEntity(d *schema.ResourceData) *models.V1AppDeploymentClusterGroupEntity {
-	return &models.V1AppDeploymentClusterGroupEntity{
-		Metadata: &models.V1ObjectMetaInputEntity{
-			Name:   d.Get("name").(string),
-			Labels: toTags(d),
-		},
-		Spec: toAppDeploymentClusterGroupSpec(d),
-	}
-}
-
-func toAppDeploymentClusterGroupSpec(d *schema.ResourceData) *models.V1AppDeploymentClusterGroupSpec {
-	return &models.V1AppDeploymentClusterGroupSpec{
-		Config:  toV1AppDeploymentClusterGroupConfigEntity(d),
-		Profile: toV1AppDeploymentProfileEntity(d),
-	}
-}
-
-func toV1AppDeploymentClusterGroupConfigEntity(d *schema.ResourceData) *models.V1AppDeploymentClusterGroupConfigEntity {
-	return &models.V1AppDeploymentClusterGroupConfigEntity{
-		TargetSpec: toAppDeploymentClusterGroupTargetSpec(d),
-	}
-}
-
-func toAppDeploymentClusterGroupTargetSpec(d *schema.ResourceData) *models.V1AppDeploymentClusterGroupTargetSpec {
-	configList := d.Get("config")
-	config := configList.([]interface{})[0].(map[string]interface{})
-
-	return &models.V1AppDeploymentClusterGroupTargetSpec{
-		ClusterGroupUID: ptr.StringPtr(config["cluster_group_uid"].(string)),
-		ClusterLimits:   toAppDeploymentTargetClusterLimits(d),
-		ClusterName:     ptr.StringPtr(config["cluster_name"].(string)),
-	}
-}
-
-func toAppDeploymentTargetClusterLimits(d *schema.ResourceData) *models.V1AppDeploymentTargetClusterLimits {
-	configList := d.Get("config")
-	config := configList.([]interface{})[0].(map[string]interface{})
-	limits := config["limits"].([]interface{})[0].(map[string]interface{})
-
-	return &models.V1AppDeploymentTargetClusterLimits{
-		CPU:       int32(limits["cpu"].(int)),
-		MemoryMiB: int32(limits["memory"].(int)),
-	}
-}
-
-func toV1AppDeploymentProfileEntity(d *schema.ResourceData) *models.V1AppDeploymentProfileEntity {
-	return &models.V1AppDeploymentProfileEntity{
-		AppProfileUID: ptr.StringPtr(d.Get("application_profile_uid").(string)),
-	}
 }
