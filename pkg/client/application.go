@@ -23,7 +23,7 @@ func (h *V1Client) GetApplication(uid string) (*models.V1AppDeployment, error) {
 	}
 
 	// special check if the cluster is marked deleted
-	application := success.Payload
+	application := success.Payload //success.Payload.Spec.Config.Target.ClusterRef.UID
 	return application, nil
 }
 
@@ -53,7 +53,7 @@ func (h *V1Client) UpdateApplication(cluster *models.V1SpectroCluster, body *mod
 	return err
 }
 
-func (h *V1Client) CreateApplication(body *models.V1AppDeploymentClusterGroupEntity) (string, error) {
+func (h *V1Client) CreateApplicationWithNewSandboxCluster(body *models.V1AppDeploymentClusterGroupEntity) (string, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
@@ -61,6 +61,22 @@ func (h *V1Client) CreateApplication(body *models.V1AppDeploymentClusterGroupEnt
 
 	params := clusterC.NewV1AppDeploymentsClusterGroupCreateParams().WithContext(h.Ctx).WithBody(body)
 	success, err := client.V1AppDeploymentsClusterGroupCreate(params)
+
+	if err != nil {
+		return "", err
+	}
+
+	return *success.Payload.UID, nil
+}
+
+func (h *V1Client) CreateApplicationWithExistingSandboxCluster(body *models.V1AppDeploymentNestedClusterEntity) (string, error) {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return "", err
+	}
+
+	params := clusterC.NewV1AppDeploymentsNestedClusterCreateParams().WithContext(h.Ctx).WithBody(body)
+	success, err := client.V1AppDeploymentsNestedClusterCreate(params)
 
 	if err != nil {
 		return "", err
