@@ -40,6 +40,10 @@ func resourceAppliance() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"pairing_key": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"wait": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -155,11 +159,21 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 			labels[k] = val.(string)
 		}
 	}
+
+	metadata := &models.V1ObjectEntity{
+		UID:  id,
+		Name: id,
+		//Labels: labels,
+	}
+
+	key := ""
+	if d.Get("pairing_key") != nil {
+		key = d.Get("pairing_key").(string)
+	}
 	return &models.V1EdgeHostDeviceEntity{
-		Metadata: &models.V1ObjectMeta{
-			UID:    id,
-			Name:   id,
-			Labels: labels,
+		Metadata: metadata,
+		Spec: &models.V1EdgeHostDeviceSpecEntity{
+			HostPairingKey: key,
 		},
 	}
 }
