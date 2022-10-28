@@ -43,13 +43,20 @@ func toAppDeploymentClusterGroupTargetSpec(d *schema.ResourceData) *models.V1App
 
 func toAppDeploymentTargetClusterLimits(d *schema.ResourceData) *models.V1AppDeploymentTargetClusterLimits {
 	configList := d.Get("config")
-	config := configList.([]interface{})[0].(map[string]interface{})
-	limits := config["limits"].([]interface{})[0].(map[string]interface{})
-
-	return &models.V1AppDeploymentTargetClusterLimits{
-		CPU:       int32(limits["cpu"].(int)),
-		MemoryMiB: int32(limits["memory"].(int)),
+	if configList.([]interface{})[0] != nil {
+		config := configList.([]interface{})[0].(map[string]interface{})
+		if config["limits"].([]interface{})[0] != nil {
+			limits := config["limits"].([]interface{})[0].(map[string]interface{})
+			if limits["cpu"] != nil && limits["memory"] != nil {
+				return &models.V1AppDeploymentTargetClusterLimits{
+					CPU:       int32(limits["cpu"].(int)),
+					MemoryMiB: int32(limits["memory"].(int)),
+				}
+			}
+		}
 	}
+
+	return &models.V1AppDeploymentTargetClusterLimits{}
 }
 
 func toV1AppDeploymentProfileEntity(d *schema.ResourceData) *models.V1AppDeploymentProfileEntity {

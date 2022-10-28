@@ -99,13 +99,24 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 	if err != nil && cluster == nil {
 		return diag.FromErr(errors.New(fmt.Sprintf("Cluster not found: %s", clusterUid)))
 	}*/
+	val_error := errors.New("config block should have either 'cluster_uid' or 'cluster_group_uid' attributes specified.")
+
 	var uid string
 	var err error
+	var config map[string]interface{}
+	var cluster_uid interface{}
 	configList := d.Get("config")
-	config := configList.([]interface{})[0].(map[string]interface{})
-	cluster_uid := config["cluster_uid"]
+	if configList.([]interface{})[0] != nil {
+		config = configList.([]interface{})[0].(map[string]interface{})
+		cluster_uid = config["cluster_uid"]
+	} else {
+		return diag.FromErr(val_error)
+	}
 
 	if cluster_uid == nil {
+		if config["cluster_group_uid"] == nil {
+			return diag.FromErr(val_error)
+		}
 		application := toAppDeploymentClusterGroupEntity(d)
 
 		/*diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c)
