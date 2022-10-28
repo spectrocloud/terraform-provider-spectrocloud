@@ -11,6 +11,8 @@ description: |-
 
 ## Example Usage
 
+### Basic Example
+
 ```terraform
 # If looking up a cluster profile instead of creating a new one
 # data "spectrocloud_cluster_profile" "profile" {
@@ -140,6 +142,18 @@ resource "spectrocloud_cluster_profile" "profile" {
     values = local.proxy_val
   }
 }
+```
+
+### Example of Providing Multiple Packs
+
+You can provide multiple packs at once.  
+
+```terraform
+resource "spectrocloud_cluster_profile" "this" {
+  name = "security-profile"
+  dynamic "pack" {
+    for_each = var.my-packs
+  }
 ```
 
 ## Schema
