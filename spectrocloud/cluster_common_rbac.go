@@ -56,6 +56,7 @@ func toRbacInputEntities(config *models.V1ClusterRbac) []*models.V1ClusterRbacIn
 
 	}
 
+
 	if len(clusterRoleBindings) > 0 {
 		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
 			Spec: &models.V1ClusterRbacSpec{
