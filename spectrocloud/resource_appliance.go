@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"log"
 	"time"
@@ -160,10 +161,10 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 		}
 	}
 
-	metadata := &models.V1ObjectEntity{
-		UID:  id,
-		Name: id,
-		//Labels: labels,
+	metadata := &models.V1ObjectTagsEntity{
+		UID:    id,
+		Name:   id,
+		Labels: labels,
 	}
 
 	key := ""
@@ -173,7 +174,7 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 	return &models.V1EdgeHostDeviceEntity{
 		Metadata: metadata,
 		Spec: &models.V1EdgeHostDeviceSpecEntity{
-			HostPairingKey: key,
+			HostPairingKey: strfmt.Password(key),
 		},
 	}
 }
