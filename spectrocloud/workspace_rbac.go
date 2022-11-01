@@ -6,7 +6,7 @@ import (
 )
 
 func toWorkspaceRBACs(d *schema.ResourceData) []*models.V1ClusterRbac {
-	rbacs := toClusterRBACs(d)
+	rbacs := toClusterRBACsInputEntities(d)
 	workspace_rbacs := make([]*models.V1ClusterRbac, 0)
 	for _, rbac := range rbacs {
 		workspace_rbacs = append(workspace_rbacs,
@@ -16,18 +16,6 @@ func toWorkspaceRBACs(d *schema.ResourceData) []*models.V1ClusterRbac {
 	}
 
 	return workspace_rbacs
-}
-
-func toUpdateWorkspaceRBACs(d *schema.ResourceData) *models.V1ClusterRbac {
-	rbacs := toWorkspaceRBACs(d)
-	bindings := make([]*models.V1ClusterRbacBinding, 0)
-	for _, rbac := range rbacs {
-		for _, binding := range rbac.Spec.Bindings {
-			bindings = append(bindings, binding)
-		}
-	}
-
-	return &models.V1ClusterRbac{Spec: &models.V1ClusterRbacSpec{Bindings: bindings}}
 }
 
 func toQuota(d *schema.ResourceData) *models.V1WorkspaceQuota {

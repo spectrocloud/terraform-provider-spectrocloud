@@ -6,25 +6,34 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-func toClusterRBACs(d *schema.ResourceData) []*models.V1ClusterRbacInputEntity {
+func toClusterRBACsInputEntities(d *schema.ResourceData) []*models.V1ClusterRbacInputEntity {
+
+	rbacs := toRbacInputEntities(toClusterRbac(GetBindings(d)))
+
+	return rbacs
+}
+
+func GetBindings(d *schema.ResourceData) []*models.V1ClusterRbacBinding {
 	bindings := make([]*models.V1ClusterRbacBinding, 0)
 
 	if d.Get("cluster_rbac_binding") == nil {
 		return nil
 	}
 	for _, clusterRbac := range d.Get("cluster_rbac_binding").([]interface{}) {
-		for _, binding := range toClusterRBAC(clusterRbac) {
+		for _, binding := range toClusterRBACBindings(clusterRbac) {
 			bindings = append(bindings, binding)
 		}
 	}
 
-	rbacs := toRbacInputEntities(&models.V1ClusterRbac{
+	return bindings
+}
+
+func toClusterRbac(bindings []*models.V1ClusterRbacBinding) *models.V1ClusterRbac {
+	return &models.V1ClusterRbac{
 		Spec: &models.V1ClusterRbacSpec{
 			Bindings: bindings,
 		},
-	})
-
-	return rbacs
+	}
 }
 
 func toRbacInputEntities(config *models.V1ClusterRbac) []*models.V1ClusterRbacInputEntity {
@@ -47,6 +56,7 @@ func toRbacInputEntities(config *models.V1ClusterRbac) []*models.V1ClusterRbacIn
 
 	}
 
+
 	if len(clusterRoleBindings) > 0 {
 		rbacs = append(rbacs, &models.V1ClusterRbacInputEntity{
 			Spec: &models.V1ClusterRbacSpec{
@@ -65,7 +75,7 @@ func toRbacInputEntities(config *models.V1ClusterRbac) []*models.V1ClusterRbacIn
 	return rbacs
 }
 
-func toClusterRBAC(clusterRbacBinding interface{}) []*models.V1ClusterRbacBinding {
+func toClusterRBACBindings(clusterRbacBinding interface{}) []*models.V1ClusterRbacBinding {
 	m := clusterRbacBinding.(map[string]interface{})
 
 	role, _ := m["role"].(map[string]interface{})
@@ -133,7 +143,7 @@ func flattenClusterRBAC(items []*models.V1ClusterRbac) []interface{} {
 }
 
 func updateClusterRBAC(c *client.V1Client, d *schema.ResourceData) error {
-	if rbacs := toClusterRBACs(d); rbacs != nil {
+	if rbacs := toClusterRBACsInputEntities(d); rbacs != nil {
 		return c.ApplyClusterRbacConfig(d.Id(), rbacs)
 	}
 	return nil

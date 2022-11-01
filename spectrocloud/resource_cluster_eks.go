@@ -34,6 +34,12 @@ func resourceClusterEks() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -542,7 +548,8 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	cluster := toEksCluster(c, d)
 
-	uid, err := c.CreateClusterEks(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterEks(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}

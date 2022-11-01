@@ -153,7 +153,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 						},
 						"vip": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 						},
 						"ntp_servers": {
 							Type:     schema.TypeSet,
@@ -588,6 +588,16 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroEdgeNativeClusterEntity {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
+	controlPlaneEndpoint := &models.V1EdgeNativeControlPlaneEndPoint{}
+	if cloudConfig["vip"] != nil {
+		vip := cloudConfig["vip"].(string)
+		controlPlaneEndpoint =
+			&models.V1EdgeNativeControlPlaneEndPoint{
+				//DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
+				Host: vip,
+				Type: "IP", // only IP type for now no DDNS
+			}
+	}
 	cluster := &models.V1SpectroEdgeNativeClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -598,13 +608,9 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1S
 			Profiles: toProfiles(c, d),
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1EdgeNativeClusterConfig{
-				NtpServers: toNtpServers(cloudConfig),
-				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
-				ControlPlaneEndpoint: &models.V1EdgeNativeControlPlaneEndPoint{
-					//DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-					Host: cloudConfig["vip"].(string),
-					Type: "IP", // only IP type for now no DDNS
-				},
+				NtpServers:           toNtpServers(cloudConfig),
+				SSHKeys:              []string{cloudConfig["ssh_key"].(string)},
+				ControlPlaneEndpoint: controlPlaneEndpoint,
 			},
 		},
 	}

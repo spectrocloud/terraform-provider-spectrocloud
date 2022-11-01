@@ -73,11 +73,6 @@ func resourceWorkspace() *schema.Resource {
 							Optional: true,
 							Default:  true,
 						},
-						"include_workspace_resources": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  true,
-						},
 						"namespaces": {
 							Type:     schema.TypeSet,
 							Optional: true,
@@ -254,16 +249,15 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 		if err := c.UpdateWorkspaceResourceAllocation(d.Id(), namespaces); err != nil {
 			return diag.FromErr(err)
 		}
-		rbacs := toUpdateWorkspaceRBACs(d)
-		if err := c.UpdateWorkspaceRBACS(d.Id(), workspace.Spec.ClusterRbacs[0].Metadata.UID, rbacs); err != nil {
-			return diag.FromErr(err)
+		diagnostics, done := updateWorkspaceRBACs(d, c, workspace)
+		if done {
+			return diagnostics
 		}
-
 	} else {
-		rbacs := toUpdateWorkspaceRBACs(d)
 		if d.HasChange("cluster_rbac_binding") {
-			if err := c.UpdateWorkspaceRBACS(d.Id(), workspace.Spec.ClusterRbacs[0].Metadata.UID, rbacs); err != nil {
-				return diag.FromErr(err)
+			diagnostics, done := updateWorkspaceRBACs(d, c, workspace)
+			if done {
+				return diagnostics
 			}
 		}
 		if d.HasChange("namespaces") {
@@ -287,6 +281,16 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 	resourceWorkspaceRead(ctx, d, m)
 
 	return diags
+}
+
+func updateWorkspaceRBACs(d *schema.ResourceData, c *client.V1Client, workspace *models.V1Workspace) (diag.Diagnostics, bool) {
+	rbacs := toWorkspaceRBACs(d)
+	for id, rbac := range rbacs {
+		if err := c.UpdateWorkspaceRBACS(d.Id(), workspace.Spec.ClusterRbacs[id].Metadata.UID, rbac); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+	return nil, false
 }
 
 func resourceWorkspaceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

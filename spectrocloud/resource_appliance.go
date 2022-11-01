@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"log"
 	"time"
@@ -39,6 +40,10 @@ func resourceAppliance() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"pairing_key": {
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 			"wait": {
 				Type:     schema.TypeBool,
@@ -155,11 +160,21 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 			labels[k] = val.(string)
 		}
 	}
+
+	metadata := &models.V1ObjectTagsEntity{
+		UID:    id,
+		Name:   id,
+		Labels: labels,
+	}
+
+	key := ""
+	if d.Get("pairing_key") != nil {
+		key = d.Get("pairing_key").(string)
+	}
 	return &models.V1EdgeHostDeviceEntity{
-		Metadata: &models.V1ObjectMeta{
-			UID:    id,
-			Name:   id,
-			Labels: labels,
+		Metadata: metadata,
+		Spec: &models.V1EdgeHostDeviceSpecEntity{
+			HostPairingKey: strfmt.Password(key),
 		},
 	}
 }

@@ -74,7 +74,6 @@ function echoInitCmd() {
 prepare
 generateSpectrocloudProvider
 downloadProviderFromRegistry random 3.1.0
-downloadProviderFromRegistry template 2.2.0
 downloadProviderFromRegistry null 3.1.0
 downloadProviderFromRegistry local 2.1.0
 generateProvidersPlugins
