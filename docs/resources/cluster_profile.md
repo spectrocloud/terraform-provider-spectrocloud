@@ -11,6 +11,8 @@ description: |-
 
 ## Example Usage
 
+### Basic Example
+
 ```terraform
 # If looking up a cluster profile instead of creating a new one
 # data "spectrocloud_cluster_profile" "profile" {
@@ -140,6 +142,20 @@ resource "spectrocloud_cluster_profile" "profile" {
     values = local.proxy_val
   }
 }
+```
+
+### Example of Providing Multiple Packs
+
+You can provide multiple packs at once by leveraging a dynamic block.  
+
+!> The order of the Packs must be taken into consideration so avoid any situations where the order of the Packs is re-arranged by Terraform, such as nested loops `for_each = { for pack in var.packs : pack => pack }`. We recommend creating a variable that contains the list of Packs arranged in order of the App Profile stack and their respective configuration.
+
+```terraform
+resource "spectrocloud_cluster_profile" "this" {
+  name = "security-profile"
+  dynamic "pack" {
+    for_each = var.my-packs
+  }
 ```
 
 ## Schema

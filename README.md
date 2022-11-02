@@ -27,6 +27,11 @@ Detailed documentation on supported data sources and resources are available on 
 - Make sure to run `go generate` after your final commit
 - Send in a PR
 
+
+### Documentation
+
+The documentation for each respective resource is found in the [docs](/docs) folder. Please ensure you are following the Terraform Registry [documentation guidance](https://developer.hashicorp.com/terraform/registry/providers/docs). To preview documentation changes, please utilize the [Terraform Registry Preview Tool](https://registry.terraform.io/tools/doc-preview).
+
 ## Support
 
 For questions or issues with the provider, please post your questions on the provider [discussion board](/discussions).
