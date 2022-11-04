@@ -140,9 +140,11 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_registry_oci":  dataSourceRegistryOci(),
 				"spectrocloud_registry":      dataSourceRegistry(), // registry datasource for all types.
 
-				"spectrocloud_appliance": dataSourceAppliance(),
-				"spectrocloud_cluster":   dataSourceCluster(),
-				"spectrocloud_workspace": dataSourceWorkspace(),
+				"spectrocloud_appliance":           dataSourceAppliance(),
+				"spectrocloud_cluster":             dataSourceCluster(),
+				"spectrocloud_cluster_group":       dataSourceClusterGroup(),
+				"spectrocloud_application_profile": dataSourceApplicationProfile(),
+				"spectrocloud_workspace":           dataSourceWorkspace(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}
