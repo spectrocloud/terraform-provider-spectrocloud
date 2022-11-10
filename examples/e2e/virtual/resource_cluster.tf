@@ -1,6 +1,6 @@
 
-resource "spectrocloud_cluster_nested" "cluster" {
-  name = "nested-cluster-demo"
+resource "spectrocloud_cluster_virtual" "cluster" {
+  name = "virtual-cluster-demo"
 
 
   cluster_config {
@@ -25,7 +25,7 @@ resource "spectrocloud_cluster_nested" "cluster" {
   #   id = spectrocloud_cluster_profile.profile.id
   # }
 
-  # optional nested cluster config
+  # optional virtual cluster config
   # cloud_config {
   #   chart_name = var.chart_name
   #   chart_repo = var.chart_repo
