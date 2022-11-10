@@ -2,14 +2,15 @@
 sc_host         = "" # Palette URL, excluding scheme, e.g., "dev.console.spectrocloud.com"
 sc_username     = ""
 sc_api_key      = ""
-// sc_password  = ""
+sc_password     = ""
 sc_project_name = "Default"
 
 # Pack Registry
 registry_name = "Public Repo"
 
 # Cluster
-host_cluster_uid = ""
+host_cluster_uid  = ""
+cluster_group_uid = ""
 
 # CI/CD
 docker_config = "" # base64 encoded docker config.json

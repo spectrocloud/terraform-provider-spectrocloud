@@ -1,3 +1,3 @@
 locals {
-  cluster_kubeconfig = spectrocloud_cluster_nested.cluster.kubeconfig
+  cluster_kubeconfig = spectrocloud_cluster_virtual.cluster.kubeconfig
 }

@@ -16,9 +16,16 @@ variable "sc_username" {
   description = "Spectro Cloud Username"
 }
 
+variable "sc_password" {
+  description = "Spectro Cloud Password"
+  sensitive   = true
+  default     = ""
+}
+
 variable "sc_api_key" {
   description = "Spectro API key"
   sensitive   = true
+  default     = ""
 }
 
 variable "sc_project_name" {
