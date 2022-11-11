@@ -239,7 +239,6 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 		}
 		p["name"] = tier.Name
 		//p["tag"] = tier.Tag
-		//p["values"] = tier.Values
 		p["type"] = tier.Type
 
 		/*if _, ok := manifestContent[tier.UID]; ok {
@@ -493,7 +492,6 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 		Name:      pName,
 		Version:   pTag,
 		Manifests: manifests,
-		//Tag:         p["tag"].(string),
 		//RegistryUID: pRegistryUID,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
