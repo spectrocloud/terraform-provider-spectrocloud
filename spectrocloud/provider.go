@@ -98,7 +98,7 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cluster_edge_vsphere": resourceClusterEdgeVsphere(),
 
-				"spectrocloud_cluster_nested": resourceClusterNested(),
+				"spectrocloud_cluster_virtual": resourceClusterNested(),
 
 				"spectrocloud_cluster_import": resourceClusterImport(),
 

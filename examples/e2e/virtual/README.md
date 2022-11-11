@@ -1,14 +1,13 @@
-# Nested Cluster demo
+# Virtual Cluster demo
 
-End-to-end example of provisioning a nested cluster with all of its dependencies. This terraform configuration
-will provision the following resources on Spectro Cloud:
+End-to-end example of provisioning a Palette Virtual Cluster with all of its dependencies. This terraform configuration will provision the following resources on Spectro Cloud:
 - K8s host cluster and datasource.
 - Addon Cluster Profile
 
 ## Instructions:
 
-Clone this repository to a local directory, and then change directory to `examples/e2e/nested`. Proceed with the following:
-1. Provision host cluster as a prerequisite to use nested cluster. 
+Clone this repository to a local directory, and then change directory to `examples/e2e/virtual`. Proceed with the following:
+1. Provision host cluster as a prerequisite to use virtual cluster. 
 To achieve it add host configuration block to existing cluster or provision it from scratch using one of existing examples:
 <pre>
   host_config {

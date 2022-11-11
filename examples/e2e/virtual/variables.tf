@@ -4,7 +4,12 @@ variable "registry_name" {
 }
 
 # Cluster
-variable "host_cluster_uid" {}
+variable "host_cluster_uid" {
+  default = ""
+}
+variable "cluster_group_uid" {
+  default = ""
+}
 variable "chart_name" {
   default = ""
 }

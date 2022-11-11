@@ -1,5 +1,5 @@
 output "cluster_id" {
-  value = spectrocloud_cluster_nested.cluster.id
+  value = spectrocloud_cluster_virtual.cluster.id
 }
 
 output "cluster_kubeconfig" {
