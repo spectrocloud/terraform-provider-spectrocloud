@@ -108,10 +108,7 @@ func resourceApplicationProfile() *schema.Resource {
 										Required: true,
 										DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 											// UI strips the trailing newline on save
-											if strings.TrimSpace(old) == strings.TrimSpace(new) {
-												return true
-											}
-											return false
+											return strings.TrimSpace(old) == strings.TrimSpace(new)
 										},
 									},
 								},
@@ -130,10 +127,7 @@ func resourceApplicationProfile() *schema.Resource {
 							Optional: true,
 							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 								// UI strips the trailing newline on save
-								if strings.TrimSpace(old) == strings.TrimSpace(new) {
-									return true
-								}
-								return false
+								return strings.TrimSpace(old) == strings.TrimSpace(new)
 							},
 						},
 					},
@@ -380,29 +374,6 @@ func toApplicationProfilePackCreate(pSrc interface{}) (*models.V1AppTierEntity, 
 	}
 	pType := models.V1AppTierType(p["type"].(string))
 
-	/*switch pType {
-	case models.V1AppTierTypeHelm:
-		if pTag == "" || pUID == "" {
-			return nil, fmt.Errorf("pack %s needs to specify tag and/or uid", pName)
-		}
-		break
-	case models.V1AppTierTypeManifest:
-		if pUID == "" {
-			pUID = "spectro-manifest-pack"
-		}
-		break
-	case models.V1AppTierTypeOperatorInstance:
-		if pUID == "" {
-			pUID = "spectro-manifest-pack"
-		}
-		break
-	case models.V1AppTierTypeContainer:
-		if pUID == "" {
-			pUID = "spectro-manifest-pack"
-		}
-		break
-	}*/
-
 	tier := &models.V1AppTierEntity{
 		Name:             ptr.StringPtr(pName),
 		Version:          pVersion,
@@ -507,17 +478,6 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 	pTag := p["tag"].(string)
 	//pUID := p["uid"].(string)
 
-	/*switch pType {
-	case models.V1PackTypeSpectro:
-		if pTag == "" || pUID == "" {
-			return nil, fmt.Errorf("pack %s needs to specify tag", pName)
-		}
-	case models.V1PackTypeManifest:
-		if pUID == "" {
-			pUID = "spectro-manifest-pack"
-		}
-	}*/
-
 	manifests := make([]*models.V1ManifestRefUpdateEntity, 0)
 	for _, manifest := range p["manifest"].([]interface{}) {
 		m := manifest.(map[string]interface{})
@@ -529,15 +489,12 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 	}
 
 	pack := &models.V1AppTierUpdateEntity{
-		//Layer:  p["layer"].(string),
 
 		Name:      pName,
 		Version:   pTag,
 		Manifests: manifests,
 		//Tag:         p["tag"].(string),
 		//RegistryUID: pRegistryUID,
-		//UID:         pUID,
-		//Type:        pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}
