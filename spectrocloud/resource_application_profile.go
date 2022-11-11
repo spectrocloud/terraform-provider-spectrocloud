@@ -2,8 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"log"
@@ -17,12 +15,12 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-func resourceClusterProfile() *schema.Resource {
+func resourceApplicationProfile() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceClusterProfileCreate,
-		ReadContext:   resourceClusterProfileRead,
-		UpdateContext: resourceClusterProfileUpdate,
-		DeleteContext: resourceClusterProfileDelete,
+		CreateContext: resourceApplicationProfileCreate,
+		ReadContext:   resourceApplicationProfileRead,
+		UpdateContext: resourceApplicationProfileUpdate,
+		DeleteContext: resourceApplicationProfileDelete,
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(20 * time.Second),
@@ -64,13 +62,6 @@ func resourceClusterProfile() *schema.Resource {
 				Optional: true,
 				ForceNew: true,
 			},
-			"type": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "add-on",
-				ValidateFunc: validation.StringInSlice([]string{"add-on", "cluster", "infra", "system"}, false),
-				ForceNew:     true,
-			},
 			"pack": {
 				Type:     schema.TypeList,
 				Required: true,
@@ -80,6 +71,10 @@ func resourceClusterProfile() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 							Default:  "spectro",
+						},
+						"source_app_tier": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"registry_uid": {
 							Type:     schema.TypeString,
@@ -148,39 +143,35 @@ func resourceClusterProfile() *schema.Resource {
 	}
 }
 
-func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	clusterProfile, err := toClusterProfileCreate(d)
+	applicationProfile, err := toApplicationProfileCreate(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	// Create
 	ProfileContext := d.Get("context").(string)
-	uid, err := c.CreateClusterProfile(clusterProfile, ProfileContext)
+	uid, err := c.CreateApplicationProfile(applicationProfile, ProfileContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	// And then publish
-	if err = c.PublishClusterProfile(uid, ProfileContext); err != nil {
-		return diag.FromErr(err)
-	}
 	d.SetId(uid)
-	resourceClusterProfileRead(ctx, d, m)
+	resourceApplicationProfileRead(ctx, d, m)
 	return diags
 }
 
-func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceApplicationProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
-	cp, err := c.GetClusterProfile(d.Id())
+	cp, err := c.GetApplicationProfile(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cp == nil {
@@ -196,7 +187,7 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		}
 	}
 
-	packManifests, d2, done2 := getPacksContent(cp, c, d)
+	packManifests, d2, done2 := getAppTiersContent(c, d)
 	if done2 {
 		return d2
 	}
@@ -210,7 +201,7 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	if done {
 		return diagnostics
 	}
-	packs, err := flattenPacks(c, diagPacks, cp.Spec.Published.Packs, packManifests)
+	packs, err := flattenAppPacks(c, diagPacks, cp.Spec.Template.AppTiers, packManifests)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -221,74 +212,62 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func getPacksContent(cp *models.V1ClusterProfile, c *client.V1Client, d *schema.ResourceData) (map[string]map[string]string, diag.Diagnostics, bool) {
+func getAppTiersContent(c *client.V1Client, d *schema.ResourceData) (map[string]map[string]string, diag.Diagnostics, bool) {
 	packManifests := make(map[string]map[string]string)
-	for _, p := range cp.Spec.Published.Packs {
-		if len(p.Manifests) > 0 {
-			content, err := c.GetClusterProfileManifestPack(d.Id(), *p.Name)
-			if err != nil {
-				return nil, diag.FromErr(err), true
+	tiersDetails, err := c.GetApplicationProfileTiers(d.Id())
+	if err != nil {
+		return nil, diag.FromErr(err), true
+	}
+	for _, tier := range tiersDetails {
+		if len(tier.Spec.Manifests) > 0 {
+			c := make(map[string]string)
+			for _, manifest := range tier.Spec.Manifests {
+				c[manifest.Name] = manifest.UID
 			}
-
-			if len(content) > 0 {
-				c := make(map[string]string)
-				for _, co := range content {
-					c[co.Metadata.Name] = co.Spec.Published.Content
-				}
-				packManifests[p.PackUID] = c
-			}
+			packManifests[tier.Metadata.UID] = c
 		}
 	}
 	return packManifests, nil, false
 }
 
-func flattenPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, packs []*models.V1PackRef, manifestContent map[string]map[string]string) ([]interface{}, error) {
-	if packs == nil {
+func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, tiers []*models.V1AppTierRef, manifestContent map[string]map[string]string) ([]interface{}, error) {
+	if tiers == nil {
 		return make([]interface{}, 0), nil
 	}
 
-	ps := make([]interface{}, len(packs))
-	for i, pack := range packs {
+	ps := make([]interface{}, len(tiers))
+	for i, tier := range tiers {
 		p := make(map[string]interface{})
 
-		p["uid"] = pack.PackUID
-		if isRegistryUID(diagPacks, *pack.Name) {
-			p["registry_uid"] = c.GetPackRegistry(pack.PackUID, pack.Type)
+		p["uid"] = tier.UID
+		if isRegistryUID(diagPacks, tier.Name) {
+			p["registry_uid"] = c.GetPackRegistry(tier.UID, string(tier.Type))
 		}
-		p["name"] = *pack.Name
-		p["tag"] = pack.Tag
-		p["values"] = pack.Values
-		p["type"] = pack.Type
+		p["name"] = tier.Name
+		//p["tag"] = tier.Tag
+		//p["values"] = tier.Values
+		p["type"] = tier.Type
 
-		if _, ok := manifestContent[pack.PackUID]; ok {
-			ma := make([]interface{}, len(pack.Manifests))
-			for j, m := range pack.Manifests {
+		/*if _, ok := manifestContent[tier.UID]; ok {
+			ma := make([]interface{}, len(tier.Manifests))
+			for j, m := range tier.Manifests {
 				mj := make(map[string]interface{})
 				mj["name"] = m.Name
 				mj["uid"] = m.UID
-				mj["content"] = manifestContent[pack.PackUID][m.Name]
+				mj["content"] = manifestContent[tier.PackUID][m.Name]
 
 				ma[j] = mj
 			}
 
 			p["manifest"] = ma
-		}
+		}*/
 		ps[i] = p
 	}
 
 	return ps, nil
 }
 
-func isRegistryUID(diagPacks []*models.V1PackManifestEntity, name string) bool {
-	for _, pack := range diagPacks {
-		if *pack.Name == name && pack.RegistryUID != "" {
-			return true
-		}
-	}
-	return false
-}
-
-func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceApplicationProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
@@ -296,42 +275,43 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") {
 		log.Printf("Updating packs")
-		cp, err := c.GetClusterProfile(d.Id())
+		tiersCreate, tiersUpdateMap, tiersDeleteIds, err := toApplicationTiersUpdate(d, c)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		cluster, err := toClusterProfileUpdate(d, cp)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		metadata, err := toClusterProfilePatch(d)
+		metadata, err := toApplicationProfilePatch(d)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 
 		ProfileContext := d.Get("context").(string)
-		if err := c.UpdateClusterProfile(cluster, ProfileContext); err != nil {
+		if err := c.CreateApplicationProfileTiers(d.Id(), tiersCreate, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PatchClusterProfile(cluster, metadata, ProfileContext); err != nil {
+		for i, tier := range tiersUpdateMap {
+			if err := c.UpdateApplicationProfileTiers(d.Id(), i, tier, ProfileContext); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if err := c.DeleteApplicationProfileTiers(d.Id(), tiersDeleteIds, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PublishClusterProfile(cluster.Metadata.UID, ProfileContext); err != nil {
+		if err := c.PatchApplicationProfile(d.Id(), metadata, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
-	resourceClusterProfileRead(ctx, d, m)
+	resourceApplicationProfileRead(ctx, d, m)
 
 	return diags
 }
 
-func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceApplicationProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
-	err := c.DeleteClusterProfile(d.Id())
+	err := c.DeleteApplicationProfile(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -339,40 +319,38 @@ func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func toClusterProfileCreate(d *schema.ResourceData) (*models.V1ClusterProfileEntity, error) {
-	cp := toClusterProfileBasic(d)
+func toApplicationProfileCreate(d *schema.ResourceData) (*models.V1AppProfileEntity, error) {
+	cp := toApplicationProfileBasic(d)
 
-	packs := make([]*models.V1PackManifestEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		if p, e := toClusterProfilePackCreate(pack); e != nil {
+	tiers := make([]*models.V1AppTierEntity, 0)
+	for _, tier := range d.Get("pack").([]interface{}) {
+		if t, e := toApplicationProfilePackCreate(tier); e != nil {
 			return nil, e
 		} else {
-			packs = append(packs, p)
+			tiers = append(tiers, t)
 		}
 	}
-	cp.Spec.Template.Packs = packs
+	cp.Spec.Template.AppTiers = tiers
 
 	return cp, nil
 }
 
-func toClusterProfileBasic(d *schema.ResourceData) *models.V1ClusterProfileEntity {
+func toApplicationProfileBasic(d *schema.ResourceData) *models.V1AppProfileEntity {
 	description := ""
 	if d.Get("description") != nil {
 		description = d.Get("description").(string)
 	}
-	cp := &models.V1ClusterProfileEntity{
-		Metadata: &models.V1ObjectMeta{
+	cp := &models.V1AppProfileEntity{
+		Metadata: &models.V1ObjectMetaInputEntity{
 			Name: d.Get("name").(string),
-			UID:  d.Id(),
 			Annotations: map[string]string{
 				"description": description,
 			},
 			Labels: toTags(d),
 		},
-		Spec: &models.V1ClusterProfileEntitySpec{
-			Template: &models.V1ClusterProfileTemplateDraft{
-				CloudType: models.V1CloudType(d.Get("cloud").(string)),
-				Type:      models.V1ProfileType(d.Get("type").(string)),
+		Spec: &models.V1AppProfileEntitySpec{
+			Template: &models.V1AppProfileTemplateEntity{
+				AppTiers: toAppTiers(),
 			},
 			Version: d.Get("version").(string),
 		},
@@ -380,35 +358,58 @@ func toClusterProfileBasic(d *schema.ResourceData) *models.V1ClusterProfileEntit
 	return cp
 }
 
-func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity, error) {
+func toAppTiers() []*models.V1AppTierEntity {
+	ret := make([]*models.V1AppTierEntity, 0)
+	return ret
+}
+
+func toApplicationProfilePackCreate(pSrc interface{}) (*models.V1AppTierEntity, error) {
 	p := pSrc.(map[string]interface{})
 
 	pName := p["name"].(string)
-	pTag := p["tag"].(string)
-	pUID := p["uid"].(string)
+	pVersion := ""
+	if p["tag"] != nil {
+		pVersion = p["tag"].(string)
+	}
+	source_app_tier := p["source_app_tier"].(string)
+	//pTag := p["tag"].(string)
+	//pUID := p["uid"].(string)
 	pRegistryUID := ""
 	if p["registry_uid"] != nil {
 		pRegistryUID = p["registry_uid"].(string)
 	}
-	pType := models.V1PackType(p["type"].(string))
+	pType := models.V1AppTierType(p["type"].(string))
 
-	switch pType {
-	case models.V1PackTypeSpectro:
+	/*switch pType {
+	case models.V1AppTierTypeHelm:
 		if pTag == "" || pUID == "" {
 			return nil, fmt.Errorf("pack %s needs to specify tag and/or uid", pName)
 		}
-	case models.V1PackTypeManifest:
+		break
+	case models.V1AppTierTypeManifest:
 		if pUID == "" {
 			pUID = "spectro-manifest-pack"
 		}
-	}
+		break
+	case models.V1AppTierTypeOperatorInstance:
+		if pUID == "" {
+			pUID = "spectro-manifest-pack"
+		}
+		break
+	case models.V1AppTierTypeContainer:
+		if pUID == "" {
+			pUID = "spectro-manifest-pack"
+		}
+		break
+	}*/
 
-	pack := &models.V1PackManifestEntity{
-		Name:        ptr.StringPtr(pName),
-		Tag:         p["tag"].(string),
-		RegistryUID: pRegistryUID,
-		UID:         pUID,
-		Type:        pType,
+	tier := &models.V1AppTierEntity{
+		Name:             ptr.StringPtr(pName),
+		Version:          pVersion,
+		SourceAppTierUID: source_app_tier,
+		RegistryUID:      pRegistryUID,
+		//UID:         pUID,
+		Type: pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}
@@ -423,71 +424,90 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 			})
 		}
 	}
-	pack.Manifests = manifests
+	tier.Manifests = manifests
 
-	return pack, nil
+	return tier, nil
 }
 
-func toClusterProfileUpdate(d *schema.ResourceData, cluster *models.V1ClusterProfile) (*models.V1ClusterProfileUpdateEntity, error) {
-	cp := &models.V1ClusterProfileUpdateEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
-		},
-		Spec: &models.V1ClusterProfileUpdateEntitySpec{
-			Template: &models.V1ClusterProfileTemplateUpdate{
-				Type: models.V1ProfileType(d.Get("type").(string)),
-			},
-			Version: d.Get("version").(string),
-		},
+// get update create delete separately based on previous version.
+func toApplicationTiersUpdate(d *schema.ResourceData, c *client.V1Client) ([]*models.V1AppTierEntity, map[string]*models.V1AppTierUpdateEntity, []string, error) {
+	previousTiers, err := c.GetApplicationProfileTiers(d.Id())
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	packs := make([]*models.V1PackManifestUpdateEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
-		if p, e := toClusterProfilePackUpdate(pack, cluster.Spec.Published.Packs); e != nil {
-			return nil, e
+
+	previousTiersMap := map[string]*models.V1AppTier{}
+	for _, tier := range previousTiers {
+		previousTiersMap[tier.Metadata.Name] = tier
+	}
+
+	var createTiers []*models.V1AppTierEntity
+	updateTiersMap := map[string]*models.V1AppTierUpdateEntity{}
+	updateTiersMapId := map[string]*models.V1AppTierUpdateEntity{}
+	var deleteTiers []string
+
+	createTiersMap := map[string]*models.V1AppTierEntity{}
+	tiers := make([]*models.V1AppTierEntity, 0)
+	for _, tier := range d.Get("pack").([]interface{}) {
+
+		if _, found := previousTiersMap[tier.(map[string]interface{})["name"].(string)]; found {
+			t := toApplicationProfilePackUpdate(tier)
+			updateTiersMap[t.Name] = t
 		} else {
-			packs = append(packs, p)
+			if t, e := toApplicationProfilePackCreate(tier); e != nil {
+				return nil, nil, nil, e
+			} else {
+				createTiers = append(createTiers, t)
+				tiers = append(tiers, t)
+				createTiersMap[*t.Name] = t
+			}
 		}
 	}
-	cp.Spec.Template.Packs = packs
 
-	return cp, nil
+	for _, tier := range previousTiers {
+		_, create := createTiersMap[tier.Metadata.Name]
+		_, update := updateTiersMap[tier.Metadata.Name]
+		if !create && !update {
+			deleteTiers = append(deleteTiers, tier.Metadata.UID)
+		}
+		if update {
+			updateTiersMapId[tier.Metadata.UID] = updateTiersMap[tier.Metadata.Name]
+		}
+	}
+
+	return createTiers, updateTiersMapId, deleteTiers, nil
+
 }
 
-func toClusterProfilePatch(d *schema.ResourceData) (*models.V1ProfileMetaEntity, error) {
+func toApplicationProfilePatch(d *schema.ResourceData) (*models.V1AppProfileMetaEntity, error) {
 	description := ""
 	if d.Get("description") != nil {
 		description = d.Get("description").(string)
 	}
-	metadata := &models.V1ProfileMetaEntity{
-		Metadata: &models.V1ObjectMetaInputEntity{
-			Name: d.Get("name").(string),
+	metadata := &models.V1AppProfileMetaEntity{
+		Metadata: &models.V1AppProfileMetaUpdateEntity{
+			//TODO name change?: Name: d.Get("name").(string),
 			Annotations: map[string]string{
 				"description": description,
 			},
 			Labels: toTags(d),
 		},
-		Spec: &models.V1ClusterProfileSpecEntity{
+		/*TODO: check profile version: Spec: &models.V1ClusterProfileSpecEntity{
 			Version: d.Get("version").(string),
-		},
+		},*/
 	}
 
 	return metadata, nil
 }
 
-func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*models.V1PackManifestUpdateEntity, error) {
+func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEntity {
 	p := pSrc.(map[string]interface{})
 
 	pName := p["name"].(string)
 	pTag := p["tag"].(string)
-	pUID := p["uid"].(string)
-	pRegistryUID := ""
-	if p["registry_uid"] != nil {
-		pRegistryUID = p["registry_uid"].(string)
-	}
-	pType := models.V1PackType(p["type"].(string))
+	//pUID := p["uid"].(string)
 
-	switch pType {
+	/*switch pType {
 	case models.V1PackTypeSpectro:
 		if pTag == "" || pUID == "" {
 			return nil, fmt.Errorf("pack %s needs to specify tag", pName)
@@ -496,18 +516,7 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 		if pUID == "" {
 			pUID = "spectro-manifest-pack"
 		}
-	}
-
-	pack := &models.V1PackManifestUpdateEntity{
-		//Layer:  p["layer"].(string),
-		Name:        ptr.StringPtr(pName),
-		Tag:         p["tag"].(string),
-		RegistryUID: pRegistryUID,
-		UID:         pUID,
-		Type:        pType,
-		// UI strips a single newline, so we should do the same
-		Values: strings.TrimSpace(p["values"].(string)),
-	}
+	}*/
 
 	manifests := make([]*models.V1ManifestRefUpdateEntity, 0)
 	for _, manifest := range p["manifest"].([]interface{}) {
@@ -515,22 +524,23 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 		manifests = append(manifests, &models.V1ManifestRefUpdateEntity{
 			Content: strings.TrimSpace(m["content"].(string)),
 			Name:    ptr.StringPtr(m["name"].(string)),
-			UID:     getManifestUID(m["name"].(string), packs),
+			//UID:     getManifestUID(m["name"].(string), packs),
 		})
 	}
-	pack.Manifests = manifests
 
-	return pack, nil
-}
+	pack := &models.V1AppTierUpdateEntity{
+		//Layer:  p["layer"].(string),
 
-func getManifestUID(name string, packs []*models.V1PackRef) string {
-	for _, pack := range packs {
-		for _, manifest := range pack.Manifests {
-			if manifest.Name == name {
-				return manifest.UID
-			}
-		}
+		Name:      pName,
+		Version:   pTag,
+		Manifests: manifests,
+		//Tag:         p["tag"].(string),
+		//RegistryUID: pRegistryUID,
+		//UID:         pUID,
+		//Type:        pType,
+		// UI strips a single newline, so we should do the same
+		Values: strings.TrimSpace(p["values"].(string)),
 	}
 
-	return ""
+	return pack
 }
