@@ -113,10 +113,7 @@ func resourceClusterProfile() *schema.Resource {
 										Required: true,
 										DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 											// UI strips the trailing newline on save
-											if strings.TrimSpace(old) == strings.TrimSpace(new) {
-												return true
-											}
-											return false
+											return strings.TrimSpace(old) == strings.TrimSpace(new)
 										},
 									},
 								},
@@ -135,10 +132,7 @@ func resourceClusterProfile() *schema.Resource {
 							Optional: true,
 							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 								// UI strips the trailing newline on save
-								if strings.TrimSpace(old) == strings.TrimSpace(new) {
-									return true
-								}
-								return false
+								return strings.TrimSpace(old) == strings.TrimSpace(new)
 							},
 						},
 					},
@@ -253,7 +247,7 @@ func flattenPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, 
 
 		p["uid"] = pack.PackUID
 		if isRegistryUID(diagPacks, *pack.Name) {
-			p["registry_uid"] = c.GetPackRegistry(pack)
+			p["registry_uid"] = c.GetPackRegistry(pack.PackUID, pack.Type)
 		}
 		p["name"] = *pack.Name
 		p["tag"] = pack.Tag

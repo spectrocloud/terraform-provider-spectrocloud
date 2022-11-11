@@ -138,8 +138,8 @@ func (h *V1Client) GetPack(uid string) (*models.V1PackTagEntity, error) {
 	return response.Payload, nil
 }
 
-func (h *V1Client) GetPackRegistry(pack *models.V1PackRef) string {
-	if pack.PackUID == "uid" || pack.Type == "manifest" {
+func (h *V1Client) GetPackRegistry(packUID string, packType string) string {
+	if packUID == "uid" || packType == "manifest" {
 		registry, err := h.GetPackRegistryCommonByName("Public Repo")
 		if err != nil {
 			return ""
@@ -147,7 +147,7 @@ func (h *V1Client) GetPackRegistry(pack *models.V1PackRef) string {
 		return registry.UID
 	}
 
-	PackTagEntity, err := h.GetPack(pack.PackUID)
+	PackTagEntity, err := h.GetPack(packUID)
 	if err != nil {
 		return ""
 	}

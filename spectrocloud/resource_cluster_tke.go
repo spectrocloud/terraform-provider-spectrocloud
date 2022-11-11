@@ -91,10 +91,7 @@ func resourceClusterTke() *schema.Resource {
 													Type:     schema.TypeString,
 													Required: true,
 													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-														if strings.TrimSpace(old) == strings.TrimSpace(new) {
-															return true
-														}
-														return false
+														return strings.TrimSpace(old) == strings.TrimSpace(new)
 													},
 												},
 											},

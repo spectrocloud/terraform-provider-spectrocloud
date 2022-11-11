@@ -91,10 +91,7 @@ func resourceClusterAks() *schema.Resource {
 													Required: true,
 													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 														// UI strips the trailing newline on save
-														if strings.TrimSpace(old) == strings.TrimSpace(new) {
-															return true
-														}
-														return false
+														return strings.TrimSpace(old) == strings.TrimSpace(new)
 													},
 												},
 											},
