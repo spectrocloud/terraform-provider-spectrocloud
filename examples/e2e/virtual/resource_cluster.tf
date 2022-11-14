@@ -1,5 +1,5 @@
 
-resource "spectrocloud_cluster_virtual" "cluster" {
+resource "spectrocloud_virtual_cluster" "cluster" {
   name = "virtual-cluster-demo"
 
 
