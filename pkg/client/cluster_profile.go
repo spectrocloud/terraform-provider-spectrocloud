@@ -1,9 +1,9 @@
 package client
 
 import (
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"strings"
 
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 
@@ -104,7 +104,7 @@ func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1P
 
 	params := clusterC.NewV1PacksSummaryListParamsWithContext(h.Ctx)
 	if filters != nil {
-		filterString := ptr.StringPtr(strings.Join(filters, "AND"))
+		filterString := types.Ptr(strings.Join(filters, "AND"))
 		params = params.WithFilters(filterString)
 	}
 

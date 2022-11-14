@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func resourceCloudAccountTencent() *schema.Resource {
@@ -78,7 +78,6 @@ func resourceCloudAccountTencentRead(_ context.Context, d *schema.ResourceData, 
 	return diags
 }
 
-//
 func resourceCloudAccountTencentUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -121,8 +120,8 @@ func toTencentAccount(d *schema.ResourceData) *models.V1TencentAccount {
 			UID:  d.Id(),
 		},
 		Spec: &models.V1TencentCloudAccount{
-			SecretID:  ptr.StringPtr(d.Get("tencent_secret_id").(string)),
-			SecretKey: ptr.StringPtr(d.Get("tencent_secret_key").(string)),
+			SecretID:  types.Ptr(d.Get("tencent_secret_id").(string)),
+			SecretKey: types.Ptr(d.Get("tencent_secret_key").(string)),
 		},
 	}
 

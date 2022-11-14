@@ -2,10 +2,10 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -76,7 +76,7 @@ func toPack(cluster *models.V1SpectroCluster, pSrc interface{}) *models.V1PackVa
 	p := pSrc.(map[string]interface{})
 
 	pack := &models.V1PackValuesEntity{
-		Name: ptr.StringPtr(p["name"].(string)),
+		Name: types.Ptr(p["name"].(string)),
 	}
 
 	if val, found := p["values"]; found && len(val.(string)) > 0 {
@@ -104,7 +104,7 @@ func toPack(cluster *models.V1SpectroCluster, pSrc interface{}) *models.V1PackVa
 				uid = getManifestUID(data["name"].(string), packs)
 			}
 			manifests[i] = &models.V1ManifestRefUpdateEntity{
-				Name:    ptr.StringPtr(data["name"].(string)),
+				Name:    types.Ptr(data["name"].(string)),
 				Content: data["content"].(string),
 				UID:     uid,
 			}

@@ -2,8 +2,8 @@ package spectrocloud
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 // New Sandbox cluster.
@@ -35,9 +35,9 @@ func toAppDeploymentClusterGroupTargetSpec(d *schema.ResourceData) *models.V1App
 	config := configList.([]interface{})[0].(map[string]interface{})
 
 	return &models.V1AppDeploymentClusterGroupTargetSpec{
-		ClusterGroupUID: ptr.StringPtr(config["cluster_group_uid"].(string)),
+		ClusterGroupUID: types.Ptr(config["cluster_group_uid"].(string)),
 		ClusterLimits:   toAppDeploymentTargetClusterLimits(d),
-		ClusterName:     ptr.StringPtr(config["cluster_name"].(string)),
+		ClusterName:     types.Ptr(config["cluster_name"].(string)),
 	}
 }
 
@@ -61,7 +61,7 @@ func toAppDeploymentTargetClusterLimits(d *schema.ResourceData) *models.V1AppDep
 
 func toV1AppDeploymentProfileEntity(d *schema.ResourceData) *models.V1AppDeploymentProfileEntity {
 	return &models.V1AppDeploymentProfileEntity{
-		AppProfileUID: ptr.StringPtr(d.Get("application_profile_uid").(string)),
+		AppProfileUID: types.Ptr(d.Get("application_profile_uid").(string)),
 	}
 }
 
@@ -94,6 +94,6 @@ func toAppDeploymentNestedClusterTargetSpec(d *schema.ResourceData) *models.V1Ap
 	config := configList.([]interface{})[0].(map[string]interface{})
 
 	return &models.V1AppDeploymentNestedClusterTargetSpec{
-		ClusterUID: ptr.StringPtr(config["cluster_uid"].(string)),
+		ClusterUID: types.Ptr(config["cluster_uid"].(string)),
 	}
 }

@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"log"
 	"strings"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -374,7 +374,7 @@ func toApplicationProfilePackCreate(pSrc interface{}) (*models.V1AppTierEntity, 
 	pType := models.V1AppTierType(p["type"].(string))
 
 	tier := &models.V1AppTierEntity{
-		Name:             ptr.StringPtr(pName),
+		Name:             types.Ptr(pName),
 		Version:          pVersion,
 		SourceAppTierUID: source_app_tier,
 		RegistryUID:      pRegistryUID,
@@ -482,7 +482,7 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 		m := manifest.(map[string]interface{})
 		manifests = append(manifests, &models.V1ManifestRefUpdateEntity{
 			Content: strings.TrimSpace(m["content"].(string)),
-			Name:    ptr.StringPtr(m["name"].(string)),
+			Name:    types.Ptr(m["name"].(string)),
 			//UID:     getManifestUID(m["name"].(string), packs),
 		})
 	}

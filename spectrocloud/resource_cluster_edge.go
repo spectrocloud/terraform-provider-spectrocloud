@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"sort"
 	"strings"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -625,7 +625,7 @@ func toMachinePoolEdge(machinePool interface{}) *models.V1EdgeMachinePoolConfigE
 		p := pos.(map[string]interface{})
 
 		placements = append(placements, &models.V1EdgeMachinePoolHostEntity{
-			HostUID: ptr.StringPtr(p["appliance_id"].(string)),
+			HostUID: types.Ptr(p["appliance_id"].(string)),
 		})
 
 	}
@@ -639,8 +639,8 @@ func toMachinePoolEdge(machinePool interface{}) *models.V1EdgeMachinePoolConfigE
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:             types.Ptr(m["name"].(string)),
+			Size:             types.Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

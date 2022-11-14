@@ -2,13 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -613,12 +613,12 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroAwsClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
-				Region:     ptr.StringPtr(cloudConfig["region"].(string)),
+				Region:     types.Ptr(cloudConfig["region"].(string)),
 			},
 		},
 	}
@@ -659,7 +659,7 @@ func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEnt
 	mp := &models.V1AwsMachinePoolConfigEntity{
 		CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
 			Azs:          azs,
-			InstanceType: ptr.StringPtr(m["instance_type"].(string)),
+			InstanceType: types.Ptr(m["instance_type"].(string)),
 			CapacityType: &capacityType,
 
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
@@ -669,8 +669,8 @@ func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEnt
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:             types.Ptr(m["name"].(string)),
+			Size:             types.Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

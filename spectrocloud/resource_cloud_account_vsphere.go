@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 const OverlordUID = "overlordUid"
@@ -105,7 +105,6 @@ func resourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData, 
 	return diags
 }
 
-//
 func resourceCloudAccountVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -146,9 +145,9 @@ func toVsphereAccount(d *schema.ResourceData) *models.V1VsphereAccount {
 			UID:  d.Id(),
 		},
 		Spec: &models.V1VsphereCloudAccount{
-			VcenterServer: ptr.StringPtr(d.Get("vsphere_password").(string)),
-			Username:      ptr.StringPtr(d.Get("vsphere_password").(string)),
-			Password:      ptr.StringPtr(d.Get("vsphere_password").(string)),
+			VcenterServer: types.Ptr(d.Get("vsphere_password").(string)),
+			Username:      types.Ptr(d.Get("vsphere_password").(string)),
+			Password:      types.Ptr(d.Get("vsphere_password").(string)),
 			Insecure:      d.Get("vsphere_ignore_insecure_error").(bool),
 		},
 	}

@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func resourceCloudAccountOpenstack() *schema.Resource {
@@ -128,7 +128,6 @@ func resourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceData
 	return diags
 }
 
-//
 func resourceCloudAccountOpenStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -174,11 +173,11 @@ func toOpenStackAccount(d *schema.ResourceData) *models.V1OpenStackAccount {
 			CaCert:           d.Get("ca_certificate").(string),
 			DefaultDomain:    d.Get("default_domain").(string),
 			DefaultProject:   d.Get("default_project").(string),
-			IdentityEndpoint: ptr.StringPtr(d.Get("identity_endpoint").(string)),
+			IdentityEndpoint: types.Ptr(d.Get("identity_endpoint").(string)),
 			Insecure:         d.Get("openstack_allow_insecure").(bool),
 			ParentRegion:     d.Get("parent_region").(string),
-			Password:         ptr.StringPtr(d.Get("openstack_password").(string)),
-			Username:         ptr.StringPtr(d.Get("openstack_username").(string)),
+			Password:         types.Ptr(d.Get("openstack_password").(string)),
+			Username:         types.Ptr(d.Get("openstack_username").(string)),
 		},
 	}
 
