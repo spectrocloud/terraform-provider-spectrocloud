@@ -1,7 +1,6 @@
 /*
-Note - Spectocloud allow upto 2 alert configurations for cluster health per project, which can be provisioned under one
-resource. Below are example for provisioning alert. we cannot have multiple email component under same resource in single
-project context, Instead we can add n' recipient in 'identifiers' or set alert_all_users to true.
+Note - We can set up to two alerts for cluster health per project. Web-hook can be configured in HTTP component and for
+email, we can add a target email recipients or enable alerts for all users in the corresponding project
 */
 
 # Sample with one email & one webhook alert configuration.
