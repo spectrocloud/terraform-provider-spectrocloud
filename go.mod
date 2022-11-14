@@ -10,8 +10,8 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.6.1
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d
-	github.com/spectrocloud/hapi v1.14.1-0.20221110154335-3607f591570a
+	github.com/spectrocloud/gomi v1.14.1-0.20221109054337-2f39fa25176c
+	github.com/spectrocloud/hapi v1.14.1-0.20221113161733-44e4aa57533e
 )
 
 //replace github.com/spectrocloud/hapi => ../hapi
