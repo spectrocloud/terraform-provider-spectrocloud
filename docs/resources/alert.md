@@ -11,7 +11,7 @@ description: Provisioning Cluster Health alerts (email | http).|-
 
 ## Example Usage
 #### Note
-- Spectrocloud allow to create upto 2 alert in below combinations
+- Spectro Cloud creates up to two alerts from the below combinations:
     - 1 email alert (can add any number of email recipient) & 1 http webhook alert.
     - 2 http webhook alert configuration.
     - Any one alert type Email/http.
