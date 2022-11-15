@@ -2,9 +2,9 @@ package client
 
 import (
 	"fmt"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func (h *V1Client) GetPackRegistryCommonByName(registryName string) (*models.V1RegistryMetadata, error) {
@@ -13,7 +13,7 @@ func (h *V1Client) GetPackRegistryCommonByName(registryName string) (*models.V1R
 		return nil, err
 	}
 
-	params := clusterC.NewV1RegistriesMetadataParams().WithScope(ptr.StringPtr(""))
+	params := clusterC.NewV1RegistriesMetadataParams().WithScope(types.Ptr(""))
 	registries, err := client.V1RegistriesMetadata(params)
 	if err != nil {
 		return nil, err

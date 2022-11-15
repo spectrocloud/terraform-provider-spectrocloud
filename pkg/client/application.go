@@ -27,32 +27,6 @@ func (h *V1Client) GetApplication(uid string) (*models.V1AppDeployment, error) {
 	return application, nil
 }
 
-func (h *V1Client) UpdateApplication(cluster *models.V1SpectroCluster, body *models.V1SpectroClusterProfiles, newProfile *models.V1ClusterProfile) error {
-	client, err := h.GetClusterClient()
-	if err != nil {
-		return nil
-	}
-
-	uid := cluster.Metadata.UID
-
-	// check if profile id is the same - update, otherwise, delete and create
-	if isProfileAttachedByName(cluster, newProfile) {
-		profile_uids := make([]string, 0)
-		profile_uids = append(profile_uids, body.Profiles[0].UID)
-		err = h.DeleteAddonDeployment(uid, &models.V1SpectroClusterProfilesDeleteEntity{
-			ProfileUids: profile_uids,
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	resolveNotification := true
-	params := clusterC.NewV1SpectroClustersPatchProfilesParamsWithContext(h.Ctx).WithUID(uid).WithBody(body).WithResolveNotification(&resolveNotification)
-	_, err = client.V1SpectroClustersPatchProfiles(params)
-	return err
-}
-
 func (h *V1Client) CreateApplicationWithNewSandboxCluster(body *models.V1AppDeploymentClusterGroupEntity) (string, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {

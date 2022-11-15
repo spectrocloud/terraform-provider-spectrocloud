@@ -5,9 +5,9 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func resourceCloudAccountAzure() *schema.Resource {
@@ -93,7 +93,6 @@ func resourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m 
 	return diags
 }
 
-//
 func resourceCloudAccountAzureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -137,9 +136,9 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 			UID:  d.Id(),
 		},
 		Spec: &models.V1AzureCloudAccount{
-			ClientID:     ptr.StringPtr(d.Get("azure_client_id").(string)),
+			ClientID:     types.Ptr(d.Get("azure_client_id").(string)),
 			ClientSecret: &clientSecret,
-			TenantID:     ptr.StringPtr(d.Get("azure_tenant_id").(string)),
+			TenantID:     types.Ptr(d.Get("azure_tenant_id").(string)),
 		},
 	}
 	return account

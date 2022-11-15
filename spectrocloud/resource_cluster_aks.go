@@ -2,13 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -636,14 +636,14 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
-				Location:           ptr.StringPtr(cloudConfigMap["region"].(string)),
+				Location:           types.Ptr(cloudConfigMap["region"].(string)),
 				ResourceGroup:      cloudConfigMap["resource_group"].(string),
-				SSHKey:             ptr.StringPtr(cloudConfigMap["ssh_key"].(string)),
-				SubscriptionID:     ptr.StringPtr(cloudConfigMap["subscription_id"].(string)),
+				SSHKey:             types.Ptr(cloudConfigMap["ssh_key"].(string)),
+				SubscriptionID:     types.Ptr(cloudConfigMap["subscription_id"].(string)),
 				VnetName:           vnetname,
 				VnetResourceGroup:  vnetResourceGroup,
 				VnetCidrBlock:      vnetcidr,
@@ -704,8 +704,8 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:             types.Ptr(m["name"].(string)),
+			Size:             types.Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

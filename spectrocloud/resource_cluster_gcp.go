@@ -2,13 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -602,13 +602,13 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroG
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroGcpClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1GcpClusterConfig{
 				Network: cloudConfig["network"].(string),
-				Project: ptr.StringPtr(cloudConfig["project"].(string)),
-				Region:  ptr.StringPtr(cloudConfig["region"].(string)),
+				Project: types.Ptr(cloudConfig["project"].(string)),
+				Region:  types.Ptr(cloudConfig["region"].(string)),
 			},
 		},
 	}
@@ -643,7 +643,7 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEnt
 	mp := &models.V1GcpMachinePoolConfigEntity{
 		CloudConfig: &models.V1GcpMachinePoolCloudConfigEntity{
 			Azs:            azs,
-			InstanceType:   ptr.StringPtr(m["instance_type"].(string)),
+			InstanceType:   types.Ptr(m["instance_type"].(string)),
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
@@ -651,8 +651,8 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEnt
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:             types.Ptr(m["name"].(string)),
+			Size:             types.Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

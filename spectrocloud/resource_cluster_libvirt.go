@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -819,7 +819,7 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 			SourceStoragePool: imageStoragePool,
 			TargetStoragePool: targetStoragePool,
 			DataStoragePool:   dataStoragePool,
-			HostUID:           ptr.StringPtr(p["appliance_id"].(string)),
+			HostUID:           types.Ptr(p["appliance_id"].(string)),
 		})
 
 	}
@@ -835,8 +835,8 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 	}
 
 	instanceType := models.V1LibvirtInstanceType{
-		MemoryInMB:         ptr.Int32Ptr(int32(ins["memory_mb"].(int))),
-		NumCPUs:            ptr.Int32Ptr(int32(ins["cpu"].(int))),
+		MemoryInMB:         types.Ptr(int32(ins["memory_mb"].(int))),
+		NumCPUs:            types.Ptr(int32(ins["cpu"].(int))),
 		GpuConfig:          getGPUConfig(ins),
 		CPUPassthroughSpec: cpuPassthroughSpec,
 	}
@@ -849,7 +849,7 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
 		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{
 			Placements:       placements,
-			RootDiskInGB:     ptr.Int32Ptr(int32(ins["disk_size_gb"].(int))),
+			RootDiskInGB:     types.Ptr(int32(ins["disk_size_gb"].(int))),
 			NonRootDisksInGB: addDisks,
 			InstanceType:     &instanceType,
 		},
@@ -858,8 +858,8 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:             types.Ptr(m["name"].(string)),
+			Size:             types.Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
@@ -12,7 +13,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -398,7 +398,7 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 	}
 
 	pack := &models.V1PackManifestEntity{
-		Name:        ptr.StringPtr(pName),
+		Name:        types.Ptr(pName),
 		Tag:         p["tag"].(string),
 		RegistryUID: pRegistryUID,
 		UID:         pUID,
@@ -494,7 +494,7 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 
 	pack := &models.V1PackManifestUpdateEntity{
 		//Layer:  p["layer"].(string),
-		Name:        ptr.StringPtr(pName),
+		Name:        types.Ptr(pName),
 		Tag:         p["tag"].(string),
 		RegistryUID: pRegistryUID,
 		UID:         pUID,
@@ -508,7 +508,7 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 		m := manifest.(map[string]interface{})
 		manifests = append(manifests, &models.V1ManifestRefUpdateEntity{
 			Content: strings.TrimSpace(m["content"].(string)),
-			Name:    ptr.StringPtr(m["name"].(string)),
+			Name:    types.Ptr(m["name"].(string)),
 			UID:     getManifestUID(m["name"].(string), packs),
 		})
 	}

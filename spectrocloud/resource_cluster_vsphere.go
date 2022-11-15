@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"sort"
 	"strings"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -820,7 +820,7 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolC
 			ResourcePool: p["resource_pool"].(string),
 			Datastore:    p["datastore"].(string),
 			Network: &models.V1VsphereNetworkConfigEntity{
-				NetworkName:   ptr.StringPtr(p["network"].(string)),
+				NetworkName:   types.Ptr(p["network"].(string)),
 				ParentPoolUID: poolID,
 				StaticIP:      staticIP,
 			},
@@ -830,9 +830,9 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolC
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
 	instanceType := models.V1VsphereInstanceType{
-		DiskGiB:   ptr.Int32Ptr(int32(ins["disk_size_gb"].(int))),
-		MemoryMiB: ptr.Int64Ptr(int64(ins["memory_mb"].(int))),
-		NumCPUs:   ptr.Int32Ptr(int32(ins["cpu"].(int))),
+		DiskGiB:   types.Ptr(int32(ins["disk_size_gb"].(int))),
+		MemoryMiB: types.Ptr(int64(ins["memory_mb"].(int))),
+		NumCPUs:   types.Ptr(int32(ins["cpu"].(int))),
 	}
 
 	mp := &models.V1VsphereMachinePoolConfigEntity{
@@ -845,8 +845,8 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolC
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:             types.Ptr(m["name"].(string)),
+			Size:             types.Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

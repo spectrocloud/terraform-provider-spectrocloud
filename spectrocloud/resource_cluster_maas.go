@@ -2,13 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
@@ -624,7 +624,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectro
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroMaasClusterEntitySpec{
-			CloudAccountUID: ptr.StringPtr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
@@ -671,15 +671,15 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 				MinCPU:     int32(InstanceType["min_cpu"].(int)),
 				MinMemInMB: int32(InstanceType["min_memory_mb"].(int)),
 			},
-			ResourcePool: ptr.StringPtr(Placement["resource_pool"].(string)),
+			ResourcePool: types.Ptr(Placement["resource_pool"].(string)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             ptr.StringPtr(m["name"].(string)),
-			Size:             ptr.Int32Ptr(int32(m["count"].(int))),
+			Name:             types.Ptr(m["name"].(string)),
+			Size:             types.Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
