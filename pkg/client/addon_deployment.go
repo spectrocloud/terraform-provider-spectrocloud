@@ -43,7 +43,7 @@ func (h *V1Client) CreateAddonDeployment(uid string, body *models.V1SpectroClust
 		return nil
 	}
 
-	resolveNotification := true
+	resolveNotification := false // during initial creation we never need to resolve packs.
 	params := clusterC.NewV1SpectroClustersPatchProfilesParamsWithContext(h.Ctx).WithUID(uid).WithBody(body).WithResolveNotification(&resolveNotification)
 	_, err = client.V1SpectroClustersPatchProfiles(params)
 	return err
