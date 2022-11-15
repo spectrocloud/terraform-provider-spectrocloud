@@ -15,15 +15,9 @@ func (h *V1Client) UpdateAddonDeployment(cluster *models.V1SpectroCluster, body 
 	uid := cluster.Metadata.UID
 
 	// check if profile id is the same - update, otherwise, delete and create
-	if isProfileAttachedByName(cluster, newProfile) {
-		profile_uids := make([]string, 0)
-		profile_uids = append(profile_uids, body.Profiles[0].UID)
-		err = h.DeleteAddonDeployment(uid, &models.V1SpectroClusterProfilesDeleteEntity{
-			ProfileUids: profile_uids,
-		})
-		if err != nil {
-			return err
-		}
+	is, replaceUID := isProfileAttachedByName(cluster, newProfile)
+	if is {
+		body.Profiles[0].ReplaceWithProfile = replaceUID
 	}
 
 	resolveNotification := true
@@ -32,15 +26,15 @@ func (h *V1Client) UpdateAddonDeployment(cluster *models.V1SpectroCluster, body 
 	return err
 }
 
-func isProfileAttachedByName(cluster *models.V1SpectroCluster, newProfile *models.V1ClusterProfile) bool {
+func isProfileAttachedByName(cluster *models.V1SpectroCluster, newProfile *models.V1ClusterProfile) (bool, string) {
 
 	for _, profile := range cluster.Spec.ClusterProfileTemplates {
 		if profile.Name == newProfile.Metadata.Name {
-			return true
+			return true, profile.UID
 		}
 	}
 
-	return false
+	return false, ""
 }
 
 func (h *V1Client) CreateAddonDeployment(uid string, body *models.V1SpectroClusterProfiles) error {
