@@ -1,6 +1,6 @@
 /*
-Note - We can set up to two alerts for cluster health per project. Web-hook can be configured in HTTP component and for
-email, we can add a target email recipients or enable alerts for all users in the corresponding project
+**Note** - We can set up a maximum of two alerts for cluster health per project. Webhook can be configured in the HTTP component,
+and for email, we can add a target email recipient or enable alerts for all users in the corresponding project
 */
 
 # Sample with one email & one webhook alert configuration.
