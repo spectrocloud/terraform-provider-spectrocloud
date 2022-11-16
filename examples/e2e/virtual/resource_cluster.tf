@@ -2,22 +2,14 @@
 resource "spectrocloud_virtual_cluster" "cluster" {
   name = "virtual-cluster-demo"
 
+  host_cluster_uid = var.host_cluster_uid
+  # cluster_group_uid = var.cluster_group_uid
 
-  cluster_config {
-    host_cluster_config {
-      host_cluster {
-        uid = var.host_cluster_uid
-      }
-      # cluster_group {
-      #   uid = var.cluster_group_uid
-      # }
-    }
-    resources {
-      max_cpu       = 6
-      max_mem_in_mb = 6000
-      min_cpu       = 0
-      min_mem_in_mb = 0
-    }
+  resources {
+    max_cpu       = 6
+    max_mem_in_mb = 6000
+    min_cpu       = 0
+    min_mem_in_mb = 0
   }
 
   # uncomment the following 3 lines to deploy the tekton demo stack

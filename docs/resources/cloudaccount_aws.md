@@ -32,7 +32,6 @@ resource "spectrocloud_cloudaccount_aws" "aws-1" {
 - `arn` (String)
 - `aws_access_key` (String)
 - `aws_secret_key` (String, Sensitive)
-- `context` (String)
 - `external_id` (String, Sensitive)
 - `type` (String)
 

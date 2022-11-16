@@ -17,7 +17,6 @@ description: |-
 
 ### Required
 
-- `cluster_config` (Block List, Min: 1) (see [below for nested schema](#nestedblock--cluster_config))
 - `name` (String)
 
 ### Optional
@@ -25,13 +24,16 @@ description: |-
 - `apply_setting` (String)
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cloud_config` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
+- `cluster_group_uid` (String)
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `host_cluster_uid` (String)
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - `os_patch_after` (String)
 - `os_patch_on_boot` (Boolean)
 - `os_patch_schedule` (String)
 - `pack` (Block List) (see [below for nested schema](#nestedblock--pack))
+- `resources` (Block List) (see [below for nested schema](#nestedblock--resources))
 - `scan_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean)
 - `tags` (Set of String)
@@ -42,54 +44,6 @@ description: |-
 - `cloud_config_id` (String)
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String)
-
-<a id="nestedblock--cluster_config"></a>
-### Nested Schema for `cluster_config`
-
-Required:
-
-- `host_cluster_config` (Block List, Min: 1) (see [below for nested schema](#nestedblock--cluster_config--host_cluster_config))
-
-Optional:
-
-- `resources` (Block List) (see [below for nested schema](#nestedblock--cluster_config--resources))
-
-<a id="nestedblock--cluster_config--host_cluster_config"></a>
-### Nested Schema for `cluster_config.host_cluster_config`
-
-Optional:
-
-- `cluster_group` (Block List) (see [below for nested schema](#nestedblock--cluster_config--host_cluster_config--cluster_group))
-- `host_cluster` (Block List) (see [below for nested schema](#nestedblock--cluster_config--host_cluster_config--host_cluster))
-
-<a id="nestedblock--cluster_config--host_cluster_config--cluster_group"></a>
-### Nested Schema for `cluster_config.host_cluster_config.cluster_group`
-
-Optional:
-
-- `uid` (String)
-
-
-<a id="nestedblock--cluster_config--host_cluster_config--host_cluster"></a>
-### Nested Schema for `cluster_config.host_cluster_config.host_cluster`
-
-Optional:
-
-- `uid` (String)
-
-
-
-<a id="nestedblock--cluster_config--resources"></a>
-### Nested Schema for `cluster_config.resources`
-
-Optional:
-
-- `max_cpu` (Number)
-- `max_mem_in_mb` (Number)
-- `min_cpu` (Number)
-- `min_mem_in_mb` (Number)
-
-
 
 <a id="nestedblock--backup_policy"></a>
 ### Nested Schema for `backup_policy`
@@ -205,6 +159,17 @@ Required:
 Optional:
 
 - `registry_uid` (String)
+
+
+<a id="nestedblock--resources"></a>
+### Nested Schema for `resources`
+
+Optional:
+
+- `max_cpu` (Number)
+- `max_mem_in_mb` (Number)
+- `min_cpu` (Number)
+- `min_mem_in_mb` (Number)
 
 
 <a id="nestedblock--scan_policy"></a>
