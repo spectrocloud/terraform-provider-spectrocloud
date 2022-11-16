@@ -1,7 +1,7 @@
 resource "spectrocloud_cluster_import" "cluster" {
   name               = "gcp-import-tf-11"
   cloud              = "gcp"
-  tags        = ["dev", "department:devops", "owner:bob"]
+  tags               = ["dev", "department:devops", "owner:bob"]
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
 
   /*  pack {

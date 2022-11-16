@@ -89,7 +89,7 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
   }
 
   machine_pool {
-    name  = "worker-basic"
+    name = "worker-basic"
 
     additional_labels = {
       addlabel = "addlabelval1"
