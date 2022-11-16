@@ -60,13 +60,23 @@ func (h *V1Client) DeleteMachinePoolAws(cloudConfigId string, machinePoolName st
 
 // Cloud Account
 
-func (h *V1Client) CreateCloudAccountAws(account *models.V1AwsAccount) (string, error) {
+func (h *V1Client) CreateCloudAccountAws(account *models.V1AwsAccount, ClusterContext string) (string, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1CloudAccountsAwsCreateParamsWithContext(h.Ctx).WithBody(account)
+	var params *clusterC.V1CloudAccountsAwsCreateParams
+	switch ClusterContext {
+	case "project":
+		params = clusterC.NewV1CloudAccountsAwsCreateParamsWithContext(h.Ctx).WithBody(account)
+		break
+	case "tenant":
+		params = clusterC.NewV1CloudAccountsAwsCreateParams().WithBody(account)
+		break
+	default:
+		break
+	}
 	success, err := client.V1CloudAccountsAwsCreate(params)
 	if err != nil {
 		return "", err
@@ -82,7 +92,17 @@ func (h *V1Client) UpdateCloudAccountAws(account *models.V1AwsAccount) error {
 	}
 
 	uid := account.Metadata.UID
-	params := clusterC.NewV1CloudAccountsAwsUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(account)
+	var params *clusterC.V1CloudAccountsAwsUpdateParams
+	switch account.Metadata.Annotations["scope"] {
+	case "project":
+		params = clusterC.NewV1CloudAccountsAwsUpdateParamsWithContext(h.Ctx).WithUID(uid).WithBody(account)
+		break
+	case "tenant":
+		params = clusterC.NewV1CloudAccountsAwsUpdateParams().WithBody(account)
+		break
+	default:
+		break
+	}
 	_, err = client.V1CloudAccountsAwsUpdate(params)
 	return err
 }
@@ -93,7 +113,22 @@ func (h *V1Client) DeleteCloudAccountAws(uid string) error {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudAccountsAwsDeleteParamsWithContext(h.Ctx).WithUID(uid)
+	account, err := h.GetCloudAccountAws(uid)
+	if err != nil {
+		return nil
+	}
+
+	var params *clusterC.V1CloudAccountsAwsDeleteParams
+	switch account.Metadata.Annotations["scope"] {
+	case "project":
+		params = clusterC.NewV1CloudAccountsAwsDeleteParamsWithContext(h.Ctx).WithUID(uid)
+		break
+	case "tenant":
+		params = clusterC.NewV1CloudAccountsAwsDeleteParams().WithUID(uid)
+		break
+	default:
+		break
+	}
 	_, err = client.V1CloudAccountsAwsDelete(params)
 	return err
 }
