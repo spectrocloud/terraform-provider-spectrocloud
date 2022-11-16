@@ -42,32 +42,16 @@ func resourceClusterNested() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"host_cluster": {
-				Type:         schema.TypeList,
+			"host_cluster_uid": {
+				Type:         schema.TypeString,
 				Optional:     true,
-				ExactlyOneOf: []string{"host_cluster", "cluster_group"},
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"uid": {
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validation.StringNotInSlice([]string{""}, false),
-						},
-					},
-				},
+				ExactlyOneOf: []string{"host_cluster_uid", "cluster_group_uid"},
+				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
 			},
-			"cluster_group": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"uid": {
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validation.StringNotInSlice([]string{""}, false),
-						},
-					},
-				},
+			"cluster_group_uid": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
 			},
 			"resources": {
 				Type:     schema.TypeList,
@@ -496,22 +480,13 @@ func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroNestedClusterEntity {
-	// parse host cluster / cluster group config
-	var hostClusterUid, clusterGroupUid string
-	val, ok := d.GetOk("host_cluster")
-	if ok {
-		hostClusterConfig := val.([]interface{})[0].(map[string]interface{})
-		hostClusterUid = hostClusterConfig["uid"].(string)
-	}
-	val, ok = d.GetOk("cluster_group")
-	if ok {
-		clusterGroupConfig := val.([]interface{})[0].(map[string]interface{})
-		clusterGroupUid = clusterGroupConfig["uid"].(string)
-	}
+	// parse host cluster / cluster group uid
+	hostClusterUid := d.Get("host_cluster_uid").(string)
+	clusterGroupUid := d.Get("cluster_group_uid").(string)
 
 	// parse CloudConfig
 	var chartName, chartRepo, chartVersion, chartValues, kubernetesVersion string
-	val, ok = d.GetOk("cloud_config")
+	val, ok := d.GetOk("cloud_config")
 	if ok {
 		cloudConfig := val.([]interface{})[0].(map[string]interface{})
 		chartName = cloudConfig["chart_name"].(string)
