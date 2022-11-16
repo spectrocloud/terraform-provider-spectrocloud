@@ -52,7 +52,7 @@ type V1Client struct {
 	retryAttempts  int
 }
 
-func New(hubbleHost, email, password, projectUID string, apikey string, transportDebug bool, retryAttemps int) *V1Client {
+func New(hubbleHost, email, password, projectUID string, apikey string, transportDebug bool, retryAttempts int) *V1Client {
 	ctx := context.Background()
 	if projectUID != "" {
 		ctx = GetProjectContextWithCtx(ctx, projectUID)
@@ -64,7 +64,7 @@ func New(hubbleHost, email, password, projectUID string, apikey string, transpor
 	authHttpTransport.RetryAttempts = 0
 	//authHttpTransport.Debug = true
 	AuthClient = authC.New(authHttpTransport, strfmt.Default)
-	return &V1Client{ctx, email, password, apikey, transportDebug, retryAttemps}
+	return &V1Client{ctx, email, password, apikey, transportDebug, retryAttempts}
 }
 
 func (h *V1Client) getNewAuthToken() (*AuthToken, error) {
