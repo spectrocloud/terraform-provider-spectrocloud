@@ -66,8 +66,3 @@ worker_azs_subnets_map = {
   "{enter AWS Availability Zone A}" = "{enter Subnet for AZ A, ...}"
   "{enter AWS Availability Zone B}" = "{enter Subnet for AZ A, ...}"
 }
-
- master_azs_subnets_map = {
-   "us-west-2a" = "subnet-12345,subnet-4567"
-   "us-west-2b" = "subnet-12345,subnet-4567"
- }

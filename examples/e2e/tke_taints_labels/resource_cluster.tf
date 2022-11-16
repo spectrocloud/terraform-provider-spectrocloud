@@ -60,12 +60,12 @@ resource "spectrocloud_cluster_tke" "cluster" {
   cloud_account_id = spectrocloud_cloudaccount_tencent.account.id
 
   cloud_config {
-    endpoint_access = "public"
+    endpoint_access     = "public"
     public_access_cidrs = ["0.0.0.0/0"]
-    ssh_key_name    = var.tke_ssh_key_name
-    region          = var.tke_region
-    vpc_id          = var.tke_vpc_id
-    az_subnets      = var.master_tke_subnets_map
+    ssh_key_name        = var.tke_ssh_key_name
+    region              = var.tke_region
+    vpc_id              = var.tke_vpc_id
+    az_subnets          = var.master_tke_subnets_map
   }
 
   machine_pool {

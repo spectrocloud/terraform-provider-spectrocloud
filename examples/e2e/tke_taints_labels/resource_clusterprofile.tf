@@ -4,26 +4,26 @@ data "spectrocloud_registry" "registry" {
 
 data "spectrocloud_pack" "csi" {
   registry_uid = data.spectrocloud_registry.registry.id
-  name    = "csi-tke"
-  version = "1.0"
+  name         = "csi-tke"
+  version      = "1.0"
 }
 
 data "spectrocloud_pack" "cni" {
   registry_uid = data.spectrocloud_registry.registry.id
-  name    = "cni-tke-global-router"
-  version = "1.0"
+  name         = "cni-tke-global-router"
+  version      = "1.0"
 }
 
 data "spectrocloud_pack" "k8s" {
   registry_uid = data.spectrocloud_registry.registry.id
-  name    = "kubernetes-tke"
-  version = "1.20.6"
+  name         = "kubernetes-tke"
+  version      = "1.20.6"
 }
 
 data "spectrocloud_pack" "ubuntu" {
   registry_uid = data.spectrocloud_registry.registry.id
-  name    = "ubuntu-tke"
-  version = "18.04"
+  name         = "ubuntu-tke"
+  version      = "18.04"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {

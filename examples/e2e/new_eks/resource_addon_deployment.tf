@@ -13,8 +13,8 @@ resource "spectrocloud_addon_deployment" "depl" {
       manifest {
         name = "enable-rook-orchestrator"
         content = templatefile(local.templates["enable-rook-orchestrator_config"].location,
-        {
-          rook_ceph_version = "v1.9.2"
+          {
+            rook_ceph_version = "v1.9.2"
         })
       }
     }

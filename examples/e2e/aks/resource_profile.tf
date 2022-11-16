@@ -63,26 +63,26 @@ resource "spectrocloud_cluster_profile" "addon_profile" {
   }
 
   pack {
-    name   = data.spectrocloud_pack.falco.name
-    tag    = local.falco_version
-    uid    = data.spectrocloud_pack.falco.id
-    values = data.spectrocloud_pack.falco.values
+    name         = data.spectrocloud_pack.falco.name
+    tag          = local.falco_version
+    uid          = data.spectrocloud_pack.falco.id
+    values       = data.spectrocloud_pack.falco.values
     registry_uid = data.spectrocloud_registry.registry.id
   }
 
- pack {
-   name   = data.spectrocloud_pack.prometheus-operator.name
-   tag    = local.prometheus_version
-   uid    = data.spectrocloud_pack.prometheus-operator.id
-   values = replace(data.spectrocloud_pack.prometheus-operator.values, "adminPassword: ", "adminPassword: admin-pr0mEtheus")
- }
+  pack {
+    name   = data.spectrocloud_pack.prometheus-operator.name
+    tag    = local.prometheus_version
+    uid    = data.spectrocloud_pack.prometheus-operator.id
+    values = replace(data.spectrocloud_pack.prometheus-operator.values, "adminPassword: ", "adminPassword: admin-pr0mEtheus")
+  }
 
- pack {
+  pack {
     name   = data.spectrocloud_pack.fluentbit.name
     tag    = local.fluentbit_version
     uid    = data.spectrocloud_pack.fluentbit.id
     values = data.spectrocloud_pack.fluentbit.values
- }
+  }
 
   pack {
     name = "manifest-namespace"
