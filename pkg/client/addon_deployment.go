@@ -25,7 +25,7 @@ func (h *V1Client) UpdateAddonDeployment(cluster *models.V1SpectroCluster, body 
 
 	resolveNotification := true
 	params := clusterC.NewV1SpectroClustersPatchProfilesParamsWithContext(h.Ctx).WithUID(uid).WithBody(body).WithResolveNotification(&resolveNotification)
-	err = patchWithRetry(h, err, client, params)
+	err = patchWithRetry(h, client, params)
 	return err
 }
 
@@ -48,11 +48,12 @@ func (h *V1Client) CreateAddonDeployment(uid string, body *models.V1SpectroClust
 
 	resolveNotification := false // during initial creation we never need to resolve packs.
 	params := clusterC.NewV1SpectroClustersPatchProfilesParamsWithContext(h.Ctx).WithUID(uid).WithBody(body).WithResolveNotification(&resolveNotification)
-	err = patchWithRetry(h, err, client, params)
+	err = patchWithRetry(h, client, params)
 	return err
 }
 
-func patchWithRetry(h *V1Client, err error, client clusterC.ClientService, params *clusterC.V1SpectroClustersPatchProfilesParams) error {
+func patchWithRetry(h *V1Client, client clusterC.ClientService, params *clusterC.V1SpectroClustersPatchProfilesParams) error {
+	var err error
 	for attempt := 0; attempt < h.retryAttempts; attempt++ {
 		// small jitter to prevent simultaneous retries
 		rand.Seed(time.Now().UnixNano())
