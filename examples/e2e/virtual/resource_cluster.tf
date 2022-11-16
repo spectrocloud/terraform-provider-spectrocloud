@@ -13,9 +13,9 @@ resource "spectrocloud_virtual_cluster" "cluster" {
       # }
     }
     resources {
-      max_cpu = 6
+      max_cpu       = 6
       max_mem_in_mb = 6000
-      min_cpu = 0
+      min_cpu       = 0
       min_mem_in_mb = 0
     }
   }
