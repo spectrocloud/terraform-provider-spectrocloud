@@ -45,7 +45,7 @@ func New(_ string) func() *schema.Provider {
 				"retry_attempts": {
 					Type:        schema.TypeInt,
 					Optional:    true,
-					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_RETRY_ATTEMPTS", nil),
+					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_RETRY_ATTEMPTS", 10),
 				},
 				"project_name": {
 					Type:     schema.TypeString,
@@ -160,14 +160,14 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	password := ""
 	apiKey := ""
 	transportDebug := false
-	retryAttemps := 10
+	retryAttempts := 10
 
 	if d.Get("trace") != nil {
 		transportDebug = d.Get("trace").(bool)
 	}
 
 	if d.Get("retry_attempts") != nil {
-		retryAttemps = d.Get("retry_attempts").(int)
+		retryAttempts = d.Get("retry_attempts").(int)
 	}
 
 	if d.Get("username") != nil && d.Get("password") != nil {
@@ -197,7 +197,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	c := client.New(host, username, password, "", apiKey, transportDebug, retryAttemps)
+	c := client.New(host, username, password, "", apiKey, transportDebug, retryAttempts)
 
 	if projectName != "" {
 		uid, err := c.GetProjectUID(projectName)
@@ -205,7 +205,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 			return nil, diag.FromErr(err)
 		}
 
-		c = client.New(host, username, password, uid, apiKey, transportDebug, retryAttemps)
+		c = client.New(host, username, password, uid, apiKey, transportDebug, retryAttempts)
 	}
 
 	return c, diags
