@@ -18,7 +18,7 @@ resource "spectrocloud_cluster_aks" "aks" {
     id = spectrocloud_cluster_profile.addon_profile.id
   }
 
-/*  backup_policy {
+  /*  backup_policy {
     schedule                  = "0 0 * * SUN"
     backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
     prefix                    = "demo001-dmitry-backup"
@@ -40,7 +40,7 @@ resource "spectrocloud_cluster_aks" "aks" {
     disk_size_gb         = 50
     is_system_node_pool  = true
     storage_account_type = "Premium_LRS"
-  }  
+  }
 
   machine_pool {
     name                 = "application"
@@ -73,7 +73,7 @@ resource "spectrocloud_cluster_aks" "aks2" {
     id = spectrocloud_cluster_profile.addon_profile.id
   }
 
-/*  backup_policy {
+  /*  backup_policy {
     schedule                  = "0 0 * * SUN"
     backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
     prefix                    = "demo001-dmitry-backup"
@@ -95,7 +95,7 @@ resource "spectrocloud_cluster_aks" "aks2" {
     disk_size_gb         = 50
     is_system_node_pool  = true
     storage_account_type = "Premium_LRS"
-  }  
+  }
 
   machine_pool {
     name                 = "application"

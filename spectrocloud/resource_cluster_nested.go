@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
@@ -41,66 +42,37 @@ func resourceClusterNested() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"cluster_config": {
+			"host_cluster_uid": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ExactlyOneOf: []string{"host_cluster_uid", "cluster_group_uid"},
+				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
+			},
+			"cluster_group_uid": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
+			},
+			"resources": {
 				Type:     schema.TypeList,
-				Required: true,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"host_cluster_config": {
-							Type:     schema.TypeList,
-							Required: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"host_cluster": {
-										Type:     schema.TypeList,
-										Optional: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"uid": {
-													Type:     schema.TypeString,
-													Optional: true,
-												},
-											},
-										},
-									},
-									"cluster_group": {
-										Type:     schema.TypeList,
-										Optional: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"uid": {
-													Type:     schema.TypeString,
-													Optional: true,
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						"resources": {
-							Type:     schema.TypeList,
+						"max_cpu": {
+							Type:     schema.TypeInt,
 							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"max_cpu": {
-										Type:     schema.TypeInt,
-										Optional: true,
-									},
-									"max_mem_in_mb": {
-										Type:     schema.TypeInt,
-										Optional: true,
-									},
-									"min_cpu": {
-										Type:     schema.TypeInt,
-										Optional: true,
-									},
-									"min_mem_in_mb": {
-										Type:     schema.TypeInt,
-										Optional: true,
-									},
-								},
-							},
+						},
+						"max_mem_in_mb": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"min_cpu": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"min_mem_in_mb": {
+							Type:     schema.TypeInt,
+							Optional: true,
 						},
 					},
 				},
@@ -508,24 +480,9 @@ func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroNestedClusterEntity {
-	// parse ClusterConfig
-	clusterConfigObj := d.Get("cluster_config")
-	clusterConfig := clusterConfigObj.([]interface{})[0].(map[string]interface{})
-
-	var hostClusterUid, clusterGroupUid string
-	hostClusterConfig := clusterConfig["host_cluster_config"].([]interface{})[0].(map[string]interface{})
-
-	hostClusterObj := hostClusterConfig["host_cluster"].([]interface{})
-	if len(hostClusterObj) > 0 {
-		hostCluster := hostClusterObj[0].(map[string]interface{})
-		hostClusterUid = hostCluster["uid"].(string)
-	}
-
-	clusterGroupObj := hostClusterConfig["cluster_group"].([]interface{})
-	if len(clusterGroupObj) > 0 {
-		clusterGroup := clusterGroupObj[0].(map[string]interface{})
-		clusterGroupUid = clusterGroup["uid"].(string)
-	}
+	// parse host cluster / cluster group uid
+	hostClusterUid := d.Get("host_cluster_uid").(string)
+	clusterGroupUid := d.Get("cluster_group_uid").(string)
 
 	// parse CloudConfig
 	var chartName, chartRepo, chartVersion, chartValues, kubernetesVersion string
@@ -576,16 +533,18 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 
 	// init cluster resources (machinepool)
 	machinePoolConfigs := make([]*models.V1NestedMachinePoolConfigEntity, 0)
-	mp := toMachinePoolNested(clusterConfigObj)
-	machinePoolConfigs = append(machinePoolConfigs, mp)
+	resourcesObj, ok := d.GetOk("resources")
+	if ok {
+		resources := resourcesObj.([]interface{})[0].(map[string]interface{})
+		mp := toMachinePoolNested(resources)
+		machinePoolConfigs = append(machinePoolConfigs, mp)
+	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
 	return cluster
 }
 
-func toMachinePoolNested(machinePoolObj interface{}) *models.V1NestedMachinePoolConfigEntity {
-	machinePool := machinePoolObj.([]interface{})[0].(map[string]interface{})
-	resources := machinePool["resources"].([]interface{})[0].(map[string]interface{})
+func toMachinePoolNested(resources map[string]interface{}) *models.V1NestedMachinePoolConfigEntity {
 	maxCpu := resources["max_cpu"].(int)
 	maxMemInMb := resources["max_mem_in_mb"].(int)
 	minCpu := resources["min_cpu"].(int)

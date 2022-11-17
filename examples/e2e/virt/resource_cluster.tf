@@ -91,7 +91,7 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
   }
 
   machine_pool {
-    name  = "worker-pool"
+    name = "worker-pool"
 
     additional_labels = {
       addlabel = "addlabelval1"
