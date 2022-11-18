@@ -50,18 +50,18 @@ func New(_ string) func() *schema.Provider {
 				"retry_attempts": {
 					Type:        schema.TypeInt,
 					Optional:    true,
-					Description: "Number of retry attempts. Can also be set with the `SPECTROCLOUD_RETRY_ATTEMPTS` environment variable. Defaults to 10",
+					Description: "Number of retry attempts. Can also be set with the `SPECTROCLOUD_RETRY_ATTEMPTS` environment variable. Defaults to 10.",
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_RETRY_ATTEMPTS", 10),
 				},
 				"project_name": {
 					Type:        schema.TypeString,
 					Optional:    true,
-					Description: "The Spectro Cloud project name",
+					Description: "The Spectro Cloud project name.",
 				},
 				"ignore_insecure_tls_error": {
 					Type:        schema.TypeBool,
 					Optional:    true,
-					Description: "Ignore insecure TLS error. Defaults to false",
+					Description: "Ignore insecure TLS error. Defaults to false.",
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
