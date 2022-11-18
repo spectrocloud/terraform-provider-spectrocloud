@@ -93,7 +93,7 @@ export SPECTROCLOUD_PASSWORD=myPassword
 provider "spectrocloud" {}
 ```
 
-Alternatively, you can use an API key to authenticate with Spectro Cloud. Visit the User Management API Key [documentation](https://docs.spectrocloud.com/user-management/user-authentication/#usingapikey) to learn more about Spectro Cloud API keys.
+Alternatively, you may use an API key to authenticate with Spectro Cloud. Visit the User Management API Key [documentation](https://docs.spectrocloud.com/user-management/user-authentication/#usingapikey) to learn more about Spectro Cloud API keys.
 ```shell
 export SPECTROCLOUD_APIKEY=5b7aad.........
 ```
