@@ -57,6 +57,27 @@ Credentials and other configurations can be provided through environment variabl
 - `SPECTROCLOUD_TRACE`
 - `SPECTROCLOUD_RETRY_ATTEMPTS`
 
+
+## Authentication
+You can use the environment variables to authenticate with Spectro Cloud with your username and password.
+
+```shell
+export SPECTROCLOUD_USERNAME=myUserName
+export SPECTROCLOUD_PASSWORD=myPassword
+```
+```hcl
+provider "spectrocloud" {}
+```
+
+Alternatively, you may use an API key to authenticate with Spectro Cloud. Visit the User Management API Key [documentation](https://docs.spectrocloud.com/user-management/user-authentication/#usingapikey) to learn more about Spectro Cloud API keys.
+```shell
+export SPECTROCLOUD_USERNAME=myUserName
+export SPECTROCLOUD_APIKEY=5b7aad.........
+```
+```hcl
+provider "spectrocloud" {}
+```
+
 ## Support
 
 For questions or issues with the provider, please post your questions on the
