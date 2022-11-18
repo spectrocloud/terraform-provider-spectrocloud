@@ -44,7 +44,7 @@ func New(_ string) func() *schema.Provider {
 				"trace": {
 					Type:        schema.TypeBool,
 					Optional:    true,
-					Description: "Enable debugging. Can also be set with the `SPECTROCLOUD_TRACE` environment variable.",
+					Description: "Enable HTTP request tracing. Can also be set with the `SPECTROCLOUD_TRACE` environment variable. To enable Terraform debug logging, set `TF_LOG=DEBUG`. Visit the Terraform documentation to learn more about Terraform [debugging](https://developer.hashicorp.com/terraform/plugin/log/managing).",
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_TRACE", nil),
 				},
 				"retry_attempts": {
@@ -61,7 +61,7 @@ func New(_ string) func() *schema.Provider {
 				"ignore_insecure_tls_error": {
 					Type:        schema.TypeBool,
 					Optional:    true,
-					Description: "Ignore insecure TLS error. Defaults to false.",
+					Description: "Ignore insecure TLS errors for Spectro Cloud API endpoints. Defaults to false.",
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{

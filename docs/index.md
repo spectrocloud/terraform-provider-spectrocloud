@@ -20,6 +20,7 @@ infrastructure stacks.
 ## Spectro Cloud account
 
 This provider requires access to a valid Spectro Cloud account. Sign up for a free trial account [here](https://www.spectrocloud.com/free-trial/).
+You may use your Spectro Cloud account credentials to access the Spectro Cloud management API or a Spectro Cloud API key. For more details on the authentication, navigate to the [authentication](#authentication) section.
 
 ## Example Usage
 
@@ -85,6 +86,8 @@ Credentials and other configurations can be provided through environment variabl
 ## Authentication
 You can use the environment variables to authenticate with Spectro Cloud with your username and password.
 
+-> **Note:** The API key takes precendence over the username and password authentication flow.
+
 ```shell
 export SPECTROCLOUD_USERNAME=myUserName
 export SPECTROCLOUD_PASSWORD=myPassword
@@ -113,9 +116,9 @@ provider GitHub [discussion board](https://github.com/spectrocloud/terraform-pro
 
 - `api_key` (String, Sensitive) The Spectro Cloud API key. Can also be set with the `SPECTROCLOUD_API_KEY` environment variable.
 - `host` (String) The Spectro Cloud API host url. Can also be set with the `SPECTROCLOUD_HOST` environment variable. Defaults to https://api.spectrocloud.com
-- `ignore_insecure_tls_error` (Boolean) Ignore insecure TLS error. Defaults to false.
+- `ignore_insecure_tls_error` (Boolean) Ignore insecure TLS errors for Spectro Cloud API endpoints. Defaults to false.
 - `password` (String, Sensitive) The Spectro Cloud user password. Can also be set with the `SPECTROCLOUD_PASSWORD` environment variable.
 - `project_name` (String) The Spectro Cloud project name.
 - `retry_attempts` (Number) Number of retry attempts. Can also be set with the `SPECTROCLOUD_RETRY_ATTEMPTS` environment variable. Defaults to 10.
-- `trace` (Boolean) Enable debugging. Can also be set with the `SPECTROCLOUD_TRACE` environment variable.
+- `trace` (Boolean) Enable HTTP request traacing. Can also be set with the `SPECTROCLOUD_TRACE` environment variable. To enable Terraform debug logging, set `TF_LOG=DEBUG`. Visit the Terraform documentation to learn more about Terraform [debugging](https://developer.hashicorp.com/terraform/plugin/log/managing).
 - `username` (String) The Spectro Cloud username. Can also be set with the `SPECTROCLOUD_USERNAME` environment variable.

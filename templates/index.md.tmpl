@@ -20,6 +20,7 @@ infrastructure stacks.
 ## Spectro Cloud account
 
 This provider requires access to a valid Spectro Cloud account. Sign up for a free trial account [here](https://www.spectrocloud.com/free-trial/).
+You may use your Spectro Cloud account credentials to access the Spectro Cloud management API or a Spectro Cloud API key. For more details on the authentication, navigate to the [authentication](#authentication) section.
 
 ## Example Usage
 
@@ -60,6 +61,8 @@ Credentials and other configurations can be provided through environment variabl
 
 ## Authentication
 You can use the environment variables to authenticate with Spectro Cloud with your username and password.
+
+-> **Note:** The API key takes precendence over the username and password authentication flow.
 
 ```shell
 export SPECTROCLOUD_USERNAME=myUserName
