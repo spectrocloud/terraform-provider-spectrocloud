@@ -46,9 +46,6 @@ provider "spectrocloud" {
 Create or append to a `terraform.tfvars` file:
 
 ```terraform
-##################################################################################
-# Spectro Cloud credentials
-##################################################################################
 sc_host         = "{enter Spectro Cloud API endpoint}" #e.g: api.spectrocloud.com (for SaaS)
 sc_username     = "{enter Spectro Cloud username}"     #e.g: user1@abc.com
 sc_password     = "{enter Spectro Cloud password}"     #e.g: supereSecure1!
@@ -72,7 +69,7 @@ For an end-to-end example of provisioning Spectro Cloud resources, visit:
 
 ## Environment Variables
 
-Credentials and other configuration can be provided through environment variables. The following environment variables are availabe.
+Credentials and other configurations can be provided through environment variables. The following environment variables are availabe.
 
 - `SPECTROCLOUD_HOST` 
 - `SPECTROCLOUD_USERNAME`
@@ -91,11 +88,11 @@ provider GitHub [discussion board](https://github.com/spectrocloud/terraform-pro
 
 ### Optional
 
-- `api_key` (String, Sensitive)
-- `host` (String)
-- `ignore_insecure_tls_error` (Boolean)
-- `password` (String, Sensitive)
-- `project_name` (String)
-- `retry_attempts` (Number)
-- `trace` (Boolean)
-- `username` (String)
+- `api_key` (String, Sensitive) The Spectro Cloud API key. Can also be set with the `SPECTROCLOUD_API_KEY` environment variable.
+- `host` (String) The Spectro Cloud API host url. Can also be set with the `SPECTROCLOUD_HOST` environment variable. Defaults to https://api.spectrocloud.com
+- `ignore_insecure_tls_error` (Boolean) Ignore insecure TLS error. Defaults to false
+- `password` (String, Sensitive) The Spectro Cloud user password. Can also be set with the `SPECTROCLOUD_PASSWORD` environment variable.
+- `project_name` (String) The Spectro Cloud project name
+- `retry_attempts` (Number) Number of retry attempts. Can also be set with the `SPECTROCLOUD_RETRY_ATTEMPTS` environment variable. Defaults to 10
+- `trace` (Boolean) Enable debugging. Can also be set with the `SPECTROCLOUD_TRACE` environment variable.
+- `username` (String) The Spectro Cloud username. Can also be set with the `SPECTROCLOUD_USERNAME` environment variable.
