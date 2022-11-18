@@ -95,7 +95,6 @@ provider "spectrocloud" {}
 
 Alternatively, you can use an API key to authenticate with Spectro Cloud. Visit the User Management API Key [documentation](https://docs.spectrocloud.com/user-management/user-authentication/#usingapikey) to learn more about Spectro Cloud API keys.
 ```shell
-export SPECTROCLOUD_USERNAME=myUserName
 export SPECTROCLOUD_APIKEY=5b7aad.........
 ```
 ```hcl
