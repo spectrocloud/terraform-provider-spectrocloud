@@ -38,25 +38,46 @@ func resourceAlert() *schema.Resource {
 				Required:     true,
 				ValidateFunc: validation.StringInSlice([]string{"ClusterHealth"}, false),
 			},
-			"email": {
+			"type": {
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.StringInSlice([]string{"email", "http"}, false),
+			},
+			"alert_all_users": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"created_by": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"status": {
 				Type:     schema.TypeList,
 				Optional: true,
-				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"alert_all_users": {
+						"is_succeeded": {
 							Type:     schema.TypeBool,
-							Required: true,
-						},
-						"identifiers": {
-							Type:     schema.TypeSet,
 							Optional: true,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
+						},
+						"message": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"time": {
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 					},
+				},
+			},
+			"identifiers": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
 				},
 			},
 			"http": {
@@ -76,7 +97,7 @@ func resourceAlert() *schema.Resource {
 						},
 						"body": {
 							Type:     schema.TypeString,
-							Optional: true,
+							Required: true,
 						},
 						"headers": {
 							Type:     schema.TypeMap,
@@ -95,101 +116,72 @@ func resourceAlert() *schema.Resource {
 func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var err error
-	projectUid := ""
+	projectUid, err := getProjectUid(d, m)
 	var diags diag.Diagnostics
 	alertObj := toAlert(d)
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-		projectUid, err = c.GetProjectUID(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
 	uid, err := c.CreateAlert(alertObj, projectUid, d.Get("component").(string))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
-
 	return diags
 }
 
 func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var err error
-	projectUid := ""
+
 	var diags diag.Diagnostics
+	projectUid, _ := getProjectUid(d, m)
 	alertObj := toAlert(d)
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-		projectUid, err = c.GetProjectUID(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	uid, err := c.UpdateAlert(alertObj, projectUid, d.Get("component").(string))
+	_, err = c.UpdateAlert(alertObj, projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	d.SetId(uid)
-
 	return diags
 }
 
-func toAlert(d *schema.ResourceData) (alertEntity *models.V1AlertEntity) {
-	channels := make([]*models.V1Channel, 0)
-	isEmail, isHttp := getAlertTypes(d)
-	if isEmail == true {
-		emailInfo := d.Get("email").([]interface{})[0].(map[string]interface{})
+func toAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
+
+	channel := &models.V1Channel{
+		IsActive: d.Get("is_active").(bool),
+		Type:     d.Get("type").(string),
+	}
+	channel.CreatedBy = d.Get("created_by").(string)
+	channel.AlertAllUsers = d.Get("alert_all_users").(bool)
+	_, hasIdentifier := d.GetOk("identifiers")
+	if hasIdentifier == true {
 		emailIDs := make([]string, 0)
-		for _, email := range emailInfo["identifiers"].(*schema.Set).List() {
+		for _, email := range d.Get("identifiers").(*schema.Set).List() {
 			emailIDs = append(emailIDs, email.(string))
 		}
-		emailAlert := &models.V1Channel{
-			IsActive:      d.Get("is_active").(bool),
-			AlertAllUsers: emailInfo["alert_all_users"].(bool),
-			Identifiers:   emailIDs,
-			Type:          "email",
-		}
-		channels = append(channels, emailAlert)
+		channel.Identifiers = emailIDs
 	}
-	if isHttp == true {
-		for _, val := range d.Get("http").([]interface{}) {
-			http := val.(map[string]interface{})
-			headersMap := make(map[string]string)
+	_, hasHttp := d.GetOk("http")
+	if hasHttp == true {
+		http := d.Get("http").([]interface{})[0].(map[string]interface{})
+		headersMap := make(map[string]string)
+		if http["headers"] != nil {
 			for key, element := range http["headers"].(map[string]interface{}) {
 				headersMap[key] = element.(string)
 			}
-			channelHttp := &models.V1ChannelHTTP{
-				Body:    http["body"].(string),
-				Headers: headersMap,
-				Method:  http["method"].(string),
-				URL:     http["url"].(string),
-			}
-			httpAlert := &models.V1Channel{
-				IsActive: d.Get("is_active").(bool),
-				Type:     "http",
-				HTTP:     channelHttp,
-			}
-			channels = append(channels, httpAlert)
+		}
+		channel.HTTP = &models.V1ChannelHTTP{
+			Body:    http["body"].(string),
+			Method:  http["method"].(string),
+			URL:     http["url"].(string),
+			Headers: headersMap,
 		}
 	}
-	alertEntity = &models.V1AlertEntity{
-		Channels: channels,
-	}
-	return alertEntity
+	return channel
 }
 
 func resourceAlertDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	projectUid := ""
 	var err error
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-		projectUid, err = c.GetProjectUID(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	err = c.DeleteAlerts(projectUid, d.Get("component").(string))
+	projectUid, err := getProjectUid(d, m)
+	err = c.DeleteAlerts(projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -197,32 +189,36 @@ func resourceAlertDelete(ctx context.Context, d *schema.ResourceData, m interfac
 }
 
 func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	projectUid := ""
 	var err error
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-		projectUid, err = c.GetProjectUID(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
+	projectUid, _ := getProjectUid(d, m)
+	alertPayload, err := c.ReadAlert(projectUid, d.Get("component").(string), d.Id())
+	if alertPayload == nil {
+		d.SetId("")
+		return diag.FromErr(err)
+
+	} else {
+		d.SetId(alertPayload.UID)
+		d.Set("created_by", alertPayload.CreatedBy)
+		d.Set("is_active", alertPayload.IsActive)
+		d.Set("type", alertPayload.Type)
+		d.Set("alert_all_users", alertPayload.AlertAllUsers)
+		d.Set("identifiers", alertPayload.Identifiers)
+		d.Set("http", alertPayload.HTTP)
 	}
-	projectDetails, _ := c.GetProjectByUID(projectUid)
-	channels := projectDetails.Spec.Alerts[0].Channels
-	_, err = c.ReadAlert(channels, projectUid, d.Get("component").(string))
 	return diags
 }
 
-func getAlertTypes(d *schema.ResourceData) (hasEmail bool, hasHttp bool) {
-	email := false
-	http := false
-	for range d.Get("email").([]interface{}) {
-		email = true
-		break
+func getProjectUid(d *schema.ResourceData, m interface{}) (string, error) {
+	projectUid := ""
+	var err error
+	c := m.(*client.V1Client)
+	if v, ok := d.GetOk("project"); ok && v.(string) != "" {
+		projectUid, err = c.GetProjectUID(v.(string))
+		if err != nil {
+			return "", err
+		}
 	}
-	for range d.Get("http").([]interface{}) {
-		http = true
-		break
-	}
-	return email, http
+	return projectUid, nil
 }

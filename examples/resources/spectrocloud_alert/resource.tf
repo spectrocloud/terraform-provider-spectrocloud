@@ -3,78 +3,29 @@
 and for email, we can add a target email recipient or enable alerts for all users in the corresponding project
 */
 
-# Sample with one email & one webhook alert configuration.
-resource "spectrocloud_alert" "alert_dev0" {
-  project = "dev0"
+resource "spectrocloud_alert" "alert_email" {
+  project = "Default"
   is_active = true
   component = "ClusterHealth"
-  http {
-    method = "POST"
-    url = "https://openhook.com/put/dev0"
-    body = "{ \"text\": \"{{message}}\" }"
-    headers = {
-      ApiKey = "test--key--dev0"
-      tag = "Health"
-      source = "spectrocloud"
-    }
-  }
-  email {
-    alert_all_users = false
-    identifiers = ["abc@spectrocloud.com"]
-  }
+  type = "email"
+  identifiers = ["siva@spectrocloud.com", "anand@spectrocloud.com"]
+  alert_all_users = false
 }
 
-# Sample with only email alert configuration.
-resource "spectrocloud_alert" "alert_dev1" {
-  project = "dev1"
-  is_active = true
-  component = "ClusterHealth"
-  email {
-    alert_all_users = false
-    identifiers = ["abc@spectrocloud.com", "cba@spectrocloud.com"]
-  }
-}
-
-# Sample with 2 webhook alert configuration
-resource "spectrocloud_alert" "alert_dev2" {
-  project = "dev2"
+resource "spectrocloud_alert" "alert_http" {
+  project = "Default"
   is_active = true
   component = "ClusterHealth"
   http {
-    method = "POST"
-    url = "https://openhook.com/put/dev2"
-    body = "{ \"text\": \"{{message}}\" }"
+    method  = "POST"
+    url     = "https://openhook.com/put/edit2"
+    body    = "{ \"text\": \"{{message}}\" }"
     headers = {
-      ApiKey = "test--key--dev0"
-      tag = "Health"
+      type = "test--key--dev0"
+      tag    = "Health"
       source = "spectrocloud"
     }
   }
-  http {
-    method = "POST"
-    url = "https://openhook.com/post/dev2"
-    body = "{ \"text\": \"{{message}}\" }"
-    headers = {
-      ApiKey = "test--key--dev0"
-      tag = "Health"
-      source = "spectrocloud"
-    }
-  }
-}
-
-# Sample with only webhook alert configuration.
-resource "spectrocloud_alert" "alert_dev3" {
-  project = "dev3"
-  is_active = true
-  component = "ClusterHealth"
-  http {
-    method = "POST"
-    url = "https://openhook.com/put/dev3"
-    body = "{ \"text\": \"{{message}}\" }"
-    headers = {
-      ApiKey = "test--key--dev0"
-      tag = "Health"
-      source = "spectrocloud"
-    }
-  }
+  type = "http"
+  alert_all_users = false
 }
