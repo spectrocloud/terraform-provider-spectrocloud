@@ -22,24 +22,35 @@ description: Provisioning Cluster Health alerts (email | http).|-
 
 
 ```terraform
-resource "spectrocloud_alert" "alert_dev" {
-  project = "dev"
+Type : HTTP
+-----------------------------------------------------------
+resource "spectrocloud_alert" "alert_http" {
+  project = "Default"
   is_active = true
   component = "ClusterHealth"
   http {
-    method = "POST"
-    url = "https://openhook.com/put/dev0"
-    body = "{ \"text\": \"{{message}}\" }"
+    method  = "POST"
+    url     = "https://openhook.com/put/edit2"
+    body    = "{ \"text\": \"{{message}}\" }"
     headers = {
-      ApiKey = "test--key--dev"
-      tag = "test"
-      source = "spectro"
+      type = "test--key--dev0"
+      tag    = "Health"
+      source = "spectrocloud"
     }
   }
-  email {
-    alert_all_users = false
-    identifiers = ["abc@spectrocloud.com"]
-  }
+  type = "http"
+  alert_all_users = false
+}
+
+Type : EMAIL
+-----------------------------------------------------------
+resource "spectrocloud_alert" "alert_email" {
+  project = "Default"
+  is_active = true
+  component = "ClusterHealth"
+  type = "email"
+  identifiers = ["siva@spectrocloud.com", "anand@spectrocloud.com"]
+  alert_all_users = false
 }
 ```
 
