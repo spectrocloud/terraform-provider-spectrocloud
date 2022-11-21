@@ -20,6 +20,7 @@ infrastructure stacks.
 ## Spectro Cloud account
 
 This provider requires access to a valid Spectro Cloud account. Sign up for a free trial account [here](https://www.spectrocloud.com/free-trial/).
+You may use your Spectro Cloud account credentials to access the Spectro Cloud management API or a Spectro Cloud API key. For more details on the authentication, navigate to the [authentication](#authentication) section.
 
 ## Example Usage
 
@@ -47,7 +48,7 @@ Create or append to a `terraform.tfvars` file:
 
 ```terraform
 ##################################################################################
-# Spectro Cloud credentials
+# Spectro Cloud Credentials
 ##################################################################################
 sc_host         = "{enter Spectro Cloud API endpoint}" #e.g: api.spectrocloud.com (for SaaS)
 sc_username     = "{enter Spectro Cloud username}"     #e.g: user1@abc.com
@@ -70,6 +71,39 @@ Detailed schema definitions for each resource are listed in the _Resources_ menu
 For an end-to-end example of provisioning Spectro Cloud resources, visit:
 [Spectro Cloud E2E Examples](https://github.com/spectrocloud/terraform-provider-spectrocloud/tree/main/examples/e2e).
 
+## Environment Variables
+
+Credentials and other configurations can be provided through environment variables. The following environment variables are availabe.
+
+- `SPECTROCLOUD_HOST` 
+- `SPECTROCLOUD_USERNAME`
+- `SPECTROCLOUD_PASSWORD`
+- `SPECTROCLOUD_APIKEY`
+- `SPECTROCLOUD_TRACE`
+- `SPECTROCLOUD_RETRY_ATTEMPTS`
+
+
+## Authentication
+You can use the environment variables to authenticate with Spectro Cloud with your username and password.
+
+-> **Note:** The API key takes precendence over the username and password authentication flow.
+
+```shell
+export SPECTROCLOUD_USERNAME=myUserName
+export SPECTROCLOUD_PASSWORD=myPassword
+```
+```hcl
+provider "spectrocloud" {}
+```
+
+Alternatively, you may use an API key to authenticate with Spectro Cloud. Visit the User Management API Key [documentation](https://docs.spectrocloud.com/user-management/user-authentication/#usingapikey) to learn more about Spectro Cloud API keys.
+```shell
+export SPECTROCLOUD_APIKEY=5b7aad.........
+```
+```hcl
+provider "spectrocloud" {}
+```
+
 ## Support
 
 For questions or issues with the provider, please post your questions on the
@@ -80,11 +114,11 @@ provider GitHub [discussion board](https://github.com/spectrocloud/terraform-pro
 
 ### Optional
 
-- `api_key` (String, Sensitive)
-- `host` (String)
-- `ignore_insecure_tls_error` (Boolean)
-- `password` (String, Sensitive)
-- `project_name` (String)
-- `retry_attempts` (Number)
-- `trace` (Boolean)
-- `username` (String)
+- `api_key` (String, Sensitive) The Spectro Cloud API key. Can also be set with the `SPECTROCLOUD_API_KEY` environment variable.
+- `host` (String) The Spectro Cloud API host url. Can also be set with the `SPECTROCLOUD_HOST` environment variable. Defaults to https://api.spectrocloud.com
+- `ignore_insecure_tls_error` (Boolean) Ignore insecure TLS errors for Spectro Cloud API endpoints. Defaults to false.
+- `password` (String, Sensitive) The Spectro Cloud user password. Can also be set with the `SPECTROCLOUD_PASSWORD` environment variable.
+- `project_name` (String) The Spectro Cloud project name.
+- `retry_attempts` (Number) Number of retry attempts. Can also be set with the `SPECTROCLOUD_RETRY_ATTEMPTS` environment variable. Defaults to 10.
+- `trace` (Boolean) Enable HTTP request traacing. Can also be set with the `SPECTROCLOUD_TRACE` environment variable. To enable Terraform debug logging, set `TF_LOG=DEBUG`. Visit the Terraform documentation to learn more about Terraform [debugging](https://developer.hashicorp.com/terraform/plugin/log/managing).
+- `username` (String) The Spectro Cloud username. Can also be set with the `SPECTROCLOUD_USERNAME` environment variable.
