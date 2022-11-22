@@ -25,6 +25,12 @@ func resourceCloudAccountAws() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+			},
 			"aws_access_key": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -61,7 +67,8 @@ func resourceCloudAccountAwsCreate(ctx context.Context, d *schema.ResourceData, 
 
 	account := toAwsAccount(d)
 
-	uid, err := c.CreateCloudAccountAws(account)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountAws(account, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -109,7 +116,6 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-//
 func resourceCloudAccountAwsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
