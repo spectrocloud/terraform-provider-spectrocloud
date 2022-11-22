@@ -56,6 +56,11 @@ func resourceAddonDeployment() *schema.Resource {
 										Type:     schema.TypeString,
 										Optional: true,
 									},
+									"uid": {
+										Type:     schema.TypeString,
+										Computed: true,
+										Optional: true,
+									},
 									"name": {
 										Type:     schema.TypeString,
 										Required: true,
@@ -116,7 +121,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 
 	addonDeployment := toAddonDeployment(c, d)
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c)
+	diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c, false)
 	if isError {
 		return diagnostics
 	}
@@ -162,7 +167,7 @@ func isProfileAttached(cluster *models.V1SpectroCluster, uid string) bool {
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	/*c := m.(*client.V1Client)
+	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 
@@ -172,11 +177,10 @@ func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	diagnostics, done := readCommonFields(c, d, cluster)
+	diagnostics, done := readAddonDeployment(c, d, cluster)
 	if done {
 		return diagnostics
-	}*/
-	var diags diag.Diagnostics
+	}
 
 	return diags
 }
