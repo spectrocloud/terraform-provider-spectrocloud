@@ -52,7 +52,7 @@ func (h *V1Client) GetClusterWithoutStatus(uid string) (*models.V1SpectroCluster
 		} else if err != nil {
 			return nil, err
 		}
-		return nil, nil
+		//return nil, nil
 	}
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		return nil, nil
