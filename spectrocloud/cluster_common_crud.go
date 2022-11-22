@@ -61,15 +61,17 @@ func resourceClusterReadyRefreshFunc(c *client.V1Client, id string) resource.Sta
 	}
 }
 
-func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, initial bool) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
-	if d.Get("skip_completion") != nil && d.Get("skip_completion").(bool) {
-		return diags, true
-	}
+	if initial { // only skip_completion when initally creating a cluster, do not skip when attach addon profile
+		if d.Get("skip_completion") != nil && d.Get("skip_completion").(bool) {
+			return diags, true
+		}
 
-	if _, found := toTags(d)["skip_completion"]; found {
-		return diags, true
+		if _, found := toTags(d)["skip_completion"]; found {
+			return diags, true
+		}
 	}
 
 	diagnostics, isError := waitForClusterReady(ctx, d, uid, diags, c)

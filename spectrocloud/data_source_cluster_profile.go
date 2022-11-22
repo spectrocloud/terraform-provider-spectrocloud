@@ -157,7 +157,7 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	}
 
 	if profile.Spec.Published != nil && len(profile.Spec.Published.Packs) > 0 {
-		packManifests, d2, done2 := getPacksContent(profile, c, d)
+		packManifests, d2, done2 := getPacksContent(profile.Spec.Published.Packs, c, d)
 		if done2 {
 			return d2
 		}
