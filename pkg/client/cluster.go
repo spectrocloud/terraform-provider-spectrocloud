@@ -43,8 +43,18 @@ func (h *V1Client) GetClusterWithoutStatus(uid string) (*models.V1SpectroCluster
 
 	params := clusterC.NewV1SpectroClustersGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1SpectroClustersGet(params)
+	// handle tenant context here cluster may be a tenant cluster
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+		params := clusterC.NewV1SpectroClustersGetParams().WithUID(uid)
+		success, err = client.V1SpectroClustersGet(params)
+		if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
+			return nil, nil
+		} else if err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
