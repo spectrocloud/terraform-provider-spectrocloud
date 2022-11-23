@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func resourceAlert() *schema.Resource {
+func ResourceAlert() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceAlertCreate,
 		ReadContext:   resourceAlertRead,
@@ -52,6 +52,7 @@ func resourceAlert() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			// Status is defined here just for schema, we are not using this status. it implemented for internal logic
 			"status": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -116,9 +117,9 @@ func resourceAlert() *schema.Resource {
 func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var err error
-	projectUid, err := getProjectUid(d, m)
+	projectUid, err := getProjectID(d, m)
 	var diags diag.Diagnostics
-	alertObj := toAlert(d)
+	alertObj := ToAlert(d)
 	uid, err := c.CreateAlert(alertObj, projectUid, d.Get("component").(string))
 	if err != nil {
 		return diag.FromErr(err)
@@ -132,8 +133,8 @@ func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 	var err error
 
 	var diags diag.Diagnostics
-	projectUid, _ := getProjectUid(d, m)
-	alertObj := toAlert(d)
+	projectUid, _ := getProjectID(d, m)
+	alertObj := ToAlert(d)
 	_, err = c.UpdateAlert(alertObj, projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
 		return diag.FromErr(err)
@@ -141,7 +142,7 @@ func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 	return diags
 }
 
-func toAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
+func ToAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
 
 	channel := &models.V1Channel{
 		IsActive: d.Get("is_active").(bool),
@@ -161,6 +162,8 @@ func toAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
 	if hasHttp == true {
 		http := d.Get("http").([]interface{})[0].(map[string]interface{})
 		headersMap := make(map[string]string)
+		println(http)
+		println(headersMap)
 		if http["headers"] != nil {
 			for key, element := range http["headers"].(map[string]interface{}) {
 				headersMap[key] = element.(string)
@@ -180,7 +183,7 @@ func resourceAlertDelete(ctx context.Context, d *schema.ResourceData, m interfac
 	var err error
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	projectUid, err := getProjectUid(d, m)
+	projectUid, err := getProjectID(d, m)
 	err = c.DeleteAlerts(projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
 		return diag.FromErr(err)
@@ -192,7 +195,7 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 	var err error
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	projectUid, _ := getProjectUid(d, m)
+	projectUid, _ := getProjectID(d, m)
 	alertPayload, err := c.ReadAlert(projectUid, d.Get("component").(string), d.Id())
 	if alertPayload == nil {
 		d.SetId("")
@@ -200,17 +203,36 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 
 	} else {
 		d.SetId(alertPayload.UID)
-		d.Set("created_by", alertPayload.CreatedBy)
-		d.Set("is_active", alertPayload.IsActive)
-		d.Set("type", alertPayload.Type)
-		d.Set("alert_all_users", alertPayload.AlertAllUsers)
-		d.Set("identifiers", alertPayload.Identifiers)
-		d.Set("http", alertPayload.HTTP)
+		if err := d.Set("is_active", alertPayload.IsActive); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("type", alertPayload.Type); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("alert_all_users", alertPayload.AlertAllUsers); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("identifiers", alertPayload.Identifiers); err != nil {
+			return diag.FromErr(err)
+		}
+		if alertPayload.Type == "http" {
+			var http []map[string]interface{}
+			hookConfig := map[string]interface{}{
+				"method":  alertPayload.HTTP.Method,
+				"url":     alertPayload.HTTP.URL,
+				"body":    alertPayload.HTTP.Body,
+				"headers": alertPayload.HTTP.Headers,
+			}
+			http = append(http, hookConfig)
+			if err := d.Set("http", http); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 	return diags
 }
 
-func getProjectUid(d *schema.ResourceData, m interface{}) (string, error) {
+func getProjectID(d *schema.ResourceData, m interface{}) (string, error) {
 	projectUid := ""
 	var err error
 	c := m.(*client.V1Client)

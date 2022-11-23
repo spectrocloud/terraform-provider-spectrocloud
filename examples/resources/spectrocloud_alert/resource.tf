@@ -8,8 +8,8 @@ resource "spectrocloud_alert" "alert_email" {
   is_active = true
   component = "ClusterHealth"
   type = "email"
-  identifiers = ["siva@spectrocloud.com", "anand@spectrocloud.com"]
-  alert_all_users = false
+  identifiers = ["abc@spectrocloud.com", "cba@spectrocloud.com"]
+  alert_all_users = true
 }
 
 resource "spectrocloud_alert" "alert_http" {
@@ -18,14 +18,13 @@ resource "spectrocloud_alert" "alert_http" {
   component = "ClusterHealth"
   http {
     method  = "POST"
-    url     = "https://openhook.com/put/edit2"
+    url     = "https://openhook.com/put/notify"
     body    = "{ \"text\": \"{{message}}\" }"
     headers = {
-      type = "test--key--dev0"
       tag    = "Health"
       source = "spectrocloud"
     }
   }
   type = "http"
-  alert_all_users = false
+  alert_all_users = true
 }
