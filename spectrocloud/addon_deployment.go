@@ -13,23 +13,19 @@ func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *mo
 
 	var diags diag.Diagnostics
 
-	profileId := ""
-	profiles := d.Get("cluster_profile").([]interface{})
-	if len(profiles) > 0 {
-		for _, profile := range profiles {
-			p := profile.(map[string]interface{})
-			profileId = p["id"].(string)
-			break
-		}
-	}
-
-	clusterProfile, err := c.GetClusterProfile(profileId)
+	clusterProfile, err := c.GetClusterProfile(getClusterProfileUID(d.Id()))
 	if err != nil {
 		return nil, false
 	}
 
 	for _, profile := range cluster.Spec.ClusterProfileTemplates {
-		if profile.Name == clusterProfile.Metadata.Name && profile.ProfileVersion == clusterProfile.Spec.Version {
+		/*if profile != nil {
+			continue
+		}
+		if clusterProfile == nil || clusterProfile.Metadata == nil || clusterProfile.Spec == nil || clusterProfile.Spec.Published == nil {
+			return nil, false
+		}*/
+		if profile.Name == clusterProfile.Metadata.Name && profile.ProfileVersion == clusterProfile.Spec.Published.ProfileVersion {
 			diagnostics, done := flattenAddonDeployment(c, d, profile)
 			if done {
 				return diagnostics, true

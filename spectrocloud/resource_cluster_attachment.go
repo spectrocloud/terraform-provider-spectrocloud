@@ -152,7 +152,15 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func getAddonDeploymentId(clusterUid string, clusterProfile *models.V1ClusterProfile) string {
-	return clusterUid + clusterProfile.Metadata.Name
+	return clusterUid + "_" + clusterProfile.Metadata.UID
+}
+
+func getClusterUID(addonDeploymentId string) string {
+	return strings.Split(addonDeploymentId, "_")[0]
+}
+
+func getClusterProfileUID(addonDeploymentId string) string {
+	return strings.Split(addonDeploymentId, "_")[1]
 }
 
 func isProfileAttached(cluster *models.V1SpectroCluster, uid string) bool {
