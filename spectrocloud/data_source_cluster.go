@@ -23,7 +23,8 @@ func dataSourceCluster() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
-				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Description:  "Cluster context can be 'project' or 'tenant'. Defaults to 'project'.",
 			},
 		},
 	}
