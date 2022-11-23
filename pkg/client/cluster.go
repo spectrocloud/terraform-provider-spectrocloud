@@ -65,13 +65,23 @@ func (h *V1Client) GetClusterWithoutStatus(uid string) (*models.V1SpectroCluster
 	return cluster, nil
 }
 
-func (h *V1Client) GetClusterByName(name string) (*models.V1SpectroCluster, error) {
+func (h *V1Client) GetClusterByName(name string, ClusterContext string) (*models.V1SpectroCluster, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1SpectroClustersListParams().WithContext(h.Ctx)
+	var params *clusterC.V1SpectroClustersListParams
+	switch ClusterContext {
+	case "project":
+		params = clusterC.NewV1SpectroClustersListParamsWithContext(h.Ctx)
+		break
+	case "tenant":
+		params = clusterC.NewV1SpectroClustersListParams()
+		break
+	default:
+		break
+	}
 	success, err := client.V1SpectroClustersList(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		return nil, nil

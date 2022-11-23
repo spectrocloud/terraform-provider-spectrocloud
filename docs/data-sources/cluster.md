@@ -19,6 +19,10 @@ description: |-
 
 - `name` (String)
 
+### Optional
+
+- `context` (String) Cluster context can be 'project' or 'tenant'. Defaults to 'project'.
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.
