@@ -154,6 +154,10 @@ func resourceClusterAws() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"vpc_id": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 					},
 				},
 			},
@@ -265,6 +269,22 @@ func resourceClusterAws() *schema.Resource {
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
+							},
+						},
+						"az_subnet": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"az": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"id": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
 							},
 						},
 					},
@@ -619,6 +639,7 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 			CloudConfig: &models.V1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
 				Region:     types.Ptr(cloudConfig["region"].(string)),
+				VpcID:      cloudConfig["vpc_id"].(string),
 			},
 		},
 	}
@@ -655,14 +676,23 @@ func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEnt
 	if m["capacity_type"] != nil && len(m["capacity_type"].(string)) > 0 {
 		capacityType = m["capacity_type"].(string)
 	}
-
+	azSubnetsConfigs := make([]*models.V1AwsSubnetEntity, 0)
+	if m["az_subnet"] != nil && len(m["az_subnet"].([]interface{})) > 0 {
+		for _, azSubnet := range m["az_subnet"].([]interface{}) {
+			s := azSubnet.(map[string]interface{})
+			azSubnetsConfigs = append(azSubnetsConfigs, &models.V1AwsSubnetEntity{
+				ID: s["id"].(string),
+				Az: s["az"].(string),
+			})
+		}
+	}
 	mp := &models.V1AwsMachinePoolConfigEntity{
 		CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
-			Azs:          azs,
-			InstanceType: types.Ptr(m["instance_type"].(string)),
-			CapacityType: &capacityType,
-
+			Azs:            azs,
+			InstanceType:   types.Ptr(m["instance_type"].(string)),
+			CapacityType:   &capacityType,
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
+			Subnets:        azSubnetsConfigs,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
