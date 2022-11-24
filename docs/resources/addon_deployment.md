@@ -53,6 +53,7 @@ Optional:
 - `registry_uid` (String)
 - `tag` (String)
 - `type` (String)
+- `uid` (String)
 - `values` (String)
 
 <a id="nestedblock--cluster_profile--pack--manifest"></a>
