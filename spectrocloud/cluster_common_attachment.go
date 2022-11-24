@@ -113,15 +113,11 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	profile_uids := make([]string, 0)
-	profiles := d.Get("cluster_profile").([]interface{})
-	if len(profiles) > 0 {
-		for _, profile := range profiles {
-			p := profile.(map[string]interface{})
-			if isProfileAttached(cluster, p["id"].(string)) {
-				profile_uids = append(profile_uids, p["id"].(string))
-			}
-		}
+	profileId, err := getClusterProfileUID(d.Id())
+	if err != nil {
+		return diags
 	}
+	profile_uids = append(profile_uids, profileId)
 
 	if len(profile_uids) > 0 {
 		err = c.DeleteAddonDeployment(cluster_uid, &models.V1SpectroClusterProfilesDeleteEntity{
