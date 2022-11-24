@@ -3,7 +3,7 @@ repos:
     rev: v8.11.2
     hooks:
       - id: gitleaks
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.5.1
+  - repo: https://github.com/TylerGillson/pre-commit-golang
+    rev: v0.1.1
     hooks:
       - id: go-generate
