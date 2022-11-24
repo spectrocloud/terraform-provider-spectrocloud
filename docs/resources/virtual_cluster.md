@@ -168,8 +168,10 @@ Optional:
 
 - `max_cpu` (Number)
 - `max_mem_in_mb` (Number)
+- `max_storage_in_gb` (Number)
 - `min_cpu` (Number)
 - `min_mem_in_mb` (Number)
+- `min_storage_in_gb` (Number)
 
 
 <a id="nestedblock--scan_policy"></a>

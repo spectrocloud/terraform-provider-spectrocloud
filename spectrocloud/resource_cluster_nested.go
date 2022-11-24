@@ -66,11 +66,19 @@ func resourceClusterNested() *schema.Resource {
 							Type:     schema.TypeInt,
 							Optional: true,
 						},
+						"max_storage_in_gb": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
 						"min_cpu": {
 							Type:     schema.TypeInt,
 							Optional: true,
 						},
 						"min_mem_in_mb": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"min_storage_in_gb": {
 							Type:     schema.TypeInt,
 							Optional: true,
 						},
@@ -547,16 +555,20 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 func toMachinePoolNested(resources map[string]interface{}) *models.V1NestedMachinePoolConfigEntity {
 	maxCpu := resources["max_cpu"].(int)
 	maxMemInMb := resources["max_mem_in_mb"].(int)
+	maxStorageInGb := resources["max_storage_in_gb"].(int)
 	minCpu := resources["min_cpu"].(int)
 	minMemInMb := resources["min_mem_in_mb"].(int)
+	minStorageInGb := resources["min_storage_in_gb"].(int)
 
 	mp := &models.V1NestedMachinePoolConfigEntity{
 		CloudConfig: &models.V1NestedMachinePoolCloudConfigEntity{
 			InstanceType: &models.V1NestedInstanceType{
-				MaxCPU:      int32(maxCpu),
-				MaxMemInMiB: int32(maxMemInMb),
-				MinCPU:      int32(minCpu),
-				MinMemInMiB: int32(minMemInMb),
+				MaxCPU:        int32(maxCpu),
+				MaxMemInMiB:   int32(maxMemInMb),
+				MaxStorageGiB: int32(maxStorageInGb),
+				MinCPU:        int32(minCpu),
+				MinMemInMiB:   int32(minMemInMb),
+				MinStorageGiB: int32(minStorageInGb),
 			},
 		},
 	}
