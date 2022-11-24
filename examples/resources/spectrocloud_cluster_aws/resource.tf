@@ -21,7 +21,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
   cloud_config {
     ssh_key_name = "spectro22"
     region       = "us-east-2"
-    vpc_id = "vpc-0d2a3f1799e4d6065"
+    vpc_id       = "vpc-0d2a3f1799e4d6065"
   }
 
   cluster_profile {
@@ -72,13 +72,13 @@ resource "spectrocloud_cluster_aws" "cluster" {
     disk_size_gb            = 62
     azs                     = ["us-east-2a"]
     az_subnet {
-        id = "subnet-08864975df862eb58"
-        az = "us-east-2a"
-      }
+      id = "subnet-08864975df862eb58"
+      az = "us-east-2a"
+    }
     az_subnet {
-        id = "subnet-031a7ff4ff5e7fb9a"
-        az = "us-east-2a"
-      }
+      id = "subnet-031a7ff4ff5e7fb9a"
+      az = "us-east-2a"
+    }
   }
 
   machine_pool {
@@ -87,9 +87,9 @@ resource "spectrocloud_cluster_aws" "cluster" {
     instance_type = "t3.large"
     azs           = ["us-east-2a"]
     az_subnet {
-        id = "subnet-08864975df862eb58"
-        az = "us-east-2a"
-      }
+      id = "subnet-08864975df862eb58"
+      az = "us-east-2a"
+    }
   }
 
 }
