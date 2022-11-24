@@ -20,7 +20,7 @@ func TestGetAddonDeploymentIdANDReverse(t *testing.T) {
 		t.Errorf("got %s, wanted %s", testClusterId, clusterId)
 	}
 
-	testClusterProfileId := getClusterProfileUID(testAddonDeploymentId)
+	testClusterProfileId, _ := getClusterProfileUID(testAddonDeploymentId)
 	if testClusterProfileId != clusterProfileId {
 		t.Errorf("got %s, wanted %s", testClusterProfileId, clusterProfileId)
 	}
