@@ -113,8 +113,8 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(val_error)
 	}
 
-	if cluster_uid == nil {
-		if config["cluster_group_uid"] == nil {
+	if cluster_uid == "" {
+		if config["cluster_group_uid"] == "" {
 			return diag.FromErr(val_error)
 		}
 		application := toAppDeploymentClusterGroupEntity(d)
