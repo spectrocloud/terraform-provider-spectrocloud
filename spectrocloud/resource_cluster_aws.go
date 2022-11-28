@@ -541,6 +541,9 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		}
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 		oi["azs"] = machinePool.Azs
+		if machinePool.SubnetIds != nil {
+			oi["az_subnet"] = machinePool.SubnetIds
+		}
 		ois[i] = oi
 	}
 
