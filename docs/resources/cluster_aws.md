@@ -85,7 +85,10 @@ resource "spectrocloud_cluster_aws" "cluster" {
     count                   = 1
     instance_type           = "t3.large"
     disk_size_gb            = 62
-    azs                     = ["us-east-2a"]
+    # azs and az_subnets are mutually exclusive.
+    # For dynamic provisioning  
+    # azs                     = ["us-east-2a"]
+    # For static provisioning
     az_subnet {
       id = "subnet-08864975df862eb58"
       az = "us-east-2a"
