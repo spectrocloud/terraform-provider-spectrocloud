@@ -40,7 +40,6 @@ func setup() {
 	fmt.Printf("* Test email - %s \n", baseConfig.email)
 	fmt.Printf("* Test pwd - %s \n", baseConfig.pwd)
 	fmt.Printf("* Test project - %s \n", baseConfig.project)
-	fmt.Printf("* Test key - %s \n", baseConfig.apikey)
 	fmt.Printf("\033[1;36m%s\033[0m", "-------------------------------\n")
 }
 

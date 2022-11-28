@@ -504,7 +504,7 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 	if config, err := c.GetCloudConfigAws(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
+		mp := FlattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -513,7 +513,7 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig) []interface{} {
+func FlattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
