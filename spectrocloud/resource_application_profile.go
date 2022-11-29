@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
@@ -28,71 +29,86 @@ func resourceApplicationProfile() *schema.Resource {
 			Delete: schema.DefaultTimeout(20 * time.Second),
 		},
 
+		Description: "Provisions an Application Profile. App Profiles are templates created with preconfigured services. You can create as many profiles as required, with multiple tiers serving different functionalities per use case.",
+
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Description: "Name of the application profile",
+				Required:    true,
 			},
 			"version": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "1.0.0", // default as in UI
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "1.0.0", // default as in UI
+				Description: "Version of the application profile. Default value is 1.0.0.",
 			},
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
+				Description:  "Context of the application profile. Allowed values are `project`, `cluster`, or `namespace`. Default value is `project`.",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
 			},
 			"tags": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Set:      schema.HashString,
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Set:         schema.HashString,
+				Description: "A list of tags to be applied to the application profile. Tags must be in the form of `key:value`.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Description: "Description of the application profile.",
+				Optional:    true,
 			},
 			"cloud": {
-				Type:     schema.TypeString,
-				Default:  "all",
-				Optional: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Default:     "all",
+				Description: "The cloud provider the app profile is eligble for usage. Default value is `all`.",
+				Optional:    true,
+				ForceNew:    true,
 			},
 			"pack": {
-				Type:     schema.TypeList,
-				Required: true,
+				Type:        schema.TypeList,
+				Required:    true,
+				Description: "A list of packs to be applied to the application profile.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"type": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "spectro",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The type of Pack. Allowed values are `container`, `helm`, `manifest`, or `operator-instance`.",
+							Default:     "spectro",
 						},
 						"source_app_tier": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "The unique id of the pack to be used as the source for the pack.",
+							Optional:    true,
 						},
 						"registry_uid": {
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "The unique id of the registry to be used for the pack.",
+							Computed:    true,
+							Optional:    true,
 						},
 						"uid": {
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "The unique id of the pack. This is a computed field and is not required to be set.",
+							Computed:    true,
+							Optional:    true,
 						},
 						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Description: "The name of the specified pack.",
+							Required:    true,
 						},
 						"manifest": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "The manifest of the pack.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"uid": {
@@ -100,12 +116,14 @@ func resourceApplicationProfile() *schema.Resource {
 										Computed: true,
 									},
 									"name": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Description: "The name of the manifest.",
+										Required:    true,
 									},
 									"content": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The content of the manifest.",
 										DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 											// UI strips the trailing newline on save
 											return strings.TrimSpace(old) == strings.TrimSpace(new)
@@ -119,12 +137,14 @@ func resourceApplicationProfile() *schema.Resource {
 						//	Required: true,
 						//},
 						"tag": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Description: "The identifier or version to label the pack.",
+							Optional:    true,
 						},
 						"values": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The values to be used for the pack. This is a stringified JSON object.",
 							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 								// UI strips the trailing newline on save
 								return strings.TrimSpace(old) == strings.TrimSpace(new)
