@@ -23,12 +23,16 @@ func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *mo
 	}
 
 	for _, profile := range cluster.Spec.ClusterProfileTemplates {
-		if profile.Name == clusterProfile.Metadata.Name && profile.ProfileVersion == clusterProfile.Spec.Published.ProfileVersion {
-			diagnostics, done := flattenAddonDeployment(c, d, profile)
-			if done {
-				return diagnostics, true
+		if profile != nil {
+			if profile.Name == clusterProfile.Metadata.Name {
+				if profile.ProfileVersion == clusterProfile.Spec.Published.ProfileVersion {
+					diagnostics, done := flattenAddonDeployment(c, d, profile)
+					if done {
+						return diagnostics, true
+					}
+					return diags, true
+				}
 			}
-			return diags, true
 		}
 	}
 
