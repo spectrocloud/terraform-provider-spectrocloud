@@ -158,6 +158,8 @@ Required:
 Optional:
 
 - `vpc_id` (String)
+- `azs` (Set of String)  # For dynamic provisioning
+- `az_subnet` (Map)  # For static provisioning
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -165,7 +167,6 @@ Optional:
 
 Required:
 
-- `azs` (Set of String)
 - `count` (Number)
 - `instance_type` (String)
 - `name` (String)
