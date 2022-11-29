@@ -44,7 +44,7 @@ provider "spectrocloud" {
 }
 ```
 
-Copy `terraform.template.tfvars` file to a `terraform.tfvars` file and modify it's content:
+Copy `terraform.template.tfvars` file to a `terraform.tfvars` file and modify its content:
 
 ```terraform
 ##################################################################################
