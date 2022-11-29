@@ -23,7 +23,7 @@ func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *mo
 	}
 
 	for _, profile := range cluster.Spec.ClusterProfileTemplates {
-		if profile != nil && clusterProfile.Metadata != nil {
+		if profile != nil && clusterProfile != nil {
 			if profile.Name == clusterProfile.Metadata.Name {
 				if profile.ProfileVersion == clusterProfile.Spec.Published.ProfileVersion {
 					diagnostics, done := flattenAddonDeployment(c, d, profile)
