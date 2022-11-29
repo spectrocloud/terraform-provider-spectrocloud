@@ -26,6 +26,7 @@ func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfigEntity {
 		MachineManagementConfig: toMachineManagementConfig(d),
 		Resources:               toClusterResourceConfig(d),
 		HostClusterConfig:       toClusterHostConfigs(d),
+		Location:                toClusterLocationConfigs(d),
 	}
 }
 
