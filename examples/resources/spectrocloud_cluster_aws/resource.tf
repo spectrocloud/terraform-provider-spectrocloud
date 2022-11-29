@@ -74,11 +74,11 @@ resource "spectrocloud_cluster_aws" "cluster" {
 #    azs                     = ["us-east-2a"]
 #     Add az_subnet component for static provisioning
     az_subnet {
-      id = "subnet-036b143150145c8e1" // private
+      subnet_id = "subnet-036b143150145c8e1" // private
       az = "us-west-2a"
     }
     az_subnet {
-      id = "subnet-0fd3677d9c41c2d82" // public
+      subnet_id = "subnet-0fd3677d9c41c2d82" // public
       az = "us-west-2a"
     }
   }
@@ -91,7 +91,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
 #    azs           = ["us-east-2a"]
 #    Add az_subnet component for static provisioning
     az_subnet {
-      id = "subnet-0fd3677d9c41c2d82"
+      subnet_id = "subnet-036b143150145c8e1"
       az = "us-west-2a"
     }
   }

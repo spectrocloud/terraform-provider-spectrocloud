@@ -90,11 +90,11 @@ resource "spectrocloud_cluster_aws" "cluster" {
     # azs                     = ["us-east-2a"]
     # For static provisioning
     az_subnet {
-      id = "subnet-08864975df862eb58"
+      subnet_id = "subnet-08864975df862eb58"
       az = "us-east-2a"
     }
     az_subnet {
-      id = "subnet-031a7ff4ff5e7fb9a"
+      subnet_id = "subnet-031a7ff4ff5e7fb9a"
       az = "us-east-2a"
     }
   }
@@ -105,7 +105,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
     instance_type = "t3.large"
     azs           = ["us-east-2a"]
     az_subnet {
-      id = "subnet-08864975df862eb58"
+      subnet_id = "subnet-08864975df862eb58"
       az = "us-east-2a"
     }
   }

@@ -280,7 +280,7 @@ func resourceClusterAws() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									"id": {
+									"subnet_id": {
 										Type:     schema.TypeString,
 										Required: true,
 									},
@@ -684,7 +684,7 @@ func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEnt
 		for _, azSubnet := range m["az_subnet"].([]interface{}) {
 			s := azSubnet.(map[string]interface{})
 			azSubnetsConfigs = append(azSubnetsConfigs, &models.V1AwsSubnetEntity{
-				ID: s["id"].(string),
+				ID: s["subnet_id"].(string),
 				Az: s["az"].(string),
 			})
 		}
