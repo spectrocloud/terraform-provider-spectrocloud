@@ -264,7 +264,7 @@ func resourceClusterAws() *schema.Resource {
 						},
 						"azs": {
 							Type:     schema.TypeSet,
-							Required: true,
+							Optional: true,
 							MinItems: 1,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
@@ -504,7 +504,7 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 	if config, err := c.GetCloudConfigAws(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		mp := FlattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
+		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -513,7 +513,7 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 	return diag.Diagnostics{}
 }
 
-func FlattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig) []interface{} {
+func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
