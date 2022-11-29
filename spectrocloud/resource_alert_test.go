@@ -109,7 +109,10 @@ func TestToAlertHttpEmail(t *testing.T) {
 Type - Integration Test
 Description - Testing all CRUD function for email alerts.
 */
-func AlertCRUDEmail(t *testing.T) {
+func TestAlertCRUDEmail(t *testing.T) {
+	if !isEnvSet(baseConfig) {
+		t.Skip("Skipping integration test env variable not set")
+	}
 	conn := client.New(baseConfig.hubbleHost, baseConfig.email, baseConfig.pwd, baseConfig.project, baseConfig.apikey, false, 3)
 	var err error
 	channelEmail := &models.V1Channel{
@@ -162,7 +165,10 @@ func AlertCRUDEmail(t *testing.T) {
 Type - Integration Test
 Description - Testing all CRUD function for http(webhook) alerts.
 */
-func AlertCRUDHttp(t *testing.T) {
+func TestAlertCRUDHttp(t *testing.T) {
+	if !isEnvSet(baseConfig) {
+		t.Skip("Skipping integration test env variable not set")
+	}
 	conn := client.New(baseConfig.hubbleHost, baseConfig.email, baseConfig.pwd, baseConfig.project, baseConfig.apikey, false, 3)
 	var err error
 	header := map[string]string{
