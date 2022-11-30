@@ -19,8 +19,9 @@ resource "spectrocloud_cluster_aws" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
-    ssh_key_name = "default"
+    ssh_key_name = "spectro22"
     region       = "us-west-2"
+    vpc_id       = "shruthi-aws-nov28-3-vpc"
   }
 
   cluster_profile {
@@ -69,14 +70,30 @@ resource "spectrocloud_cluster_aws" "cluster" {
     count                   = 1
     instance_type           = "t3.large"
     disk_size_gb            = 62
-    azs                     = ["us-west-2a"]
+#    Add azs for dynamic provisioning
+#    azs                     = ["us-east-2a"]
+#     Add az_subnet component for static provisioning
+    az_subnet {
+      subnet_id = "subnet-036b143150145c8e1" // private
+      az = "us-west-2a"
+    }
+    az_subnet {
+      subnet_id = "subnet-0fd3677d9c41c2d82" // public
+      az = "us-west-2a"
+    }
   }
 
   machine_pool {
     name          = "worker-basic"
     count         = 1
     instance_type = "t3.large"
-    azs           = ["us-west-2a"]
+#    Add azs for dynamic provisioning
+#    azs           = ["us-east-2a"]
+#    Add az_subnet component for static provisioning
+    az_subnet {
+      subnet_id = "subnet-036b143150145c8e1"
+      az = "us-west-2a"
+    }
   }
 
 }

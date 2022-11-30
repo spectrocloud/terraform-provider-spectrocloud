@@ -101,6 +101,7 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+	buf.WriteString(HashStringMapList(m["az_subnet"]))
 
 	return int(hash(buf.String()))
 }
