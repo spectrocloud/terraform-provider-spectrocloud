@@ -1,9 +1,8 @@
-package test
+package spectrocloud
 
 import (
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 	"reflect"
 	"testing"
 )
@@ -13,13 +12,13 @@ Type - Unit Test
 Description - Testing ToAlert function for email schema
 */
 func TestToAlertEmail(t *testing.T) {
-	rd := spectrocloud.ResourceAlert().TestResourceData()
+	rd := resourceAlert().TestResourceData()
 	rd.Set("type", "email")
 	rd.Set("is_active", true)
 	rd.Set("alert_all_users", false)
 	emails := []string{"testuser1@spectrocloud.com", "testuser2@spectrocloud.com"}
 	rd.Set("identifiers", emails)
-	alertChannelEmail := spectrocloud.ToAlert(rd)
+	alertChannelEmail := toAlert(rd)
 	if alertChannelEmail.Type != "email" || alertChannelEmail.IsActive != true ||
 		alertChannelEmail.AlertAllUsers != false || alertChannelEmail == nil {
 		t.Fail()
@@ -36,7 +35,7 @@ Type - Unit Test
 Description - Testing ToAlert function for http schema
 */
 func TestToAlertHttp(t *testing.T) {
-	rd := spectrocloud.ResourceAlert().TestResourceData()
+	rd := resourceAlert().TestResourceData()
 	rd.Set("type", "http")
 	rd.Set("is_active", true)
 	rd.Set("alert_all_users", false)
@@ -53,7 +52,7 @@ func TestToAlertHttp(t *testing.T) {
 	}
 	http = append(http, hookConfig)
 	rd.Set("http", http)
-	alertChannelHttp := spectrocloud.ToAlert(rd)
+	alertChannelHttp := toAlert(rd)
 	if alertChannelHttp.Type != "http" || alertChannelHttp.IsActive != true ||
 		alertChannelHttp.AlertAllUsers != false || alertChannelHttp == nil {
 		t.Fail()
@@ -71,7 +70,7 @@ Type - Unit Test
 Description - Testing ToAlert function for http schema with email schema.
 */
 func TestToAlertHttpEmail(t *testing.T) {
-	rd := spectrocloud.ResourceAlert().TestResourceData()
+	rd := resourceAlert().TestResourceData()
 	rd.Set("type", "http")
 	rd.Set("is_active", true)
 	rd.Set("alert_all_users", false)
@@ -89,7 +88,7 @@ func TestToAlertHttpEmail(t *testing.T) {
 	}
 	http = append(http, hookConfig)
 	rd.Set("http", http)
-	alertChannelHttpEmail := spectrocloud.ToAlert(rd)
+	alertChannelHttpEmail := toAlert(rd)
 	if alertChannelHttpEmail.Type != "http" || alertChannelHttpEmail.IsActive != true ||
 		alertChannelHttpEmail.AlertAllUsers != false || alertChannelHttpEmail == nil {
 		t.Fail()
@@ -111,6 +110,9 @@ Type - Integration Test
 Description - Testing all CRUD function for email alerts.
 */
 func TestAlertCRUDEmail(t *testing.T) {
+	if !isEnvSet(baseConfig) {
+		t.Skip("Skipping integration test env variable not set")
+	}
 	conn := client.New(baseConfig.hubbleHost, baseConfig.email, baseConfig.pwd, baseConfig.project, baseConfig.apikey, false, 3)
 	var err error
 	channelEmail := &models.V1Channel{
@@ -164,6 +166,9 @@ Type - Integration Test
 Description - Testing all CRUD function for http(webhook) alerts.
 */
 func TestAlertCRUDHttp(t *testing.T) {
+	if !isEnvSet(baseConfig) {
+		t.Skip("Skipping integration test env variable not set")
+	}
 	conn := client.New(baseConfig.hubbleHost, baseConfig.email, baseConfig.pwd, baseConfig.project, baseConfig.apikey, false, 3)
 	var err error
 	header := map[string]string{

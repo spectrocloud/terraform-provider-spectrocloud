@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func ResourceAlert() *schema.Resource {
+func resourceAlert() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceAlertCreate,
 		ReadContext:   resourceAlertRead,
@@ -119,7 +119,7 @@ func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interfac
 	var err error
 	projectUid, err := getProjectID(d, m)
 	var diags diag.Diagnostics
-	alertObj := ToAlert(d)
+	alertObj := toAlert(d)
 	uid, err := c.CreateAlert(alertObj, projectUid, d.Get("component").(string))
 	if err != nil {
 		return diag.FromErr(err)
@@ -134,7 +134,7 @@ func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 
 	var diags diag.Diagnostics
 	projectUid, _ := getProjectID(d, m)
-	alertObj := ToAlert(d)
+	alertObj := toAlert(d)
 	_, err = c.UpdateAlert(alertObj, projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
 		return diag.FromErr(err)
@@ -142,7 +142,7 @@ func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 	return diags
 }
 
-func ToAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
+func toAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
 
 	channel := &models.V1Channel{
 		IsActive: d.Get("is_active").(bool),
@@ -162,8 +162,6 @@ func ToAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
 	if hasHttp == true {
 		http := d.Get("http").([]interface{})[0].(map[string]interface{})
 		headersMap := make(map[string]string)
-		println(http)
-		println(headersMap)
 		if http["headers"] != nil {
 			for key, element := range http["headers"].(map[string]interface{}) {
 				headersMap[key] = element.(string)
