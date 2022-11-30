@@ -34,8 +34,9 @@ resource "spectrocloud_cluster_aws" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
-    ssh_key_name = "default"
-    region       = "us-west-2"
+    ssh_key_name = "spectro22"
+    region       = "us-east-2"
+    vpc_id       = "vpc-0d2a3f1799e4d6065"
   }
 
   cluster_profile {
@@ -84,14 +85,29 @@ resource "spectrocloud_cluster_aws" "cluster" {
     count                   = 1
     instance_type           = "t3.large"
     disk_size_gb            = 62
-    azs                     = ["us-west-2a"]
+    # azs and az_subnets are mutually exclusive.
+    # For dynamic provisioning  
+    # azs                     = ["us-east-2a"]
+    # For static provisioning
+    az_subnet {
+      subnet_id = "subnet-08864975df862eb58"
+      az = "us-east-2a"
+    }
+    az_subnet {
+      subnet_id = "subnet-031a7ff4ff5e7fb9a"
+      az = "us-east-2a"
+    }
   }
 
   machine_pool {
     name          = "worker-basic"
     count         = 1
     instance_type = "t3.large"
-    azs           = ["us-west-2a"]
+    azs           = ["us-east-2a"]
+    az_subnet {
+      subnet_id = "subnet-08864975df862eb58"
+      az = "us-east-2a"
+    }
   }
 
 }
@@ -139,13 +155,18 @@ Required:
 - `region` (String)
 - `ssh_key_name` (String)
 
+Optional:
+
+- `vpc_id` (String)
+- `azs` (Set of String)  # For dynamic provisioning
+- `az_subnet` (Map)  # For static provisioning
+
 
 <a id="nestedblock--machine_pool"></a>
 ### Nested Schema for `machine_pool`
 
 Required:
 
-- `azs` (Set of String)
 - `count` (Number)
 - `instance_type` (String)
 - `name` (String)
@@ -153,6 +174,7 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
+- `az_subnet` (Block List) (see [below for nested schema](#nestedblock--machine_pool--az_subnet))
 - `capacity_type` (String)
 - `control_plane` (Boolean)
 - `control_plane_as_worker` (Boolean)
@@ -160,6 +182,18 @@ Optional:
 - `max_price` (String)
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String)
+
+<a id="nestedblock--machine_pool--az_subnet"></a>
+### Nested Schema for `machine_pool.az_subnet`
+
+Required:
+
+- `az` (String)
+
+Read-Only:
+
+- `id` (String) The ID of this resource.
+
 
 <a id="nestedblock--machine_pool--taints"></a>
 ### Nested Schema for `machine_pool.taints`

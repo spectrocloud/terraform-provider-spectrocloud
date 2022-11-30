@@ -4,28 +4,27 @@ and for email, we can add a target email recipient or enable alerts for all user
 */
 
 resource "spectrocloud_alert" "alert_email" {
-  project = "Default"
-  is_active = true
-  component = "ClusterHealth"
-  type = "email"
-  identifiers = ["siva@spectrocloud.com", "anand@spectrocloud.com"]
-  alert_all_users = false
+  project         = "Default"
+  is_active       = true
+  component       = "ClusterHealth"
+  type            = "email"
+  identifiers     = ["abc@spectrocloud.com", "cba@spectrocloud.com"]
+  alert_all_users = true
 }
 
 resource "spectrocloud_alert" "alert_http" {
-  project = "Default"
+  project   = "Default"
   is_active = true
   component = "ClusterHealth"
   http {
-    method  = "POST"
-    url     = "https://openhook.com/put/edit2"
-    body    = "{ \"text\": \"{{message}}\" }"
+    method = "POST"
+    url    = "https://openhook.com/put/notify"
+    body   = "{ \"text\": \"{{message}}\" }"
     headers = {
-      type = "test--key--dev0"
       tag    = "Health"
       source = "spectrocloud"
     }
   }
-  type = "http"
-  alert_all_users = false
+  type            = "http"
+  alert_all_users = true
 }

@@ -30,7 +30,7 @@ func GetNamespaces1Test(t *testing.T, h *client.V1Client, retry Retry) {
 		t.Fail()
 	}
 
-	cluster, err := h.GetClusterByName("eks-dev-nik-4")
+	cluster, err := h.GetClusterByName("eks-dev-nik-4", "project")
 	if err != nil && cluster == nil {
 		t.Fail()
 	}

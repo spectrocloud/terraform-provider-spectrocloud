@@ -101,6 +101,7 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+	buf.WriteString(HashStringMapList(m["az_subnet"]))
 
 	return int(hash(buf.String()))
 }
@@ -271,16 +272,16 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 			buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
 			buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
 			buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
-			buf.WriteString(fmt.Sprintf("%d-", ins["cpus_sets"].(string)))
+			buf.WriteString(fmt.Sprintf("%s-", ins["cpus_sets"].(string)))
 			if ins["cache_passthrough"] != nil {
-				buf.WriteString(fmt.Sprintf("%s-%s", "cache_passthrough", ins["cache_passthrough"].(bool)))
+				buf.WriteString(fmt.Sprintf("%s-%t", "cache_passthrough", ins["cache_passthrough"].(bool)))
 			}
 			if ins["gpu_config"] != nil {
 				config, _ := ins["gpu_config"].(map[string]interface{})
 				if config != nil {
 					buf.WriteString(fmt.Sprintf("%d-", config["num_gpus"].(int)))
-					buf.WriteString(fmt.Sprintf("%d-", config["device_model"].(string)))
-					buf.WriteString(fmt.Sprintf("%d-", config["vendor"].(string)))
+					buf.WriteString(fmt.Sprintf("%s-", config["device_model"].(string)))
+					buf.WriteString(fmt.Sprintf("%s-", config["vendor"].(string)))
 					buf.WriteString(HashStringMap(config["addresses"]))
 				}
 			}
@@ -289,10 +290,10 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 				for _, disk := range ins["attached_disks"].([]interface{}) {
 					diskMap := disk.(map[string]interface{})
 					if diskMap["managed"] != nil {
-						buf.WriteString(fmt.Sprintf("%s-%s", "managed", diskMap["managed"].(bool)))
+						buf.WriteString(fmt.Sprintf("%s-%t", "managed", diskMap["managed"].(bool)))
 					}
 					if diskMap["size_in_gb"] != nil {
-						buf.WriteString(fmt.Sprintf("%s-%s", "size_in_gb", diskMap["size_in_gb"].(int)))
+						buf.WriteString(fmt.Sprintf("%s-%d", "size_in_gb", diskMap["size_in_gb"].(int)))
 					}
 				}
 			}

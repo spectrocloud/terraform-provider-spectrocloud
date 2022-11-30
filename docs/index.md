@@ -44,12 +44,10 @@ provider "spectrocloud" {
 }
 ```
 
-Create or append to a `terraform.tfvars` file:
+Copy `terraform.template.tfvars` file to a `terraform.tfvars` file and modify its content:
 
 ```terraform
-##################################################################################
-# Spectro Cloud Credentials
-##################################################################################
+# Spectro Cloud credentials
 sc_host         = "{enter Spectro Cloud API endpoint}" #e.g: api.spectrocloud.com (for SaaS)
 sc_username     = "{enter Spectro Cloud username}"     #e.g: user1@abc.com
 sc_password     = "{enter Spectro Cloud password}"     #e.g: supereSecure1!
@@ -120,5 +118,5 @@ provider GitHub [discussion board](https://github.com/spectrocloud/terraform-pro
 - `password` (String, Sensitive) The Spectro Cloud user password. Can also be set with the `SPECTROCLOUD_PASSWORD` environment variable.
 - `project_name` (String) The Spectro Cloud project name.
 - `retry_attempts` (Number) Number of retry attempts. Can also be set with the `SPECTROCLOUD_RETRY_ATTEMPTS` environment variable. Defaults to 10.
-- `trace` (Boolean) Enable HTTP request traacing. Can also be set with the `SPECTROCLOUD_TRACE` environment variable. To enable Terraform debug logging, set `TF_LOG=DEBUG`. Visit the Terraform documentation to learn more about Terraform [debugging](https://developer.hashicorp.com/terraform/plugin/log/managing).
+- `trace` (Boolean) Enable HTTP request tracing. Can also be set with the `SPECTROCLOUD_TRACE` environment variable. To enable Terraform debug logging, set `TF_LOG=DEBUG`. Visit the Terraform documentation to learn more about Terraform [debugging](https://developer.hashicorp.com/terraform/plugin/log/managing).
 - `username` (String) The Spectro Cloud username. Can also be set with the `SPECTROCLOUD_USERNAME` environment variable.
