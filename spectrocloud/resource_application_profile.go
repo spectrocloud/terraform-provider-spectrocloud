@@ -41,13 +41,13 @@ func resourceApplicationProfile() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "1.0.0", // default as in UI
-				Description: "Version of the application profile. Default value is 1.0.0.",
+				Description: "Version of the profile. Default value is 1.0.0.",
 			},
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
-				Description:  "Context of the application profile. Allowed values are `project`, `cluster`, or `namespace`. Default value is `project`.",
+				Description:  "Context of the profile. Allowed values are `project`, `cluster`, or `namespace`. Default value is `project`.",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
 			},
 			"tags": {
@@ -61,13 +61,13 @@ func resourceApplicationProfile() *schema.Resource {
 			},
 			"description": {
 				Type:        schema.TypeString,
-				Description: "Description of the application profile.",
+				Description: "Description of the profile.",
 				Optional:    true,
 			},
 			"cloud": {
 				Type:        schema.TypeString,
 				Default:     "all",
-				Description: "The cloud provider the app profile is eligble for usage. Default value is `all`.",
+				Description: "The cloud provider the profile is eligible for. Default value is `all`.",
 				Optional:    true,
 				ForceNew:    true,
 			},
