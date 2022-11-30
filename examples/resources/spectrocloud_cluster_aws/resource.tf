@@ -70,16 +70,16 @@ resource "spectrocloud_cluster_aws" "cluster" {
     count                   = 1
     instance_type           = "t3.large"
     disk_size_gb            = 62
-#    Add azs for dynamic provisioning
-#    azs                     = ["us-east-2a"]
-#     Add az_subnet component for static provisioning
+    #    Add azs for dynamic provisioning
+    #    azs                     = ["us-east-2a"]
+    #     Add az_subnet component for static provisioning
     az_subnet {
       subnet_id = "subnet-036b143150145c8e1" // private
-      az = "us-west-2a"
+      az        = "us-west-2a"
     }
     az_subnet {
       subnet_id = "subnet-0fd3677d9c41c2d82" // public
-      az = "us-west-2a"
+      az        = "us-west-2a"
     }
   }
 
@@ -87,12 +87,12 @@ resource "spectrocloud_cluster_aws" "cluster" {
     name          = "worker-basic"
     count         = 1
     instance_type = "t3.large"
-#    Add azs for dynamic provisioning
-#    azs           = ["us-east-2a"]
-#    Add az_subnet component for static provisioning
+    #    Add azs for dynamic provisioning
+    #    azs           = ["us-east-2a"]
+    #    Add az_subnet component for static provisioning
     az_subnet {
       subnet_id = "subnet-036b143150145c8e1"
-      az = "us-west-2a"
+      az        = "us-west-2a"
     }
   }
 

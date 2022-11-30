@@ -8,15 +8,7 @@ import (
 )
 
 func (h *V1Client) GetApplianceByName(deviceName string) (*models.V1EdgeHostDevice, error) {
-	client, err := h.GetClusterClient()
-	if err != nil {
-		return nil, err
-	}
-
-	//limit := int64(0)
-	//params := clusterC.NewV1EdgeHostDevicesListParamsWithContext(h.ctx).WithLimit(&limit)
-	params := clusterC.NewV1EdgeHostDevicesListParamsWithContext(h.Ctx)
-	appliances, err := client.V1EdgeHostDevicesList(params)
+	appliances, err := h.GetAppliances()
 	if err != nil {
 		return nil, err
 	}
@@ -28,6 +20,20 @@ func (h *V1Client) GetApplianceByName(deviceName string) (*models.V1EdgeHostDevi
 	}
 
 	return nil, fmt.Errorf("Appliance '%s' not found.", deviceName)
+}
+
+func (h *V1Client) GetAppliances() (*clusterC.V1EdgeHostDevicesListOK, error) {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1EdgeHostDevicesListParamsWithContext(h.Ctx)
+	appliances, err := client.V1EdgeHostDevicesList(params)
+	if err != nil {
+		return nil, err
+	}
+	return appliances, nil
 }
 
 func (h *V1Client) GetAppliance(uid string) (*models.V1EdgeHostDevice, error) {
