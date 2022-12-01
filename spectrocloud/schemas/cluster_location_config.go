@@ -33,6 +33,7 @@ func ClusterLocationSchema() *schema.Schema {
 				},
 				"latitude": {
 					Type:     schema.TypeFloat,
+					Description: "The latitude coordinates value.",
 					Required: true,
 				},
 				"longitude": {
