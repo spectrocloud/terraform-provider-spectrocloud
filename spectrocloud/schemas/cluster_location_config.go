@@ -10,6 +10,7 @@ func ClusterLocationSchema() *schema.Schema {
 			Schema: map[string]*schema.Schema{
 				"country_code": {
 					Type:     schema.TypeString,
+					Description: "The country code of the country the cluster is located in.",
 					Optional: true,
 					Default:  "",
 				},
