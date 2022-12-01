@@ -14,6 +14,7 @@ type MyMap map[string]string
 func dataSourceAppliances() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcesApplianceRead,
+		Description: "Provides details about for a set of appliances.",
 
 		Schema: map[string]*schema.Schema{
 			"ids": {
