@@ -23,6 +23,7 @@ func dataSourceAppliances() *schema.Resource {
 			},
 			"tags": {
 				Type:     schema.TypeSet,
+				Description: "A list of tags to filter the appliances."
 				Optional: true,
 				Set:      schema.HashString,
 				Elem: &schema.Schema{
