@@ -38,6 +38,7 @@ func ClusterLocationSchema() *schema.Schema {
 				"longitude": {
 					Type:     schema.TypeFloat,
 					Required: true,
+					Description: "The longitude coordinates value.",
 				},
 			},
 		},
