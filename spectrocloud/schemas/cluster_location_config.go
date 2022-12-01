@@ -28,6 +28,7 @@ func ClusterLocationSchema() *schema.Schema {
 				},
 				"region_name": {
 					Type:     schema.TypeString,
+					Description: "The name of the region.",
 					Optional: true,
 					Default:  "",
 				},
