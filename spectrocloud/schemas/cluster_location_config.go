@@ -21,6 +21,7 @@ func ClusterLocationSchema() *schema.Schema {
 				},
 				"region_code": {
 					Type:     schema.TypeString,
+					Description: "The region code of where the cluster is located in.",
 					Optional: true,
 					Default:  "",
 				},
