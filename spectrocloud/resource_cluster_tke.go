@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
@@ -439,6 +440,7 @@ func resourceClusterTke() *schema.Resource {
 					},
 				},
 			},
+			"location_config": schemas.ClusterLocationSchema(),
 			"skip_completion": {
 				Type:     schema.TypeBool,
 				Optional: true,

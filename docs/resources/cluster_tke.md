@@ -29,6 +29,7 @@ description: |-
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
+- `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - `pack` (Block List) (see [below for nested schema](#nestedblock--pack))
 - `scan_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
@@ -182,6 +183,22 @@ Optional:
 - `host_endpoint_type` (String)
 - `ingress_host` (String)
 - `load_balancer_source_ranges` (String)
+
+
+<a id="nestedblock--location_config"></a>
+### Nested Schema for `location_config`
+
+Required:
+
+- `latitude` (Number)
+- `longitude` (Number)
+
+Optional:
+
+- `country_code` (String)
+- `country_name` (String)
+- `region_code` (String)
+- `region_name` (String)
 
 
 <a id="nestedblock--namespaces"></a>

@@ -132,6 +132,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
 - `cluster_profile_id` (String, Deprecated)
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
+- `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - `os_patch_after` (String)
 - `os_patch_on_boot` (Boolean)
@@ -293,6 +294,22 @@ Optional:
 - `host_endpoint_type` (String)
 - `ingress_host` (String)
 - `load_balancer_source_ranges` (String)
+
+
+<a id="nestedblock--location_config"></a>
+### Nested Schema for `location_config`
+
+Required:
+
+- `latitude` (Number)
+- `longitude` (Number)
+
+Optional:
+
+- `country_code` (String)
+- `country_name` (String)
+- `region_code` (String)
+- `region_name` (String)
 
 
 <a id="nestedblock--namespaces"></a>
