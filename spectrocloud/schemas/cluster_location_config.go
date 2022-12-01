@@ -15,6 +15,7 @@ func ClusterLocationSchema() *schema.Schema {
 				},
 				"country_name": {
 					Type:     schema.TypeString,
+					Description: "The name of the country.",
 					Optional: true,
 					Default:  "",
 				},
