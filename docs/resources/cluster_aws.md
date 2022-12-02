@@ -35,8 +35,8 @@ resource "spectrocloud_cluster_aws" "cluster" {
 
   cloud_config {
     ssh_key_name = "spectro22"
-    region       = "us-east-2"
-    vpc_id       = "vpc-0d2a3f1799e4d6065"
+    region       = "us-west-2"
+    vpc_id       = "shruthi-aws-nov28-3-vpc"
   }
 
   cluster_profile {
@@ -85,17 +85,16 @@ resource "spectrocloud_cluster_aws" "cluster" {
     count                   = 1
     instance_type           = "t3.large"
     disk_size_gb            = 62
-    # azs and az_subnets are mutually exclusive.
-    # For dynamic provisioning  
-    # azs                     = ["us-east-2a"]
-    # For static provisioning
+    #    Add azs for dynamic provisioning
+    #    azs                     = ["us-east-2a"]
+    #     Add az_subnet component for static provisioning
     az_subnet {
-      subnet_id = "subnet-08864975df862eb58"
-      az = "us-east-2a"
+      subnet_id = "subnet-036b143150145c8e1" // private
+      az        = "us-west-2a"
     }
     az_subnet {
-      subnet_id = "subnet-031a7ff4ff5e7fb9a"
-      az = "us-east-2a"
+      subnet_id = "subnet-0fd3677d9c41c2d82" // public
+      az        = "us-west-2a"
     }
   }
 
@@ -103,10 +102,12 @@ resource "spectrocloud_cluster_aws" "cluster" {
     name          = "worker-basic"
     count         = 1
     instance_type = "t3.large"
-    azs           = ["us-east-2a"]
+    #    Add azs for dynamic provisioning
+    #    azs           = ["us-east-2a"]
+    #    Add az_subnet component for static provisioning
     az_subnet {
-      subnet_id = "subnet-08864975df862eb58"
-      az = "us-east-2a"
+      subnet_id = "subnet-036b143150145c8e1"
+      az        = "us-west-2a"
     }
   }
 
@@ -158,8 +159,6 @@ Required:
 Optional:
 
 - `vpc_id` (String)
-- `azs` (Set of String)  # For dynamic provisioning
-- `az_subnet` (Map)  # For static provisioning
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -175,6 +174,7 @@ Optional:
 
 - `additional_labels` (Map of String)
 - `az_subnet` (Block List) (see [below for nested schema](#nestedblock--machine_pool--az_subnet))
+- `azs` (Set of String)
 - `capacity_type` (String)
 - `control_plane` (Boolean)
 - `control_plane_as_worker` (Boolean)
@@ -189,10 +189,7 @@ Optional:
 Required:
 
 - `az` (String)
-
-Read-Only:
-
-- `id` (String) The ID of this resource.
+- `subnet_id` (String)
 
 
 <a id="nestedblock--machine_pool--taints"></a>
