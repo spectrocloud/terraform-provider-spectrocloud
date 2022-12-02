@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	schemas "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
@@ -405,42 +406,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 					},
 				},
 			},
-			"location_config": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"country_code": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "",
-						},
-						"country_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "",
-						},
-						"region_code": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "",
-						},
-						"region_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "",
-						},
-						"latitude": {
-							Type:     schema.TypeFloat,
-							Required: true,
-						},
-						"longitude": {
-							Type:     schema.TypeFloat,
-							Required: true,
-						},
-					},
-				},
-			},
+			"location_config": schemas.ClusterLocationSchema(),
 			"skip_completion": {
 				Type:     schema.TypeBool,
 				Optional: true,

@@ -9,22 +9,23 @@ import (
 	"reflect"
 )
 
-type MyMap map[string]string
-
 func dataSourceAppliances() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcesApplianceRead,
+		Description: "Provides details about for a set of appliances.",
 
 		Schema: map[string]*schema.Schema{
 			"ids": {
-				Type:     schema.TypeList,
-				Computed: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
+				Type:        schema.TypeList,
+				Description: "The unique ids of the appliances. This is a computed field and is not required to be set.",
+				Computed:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"tags": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Set:      schema.HashString,
+				Type:        schema.TypeSet,
+				Description: "A list of tags to filter the appliances.",
+				Optional:    true,
+				Set:         schema.HashString,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
