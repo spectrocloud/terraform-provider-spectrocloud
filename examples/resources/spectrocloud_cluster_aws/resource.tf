@@ -8,7 +8,6 @@ data "spectrocloud_cluster_profile" "profile" {
   name = var.cluster_cluster_profile_name
 }
 
-
 data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
@@ -19,9 +18,9 @@ resource "spectrocloud_cluster_aws" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
-    ssh_key_name = "spectro22"
-    region       = "us-west-2"
-    vpc_id       = "shruthi-aws-nov28-3-vpc"
+    ssh_key_name = "spectro2022"
+    region       = "eu-west-1"
+    vpc_id       = "vpc-0a38a86f3bf3c6cf5"
   }
 
   cluster_profile {
@@ -68,31 +67,27 @@ resource "spectrocloud_cluster_aws" "cluster" {
     control_plane_as_worker = true
     name                    = "master-pool"
     count                   = 1
-    instance_type           = "t3.large"
-    disk_size_gb            = 62
+    instance_type           = "m4.large"
+    disk_size_gb            = 60
     #    Add azs for dynamic provisioning
     #    azs                     = ["us-east-2a"]
     #     Add az_subnet component for static provisioning
-    az_subnet {
-      subnet_id = "subnet-036b143150145c8e1" // private
-      az        = "us-west-2a"
-    }
-    az_subnet {
-      subnet_id = "subnet-0fd3677d9c41c2d82" // public
-      az        = "us-west-2a"
+    az_subnets = {
+      "eu-west-1c" = join(",", var.subnet_ids_eu_west_1c)
+      "eu-west-1a" = "subnet-08c7ad2affe1f1250,subnet-04dbeac9aba098d0e"
     }
   }
 
   machine_pool {
     name          = "worker-basic"
-    count         = 1
-    instance_type = "t3.large"
+    count         = 2
+    instance_type = "m5.large"
     #    Add azs for dynamic provisioning
     #    azs           = ["us-east-2a"]
     #    Add az_subnet component for static provisioning
-    az_subnet {
-      subnet_id = "subnet-036b143150145c8e1"
-      az        = "us-west-2a"
+    az_subnets = {
+      "eu-west-1c" = "subnet-039c3beb3da69172f"
+      "eu-west-1a" = "subnet-04dbeac9aba098d0e"
     }
   }
 

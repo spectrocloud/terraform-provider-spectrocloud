@@ -149,14 +149,17 @@ func resourceClusterAws() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"ssh_key_name": {
 							Type:     schema.TypeString,
+							ForceNew: true,
 							Required: true,
 						},
 						"region": {
 							Type:     schema.TypeString,
+							ForceNew: true,
 							Required: true,
 						},
 						"vpc_id": {
 							Type:     schema.TypeString,
+							ForceNew: true,
 							Optional: true,
 						},
 					},
@@ -223,19 +226,17 @@ func resourceClusterAws() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-							//ForceNew: true,
+							ForceNew: true,
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-
-							//ForceNew: true,
+							ForceNew: true,
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
-							//ForceNew: true,
 						},
 						"count": {
 							Type:     schema.TypeInt,
@@ -244,6 +245,7 @@ func resourceClusterAws() *schema.Resource {
 						"instance_type": {
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 						"capacity_type": {
 							Type:     schema.TypeString,
@@ -266,26 +268,21 @@ func resourceClusterAws() *schema.Resource {
 						"azs": {
 							Type:     schema.TypeSet,
 							Optional: true,
+							ForceNew: true,
 							MinItems: 1,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
-						"az_subnet": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"az": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"subnet_id": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
+						"az_subnets": {
+							Type:        schema.TypeMap,
+							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
+							Optional:    true,
+							ForceNew:    true,
+							Elem: &schema.Schema{
+								Type:     schema.TypeString,
+								Required: true,
 							},
 						},
 					},
@@ -544,7 +541,7 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 		oi["azs"] = machinePool.Azs
 		if machinePool.SubnetIds != nil {
-			oi["az_subnet"] = machinePool.SubnetIds
+			oi["az_subnets"] = machinePool.SubnetIds
 		}
 		ois[i] = oi
 	}
@@ -682,12 +679,11 @@ func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEnt
 		capacityType = m["capacity_type"].(string)
 	}
 	azSubnetsConfigs := make([]*models.V1AwsSubnetEntity, 0)
-	if m["az_subnet"] != nil && len(m["az_subnet"].([]interface{})) > 0 {
-		for _, azSubnet := range m["az_subnet"].([]interface{}) {
-			s := azSubnet.(map[string]interface{})
+	if m["az_subnets"] != nil && len(m["az_subnets"].(map[string]interface{})) > 0 {
+		for key, azSubnet := range m["az_subnets"].(map[string]interface{}) {
 			azSubnetsConfigs = append(azSubnetsConfigs, &models.V1AwsSubnetEntity{
-				ID: s["subnet_id"].(string),
-				Az: s["az"].(string),
+				ID: azSubnet.(string),
+				Az: key,
 			})
 		}
 	}
