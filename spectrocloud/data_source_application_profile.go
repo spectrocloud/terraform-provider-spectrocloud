@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 
@@ -11,12 +12,14 @@ import (
 func dataSourceApplicationProfile() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceApplicationProfileRead,
+		Description: "Use this data source to get the details of an existing application profile.",
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the application profile",
 			},
 		},
 	}
