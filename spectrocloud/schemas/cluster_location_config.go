@@ -46,3 +46,38 @@ func ClusterLocationSchema() *schema.Schema {
 		},
 	}
 }
+
+func ClusterLocationSchemaComputed() *schema.Schema {
+	return &schema.Schema{
+		Type:     schema.TypeList,
+		Optional: true,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"country_code": {
+					Type:     schema.TypeString,
+					Computed: true,
+				},
+				"country_name": {
+					Type:     schema.TypeString,
+					Computed: true,
+				},
+				"region_code": {
+					Type:     schema.TypeString,
+					Computed: true,
+				},
+				"region_name": {
+					Type:     schema.TypeString,
+					Computed: true,
+				},
+				"latitude": {
+					Type:     schema.TypeFloat,
+					Computed: true,
+				},
+				"longitude": {
+					Type:     schema.TypeFloat,
+					Computed: true,
+				},
+			},
+		},
+	}
+}
