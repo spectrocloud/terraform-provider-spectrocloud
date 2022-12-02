@@ -218,15 +218,15 @@ Optional:
 
 Required:
 
-- `latitude` (Number)
-- `longitude` (Number)
+- `latitude` (Number) The latitude coordinates value.
+- `longitude` (Number) The longitude coordinates value.
 
 Optional:
 
-- `country_code` (String)
-- `country_name` (String)
-- `region_code` (String)
-- `region_name` (String)
+- `country_code` (String) The country code of the country the cluster is located in.
+- `country_name` (String) The name of the country.
+- `region_code` (String) The region code of where the cluster is located in.
+- `region_name` (String) The name of the region.
 
 
 <a id="nestedblock--namespaces"></a>

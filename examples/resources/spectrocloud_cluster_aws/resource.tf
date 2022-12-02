@@ -73,7 +73,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
     #    azs                     = ["us-east-2a"]
     #     Add az_subnet component for static provisioning
     az_subnets = {
-      "eu-west-1c" = join(",",var.subnet_ids_eu_west_1c)
+      "eu-west-1c" = join(",", var.subnet_ids_eu_west_1c)
       "eu-west-1a" = "subnet-08c7ad2affe1f1250,subnet-04dbeac9aba098d0e"
     }
   }
