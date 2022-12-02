@@ -226,13 +226,11 @@ func resourceClusterAws() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-							ForceNew: true,
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-							ForceNew: true,
 						},
 						"name": {
 							Type:     schema.TypeString,
@@ -245,7 +243,6 @@ func resourceClusterAws() *schema.Resource {
 						"instance_type": {
 							Type:     schema.TypeString,
 							Required: true,
-							ForceNew: true,
 						},
 						"capacity_type": {
 							Type:     schema.TypeString,
@@ -268,7 +265,6 @@ func resourceClusterAws() *schema.Resource {
 						"azs": {
 							Type:     schema.TypeSet,
 							Optional: true,
-							ForceNew: true,
 							MinItems: 1,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
@@ -279,7 +275,6 @@ func resourceClusterAws() *schema.Resource {
 							Type:        schema.TypeMap,
 							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
 							Optional:    true,
-							ForceNew:    true,
 							Elem: &schema.Schema{
 								Type:     schema.TypeString,
 								Required: true,
@@ -578,25 +573,27 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolAwsHash(machinePoolResource)
+			if name != "" {
+				hash := resourceMachinePoolAwsHash(machinePoolResource)
 
-			machinePool := toMachinePoolAws(machinePoolResource)
+				machinePool := toMachinePoolAws(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
+				}
+	
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
