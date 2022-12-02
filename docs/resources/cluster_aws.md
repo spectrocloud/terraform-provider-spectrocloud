@@ -87,14 +87,10 @@ resource "spectrocloud_cluster_aws" "cluster" {
     disk_size_gb            = 62
     #    Add azs for dynamic provisioning
     #    azs                     = ["us-east-2a"]
-    #     Add az_subnet component for static provisioning
-    az_subnet {
-      subnet_id = "subnet-036b143150145c8e1" // private
-      az        = "us-west-2a"
-    }
-    az_subnet {
-      subnet_id = "subnet-0fd3677d9c41c2d82" // public
-      az        = "us-west-2a"
+    #     Add az_subnet component for static provisioning, (Master pool should have private/public subnet for each availability zone)
+    az_subnets = {
+      "eu-west-1c" = join(",",["subnet-04ab962a9fa3ca4b6","subnet-039c3beb3da69172f"])
+      "eu-west-1a" = "subnet-08c7ad2affe1f1250,subnet-04dbeac9aba098d0e"
     }
   }
 
@@ -105,9 +101,9 @@ resource "spectrocloud_cluster_aws" "cluster" {
     #    Add azs for dynamic provisioning
     #    azs           = ["us-east-2a"]
     #    Add az_subnet component for static provisioning
-    az_subnet {
-      subnet_id = "subnet-036b143150145c8e1"
-      az        = "us-west-2a"
+    az_subnets = {
+      "eu-west-1c" = "subnet-039c3beb3da69172f"
+      "eu-west-1a" = "subnet-04dbeac9aba098d0e"
     }
   }
 
@@ -174,7 +170,7 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
-- `az_subnet` (Block List) (see [below for nested schema](#nestedblock--machine_pool--az_subnet))
+- `az_subnets` (Map of String) (see [below for nested schema](#machine_pool--az_subnets))
 - `azs` (Set of String)
 - `capacity_type` (String)
 - `control_plane` (Boolean)
@@ -184,13 +180,19 @@ Optional:
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String)
 
-<a id="nestedblock--machine_pool--az_subnet"></a>
-### Nested Schema for `machine_pool.az_subnet`
+<a id="machine_pool--az_subnets"></a>
+### Schema for `machine_pool.az_subnets`
 
 Required:
 
-- `az` (String)
-- `subnet_id` (String)
+```
+## Example
+az_subnets = {
+      "eu-west-1a" = "subnet-08c7ad2affe1f1250,subnet-04dbeac9aba098d0e"
+    }
+```
+- `Availability zone(az) will be the key` - (string)
+- `Subnet ids will be the value` - Values will be single or multiple subnets (multiple subnet can be specified as string with comma seperated)
 
 
 <a id="nestedblock--machine_pool--taints"></a>
