@@ -9,8 +9,6 @@ import (
 	"reflect"
 )
 
-type MyMap map[string]string
-
 func dataSourceAppliances() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcesApplianceRead,

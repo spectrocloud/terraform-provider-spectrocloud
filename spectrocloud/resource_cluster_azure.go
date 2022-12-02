@@ -450,7 +450,7 @@ func resourceClusterAzure() *schema.Resource {
 					},
 				},
 			},
-			"location_config": schemas.ClusterLocationSchema(),
+			"location_config": schemas.ClusterLocationSchemaComputed(),
 			"skip_completion": {
 				Type:     schema.TypeBool,
 				Optional: true,
