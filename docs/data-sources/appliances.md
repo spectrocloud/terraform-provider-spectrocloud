@@ -3,12 +3,12 @@
 page_title: "spectrocloud_appliances Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Provides details about for a set of appliances.
 ---
 
 # spectrocloud_appliances (Data Source)
 
-
+Provides details about for a set of appliances.
 
 ## Example Usage
 
@@ -29,11 +29,11 @@ output "same" {
 
 ### Optional
 
-- `tags` (Set of String)
+- `tags` (Set of String) A list of tags to filter the appliances.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `ids` (List of String)
+- `ids` (List of String) The unique ids of the appliances. This is a computed field and is not required to be set.
 
 
