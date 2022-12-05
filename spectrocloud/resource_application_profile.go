@@ -108,7 +108,7 @@ func resourceApplicationProfile() *schema.Resource {
 						"properties": {
 							Type:        schema.TypeMap,
 							Optional:    true,
-							Description: "The various properties required by different database tiers Eg: databaseName and databaseVolumeSize size for redis etc,",
+							Description: "The various properties required by different database tiers eg: `databaseName` and `databaseVolumeSize` size for Redis etc.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
