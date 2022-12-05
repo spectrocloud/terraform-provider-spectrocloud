@@ -159,7 +159,7 @@ Required:
 Optional:
 
 - `manifest` (Block List) The manifest of the pack. (see [below for nested schema](#nestedblock--pack--manifest))
-- `properties` (Map of String)
+- `properties` (Map of String) The various properties required by different database tiers Eg: databaseName and databaseVolumeSize size for redis etc,
 - `registry_uid` (String) The unique id of the registry to be used for the pack.
 - `source_app_tier` (String) The unique id of the pack to be used as the source for the pack.
 - `tag` (String) The identifier or version to label the pack.
