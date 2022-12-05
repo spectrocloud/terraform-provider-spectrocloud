@@ -159,13 +159,14 @@ Required:
 Optional:
 
 - `manifest` (Block List) The manifest of the pack. (see [below for nested schema](#nestedblock--pack--manifest))
+- `properties` (Map of String)
 - `registry_uid` (String) The unique id of the registry to be used for the pack.
 - `source_app_tier` (String) The unique id of the pack to be used as the source for the pack.
 - `tag` (String) The identifier or version to label the pack.
 - `type` (String) The type of Pack. Allowed values are `container`, `helm`, `manifest`, or `operator-instance`.
 - `uid` (String) The unique id of the pack. This is a computed field and is not required to be set.
-- `values` (String) The values to be used for the pack. This is a string field JSON object.
-- `properties` (map) The key and value pair required for dependents packs
+- `values` (String) The values to be used for the pack. This is a stringified JSON object.
+
 <a id="nestedblock--pack--manifest"></a>
 ### Nested Schema for `pack.manifest`
 
