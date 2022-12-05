@@ -164,8 +164,8 @@ Optional:
 - `tag` (String) The identifier or version to label the pack.
 - `type` (String) The type of Pack. Allowed values are `container`, `helm`, `manifest`, or `operator-instance`.
 - `uid` (String) The unique id of the pack. This is a computed field and is not required to be set.
-- `values` (String) The values to be used for the pack. This is a stringified JSON object.
-
+- `values` (String) The values to be used for the pack. This is a string field JSON object.
+- `properties` (map) The key and value pair required for dependents packs
 <a id="nestedblock--pack--manifest"></a>
 ### Nested Schema for `pack.manifest`
 
