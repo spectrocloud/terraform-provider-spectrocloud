@@ -30,7 +30,7 @@ func TestToAppTiers(t *testing.T) {
 	appProfileBasicRd := createBaseResourceData()
 	profileEntity := toApplicationProfileBasic(appProfileBasicRd)
 	if profileEntity.Spec.Template.AppTiers == nil {
-		assert.Fail(t, "After flatten toApplicationProfileBasic tier is set to nil")
+		assert.Fail(t, "After convert toApplicationProfileBasic tier is set to nil")
 	}
 }
 
@@ -50,7 +50,7 @@ func TestToApplicationProfilePackCreateWithPack(t *testing.T) {
 
 	profileEntity, err := toApplicationProfilePackCreate(packOne)
 	if err != nil {
-		assert.Fail(t, "toApplicationProfilePackCreate - Not able to flatten the interface")
+		assert.Fail(t, "toApplicationProfilePackCreate - Not able to convert the interface")
 	}
 
 	assert.Equal(t, packOne["name"].(string), *profileEntity.Name)
@@ -80,7 +80,7 @@ func TestToApplicationProfilePackCreateWithManifest(t *testing.T) {
 
 	profileEntity, err := toApplicationProfilePackCreate(packOne)
 	if err != nil {
-		assert.Fail(t, "toApplicationProfilePackCreate - Not able to flatten the interface")
+		assert.Fail(t, "toApplicationProfilePackCreate - Not able to convert the interface")
 	}
 
 	assert.Equal(t, packOne["name"].(string), *profileEntity.Name)
@@ -115,7 +115,7 @@ func TestToApplicationProfilePackCreateWithPackManifest(t *testing.T) {
 
 	profileEntity, err := toApplicationProfilePackCreate(packOne)
 	if err != nil {
-		assert.Fail(t, "toApplicationProfilePackCreate - Not able to flatten the interface")
+		assert.Fail(t, "toApplicationProfilePackCreate - Not able to convert the interface")
 	}
 
 	assert.Equal(t, packOne["name"].(string), *profileEntity.Name)
@@ -157,7 +157,7 @@ func TestToApplicationProfilePatch(t *testing.T) {
 	profilePatchRD.Set("tags", tagMap)
 	profileMetaEntity, err := toApplicationProfilePatch(profilePatchRD)
 	if err != nil {
-		assert.Fail(t, "toApplicationProfilePatch - Not able to flatten the resource data")
+		assert.Fail(t, "toApplicationProfilePatch - Not able to convert the resource data")
 	}
 	assert.Equal(t, profilePatchRD.Get("description"), profileMetaEntity.Metadata.Annotations["description"])
 	assert.Equal(t, strings.Split(tagMap[0], ":")[1], profileMetaEntity.Metadata.Labels["owner"])

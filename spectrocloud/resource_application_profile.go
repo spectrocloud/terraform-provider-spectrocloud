@@ -410,17 +410,6 @@ func toApplicationProfilePackCreate(pSrc interface{}) (*models.V1AppTierEntity, 
 	}
 	pType := models.V1AppTierType(p["type"].(string))
 
-	pProperties := make([]*models.V1AppTierPropertyEntity, 0)
-	if p["properties"] != nil {
-		for k, val := range p["properties"].(map[string]interface{}) {
-			prop := &models.V1AppTierPropertyEntity{
-				Name:  k,
-				Value: val.(string),
-			}
-			pProperties = append(pProperties, prop)
-		}
-	}
-
 	tier := &models.V1AppTierEntity{
 		Name:             types.Ptr(pName),
 		Version:          pVersion,
@@ -430,7 +419,7 @@ func toApplicationProfilePackCreate(pSrc interface{}) (*models.V1AppTierEntity, 
 		Type: pType,
 		// UI strips a single newline, so we should do the same
 		Values:     strings.TrimSpace(p["values"].(string)),
-		Properties: pProperties,
+		Properties: toPropertiesTier(p),
 	}
 
 	manifests := make([]*models.V1ManifestInputEntity, 0)
@@ -520,6 +509,20 @@ func toApplicationProfilePatch(d *schema.ResourceData) (*models.V1AppProfileMeta
 	return metadata, nil
 }
 
+func toPropertiesTier(prop map[string]interface{}) []*models.V1AppTierPropertyEntity {
+	pProperties := make([]*models.V1AppTierPropertyEntity, 0)
+	if prop["properties"] != nil {
+		for k, val := range prop["properties"].(map[string]interface{}) {
+			prop := &models.V1AppTierPropertyEntity{
+				Name:  k,
+				Value: val.(string),
+			}
+			pProperties = append(pProperties, prop)
+		}
+	}
+	return pProperties
+}
+
 func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEntity {
 	p := pSrc.(map[string]interface{})
 
@@ -537,17 +540,6 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 		})
 	}
 
-	pProperties := make([]*models.V1AppTierPropertyEntity, 0)
-	if p["properties"] != nil {
-		for k, val := range p["properties"].(map[string]interface{}) {
-			prop := &models.V1AppTierPropertyEntity{
-				Name:  k,
-				Value: val.(string),
-			}
-			pProperties = append(pProperties, prop)
-		}
-	}
-
 	pack := &models.V1AppTierUpdateEntity{
 
 		Name:      pName,
@@ -556,7 +548,7 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 		//RegistryUID: pRegistryUID,
 		// UI strips a single newline, so we should do the same
 		Values:     strings.TrimSpace(p["values"].(string)),
-		Properties: pProperties,
+		Properties: toPropertiesTier(p),
 	}
 
 	return pack
