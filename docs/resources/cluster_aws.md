@@ -84,9 +84,9 @@ resource "spectrocloud_cluster_aws" "cluster" {
     count                   = 1
     instance_type           = "m4.large"
     disk_size_gb            = 60
-    #    Add azs for dynamic provisioning
-    #    azs                     = ["us-east-2a"]
-    #     Add az_subnet component for static provisioning
+    # Add azs for dynamic provisioning
+    # azs                     = ["eu-west-1a", "eu-west-1c"]
+    # Add az_subnet component for static provisioning
     az_subnets = {
       "eu-west-1c" = join(",", var.subnet_ids_eu_west_1c)
       "eu-west-1a" = "subnet-08c7ad2affe1f1250,subnet-04dbeac9aba098d0e"
@@ -97,9 +97,9 @@ resource "spectrocloud_cluster_aws" "cluster" {
     name          = "worker-basic"
     count         = 2
     instance_type = "m5.large"
-    #    Add azs for dynamic provisioning
-    #    azs           = ["us-east-2a"]
-    #    Add az_subnet component for static provisioning
+    # Add azs for dynamic provisioning
+    # azs           = ["eu-west-1a", "eu-west-1c"]
+    # Add az_subnet component for static provisioning
     az_subnets = {
       "eu-west-1c" = "subnet-039c3beb3da69172f"
       "eu-west-1a" = "subnet-04dbeac9aba098d0e"
@@ -169,8 +169,8 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
-- `az_subnets` (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
-- `azs` (Set of String)
+- `az_subnets` (Map of String) Mutually exclusive with `azs`. Use `az_subnets` for Static provisioning.
+- `azs` (Set of String) Mutually exclusive with `az_subnets`. Use `azs` for Dynamic provisioning.
 - `capacity_type` (String)
 - `control_plane` (Boolean)
 - `control_plane_as_worker` (Boolean)

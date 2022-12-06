@@ -74,14 +74,14 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 					t.Errorf("Machine pool - disk_size_gb is not matching got %v, wanted %v", k["disk_size_gb"].(int), int(machinePoolConfig[i].RootDeviceSize))
 					t.Fail()
 				}
-				if !validateMapString(subnetIdsMaster, k["az_subnet"].(map[string]string)) {
-					t.Errorf("Machine pool - additional labels is not matching got %v, wanted %v", subnetIdsMaster, k["az_subnet"])
+				if !validateMapString(subnetIdsMaster, k["az_subnets"].(map[string]string)) {
+					t.Errorf("Machine pool - additional labels is not matching got %v, wanted %v", subnetIdsMaster, k["az_subnets"])
 					t.Fail()
 				}
 
 			} else {
-				if !validateMapString(subnetIdsWorker, k["az_subnet"].(map[string]string)) {
-					t.Errorf("Machine pool - additional labels is not matching got %v, wanted %v", subnetIdsWorker, k["az_subnet"])
+				if !validateMapString(subnetIdsWorker, k["az_subnets"].(map[string]string)) {
+					t.Errorf("Machine pool - additional labels is not matching got %v, wanted %v", subnetIdsWorker, k["az_subnets"])
 					t.Fail()
 				}
 			}

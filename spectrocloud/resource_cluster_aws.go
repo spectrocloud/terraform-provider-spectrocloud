@@ -263,18 +263,19 @@ func resourceClusterAws() *schema.Resource {
 							Default:  65,
 						},
 						"azs": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							MinItems: 1,
-							Set:      schema.HashString,
+							Type:        schema.TypeSet,
+							Optional:    true,
+							Description: "Mutually exclusive with `az_subnets`. Use `azs` for Dynamic provisioning.",
+							MinItems:    1,
+							Set:         schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
 						"az_subnets": {
 							Type:        schema.TypeMap,
-							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
 							Optional:    true,
+							Description: "Mutually exclusive with `azs`. Use `az_subnets` for Static provisioning.",
 							Elem: &schema.Schema{
 								Type:     schema.TypeString,
 								Required: true,
@@ -586,7 +587,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
 				}
-	
+
 				if err != nil {
 					return diag.FromErr(err)
 				}
@@ -667,10 +668,6 @@ func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEnt
 	}
 
 	azs := make([]string, 0)
-	for _, az := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, az.(string))
-	}
-
 	capacityType := "on-demand" // on-demand by default.
 	if m["capacity_type"] != nil && len(m["capacity_type"].(string)) > 0 {
 		capacityType = m["capacity_type"].(string)
@@ -678,10 +675,16 @@ func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEnt
 	azSubnetsConfigs := make([]*models.V1AwsSubnetEntity, 0)
 	if m["az_subnets"] != nil && len(m["az_subnets"].(map[string]interface{})) > 0 {
 		for key, azSubnet := range m["az_subnets"].(map[string]interface{}) {
+			azs = append(azs, key)
 			azSubnetsConfigs = append(azSubnetsConfigs, &models.V1AwsSubnetEntity{
 				ID: azSubnet.(string),
 				Az: key,
 			})
+		}
+	}
+	if len(azs) == 0 {
+		for _, az := range m["azs"].(*schema.Set).List() {
+			azs = append(azs, az.(string))
 		}
 	}
 	mp := &models.V1AwsMachinePoolConfigEntity{
