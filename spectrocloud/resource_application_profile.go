@@ -105,6 +105,14 @@ func resourceApplicationProfile() *schema.Resource {
 							Description: "The name of the specified pack.",
 							Required:    true,
 						},
+						"properties": {
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Description: "The various properties required by different database tiers eg: `databaseName` and `databaseVolumeSize` size for Redis etc.",
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
 						"manifest": {
 							Type:        schema.TypeList,
 							Optional:    true,
@@ -201,7 +209,7 @@ func resourceApplicationProfileRead(_ context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	packManifests, d2, done2 := getAppTiersContent(c, d)
+	tierDetails, d2, done2 := getAppTiersContent(c, d)
 	if done2 {
 		return d2
 	}
@@ -215,7 +223,7 @@ func resourceApplicationProfileRead(_ context.Context, d *schema.ResourceData, m
 	if done {
 		return diagnostics
 	}
-	packs, err := flattenAppPacks(c, diagPacks, cp.Spec.Template.AppTiers, packManifests)
+	packs, err := flattenAppPacks(c, diagPacks, cp.Spec.Template.AppTiers, tierDetails)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -226,49 +234,59 @@ func resourceApplicationProfileRead(_ context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func getAppTiersContent(c *client.V1Client, d *schema.ResourceData) (map[string]map[string]string, diag.Diagnostics, bool) {
-	packManifests := make(map[string]map[string]string)
+func getAppTiersContent(c *client.V1Client, d *schema.ResourceData) ([]*models.V1AppTier, diag.Diagnostics, bool) {
 	tiersDetails, err := c.GetApplicationProfileTiers(d.Id())
 	if err != nil {
 		return nil, diag.FromErr(err), true
 	}
-	for _, tier := range tiersDetails {
+	return tiersDetails, nil, false
+}
+
+func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, tiers []*models.V1AppTierRef, tierDet []*models.V1AppTier) ([]interface{}, error) {
+	if tiers == nil {
+		return make([]interface{}, 0), nil
+	}
+	packManifests := make(map[string]map[string]string)
+	for _, tier := range tierDet {
 		if len(tier.Spec.Manifests) > 0 {
 			c := make(map[string]string)
 			for _, manifest := range tier.Spec.Manifests {
 				c[manifest.Name] = manifest.UID
 			}
 			packManifests[tier.Metadata.UID] = c
-		}
-	}
-	return packManifests, nil, false
-}
 
-func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, tiers []*models.V1AppTierRef, manifestContent map[string]map[string]string) ([]interface{}, error) {
-	if tiers == nil {
-		return make([]interface{}, 0), nil
+		}
+
 	}
 
 	ps := make([]interface{}, len(tiers))
-	for i, tier := range tiers {
+	for i, tier := range tierDet {
 		p := make(map[string]interface{})
 
-		p["uid"] = tier.UID
-		if isRegistryUID(diagPacks, tier.Name) {
-			p["registry_uid"] = c.GetPackRegistry(tier.UID, string(tier.Type))
+		p["uid"] = tier.Metadata.UID
+		if isRegistryUID(diagPacks, tier.Metadata.Name) {
+			p["registry_uid"] = c.GetPackRegistry(tier.Metadata.UID, string(tier.Spec.Type))
 		}
-		p["name"] = tier.Name
+		p["name"] = tier.Metadata.Name
 		//p["tag"] = tier.Tag
-		p["type"] = tier.Type
+		p["type"] = tier.Spec.Type
+		p["registry_uid"] = tier.Spec.RegistryUID
+		p["source_app_tier"] = tier.Spec.SourceAppTierUID
+		prop := make(map[string]string)
+		if len(tier.Spec.Properties) > 0 {
+			for _, pt := range tier.Spec.Properties {
+				prop[pt.Name] = pt.Value
+			}
+		}
+		p["properties"] = prop
 
-		/*if _, ok := manifestContent[tier.UID]; ok {
+		/*if _, ok := packManifests[tier.UID]; ok {
 			ma := make([]interface{}, len(tier.Manifests))
 			for j, m := range tier.Manifests {
 				mj := make(map[string]interface{})
 				mj["name"] = m.Name
 				mj["uid"] = m.UID
-				mj["content"] = manifestContent[tier.PackUID][m.Name]
-
+				mj["content"] = packManifests[tier.PackUID][m.Name]
 				ma[j] = mj
 			}
 
@@ -344,7 +362,6 @@ func toApplicationProfileCreate(d *schema.ResourceData) (*models.V1AppProfileEnt
 		}
 	}
 	cp.Spec.Template.AppTiers = tiers
-
 	return cp, nil
 }
 
@@ -401,7 +418,8 @@ func toApplicationProfilePackCreate(pSrc interface{}) (*models.V1AppTierEntity, 
 		//UID:         pUID,
 		Type: pType,
 		// UI strips a single newline, so we should do the same
-		Values: strings.TrimSpace(p["values"].(string)),
+		Values:     strings.TrimSpace(p["values"].(string)),
+		Properties: toPropertiesTier(p),
 	}
 
 	manifests := make([]*models.V1ManifestInputEntity, 0)
@@ -474,6 +492,7 @@ func toApplicationProfilePatch(d *schema.ResourceData) (*models.V1AppProfileMeta
 	if d.Get("description") != nil {
 		description = d.Get("description").(string)
 	}
+
 	metadata := &models.V1AppProfileMetaEntity{
 		Metadata: &models.V1AppProfileMetaUpdateEntity{
 			//TODO name change?: Name: d.Get("name").(string),
@@ -488,6 +507,20 @@ func toApplicationProfilePatch(d *schema.ResourceData) (*models.V1AppProfileMeta
 	}
 
 	return metadata, nil
+}
+
+func toPropertiesTier(prop map[string]interface{}) []*models.V1AppTierPropertyEntity {
+	pProperties := make([]*models.V1AppTierPropertyEntity, 0)
+	if prop["properties"] != nil {
+		for k, val := range prop["properties"].(map[string]interface{}) {
+			prop := &models.V1AppTierPropertyEntity{
+				Name:  k,
+				Value: val.(string),
+			}
+			pProperties = append(pProperties, prop)
+		}
+	}
+	return pProperties
 }
 
 func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEntity {
@@ -514,7 +547,8 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 		Manifests: manifests,
 		//RegistryUID: pRegistryUID,
 		// UI strips a single newline, so we should do the same
-		Values: strings.TrimSpace(p["values"].(string)),
+		Values:     strings.TrimSpace(p["values"].(string)),
+		Properties: toPropertiesTier(p),
 	}
 
 	return pack
