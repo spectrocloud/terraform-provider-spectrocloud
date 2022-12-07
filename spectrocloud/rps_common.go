@@ -1,4 +1,4 @@
-package test
+package spectrocloud
 
 type Retry struct {
 	runs          int

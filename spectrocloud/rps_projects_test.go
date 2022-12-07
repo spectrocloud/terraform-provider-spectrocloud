@@ -1,41 +1,36 @@
-package test
+package spectrocloud
 
 import (
 	"fmt"
-	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	userC "github.com/spectrocloud/hapi/user/client/v1"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"testing"
 )
 
-func TestNameSpacesRPSScenario(t *testing.T) {
+func Test1Scenario(t *testing.T) {
+	if !IsIntegrationTestEnvSet(baseConfig) {
+		t.Skip("Skipping integration test env variable not set")
+	}
 	cases := []Retry{
-		{50, 1, 429},
+		{190, 3, 429},
 	}
 
 	for _, c := range cases {
-		h := client.New("api.dev.spectrocloud.com", "nikolay@spectrocloud.com", "", "", "mB9NKY0bBRlYy4eP1wteirbxHQ0b5ypL", false, c.retries)
-		uid, err := h.GetProjectUID("Default")
-		if err != nil {
-			t.Fail()
-		}
-		projectH := client.New("api.dev.spectrocloud.com", "nikolay@spectrocloud.com", "", uid, "mB9NKY0bBRlYy4eP1wteirbxHQ0b5ypL", false, c.retries)
-		GetNamespaces1Test(t, projectH, c)
+		h := client.New("api.dev.spectrocloud.com", "nikolay@spectrocloud.com", "", "Default", "QR5aRhZe0XZjP2bvLDEcToC0xBBqgmjS", false, c.retries)
+		GetProjects1Test(t, h, c)
 	}
 }
 
 // 1. Normal case where rps is just within the limit. 5 rps or 50 with burst. Expected result: no retries, no errors.
-func GetNamespaces1Test(t *testing.T, h *client.V1Client, retry Retry) {
-	client, err := h.GetClusterClient()
+func GetProjects1Test(t *testing.T, h *client.V1Client, retry Retry) {
+	userClient, err := h.GetUserClient()
+
 	if err != nil {
 		t.Fail()
 	}
 
-	cluster, err := h.GetClusterByName("eks-dev-nik-4", "project")
-	if err != nil && cluster == nil {
-		t.Fail()
-	}
-
-	params := clusterC.NewV1SpectroClustersUIDConfigNamespacesGetParamsWithContext(h.Ctx).WithUID(cluster.Metadata.UID)
+	limit := int64(0)
+	params := userC.NewV1ProjectsListParams().WithLimit(&limit)
 
 	// 2. Many requests but retry works. For example for 100 rps, 1 retry_attempt yeilds no erros.
 	// (default timeout for retry is starting at 2 seconds, and exponentially increasing with jitter)
@@ -47,7 +42,7 @@ func GetNamespaces1Test(t *testing.T, h *client.V1Client, retry Retry) {
 	ch := make(chan int)
 	done := make(chan bool)
 
-	method, in := prepareClusterMethod(client, params, "V1SpectroClustersUIDConfigNamespacesGet")
+	method, in := prepareUserMethod(userClient, params, "V1ProjectsList")
 	go produceResults(retry, method, in, ch, done)
 
 	stat := consumeResults(t, retry, ch, done)

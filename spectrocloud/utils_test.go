@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+func TestStringContains(t *testing.T) {
+	ss := []interface{}{"fizz_1", "bazz", "random", "nfizz_1", "fizz_2"}
+
+	contains := stringContains(ss, "random")
+	assert.Equal(t, true, contains, "Should be true.")
+
+	assert.Equal(t, false, stringContains(ss, "doesnt"), "Should be false.")
+
+}
+
 func TestFilter(t *testing.T) {
 	ss := []string{"fizz_1", "bazz", "random", "nfizz_1", "fizz_2"}
 
@@ -22,4 +32,5 @@ func TestIsMapSubset(t *testing.T) {
 
 	assert.Equal(t, true, IsMapSubset(a, b))
 	assert.Equal(t, false, IsMapSubset(a, c))
+	assert.Equal(t, false, IsMapSubset(b, a)) // a bigger than b
 }

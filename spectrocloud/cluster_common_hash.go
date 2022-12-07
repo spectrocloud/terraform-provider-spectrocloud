@@ -211,7 +211,7 @@ func resourceMachinePoolOpenStackHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
-func resourceMachinePoolNestedHash(v interface{}) int {
+func resourceMachinePoolVirtualHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 

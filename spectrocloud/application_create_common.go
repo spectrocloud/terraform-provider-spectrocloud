@@ -67,34 +67,34 @@ func toV1AppDeploymentProfileEntity(d *schema.ResourceData) *models.V1AppDeploym
 }
 
 // Existing sandbox cluster
-func toAppDeploymentNestedClusterEntity(d *schema.ResourceData) *models.V1AppDeploymentNestedClusterEntity {
-	return &models.V1AppDeploymentNestedClusterEntity{
+func toAppDeploymentVirtualClusterEntity(d *schema.ResourceData) *models.V1AppDeploymentVirtualClusterEntity {
+	return &models.V1AppDeploymentVirtualClusterEntity{
 		Metadata: &models.V1ObjectMetaInputEntity{
 			Name:   d.Get("name").(string),
 			Labels: toTags(d),
 		},
-		Spec: toAppDeploymentNestedClusterSpec(d),
+		Spec: toAppDeploymentVirtualClusterSpec(d),
 	}
 }
 
-func toAppDeploymentNestedClusterSpec(d *schema.ResourceData) *models.V1AppDeploymentNestedClusterSpec {
-	return &models.V1AppDeploymentNestedClusterSpec{
-		Config:  toAppDeploymentNestedClusterConfigEntity(d),
+func toAppDeploymentVirtualClusterSpec(d *schema.ResourceData) *models.V1AppDeploymentVirtualClusterSpec {
+	return &models.V1AppDeploymentVirtualClusterSpec{
+		Config:  toAppDeploymentVirtualClusterConfigEntity(d),
 		Profile: toV1AppDeploymentProfileEntity(d),
 	}
 }
 
-func toAppDeploymentNestedClusterConfigEntity(d *schema.ResourceData) *models.V1AppDeploymentNestedClusterConfigEntity {
-	return &models.V1AppDeploymentNestedClusterConfigEntity{
-		TargetSpec: toAppDeploymentNestedClusterTargetSpec(d),
+func toAppDeploymentVirtualClusterConfigEntity(d *schema.ResourceData) *models.V1AppDeploymentVirtualClusterConfigEntity {
+	return &models.V1AppDeploymentVirtualClusterConfigEntity{
+		TargetSpec: toAppDeploymentVirtualClusterTargetSpec(d),
 	}
 }
 
-func toAppDeploymentNestedClusterTargetSpec(d *schema.ResourceData) *models.V1AppDeploymentNestedClusterTargetSpec {
+func toAppDeploymentVirtualClusterTargetSpec(d *schema.ResourceData) *models.V1AppDeploymentVirtualClusterTargetSpec {
 	configList := d.Get("config")
 	config := configList.([]interface{})[0].(map[string]interface{})
 
-	return &models.V1AppDeploymentNestedClusterTargetSpec{
+	return &models.V1AppDeploymentVirtualClusterTargetSpec{
 		ClusterUID: types.Ptr(config["cluster_uid"].(string)),
 	}
 }

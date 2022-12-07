@@ -34,7 +34,7 @@ func setup() {
 	baseConfig.apikey = getEnvWithFallBack("TEST_API_KEY")
 	baseConfig.component = "ClusterHealth"
 	baseConfig.AlertUid = ""
-	if isEnvSet(baseConfig) {
+	if IsIntegrationTestEnvSet(baseConfig) {
 		fmt.Printf("\033[1;36m%s\033[0m", "> Credentials & Base config setup completed\n")
 		fmt.Printf("\033[1;36m%s\033[0m", "-- Test Runnig with below crdentials & base config\n")
 		fmt.Printf("* Test host - %s \n", baseConfig.hubbleHost)
@@ -48,7 +48,7 @@ func setup() {
 	}
 	fmt.Printf("\033[1;36m%s\033[0m", "> Setup completed \n")
 }
-func isEnvSet(config Cred) (envSet bool) {
+func IsIntegrationTestEnvSet(config Cred) (envSet bool) {
 	if config.hubbleHost != "" && config.project != "" && config.email != "" && config.pwd != "" && config.apikey != "" {
 		return true
 	} else {

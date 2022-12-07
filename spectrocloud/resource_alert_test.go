@@ -110,7 +110,7 @@ Type - Integration Test
 Description - Testing all CRUD function for email alerts.
 */
 func TestAlertCRUDEmail(t *testing.T) {
-	if !isEnvSet(baseConfig) {
+	if !IsIntegrationTestEnvSet(baseConfig) {
 		t.Skip("Skipping integration test env variable not set")
 	}
 	conn := client.New(baseConfig.hubbleHost, baseConfig.email, baseConfig.pwd, baseConfig.project, baseConfig.apikey, false, 3)
@@ -166,7 +166,7 @@ Type - Integration Test
 Description - Testing all CRUD function for http(webhook) alerts.
 */
 func TestAlertCRUDHttp(t *testing.T) {
-	if !isEnvSet(baseConfig) {
+	if !IsIntegrationTestEnvSet(baseConfig) {
 		t.Skip("Skipping integration test env variable not set")
 	}
 	conn := client.New(baseConfig.hubbleHost, baseConfig.email, baseConfig.pwd, baseConfig.project, baseConfig.apikey, false, 3)

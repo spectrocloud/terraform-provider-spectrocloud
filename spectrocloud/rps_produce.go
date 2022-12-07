@@ -1,9 +1,8 @@
-package test
+package spectrocloud
 
 import (
 	"fmt"
 	"github.com/spectrocloud/hapi/apiutil/transport"
-	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 	userC "github.com/spectrocloud/hapi/user/client/v1"
 	"reflect"
@@ -38,7 +37,7 @@ func produceResults(retry Retry, method reflect.Value, in []reflect.Value, ch ch
 
 			result := method.Call(in)
 			err := result[1].Interface()
-			fmt.Println(result[0].Convert(*models.V1SpectroClustersUIDConfigNamespacesGetOK))
+			//fmt.Println(result[0].Convert(*clusterC.V1SpectroClustersUIDConfigNamespacesGetOK))
 			if err != nil {
 				if _, ok := err.(*transport.TcpError); ok {
 					chnl <- -1
