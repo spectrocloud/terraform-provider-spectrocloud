@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -17,28 +18,29 @@ func dataSourcePackSimple() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
 				Description: "The name of the pack.",
 			},
 			"version": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
 				Description: "The version of the pack.",
 			},
 			"registry_uid": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
 				Description: "The unique identifier of the registry the pack belongs to.",
 			},
 			"type": {
-				Type:     schema.TypeString,
-				Required: true,
-				Description: "The type of Pack. Allowed values are `container`, `helm`, `manifest`, or `operator-instance`.",
+				Type:         schema.TypeString,
+				Required:     true,
+				ValidateFunc: validation.StringInSlice([]string{"helm", "manifest", "operator-instance"}, false),
+				Description:  "The type of Pack. Allowed values are `helm`, `manifest` or `operator-instance`.",
 			},
 			"values": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
 				Description: "This is a stringified YAML object containing the pack configuration details. ",
 			},
 		},

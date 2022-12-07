@@ -30,15 +30,15 @@ data "spectrocloud_pack_simple" "pack" {
 
 ### Required
 
-- `name` (String)
-- `type` (String)
+- `name` (String) The name of the pack.
+- `type` (String) The type of Pack. Allowed values are `helm`, `manifest` or `operator-instance`.
 
 ### Optional
 
-- `registry_uid` (String)
-- `version` (String)
+- `registry_uid` (String) The unique identifier of the registry the pack belongs to.
+- `version` (String) The version of the pack.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `values` (String)
+- `values` (String) This is a stringified YAML object containing the pack configuration details.
