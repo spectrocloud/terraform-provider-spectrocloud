@@ -23,6 +23,7 @@ func dataSourcePackSimple() *schema.Resource {
 			"version": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Description: "The version of the pack.",
 			},
 			"registry_uid": {
 				Type:     schema.TypeString,
