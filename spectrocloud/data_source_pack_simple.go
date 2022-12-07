@@ -34,6 +34,7 @@ func dataSourcePackSimple() *schema.Resource {
 			"type": {
 				Type:     schema.TypeString,
 				Required: true,
+				Description: "The type of Pack. Allowed values are `container`, `helm`, `manifest`, or `operator-instance`.",
 			},
 			"values": {
 				Type:     schema.TypeString,
