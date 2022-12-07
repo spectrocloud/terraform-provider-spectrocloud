@@ -19,6 +19,7 @@ func dataSourcePackSimple() *schema.Resource {
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
+				Description: "The name of the pack.",
 			},
 			"version": {
 				Type:     schema.TypeString,
