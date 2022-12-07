@@ -39,6 +39,7 @@ func dataSourcePackSimple() *schema.Resource {
 			"values": {
 				Type:     schema.TypeString,
 				Computed: true,
+				Description: "This is a stringified YAML object containing the pack configuration details. ",
 			},
 		},
 	}
