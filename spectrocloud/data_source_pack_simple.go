@@ -28,6 +28,7 @@ func dataSourcePackSimple() *schema.Resource {
 			"registry_uid": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Description: "The unique identifier of the registry the pack belongs to.",
 			},
 			"type": {
 				Type:     schema.TypeString,
