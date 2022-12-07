@@ -1,0 +1,136 @@
+package spectrocloud
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+)
+
+func dataSourcePackSimple() *schema.Resource {
+	return &schema.Resource{
+		ReadContext: dataSourcePackReadSimple,
+
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"version": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"registry_uid": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"type": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"values": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+		},
+	}
+}
+
+func dataSourcePackReadSimple(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := m.(*client.V1Client)
+
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
+
+	packName := ""
+	registryUID := ""
+	if v, ok := d.GetOk("type"); ok {
+		if v.(string) == "manifest" {
+			return diags
+		} else {
+			if regUID, ok := d.GetOk("registry_uid"); ok {
+				registryUID = regUID.(string)
+				registry, err := c.GetHelmRegistry(regUID.(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+				if registry.Spec.IsPrivate {
+					return diags
+				}
+			} else {
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Error,
+					Summary:  "No registry uid provided.",
+					Detail:   fmt.Sprintf("Registry uid is required for pack name:%s, type:%s ", d.Get("name").(string), d.Get("type").(string)),
+				})
+				return diags
+			}
+		}
+	}
+
+	if v, ok := d.GetOk("name"); ok {
+
+		/*
+			Cluster profile now supports packs duplication, but pack name has to be unique and will be double dashed
+			and first part would be any random name to make overall pack name unique and 2nd part is actual pack name.
+			Thus, splitting pack name with '--' to get the correct pack name to find pack uuid
+		*/
+		if strings.Contains(v.(string), "--") {
+			v = strings.Split(v.(string), "--")[1]
+		}
+		packName = v.(string)
+	}
+
+	pack, err := c.GetPacksByNameAndRegistry(packName, registryUID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	version := "1.0.0"
+	if v, ok := d.GetOk("version"); ok {
+		version = v.(string)
+	}
+	for _, tag := range pack.Tags {
+		if tag.Version == version {
+			d.SetId(tag.PackUID)
+			err = d.Set("name", pack.Name)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			err = d.Set("version", tag.Version)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			err = d.Set("registry_uid", pack.RegistryUID)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			for _, value := range pack.PackValues {
+				if value.PackUID == tag.PackUID {
+					err = d.Set("values", value.Values)
+					if err != nil {
+						return diag.FromErr(err)
+					}
+					return diags
+				}
+			}
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  "No values for pack found.",
+				Detail:   fmt.Sprintf("Values not found for pack name:%s, version:%s ", d.Get("name").(string), d.Get("version").(string)),
+			})
+			return diags
+		}
+	}
+
+	diags = append(diags, diag.Diagnostic{
+		Severity: diag.Error,
+		Summary:  "No version for pack found.",
+		Detail:   fmt.Sprintf("Version not found for pack name:%s, version:%s ", d.Get("name").(string), d.Get("version").(string)),
+	})
+	return diags
+}
