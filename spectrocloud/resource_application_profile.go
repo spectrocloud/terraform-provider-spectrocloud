@@ -114,7 +114,7 @@ func resourceApplicationProfile() *schema.Resource {
 						},
 						"install_order": {
 							Type:        schema.TypeInt,
-							Description: "The install orders, will line up installation, If there are multiple manifests placed.",
+							Description: "The install orders will line up installation ascending, based on priority values set on multiple tiers",
 							Default:     0,
 							Optional:    true,
 						},
