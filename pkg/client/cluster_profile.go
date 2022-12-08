@@ -124,6 +124,22 @@ func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1P
 	return packs, nil
 }
 
+func (h *V1Client) GetPacksByNameAndRegistry(name string, registryUID string) (*models.V1PackTagEntity, error) {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1PacksNameRegistryUIDListParamsWithContext(h.Ctx).WithPackName(name).WithRegistryUID(registryUID)
+
+	response, err := client.V1PacksNameRegistryUIDList(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Payload, nil
+}
+
 func (h *V1Client) GetPack(uid string) (*models.V1PackTagEntity, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {

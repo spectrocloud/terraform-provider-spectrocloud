@@ -131,7 +131,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_project": dataSourceProject(),
 				"spectrocloud_role":    dataSourceRole(),
 
-				"spectrocloud_pack": dataSourcePack(),
+				"spectrocloud_pack":        dataSourcePack(),
+				"spectrocloud_pack_simple": dataSourcePackSimple(),
 
 				"spectrocloud_cluster_profile": dataSourceClusterProfile(),
 
