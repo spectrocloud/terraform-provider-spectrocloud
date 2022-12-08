@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
@@ -113,6 +112,12 @@ func resourceApplicationProfile() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"install_order": {
+							Type:        schema.TypeInt,
+							Description: "The installation priority order of the app profile. The order of priority goes from lowest number to highest number. For example, a value of `-3` would be installed before an app profile with a higher number value. No upper and lower limits exist, and you may specify positive and negative integers. The default value is `0`. ",
+							Default:     0,
+							Optional:    true,
+						},
 						"manifest": {
 							Type:        schema.TypeList,
 							Optional:    true,
@@ -188,7 +193,7 @@ func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceDat
 	return diags
 }
 
-func resourceApplicationProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceApplicationProfileRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
@@ -223,7 +228,7 @@ func resourceApplicationProfileRead(_ context.Context, d *schema.ResourceData, m
 	if done {
 		return diagnostics
 	}
-	packs, err := flattenAppPacks(c, diagPacks, cp.Spec.Template.AppTiers, tierDetails)
+	packs, err := flattenAppPacks(c, diagPacks, cp.Spec.Template.AppTiers, tierDetails, d, ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -242,27 +247,23 @@ func getAppTiersContent(c *client.V1Client, d *schema.ResourceData) ([]*models.V
 	return tiersDetails, nil, false
 }
 
-func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, tiers []*models.V1AppTierRef, tierDet []*models.V1AppTier) ([]interface{}, error) {
+func getValueInProperties(prop map[string]interface{}, key string) string {
+	for k, v := range prop {
+		if k == key {
+			return v.(string)
+		}
+	}
+	return ""
+}
+
+func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, tiers []*models.V1AppTierRef, tierDet []*models.V1AppTier, d *schema.ResourceData, ctx context.Context) ([]interface{}, error) {
 	if tiers == nil {
 		return make([]interface{}, 0), nil
-	}
-	packManifests := make(map[string]map[string]string)
-	for _, tier := range tierDet {
-		if len(tier.Spec.Manifests) > 0 {
-			c := make(map[string]string)
-			for _, manifest := range tier.Spec.Manifests {
-				c[manifest.Name] = manifest.UID
-			}
-			packManifests[tier.Metadata.UID] = c
-
-		}
-
 	}
 
 	ps := make([]interface{}, len(tiers))
 	for i, tier := range tierDet {
 		p := make(map[string]interface{})
-
 		p["uid"] = tier.Metadata.UID
 		if isRegistryUID(diagPacks, tier.Metadata.Name) {
 			p["registry_uid"] = c.GetPackRegistry(tier.Metadata.UID, string(tier.Spec.Type))
@@ -275,23 +276,40 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 		prop := make(map[string]string)
 		if len(tier.Spec.Properties) > 0 {
 			for _, pt := range tier.Spec.Properties {
-				prop[pt.Name] = pt.Value
+				if pt.Value != "********" {
+					prop[pt.Name] = pt.Value
+				} else {
+					ogProp := d.Get("pack").([]interface{})[i].(map[string]interface{})["properties"]
+					prop[pt.Name] = getValueInProperties(ogProp.(map[string]interface{}), pt.Name)
+				}
+
 			}
 		}
 		p["properties"] = prop
-
-		/*if _, ok := packManifests[tier.UID]; ok {
-			ma := make([]interface{}, len(tier.Manifests))
-			for j, m := range tier.Manifests {
-				mj := make(map[string]interface{})
-				mj["name"] = m.Name
-				mj["uid"] = m.UID
-				mj["content"] = packManifests[tier.PackUID][m.Name]
-				ma[j] = mj
+		if tier.Spec.Type == "container" {
+			p["values"] = tier.Spec.Values
+		}
+		if tier.Spec.Type == "helm" || tier.Spec.Type == "manifest" {
+			if len(tier.Spec.Manifests) > 0 {
+				ma := make([]interface{}, len(tier.Spec.Manifests))
+				for j, m := range tier.Spec.Manifests {
+					mj := make(map[string]interface{})
+					mj["name"] = m.Name
+					mj["uid"] = m.UID
+					cnt, err := c.GetApplicationProfileTierManifestContent(d.Id(), tier.Metadata.UID, m.UID)
+					if err != nil {
+						return nil, err
+					}
+					if cnt != "" {
+						mj["content"] = cnt
+					} else {
+						mj["content"] = ""
+					}
+					ma[j] = mj
+				}
+				p["manifest"] = ma
 			}
-
-			p["manifest"] = ma
-		}*/
+		}
 		ps[i] = p
 	}
 

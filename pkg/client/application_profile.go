@@ -67,6 +67,26 @@ func (h *V1Client) GetApplicationProfileTiers(applicationProfileUID string) ([]*
 	return success.Payload.Spec.AppTiers, nil
 }
 
+func (h *V1Client) GetApplicationProfileTierManifestContent(applicationProfileUID string, tierUID string, manifestUID string) (string, error) {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return "", err
+	}
+	params := &clusterC.V1AppProfilesUIDTiersUIDManifestsUIDGetParams{
+		UID:         applicationProfileUID,
+		TierUID:     tierUID,
+		ManifestUID: manifestUID,
+		Context:     h.Ctx,
+	}
+	success, err := client.V1AppProfilesUIDTiersUIDManifestsUIDGet(params)
+	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
+		return "", nil
+	} else if err != nil {
+		return "", err
+	}
+	return success.Payload.Spec.Published.Content, nil
+}
+
 func (h *V1Client) PatchApplicationProfile(appProfileUID string, metadata *models.V1AppProfileMetaEntity, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
