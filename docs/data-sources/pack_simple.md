@@ -31,7 +31,7 @@ data "spectrocloud_pack_simple" "pack" {
 ### Required
 
 - `name` (String) The name of the pack.
-- `type` (String) The type of Pack. Allowed values are `helm`, `manifest` or `operator-instance`.
+- `type` (String) The type of Pack. Allowed values are `helm`, `manifest`, `container` or `operator-instance`.
 
 ### Optional
 
