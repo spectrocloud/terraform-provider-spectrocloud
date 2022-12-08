@@ -114,7 +114,7 @@ func resourceApplicationProfile() *schema.Resource {
 						},
 						"install_order": {
 							Type:        schema.TypeInt,
-							Description: "The install orders will line up installation ascending, based on priority values set on multiple tiers",
+							Description: "The installation priority order of the app profile. The order of priority goes from lowest number to highest number. For example, a value of `-3` would be installed before an app profile with a higher number value. No upper and lower limits exist, and you may specify positive and negative integers. The default value is `0`. ",
 							Default:     0,
 							Optional:    true,
 						},
