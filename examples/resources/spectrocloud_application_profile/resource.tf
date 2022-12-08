@@ -24,7 +24,7 @@ data "spectrocloud_pack_simple" "minio_pack" {
 }
 
 data "spectrocloud_pack_simple" "container_pack" {
-  type         = "operator-instance"
+  type         = "container"
   name         = "container"
   version      = "1.0.0"
   registry_uid = data.spectrocloud_registry.registry.id
