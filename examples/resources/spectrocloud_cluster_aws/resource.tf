@@ -63,6 +63,11 @@ resource "spectrocloud_cluster_aws" "cluster" {
   }
 
   machine_pool {
+    additional_labels = {
+      "owner" = "siva"
+      "purpose" = "testing"
+      "type" = "master"
+    }
     control_plane           = true
     control_plane_as_worker = true
     name                    = "master-pool"
@@ -70,7 +75,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
     instance_type           = "m4.large"
     disk_size_gb            = 60
     #    Add azs for dynamic provisioning
-    #    azs                     = ["us-east-2a"]
+    # azs           = ["eu-west-1c","eu-west-1a"]
     #     Add az_subnet component for static provisioning
     az_subnets = {
       "eu-west-1c" = join(",", var.subnet_ids_eu_west_1c)
@@ -79,11 +84,16 @@ resource "spectrocloud_cluster_aws" "cluster" {
   }
 
   machine_pool {
+    additional_labels = {
+      "owner" = "siva"
+      "purpose" = "testing"
+      "type" = "worker"
+    }
     name          = "worker-basic"
-    count         = 2
+    count         = 1
     instance_type = "m5.large"
     #    Add azs for dynamic provisioning
-    #    azs           = ["us-east-2a"]
+    # azs           = ["eu-west-1c","eu-west-1a"]
     #    Add az_subnet component for static provisioning
     az_subnets = {
       "eu-west-1c" = "subnet-039c3beb3da69172f"

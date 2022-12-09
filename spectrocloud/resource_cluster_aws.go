@@ -246,6 +246,7 @@ func resourceClusterAws() *schema.Resource {
 						},
 						"capacity_type": {
 							Type:     schema.TypeString,
+							Default:  "on-demand",
 							Optional: true,
 						},
 						"max_price": {
@@ -535,9 +536,10 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
 		}
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
-		oi["azs"] = machinePool.Azs
 		if machinePool.SubnetIds != nil {
 			oi["az_subnets"] = machinePool.SubnetIds
+		} else {
+			oi["azs"] = machinePool.Azs
 		}
 		ois[i] = oi
 	}
