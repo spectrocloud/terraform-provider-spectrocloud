@@ -164,7 +164,7 @@ func toAwsAccount(d *schema.ResourceData) *models.V1AwsAccount {
 			SecretKey: d.Get("aws_secret_key").(string),
 		},
 	}
-	if d.Get("context") != nil || d.Get("context") != "" {
+	if d.Get("context") != nil {
 		ctxAnnotation := map[string]string{
 			"scope": d.Get("context").(string),
 		}
