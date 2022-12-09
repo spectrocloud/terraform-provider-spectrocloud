@@ -67,5 +67,4 @@ func TestToAwsAccountCTXTenantSTS(t *testing.T) {
 	assert.Equal(t, rd.Get("external_id"), acc.Spec.Sts.ExternalID)
 	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
 	assert.Equal(t, rd.Get("type"), string(acc.Spec.CredentialType))
-	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
 }
