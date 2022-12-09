@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
+	hashboardC "github.com/spectrocloud/hapi/hashboard/client/v1"
 	"github.com/spectrocloud/hapi/models"
 
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
@@ -76,25 +77,19 @@ func (h *V1Client) GetClusterProfileManifestPack(clusterProfileUID, packName str
 	return success.Payload.Items, nil
 }
 
-func (h *V1Client) GetClusterProfiles() ([]*models.V1ClusterProfile, error) {
-	client, err := h.GetClusterClient()
+func (h *V1Client) GetClusterProfiles() ([]*models.V1ClusterProfileMetadata, error) {
+	client, err := h.GetHashboard()
 	if err != nil {
 		return nil, err
 	}
 
-	limit := int64(0)
-	params := clusterC.NewV1ClusterProfilesListParamsWithContext(h.Ctx).WithLimit(&limit)
-	response, err := client.V1ClusterProfilesList(params)
+	params := hashboardC.NewV1ClusterProfilesMetadataParamsWithContext(h.Ctx)
+	response, err := client.V1ClusterProfilesMetadata(params)
 	if err != nil {
 		return nil, err
 	}
 
-	profiles := make([]*models.V1ClusterProfile, len(response.Payload.Items))
-	for i, profile := range response.Payload.Items {
-		profiles[i] = profile
-	}
-
-	return profiles, nil
+	return response.Payload.Items, nil
 }
 
 func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1PackSummary, error) {
