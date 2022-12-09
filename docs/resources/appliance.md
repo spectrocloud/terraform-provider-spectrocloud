@@ -14,9 +14,9 @@ description: |-
 
 ```terraform
 resource "spectrocloud_appliance" "appliance" {
-  uid = "nik-libvirt15-mar-20"
-  labels = {
-    "name" = "nik_appliance_name"
+  uid = "test-dec9"
+  tags = {
+    "name" = "appliance_name"
   }
   wait = true
 }
@@ -31,8 +31,8 @@ resource "spectrocloud_appliance" "appliance" {
 
 ### Optional
 
-- `labels` (Map of String)
 - `pairing_key` (String)
+- `tags` (Map of String)
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait` (Boolean)
 

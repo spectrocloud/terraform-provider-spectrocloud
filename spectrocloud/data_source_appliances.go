@@ -22,10 +22,9 @@ func dataSourceAppliances() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"tags": {
-				Type:        schema.TypeSet,
+				Type:        schema.TypeMap,
 				Description: "A list of tags to filter the appliances.",
 				Optional:    true,
-				Set:         schema.HashString,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -36,7 +35,11 @@ func dataSourceAppliances() *schema.Resource {
 
 func dataSourcesApplianceRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	labels := toTags(d)
+
+	var tags map[string]string
+	if d.Get("tags") != nil {
+		tags = expandStringMap(d.Get("tags").(map[string]interface{}))
+	}
 
 	// read all appliances
 	appliances, err := c.GetAppliances()
@@ -46,7 +49,7 @@ func dataSourcesApplianceRead(_ context.Context, d *schema.ResourceData, m inter
 
 	// prepare filter
 	check := func(edgeHostDevice *models.V1EdgeHostDevice) bool {
-		return IsMapSubset(edgeHostDevice.Metadata.Labels, labels)
+		return IsMapSubset(edgeHostDevice.Metadata.Labels, tags)
 	}
 
 	// apply filter
@@ -58,7 +61,7 @@ func dataSourcesApplianceRead(_ context.Context, d *schema.ResourceData, m inter
 		applianceIDs = append(applianceIDs, getEdgeHostDeviceUID(appliance))
 	}
 
-	id := toDatasourcesId("appliance", labels)
+	id := toDatasourcesId("appliance", tags)
 
 	d.SetId(id) //need to set some id
 	err = d.Set("ids", applianceIDs)

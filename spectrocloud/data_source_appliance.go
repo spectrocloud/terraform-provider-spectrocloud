@@ -18,7 +18,7 @@ func dataSourceAppliance() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"labels": {
+			"tags": {
 				Type:     schema.TypeMap,
 				Optional: true,
 				Elem: &schema.Schema{
@@ -38,8 +38,14 @@ func dataSourceApplianceRead(_ context.Context, d *schema.ResourceData, m interf
 			return diag.FromErr(err)
 		}
 		d.SetId(appliance.Metadata.UID)
-		d.Set("name", appliance.Metadata.Name)
-		d.Set("labels", appliance.Metadata.Labels)
+		err = d.Set("name", appliance.Metadata.Name)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		err = d.Set("tags", appliance.Metadata.Labels)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }

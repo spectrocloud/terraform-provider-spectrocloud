@@ -14,8 +14,9 @@ Provides details about for a set of appliances.
 
 ```terraform
 data "spectrocloud_appliances" "appliances" {
-  #tags = ["env:prod", "store:502"]
-  tags = ["env:dev"]
+  tags = {
+    "env" = "dev"
+  }
 }
 
 output "same" {
@@ -29,7 +30,7 @@ output "same" {
 
 ### Optional
 
-- `tags` (Set of String) A list of tags to filter the appliances.
+- `tags` (Map of String) A list of tags to filter the appliances.
 
 ### Read-Only
 
