@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"strings"
 
@@ -131,7 +133,7 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 		ProjectContext = Pcontext.(string)
 	}
 
-	profile, err := c.GetClusterProfile(getProfileUID(profiles, d, version, ProjectContext))
+	profile, err := getProfile(profiles, d, version, ProjectContext, c)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -140,7 +142,7 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  "Unable to find cluster profile",
-			Detail:   "Unable to find the specified cluster profile",
+			Detail:   fmt.Sprintf("Unable to find the specified cluster profile name: %s, version: %s", d.Get("name").(string), version),
 		})
 		return diags
 	}
@@ -190,17 +192,25 @@ func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEn
 	return diagPacks, nil, false
 }
 
-func getProfileUID(profiles []*models.V1ClusterProfile, d *schema.ResourceData, version string, ProfileContext string) string {
+func getProfile(profiles []*models.V1ClusterProfileMetadata, d *schema.ResourceData, version string, ProfileContext string, c *client.V1Client) (*models.V1ClusterProfile, error) {
 	for _, p := range profiles {
 		if v, ok := d.GetOk("id"); ok && v.(string) == p.Metadata.UID {
-			return p.Metadata.UID
+			fullProfile, err := c.GetClusterProfile(p.Metadata.UID)
+			if err != nil {
+				return nil, err
+			}
+			return fullProfile, nil
 		} else if v, ok := d.GetOk("name"); ok && v.(string) == p.Metadata.Name {
 			if p.Spec.Version == version || (p.Spec.Version == "" && version == "1.0.0") {
-				if ProfileContext == p.Metadata.Annotations["scope"] {
-					return p.Metadata.UID
+				fullProfile, err := c.GetClusterProfile(p.Metadata.UID)
+				if err != nil {
+					return nil, err
+				}
+				if ProfileContext == fullProfile.Metadata.Annotations["scope"] {
+					return fullProfile, nil
 				}
 			}
 		}
 	}
-	return ""
+	return nil, errors.New(fmt.Sprintf("Cluster profile not found name: %s, version: %s, context: %s", d.Get("name").(string), version, ProfileContext))
 }
