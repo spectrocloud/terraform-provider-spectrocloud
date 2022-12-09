@@ -102,7 +102,9 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 	if err := d.Set("type", string(account.Spec.CredentialType)); err != nil {
 		return diag.FromErr(err)
 	}
-
+	if err := d.Set("context", account.Metadata.Annotations["scope"]); err != nil {
+		return diag.FromErr(err)
+	}
 	if account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 		if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
 			return diag.FromErr(err)
@@ -161,6 +163,12 @@ func toAwsAccount(d *schema.ResourceData) *models.V1AwsAccount {
 			AccessKey: d.Get("aws_access_key").(string),
 			SecretKey: d.Get("aws_secret_key").(string),
 		},
+	}
+	if d.Get("context") != nil || d.Get("context") != "" {
+		ctxAnnotation := map[string]string{
+			"scope": d.Get("context").(string),
+		}
+		account.Metadata.Annotations = ctxAnnotation
 	}
 	if len(d.Get("type").(string)) == 0 || d.Get("type").(string) == "secret" {
 		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret
