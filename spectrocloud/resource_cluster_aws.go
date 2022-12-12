@@ -578,8 +578,8 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 			name := machinePoolResource["name"].(string)
 			if name != "" {
 				hash := resourceMachinePoolAwsHash(machinePoolResource)
-
-				machinePool := toMachinePoolAws(machinePoolResource)
+				vpcId := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})["vpc_id"]
+				machinePool := toMachinePoolAws(machinePoolResource, vpcId.(string))
 
 				var err error
 				if oldMachinePool, ok := osMap[name]; !ok {
@@ -649,7 +649,7 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AwsMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolAws(machinePool)
+		mp := toMachinePoolAws(machinePool, cluster.Spec.CloudConfig.VpcID)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -659,7 +659,7 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 	return cluster
 }
 
-func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEntity {
+func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachinePoolConfigEntity {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -675,7 +675,7 @@ func toMachinePoolAws(machinePool interface{}) *models.V1AwsMachinePoolConfigEnt
 		capacityType = m["capacity_type"].(string)
 	}
 	azSubnetsConfigs := make([]*models.V1AwsSubnetEntity, 0)
-	if m["az_subnets"] != nil && len(m["az_subnets"].(map[string]interface{})) > 0 {
+	if m["az_subnets"] != nil && len(m["az_subnets"].(map[string]interface{})) > 0 && vpcId != "" {
 		for key, azSubnet := range m["az_subnets"].(map[string]interface{}) {
 			azs = append(azs, key)
 			azSubnetsConfigs = append(azSubnetsConfigs, &models.V1AwsSubnetEntity{
