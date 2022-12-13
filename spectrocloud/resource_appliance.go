@@ -34,7 +34,7 @@ func resourceAppliance() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"labels": {
+			"tags": {
 				Type:     schema.TypeMap,
 				Optional: true,
 				Elem: &schema.Schema{
@@ -55,7 +55,7 @@ func resourceAppliance() *schema.Resource {
 }
 
 /*
-{"metadata":{"name":"test_id","uid":"test_id","labels":{"name":"test_tag"}}}
+{"metadata":{"name":"test_id","uid":"test_id","tags":{"name":"test_tag"}}}
 */
 var resourceApplianceCreatePendingStates = []string{
 	"unpaired_", "ready_",
@@ -154,17 +154,15 @@ func resourceApplianceDelete(ctx context.Context, d *schema.ResourceData, m inte
 
 func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 	id := d.Get("uid").(string)
-	labels := map[string]string{}
-	if d.Get("labels") != nil {
-		for k, val := range d.Get("labels").(map[string]interface{}) {
-			labels[k] = val.(string)
-		}
+	tags := map[string]string{}
+	if d.Get("tags") != nil {
+		tags = expandStringMap(d.Get("tags").(map[string]interface{}))
 	}
 
 	metadata := &models.V1ObjectTagsEntity{
 		UID:    id,
 		Name:   id,
-		Labels: labels,
+		Labels: tags,
 	}
 
 	key := ""
@@ -181,10 +179,10 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 
 func toAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
 
-	if d.Get("labels") != nil {
-		labels := d.Get("labels").(map[string]interface{})
+	if d.Get("tags") != nil {
+		tags := d.Get("tags").(map[string]interface{})
 
-		appliance := SetFields(d, labels)
+		appliance := SetFields(d, tags)
 
 		return &appliance
 	}
@@ -193,21 +191,13 @@ func toAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
 
 }
 
-func SetFields(d *schema.ResourceData, labels map[string]interface{}) models.V1EdgeHostDevice {
+func SetFields(d *schema.ResourceData, tags map[string]interface{}) models.V1EdgeHostDevice {
 	appliance := models.V1EdgeHostDevice{}
 	appliance.Metadata = &models.V1ObjectMeta{}
 	appliance.Metadata.UID = d.Id()
-	if labels["name"] != nil {
-		appliance.Metadata.Name = labels["name"].(string)
+	if tags["name"] != nil {
+		appliance.Metadata.Name = tags["name"].(string)
 	}
-	appliance.Metadata.Labels = getLabels(labels)
+	appliance.Metadata.Labels = expandStringMap(tags)
 	return appliance
-}
-
-func getLabels(labels map[string]interface{}) map[string]string {
-	labelsStr := map[string]string{}
-	for k, v := range labels {
-		labelsStr[k] = v.(string)
-	}
-	return labelsStr
 }
