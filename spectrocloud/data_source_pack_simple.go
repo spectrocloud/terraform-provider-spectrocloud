@@ -35,8 +35,8 @@ func dataSourcePackSimple() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Required:     true,
-				ValidateFunc: validation.StringInSlice([]string{"helm", "manifest", "operator-instance"}, false),
-				Description:  "The type of Pack. Allowed values are `helm`, `manifest` or `operator-instance`.",
+				ValidateFunc: validation.StringInSlice([]string{"helm", "manifest", "container", "operator-instance"}, false),
+				Description:  "The type of Pack. Allowed values are `helm`, `manifest`, `container` or `operator-instance`.",
 			},
 			"values": {
 				Type:        schema.TypeString,

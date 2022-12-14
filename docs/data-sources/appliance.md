@@ -14,7 +14,7 @@ description: |-
 
 ```terraform
 data "spectrocloud_appliance" "test_appliance" {
-  name = "nik-test-1"
+  name = "dev_502"
 }
 
 output "same" {
@@ -31,7 +31,7 @@ output "same" {
 
 ### Optional
 
-- `labels` (Map of String)
+- `tags` (Map of String)
 
 ### Read-Only
 

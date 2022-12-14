@@ -1,6 +1,7 @@
 data "spectrocloud_appliances" "appliances" {
-  #tags = ["env:prod", "store:502"]
-  tags = ["env:dev"]
+  tags = {
+    "env" = "dev"
+  }
 }
 
 output "same" {
