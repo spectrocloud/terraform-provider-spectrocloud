@@ -1,0 +1,49 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+## Example Usage
+
+
+### Virtual cluster deployment with host cluster and optional cluster group.
+
+```hcl
+resource "spectrocloud_virtual_cluster" "cluster" {
+  name = "virtual-cluster-demo"
+
+  host_cluster_uid = var.host_cluster_uid
+  # cluster_group_uid = var.cluster_group_uid
+
+  resources {
+    max_cpu       = 6
+    max_mem_in_mb = 6000
+    min_cpu       = 0
+    min_mem_in_mb = 0
+  }
+
+  # cluster_profile {
+  #   id = spectrocloud_cluster_profile.profile.id
+  # }
+
+  # optional virtual cluster config
+  # cloud_config {
+  #   chart_name = var.chart_name
+  #   chart_repo = var.chart_repo
+  #   chart_version = var.chart_version
+  #   chart_values = var.chart_values
+  #   k8s_version = var.k8s_version
+  # }
+
+}
+   
+```
+
+
+{{ .SchemaMarkdown | trimspace }}
