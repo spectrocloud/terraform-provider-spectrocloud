@@ -19,6 +19,7 @@ func resourceClusterVirtual() *schema.Resource {
 		CreateContext: resourceClusterVirtualCreate,
 		ReadContext:   resourceClusterVirtualRead,
 		UpdateContext: resourceClusterVirtualUpdate,
+		Description: "A resource to manage a Palette Virtual Cluster.",
 		DeleteContext: resourceClusterDelete,
 
 		Timeouts: &schema.ResourceTimeout{
