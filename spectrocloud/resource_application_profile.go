@@ -68,7 +68,6 @@ func resourceApplicationProfile() *schema.Resource {
 				Default:     "all",
 				Description: "The cloud provider the profile is eligible for. Default value is `all`.",
 				Optional:    true,
-				ForceNew:    true,
 			},
 			"pack": {
 				Type:        schema.TypeList,
