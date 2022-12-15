@@ -121,7 +121,7 @@ resource "spectrocloud_cluster_aks" "cluster" {
 - `cloud_config_id` (String)
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String)
-- `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
+- `location_config` (List of Object) (see [below for nested schema](#nestedatt--location_config))
 
 <a id="nestedblock--cloud_config"></a>
 ### Nested Schema for `cloud_config`
@@ -308,7 +308,7 @@ Optional:
 - `update` (String)
 
 
-<a id="nestedblock--location_config"></a>
+<a id="nestedatt--location_config"></a>
 ### Nested Schema for `location_config`
 
 Read-Only:

@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/hapi v1.14.1-0.20221113161733-44e4aa57533e
+	github.com/spectrocloud/hapi v1.14.1-0.20221207125041-e32a92e03569
 	github.com/stretchr/testify v1.7.2
 )
 

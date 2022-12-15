@@ -1,0 +1,36 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+## Example Usage
+
+
+### Application deployment into Cluster Group.
+
+```hcl
+resource "spectrocloud_application" "application" {
+  name                    = "app-beru-whitesun-lars"
+  application_profile_uid = data.spectrocloud_application_profile.id
+
+  config {
+    cluster_name      = "sandbox-scorpius"
+    cluster_group_uid = "6358d799fad5aa39fa26a8c2" # or data.spectrocloud_cluster_group.id
+    limits {
+      cpu     = 2
+      memory  = 4096
+      storage = 10
+    }
+  }
+}
+   
+```
+
+
+{{ .SchemaMarkdown | trimspace }}

@@ -1,4 +1,4 @@
-package test
+package spectrocloud
 
 import "testing"
 

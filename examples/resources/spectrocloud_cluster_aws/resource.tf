@@ -64,9 +64,9 @@ resource "spectrocloud_cluster_aws" "cluster" {
 
   machine_pool {
     additional_labels = {
-      "owner" = "siva"
+      "owner"   = "siva"
       "purpose" = "testing"
-      "type" = "master"
+      "type"    = "master"
     }
     control_plane           = true
     control_plane_as_worker = true
@@ -85,9 +85,9 @@ resource "spectrocloud_cluster_aws" "cluster" {
 
   machine_pool {
     additional_labels = {
-      "owner" = "siva"
+      "owner"   = "siva"
       "purpose" = "testing"
-      "type" = "worker"
+      "type"    = "worker"
     }
     name          = "worker-basic"
     count         = 1

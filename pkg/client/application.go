@@ -43,14 +43,14 @@ func (h *V1Client) CreateApplicationWithNewSandboxCluster(body *models.V1AppDepl
 	return *success.Payload.UID, nil
 }
 
-func (h *V1Client) CreateApplicationWithExistingSandboxCluster(body *models.V1AppDeploymentNestedClusterEntity) (string, error) {
+func (h *V1Client) CreateApplicationWithExistingSandboxCluster(body *models.V1AppDeploymentVirtualClusterEntity) (string, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1AppDeploymentsNestedClusterCreateParams().WithContext(h.Ctx).WithBody(body)
-	success, err := client.V1AppDeploymentsNestedClusterCreate(params)
+	params := clusterC.NewV1AppDeploymentsVirtualClusterCreateParams().WithContext(h.Ctx).WithBody(body)
+	success, err := client.V1AppDeploymentsVirtualClusterCreate(params)
 
 	if err != nil {
 		return "", err

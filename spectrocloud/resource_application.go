@@ -129,7 +129,7 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 	} else {
-		application := toAppDeploymentNestedClusterEntity(d)
+		application := toAppDeploymentVirtualClusterEntity(d)
 
 		/*diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c)
 		if isError {

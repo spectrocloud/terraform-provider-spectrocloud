@@ -7,14 +7,14 @@ import (
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 )
 
-func (h *V1Client) CreateClusterNested(cluster *models.V1SpectroNestedClusterEntity) (string, error) {
+func (h *V1Client) CreateClusterVirtual(cluster *models.V1SpectroVirtualClusterEntity) (string, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
 	}
 
-	params := clusterC.NewV1SpectroClustersNestedCreateParamsWithContext(h.Ctx).WithBody(cluster)
-	success, err := client.V1SpectroClustersNestedCreate(params)
+	params := clusterC.NewV1SpectroClustersVirtualCreateParamsWithContext(h.Ctx).WithBody(cluster)
+	success, err := client.V1SpectroClustersVirtualCreate(params)
 	if err != nil {
 		return "", err
 	}
@@ -22,49 +22,49 @@ func (h *V1Client) CreateClusterNested(cluster *models.V1SpectroNestedClusterEnt
 	return *success.Payload.UID, nil
 }
 
-func (h *V1Client) CreateMachinePoolNested(cloudConfigId string, machinePool *models.V1NestedMachinePoolConfigEntity) error {
+func (h *V1Client) CreateMachinePoolVirtual(cloudConfigId string, machinePool *models.V1VirtualMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsNestedMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
-	_, err = client.V1CloudConfigsNestedMachinePoolCreate(params)
+	params := clusterC.NewV1CloudConfigsVirtualMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
+	_, err = client.V1CloudConfigsVirtualMachinePoolCreate(params)
 	return err
 }
 
-func (h *V1Client) UpdateMachinePoolNested(cloudConfigId string, machinePool *models.V1NestedMachinePoolConfigEntity) error {
+func (h *V1Client) UpdateMachinePoolVirtual(cloudConfigId string, machinePool *models.V1VirtualMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsNestedMachinePoolUpdateParamsWithContext(h.Ctx).
+	params := clusterC.NewV1CloudConfigsVirtualMachinePoolUpdateParamsWithContext(h.Ctx).
 		WithConfigUID(cloudConfigId).
 		WithBody(machinePool)
-	_, err = client.V1CloudConfigsNestedMachinePoolUpdate(params)
+	_, err = client.V1CloudConfigsVirtualMachinePoolUpdate(params)
 	return err
 }
 
-func (h *V1Client) DeleteMachinePoolNested(cloudConfigId string, machinePoolName string) error {
+func (h *V1Client) DeleteMachinePoolVirtual(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1CloudConfigsNestedMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
-	_, err = client.V1CloudConfigsNestedMachinePoolDelete(params)
+	params := clusterC.NewV1CloudConfigsVirtualMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
+	_, err = client.V1CloudConfigsVirtualMachinePoolDelete(params)
 	return err
 }
 
-func (h *V1Client) GetCloudConfigNested(configUID string) (*models.V1NestedCloudConfig, error) {
+func (h *V1Client) GetCloudConfigVirtual(configUID string) (*models.V1VirtualCloudConfig, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1CloudConfigsNestedGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
-	success, err := client.V1CloudConfigsNestedGet(params)
+	params := clusterC.NewV1CloudConfigsVirtualGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
+	success, err := client.V1CloudConfigsVirtualGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		return nil, nil
 	} else if err != nil {

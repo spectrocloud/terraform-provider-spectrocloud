@@ -14,11 +14,12 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
-func resourceClusterNested() *schema.Resource {
+func resourceClusterVirtual() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceClusterNestedCreate,
-		ReadContext:   resourceClusterNestedRead,
-		UpdateContext: resourceClusterNestedUpdate,
+		CreateContext: resourceClusterVirtualCreate,
+		ReadContext:   resourceClusterVirtualRead,
+		UpdateContext: resourceClusterVirtualUpdate,
+		Description: "A resource to manage a Palette Virtual Cluster.",
 		DeleteContext: resourceClusterDelete,
 
 		Timeouts: &schema.ResourceTimeout{
@@ -360,15 +361,15 @@ func resourceClusterNested() *schema.Resource {
 	}
 }
 
-func resourceClusterNestedCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toNestedCluster(c, d)
+	cluster := toVirtualCluster(c, d)
 
-	uid, err := c.CreateClusterNested(cluster)
+	uid, err := c.CreateClusterVirtual(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -378,13 +379,13 @@ func resourceClusterNestedCreate(ctx context.Context, d *schema.ResourceData, m 
 		return diagnostics
 	}
 
-	resourceClusterNestedRead(ctx, d, m)
+	resourceClusterVirtualRead(ctx, d, m)
 
 	return diags
 }
 
 //goland:noinspection GoUnhandledErrorResult
-func resourceClusterNestedRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
@@ -405,10 +406,10 @@ func resourceClusterNestedRead(_ context.Context, d *schema.ResourceData, m inte
 		return diagnostics
 	}
 
-	return flattenCloudConfigNested(cluster.Spec.CloudConfigRef.UID, d, c)
+	return flattenCloudConfigVirtual(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
-func flattenCloudConfigNested(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+func flattenCloudConfigVirtual(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	err := d.Set("cloud_config_id", configUID)
 	if err != nil {
 		return diag.FromErr(err)
@@ -417,7 +418,7 @@ func flattenCloudConfigNested(configUID string, d *schema.ResourceData, c *clien
 	return diag.Diagnostics{}
 }
 
-func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
@@ -446,17 +447,17 @@ func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolNestedHash(machinePoolResource)
+			hash := resourceMachinePoolVirtualHash(machinePoolResource)
 
-			machinePool := toMachinePoolNested(machinePoolResource)
+			machinePool := toMachinePoolVirtual(machinePoolResource)
 
 			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolNested(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolNestedHash(oldMachinePool) {
+				err = c.CreateMachinePoolVirtual(cloudConfigId, machinePool)
+			} else if hash != resourceMachinePoolVirtualHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolNested(cloudConfigId, machinePool)
+				err = c.UpdateMachinePoolVirtual(cloudConfigId, machinePool)
 			}
 			if err != nil {
 				return diag.FromErr(err)
@@ -471,7 +472,7 @@ func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m 
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolNested(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolVirtual(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -482,12 +483,12 @@ func resourceClusterNestedUpdate(ctx context.Context, d *schema.ResourceData, m 
 		return diagnostics
 	}
 
-	resourceClusterNestedRead(ctx, d, m)
+	resourceClusterVirtualRead(ctx, d, m)
 
 	return diags
 }
 
-func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroNestedClusterEntity {
+func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroVirtualClusterEntity {
 	// parse host cluster / cluster group uid
 	hostClusterUid := d.Get("host_cluster_uid").(string)
 	clusterGroupUid := d.Get("cluster_group_uid").(string)
@@ -505,14 +506,14 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 	}
 
 	// init cluster
-	cluster := &models.V1SpectroNestedClusterEntity{
+	cluster := &models.V1SpectroVirtualClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1SpectroNestedClusterEntitySpec{
-			CloudConfig: &models.V1NestedClusterConfig{
+		Spec: &models.V1SpectroVirtualClusterEntitySpec{
+			CloudConfig: &models.V1VirtualClusterConfig{
 				HelmRelease: &models.V1VirtualClusterHelmRelease{
 					Chart: &models.V1VirtualClusterHelmChart{
 						Name:    chartName,
@@ -540,11 +541,11 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 	}
 
 	// init cluster resources (machinepool)
-	machinePoolConfigs := make([]*models.V1NestedMachinePoolConfigEntity, 0)
+	machinePoolConfigs := make([]*models.V1VirtualMachinePoolConfigEntity, 0)
 	resourcesObj, ok := d.GetOk("resources")
 	if ok {
 		resources := resourcesObj.([]interface{})[0].(map[string]interface{})
-		mp := toMachinePoolNested(resources)
+		mp := toMachinePoolVirtual(resources)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
@@ -552,7 +553,7 @@ func toNestedCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spect
 	return cluster
 }
 
-func toMachinePoolNested(resources map[string]interface{}) *models.V1NestedMachinePoolConfigEntity {
+func toMachinePoolVirtual(resources map[string]interface{}) *models.V1VirtualMachinePoolConfigEntity {
 	maxCpu := resources["max_cpu"].(int)
 	maxMemInMb := resources["max_mem_in_mb"].(int)
 	maxStorageInGb := resources["max_storage_in_gb"].(int)
@@ -560,9 +561,9 @@ func toMachinePoolNested(resources map[string]interface{}) *models.V1NestedMachi
 	minMemInMb := resources["min_mem_in_mb"].(int)
 	minStorageInGb := resources["min_storage_in_gb"].(int)
 
-	mp := &models.V1NestedMachinePoolConfigEntity{
-		CloudConfig: &models.V1NestedMachinePoolCloudConfigEntity{
-			InstanceType: &models.V1NestedInstanceType{
+	mp := &models.V1VirtualMachinePoolConfigEntity{
+		CloudConfig: &models.V1VirtualMachinePoolCloudConfigEntity{
+			InstanceType: &models.V1VirtualInstanceType{
 				MaxCPU:        int32(maxCpu),
 				MaxMemInMiB:   int32(maxMemInMb),
 				MaxStorageGiB: int32(maxStorageInGb),
