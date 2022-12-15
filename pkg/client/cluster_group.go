@@ -7,13 +7,28 @@ import (
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 )
 
+func (h *V1Client) CreateClusterGroup(cluster *models.V1ClusterGroupEntity) (string, error) {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return "", err
+	}
+
+	params := clusterC.NewV1ClusterGroupsCreateParams().WithBody(cluster)
+	success, err := client.V1ClusterGroupsCreate(params)
+	if err != nil {
+		return "", err
+	}
+
+	return *success.Payload.UID, nil
+}
+
 func (h *V1Client) DeleteClusterGroup(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil
 	}
 
-	params := clusterC.NewV1ClusterGroupsUIDDeleteParamsWithContext(h.Ctx).WithUID(uid)
+	params := clusterC.NewV1ClusterGroupsUIDDeleteParams().WithUID(uid)
 	_, err = client.V1ClusterGroupsUIDDelete(params)
 	return err
 }
@@ -37,7 +52,7 @@ func (h *V1Client) GetClusterGroupWithoutStatus(uid string) (*models.V1ClusterGr
 		return nil, err
 	}
 
-	params := clusterC.NewV1ClusterGroupsUIDGetParamsWithContext(h.Ctx).WithUID(uid)
+	params := clusterC.NewV1ClusterGroupsUIDGetParams().WithUID(uid)
 	success, err := client.V1ClusterGroupsUIDGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		return nil, nil
