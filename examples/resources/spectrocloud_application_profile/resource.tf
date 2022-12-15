@@ -65,7 +65,7 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
     source_app_tier = data.spectrocloud_pack_simple.container_pack.id
     values          = <<-EOT
         containerService:
-            serviceName: "spectro-system-appdeployment-tiername-svc"
+            serviceName: "{{.spectro.system.appdeployment.tiername}}-svc"
             registryUrl: ""
             image: alphine
             access: public
@@ -83,7 +83,7 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
             volumeName: TestVolume
             volumeSize: 10
             pathToMount: /pack/
-          EOT
+    EOT
   }
   # Sample Helm Tier
   pack {
@@ -94,39 +94,39 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
     manifest {
       name    = "kafka"
       content = <<-EOT
-                annotations:
-                  category: Infrastructure
-                apiVersion: v2
-                appVersion: 3.3.1
-                dependencies:
-                  - condition: zookeeper.enabled
-                    name: zookeeper
-                    repository: https://charts.bitnami.com/bitnami
-                    version: 11.x.x
-                  - name: common
-                    repository: https://charts.bitnami.com/bitnami
-                    tags:
-                      - bitnami-common
-                    version: 2.x.x
-                description: Apache Kafka is a distributed streaming platform designed to build real-time pipelines and can be used as a message broker or as a replacement for a log aggregation solution for big data applications.
-                engine: gotpl
-                home: https://github.com/bitnami/charts/tree/main/bitnami/kafka
-                icon: https://bitnami.com/assets/stacks/kafka/img/kafka-stack-220x234.png
-                keywords:
-                  - kafka
-                  - zookeeper
-                  - streaming
-                  - producer
-                  - consumer
-                maintainers:
-                  - name: Bitnami
-                    url: https://github.com/bitnami/charts
-                name: kafka
-                sources:
-                  - https://github.com/bitnami/containers/tree/main/bitnami/kafka
-                  - https://kafka.apache.org/
-                version: 20.0.0
-            EOT
+          annotations:
+            category: Infrastructure
+          apiVersion: v2
+          appVersion: 3.3.1
+          dependencies:
+            - condition: zookeeper.enabled
+              name: zookeeper
+              repository: https://charts.bitnami.com/bitnami
+              version: 11.x.x
+            - name: common
+              repository: https://charts.bitnami.com/bitnami
+              tags:
+                - bitnami-common
+              version: 2.x.x
+          description: Apache Kafka is a distributed streaming platform designed to build real-time pipelines and can be used as a message broker or as a replacement for a log aggregation solution for big data applications.
+          engine: gotpl
+          home: https://github.com/bitnami/charts/tree/main/bitnami/kafka
+          icon: https://bitnami.com/assets/stacks/kafka/img/kafka-stack-220x234.png
+          keywords:
+            - kafka
+            - zookeeper
+            - streaming
+            - producer
+            - consumer
+          maintainers:
+            - name: Bitnami
+              url: https://github.com/bitnami/charts
+          name: kafka
+          sources:
+            - https://github.com/bitnami/containers/tree/main/bitnami/kafka
+            - https://kafka.apache.org/
+          version: 20.0.0
+      EOT
     }
   }
   # Sample Manifest Tier
@@ -137,28 +137,28 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
     manifest {
       name    = "test-manifest-3"
       content = <<-EOT
-                apiVersion: apps/v1
-                kind: Deployment
-                metadata:
-                  name: nginx-deployment
-                  labels:
-                    app: nginx
-                spec:
-                  replicas: 3
-                  selector:
-                    matchLabels:
-                      app: nginx
-                  template:
-                    metadata:
-                      labels:
-                        app: nginx
-                    spec:
-                      containers:
-                        - name: nginx
-                          image: nginx:1.14.2
-                          ports:
-                            - containerPort: 80
-            EOT
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: nginx-deployment
+            labels:
+              app: nginx
+          spec:
+            replicas: 3
+            selector:
+              matchLabels:
+                app: nginx
+            template:
+              metadata:
+                labels:
+                  app: nginx
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx:1.14.2
+                    ports:
+                      - containerPort: 80
+      EOT
     }
   }
   # Sample Operator-Instance Tier's
