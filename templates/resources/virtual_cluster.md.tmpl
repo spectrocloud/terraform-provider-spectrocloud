@@ -12,7 +12,8 @@ description: |-
 ## Example Usage
 
 
-### Virtual cluster deployment with host cluster and optional cluster group.
+### Virtual Cluster Deployment 
+An example of a Palette Virtual Cluster with a host and optional cluster group.
 
 ```hcl
 resource "spectrocloud_virtual_cluster" "cluster" {
