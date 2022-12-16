@@ -8,7 +8,7 @@ End-to-end example of provisioning a Palette Virtual Cluster with all of its dep
 
 Clone this repository to a local directory, and then change the directory to `examples/e2e/virtual`. Proceed with the following steps:
 1. Provision a host cluster. This is a prerequisite before using a Palette Virtual Cluster. 
-To achieve it add host configuration block to existing cluster or provision it from scratch using one of existing examples:
+To create a virtual cluster, either add a host configuration block to an existing host cluster or provision a new host cluster from scratch using one of the existing examples:
 <pre>
   host_config {
     host_endpoint_type = "LoadBalancer" 
