@@ -17,7 +17,7 @@ To achieve it add host configuration block to existing cluster or provision it f
 </pre>
 2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file with the name `terraform.tfvars`.
 3. Specify and update all the placeholder values in the `terraform.tfvars` file.
-4. Initialize and run terraform: `terraform init && terraform apply`.
+4. Initialize Terraform and invoke the deployment with the following command: `terraform init && terraform apply --auto-approve`.
 5. Wait for the cluster creation to finish.
 
 Once the cluster is provisioned, the cluster _kubeconfig_ file is exported in the current working directly.
