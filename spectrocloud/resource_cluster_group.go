@@ -99,7 +99,7 @@ func resourceClusterGroup() *schema.Resource {
 						"cluster_uid": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "UID of the cluster.",
+							Description: "The UID of the host cluster.",
 						},
 						"host": {
 							Type:        schema.TypeString,
