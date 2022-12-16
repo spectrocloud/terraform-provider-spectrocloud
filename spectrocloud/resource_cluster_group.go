@@ -76,7 +76,7 @@ func resourceClusterGroup() *schema.Resource {
 						"storage_in_gb": {
 							Type:        schema.TypeInt,
 							Optional:    true,
-							Description: "Storage limit in GB.",
+							Description: "The storage limit in gigabytes (GB).",
 						},
 						"oversubscription_percent": {
 							Type:        schema.TypeInt,
