@@ -15,7 +15,7 @@ To achieve it add host configuration block to existing cluster or provision it f
     ingress_host       = "*.dev.spectrocloud.com"
   }
 </pre>
-2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file `terraform.tfvars`.
+2. From the current directory, copy the template variable file `terraform.template.tfvars` to a new file with the name `terraform.tfvars`.
 3. Specify and update all the placeholder values in the `terraform.tfvars` file.
 4. Initialize and run terraform: `terraform init && terraform apply`.
 5. Wait for the cluster creation to finish.
