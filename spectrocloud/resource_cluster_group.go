@@ -81,7 +81,7 @@ func resourceClusterGroup() *schema.Resource {
 						"oversubscription_percent": {
 							Type:        schema.TypeInt,
 							Optional:    true,
-							Description: "Resource oversubscription percentage.",
+							Description: "The allowed oversubscription percentage.",
 						},
 						"values": {
 							Type:     schema.TypeString,
