@@ -104,7 +104,7 @@ func resourceClusterGroup() *schema.Resource {
 						"host": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "Host string in the cluster. I.e. *.dev or *.",
+							Description: "The host DNS wildcard for the cluster. i.e. `*.dev` or `*test.com`",
 						},
 					},
 				},
