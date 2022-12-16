@@ -6,7 +6,7 @@ End-to-end example of provisioning a Palette Virtual Cluster with all of its dep
 
 ## Instructions:
 
-Clone this repository to a local directory, and then change directory to `examples/e2e/virtual`. Proceed with the following:
+Clone this repository to a local directory, and then change the directory to `examples/e2e/virtual`. Proceed with the following steps:
 1. Provision host cluster as a prerequisite to use virtual cluster. 
 To achieve it add host configuration block to existing cluster or provision it from scratch using one of existing examples:
 <pre>
