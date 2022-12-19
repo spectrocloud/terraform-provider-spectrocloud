@@ -34,7 +34,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
 
   cloud_config {
     ssh_key_name = "default"
-    region       = "us-west-2"
+    region       = "eu-west-1"
   }
 
   cluster_profile {
@@ -79,10 +79,12 @@ resource "spectrocloud_cluster_eks" "cluster" {
 
   machine_pool {
     name          = "worker-basic"
-    count         = 1
-    instance_type = "t3.large"
+    count         = 4
+    instance_type = "t3.xlarge"
+    capacity_type = "spot"
+    disk_size_gb  = 60
     az_subnets = {
-      "us-west-2a" = "subnet-0d4978ddbff16c"
+      "eu-west-1a" = "subnet-0d4978ddbff16c"
     }
   }
 

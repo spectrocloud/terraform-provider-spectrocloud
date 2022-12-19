@@ -302,9 +302,10 @@ func resourceClusterEks() *schema.Resource {
 							Required: true,
 						},
 						"capacity_type": {
-							Type:     schema.TypeString,
-							Default:  "on-demand",
-							Optional: true,
+							Type:         schema.TypeString,
+							Default:      "on-demand",
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"on-demand", "spot"}, false),
 						},
 						"max_price": {
 							Type:     schema.TypeString,
