@@ -6,9 +6,9 @@ resource "spectrocloud_application" "application" {
     cluster_name      = "sandbox-scorpius"
     cluster_group_uid = "6358d799fad5aa39fa26a8c2" # data.spectrocloud_cluster_group.id
     limits {
-      cpu     = 2
+      cpu     = 3
       memory  = 4096
-      storage = 10
+      storage = 3
     }
   }
 }
