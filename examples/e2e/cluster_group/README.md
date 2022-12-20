@@ -20,7 +20,7 @@ To create a virtual cluster group, either add a host configuration block to an e
 4. Initialize Terraform and invoke the deployment with the following command: `terraform init && terraform apply --auto-approve`.
 5. Wait for the cluster group creation to finish.
 
-## Cleanup:
+## Clean up:
 
 Run the destroy operation:
 
