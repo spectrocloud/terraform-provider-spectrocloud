@@ -69,7 +69,7 @@ func resourceClusterGroup() *schema.Resource {
 						"memory_in_mb": {
 							Type:        schema.TypeInt,
 							Optional:    true,
-							Description: "Memory limit in MB.",
+							Description: "The memory limit in megabytes (MB).",
 						},
 						"storage_in_gb": {
 							Type:        schema.TypeInt,
