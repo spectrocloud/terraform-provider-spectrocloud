@@ -52,7 +52,7 @@ resource "spectrocloud_cluster_group" "cg" {
 ### Optional
 
 - `clusters` (Block List) (see [below for nested schema](#nestedblock--clusters))
-- `context` (String) Cluster group context can be 'project' or 'tenant'. Defaults to 'project'.
+- `context` (String) The context of the Cluster group. Allowed values are 'project' or 'tenant'. Defaults to 'tenant'.
 - `tags` (Set of String) A list of tags to be applied to the cluster group. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
@@ -65,9 +65,9 @@ resource "spectrocloud_cluster_group" "cg" {
 
 Optional:
 
-- `cpu_millicore` (Number) CPU limit in millicores.
-- `host_endpoint_type` (String) Host endpoint type can be 'Ingress' or 'LoadBalancer'. Defaults to 'Ingress'.
-- `memory_in_mb` (Number) Memory limit in MB.
+- `cpu_millicore` (Number) The CPU limit in millicores.
+- `host_endpoint_type` (String) The host endpoint type. Allowed values are 'Ingress' or 'LoadBalancer'. Defaults to 'Ingress'.
+- `memory_in_mb` (Number) The memory limit in megabytes (MB).
 - `oversubscription_percent` (Number) The allowed oversubscription percentage.
 - `storage_in_gb` (Number) The storage limit in gigabytes (GB).
 - `values` (String)
