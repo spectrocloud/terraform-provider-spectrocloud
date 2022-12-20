@@ -37,7 +37,7 @@ func resourceClusterGroup() *schema.Resource {
 				Optional:     true,
 				Default:      "tenant",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description:  "Cluster group context can be 'project' or 'tenant'. Defaults to 'project'.",
+				Description:  "The context of the Cluster group. Allowed values are 'project' or 'tenant'. Defaults to 'tenant'.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
