@@ -51,7 +51,7 @@ resource "spectrocloud_cluster_group" "cg" {
 
 ### Optional
 
-- `clusters` (Block List) (see [below for nested schema](#nestedblock--clusters))
+- `clusters` (Block List) A list of clusters to include in the cluster group. (see [below for nested schema](#nestedblock--clusters))
 - `context` (String) The context of the Cluster group. Allowed values are 'project' or 'tenant'. Defaults to 'tenant'.
 - `tags` (Set of String) A list of tags to be applied to the cluster group. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
