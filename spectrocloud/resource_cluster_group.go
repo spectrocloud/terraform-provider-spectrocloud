@@ -59,7 +59,7 @@ func resourceClusterGroup() *schema.Resource {
 							Optional:     true,
 							Default:      "Ingress",
 							ValidateFunc: validation.StringInSlice([]string{"Ingress", "LoadBalancer"}, false),
-							Description:  "Host endpoint type can be 'Ingress' or 'LoadBalancer'. Defaults to 'Ingress'.",
+							Description:  "The host endpoint type. Allowed values are 'Ingress' or 'LoadBalancer'. Defaults to 'Ingress'.",
 						},
 						"cpu_millicore": {
 							Type:        schema.TypeInt,
