@@ -1,4 +1,4 @@
-# Virtual Cluster demo
+# Virtual Cluster Demo
 
 End-to-end example of provisioning a Palette Virtual Cluster with all of its dependencies. This terraform configuration will provision the following resources on Spectro Cloud:
 - K8s host cluster and datasource.
