@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/hapi v1.14.1-0.20221207125041-e32a92e03569
+	github.com/spectrocloud/hapi v1.14.1-0.20221218152626-226e9897d1fc
 	github.com/stretchr/testify v1.7.2
 )
 
@@ -81,6 +81,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d // indirect
 	github.com/spf13/cast v1.5.0 // indirect
+	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
 	github.com/vmihailenco/tagparser v0.1.1 // indirect

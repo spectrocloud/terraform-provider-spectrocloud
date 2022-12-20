@@ -25,7 +25,7 @@ export KUBECONFIG=kubeconfig_gcp-2
 kubectl get pod -A
 ```
 
-## Cleanup:
+## Clean up:
 
 Run the destroy operation:
 

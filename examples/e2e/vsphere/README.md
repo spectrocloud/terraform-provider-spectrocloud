@@ -41,7 +41,7 @@ export KUBECONFIG=kubeconfig_vsphere-2
 kubectl get pod -A
 ```
 
-## Cleanup:
+## Clean up:
 
 Run the destroy operation:
 
