@@ -4,7 +4,7 @@ This is an end-to-end example of provisioning a Palette Virtual Cluster with all
 - K8s host cluster and datasource.
 - Addon Cluster Profile
 
-## Instructions:
+## Instructions
 
 Clone this repository to a local directory, and then change the directory to `examples/e2e/virtual`. Proceed with the following steps:
 1. Provision a host cluster. This is a prerequisite before using a Palette Virtual Cluster. 
