@@ -135,7 +135,10 @@ func TestToApplicationProfilePackCreateWithPackManifest(t *testing.T) {
 func TestToTags(t *testing.T) {
 	tagRD := createBaseResourceData()
 	tagMap := []string{"owner:sivaa", "unittest"}
-	tagRD.Set("tags", tagMap)
+	err := tagRD.Set("tags", tagMap)
+	if err != nil {
+		assert.Fail(t, "Error setting tags.")
+	}
 	tags := toTags(tagRD)
 	assert.Equal(t, strings.Split(tagMap[0], ":")[1], tags["owner"])
 	assert.Equal(t, "spectro__tag", tags["unittest"])
@@ -149,6 +152,13 @@ func TestFlattenTags(t *testing.T) {
 	tags := flattenTags(tagMap)
 	assert.Equal(t, "unittest", tags[0])
 	assert.Equal(t, "owner:"+tagMap["owner"], tags[1])
+}
+
+func TestFlattenTagsEmpty(t *testing.T) {
+	tagMap := make(map[string]string)
+	tags := flattenTags(tagMap)
+	// should be nil if empty
+	assert.Equal(t, []interface{}(nil), tags)
 }
 
 func TestToApplicationProfilePatch(t *testing.T) {

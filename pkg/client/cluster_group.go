@@ -8,6 +8,10 @@ import (
 )
 
 func (h *V1Client) CreateClusterGroup(cluster *models.V1ClusterGroupEntity) (string, error) {
+	if h.CreateClusterGroupFn != nil {
+		return h.CreateClusterGroupFn(cluster)
+	}
+
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
@@ -34,6 +38,10 @@ func (h *V1Client) DeleteClusterGroup(uid string) error {
 }
 
 func (h *V1Client) GetClusterGroup(uid string) (*models.V1ClusterGroup, error) {
+	if h.GetClusterGroupFn != nil {
+		return h.GetClusterGroupFn(uid)
+	}
+
 	group, err := h.GetClusterGroupWithoutStatus(uid)
 	if err != nil {
 		return nil, err
@@ -60,7 +68,6 @@ func (h *V1Client) GetClusterGroupWithoutStatus(uid string) (*models.V1ClusterGr
 		return nil, err
 	}
 
-	// special check if the cluster is marked deleted
 	cluster := success.Payload
 	return cluster, nil
 }
@@ -86,4 +93,34 @@ func (h *V1Client) GetClusterGroupByName(name string, scope string) (*models.V1O
 	}
 
 	return nil, nil
+}
+
+// Update cluster group metadata by invoking V1ClusterGroupsUIDMetaUpdate hapi api
+func (h *V1Client) UpdateClusterGroupMeta(clusterGroup *models.V1ClusterGroupEntity) error {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return err
+	}
+
+	params := clusterC.NewV1ClusterGroupsUIDMetaUpdateParams().WithUID(clusterGroup.Metadata.UID)
+	params = params.WithBody(&models.V1ObjectMeta{
+		Name:        clusterGroup.Metadata.Name,
+		Labels:      clusterGroup.Metadata.Labels,
+		Annotations: clusterGroup.Metadata.Annotations,
+	})
+	_, err = client.V1ClusterGroupsUIDMetaUpdate(params)
+	return err
+}
+
+// Update cluster group by invoking V1ClusterGroupsUIDHostClusterUpdate hapi api
+func (h *V1Client) UpdateClusterGroup(uid string, clusterGroup *models.V1ClusterGroupHostClusterEntity) error {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return err
+	}
+
+	params := clusterC.NewV1ClusterGroupsUIDHostClusterUpdateParams().WithUID(uid)
+	params = params.WithBody(clusterGroup)
+	_, err = client.V1ClusterGroupsUIDHostClusterUpdate(params)
+	return err
 }

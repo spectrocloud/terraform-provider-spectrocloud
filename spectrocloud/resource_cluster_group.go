@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -31,7 +30,6 @@ func resourceClusterGroup() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Description: "Name of the cluster group",
 			},
 			"context": {
@@ -141,19 +139,80 @@ func resourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m inter
 	//
 	uid := d.Id()
 	//
-	cluster, err := c.GetClusterGroup(uid)
+	clusterGroup, err := c.GetClusterGroup(uid)
 	if err != nil {
 		return diag.FromErr(err)
-	} else if cluster == nil {
+	} else if clusterGroup == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")
 		return diags
 	}
 
-	return flattenClusterGroup(cluster, d)
+	return flattenClusterGroup(clusterGroup, d)
 }
 
-func flattenClusterGroup(cluster *models.V1ClusterGroup, d *schema.ResourceData) diag.Diagnostics {
+func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.ResourceData) diag.Diagnostics {
+
+	if clusterGroup == nil {
+		return diag.Diagnostics{}
+	}
+
+	d.SetId(clusterGroup.Metadata.UID)
+	err := d.Set("name", clusterGroup.Metadata.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("tags", flattenTags(clusterGroup.Metadata.Labels)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	clusterGroupSpec := clusterGroup.Spec
+	if clusterGroupSpec != nil {
+		clusterConfig := clusterGroupSpec.ClustersConfig
+		if clusterConfig != nil {
+			limitConfig := clusterConfig.LimitConfig
+			if limitConfig != nil {
+				err := d.Set("config", []map[string]interface{}{
+					{
+						"cpu_millicore":            limitConfig.CPUMilliCore,
+						"memory_in_mb":             limitConfig.MemoryMiB,
+						"storage_in_gb":            limitConfig.StorageGiB,
+						"oversubscription_percent": limitConfig.OverSubscription,
+					},
+				})
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+	}
+
+	if clusterGroupSpec != nil {
+		clusterConfig := clusterGroupSpec.ClustersConfig
+		if clusterConfig != nil {
+			hostConfig := clusterConfig.HostClustersConfig
+			if hostConfig != nil {
+				// set cluster uid and host
+				clusters := make([]map[string]interface{}, 0)
+				for _, cluster := range hostConfig {
+					// if it's ingress config set ingress if it's loadbalancer set loadbalancer
+					var host string
+					if cluster.EndpointConfig.IngressConfig != nil {
+						host = cluster.EndpointConfig.IngressConfig.Host
+					}
+					clusters = append(clusters, map[string]interface{}{
+						"cluster_uid": cluster.ClusterUID,
+						"host":        host,
+					})
+				}
+				// set clusters in the schema
+				err = d.Set("clusters", clusters)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+	}
 
 	return diag.Diagnostics{}
 }
@@ -164,63 +223,21 @@ func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m i
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cloudConfigId := d.Get("cloud_config_id").(string)
-
-	if d.HasChange("machine_pool") {
-		oraw, nraw := d.GetChange("machine_pool")
-		if oraw == nil {
-			oraw = new(schema.Set)
-		}
-		if nraw == nil {
-			nraw = new(schema.Set)
-		}
-
-		os := oraw.(*schema.Set)
-		ns := nraw.(*schema.Set)
-
-		osMap := make(map[string]interface{})
-		for _, mp := range os.List() {
-			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
-		}
-
-		for _, mp := range ns.List() {
-			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolVirtualHash(machinePoolResource)
-
-			machinePool := toMachinePoolVirtual(machinePoolResource)
-
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolVirtual(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolVirtualHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolVirtual(cloudConfigId, machinePool)
-			}
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
-		}
-
-		// Deleted old machine pools
-		for _, mp := range osMap {
-			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
-			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolVirtual(cloudConfigId, name); err != nil {
-				return diag.FromErr(err)
-			}
+	// if there are changes in the name of  cluster group, update it using UpdateClusterGroupMeta()
+	if d.HasChanges("name", "tags") {
+		clusterGroup := toClusterGroup(d)
+		err := c.UpdateClusterGroupMeta(clusterGroup)
+		if err != nil {
+			return diag.FromErr(err)
 		}
 	}
+	if d.HasChanges("config", "clusters") {
+		clusterGroup := toClusterGroup(d)
 
-	diagnostics, done := updateCommonFields(d, c)
-	if done {
-		return diagnostics
+		err := c.UpdateClusterGroup(clusterGroup.Metadata.UID, toClusterGroupUpdate(clusterGroup))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	resourceClusterGroupRead(ctx, d, m)
@@ -259,6 +276,15 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 				LimitConfig: clusterGroupLimitConfig,
 			},
 		},
+	}
+
+	return ret
+}
+
+func toClusterGroupUpdate(clusterGroupEntity *models.V1ClusterGroupEntity) *models.V1ClusterGroupHostClusterEntity {
+	ret := &models.V1ClusterGroupHostClusterEntity{
+		ClusterRefs:    clusterGroupEntity.Spec.ClusterRefs,
+		ClustersConfig: clusterGroupEntity.Spec.ClustersConfig,
 	}
 
 	return ret
