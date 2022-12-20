@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
@@ -531,7 +532,10 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toLibvirtCluster(c, d)
+	cluster, err := toLibvirtCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	uid, err := c.CreateClusterLibvirt(cluster)
 	if err != nil {
@@ -717,9 +721,11 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 			}
 			hash := resourceMachinePoolLibvirtHash(machinePoolResource)
 
-			machinePool := toMachinePoolLibvirt(machinePoolResource)
+			machinePool, err := toMachinePoolLibvirt(machinePoolResource)
+			if err != nil {
+				return diag.FromErr(err)
+			}
 
-			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
 				err = c.CreateMachinePoolLibvirt(cloudConfigId, machinePool)
@@ -757,7 +763,7 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroLibvirtClusterEntity {
+func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroLibvirtClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	cluster := &models.V1SpectroLibvirtClusterEntity{
@@ -782,7 +788,10 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 
 	machinePoolConfigs := make([]*models.V1LibvirtMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolLibvirt(machinePool)
+		mp, err := toMachinePoolLibvirt(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -794,10 +803,10 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
-func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolConfigEntity {
+func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -848,6 +857,13 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 	}
 	addDisks := getAdditionalDisks(ins)
 
+	if m["name"].(string) == "master-pool" && len(addDisks) > 0 {
+		// If master pool has additional disks, return an error
+		return nil, fmt.Errorf("Attached disks are not allowed for the 'master-pool' machine pool")
+	}
+
+	updateStrategyType := getUpdateStrategy(m)
+
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
 		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{
 			Placements:       placements,
@@ -863,12 +879,12 @@ func toMachinePoolLibvirt(machinePool interface{}) *models.V1LibvirtMachinePoolC
 			Name:             types.Ptr(m["name"].(string)),
 			Size:             types.Ptr(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: getUpdateStrategy(m),
+				Type: updateStrategyType,
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+	return mp, nil
 }
 
 func getGPUConfig(ins map[string]interface{}) *models.V1GPUConfig {
