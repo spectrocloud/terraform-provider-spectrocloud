@@ -92,6 +92,7 @@ func resourceClusterGroup() *schema.Resource {
 			"clusters": {
 				Type:     schema.TypeList,
 				Optional: true,
+				Description: "A list of clusters to include in the cluster group.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"cluster_uid": {
