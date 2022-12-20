@@ -181,7 +181,7 @@ Optional:
 - `additional_labels` (Map of String)
 - `az_subnets` (Map of String) Mutually exclusive with `azs`. Use `az_subnets` for Static provisioning.
 - `azs` (Set of String) Mutually exclusive with `az_subnets`. Use `azs` for Dynamic provisioning.
-- `capacity_type` (String)
+- `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
 - `control_plane` (Boolean)
 - `control_plane_as_worker` (Boolean)
 - `disk_size_gb` (Number)
