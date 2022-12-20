@@ -12,7 +12,8 @@ description: |-
 ## Example Usage
 
 
-### Cluster Group resource provision.
+### Cluster Group 
+An example of how to provision a Palette Cluster Group.
 
 ```hcl
 resource "spectrocloud_cluster_group" "cg" {
@@ -67,8 +68,8 @@ Optional:
 - `cpu_millicore` (Number) CPU limit in millicores.
 - `host_endpoint_type` (String) Host endpoint type can be 'Ingress' or 'LoadBalancer'. Defaults to 'Ingress'.
 - `memory_in_mb` (Number) Memory limit in MB.
-- `oversubscription_percent` (Number) Resource oversubscription percentage.
-- `storage_in_gb` (Number) Storage limit in GB.
+- `oversubscription_percent` (Number) The allowed oversubscription percentage.
+- `storage_in_gb` (Number) The storage limit in gigabytes (GB).
 - `values` (String)
 
 
@@ -77,11 +78,11 @@ Optional:
 
 Required:
 
-- `cluster_uid` (String) UID of the cluster.
+- `cluster_uid` (String) The UID of the host cluster.
 
 Optional:
 
-- `host` (String) Host string in the cluster. I.e. *.dev or *.
+- `host` (String) The host DNS wildcard for the cluster. i.e. `*.dev` or `*test.com`
 
 
 <a id="nestedblock--timeouts"></a>
