@@ -64,7 +64,7 @@ func resourceClusterGroup() *schema.Resource {
 						"cpu_millicore": {
 							Type:        schema.TypeInt,
 							Optional:    true,
-							Description: "CPU limit in millicores.",
+							Description: "The CPU limit in millicores.",
 						},
 						"memory_in_mb": {
 							Type:        schema.TypeInt,
