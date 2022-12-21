@@ -863,6 +863,10 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 	}
 
 	updateStrategyType := getUpdateStrategy(m)
+	if m["name"].(string) == "master-pool" && updateStrategyType == "RollingUpdateScaleIn" {
+		// If master pool has RollingUpdateScaleIn as an update strategy, return an error
+		return nil, fmt.Errorf("Update strategy RollingUpdateScaleIn is not allowed for the 'master-pool' machine pool")
+	}
 
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
 		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{

@@ -81,6 +81,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     name          = "worker-basic"
     count         = 1
     instance_type = "t3.large"
+    disk_size_gb  = 60
     az_subnets = {
       "us-west-2a" = "subnet-0d4978ddbff16c"
     }
@@ -159,7 +160,7 @@ Optional:
 - `additional_labels` (Map of String)
 - `az_subnets` (Map of String)
 - `azs` (List of String)
-- `capacity_type` (String)
+- `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
 - `max` (Number)
 - `max_price` (String)
 - `min` (Number)

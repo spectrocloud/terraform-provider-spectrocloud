@@ -50,6 +50,10 @@ type V1Client struct {
 	apikey         string
 	transportDebug bool
 	retryAttempts  int
+
+	CreateClusterGroupFn func(*models.V1ClusterGroupEntity) (string, error)
+	GetClusterGroupFn    func(string) (*models.V1ClusterGroup, error)
+	GetApplicationFn     func(string) (*models.V1AppDeployment, error)
 }
 
 func New(hubbleHost, email, password, projectUID string, apikey string, transportDebug bool, retryAttempts int) *V1Client {
@@ -64,7 +68,7 @@ func New(hubbleHost, email, password, projectUID string, apikey string, transpor
 	authHttpTransport.RetryAttempts = 0
 	//authHttpTransport.Debug = true
 	AuthClient = authC.New(authHttpTransport, strfmt.Default)
-	return &V1Client{ctx, email, password, apikey, transportDebug, retryAttempts}
+	return &V1Client{Ctx: ctx, email: email, password: password, apikey: apikey, transportDebug: transportDebug, retryAttempts: retryAttempts}
 }
 
 func (h *V1Client) getNewAuthToken() (*AuthToken, error) {

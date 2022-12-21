@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
@@ -245,9 +246,13 @@ func resourceClusterAws() *schema.Resource {
 							Required: true,
 						},
 						"capacity_type": {
-							Type:     schema.TypeString,
-							Default:  "on-demand",
-							Optional: true,
+							Type:         schema.TypeString,
+							Default:      "on-demand",
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"on-demand", "spot"}, false),
+							Description:  "Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.",
+
+							
 						},
 						"max_price": {
 							Type:     schema.TypeString,

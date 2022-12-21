@@ -66,6 +66,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     name          = "worker-basic"
     count         = 1
     instance_type = "t3.large"
+    disk_size_gb  = 60
     az_subnets = {
       "us-west-2a" = "subnet-0d4978ddbff16c"
     }

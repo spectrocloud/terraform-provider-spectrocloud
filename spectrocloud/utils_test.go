@@ -7,7 +7,7 @@ import (
 )
 
 func TestStringContains(t *testing.T) {
-	ss := []interface{}{"fizz_1", "bazz", "random", "nfizz_1", "fizz_2"}
+	ss := []string{"fizz_1", "bazz", "random", "nfizz_1", "fizz_2"}
 
 	contains := stringContains(ss, "random")
 	assert.Equal(t, true, contains, "Should be true.")

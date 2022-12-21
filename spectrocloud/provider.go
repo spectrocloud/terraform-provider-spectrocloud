@@ -109,6 +109,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_virtual_cluster": resourceClusterVirtual(),
 
+				"spectrocloud_cluster_group": resourceClusterGroup(),
+
 				"spectrocloud_cluster_import": resourceClusterImport(),
 
 				"spectrocloud_addon_deployment": resourceAddonDeployment(),
