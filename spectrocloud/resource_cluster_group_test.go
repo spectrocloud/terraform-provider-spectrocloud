@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func prepareTestData() *schema.ResourceData {
+func prepareClusterGroupTestData() *schema.ResourceData {
 	d := resourceClusterGroup().TestResourceData()
 	d.SetId("")
 	d.Set("name", "test-name")
@@ -34,7 +34,7 @@ func TestToClusterGroup(t *testing.T) {
 	assert := assert.New(t)
 
 	// Create a mock ResourceData object
-	d := prepareTestData()
+	d := prepareClusterGroupTestData()
 
 	// Call the function with the mock resource data
 	output := toClusterGroup(d)
@@ -81,7 +81,7 @@ func TestResourceClusterGroupCreate(t *testing.T) {
 		},
 	}
 
-	d := prepareTestData()
+	d := prepareClusterGroupTestData()
 	ctx := context.Background()
 
 	diags := resourceClusterGroupCreate(ctx, d, m)

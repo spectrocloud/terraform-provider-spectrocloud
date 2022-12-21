@@ -8,6 +8,10 @@ import (
 )
 
 func (h *V1Client) GetApplication(uid string) (*models.V1AppDeployment, error) {
+	if h.GetApplicationFn != nil {
+		return h.GetApplicationFn(uid)
+	}
+
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
