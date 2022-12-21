@@ -32,7 +32,7 @@ func waitForApplication(ctx context.Context, d *schema.ResourceData, diags diag.
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceApplicationCreatePendingStates,
 		Target:     []string{"True"},
-		Refresh:    resourceApplicationStateRefreshFunc(c, d),
+		Refresh:    resourceApplicationStateRefreshFunc(c, d, 5, 60),
 		Timeout:    d.Timeout(state) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
@@ -54,7 +54,7 @@ func waitForApplicationUpdate(ctx context.Context, d *schema.ResourceData, diags
 	return waitForApplication(ctx, d, diags, c, schema.TimeoutUpdate)
 }
 
-func resourceApplicationStateRefreshFunc(c *client.V1Client, d *schema.ResourceData) resource.StateRefreshFunc {
+func resourceApplicationStateRefreshFunc(c *client.V1Client, d *schema.ResourceData, retryAttempts int, duration int) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		application, err := c.GetApplication(d.Id())
 		if err != nil {
@@ -63,18 +63,16 @@ func resourceApplicationStateRefreshFunc(c *client.V1Client, d *schema.ResourceD
 			return nil, "Deleted", nil
 		}
 
-		// wait for tiers to be ready
-		/*for _, app_tier := range application.Status.AppTiers {
-			if *app_tier.Condition.Status != "True" {
-				log.Printf("Cluster condition status (%s): %s", d.Id(), *app_tier.Condition.Status)
-				return application, "Application:NotReady", nil
-			}
-		}*/
-
 		for _, tier_status := range application.Status.AppTiers {
 			log.Printf("Cluster (%s): tier:%s, condition status:%s", d.Id(), tier_status.Name, *tier_status.Condition.Status)
 			if *tier_status.Condition.Type == "Error" {
-				return application, "Tier:Error", errors.New(tier_status.Condition.Message)
+				// invoke recursive call h.retryAttempts number of times
+				if retryAttempts > 0 {
+					time.Sleep(time.Duration(duration) * time.Second)
+					return resourceApplicationStateRefreshFunc(c, d, retryAttempts-1, duration)()
+				} else {
+					return application, "Tier:Error", errors.New(tier_status.Condition.Message)
+				}
 			}
 			if *tier_status.Condition.Status != "True" || *tier_status.Condition.Type != "Ready" {
 				return application, "Tier:NotReady", nil
