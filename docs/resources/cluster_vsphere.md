@@ -208,10 +208,10 @@ Optional:
 
 Optional:
 
-- `external_traffic_policy` (String)
-- `host_endpoint_type` (String)
-- `ingress_host` (String)
-- `load_balancer_source_ranges` (String)
+- `external_traffic_policy` (String) The external traffic policy for the cluster.
+- `host_endpoint_type` (String) The type of endpoint for the cluster. Can be either 'Ingress' or 'LoadBalancer'. The default is 'Ingress'.
+- `ingress_host` (String) The host for the Ingress endpoint. Required if 'host_endpoint_type' is set to 'Ingress'.
+- `load_balancer_source_ranges` (String) The source ranges for the load balancer. Required if 'host_endpoint_type' is set to 'LoadBalancer'.
 
 
 <a id="nestedblock--location_config"></a>

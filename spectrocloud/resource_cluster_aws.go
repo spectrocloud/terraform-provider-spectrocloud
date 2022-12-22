@@ -251,8 +251,6 @@ func resourceClusterAws() *schema.Resource {
 							Optional:     true,
 							ValidateFunc: validation.StringInSlice([]string{"on-demand", "spot"}, false),
 							Description:  "Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.",
-
-							
 						},
 						"max_price": {
 							Type:     schema.TypeString,
@@ -416,31 +414,7 @@ func resourceClusterAws() *schema.Resource {
 					},
 				},
 			},
-			"host_config": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"host_endpoint_type": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "Ingress",
-						},
-						"ingress_host": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"external_traffic_policy": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"load_balancer_source_ranges": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-			},
+			"host_config":     schemas.ClusterHostConfigSchema(),
 			"location_config": schemas.ClusterLocationSchemaComputed(),
 			"skip_completion": {
 				Type:     schema.TypeBool,

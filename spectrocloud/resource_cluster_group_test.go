@@ -16,6 +16,7 @@ func prepareClusterGroupTestData() *schema.ResourceData {
 	d.Set("tags", []string{"key1:value1", "key2:value2"})
 	d.Set("config", []map[string]interface{}{
 		{
+			"host_endpoint_type":       "LoadBalancer",
 			"cpu_millicore":            4000,
 			"memory_in_mb":             4096,
 			"storage_in_gb":            100,
@@ -50,6 +51,7 @@ func TestToClusterGroup(t *testing.T) {
 	assert.Equal(int32(4096), output.Spec.ClustersConfig.LimitConfig.MemoryMiB)
 	assert.Equal(int32(100), output.Spec.ClustersConfig.LimitConfig.StorageGiB)
 	assert.Equal(int32(200), output.Spec.ClustersConfig.LimitConfig.OverSubscription)
+	assert.Equal("LoadBalancer", output.Spec.ClustersConfig.EndpointType)
 }
 
 func TestToClusterGroupLimitConfig(t *testing.T) {
@@ -164,6 +166,7 @@ func TestFlattenClusterGroup(t *testing.T) {
 	// set up test data
 	name := "test-cluster-group"
 	uid := "1234"
+	endpointType := "Ingress"
 	cpuLimit := 1000
 	memoryLimit := 2000
 	storageLimit := 3000
@@ -181,6 +184,7 @@ func TestFlattenClusterGroup(t *testing.T) {
 		},
 		Spec: &models.V1ClusterGroupSpec{
 			ClustersConfig: &models.V1ClusterGroupClustersConfig{
+				EndpointType: endpointType,
 				LimitConfig: &models.V1ClusterGroupLimitConfig{
 					CPUMilliCore:     int32(cpuLimit),
 					MemoryMiB:        int32(memoryLimit),
@@ -226,6 +230,7 @@ func TestFlattenClusterGroup(t *testing.T) {
 	configList := d.Get("config").([]interface{})
 	assert.Len(t, configList, 1)
 	config := configList[0].(map[string]interface{})
+	assert.Equal(t, endpointType, config["host_endpoint_type"])
 	assert.Equal(t, cpuLimit, config["cpu_millicore"])
 	assert.Equal(t, memoryLimit, config["memory_in_mb"])
 	assert.Equal(t, storageLimit, config["storage_in_gb"])

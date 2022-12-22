@@ -150,8 +150,10 @@ func TestFlattenTags(t *testing.T) {
 	tagMap["unittest"] = "spectro__tag"
 	tagMap["owner"] = "siva"
 	tags := flattenTags(tagMap)
-	assert.Equal(t, "unittest", tags[0])
-	assert.Equal(t, "owner:"+tagMap["owner"], tags[1])
+
+	// Check that the tags slice contains the expected tags, regardless of order
+	assert.Contains(t, tags, "unittest")
+	assert.Contains(t, tags, "owner:"+tagMap["owner"])
 }
 
 func TestFlattenTagsEmpty(t *testing.T) {

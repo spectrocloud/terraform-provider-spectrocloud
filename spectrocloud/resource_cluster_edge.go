@@ -375,31 +375,7 @@ func resourceClusterEdge() *schema.Resource {
 					},
 				},
 			},
-			"host_config": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"host_endpoint_type": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "Ingress",
-						},
-						"ingress_host": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"external_traffic_policy": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"load_balancer_source_ranges": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-					},
-				},
-			},
+			"host_config":     schemas.ClusterHostConfigSchema(),
 			"location_config": schemas.ClusterLocationSchema(),
 			"skip_completion": {
 				Type:     schema.TypeBool,
