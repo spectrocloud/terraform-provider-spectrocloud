@@ -175,6 +175,7 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 			if limitConfig != nil {
 				err := d.Set("config", []map[string]interface{}{
 					{
+						"host_endpoint_type":       clusterConfig.EndpointType,
 						"cpu_millicore":            limitConfig.CPUMilliCore,
 						"memory_in_mb":             limitConfig.MemoryMiB,
 						"storage_in_gb":            limitConfig.StorageGiB,
@@ -259,9 +260,13 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 
 	var clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig
 	resourcesObj, ok := d.GetOk("config")
+	endpointType := "Ingress" // default endpoint type is ingress
 	if ok {
 		resources := resourcesObj.([]interface{})[0].(map[string]interface{})
 		clusterGroupLimitConfig = toClusterGroupLimitConfig(resources)
+		if resources["host_endpoint_type"] != nil {
+			endpointType = resources["host_endpoint_type"].(string)
+		}
 	}
 
 	ret := &models.V1ClusterGroupEntity{
@@ -274,7 +279,8 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 			Type:        "hostCluster",
 			ClusterRefs: clusterRefs,
 			ClustersConfig: &models.V1ClusterGroupClustersConfig{
-				LimitConfig: clusterGroupLimitConfig,
+				EndpointType: endpointType,
+				LimitConfig:  clusterGroupLimitConfig,
 			},
 		},
 	}
