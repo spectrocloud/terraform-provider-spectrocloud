@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"log"
 	"strings"
 	"time"
@@ -19,7 +20,7 @@ func resourceClusterVirtual() *schema.Resource {
 		CreateContext: resourceClusterVirtualCreate,
 		ReadContext:   resourceClusterVirtualRead,
 		UpdateContext: resourceClusterVirtualUpdate,
-		Description: "A resource to manage a Palette Virtual Cluster.",
+		Description:   "A resource to manage a Palette Virtual Cluster.",
 		DeleteContext: resourceClusterDelete,
 
 		Timeouts: &schema.ResourceTimeout{
@@ -353,6 +354,7 @@ func resourceClusterVirtual() *schema.Resource {
 					},
 				},
 			},
+			"location_config": schemas.ClusterLocationSchemaComputed(),
 			"skip_completion": {
 				Type:     schema.TypeBool,
 				Optional: true,

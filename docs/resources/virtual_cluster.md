@@ -79,6 +79,7 @@ resource "spectrocloud_virtual_cluster" "cluster" {
 - `cloud_config_id` (String)
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String)
+- `location_config` (List of Object) (see [below for nested schema](#nestedatt--location_config))
 
 <a id="nestedblock--backup_policy"></a>
 ### Nested Schema for `backup_policy`
@@ -227,3 +228,16 @@ Optional:
 - `create` (String)
 - `delete` (String)
 - `update` (String)
+
+
+<a id="nestedatt--location_config"></a>
+### Nested Schema for `location_config`
+
+Read-Only:
+
+- `country_code` (String)
+- `country_name` (String)
+- `latitude` (Number)
+- `longitude` (Number)
+- `region_code` (String)
+- `region_name` (String)
