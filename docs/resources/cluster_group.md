@@ -82,7 +82,7 @@ Required:
 
 Optional:
 
-- `host` (String) The host DNS wildcard for the cluster. i.e. `*.dev` or `*test.com`
+- `host_dns` (String) The host DNS wildcard for the cluster. i.e. `*.dev` or `*test.com`
 
 
 <a id="nestedblock--timeouts"></a>

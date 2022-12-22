@@ -236,8 +236,8 @@ func TestFlattenClusterGroup(t *testing.T) {
 	assert.Len(t, clustersList, 2)
 	cluster1 := clustersList[0].(map[string]interface{})
 	assert.Equal(t, clusterUID1, cluster1["cluster_uid"])
-	assert.Equal(t, host1, cluster1["host"])
+	assert.Equal(t, host1, cluster1["host_dns"])
 	cluster2 := clustersList[1].(map[string]interface{})
 	assert.Equal(t, clusterUID2, cluster2["cluster_uid"])
-	assert.Equal(t, host2, cluster2["host"])
+	assert.Equal(t, host2, cluster2["host_dns"])
 }
