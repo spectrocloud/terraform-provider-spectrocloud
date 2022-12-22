@@ -1,6 +1,6 @@
 resource "spectrocloud_cluster_import" "cluster" {
-  name               = "gcp-import-tf-11"
-  cloud              = "gcp"
+  name               = "vmware-import-tf-11"
+  cloud              = "vmware"
   tags               = ["dev", "department:devops", "owner:bob"]
   cluster_profile_id = spectrocloud_cluster_profile.profile.id
 
