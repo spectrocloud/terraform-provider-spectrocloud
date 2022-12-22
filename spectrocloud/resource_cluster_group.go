@@ -90,8 +90,8 @@ func resourceClusterGroup() *schema.Resource {
 				},
 			},
 			"clusters": {
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:        schema.TypeList,
+				Optional:    true,
 				Description: "A list of clusters to include in the cluster group.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -100,7 +100,7 @@ func resourceClusterGroup() *schema.Resource {
 							Required:    true,
 							Description: "The UID of the host cluster.",
 						},
-						"host": {
+						"host_dns": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Description: "The host DNS wildcard for the cluster. i.e. `*.dev` or `*test.com`",
@@ -203,7 +203,7 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 					}
 					clusters = append(clusters, map[string]interface{}{
 						"cluster_uid": cluster.ClusterUID,
-						"host":        host,
+						"host_dns":    host,
 					})
 				}
 				// set clusters in the schema
