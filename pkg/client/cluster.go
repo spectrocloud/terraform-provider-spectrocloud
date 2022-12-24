@@ -17,7 +17,23 @@ func (h *V1Client) DeleteCluster(uid string) error {
 		return nil
 	}
 
-	params := clusterC.NewV1SpectroClustersDeleteParamsWithContext(h.Ctx).WithUID(uid)
+	cluster, err := h.GetCluster(uid)
+	if err != nil || cluster == nil {
+		return err
+	}
+
+	var params *clusterC.V1SpectroClustersDeleteParams
+	switch cluster.Metadata.Annotations["scope"] {
+	case "project":
+		params = clusterC.NewV1SpectroClustersDeleteParamsWithContext(h.Ctx).WithUID(uid)
+		break
+	case "tenant":
+		params = clusterC.NewV1SpectroClustersDeleteParams().WithUID(uid)
+		break
+	default:
+		break
+	}
+
 	_, err = client.V1SpectroClustersDelete(params)
 	return err
 }
