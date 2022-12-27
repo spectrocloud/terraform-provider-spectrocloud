@@ -268,6 +268,10 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 			endpointType = resources["host_endpoint_type"].(string)
 		}
 	}
+	var hostClusterConfig []*models.V1ClusterGroupHostClusterConfig
+	if endpointType == "Ingress" {
+		hostClusterConfig = toHostClusterConfigs(clusterRefObj.([]interface{}))
+	}
 
 	ret := &models.V1ClusterGroupEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -279,13 +283,31 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 			Type:        "hostCluster",
 			ClusterRefs: clusterRefs,
 			ClustersConfig: &models.V1ClusterGroupClustersConfig{
-				EndpointType: endpointType,
-				LimitConfig:  clusterGroupLimitConfig,
+				EndpointType:       endpointType,
+				LimitConfig:        clusterGroupLimitConfig,
+				HostClustersConfig: hostClusterConfig,
 			},
 		},
 	}
 
 	return ret
+}
+
+func toHostClusterConfigs(clusterConfig []interface{}) []*models.V1ClusterGroupHostClusterConfig {
+	var hostClusterConfigs []*models.V1ClusterGroupHostClusterConfig
+	for _, obj := range clusterConfig {
+		resources := obj.(map[string]interface{})
+		hostCluster := &models.V1ClusterGroupHostClusterConfig{
+			ClusterUID: resources["cluster_uid"].(string),
+			EndpointConfig: &models.V1HostClusterEndpointConfig{
+				IngressConfig: &models.V1IngressConfig{
+					Host: resources["host_dns"].(string),
+				},
+			},
+		}
+		hostClusterConfigs = append(hostClusterConfigs, hostCluster)
+	}
+	return hostClusterConfigs
 }
 
 func toClusterGroupUpdate(clusterGroupEntity *models.V1ClusterGroupEntity) *models.V1ClusterGroupHostClusterEntity {
