@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
@@ -26,6 +27,7 @@ func prepareClusterGroupTestData() *schema.ResourceData {
 	d.Set("clusters", []map[string]interface{}{
 		{
 			"cluster_uid": "test-cluster-uid",
+			"host_dns":    "https://test.dev.spectro.com",
 		},
 	})
 	return d
@@ -94,6 +96,48 @@ func TestResourceClusterGroupCreate(t *testing.T) {
 	if d.Id() != "test-uid" {
 		t.Errorf("Expected ID to be 'test-uid', got %s", d.Id())
 	}
+}
+
+func TestResourceClusterGroupDelete(t *testing.T) {
+	testUid := "unit_test_uid"
+	m := &client.V1Client{
+		DeleteClusterGroupFn: func(uid string) error {
+			if uid != testUid {
+				return fmt.Errorf("this UID `%s` doesn't match with test uid `%s`", uid, testUid)
+			}
+			return nil
+		},
+	}
+	e := m.DeleteClusterGroup(testUid)
+	if e != nil {
+		t.Errorf("Expectred nil, got %s", e)
+	}
+}
+
+func TestResourceClusterGroupUpdate(t *testing.T) {
+	d := prepareClusterGroupTestData()
+	clusterConfig := []map[string]interface{}{
+		{
+			"host_endpoint_type":       "LoadBalancer",
+			"cpu_millicore":            5000,
+			"memory_in_mb":             5096,
+			"storage_in_gb":            150,
+			"oversubscription_percent": 120,
+		},
+	}
+	d.Set("config", clusterConfig)
+	m := &client.V1Client{
+		UpdateClusterGroupFn: func(uid string, cg *models.V1ClusterGroupHostClusterEntity) error {
+			assert.Equal(t, int(cg.ClustersConfig.LimitConfig.MemoryMiB), clusterConfig[0]["memory_in_mb"])
+			assert.Equal(t, int(cg.ClustersConfig.LimitConfig.StorageGiB), clusterConfig[0]["storage_in_gb"])
+			assert.Equal(t, int(cg.ClustersConfig.LimitConfig.CPUMilliCore), clusterConfig[0]["cpu_millicore"])
+			assert.Equal(t, int(cg.ClustersConfig.LimitConfig.OverSubscription), clusterConfig[0]["oversubscription_percent"])
+			assert.Equal(t, cg.ClustersConfig.EndpointType, clusterConfig[0]["host_endpoint_type"])
+			return nil
+		},
+	}
+	ctx := context.Background()
+	resourceClusterGroupUpdate(ctx, d, m)
 }
 
 func TestToClusterGroupUpdate(t *testing.T) {
@@ -245,4 +289,21 @@ func TestFlattenClusterGroup(t *testing.T) {
 	cluster2 := clustersList[1].(map[string]interface{})
 	assert.Equal(t, clusterUID2, cluster2["cluster_uid"])
 	assert.Equal(t, host2, cluster2["host_dns"])
+}
+
+func TestToClusterRef(t *testing.T) {
+	d := prepareClusterGroupTestData()
+	cluster := d.Get("clusters").([]interface{})[0].(map[string]interface{})
+	ret := toClusterRef(cluster)
+	assert.Equal(t, ret.ClusterUID, cluster["cluster_uid"])
+}
+
+func TestToHostClusterConfigs(t *testing.T) {
+	d := prepareClusterGroupTestData()
+	hostConfigs := d.Get("clusters").([]interface{})
+	clusterUid := hostConfigs[0].(map[string]interface{})["cluster_uid"]
+	hostDns := hostConfigs[0].(map[string]interface{})["host_dns"]
+	hostClusterConfigs := toHostClusterConfigs(hostConfigs)
+	assert.Equal(t, clusterUid, hostClusterConfigs[0].ClusterUID)
+	assert.Equal(t, hostDns, hostClusterConfigs[0].EndpointConfig.IngressConfig.Host)
 }

@@ -27,6 +27,9 @@ func (h *V1Client) CreateClusterGroup(cluster *models.V1ClusterGroupEntity) (str
 }
 
 func (h *V1Client) DeleteClusterGroup(uid string) error {
+	if h.DeleteClusterGroupFn != nil {
+		return h.DeleteClusterGroupFn(uid)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil

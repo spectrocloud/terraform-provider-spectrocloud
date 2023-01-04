@@ -54,6 +54,8 @@ type V1Client struct {
 	CreateClusterGroupFn func(*models.V1ClusterGroupEntity) (string, error)
 	GetClusterGroupFn    func(string) (*models.V1ClusterGroup, error)
 	GetApplicationFn     func(string) (*models.V1AppDeployment, error)
+	UpdateClusterGroupFn func(string, *models.V1ClusterGroupHostClusterEntity) error
+	DeleteClusterGroupFn func(string) error
 }
 
 func New(hubbleHost, email, password, projectUID string, apikey string, transportDebug bool, retryAttempts int) *V1Client {
