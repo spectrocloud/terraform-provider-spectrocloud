@@ -6,13 +6,7 @@ jobs:
   build-with-coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: ./.github/workflows/common-steps
       - name: Run tests with coverage
         run: go test -cover
 
-  build-without-coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run tests without coverage
-        run: go test
