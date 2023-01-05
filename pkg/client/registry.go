@@ -8,6 +8,12 @@ import (
 )
 
 func (h *V1Client) GetPackRegistryCommonByName(registryName string) (*models.V1RegistryMetadata, error) {
+	// Unit test mock handler
+	if h.GetPackRegistryCommonByNameFn != nil {
+		return h.GetPackRegistryCommonByNameFn(registryName)
+	}
+	//
+
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
