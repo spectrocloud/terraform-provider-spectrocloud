@@ -57,13 +57,18 @@ type V1Client struct {
 	UpdateClusterGroupFn func(string, *models.V1ClusterGroupHostClusterEntity) error
 	DeleteClusterGroupFn func(string) error
 
+	// Application
+	GetApplicationFn func(string) (*models.V1AppDeployment, error)
+
 	// Application Profile
-	GetApplicationFn                           func(string) (*models.V1AppDeployment, error)
 	GetApplicationProfileTiersFn               func(string) ([]*models.V1AppTier, error)
 	CreateApplicationProfileFn                 func(*models.V1AppProfileEntity, string) (string, error)
 	GetApplicationProfileTierManifestContentFn func(string, string, string) (string, error)
 	GetApplicationProfileFn                    func(string) (*models.V1AppProfile, error)
 	DeleteApplicationProfileFn                 func(string) error
+
+	// Cluster profiles
+	ClustersPatchProfilesFn func(*clusterC.V1SpectroClustersPatchProfilesParams) error
 
 	//Registry
 	GetPackRegistryCommonByNameFn func(string) (*models.V1RegistryMetadata, error)
