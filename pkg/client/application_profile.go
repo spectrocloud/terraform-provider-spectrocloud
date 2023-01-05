@@ -33,6 +33,11 @@ func (h *V1Client) GetApplicationProfileByName(profileName string) (*models.V1Ap
 }
 
 func (h *V1Client) GetApplicationProfile(uid string) (*models.V1AppProfile, error) {
+	// Unit test mock handler
+	if h.GetApplicationProfileFn != nil {
+		return h.GetApplicationProfileFn(uid)
+	}
+	//
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
@@ -51,6 +56,10 @@ func (h *V1Client) GetApplicationProfile(uid string) (*models.V1AppProfile, erro
 }
 
 func (h *V1Client) GetApplicationProfileTiers(applicationProfileUID string) ([]*models.V1AppTier, error) {
+	if h.GetApplicationProfileTiersFn != nil {
+		return h.GetApplicationProfileTiersFn(applicationProfileUID)
+	}
+
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
@@ -68,6 +77,10 @@ func (h *V1Client) GetApplicationProfileTiers(applicationProfileUID string) ([]*
 }
 
 func (h *V1Client) GetApplicationProfileTierManifestContent(applicationProfileUID string, tierUID string, manifestUID string) (string, error) {
+	if h.GetApplicationProfileTierManifestContentFn != nil {
+		return h.GetApplicationProfileTierManifestContentFn(applicationProfileUID, tierUID, manifestUID)
+	}
+
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
@@ -189,6 +202,12 @@ func (h *V1Client) DeleteApplicationProfileTiers(appProfileUID string, appTiers 
 }
 
 func (h *V1Client) CreateApplicationProfile(appProfile *models.V1AppProfileEntity, ProfileContext string) (string, error) {
+	// Unit test mock handler
+	if h.CreateApplicationProfileFn != nil {
+		return h.CreateApplicationProfileFn(appProfile, ProfileContext)
+	}
+	//
+
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
@@ -214,6 +233,11 @@ func (h *V1Client) CreateApplicationProfile(appProfile *models.V1AppProfileEntit
 }
 
 func (h *V1Client) DeleteApplicationProfile(uid string) error {
+	// Unit test mock handler
+	if h.DeleteApplicationProfileFn != nil {
+		return h.DeleteApplicationProfileFn(uid)
+	}
+	//
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil

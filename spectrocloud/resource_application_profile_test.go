@@ -1,13 +1,17 @@
 package spectrocloud
 
 import (
+	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 )
 
-func createBaseResourceData() *schema.ResourceData {
+func getBaseResourceData() *schema.ResourceData {
 	rd := resourceApplicationProfile().TestResourceData()
 	rd.Set("name", "Profile-unit-test")
 	rd.Set("version", "1.0.0")
@@ -19,7 +23,7 @@ func createBaseResourceData() *schema.ResourceData {
 }
 
 func TestToApplicationProfileBasic(t *testing.T) {
-	appProfileBasicRd := createBaseResourceData()
+	appProfileBasicRd := getBaseResourceData()
 	profileEntity := toApplicationProfileBasic(appProfileBasicRd)
 	assert.Equal(t, appProfileBasicRd.Get("description"), profileEntity.Metadata.Annotations["description"])
 	assert.Equal(t, appProfileBasicRd.Get("name"), profileEntity.Metadata.Name)
@@ -27,7 +31,7 @@ func TestToApplicationProfileBasic(t *testing.T) {
 }
 
 func TestToAppTiers(t *testing.T) {
-	appProfileBasicRd := createBaseResourceData()
+	appProfileBasicRd := getBaseResourceData()
 	profileEntity := toApplicationProfileBasic(appProfileBasicRd)
 	if profileEntity.Spec.Template.AppTiers == nil {
 		assert.Fail(t, "After convert toApplicationProfileBasic tier is set to nil")
@@ -133,7 +137,7 @@ func TestToApplicationProfilePackCreateWithPackManifest(t *testing.T) {
 }
 
 func TestToTags(t *testing.T) {
-	tagRD := createBaseResourceData()
+	tagRD := getBaseResourceData()
 	tagMap := []string{"owner:sivaa", "unittest"}
 	err := tagRD.Set("tags", tagMap)
 	if err != nil {
@@ -164,7 +168,7 @@ func TestFlattenTagsEmpty(t *testing.T) {
 }
 
 func TestToApplicationProfilePatch(t *testing.T) {
-	profilePatchRD := createBaseResourceData()
+	profilePatchRD := getBaseResourceData()
 	tagMap := []string{"owner:sivaa", "unittest"}
 	profilePatchRD.Set("tags", tagMap)
 	profileMetaEntity, err := toApplicationProfilePatch(profilePatchRD)
@@ -206,4 +210,273 @@ func TestToApplicationProfilePackUpdate(t *testing.T) {
 		assert.Equal(t, v.Content, strings.TrimSpace(m["content"].(string)))
 		assert.Equal(t, *v.Name, m["name"].(string))
 	}
+}
+
+func TestGetAppTiersContent(t *testing.T) {
+	appUid := "test-app-tier-id"
+	d := getBaseResourceData()
+	d.SetId(appUid)
+	m := &client.V1Client{
+		GetApplicationProfileTiersFn: func(appProfileID string) ([]*models.V1AppTier, error) {
+			var appTierSet []*models.V1AppTier
+			tier := &models.V1AppTier{
+				Metadata: &models.V1ObjectMeta{
+					UID:  appUid,
+					Name: "mysql",
+				},
+				Spec: &models.V1AppTierSpec{
+					Type:             "operator-instance",
+					SourceAppTierUID: "test-source-uid",
+					Version:          "5.25",
+					RegistryUID:      "test-registry-id",
+					InstallOrder:     10,
+				},
+			}
+			appTierSet = append(appTierSet, tier)
+			return appTierSet, nil
+		},
+	}
+	appTiers, _, _ := getAppTiersContent(m, d)
+	assert.Equal(t, appUid, appTiers[0].Metadata.UID)
+	assert.Equal(t, "mysql", appTiers[0].Metadata.Name)
+	assert.Equal(t, "test-source-uid", appTiers[0].Spec.SourceAppTierUID)
+	assert.Equal(t, "5.25", appTiers[0].Spec.Version)
+	assert.Equal(t, "test-registry-id", appTiers[0].Spec.RegistryUID)
+	assert.Equal(t, 10, int(appTiers[0].Spec.InstallOrder))
+}
+
+func TestGetValueInProperties(t *testing.T) {
+	prop := map[string]interface{}{
+		"key1": "value1",
+		"key2": "value2",
+	}
+	result := getValueInProperties(prop, "key2")
+	assert.Equal(t, prop["key2"], result)
+	result = getValueInProperties(prop, "key3")
+	assert.Equal(t, "", result)
+}
+
+func TestFlattenAppPacks(t *testing.T) {
+	d := getBaseResourceData()
+	ctx := context.Background()
+	m := &client.V1Client{
+		GetPackRegistryCommonByNameFn: func(regName string) (*models.V1RegistryMetadata, error) {
+			reg := &models.V1RegistryMetadata{
+				IsPrivate: false,
+				Kind:      "pack",
+				Name:      "Public Repo",
+				Scope:     "project",
+				UID:       "test-pub-registry-uid",
+			}
+			return reg, nil
+		},
+		GetApplicationProfileTierManifestContentFn: func(appProfileUID string, tierUID string, manifestUID string) (string, error) {
+			return "test: \n content", nil
+		},
+	}
+
+	var diagPack []*models.V1PackManifestEntity
+	diagPack = append(diagPack, &models.V1PackManifestEntity{
+		UID:         "test-pack-uid",
+		Name:        types.Ptr("kafka"),
+		RegistryUID: "test-pub-registry-uid",
+		Type:        "manifest",
+		Values:      "test values",
+	})
+
+	var tiers []*models.V1AppTierRef
+	tiers = append(tiers, &models.V1AppTierRef{
+		Type:    "manifest",
+		UID:     "test-tier-uid",
+		Name:    "kafka",
+		Version: "5.1",
+	})
+
+	var tierDet []*models.V1AppTier
+	var manifest []*models.V1ObjectReference
+	manifest = append(manifest, &models.V1ObjectReference{
+		Name:            "kafka-dep",
+		UID:             "test-manifest-uid",
+		APIVersion:      "apps/v1",
+		Kind:            "Deployment",
+		ResourceVersion: "v1",
+	})
+
+	var props []*models.V1AppTierProperty
+	props = append(props, &models.V1AppTierProperty{
+		Name:   "prop_key",
+		Value:  "prop_value",
+		Type:   "string",
+		Format: "",
+	})
+	tierDet = append(tierDet, &models.V1AppTier{
+		Metadata: &models.V1ObjectMeta{
+			UID:  "test-uid",
+			Name: "kafka",
+		},
+		Spec: &models.V1AppTierSpec{
+			Type:             "manifest",
+			SourceAppTierUID: "test-source-uid",
+			Version:          "5.25",
+			RegistryUID:      "test-registry-id",
+			InstallOrder:     10,
+			Manifests:        manifest,
+			Properties:       props,
+		},
+	})
+
+	re, _ := flattenAppPacks(m, diagPack, tiers, tierDet, d, ctx)
+	assert.Equal(t, "test-uid", re[0].(map[string]interface{})["uid"])
+	assert.Equal(t, "test-registry-id", re[0].(map[string]interface{})["registry_uid"])
+	assert.Equal(t, "kafka", re[0].(map[string]interface{})["name"])
+	assert.Equal(t, "test-source-uid", re[0].(map[string]interface{})["source_app_tier"])
+	assert.Equal(t, "prop_value", re[0].(map[string]interface{})["properties"].(map[string]string)["prop_key"])
+	assert.Equal(t, "kafka-dep", re[0].(map[string]interface{})["manifest"].([]interface{})[0].(map[string]interface{})["name"])
+	assert.Equal(t, "test-manifest-uid", re[0].(map[string]interface{})["manifest"].([]interface{})[0].(map[string]interface{})["uid"])
+	assert.Equal(t, "test: \n content", re[0].(map[string]interface{})["manifest"].([]interface{})[0].(map[string]interface{})["content"])
+}
+
+func TestToPropertiesTier(t *testing.T) {
+	props := map[string]interface{}{
+		"properties": map[string]interface{}{
+			"aa": "value1",
+			"bb": "value2",
+		},
+	}
+	p := toPropertiesTier(props)
+	assert.Equal(t, "aa", p[0].Name)
+	assert.Equal(t, "value1", p[0].Value)
+	assert.Equal(t, "bb", p[1].Name)
+	assert.Equal(t, "value2", p[1].Value)
+
+}
+
+func TestToApplicationProfileCreate(t *testing.T) {
+	d := getBaseResourceData()
+	var p []map[string]interface{}
+	p = append(p, map[string]interface{}{
+		"type":            "operator-instance",
+		"source_app_tier": "testSUID",
+		"registry_uid":    "test_reg_uid",
+		"uid":             "test_pack_uid",
+		"name":            "mysql",
+		"properties": map[string]interface{}{
+			"dbname": "testDB",
+		},
+	})
+	d.Set("pack", p)
+	cp, _ := toApplicationProfileCreate(d)
+	assert.Equal(t, p[0]["type"], string(cp.Spec.Template.AppTiers[0].Type))
+	assert.Equal(t, p[0]["source_app_tier"], cp.Spec.Template.AppTiers[0].SourceAppTierUID)
+	assert.Equal(t, p[0]["registry_uid"], cp.Spec.Template.AppTiers[0].RegistryUID)
+	assert.Equal(t, "dbname", string(cp.Spec.Template.AppTiers[0].Properties[0].Name))
+	assert.Equal(t, "testDB", string(cp.Spec.Template.AppTiers[0].Properties[0].Value))
+}
+
+func TestToApplicationTiersUpdate(t *testing.T) {
+	d := getBaseResourceData()
+	var p []map[string]interface{}
+	p = append(p, map[string]interface{}{
+		"type":            "operator-instance",
+		"source_app_tier": "testSUID",
+		"registry_uid":    "test_reg_uid",
+		"uid":             "test_pack_uid",
+		"name":            "mysql",
+		"properties": map[string]interface{}{
+			"dbname": "testDB",
+		},
+	})
+	d.Set("pack", p)
+	m := &client.V1Client{
+		GetApplicationProfileTiersFn: func(appProfileID string) ([]*models.V1AppTier, error) {
+			var appTierSet []*models.V1AppTier
+			tier := &models.V1AppTier{
+				Metadata: &models.V1ObjectMeta{
+					UID:  "test-uid",
+					Name: "mysql",
+				},
+				Spec: &models.V1AppTierSpec{
+					Type:             "operator-instance",
+					SourceAppTierUID: "test-source-uid",
+					Version:          "5.25",
+					RegistryUID:      "test-registry-id",
+					InstallOrder:     10,
+				},
+			}
+			appTierSet = append(appTierSet, tier)
+			return appTierSet, nil
+		},
+	}
+	_, ut, _, _ := toApplicationTiersUpdate(d, m)
+	assert.Equal(t, "mysql", ut["test-uid"].Name)
+	assert.Equal(t, "dbname", string(ut["test-uid"].Properties[0].Name))
+	assert.Equal(t, "testDB", string(ut["test-uid"].Properties[0].Value))
+}
+
+func TestResourceApplicationProfileCreate(t *testing.T) {
+	d := getBaseResourceData()
+	ctx := context.Background()
+	m := &client.V1Client{
+		CreateApplicationProfileFn: func(entity *models.V1AppProfileEntity, s string) (string, error) {
+			return "test_application_profile_uid", nil
+		},
+		GetApplicationProfileTiersFn: func(appProfileID string) ([]*models.V1AppTier, error) {
+			var appTierSet []*models.V1AppTier
+			tier := &models.V1AppTier{
+				Metadata: &models.V1ObjectMeta{
+					UID:  "appUid",
+					Name: "mysql",
+				},
+				Spec: &models.V1AppTierSpec{
+					Type:             "operator-instance",
+					SourceAppTierUID: "test-source-uid",
+					Version:          "5.25",
+					RegistryUID:      "test-registry-id",
+					InstallOrder:     10,
+				},
+			}
+			appTierSet = append(appTierSet, tier)
+			return appTierSet, nil
+		},
+		GetApplicationProfileFn: func(uid string) (*models.V1AppProfile, error) {
+			var tiers []*models.V1AppTierRef
+			tiers = append(tiers, &models.V1AppTierRef{
+				Type:    "manifest",
+				UID:     "test-tier-uid",
+				Name:    "kafka",
+				Version: "5.1",
+			})
+			ap := &models.V1AppProfile{
+				Metadata: &models.V1ObjectMeta{
+					UID:  "test_application_profile_uid",
+					Name: "test_application_profile",
+					Labels: map[string]string{
+						"owner": "siva",
+					},
+				},
+				Spec: &models.V1AppProfileSpec{
+					Version: "5.4",
+					Template: &models.V1AppProfileTemplate{
+						AppTiers: tiers,
+					},
+				},
+			}
+			return ap, nil
+		},
+	}
+	s := resourceApplicationProfileCreate(ctx, d, m)
+	assert.Equal(t, false, s.HasError())
+
+}
+
+func TestResourceApplicationProfileDelete(t *testing.T) {
+	d := getBaseResourceData()
+	ctx := context.Background()
+	m := &client.V1Client{
+		DeleteApplicationProfileFn: func(s string) error {
+			return nil
+		},
+	}
+	r := resourceApplicationProfileDelete(ctx, d, m)
+	assert.Equal(t, false, r.HasError())
 }
