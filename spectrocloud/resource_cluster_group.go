@@ -221,9 +221,14 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 
 func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	// Unit test handler
+	if c.UpdateClusterGroupFn != nil {
+		cg := toClusterGroup(d)
+		return diag.FromErr(c.UpdateClusterGroupFn(cg.Metadata.UID, toClusterGroupUpdate(cg)))
+	}
+	//
 
 	// if there are changes in the name of  cluster group, update it using UpdateClusterGroupMeta()
 	if d.HasChanges("name", "tags") {
