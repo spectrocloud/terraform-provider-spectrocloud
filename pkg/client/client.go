@@ -59,6 +59,9 @@ type V1Client struct {
 
 	// Applications
 	GetApplicationFn func(string) (*models.V1AppDeployment, error)
+
+	// Cluster profiles
+	ClustersPatchProfilesFn func(*clusterC.V1SpectroClustersPatchProfilesParams) error
 }
 
 func New(hubbleHost, email, password, projectUID string, apikey string, transportDebug bool, retryAttempts int) *V1Client {
