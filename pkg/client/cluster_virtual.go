@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterVirtual(cluster *models.V1SpectroVirtualClusterE
 func (h *V1Client) CreateMachinePoolVirtual(cloudConfigId string, machinePool *models.V1VirtualMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsVirtualMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolVirtual(cloudConfigId string, machinePool *m
 func (h *V1Client) UpdateMachinePoolVirtual(cloudConfigId string, machinePool *models.V1VirtualMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsVirtualMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -49,7 +49,7 @@ func (h *V1Client) UpdateMachinePoolVirtual(cloudConfigId string, machinePool *m
 func (h *V1Client) DeleteMachinePoolVirtual(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsVirtualMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)

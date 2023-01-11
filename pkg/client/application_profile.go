@@ -103,7 +103,7 @@ func (h *V1Client) GetApplicationProfileTierManifestContent(applicationProfileUI
 func (h *V1Client) PatchApplicationProfile(appProfileUID string, metadata *models.V1AppProfileMetaEntity, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	var params *clusterC.V1AppProfilesUIDMetadataUpdateParams
@@ -124,7 +124,7 @@ func (h *V1Client) PatchApplicationProfile(appProfileUID string, metadata *model
 func (h *V1Client) CreateApplicationProfileTiers(appProfileUID string, appTiers []*models.V1AppTierEntity, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for _, appTier := range appTiers {
@@ -150,7 +150,7 @@ func (h *V1Client) CreateApplicationProfileTiers(appProfileUID string, appTiers 
 func (h *V1Client) UpdateApplicationProfileTiers(appProfileUID string, tierUID string, appTier *models.V1AppTierUpdateEntity, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	var params *clusterC.V1AppProfilesUIDTiersUIDUpdateParams
@@ -178,7 +178,7 @@ func (h *V1Client) UpdateApplicationProfileTiers(appProfileUID string, tierUID s
 func (h *V1Client) DeleteApplicationProfileTiers(appProfileUID string, appTiers []string, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for _, appTierUID := range appTiers {
@@ -240,12 +240,12 @@ func (h *V1Client) DeleteApplicationProfile(uid string) error {
 	//
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	profile, err := h.GetApplicationProfile(uid)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	var params *clusterC.V1AppProfilesUIDDeleteParams

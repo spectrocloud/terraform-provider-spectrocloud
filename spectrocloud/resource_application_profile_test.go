@@ -344,11 +344,20 @@ func TestToPropertiesTier(t *testing.T) {
 		},
 	}
 	p := toPropertiesTier(props)
-	assert.Equal(t, "aa", p[0].Name)
-	assert.Equal(t, "value1", p[0].Value)
-	assert.Equal(t, "bb", p[1].Name)
-	assert.Equal(t, "value2", p[1].Value)
 
+	assertProperties := func(name string, value string) bool {
+		for _, prop := range p {
+			if prop.Name == name && prop.Value == value {
+				return true
+			}
+		}
+		return false
+	}
+	assert.True(t, assertProperties("aa", "value1"))
+	assert.True(t, assertProperties("bb", "value2"))
+
+	// assert there are no any other properties
+	assert.Equal(t, 2, len(p))
 }
 
 func TestToApplicationProfileCreate(t *testing.T) {

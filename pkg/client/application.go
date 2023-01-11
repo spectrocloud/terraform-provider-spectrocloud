@@ -66,7 +66,7 @@ func (h *V1Client) CreateApplicationWithExistingSandboxCluster(body *models.V1Ap
 func (h *V1Client) DeleteApplication(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 	params := clusterC.NewV1AppDeploymentsUIDDeleteParamsWithContext(h.Ctx).WithUID(uid)
 	_, err = client.V1AppDeploymentsUIDDelete(params)

@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterEdgeNative(cluster *models.V1SpectroEdgeNativeCl
 func (h *V1Client) CreateMachinePoolEdgeNative(cloudConfigId string, machinePool *models.V1EdgeNativeMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEdgeNativeMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolEdgeNative(cloudConfigId string, machinePool
 func (h *V1Client) UpdateMachinePoolEdgeNative(cloudConfigId string, machinePool *models.V1EdgeNativeMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEdgeNativeMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -50,7 +50,7 @@ func (h *V1Client) UpdateMachinePoolEdgeNative(cloudConfigId string, machinePool
 func (h *V1Client) DeleteMachinePoolEdgeNative(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEdgeNativeMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)

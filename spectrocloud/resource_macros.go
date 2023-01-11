@@ -96,7 +96,14 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 		return diags
 	}
 
-	d.SetId(c.StringHash(d.Get("name").(string)))
+	var hash string
+	if uid != "" {
+		hash = c.StringHash(d.Get("name").(string) + "tenant")
+	} else {
+		hash = c.StringHash(d.Get("name").(string) + uid)
+	}
+
+	d.SetId(hash)
 
 	if err := d.Set("name", macro.Name); err != nil {
 		return diag.FromErr(err)

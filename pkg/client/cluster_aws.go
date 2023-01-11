@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterAws(cluster *models.V1SpectroAwsClusterEntity) (
 func (h *V1Client) CreateMachinePoolAws(cloudConfigId string, machinePool *models.V1AwsMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsAwsMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolAws(cloudConfigId string, machinePool *model
 func (h *V1Client) UpdateMachinePoolAws(cloudConfigId string, machinePool *models.V1AwsMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsAwsMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -50,7 +50,7 @@ func (h *V1Client) UpdateMachinePoolAws(cloudConfigId string, machinePool *model
 func (h *V1Client) DeleteMachinePoolAws(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsAwsMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
@@ -88,7 +88,7 @@ func (h *V1Client) CreateCloudAccountAws(account *models.V1AwsAccount, ClusterCo
 func (h *V1Client) UpdateCloudAccountAws(account *models.V1AwsAccount) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	uid := account.Metadata.UID
@@ -110,12 +110,12 @@ func (h *V1Client) UpdateCloudAccountAws(account *models.V1AwsAccount) error {
 func (h *V1Client) DeleteCloudAccountAws(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	account, err := h.GetCloudAccountAws(uid)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	var params *clusterC.V1CloudAccountsAwsDeleteParams
