@@ -65,7 +65,7 @@ func ClustersPatchProfiles(h *V1Client, params *clusterC.V1SpectroClustersPatchP
 	}
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 	_, err = client.V1SpectroClustersPatchProfiles(params)
 	return err
@@ -74,7 +74,7 @@ func ClustersPatchProfiles(h *V1Client, params *clusterC.V1SpectroClustersPatchP
 func (h *V1Client) DeleteAddonDeployment(uid string, body *models.V1SpectroClusterProfilesDeleteEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1SpectroClustersDeleteProfilesParamsWithContext(h.Ctx).WithUID(uid).WithBody(body)

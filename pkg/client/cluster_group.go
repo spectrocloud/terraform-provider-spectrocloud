@@ -32,7 +32,7 @@ func (h *V1Client) DeleteClusterGroup(uid string) error {
 	}
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1ClusterGroupsUIDDeleteParams().WithUID(uid)

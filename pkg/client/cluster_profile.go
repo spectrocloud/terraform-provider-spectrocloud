@@ -1,9 +1,7 @@
 package client
 
 import (
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"strings"
-
+	"errors"
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	hashboardC "github.com/spectrocloud/hapi/hashboard/client/v1"
 	"github.com/spectrocloud/hapi/models"
@@ -12,14 +10,17 @@ import (
 )
 
 func (h *V1Client) DeleteClusterProfile(uid string) error {
+	if h.DeleteClusterProfileFn != nil {
+		return h.DeleteClusterProfileFn(uid)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	profile, err := h.GetClusterProfile(uid)
-	if err != nil {
-		return nil
+	if err != nil || profile == nil {
+		return err
 	}
 
 	var params *clusterC.V1ClusterProfilesDeleteParams
@@ -31,14 +32,21 @@ func (h *V1Client) DeleteClusterProfile(uid string) error {
 		params = clusterC.NewV1ClusterProfilesDeleteParams().WithUID(uid)
 		break
 	default:
-		break
+		return errors.New("invalid scope")
 	}
 
-	_, err = client.V1ClusterProfilesDelete(params)
+	if h.v1ClusterProfilesDeleteFn != nil {
+		_, err = h.v1ClusterProfilesDeleteFn(params)
+	} else {
+		_, err = client.V1ClusterProfilesDelete(params)
+	}
 	return err
 }
 
 func (h *V1Client) GetClusterProfile(uid string) (*models.V1ClusterProfile, error) {
+	if h.GetClusterProfileFn != nil {
+		return h.GetClusterProfileFn(uid)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
@@ -57,26 +65,6 @@ func (h *V1Client) GetClusterProfile(uid string) (*models.V1ClusterProfile, erro
 	return success.Payload, nil
 }
 
-func (h *V1Client) GetClusterProfileManifestPack(clusterProfileUID, packName string) ([]*models.V1ManifestEntity, error) {
-	client, err := h.GetClusterClient()
-	if err != nil {
-		return nil, err
-	}
-
-	//params := clusterC.NewV1ClusterProfilesGetParamsWithContext(h.ctx).WithUID(uid)
-	params := clusterC.NewV1ClusterProfilesUIDPacksUIDManifestsParamsWithContext(h.Ctx).
-		WithUID(clusterProfileUID).WithPackName(packName)
-	success, err := client.V1ClusterProfilesUIDPacksUIDManifests(params)
-	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	return success.Payload.Items, nil
-}
-
 func (h *V1Client) GetClusterProfiles() ([]*models.V1ClusterProfileMetadata, error) {
 	client, err := h.GetHashboard()
 	if err != nil {
@@ -92,85 +80,10 @@ func (h *V1Client) GetClusterProfiles() ([]*models.V1ClusterProfileMetadata, err
 	return response.Payload.Items, nil
 }
 
-func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1PackSummary, error) {
-	client, err := h.GetClusterClient()
-	if err != nil {
-		return nil, err
-	}
-
-	params := clusterC.NewV1PacksSummaryListParamsWithContext(h.Ctx)
-	if filters != nil {
-		filterString := types.Ptr(strings.Join(filters, "AND"))
-		params = params.WithFilters(filterString)
-	}
-
-	response, err := client.V1PacksSummaryList(params)
-	if err != nil {
-		return nil, err
-	}
-
-	packs := make([]*models.V1PackSummary, 0)
-	for _, pack := range response.Payload.Items {
-		if registryUID == "" || pack.Spec.RegistryUID == registryUID {
-			packs = append(packs, pack)
-		}
-	}
-
-	return packs, nil
-}
-
-func (h *V1Client) GetPacksByNameAndRegistry(name string, registryUID string) (*models.V1PackTagEntity, error) {
-	client, err := h.GetClusterClient()
-	if err != nil {
-		return nil, err
-	}
-
-	params := clusterC.NewV1PacksNameRegistryUIDListParamsWithContext(h.Ctx).WithPackName(name).WithRegistryUID(registryUID)
-
-	response, err := client.V1PacksNameRegistryUIDList(params)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Payload, nil
-}
-
-func (h *V1Client) GetPack(uid string) (*models.V1PackTagEntity, error) {
-	client, err := h.GetClusterClient()
-	if err != nil {
-		return nil, err
-	}
-
-	params := clusterC.NewV1PacksUIDParamsWithContext(h.Ctx).WithUID(uid)
-	response, err := client.V1PacksUID(params)
-	if err != nil {
-		return nil, err
-	}
-
-	return response.Payload, nil
-}
-
-func (h *V1Client) GetPackRegistry(packUID string, packType string) string {
-	if packUID == "uid" || packType == "manifest" {
-		registry, err := h.GetPackRegistryCommonByName("Public Repo")
-		if err != nil {
-			return ""
-		}
-		return registry.UID
-	}
-
-	PackTagEntity, err := h.GetPack(packUID)
-	if err != nil {
-		return ""
-	}
-
-	return PackTagEntity.RegistryUID
-}
-
 func (h *V1Client) PatchClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity, metadata *models.V1ProfileMetaEntity, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	uid := clusterProfile.Metadata.UID
@@ -183,16 +96,20 @@ func (h *V1Client) PatchClusterProfile(clusterProfile *models.V1ClusterProfileUp
 		params = clusterC.NewV1ClusterProfilesUIDMetadataUpdateParams().WithUID(uid).WithBody(metadata)
 		break
 	default:
-		break
+		return errors.New("invalid scope")
 	}
-	_, err = client.V1ClusterProfilesUIDMetadataUpdate(params)
+	if h.v1ClusterProfilesUIDMetadataUpdateFn != nil {
+		_, err = h.v1ClusterProfilesUIDMetadataUpdateFn(params)
+	} else {
+		_, err = client.V1ClusterProfilesUIDMetadataUpdate(params)
+	}
 	return err
 }
 
 func (h *V1Client) UpdateClusterProfile(clusterProfile *models.V1ClusterProfileUpdateEntity, ProfileContext string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	uid := clusterProfile.Metadata.UID
@@ -205,9 +122,14 @@ func (h *V1Client) UpdateClusterProfile(clusterProfile *models.V1ClusterProfileU
 		params = clusterC.NewV1ClusterProfilesUpdateParams().WithUID(uid).WithBody(clusterProfile)
 		break
 	default:
-		break
+		return errors.New("invalid scope")
 	}
-	_, err = client.V1ClusterProfilesUpdate(params)
+
+	if h.v1ClusterProfilesUpdateFn != nil {
+		_, err = h.v1ClusterProfilesUpdateFn(params)
+	} else {
+		_, err = client.V1ClusterProfilesUpdate(params)
+	}
 	return err
 }
 
@@ -226,9 +148,15 @@ func (h *V1Client) CreateClusterProfile(clusterProfile *models.V1ClusterProfileE
 		params = clusterC.NewV1ClusterProfilesCreateParams().WithBody(clusterProfile)
 		break
 	default:
-		break
+		return "", errors.New("invalid scope")
 	}
-	success, err := client.V1ClusterProfilesCreate(params)
+
+	var success *clusterC.V1ClusterProfilesCreateCreated
+	if h.v1ClusterProfilesCreateFn != nil {
+		success, err = h.v1ClusterProfilesCreateFn(params)
+	} else {
+		success, err = client.V1ClusterProfilesCreate(params)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -251,12 +179,13 @@ func (h *V1Client) PublishClusterProfile(uid string, ProfileContext string) erro
 		params = clusterC.NewV1ClusterProfilesPublishParams().WithUID(uid)
 		break
 	default:
-		break
+		return errors.New("invalid scope")
 	}
-	_, err = client.V1ClusterProfilesPublish(params)
-	if err != nil {
-		return err
+	if h.v1ClusterProfilesPublishFn != nil {
+		_, err = h.v1ClusterProfilesPublishFn(params)
+	} else {
+		_, err = client.V1ClusterProfilesPublish(params)
 	}
 
-	return nil
+	return err
 }

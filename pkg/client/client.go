@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"errors"
-	"log"
 	"time"
 
 	openapiclient "github.com/go-openapi/runtime/client"
@@ -51,6 +50,9 @@ type V1Client struct {
 	transportDebug bool
 	retryAttempts  int
 
+	// Cluster client(common)
+	GetClusterClientFn func() (clusterC.ClientService, error)
+
 	// Cluster Groups
 	CreateClusterGroupFn func(*models.V1ClusterGroupEntity) (string, error)
 	GetClusterGroupFn    func(string) (*models.V1ClusterGroup, error)
@@ -68,7 +70,15 @@ type V1Client struct {
 	DeleteApplicationProfileFn                 func(string) error
 
 	// Cluster profiles
-	ClustersPatchProfilesFn func(*clusterC.V1SpectroClustersPatchProfilesParams) error
+	ClustersPatchProfilesFn func(*clusterC.V1SpectroClustersPatchProfilesParams) error // used in application deployment
+	GetClusterProfileFn     func(string) (*models.V1ClusterProfile, error)
+	DeleteClusterProfileFn  func(string) error
+	// special function for nested mock
+	v1ClusterProfilesDeleteFn            func(params *clusterC.V1ClusterProfilesDeleteParams) (*clusterC.V1ClusterProfilesDeleteNoContent, error)
+	v1ClusterProfilesUIDMetadataUpdateFn func(params *clusterC.V1ClusterProfilesUIDMetadataUpdateParams) (*clusterC.V1ClusterProfilesUIDMetadataUpdateNoContent, error)
+	v1ClusterProfilesUpdateFn            func(params *clusterC.V1ClusterProfilesUpdateParams) (*clusterC.V1ClusterProfilesUpdateNoContent, error)
+	v1ClusterProfilesCreateFn            func(params *clusterC.V1ClusterProfilesCreateParams) (*clusterC.V1ClusterProfilesCreateCreated, error)
+	v1ClusterProfilesPublishFn           func(params *clusterC.V1ClusterProfilesPublishParams) (*models.V1ClusterProfile, error)
 
 	//Registry
 	GetPackRegistryCommonByNameFn func(string) (*models.V1RegistryMetadata, error)
@@ -101,7 +111,7 @@ func (h *V1Client) getNewAuthToken() (*AuthToken, error) {
 		})
 	res, err := AuthClient.V1Authenticate(authParam)
 	if err != nil {
-		log.Fatal(err.Error())
+		//log.Fatal(err.Error())
 		return nil, err
 	}
 
@@ -127,7 +137,7 @@ func GetProjectContextWithCtx(c context.Context, projectUid string) context.Cont
 func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
 	if h.apikey == "" && (authToken == nil || authToken.expiry.Before(time.Now())) {
 		if tkn, err := h.getNewAuthToken(); err != nil {
-			log.Fatal("Failed to get auth token ", err.Error())
+			//log.Fatal("Failed to get auth token ", err.Error())
 			return nil, err
 		} else {
 			authToken = tkn
@@ -147,6 +157,9 @@ func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
 
 // Clients
 func (h *V1Client) GetClusterClient() (clusterC.ClientService, error) {
+	if h.GetClusterClientFn != nil {
+		return h.GetClusterClientFn()
+	}
 	httpTransport, err := h.getTransport()
 	if err != nil {
 		return nil, err

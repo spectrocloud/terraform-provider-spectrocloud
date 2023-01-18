@@ -45,7 +45,7 @@ func (h *V1Client) GetIpPool(pcgUID, poolUID string) (*models.V1IPPoolEntity, er
 func (h *V1Client) UpdateIpPool(pcgUID, poolUID string, pool *models.V1IPPoolInputEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1OverlordsUIDPoolUpdateParams().WithUID(pcgUID).
@@ -57,7 +57,7 @@ func (h *V1Client) UpdateIpPool(pcgUID, poolUID string, pool *models.V1IPPoolInp
 func (h *V1Client) DeleteIpPool(pcgUID, poolUID string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1OverlordsUIDPoolDeleteParams().WithUID(pcgUID).WithPoolUID(poolUID)

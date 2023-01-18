@@ -35,7 +35,7 @@ func (h *V1Client) CreateClusterEks(cluster *models.V1SpectroEksClusterEntity, C
 func (h *V1Client) CreateMachinePoolEks(cloudConfigId string, machinePool *models.V1EksMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEksMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -46,7 +46,7 @@ func (h *V1Client) CreateMachinePoolEks(cloudConfigId string, machinePool *model
 func (h *V1Client) UpdateMachinePoolEks(cloudConfigId string, machinePool *models.V1EksMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEksMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -60,7 +60,7 @@ func (h *V1Client) UpdateMachinePoolEks(cloudConfigId string, machinePool *model
 func (h *V1Client) DeleteMachinePoolEks(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEksMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
@@ -71,7 +71,7 @@ func (h *V1Client) DeleteMachinePoolEks(cloudConfigId string, machinePoolName st
 func (h *V1Client) UpdateFargateProfilesEks(cloudConfigId string, fargateProfiles *models.V1EksFargateProfiles) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 	params := clusterC.NewV1CloudConfigsEksUIDFargateProfilesUpdateParamsWithContext(h.Ctx).
 		WithConfigUID(cloudConfigId).

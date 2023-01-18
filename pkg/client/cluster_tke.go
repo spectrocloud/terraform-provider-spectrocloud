@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterTke(cluster *models.V1SpectroTencentClusterEntit
 func (h *V1Client) CreateMachinePoolTke(cloudConfigId string, machinePool *models.V1TencentMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsTkeMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolTke(cloudConfigId string, machinePool *model
 func (h *V1Client) UpdateMachinePoolTke(cloudConfigId string, machinePool *models.V1TencentMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsTkeMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -50,7 +50,7 @@ func (h *V1Client) UpdateMachinePoolTke(cloudConfigId string, machinePool *model
 func (h *V1Client) DeleteMachinePoolTke(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsTkeMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
@@ -93,7 +93,7 @@ func (h *V1Client) CreateCloudAccountTke(account *models.V1TencentAccount) (stri
 func (h *V1Client) UpdateCloudAccountTencent(account *models.V1TencentAccount) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	uid := account.Metadata.UID
@@ -105,7 +105,7 @@ func (h *V1Client) UpdateCloudAccountTencent(account *models.V1TencentAccount) e
 func (h *V1Client) DeleteCloudAccountTke(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudAccountsTencentDeleteParamsWithContext(h.Ctx).WithUID(uid)
