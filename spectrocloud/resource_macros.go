@@ -14,7 +14,7 @@ import (
 
 func resourceMacro() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceMacrosUpdate,
+		CreateContext: resourceMacrosCreate,
 		ReadContext:   resourceMacrosRead,
 		UpdateContext: resourceMacrosUpdate,
 		DeleteContext: resourceMacrosDelete,
@@ -30,11 +30,10 @@ func resourceMacro() *schema.Resource {
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
-				ForceNew: true,
 			},
 			"value": {
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 			},
 			"project": {
 				Type:     schema.TypeString,
@@ -49,26 +48,19 @@ func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interfa
 	var diags diag.Diagnostics
 	uid := ""
 	var err error
-
 	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
 		uid, err = c.GetProjectUID(v.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
-
-	macros, err := c.GetMacros(uid)
+	err = c.CreateMacros(uid, toMacros(d))
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = c.CreateMacros(uid, toMacrosUpdate(macros, d))
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
 	name := d.Get("name").(string)
-	d.SetId(c.StringHash(name))
-
+	d.SetId(c.GetMacroId(uid, name))
+	//resourceMacrosRead(ctx, d, m)
 	return diags
 }
 
@@ -87,7 +79,6 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 	}
 
 	macro, err = c.GetMacro(d.Get("name").(string), uid)
-
 	if err != nil {
 		return diag.FromErr(err)
 	} else if macro == nil {
@@ -95,24 +86,17 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 		d.SetId("")
 		return diags
 	}
+	if macro != nil {
+		d.SetId(c.GetMacroId(uid, d.Get("name").(string)))
 
-	var hash string
-	if uid != "" {
-		hash = c.StringHash(d.Get("name").(string) + "tenant")
-	} else {
-		hash = c.StringHash(d.Get("name").(string) + uid)
+		if err := d.Set("name", macro.Name); err != nil {
+			return diag.FromErr(err)
+		}
+
+		if err := d.Set("value", macro.Value); err != nil {
+			return diag.FromErr(err)
+		}
 	}
-
-	d.SetId(hash)
-
-	if err := d.Set("name", macro.Name); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if err := d.Set("value", macro.Value); err != nil {
-		return diag.FromErr(err)
-	}
-
 	return diags
 }
 
@@ -121,29 +105,31 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 	var diags diag.Diagnostics
 	var err error
 	uid := ""
-
-	if d.HasChanges("name") || d.HasChanges("value") {
-
-		if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-			uid, err = c.GetProjectUID(v.(string))
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
-
-		macros, err := c.GetMacros(uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		err = c.UpdateMacros(toMacrosUpdate(macros, d).Macros, uid)
+	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
+		uid, err = c.GetProjectUID(v.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
+	if d.HasChange("value") && !d.HasChange("name") {
+		err = c.PatchMacros(uid, toMacros(d))
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
-	resourceMacrosRead(ctx, d, m)
-
+	}
+	if d.HasChange("name") {
+		oldName, _ := d.GetChange("name")
+		oldValue, _ := d.GetChange("name")
+		deleteMacro := resourceMacro().TestResourceData()
+		deleteMacro.Set("name", oldName)
+		deleteMacro.Set("value", oldValue)
+		err = c.DeleteMacros(uid, toMacros(deleteMacro))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		c.CreateMacros(uid, toMacros(d))
+	}
 	return diags
 }
 
@@ -159,68 +145,51 @@ func resourceMacrosDelete(ctx context.Context, d *schema.ResourceData, m interfa
 			return diag.FromErr(err)
 		}
 	}
-
-	err = c.DeleteMacros(d.Get("name").(string), uid)
+	err = c.DeleteMacros(uid, toMacros(d))
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	resourceMacrosRead(ctx, d, m)
-
 	return diags
 }
 
-// toMacros() appends macro to existing list of macros if it is not already there
-func toMacros(macros []*models.V1Macro, d *schema.ResourceData) *models.V1Macros {
+func toMacros(d *schema.ResourceData) *models.V1Macros {
 
-	ret := &models.V1Macro{
+	var macro []*models.V1Macro
+	macro = append(macro, &models.V1Macro{
 		Name:  d.Get("name").(string),
 		Value: d.Get("value").(string),
+	})
+	retMacros := &models.V1Macros{
+		Macros: macro,
 	}
-
-	if !macrosExists(macros, ret.Name) {
-		macros = append(macros, ret)
-	}
-
-	return &models.V1Macros{
-		Macros: macros,
-	}
+	return retMacros
 }
 
-func toMacrosUpdate(macros []*models.V1Macro, d *schema.ResourceData) *models.V1Macros {
-
-	ret := &models.V1Macro{
-		Name:  d.Get("name").(string),
-		Value: d.Get("value").(string),
-	}
-
-	if macrosExists(macros, ret.Name) {
-		new_macros := make([]*models.V1Macro, 0)
-		for _, macro := range macros {
-			if macro.Name != ret.Name {
-				new_macros = append(new_macros, macro)
-			} else {
-				new_macros = append(new_macros, ret)
-			}
-		}
-		return &models.V1Macros{
-			Macros: new_macros,
-		}
-	} else {
-		macros = append(macros, ret)
-		return &models.V1Macros{
-			Macros: macros,
-		}
-	}
-
-}
-
-func macrosExists(macros []*models.V1Macro, name string) bool {
-	for _, macros := range macros {
-		if macros.Name == name {
-			return true
-		}
-	}
-
-	return false
-}
+// Below is unused code will remove before merge to master
+//func toMacrosUpdate(macros []*models.V1Macro, d *schema.ResourceData, old string) *models.V1Macros {
+//
+//	ret := &models.V1Macro{
+//		Name:  d.Get("name").(string),
+//		Value: d.Get("value").(string),
+//	}
+//	put_macros := make([]*models.V1Macro, 0)
+//	for _, m := range macros {
+//		if m.Name != old {
+//			put_macros = append(put_macros, m)
+//		}
+//	}
+//	put_macros = append(put_macros, ret)
+//	return &models.V1Macros{
+//		Macros: put_macros,
+//	}
+//}
+//
+//func macrosExists(macros []*models.V1Macro, name string) bool {
+//	for _, macros := range macros {
+//		if macros.Name == name {
+//			return true
+//		}
+//	}
+//
+//	return false
+//}
