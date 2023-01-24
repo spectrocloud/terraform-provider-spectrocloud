@@ -30,6 +30,7 @@ func resourceMacro() *schema.Resource {
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"value": {
 				Type:     schema.TypeString,
@@ -60,7 +61,6 @@ func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 	name := d.Get("name").(string)
 	d.SetId(c.GetMacroId(uid, name))
-	//resourceMacrosRead(ctx, d, m)
 	return diags
 }
 
@@ -112,23 +112,11 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 		}
 	}
 	if d.HasChange("value") && !d.HasChange("name") {
-		err = c.PatchMacros(uid, toMacros(d))
+		err = c.UpdateMacros(uid, toMacros(d))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 
-	}
-	if d.HasChange("name") {
-		oldName, _ := d.GetChange("name")
-		oldValue, _ := d.GetChange("name")
-		deleteMacro := resourceMacro().TestResourceData()
-		deleteMacro.Set("name", oldName)
-		deleteMacro.Set("value", oldValue)
-		err = c.DeleteMacros(uid, toMacros(deleteMacro))
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		c.CreateMacros(uid, toMacros(d))
 	}
 	return diags
 }
@@ -164,32 +152,3 @@ func toMacros(d *schema.ResourceData) *models.V1Macros {
 	}
 	return retMacros
 }
-
-// Below is unused code will remove before merge to master
-//func toMacrosUpdate(macros []*models.V1Macro, d *schema.ResourceData, old string) *models.V1Macros {
-//
-//	ret := &models.V1Macro{
-//		Name:  d.Get("name").(string),
-//		Value: d.Get("value").(string),
-//	}
-//	put_macros := make([]*models.V1Macro, 0)
-//	for _, m := range macros {
-//		if m.Name != old {
-//			put_macros = append(put_macros, m)
-//		}
-//	}
-//	put_macros = append(put_macros, ret)
-//	return &models.V1Macros{
-//		Macros: put_macros,
-//	}
-//}
-//
-//func macrosExists(macros []*models.V1Macro, name string) bool {
-//	for _, macros := range macros {
-//		if macros.Name == name {
-//			return true
-//		}
-//	}
-//
-//	return false
-//}

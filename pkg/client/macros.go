@@ -87,7 +87,7 @@ func (h *V1Client) StringHash(name string) string {
 	return strconv.FormatUint(uint64(hash(name)), 10)
 }
 
-func (h *V1Client) PatchMacros(uid string, macros *models.V1Macros) error {
+func (h *V1Client) UpdateMacros(uid string, macros *models.V1Macros) error {
 	client, err := h.GetUserClient()
 	if err != nil {
 		return err
@@ -104,30 +104,6 @@ func (h *V1Client) PatchMacros(uid string, macros *models.V1Macros) error {
 		}
 		params := userC.NewV1TenantsUIDMacrosUpdateByMacroNameParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(macros)
 		_, err = client.V1TenantsUIDMacrosUpdateByMacroName(params)
-		return err
-	}
-}
-
-func (h *V1Client) UpdateMacros(uid string, macros []*models.V1Macro) error {
-	client, err := h.GetUserClient()
-	if err != nil {
-		return err
-	}
-	body := &models.V1Macros{
-		Macros: macros,
-	}
-	if uid != "" {
-		params := userC.NewV1ProjectsUIDMacrosUpdateParams().WithContext(h.Ctx).WithUID(uid).WithBody(body)
-		_, err := client.V1ProjectsUIDMacrosUpdate(params)
-		return err
-
-	} else {
-		tenantUID, err := h.GetTenantUID()
-		if err != nil || tenantUID == "" {
-			return err
-		}
-		params := userC.NewV1TenantsUIDMacrosUpdateParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(body)
-		_, err = client.V1TenantsUIDMacrosUpdate(params)
 		return err
 	}
 }
