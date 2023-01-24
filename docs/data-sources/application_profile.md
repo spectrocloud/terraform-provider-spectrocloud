@@ -24,6 +24,10 @@ data "spectrocloud_application_profile" "my-app-profile" {
 
 - `name` (String) Name of the application profile
 
+### Optional
+
+- `version` (String)
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.
