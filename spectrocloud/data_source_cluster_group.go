@@ -15,15 +15,17 @@ func dataSourceClusterGroup() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the cluster group.",
 			},
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "tenant",
 				ValidateFunc: validation.StringInSlice([]string{"", "tenant", "system"}, false),
+				Description:  "Cluster Group context can be 'system' or 'tenant'. Defaults to 'tenant'.",
 			},
 		},
 	}

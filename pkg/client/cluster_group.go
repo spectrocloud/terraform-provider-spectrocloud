@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	hapitransport "github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 
@@ -75,13 +76,24 @@ func (h *V1Client) GetClusterGroupWithoutStatus(uid string) (*models.V1ClusterGr
 	return cluster, nil
 }
 
-func (h *V1Client) GetClusterGroupByName(name string, scope string) (*models.V1ObjectScopeEntity, error) {
+func (h *V1Client) GetClusterGroupByName(name string, ClusterGroupContext string) (*models.V1ObjectScopeEntity, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1ClusterGroupsHostClusterMetadataParams().WithContext(h.Ctx)
+	var params *clusterC.V1ClusterGroupsHostClusterMetadataParams
+	switch ClusterGroupContext {
+	case "system":
+		params = clusterC.NewV1ClusterGroupsHostClusterMetadataParams()
+		break
+	case "tenant":
+		params = clusterC.NewV1ClusterGroupsHostClusterMetadataParams().WithContext(h.Ctx)
+		break
+	default:
+		return nil, errors.New("invalid scope")
+	}
+
 	success, err := client.V1ClusterGroupsHostClusterMetadata(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
 		return nil, nil
@@ -90,7 +102,7 @@ func (h *V1Client) GetClusterGroupByName(name string, scope string) (*models.V1O
 	}
 
 	for _, group := range success.Payload.Items {
-		if group.Name == name && group.Scope == scope { // tenant or system
+		if group.Name == name && group.Scope == ClusterGroupContext { // tenant or system. keep it to extend to project in future.
 			return group, nil
 		}
 	}
