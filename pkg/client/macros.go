@@ -147,7 +147,7 @@ func (h *V1Client) GetMacroId(uid string, name string) string {
 	if uid != "" {
 		hash = h.StringHash(name + uid)
 	} else {
-		hash = h.StringHash(name + "tenant")
+		hash = h.StringHash(name + "%tenant")
 	}
 	return hash
 }
