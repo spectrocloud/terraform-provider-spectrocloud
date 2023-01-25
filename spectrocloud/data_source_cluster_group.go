@@ -18,7 +18,7 @@ func dataSourceClusterGroup() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Name of the cluster group.",
+				Description: "The name of the cluster group.",
 			},
 			"context": {
 				Type:         schema.TypeString,
