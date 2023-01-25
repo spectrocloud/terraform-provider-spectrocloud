@@ -28,17 +28,20 @@ func resourceMacro() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the macro.",
 			},
 			"value": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The value of the macro.",
 			},
 			"project": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The Spectro Cloud project name.",
 			},
 		},
 	}
