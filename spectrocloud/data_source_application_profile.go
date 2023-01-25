@@ -24,7 +24,7 @@ func dataSourceApplicationProfile() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Optional:    true,
-				Description: "The version number of the app profile",
+				Description: "The version number of the app profile. Default value is 1.0.0.",
 			},
 		},
 	}
