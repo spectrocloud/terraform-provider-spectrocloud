@@ -34,24 +34,17 @@ func dataSourceApplicationProfileRead(_ context.Context, d *schema.ResourceData,
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
-		if version, okVersion := d.GetOk("version"); okVersion {
-			applicationProfile, appUID, getVersion, err := c.GetApplicationProfileByNameAndVersion(name.(string), version.(string))
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			d.SetId(appUID)
-			d.Set("name", applicationProfile.Metadata.Name)
-			d.Set("version", getVersion)
-		} else {
-			applicationProfile, err := c.GetApplicationProfileByName(name.(string))
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			d.SetId(applicationProfile.Metadata.UID)
-			d.Set("name", applicationProfile.Metadata.Name)
-			d.Set("version", applicationProfile.Spec.Version)
+		version, okVersion := d.GetOk("version")
+		if !okVersion || version == "" {
+			version = "1.0.0"
 		}
-
+		applicationProfile, appUID, getVersion, err := c.GetApplicationProfileByNameAndVersion(name.(string), version.(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		d.SetId(appUID)
+		d.Set("name", applicationProfile.Metadata.Name)
+		d.Set("version", getVersion)
 	}
 	return diags
 }
