@@ -9,7 +9,7 @@ output "out_beehive" {
 
 data "spectrocloud_cluster_group" "tenant_cl" {
   name = "tenant_cl"
-  context = "system"
+  context = "tenant"
 }
 
 output "out_tenant_cl" {
