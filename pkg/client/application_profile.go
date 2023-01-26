@@ -10,26 +10,29 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client/herr"
 )
 
-func (h *V1Client) GetApplicationProfileByName(profileName string) (*models.V1AppProfileSummary, error) {
+func (h *V1Client) GetApplicationProfileByNameAndVersion(profileName string, version string) (*models.V1AppProfileSummary, string, string, error) {
 	client, err := h.GetHashboard()
 	if err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
 
 	limit := int64(0)
 	params := hashboardC.NewV1DashboardAppProfilesParamsWithContext(h.Ctx).WithLimit(&limit)
 	profiles, err := client.V1DashboardAppProfiles(params)
 	if err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
 
 	for _, profile := range profiles.Payload.AppProfiles {
 		if profile.Metadata.Name == profileName {
-			return profile, nil
+			for i, _ := range profile.Spec.Versions {
+				if profile.Spec.Versions[i].Version == version {
+					return profile, profile.Spec.Versions[i].UID, profile.Spec.Versions[i].Version, nil
+				}
+			}
 		}
 	}
-
-	return nil, fmt.Errorf("Application profile '%s' not found.", profileName)
+	return nil, "", "", fmt.Errorf("application profile '%s' not found for version '%s'", profileName, version)
 }
 
 func (h *V1Client) GetApplicationProfile(uid string) (*models.V1AppProfile, error) {
