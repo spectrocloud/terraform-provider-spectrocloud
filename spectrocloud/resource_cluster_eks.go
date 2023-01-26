@@ -2,11 +2,12 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -21,6 +22,7 @@ func resourceClusterEks() *schema.Resource {
 		ReadContext:   resourceClusterEksRead,
 		UpdateContext: resourceClusterEksUpdate,
 		DeleteContext: resourceClusterDelete,
+		Description:   "Resource for managing EKS clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -31,9 +33,10 @@ func resourceClusterEks() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the cluster.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -121,9 +124,10 @@ func resourceClusterEks() *schema.Resource {
 				Optional: true,
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The AWS cloud account id to use for this cluster.",
 			},
 			"cloud_config_id": {
 				Type:     schema.TypeString,
@@ -148,10 +152,11 @@ func resourceClusterEks() *schema.Resource {
 				Computed: true,
 			},
 			"cloud_config": {
-				Type:     schema.TypeList,
-				ForceNew: true,
-				Required: true,
-				MaxItems: 1,
+				Type:        schema.TypeList,
+				ForceNew:    true,
+				Required:    true,
+				MaxItems:    1,
+				Description: "The AWS environment configuration settings such as network parameters and encryption parameters that apply to this cluster.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key_name": {
@@ -240,8 +245,9 @@ func resourceClusterEks() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeList,
-				Required: true,
+				Type:        schema.TypeList,
+				Required:    true,
+				Description: "The machine pool configuration for the cluster.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {

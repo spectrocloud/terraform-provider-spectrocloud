@@ -1,5 +1,5 @@
 data "spectrocloud_cluster_group" "beehive" {
-  name = "beehive"
+  name    = "beehive"
   context = "system"
 }
 
@@ -8,7 +8,7 @@ output "out_beehive" {
 }
 
 data "spectrocloud_cluster_group" "tenant_cl" {
-  name = "tenant_cl"
+  name    = "tenant_cl"
   context = "tenant"
 }
 
