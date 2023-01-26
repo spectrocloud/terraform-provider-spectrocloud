@@ -40,7 +40,6 @@ resource "spectrocloud_cluster_eks" "cluster" {
     id = data.spectrocloud_cluster_profile.profile.id
 
     # To override or specify values for a cluster:
-
     # pack {
     #   name   = "spectro-byo-manifest"
     #   tag    = "1.0.x"
@@ -73,6 +72,16 @@ resource "spectrocloud_cluster_eks" "cluster" {
     configuration_scan_schedule = "0 0 * * SUN"
     penetration_scan_schedule   = "0 0 * * SUN"
     conformance_scan_schedule   = "0 0 1 * *"
+  }
+
+  machine_pool {
+    name          = "worker-basic"
+    count         = 1
+    instance_type = "t3.large"
+    disk_size_gb  = 60
+    az_subnets = {
+      "us-west-2a" = "subnet-0d4978ddbff16c"
+    }
   }
 }
 ```

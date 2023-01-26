@@ -26,7 +26,7 @@ data "spectrocloud_application_profile" "my-app-profile" {
 
 ### Optional
 
-- `version` (String)
+- `version` (String) The version of the app profile. Default value is '1.0.0'.
 
 ### Read-Only
 
