@@ -103,9 +103,6 @@ func resourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData, 
 		return diagnostics
 	}
 
-	// Don't read the password!!
-	//d.Set("vsphere_password", *account.Spec.Password)
-
 	return diags
 }
 

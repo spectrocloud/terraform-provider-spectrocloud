@@ -82,7 +82,7 @@ func (h *V1Client) GetCloudAccountOpenStack(uid string) (*models.V1OpenStackAcco
 	params := clusterC.NewV1CloudAccountsOpenStackGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsOpenStackGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err

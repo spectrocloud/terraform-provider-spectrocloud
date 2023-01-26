@@ -115,7 +115,7 @@ func (h *V1Client) GetCloudAccountVsphere(uid string) (*models.V1VsphereAccount,
 	getParams := clusterC.NewV1CloudAccountsVsphereGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsVsphereGet(getParams)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err
