@@ -37,7 +37,7 @@ func resourceMacro() *schema.Resource {
 			"value": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The value of the macro.",
+				Description: "The value that the macro or service output variable will contain.",
 			},
 			"project": {
 				Type:        schema.TypeString,
