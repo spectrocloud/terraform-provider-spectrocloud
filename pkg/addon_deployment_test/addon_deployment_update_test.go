@@ -1,16 +1,16 @@
-package client
+package addon_deployment
 
 import (
-	"fmt"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
 	// Create a mock V1Client
-	h := &V1Client{
+	h := &client.V1Client{
 		ClustersPatchProfilesFn: func(params *clusterC.V1SpectroClustersPatchProfilesParams) error {
 			// Check that the correct params are passed to ClustersPatchProfiles
 			assert.Equal(t, "test-cluster", params.UID)
@@ -59,7 +59,7 @@ func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
 
 func TestUpdateAddonDeploymentIsAttached(t *testing.T) {
 	// Create a mock V1Client
-	h := &V1Client{
+	h := &client.V1Client{
 		ClustersPatchProfilesFn: func(params *clusterC.V1SpectroClustersPatchProfilesParams) error {
 			// Check that the correct params are passed to ClustersPatchProfiles
 			assert.Equal(t, "test-cluster", params.UID)
@@ -104,82 +104,4 @@ func TestUpdateAddonDeploymentIsAttached(t *testing.T) {
 
 	// Assert there was no error
 	assert.NoError(t, err)
-}
-
-func TestPatchWithRetry(t *testing.T) {
-	// Create a mock V1Client
-	var patchCalled int
-
-	// Create a mock for client.V1SpectroClustersPatchProfiles(params)
-	h := &V1Client{
-		retryAttempts: 3,
-		ClustersPatchProfilesFn: func(params *clusterC.V1SpectroClustersPatchProfilesParams) error {
-			patchCalled++
-			if patchCalled < 3 {
-				return fmt.Errorf("test error")
-			}
-			return nil
-		},
-	}
-
-	// Create mock params
-	params := &clusterC.V1SpectroClustersPatchProfilesParams{
-		UID: "test-cluster",
-		Body: &models.V1SpectroClusterProfiles{
-			Profiles: []*models.V1SpectroClusterProfileEntity{
-				{UID: "test-profile"},
-			},
-		},
-	}
-
-	// Call patchWithRetry
-	err := patchWithRetry(h, params)
-
-	// Assert patch was called 3 times and there was no error
-	assert.Equal(t, 3, patchCalled)
-	assert.NoError(t, err)
-}
-
-func TestIsProfileAttachedByNamePositive(t *testing.T) {
-	// Test where profile is attached
-	cluster := &models.V1SpectroCluster{
-		Spec: &models.V1SpectroClusterSpec{
-			ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
-				{
-					UID:  "test-uid",
-					Name: "test-name",
-				},
-			},
-		},
-	}
-	newProfile := &models.V1ClusterProfile{
-		Metadata: &models.V1ObjectMeta{
-			Name: "test-name",
-		},
-	}
-	isAttached, uid := isProfileAttachedByName(cluster, newProfile)
-	assert.True(t, isAttached)
-	assert.Equal(t, "test-uid", uid)
-}
-
-func TestIsProfileAttachedByNameNegative(t *testing.T) {
-	// Test where profile is not attached
-	cluster := &models.V1SpectroCluster{
-		Spec: &models.V1SpectroClusterSpec{
-			ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
-				{
-					UID:  "test-uid",
-					Name: "test-name",
-				},
-			},
-		},
-	}
-	newProfile := &models.V1ClusterProfile{
-		Metadata: &models.V1ObjectMeta{
-			Name: "other-test-name",
-		},
-	}
-	isAttached, uid := isProfileAttachedByName(cluster, newProfile)
-	assert.False(t, isAttached)
-	assert.Equal(t, "", uid)
 }

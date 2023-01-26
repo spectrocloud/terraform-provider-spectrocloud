@@ -1,10 +1,11 @@
-package client
+package cluster_profile_test
 
 import (
 	"errors"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -80,11 +81,11 @@ func TestCreateClusterProfile(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			h := &V1Client{
+			h := &client.V1Client{
 				GetClusterClientFn: func() (clusterC.ClientService, error) {
 					return &clusterC.Client{}, tc.getClientError
 				},
-				v1ClusterProfilesCreateFn: tc.v1ClusterProfilesCreateFn,
+				V1ClusterProfilesCreateFn: tc.v1ClusterProfilesCreateFn,
 			}
 			id, err := h.CreateClusterProfile(tc.clusterProfile, tc.profileContext)
 			if tc.expectedError != nil {
