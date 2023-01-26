@@ -35,7 +35,7 @@ func (h *V1Client) CreateClusterEks(cluster *models.V1SpectroEksClusterEntity, C
 func (h *V1Client) CreateMachinePoolEks(cloudConfigId string, machinePool *models.V1EksMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEksMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -46,7 +46,7 @@ func (h *V1Client) CreateMachinePoolEks(cloudConfigId string, machinePool *model
 func (h *V1Client) UpdateMachinePoolEks(cloudConfigId string, machinePool *models.V1EksMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEksMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -60,7 +60,7 @@ func (h *V1Client) UpdateMachinePoolEks(cloudConfigId string, machinePool *model
 func (h *V1Client) DeleteMachinePoolEks(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEksMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
@@ -71,7 +71,7 @@ func (h *V1Client) DeleteMachinePoolEks(cloudConfigId string, machinePoolName st
 func (h *V1Client) UpdateFargateProfilesEks(cloudConfigId string, fargateProfiles *models.V1EksFargateProfiles) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 	params := clusterC.NewV1CloudConfigsEksUIDFargateProfilesUpdateParamsWithContext(h.Ctx).
 		WithConfigUID(cloudConfigId).
@@ -89,7 +89,7 @@ func (h *V1Client) GetCloudConfigEks(configUID string) (*models.V1EksCloudConfig
 	params := clusterC.NewV1CloudConfigsEksGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsEksGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -19,29 +20,42 @@ func resourceCloudAccountVsphere() *schema.Resource {
 		DeleteContext: resourceCloudAccountVsphereDelete,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the cloud account. This name is used to identify the cloud account in the Spectro Cloud UI.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "Context of the cloud account. This can be either project or tenant. If not specified, the default value is project.",
 			},
 			"private_cloud_gateway_id": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the vSphere cloud.",
 			},
 			"vsphere_vcenter": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "vCenter server address. This is the address of the vCenter server that is used to connect to the vSphere cloud.",
 			},
 			"vsphere_username": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Username of the vSphere cloud. This is the username of the vSphere cloud that is used to connect to the vSphere cloud.",
 			},
 			"vsphere_password": {
-				Type:      schema.TypeString,
-				Required:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Sensitive:   true,
+				Description: "Password of the vSphere cloud. This is the password of the vSphere cloud that is used to connect to the vSphere cloud.",
 			},
 			"vsphere_ignore_insecure_error": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Ignore insecure error. This is a boolean value that indicates whether to ignore the insecure error or not. If not specified, the default value is false.",
 			},
 		},
 	}
@@ -55,7 +69,8 @@ func resourceCloudAccountVsphereCreate(ctx context.Context, d *schema.ResourceDa
 
 	account := toVsphereAccount(d)
 
-	uid, err := c.CreateCloudAccountVsphere(account)
+	AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountVsphere(account, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -83,26 +98,31 @@ func resourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData, 
 		return diags
 	}
 
-	if err := d.Set("name", account.Metadata.Name); err != nil {
-		return diag.FromErr(err)
+	diagnostics, done := flattenVsphereCloudAccount(d, account)
+	if done {
+		return diagnostics
 	}
-	if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("vsphere_vcenter", *account.Spec.VcenterServer); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("vsphere_username", *account.Spec.Username); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("vsphere_ignore_insecure_error", account.Spec.Insecure); err != nil {
-		return diag.FromErr(err)
-	}
-
-	// Don't read the password!!
-	//d.Set("vsphere_password", *account.Spec.Password)
 
 	return diags
+}
+
+func flattenVsphereCloudAccount(d *schema.ResourceData, account *models.V1VsphereAccount) (diag.Diagnostics, bool) {
+	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("vsphere_vcenter", *account.Spec.VcenterServer); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("vsphere_username", *account.Spec.Username); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("vsphere_ignore_insecure_error", account.Spec.Insecure); err != nil {
+		return diag.FromErr(err), true
+	}
+	return nil, false
 }
 
 func resourceCloudAccountVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -113,7 +133,8 @@ func resourceCloudAccountVsphereUpdate(ctx context.Context, d *schema.ResourceDa
 
 	account := toVsphereAccount(d)
 
-	err := c.UpdateCloudAccountVsphere(account)
+	AccountContext := d.Get("context").(string)
+	err := c.UpdateCloudAccountVsphere(account, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -141,12 +162,13 @@ func resourceCloudAccountVsphereDelete(_ context.Context, d *schema.ResourceData
 func toVsphereAccount(d *schema.ResourceData) *models.V1VsphereAccount {
 	account := &models.V1VsphereAccount{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Name:        d.Get("name").(string),
+			Annotations: map[string]string{OverlordUID: d.Get("private_cloud_gateway_id").(string)},
+			UID:         d.Id(),
 		},
 		Spec: &models.V1VsphereCloudAccount{
-			VcenterServer: types.Ptr(d.Get("vsphere_password").(string)),
-			Username:      types.Ptr(d.Get("vsphere_password").(string)),
+			VcenterServer: types.Ptr(d.Get("vsphere_vcenter").(string)),
+			Username:      types.Ptr(d.Get("vsphere_username").(string)),
 			Password:      types.Ptr(d.Get("vsphere_password").(string)),
 			Insecure:      d.Get("vsphere_ignore_insecure_error").(bool),
 		},

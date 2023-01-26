@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterMaas(cluster *models.V1SpectroMaasClusterEntity)
 func (h *V1Client) CreateMachinePoolMaas(cloudConfigId string, machinePool *models.V1MaasMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsMaasMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolMaas(cloudConfigId string, machinePool *mode
 func (h *V1Client) UpdateMachinePoolMaas(cloudConfigId string, machinePool *models.V1MaasMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsMaasMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -50,7 +50,7 @@ func (h *V1Client) UpdateMachinePoolMaas(cloudConfigId string, machinePool *mode
 func (h *V1Client) DeleteMachinePoolMaas(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsMaasMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
@@ -78,7 +78,7 @@ func (h *V1Client) CreateCloudAccountMaas(account *models.V1MaasAccount) (string
 func (h *V1Client) UpdateCloudAccountMaas(account *models.V1MaasAccount) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	uid := account.Metadata.UID
@@ -90,7 +90,7 @@ func (h *V1Client) UpdateCloudAccountMaas(account *models.V1MaasAccount) error {
 func (h *V1Client) DeleteCloudAccountMaas(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudAccountsMaasDeleteParamsWithContext(h.Ctx).WithUID(uid)

@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 
@@ -21,6 +20,12 @@ func dataSourceApplicationProfile() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the application profile",
 			},
+			"version": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "The version of the app profile. Default value is '1.0.0'.",
+			},
 		},
 	}
 }
@@ -29,12 +34,17 @@ func dataSourceApplicationProfileRead(_ context.Context, d *schema.ResourceData,
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
-		application_profile, err := c.GetApplicationProfileByName(name.(string))
+		version, okVersion := d.GetOk("version")
+		if !okVersion || version == "" {
+			version = "1.0.0"
+		}
+		applicationProfile, appUID, getVersion, err := c.GetApplicationProfileByNameAndVersion(name.(string), version.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		d.SetId(application_profile.Metadata.UID)
-		d.Set("name", application_profile.Metadata.Name)
+		d.SetId(appUID)
+		d.Set("name", applicationProfile.Metadata.Name)
+		d.Set("version", getVersion)
 	}
 	return diags
 }

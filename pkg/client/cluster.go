@@ -14,7 +14,7 @@ import (
 func (h *V1Client) DeleteCluster(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	cluster, err := h.GetCluster(uid)
@@ -152,7 +152,7 @@ func (h *V1Client) GetClusterImportManifest(uid string) (string, error) {
 func (h *V1Client) UpdateClusterProfileValues(uid string, profiles *models.V1SpectroClusterProfiles) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	resolveNotification := true

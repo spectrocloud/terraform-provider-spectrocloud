@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterAzure(cluster *models.V1SpectroAzureClusterEntit
 func (h *V1Client) CreateMachinePoolAzure(cloudConfigId string, machinePool *models.V1AzureMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsAzureMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolAzure(cloudConfigId string, machinePool *mod
 func (h *V1Client) UpdateMachinePoolAzure(cloudConfigId string, machinePool *models.V1AzureMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsAzureMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -50,7 +50,7 @@ func (h *V1Client) UpdateMachinePoolAzure(cloudConfigId string, machinePool *mod
 func (h *V1Client) DeleteMachinePoolAzure(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsAzureMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
@@ -78,7 +78,7 @@ func (h *V1Client) CreateCloudAccountAzure(account *models.V1AzureAccount) (stri
 func (h *V1Client) UpdateCloudAccountAzure(account *models.V1AzureAccount) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	uid := account.Metadata.UID
@@ -90,7 +90,7 @@ func (h *V1Client) UpdateCloudAccountAzure(account *models.V1AzureAccount) error
 func (h *V1Client) DeleteCloudAccountAzure(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudAccountsAzureDeleteParamsWithContext(h.Ctx).WithUID(uid)
@@ -107,7 +107,7 @@ func (h *V1Client) GetCloudAccountAzure(uid string) (*models.V1AzureAccount, err
 	params := clusterC.NewV1CloudAccountsAzureGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsAzureGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (h *V1Client) GetCloudConfigAzure(configUID string) (*models.V1AzureCloudCo
 	params := clusterC.NewV1CloudConfigsAzureGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsAzureGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err

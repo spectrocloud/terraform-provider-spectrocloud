@@ -67,8 +67,8 @@ func resourceCloudAccountAwsCreate(ctx context.Context, d *schema.ResourceData, 
 
 	account := toAwsAccount(d)
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateCloudAccountAws(account, ClusterContext)
+	AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountAws(account, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}

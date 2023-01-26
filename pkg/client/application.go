@@ -20,7 +20,7 @@ func (h *V1Client) GetApplication(uid string) (*models.V1AppDeployment, error) {
 	params := clusterC.NewV1AppDeploymentsUIDGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1AppDeploymentsUIDGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (h *V1Client) CreateApplicationWithExistingSandboxCluster(body *models.V1Ap
 func (h *V1Client) DeleteApplication(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 	params := clusterC.NewV1AppDeploymentsUIDDeleteParamsWithContext(h.Ctx).WithUID(uid)
 	_, err = client.V1AppDeploymentsUIDDelete(params)

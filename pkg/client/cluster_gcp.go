@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterGcp(cluster *models.V1SpectroGcpClusterEntity) (
 func (h *V1Client) CreateMachinePoolGcp(cloudConfigId string, machinePool *models.V1GcpMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsGcpMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolGcp(cloudConfigId string, machinePool *model
 func (h *V1Client) UpdateMachinePoolGcp(cloudConfigId string, machinePool *models.V1GcpMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsGcpMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -50,7 +50,7 @@ func (h *V1Client) UpdateMachinePoolGcp(cloudConfigId string, machinePool *model
 func (h *V1Client) DeleteMachinePoolGcp(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsGcpMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
@@ -78,7 +78,7 @@ func (h *V1Client) CreateCloudAccountGcp(account *models.V1GcpAccountEntity) (st
 func (h *V1Client) UpdateCloudAccountGcp(account *models.V1GcpAccountEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	uid := account.Metadata.UID
@@ -90,7 +90,7 @@ func (h *V1Client) UpdateCloudAccountGcp(account *models.V1GcpAccountEntity) err
 func (h *V1Client) DeleteCloudAccountGcp(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudAccountsGcpDeleteParamsWithContext(h.Ctx).WithUID(uid)
@@ -107,7 +107,7 @@ func (h *V1Client) GetCloudAccountGcp(uid string) (*models.V1GcpAccount, error) 
 	params := clusterC.NewV1CloudAccountsGcpGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsGcpGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (h *V1Client) GetCloudConfigGcp(configUID string) (*models.V1GcpCloudConfig
 	params := clusterC.NewV1CloudConfigsGcpGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsGcpGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err

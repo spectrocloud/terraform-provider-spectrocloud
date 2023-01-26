@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterLibvirt(cluster *models.V1SpectroLibvirtClusterE
 func (h *V1Client) CreateMachinePoolLibvirt(cloudConfigId string, machinePool *models.V1LibvirtMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsLibvirtMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolLibvirt(cloudConfigId string, machinePool *m
 func (h *V1Client) UpdateMachinePoolLibvirt(cloudConfigId string, machinePool *models.V1LibvirtMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsLibvirtMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -50,7 +50,7 @@ func (h *V1Client) UpdateMachinePoolLibvirt(cloudConfigId string, machinePool *m
 func (h *V1Client) DeleteMachinePoolLibvirt(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsLibvirtMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)

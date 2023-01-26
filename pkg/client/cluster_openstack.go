@@ -40,7 +40,7 @@ func (h *V1Client) CreateCloudAccountOpenStack(account *models.V1OpenStackAccoun
 func (h *V1Client) CreateMachinePoolOpenStack(cloudConfigId string, machinePool *models.V1OpenStackMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsOpenStackMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -51,7 +51,7 @@ func (h *V1Client) CreateMachinePoolOpenStack(cloudConfigId string, machinePool 
 func (h *V1Client) UpdateMachinePoolOpenStack(cloudConfigId string, machinePool *models.V1OpenStackMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsOpenStackMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -65,7 +65,7 @@ func (h *V1Client) UpdateMachinePoolOpenStack(cloudConfigId string, machinePool 
 func (h *V1Client) DeleteMachinePoolOpenStack(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsOpenStackMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
@@ -82,7 +82,7 @@ func (h *V1Client) GetCloudAccountOpenStack(uid string) (*models.V1OpenStackAcco
 	params := clusterC.NewV1CloudAccountsOpenStackGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsOpenStackGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (h *V1Client) GetCloudConfigOpenStack(configUID string) (*models.V1OpenStac
 func (h *V1Client) UpdateCloudAccountOpenStack(account *models.V1OpenStackAccount) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	uid := account.Metadata.UID
@@ -124,7 +124,7 @@ func (h *V1Client) UpdateCloudAccountOpenStack(account *models.V1OpenStackAccoun
 func (h *V1Client) DeleteCloudAccountOpenStack(uid string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudAccountsOpenStackDeleteParamsWithContext(h.Ctx).WithUID(uid)

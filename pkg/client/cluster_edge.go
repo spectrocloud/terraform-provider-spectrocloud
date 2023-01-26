@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterEdge(cluster *models.V1SpectroEdgeClusterEntity)
 func (h *V1Client) CreateMachinePoolEdge(cloudConfigId string, machinePool *models.V1EdgeMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEdgeMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolEdge(cloudConfigId string, machinePool *mode
 func (h *V1Client) UpdateMachinePoolEdge(cloudConfigId string, machinePool *models.V1EdgeMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEdgeMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -50,7 +50,7 @@ func (h *V1Client) UpdateMachinePoolEdge(cloudConfigId string, machinePool *mode
 func (h *V1Client) DeleteMachinePoolEdge(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsEdgeMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)

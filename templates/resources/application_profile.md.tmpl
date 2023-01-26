@@ -100,6 +100,57 @@ resource "spectrocloud_cluster_profile" "profile" {
    
 ```
 
+### App Profile with Container
+
+```hcl
+
+variable "single-container-image" {
+    type        = string
+    description = "The name of the container image to use for the virtual cluster in a single scenario"
+    default     = "ghcr.io/spectrocloud/hello-universe:1.0.8"
+}
+
+data "spectrocloud_cluster_group" "beehive" {
+  name    = "beehive"
+  context = "system"
+}
+
+data "spectrocloud_registry" "container_registry" {
+  name = "Public Repo"
+}
+
+data "spectrocloud_pack_simple" "container_pack" {
+  type         = "container"
+  name         = "container"
+  version      = "1.0.0"
+  registry_uid = data.spectrocloud_registry.container_registry.id
+}
+
+resource "spectrocloud_application_profile" "hello-universe-ui" {
+  name        = "hello-universe"
+  description = "Hello Universe as a single UI instance"
+  pack {
+    name = "hello-universe-ui"
+    type = data.spectrocloud_pack_simple.container_pack.type
+    registry_uid = data.spectrocloud_registry.container_registry.id
+    source_app_tier = data.spectrocloud_pack_simple.container_pack.id
+    values = <<-EOT
+        containerService:
+            serviceName: "hello-universe-ui-test"
+            registryUrl: ""
+            image: ${var.single-container-image}
+            access: public
+            ports:
+              - "8080"
+            serviceType: LoadBalancer
+    EOT
+  }
+  tags = ["scenario-1"]
+}
+
+
+```
+
 
 ###  App Profile with Helm Chart
 
@@ -136,7 +187,7 @@ data "spectrocloud_registry" "common_registry" {
 }
 
 data "spectrocloud_registry" "container_registry" {
-  name = "automation-pack-registry"
+  name = "Public Repo"
 }
 
 data "spectrocloud_registry" "db_registry" {

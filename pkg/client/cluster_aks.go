@@ -25,7 +25,7 @@ func (h *V1Client) CreateClusterAks(cluster *models.V1SpectroAzureClusterEntity)
 func (h *V1Client) CreateMachinePoolAks(cloudConfigId string, machinePool *models.V1AzureMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsAksMachinePoolCreateParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithBody(machinePool)
@@ -36,7 +36,7 @@ func (h *V1Client) CreateMachinePoolAks(cloudConfigId string, machinePool *model
 func (h *V1Client) UpdateMachinePoolAks(cloudConfigId string, machinePool *models.V1AzureMachinePoolConfigEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsAksMachinePoolUpdateParamsWithContext(h.Ctx).
@@ -50,7 +50,7 @@ func (h *V1Client) UpdateMachinePoolAks(cloudConfigId string, machinePool *model
 func (h *V1Client) DeleteMachinePoolAks(cloudConfigId string, machinePoolName string) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1CloudConfigsAksMachinePoolDeleteParamsWithContext(h.Ctx).WithConfigUID(cloudConfigId).WithMachinePoolName(machinePoolName)
@@ -67,7 +67,7 @@ func (h *V1Client) GetCloudConfigAks(configUID string) (*models.V1AzureCloudConf
 	params := clusterC.NewV1CloudConfigsAksGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsAksGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err

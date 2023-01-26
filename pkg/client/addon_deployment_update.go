@@ -13,18 +13,18 @@ func (h *V1Client) UpdateAddonDeployment(cluster *models.V1SpectroCluster, body 
 	uid := cluster.Metadata.UID
 
 	// check if profile id is the same - update, otherwise, delete and create
-	is, replaceUID := isProfileAttachedByName(cluster, newProfile)
+	is, replaceUID := IsProfileAttachedByName(cluster, newProfile)
 	if is {
 		body.Profiles[0].ReplaceWithProfile = replaceUID
 	}
 
 	resolveNotification := true
 	params := clusterC.NewV1SpectroClustersPatchProfilesParamsWithContext(h.Ctx).WithUID(uid).WithBody(body).WithResolveNotification(&resolveNotification)
-	err := patchWithRetry(h, params)
+	err := PatchWithRetry(h, params)
 	return err
 }
 
-func isProfileAttachedByName(cluster *models.V1SpectroCluster, newProfile *models.V1ClusterProfile) (bool, string) {
+func IsProfileAttachedByName(cluster *models.V1SpectroCluster, newProfile *models.V1ClusterProfile) (bool, string) {
 
 	for _, profile := range cluster.Spec.ClusterProfileTemplates {
 		if profile.Name == newProfile.Metadata.Name {
@@ -38,16 +38,16 @@ func isProfileAttachedByName(cluster *models.V1SpectroCluster, newProfile *model
 func (h *V1Client) CreateAddonDeployment(uid string, body *models.V1SpectroClusterProfiles) error {
 	resolveNotification := false // during initial creation we never need to resolve packs.
 	params := clusterC.NewV1SpectroClustersPatchProfilesParamsWithContext(h.Ctx).WithUID(uid).WithBody(body).WithResolveNotification(&resolveNotification)
-	err := patchWithRetry(h, params)
+	err := PatchWithRetry(h, params)
 	return err
 }
 
-func patchWithRetry(h *V1Client, params *clusterC.V1SpectroClustersPatchProfilesParams) error {
+func PatchWithRetry(h *V1Client, params *clusterC.V1SpectroClustersPatchProfilesParams) error {
 	var err error
 	rand.Seed(time.Now().UnixNano())
-	for attempt := 0; attempt < h.retryAttempts; attempt++ {
+	for attempt := 0; attempt < h.RetryAttempts; attempt++ {
 		// small jitter to prevent simultaneous retries
-		s := rand.Intn(h.retryAttempts) // n will be between 0 and number of retries
+		s := rand.Intn(h.RetryAttempts) // n will be between 0 and number of retries
 		log.Printf("Sleeping %d seconds, retry: %d, cluster:%s, profile:%s, ", s, attempt, params.UID, params.Body.Profiles[0].UID)
 		time.Sleep(time.Duration(s) * time.Second)
 		err = ClustersPatchProfiles(h, params)
@@ -65,7 +65,7 @@ func ClustersPatchProfiles(h *V1Client, params *clusterC.V1SpectroClustersPatchP
 	}
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 	_, err = client.V1SpectroClustersPatchProfiles(params)
 	return err
@@ -74,7 +74,7 @@ func ClustersPatchProfiles(h *V1Client, params *clusterC.V1SpectroClustersPatchP
 func (h *V1Client) DeleteAddonDeployment(uid string, body *models.V1SpectroClusterProfilesDeleteEntity) error {
 	client, err := h.GetClusterClient()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	params := clusterC.NewV1SpectroClustersDeleteProfilesParamsWithContext(h.Ctx).WithUID(uid).WithBody(body)
