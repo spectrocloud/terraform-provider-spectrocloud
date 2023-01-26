@@ -35,8 +35,8 @@ func (h *V1Client) DeleteClusterProfile(uid string) error {
 		return errors.New("invalid scope")
 	}
 
-	if h.v1ClusterProfilesDeleteFn != nil {
-		_, err = h.v1ClusterProfilesDeleteFn(params)
+	if h.V1ClusterProfilesDeleteFn != nil {
+		_, err = h.V1ClusterProfilesDeleteFn(params)
 	} else {
 		_, err = client.V1ClusterProfilesDelete(params)
 	}
@@ -56,7 +56,7 @@ func (h *V1Client) GetClusterProfile(uid string) (*models.V1ClusterProfile, erro
 	params := clusterC.NewV1ClusterProfilesGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1ClusterProfilesGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -98,8 +98,8 @@ func (h *V1Client) PatchClusterProfile(clusterProfile *models.V1ClusterProfileUp
 	default:
 		return errors.New("invalid scope")
 	}
-	if h.v1ClusterProfilesUIDMetadataUpdateFn != nil {
-		_, err = h.v1ClusterProfilesUIDMetadataUpdateFn(params)
+	if h.V1ClusterProfilesUIDMetadataUpdateFn != nil {
+		_, err = h.V1ClusterProfilesUIDMetadataUpdateFn(params)
 	} else {
 		_, err = client.V1ClusterProfilesUIDMetadataUpdate(params)
 	}
@@ -125,8 +125,8 @@ func (h *V1Client) UpdateClusterProfile(clusterProfile *models.V1ClusterProfileU
 		return errors.New("invalid scope")
 	}
 
-	if h.v1ClusterProfilesUpdateFn != nil {
-		_, err = h.v1ClusterProfilesUpdateFn(params)
+	if h.V1ClusterProfilesUpdateFn != nil {
+		_, err = h.V1ClusterProfilesUpdateFn(params)
 	} else {
 		_, err = client.V1ClusterProfilesUpdate(params)
 	}
@@ -152,8 +152,8 @@ func (h *V1Client) CreateClusterProfile(clusterProfile *models.V1ClusterProfileE
 	}
 
 	var success *clusterC.V1ClusterProfilesCreateCreated
-	if h.v1ClusterProfilesCreateFn != nil {
-		success, err = h.v1ClusterProfilesCreateFn(params)
+	if h.V1ClusterProfilesCreateFn != nil {
+		success, err = h.V1ClusterProfilesCreateFn(params)
 	} else {
 		success, err = client.V1ClusterProfilesCreate(params)
 	}
@@ -181,8 +181,8 @@ func (h *V1Client) PublishClusterProfile(uid string, ProfileContext string) erro
 	default:
 		return errors.New("invalid scope")
 	}
-	if h.v1ClusterProfilesPublishFn != nil {
-		_, err = h.v1ClusterProfilesPublishFn(params)
+	if h.V1ClusterProfilesPublishFn != nil {
+		_, err = h.V1ClusterProfilesPublishFn(params)
 	} else {
 		_, err = client.V1ClusterProfilesPublish(params)
 	}

@@ -89,7 +89,7 @@ func (h *V1Client) GetCloudConfigEks(configUID string) (*models.V1EksCloudConfig
 	params := clusterC.NewV1CloudConfigsEksGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsEksGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err

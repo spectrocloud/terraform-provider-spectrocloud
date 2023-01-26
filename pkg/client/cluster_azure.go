@@ -107,7 +107,7 @@ func (h *V1Client) GetCloudAccountAzure(uid string) (*models.V1AzureAccount, err
 	params := clusterC.NewV1CloudAccountsAzureGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsAzureGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (h *V1Client) GetCloudConfigAzure(configUID string) (*models.V1AzureCloudCo
 	params := clusterC.NewV1CloudConfigsAzureGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsAzureGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err

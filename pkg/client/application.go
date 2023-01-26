@@ -20,7 +20,7 @@ func (h *V1Client) GetApplication(uid string) (*models.V1AppDeployment, error) {
 	params := clusterC.NewV1AppDeploymentsUIDGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1AppDeploymentsUIDGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err

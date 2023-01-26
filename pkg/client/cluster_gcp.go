@@ -107,7 +107,7 @@ func (h *V1Client) GetCloudAccountGcp(uid string) (*models.V1GcpAccount, error) 
 	params := clusterC.NewV1CloudAccountsGcpGetParamsWithContext(h.Ctx).WithUID(uid)
 	success, err := client.V1CloudAccountsGcpGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -145,7 +145,7 @@ func (h *V1Client) GetCloudConfigGcp(configUID string) (*models.V1GcpCloudConfig
 	params := clusterC.NewV1CloudConfigsGcpGetParamsWithContext(h.Ctx).WithConfigUID(configUID)
 	success, err := client.V1CloudConfigsGcpGet(params)
 	if e, ok := err.(*hapitransport.TransportError); ok && e.HttpCode == 404 {
-		// TODO(saamalik) check with team if this is proper?
+
 		return nil, nil
 	} else if err != nil {
 		return nil, err

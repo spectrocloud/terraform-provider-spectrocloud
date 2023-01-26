@@ -14,6 +14,7 @@ import (
 
 	authC "github.com/spectrocloud/hapi/auth/client/v1"
 
+	cloudC "github.com/spectrocloud/hapi/cloud/client/v1"
 	hashboardC "github.com/spectrocloud/hapi/hashboard/client/v1"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 	userC "github.com/spectrocloud/hapi/user/client/v1"
@@ -48,7 +49,7 @@ type V1Client struct {
 	password       string
 	apikey         string
 	transportDebug bool
-	retryAttempts  int
+	RetryAttempts  int
 
 	// Cluster client(common)
 	GetClusterClientFn func() (clusterC.ClientService, error)
@@ -74,11 +75,11 @@ type V1Client struct {
 	GetClusterProfileFn     func(string) (*models.V1ClusterProfile, error)
 	DeleteClusterProfileFn  func(string) error
 	// special function for nested mock
-	v1ClusterProfilesDeleteFn            func(params *clusterC.V1ClusterProfilesDeleteParams) (*clusterC.V1ClusterProfilesDeleteNoContent, error)
-	v1ClusterProfilesUIDMetadataUpdateFn func(params *clusterC.V1ClusterProfilesUIDMetadataUpdateParams) (*clusterC.V1ClusterProfilesUIDMetadataUpdateNoContent, error)
-	v1ClusterProfilesUpdateFn            func(params *clusterC.V1ClusterProfilesUpdateParams) (*clusterC.V1ClusterProfilesUpdateNoContent, error)
-	v1ClusterProfilesCreateFn            func(params *clusterC.V1ClusterProfilesCreateParams) (*clusterC.V1ClusterProfilesCreateCreated, error)
-	v1ClusterProfilesPublishFn           func(params *clusterC.V1ClusterProfilesPublishParams) (*models.V1ClusterProfile, error)
+	V1ClusterProfilesDeleteFn            func(params *clusterC.V1ClusterProfilesDeleteParams) (*clusterC.V1ClusterProfilesDeleteNoContent, error)
+	V1ClusterProfilesUIDMetadataUpdateFn func(params *clusterC.V1ClusterProfilesUIDMetadataUpdateParams) (*clusterC.V1ClusterProfilesUIDMetadataUpdateNoContent, error)
+	V1ClusterProfilesUpdateFn            func(params *clusterC.V1ClusterProfilesUpdateParams) (*clusterC.V1ClusterProfilesUpdateNoContent, error)
+	V1ClusterProfilesCreateFn            func(params *clusterC.V1ClusterProfilesCreateParams) (*clusterC.V1ClusterProfilesCreateCreated, error)
+	V1ClusterProfilesPublishFn           func(params *clusterC.V1ClusterProfilesPublishParams) (*models.V1ClusterProfile, error)
 
 	//Registry
 	GetPackRegistryCommonByNameFn func(string) (*models.V1RegistryMetadata, error)
@@ -96,7 +97,7 @@ func New(hubbleHost, email, password, projectUID string, apikey string, transpor
 	authHttpTransport.RetryAttempts = 0
 	//authHttpTransport.Debug = true
 	AuthClient = authC.New(authHttpTransport, strfmt.Default)
-	return &V1Client{Ctx: ctx, email: email, password: password, apikey: apikey, transportDebug: transportDebug, retryAttempts: retryAttempts}
+	return &V1Client{Ctx: ctx, email: email, password: password, apikey: apikey, transportDebug: transportDebug, RetryAttempts: retryAttempts}
 }
 
 func (h *V1Client) getNewAuthToken() (*AuthToken, error) {
@@ -150,7 +151,7 @@ func (h *V1Client) getTransport() (*hapitransport.Runtime, error) {
 	} else {
 		httpTransport.DefaultAuthentication = openapiclient.APIKeyAuth(authTokenKey, authTokenInput, authToken.token.Authorization)
 	}
-	httpTransport.RetryAttempts = h.retryAttempts
+	httpTransport.RetryAttempts = h.RetryAttempts
 	httpTransport.Debug = h.transportDebug
 	return httpTransport, nil
 }
@@ -184,4 +185,13 @@ func (h *V1Client) GetHashboard() (hashboardC.ClientService, error) {
 	}
 
 	return hashboardC.New(httpTransport, strfmt.Default), nil
+}
+
+func (h *V1Client) GetCloudClient() (cloudC.ClientService, error) {
+	httpTransport, err := h.getTransport()
+	if err != nil {
+		return nil, err
+	}
+
+	return cloudC.New(httpTransport, strfmt.Default), nil
 }
