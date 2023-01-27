@@ -110,6 +110,9 @@ func flattenVsphereCloudAccount(d *schema.ResourceData, account *models.V1Vspher
 	if err := d.Set("name", account.Metadata.Name); err != nil {
 		return diag.FromErr(err), true
 	}
+	if err := d.Set("context", account.Metadata.Annotations["scope"]); err != nil {
+		return diag.FromErr(err), true
+	}
 	if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
 		return diag.FromErr(err), true
 	}
