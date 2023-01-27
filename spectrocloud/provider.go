@@ -161,6 +161,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cluster_group":       dataSourceClusterGroup(),
 				"spectrocloud_application_profile": dataSourceApplicationProfile(),
 				"spectrocloud_workspace":           dataSourceWorkspace(),
+				"spectrocloud_private_cloud_gateway": dataSourcePCG(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}

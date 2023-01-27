@@ -3,7 +3,6 @@ package client
 import (
 	"github.com/spectrocloud/hapi/apiutil"
 	"github.com/spectrocloud/hapi/models"
-
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 )
 
@@ -63,4 +62,9 @@ func (h *V1Client) DeleteIpPool(pcgUID, poolUID string) error {
 	params := clusterC.NewV1OverlordsUIDPoolDeleteParams().WithUID(pcgUID).WithPoolUID(poolUID)
 	_, err = client.V1OverlordsUIDPoolDelete(params)
 	return err
+}
+
+func (h *V1Client) GetPrivateCloudGatewayID(name *string) (string, error) {
+	// Need to call overload api
+	return "{id}", nil
 }
