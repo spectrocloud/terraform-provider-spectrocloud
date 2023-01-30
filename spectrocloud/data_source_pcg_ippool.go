@@ -13,12 +13,14 @@ func dataSourcePrivateCloudGatewayIpPool() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The name of the IP pool.",
 			},
 			"private_cloud_gateway_id": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The ID of the private cloud gateway.",
 			},
 		},
 	}
