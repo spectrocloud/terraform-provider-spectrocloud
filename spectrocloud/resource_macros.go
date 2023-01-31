@@ -18,7 +18,7 @@ func resourceMacro() *schema.Resource {
 		ReadContext:   resourceMacrosRead,
 		UpdateContext: resourceMacrosUpdate,
 		DeleteContext: resourceMacrosDelete,
-		Description:   "A resource for creating and managing service output variables  and macros.",
+		Description:   "A resource for creating and managing service output variables and macros.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
