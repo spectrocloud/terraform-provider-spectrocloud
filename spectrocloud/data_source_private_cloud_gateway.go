@@ -17,13 +17,13 @@ func dataSourcePCG() *schema.Resource {
 				Computed:      true,
 				Optional:      true,
 				ConflictsWith: []string{"name"},
-				Description:   "The ID of Private Cloud Gateways.",
+				Description:   "The ID of Private Cloud Gateway.",
 			},
 			"name": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Optional:    true,
-				Description: "The Name of Private Cloud Gateways.",
+				Description: "The Name of Private Cloud Gateway.",
 			},
 		},
 	}

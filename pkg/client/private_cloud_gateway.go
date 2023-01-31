@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"github.com/spectrocloud/hapi/apiutil"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
@@ -20,25 +21,48 @@ func (h *V1Client) CreateIpPool(pcgUID string, pool *models.V1IPPoolInputEntity)
 	}
 }
 
+// get ip pool by uid
 func (h *V1Client) GetIpPool(pcgUID, poolUID string) (*models.V1IPPoolEntity, error) {
+	pools, err := h.GetIpPools(pcgUID)
+	if err != nil {
+		return nil, err
+	}
+	for _, pool := range pools {
+		if pool.Metadata.UID == poolUID {
+			return pool, nil
+		}
+	}
+	return nil, nil
+}
+
+// get ip pool by name
+func (h *V1Client) GetIpPoolByName(pcgUID, poolName string) (*models.V1IPPoolEntity, error) {
+	pools, err := h.GetIpPools(pcgUID)
+	if err != nil {
+		return nil, err
+	}
+	for _, pool := range pools {
+		if pool.Metadata.Name == poolName {
+			return pool, nil
+		}
+	}
+	return nil, errors.New("ip pool not found: " + poolName)
+}
+
+func (h *V1Client) GetIpPools(pcgUID string) ([]*models.V1IPPoolEntity, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
 	params := clusterC.NewV1OverlordsUIDPoolsListParams().WithUID(pcgUID)
-	if listResp, err := client.V1OverlordsUIDPoolsList(params); err != nil {
+	listResp, err := client.V1OverlordsUIDPoolsList(params)
+	if err != nil {
 		if v1Err := apiutil.ToV1ErrorObj(err); v1Err.Code != "ResourceNotFound" {
 			return nil, err
 		}
-	} else if listResp.Payload != nil && listResp.Payload.Items != nil {
-		for _, pool := range listResp.Payload.Items {
-			if p := *pool; pool.Metadata.UID == poolUID {
-				return &p, nil
-			}
-		}
 	}
-	return nil, nil
+	return listResp.Payload.Items, nil
 }
 
 func (h *V1Client) UpdateIpPool(pcgUID, poolUID string, pool *models.V1IPPoolInputEntity) error {
@@ -65,6 +89,22 @@ func (h *V1Client) DeleteIpPool(pcgUID, poolUID string) error {
 }
 
 func (h *V1Client) GetPrivateCloudGatewayID(name *string) (string, error) {
-	// Need to call overload api
-	return "{id}", nil
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return "", err
+	}
+
+	params := clusterC.NewV1OverlordsListParams()
+	listResp, err := client.V1OverlordsList(params)
+	if err != nil {
+		return "", err
+	}
+
+	for _, pcg := range listResp.Payload.Items {
+		if pcg.Metadata.Name == *name {
+			return pcg.Metadata.UID, nil
+		}
+	}
+	// return not found error
+	return "", errors.New("Private Cloud Gateway not found: " + *name)
 }

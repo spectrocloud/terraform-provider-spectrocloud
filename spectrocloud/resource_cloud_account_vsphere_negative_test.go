@@ -70,7 +70,7 @@ func TestFlattenVsphereCloudAccountAttributes(t *testing.T) {
 			continue
 		}
 
-		// Create a new schema with only the current attribute
+		// Create a new schema skipping the current attribute
 		newSchema := skipSchemaAttributes(originalSchema, []string{attrName})
 
 		resourceCloudAccountVsphereWithSkippedAttrs := &schema.Resource{
