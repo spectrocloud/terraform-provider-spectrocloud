@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"strings"
 	"time"
 
@@ -32,73 +33,7 @@ func resourceAddonDeployment() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"cluster_profile": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"pack": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"type": {
-										Type:     schema.TypeString,
-										Optional: true,
-										Default:  "spectro",
-									},
-									"registry_uid": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"uid": {
-										Type:     schema.TypeString,
-										Computed: true,
-										Optional: true,
-									},
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"tag": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"values": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"manifest": {
-										Type:     schema.TypeList,
-										Optional: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"name": {
-													Type:     schema.TypeString,
-													Required: true,
-												},
-												"content": {
-													Type:     schema.TypeString,
-													Required: true,
-													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-														// UI strips the trailing newline on save
-														return strings.TrimSpace(old) == strings.TrimSpace(new)
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
 				Type:     schema.TypeString,
 				Optional: true,

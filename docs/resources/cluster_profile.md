@@ -149,13 +149,13 @@ resource "spectrocloud_cluster_profile" "profile" {
 ### Required
 
 - `name` (String)
-- `pack` (Block List, Min: 1) (see [below for nested schema](#nestedblock--pack))
 
 ### Optional
 
 - `cloud` (String)
 - `context` (String)
 - `description` (String)
+- `pack` (Block List) (see [below for nested schema](#nestedblock--pack))
 - `tags` (Set of String)
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `type` (String)
@@ -170,28 +170,23 @@ resource "spectrocloud_cluster_profile" "profile" {
 
 Required:
 
-- `name` (String)
+- `name` (String) The name of the pack. The name must be unique within the cluster profile.
+- `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
 Optional:
 
 - `manifest` (Block List) (see [below for nested schema](#nestedblock--pack--manifest))
-- `registry_uid` (String)
-- `tag` (String)
-- `type` (String)
-- `uid` (String)
-- `values` (String)
+- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
+- `tag` (String) The tag of the pack. The tag is the version of the pack.
+- `type` (String) The type of the pack. The default value is `spectro`.
 
 <a id="nestedblock--pack--manifest"></a>
 ### Nested Schema for `pack.manifest`
 
 Required:
 
-- `content` (String)
-- `name` (String)
-
-Read-Only:
-
-- `uid` (String)
+- `content` (String) The content of the manifest. The content is the YAML content of the manifest.
+- `name` (String) The name of the manifest. The name must be unique within the pack.
 
 
 

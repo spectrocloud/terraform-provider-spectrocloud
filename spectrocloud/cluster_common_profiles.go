@@ -39,21 +39,6 @@ func toProfilesCommon(d *schema.ResourceData, cluster *models.V1SpectroCluster) 
 				PackValues: packValues,
 			})
 		}
-	} else {
-		clusterProfileId := d.Get("cluster_profile_id")
-
-		// consider removing backward compatibility for cluster_profile_id
-		if clusterProfileId != nil {
-			packValues := make([]*models.V1PackValuesEntity, 0)
-			for _, pack := range d.Get("pack").([]interface{}) {
-				p := toPack(cluster, pack)
-				packValues = append(packValues, p)
-			}
-			resp = append(resp, &models.V1SpectroClusterProfileEntity{
-				UID:        clusterProfileId.(string),
-				PackValues: packValues,
-			})
-		}
 	}
 
 	return resp

@@ -6,7 +6,6 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -43,73 +42,7 @@ func resourceClusterAws() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"cluster_profile_id": {
-				Type:       schema.TypeString,
-				Optional:   true,
-				Deprecated: "Switch to cluster_profile",
-			},
-			"cluster_profile": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				ConflictsWith: []string{"cluster_profile_id", "pack"},
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"pack": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"type": {
-										Type:     schema.TypeString,
-										Optional: true,
-										Default:  "spectro",
-									},
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"registry_uid": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"tag": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"values": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"manifest": {
-										Type:     schema.TypeList,
-										Optional: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"name": {
-													Type:     schema.TypeString,
-													Required: true,
-												},
-												"content": {
-													Type:     schema.TypeString,
-													Required: true,
-													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-														// UI strips the trailing newline on save
-														return strings.TrimSpace(old) == strings.TrimSpace(new)
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -162,30 +95,6 @@ func resourceClusterAws() *schema.Resource {
 							Type:     schema.TypeString,
 							ForceNew: true,
 							Optional: true,
-						},
-					},
-				},
-			},
-			"pack": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"registry_uid": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"tag": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"values": {
-							Type:     schema.TypeString,
-							Required: true,
 						},
 					},
 				},
@@ -288,134 +197,12 @@ func resourceClusterAws() *schema.Resource {
 					},
 				},
 			},
-			"backup_policy": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"prefix": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"backup_location_id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"schedule": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"expiry_in_hour": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"include_disks": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  true,
-						},
-						"include_cluster_resources": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  true,
-						},
-						"namespaces": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-					},
-				},
-			},
-			"scan_policy": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"configuration_scan_schedule": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"penetration_scan_schedule": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"conformance_scan_schedule": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
-			},
-			"cluster_rbac_binding": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"type": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"namespace": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"role": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"subjects": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"type": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"namespace": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			"namespaces": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"resource_allocation": {
-							Type:     schema.TypeMap,
-							Required: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-					},
-				},
-			},
-			"host_config":     schemas.ClusterHostConfigSchema(),
-			"location_config": schemas.ClusterLocationSchemaComputed(),
+			"backup_policy":        schemas.BackupPolicySchema(),
+			"scan_policy":          schemas.ScanPolicySchema(),
+			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
+			"namespaces":           schemas.ClusterNamespacesSchema(),
+			"host_config":          schemas.ClusterHostConfigSchema(),
+			"location_config":      schemas.ClusterLocationSchemaComputed(),
 			"skip_completion": {
 				Type:     schema.TypeBool,
 				Optional: true,

@@ -27,7 +27,6 @@ description: |-
 - `apply_setting` (String)
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
-- `cluster_profile_id` (String, Deprecated)
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
@@ -35,7 +34,6 @@ description: |-
 - `os_patch_after` (String)
 - `os_patch_on_boot` (Boolean)
 - `os_patch_schedule` (String)
-- `pack` (Block List) (see [below for nested schema](#nestedblock--pack))
 - `scan_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean)
 - `tags` (Set of String)
@@ -116,9 +114,9 @@ Read-Only:
 
 Required:
 
-- `effect` (String)
-- `key` (String)
-- `value` (String)
+- `effect` (String) The effect of the taint.
+- `key` (String) The key of the taint.
+- `value` (String) The value of the taint.
 
 
 
@@ -127,51 +125,53 @@ Required:
 
 Required:
 
-- `backup_location_id` (String)
-- `expiry_in_hour` (Number)
-- `prefix` (String)
-- `schedule` (String)
+- `backup_location_id` (String) The ID of the backup location to use for the backup.
+- `expiry_in_hour` (Number) The number of hours after which the backup will be deleted. For example, if the expiry is set to 24, the backup will be deleted after 24 hours.
+- `prefix` (String) Prefix for the backup name. The backup name will be of the format <prefix>-<cluster-name>-<timestamp>.
+- `schedule` (String) The schedule for the backup. The schedule is specified in cron format. For example, to run the backup every day at 1:00 AM, the schedule should be set to 0 1 * * *.
 
 Optional:
 
-- `include_cluster_resources` (Boolean)
-- `include_disks` (Boolean)
-- `namespaces` (Set of String)
+- `cluster_uids` (Set of String) The list of cluster UIDs to include in the backup. If `include_all_clusters` set to `true`, all clusters will be included.
+- `include_all_clusters` (Boolean) Whether to include all clusters in the backup. If set to false, only the clusters specified in `cluster_uids` will be included.
+- `include_cluster_resources` (Boolean) Whether to include the cluster resources in the backup. If set to false, only the cluster configuration and disks will be backed up.
+- `include_disks` (Boolean) Whether to include the disks in the backup. If set to false, only the cluster configuration will be backed up.
+- `namespaces` (Set of String) The list of namespaces to include in the backup. If not specified, all namespaces will be included.
 
 
 <a id="nestedblock--cluster_profile"></a>
 ### Nested Schema for `cluster_profile`
 
+Required:
+
+- `id` (String) The ID of the cluster profile.
+
 Optional:
 
 - `pack` (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack))
-
-Read-Only:
-
-- `id` (String) The ID of this resource.
 
 <a id="nestedblock--cluster_profile--pack"></a>
 ### Nested Schema for `cluster_profile.pack`
 
 Required:
 
-- `name` (String)
-- `values` (String)
+- `name` (String) The name of the pack. The name must be unique within the cluster profile.
+- `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
 Optional:
 
 - `manifest` (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack--manifest))
-- `registry_uid` (String)
-- `tag` (String)
-- `type` (String)
+- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
+- `tag` (String) The tag of the pack. The tag is the version of the pack.
+- `type` (String) The type of the pack. The default value is `spectro`.
 
 <a id="nestedblock--cluster_profile--pack--manifest"></a>
 ### Nested Schema for `cluster_profile.pack.manifest`
 
 Required:
 
-- `content` (String)
-- `name` (String)
+- `content` (String) The content of the manifest. The content is the YAML content of the manifest.
+- `name` (String) The name of the manifest. The name must be unique within the pack.
 
 
 
@@ -181,12 +181,12 @@ Required:
 
 Required:
 
-- `type` (String)
+- `type` (String) The type of the RBAC binding. Can be one of the following: RoleBinding, ClusterRoleBinding
 
 Optional:
 
-- `namespace` (String)
-- `role` (Map of String)
+- `namespace` (String) The namespace of the RBAC binding. Required if 'type' is set to 'RoleBinding'.
+- `role` (Map of String) The role of the RBAC binding. Required if 'type' is set to 'RoleBinding'.
 - `subjects` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding--subjects))
 
 <a id="nestedblock--cluster_rbac_binding--subjects"></a>
@@ -194,12 +194,12 @@ Optional:
 
 Required:
 
-- `name` (String)
-- `type` (String)
+- `name` (String) The name of the subject. Required if 'type' is set to 'User' or 'Group'.
+- `type` (String) The type of the subject. Can be one of the following: User, Group, ServiceAccount
 
 Optional:
 
-- `namespace` (String)
+- `namespace` (String) The namespace of the subject. Required if 'type' is set to 'ServiceAccount'.
 
 
 
@@ -235,22 +235,12 @@ Optional:
 
 Required:
 
-- `name` (String)
-- `resource_allocation` (Map of String)
-
-
-<a id="nestedblock--pack"></a>
-### Nested Schema for `pack`
-
-Required:
-
-- `name` (String)
-- `tag` (String)
-- `values` (String)
+- `name` (String) Name of the namespace. This is the name of the namespace in the cluster.
+- `resource_allocation` (Map of String) Resource allocation for the namespace. This is a map of resource type to resource value. For example, `{cpu_cores: '2', memory_MiB: '2048'}`
 
 Optional:
 
-- `registry_uid` (String)
+- `images_blacklist` (List of String) List of images to blacklist for the namespace. For example, `['nginx:latest', 'redis:latest']`
 
 
 <a id="nestedblock--scan_policy"></a>
@@ -258,9 +248,9 @@ Optional:
 
 Required:
 
-- `configuration_scan_schedule` (String)
-- `conformance_scan_schedule` (String)
-- `penetration_scan_schedule` (String)
+- `configuration_scan_schedule` (String) The schedule for configuration scan.
+- `conformance_scan_schedule` (String) The schedule for conformance scan.
+- `penetration_scan_schedule` (String) The schedule for penetration scan.
 
 
 <a id="nestedblock--timeouts"></a>

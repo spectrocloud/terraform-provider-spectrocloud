@@ -29,33 +29,34 @@ output "same" {
 
 - `context` (String)
 - `name` (String)
+- `pack` (Block List) (see [below for nested schema](#nestedblock--pack))
 - `version` (String)
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `pack` (List of Object) (see [below for nested schema](#nestedatt--pack))
 
-<a id="nestedatt--pack"></a>
+<a id="nestedblock--pack"></a>
 ### Nested Schema for `pack`
 
-Read-Only:
+Required:
 
-- `manifest` (List of Object) (see [below for nested schema](#nestedobjatt--pack--manifest))
-- `name` (String)
-- `registry_uid` (String)
-- `tag` (String)
-- `type` (String)
-- `uid` (String)
-- `values` (String)
+- `name` (String) The name of the pack. The name must be unique within the cluster profile.
+- `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
-<a id="nestedobjatt--pack--manifest"></a>
+Optional:
+
+- `manifest` (Block List) (see [below for nested schema](#nestedblock--pack--manifest))
+- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
+- `tag` (String) The tag of the pack. The tag is the version of the pack.
+- `type` (String) The type of the pack. The default value is `spectro`.
+
+<a id="nestedblock--pack--manifest"></a>
 ### Nested Schema for `pack.manifest`
 
-Read-Only:
+Required:
 
-- `content` (String)
-- `name` (String)
-- `uid` (String)
+- `content` (String) The content of the manifest. The content is the YAML content of the manifest.
+- `name` (String) The name of the manifest. The name must be unique within the pack.
 
 
