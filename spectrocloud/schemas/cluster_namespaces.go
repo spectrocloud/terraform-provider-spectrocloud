@@ -19,7 +19,7 @@ func ClusterNamespacesSchema() *schema.Schema {
 					Elem: &schema.Schema{
 						Type: schema.TypeString,
 					},
-					Description: "Resource allocation for the namespace. This is a map of resource type to resource value. For example, `{cpu_cores: '2', memory_MiB: '2048'}`",
+					Description: "Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048'}`",
 				},
 				"images_blacklist": {
 					Type:     schema.TypeList,
