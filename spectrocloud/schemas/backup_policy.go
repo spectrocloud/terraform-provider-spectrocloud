@@ -57,7 +57,7 @@ func BackupPolicySchema() *schema.Schema {
 					Elem: &schema.Schema{
 						Type: schema.TypeString,
 					},
-					Description: "The list of cluster UIDs to include in the backup. If `include_all_clusters` set to `true`, all clusters will be included.",
+					Description: "The list of cluster UIDs to include in the backup. If `include_all_clusters` is set to `true`, then all clusters will be included.",
 				},
 				"include_all_clusters": {
 					Type:        schema.TypeBool,
