@@ -48,7 +48,7 @@ func BackupPolicySchema() *schema.Schema {
 					Elem: &schema.Schema{
 						Type: schema.TypeString,
 					},
-					Description: "The list of namespaces to include in the backup. If not specified, all namespaces will be included.",
+					Description: "The list of Kubernetes namespaces to include in the backup. If not specified, all namespaces will be included.",
 				},
 				"cluster_uids": {
 					Type:     schema.TypeSet,
