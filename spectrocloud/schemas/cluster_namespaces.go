@@ -11,7 +11,7 @@ func ClusterNamespacesSchema() *schema.Schema {
 				"name": {
 					Type:        schema.TypeString,
 					Required:    true,
-					Description: "Name of the namespace. This is the name of the namespace in the cluster.",
+					Description: "Name of the namespace. This is the name of the Kubernetes namespace in the cluster.",
 				},
 				"resource_allocation": {
 					Type:     schema.TypeMap,
