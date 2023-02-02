@@ -21,7 +21,7 @@ func ClusterTaintsSchema() *schema.Schema {
 				"effect": {
 					Type:        schema.TypeString,
 					Required:    true,
-					Description: "The effect of the taint.",
+					Description: "The effect of the taint. Allowed values are: `NoSchedule`, `PreferNoSchedule` or `NoExecute`.",
 				},
 			},
 		},
