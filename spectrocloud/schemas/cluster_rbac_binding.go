@@ -49,7 +49,7 @@ func ClusterRbacBindingSchema() *schema.Schema {
 							"namespace": {
 								Type:        schema.TypeString,
 								Optional:    true,
-								Description: "The namespace of the subject. Required if 'type' is set to 'ServiceAccount'.",
+								Description: "The Kubernetes namespace of the subject. Required if 'type' is set to 'ServiceAccount'.",
 							},
 						},
 					},
