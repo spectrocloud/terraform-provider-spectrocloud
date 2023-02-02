@@ -22,7 +22,7 @@ func BackupPolicySchema() *schema.Schema {
 				"schedule": {
 					Type:        schema.TypeString,
 					Required:    true,
-					Description: "The schedule for the backup. The schedule is specified in cron format. For example, to run the backup every day at 1:00 AM, the schedule should be set to 0 1 * * *.",
+					Description: "The schedule for the backup. The schedule is specified in cron format. For example, to run the backup every day at 1:00 AM, the schedule should be set to `0 1 * * *`.",
 				},
 				"expiry_in_hour": {
 					Type:        schema.TypeInt,
