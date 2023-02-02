@@ -27,7 +27,7 @@ func ClusterNamespacesSchema() *schema.Schema {
 					Elem: &schema.Schema{
 						Type: schema.TypeString,
 					},
-					Description: "List of images to blacklist for the namespace. For example, `['nginx:latest', 'redis:latest']`",
+					Description: "List of images to disallow for the namespace. For example, `['nginx:latest', 'redis:latest']`",
 				},
 			},
 		},
