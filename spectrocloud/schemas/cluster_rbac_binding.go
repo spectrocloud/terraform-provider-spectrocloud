@@ -39,7 +39,7 @@ func ClusterRbacBindingSchema() *schema.Schema {
 								Type:         schema.TypeString,
 								Required:     true,
 								ValidateFunc: validation.StringInSlice([]string{"User", "Group", "ServiceAccount"}, false),
-								Description:  "The type of the subject. Can be one of the following: User, Group, ServiceAccount",
+								Description:  "The type of the subject. Can be one of the following values: `User`, `Group`, or `ServiceAccount`.",
 							},
 							"name": {
 								Type:        schema.TypeString,
