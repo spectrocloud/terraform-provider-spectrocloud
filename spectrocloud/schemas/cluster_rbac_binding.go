@@ -20,7 +20,7 @@ func ClusterRbacBindingSchema() *schema.Schema {
 				"namespace": {
 					Type:        schema.TypeString,
 					Optional:    true,
-					Description: "The namespace of the RBAC binding. Required if 'type' is set to 'RoleBinding'.",
+					Description: "The Kubernetes namespace of the RBAC binding. Required if 'type' is set to 'RoleBinding'.",
 				},
 				"role": {
 					Type:     schema.TypeMap,
