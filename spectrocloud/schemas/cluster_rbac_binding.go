@@ -15,7 +15,7 @@ func ClusterRbacBindingSchema() *schema.Schema {
 					Type:         schema.TypeString,
 					Required:     true,
 					ValidateFunc: validation.StringInSlice([]string{"RoleBinding", "ClusterRoleBinding"}, false),
-					Description:  "The type of the RBAC binding. Can be one of the following: RoleBinding, ClusterRoleBinding",
+					Description:  "The type of the RBAC binding. Can be one of the following values: `RoleBinding`, or `ClusterRoleBinding`.",
 				},
 				"namespace": {
 					Type:        schema.TypeString,
