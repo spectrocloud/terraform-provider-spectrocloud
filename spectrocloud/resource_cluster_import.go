@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"time"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -43,42 +44,7 @@ func resourceClusterImport() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"cluster_profile": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"pack": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"registry_uid": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"tag": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"values": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			"cluster_profile": schemas.ClusterProfileSchema(),
 			"cloud": {
 				Type:             schema.TypeString,
 				ForceNew:         true,

@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -71,73 +72,7 @@ func resourceClusterProfile() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"add-on", "cluster", "infra", "system"}, false),
 				ForceNew:     true,
 			},
-			"pack": {
-				Type:     schema.TypeList,
-				Required: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"type": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "spectro",
-						},
-						"registry_uid": {
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
-						},
-						"uid": {
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
-						},
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"manifest": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"uid": {
-										Type:     schema.TypeString,
-										Computed: true,
-									},
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"content": {
-										Type:     schema.TypeString,
-										Required: true,
-										DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-											// UI strips the trailing newline on save
-											return strings.TrimSpace(old) == strings.TrimSpace(new)
-										},
-									},
-								},
-							},
-						},
-						//"layer": {
-						//	Type:     schema.TypeString,
-						//	Required: true,
-						//},
-						"tag": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"values": {
-							Type:     schema.TypeString,
-							Optional: true,
-							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-								// UI strips the trailing newline on save
-								return strings.TrimSpace(old) == strings.TrimSpace(new)
-							},
-						},
-					},
-				},
-			},
+			"pack": schemas.PackSchema(),
 		},
 	}
 }

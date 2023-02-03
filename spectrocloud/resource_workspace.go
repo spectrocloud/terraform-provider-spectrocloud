@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
 
 func resourceWorkspace() *schema.Resource {
@@ -46,131 +47,9 @@ func resourceWorkspace() *schema.Resource {
 					},
 				},
 			},
-			"backup_policy": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"prefix": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"backup_location_id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"schedule": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"expiry_in_hour": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"include_disks": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  true,
-						},
-						"namespaces": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"cluster_uids": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"include_all_clusters": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  true,
-						},
-						"include_cluster_resources": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  true,
-						},
-					},
-				},
-			},
-			"cluster_rbac_binding": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"type": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"namespace": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"role": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"subjects": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"type": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"namespace": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			"namespaces": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"resource_allocation": {
-							Type:     schema.TypeMap,
-							Required: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"images_blacklist": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-					},
-				},
-			},
+			"backup_policy":        schemas.BackupPolicySchema(),
+			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
+			"namespaces":           schemas.ClusterNamespacesSchema(),
 		},
 	}
 }
