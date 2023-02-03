@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"strings"
 
@@ -57,13 +58,24 @@ func (h *V1Client) GetPacks(filters []string, registryUID string) ([]*models.V1P
 	return packs, nil
 }
 
-func (h *V1Client) GetPacksByNameAndRegistry(name string, registryUID string) (*models.V1PackTagEntity, error) {
+func (h *V1Client) GetPacksByNameAndRegistry(name string, registryUID string, packContext string) (*models.V1PackTagEntity, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
 	}
 
-	params := clusterC.NewV1PacksNameRegistryUIDListParamsWithContext(h.Ctx).WithPackName(name).WithRegistryUID(registryUID)
+	var params *clusterC.V1PacksNameRegistryUIDListParams
+	switch packContext {
+	case "project":
+		params = clusterC.NewV1PacksNameRegistryUIDListParamsWithContext(h.Ctx).WithPackName(name).WithRegistryUID(registryUID)
+		break
+	case "tenant":
+		params = clusterC.NewV1PacksNameRegistryUIDListParams().WithPackName(name).WithRegistryUID(registryUID)
+		break
+	default:
+		return nil, fmt.Errorf("invalid pack context %s", packContext)
+
+	}
 
 	response, err := client.V1PacksNameRegistryUIDList(params)
 	if err != nil {
