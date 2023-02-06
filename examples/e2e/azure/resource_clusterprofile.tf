@@ -47,11 +47,16 @@ data "spectrocloud_pack" "cni" {
   version = "3.16.0"
 }
 
+data "spectrocloud_registry_pack" "registry" {
+  name = "Public Repo"
+
+}
+
 data "spectrocloud_pack" "k8s" {
   name    = "kubernetes"
   version = "1.23.9"
   cloud = ["azure"]
-  registry_uid = "5e2031962f090e2d3d8a3290"
+  registry_uid = data.spectrocloud_registry_pack.registry.id
 }
 
 data "spectrocloud_pack" "ubuntu" {
