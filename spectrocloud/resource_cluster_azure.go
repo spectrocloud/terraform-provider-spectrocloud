@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
@@ -19,6 +20,7 @@ func resourceClusterAzure() *schema.Resource {
 		ReadContext:   resourceClusterAzureRead,
 		UpdateContext: resourceClusterAzureUpdate,
 		DeleteContext: resourceClusterDelete,
+		Description:   "Resource for managing Azure clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -28,9 +30,10 @@ func resourceClusterAzure() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the cluster. This name will be used to create the cluster in Azure.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -39,38 +42,46 @@ func resourceClusterAzure() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Apply setting for the cluster. This can be set to `on_create` or `on_update`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "ID of the cloud account to be used for the cluster. This cloud account must be of type `azure`.",
 			},
 			"cloud_config_id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 			},
 			"os_patch_on_boot": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Whether to apply OS patches on boot. This can be set to `true` or `false`.",
 			},
 			"os_patch_schedule": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchSchedule,
+				Description:      "Cron schedule for OS patching. This must be in the form of `0 0 * * *`.",
 			},
 			"os_patch_after": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+				Description:      "Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
 			"kubeconfig": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -80,20 +91,24 @@ func resourceClusterAzure() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"subscription_id": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Azure subscription ID. This can be found in the Azure portal under `Subscriptions`.",
 						},
 						"resource_group": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Azure resource group. This can be found in the Azure portal under `Resource groups`.",
 						},
 						"region": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Azure region. This can be found in the Azure portal under `Resource groups`.",
 						},
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "SSH key to be used for the cluster nodes.",
 						},
 					},
 				},
@@ -111,56 +126,42 @@ func resourceClusterAzure() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"taints": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"key": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"value": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"effect": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
-						},
+						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
+							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-
 							//ForceNew: true,
+							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "Name of the machine pool. This must be unique within the cluster.",
 						},
 						"count": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Number of nodes in the machine pool.",
 						},
 						"instance_type": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Azure instance type from the Azure portal.",
 						},
 						"update_strategy": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "RollingUpdateScaleOut",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "RollingUpdateScaleOut",
+							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 						},
 						"disk": {
 							Type:     schema.TypeList,
@@ -180,15 +181,18 @@ func resourceClusterAzure() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"size_gb": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "Size of the disk in GB.",
 									},
 									"type": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Type of the disk. Valid values are `Standard_LRS`, `StandardSSD_LRS`, `Premium_LRS`.",
 									},
 								},
 							},
+							Description: "Disk configuration for the machine pool.",
 						},
 						"azs": {
 							Type:     schema.TypeSet,
@@ -197,10 +201,12 @@ func resourceClusterAzure() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Availability zones for the machine pool.",
 						},
 						"is_system_node_pool": {
-							Type:     schema.TypeBool,
-							Optional: true,
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether this machine pool is a system node pool.",
 						},
 						"os_type": {
 							Type:     schema.TypeString,
@@ -208,6 +214,9 @@ func resourceClusterAzure() *schema.Resource {
 							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 								return false
 							},
+							Default:      "Linux",
+							ValidateFunc: validation.StringInSlice([]string{"Linux", "Windows"}, false),
+							Description:  "Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.",
 						},
 					},
 				},
@@ -219,19 +228,10 @@ func resourceClusterAzure() *schema.Resource {
 			"host_config":          schemas.ClusterHostConfigSchema(),
 			"location_config":      schemas.ClusterLocationSchemaComputed(),
 			"skip_completion": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "If true, the cluster will be created asynchronously.",
 			},
-			//"cloud_config": {
-			//	Type:     schema.TypeString,
-			//	Required: true,
-			//	//DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-			//	//	return false
-			//	//},
-			//	//StateFunc: func(val interface{}) string {
-			//	//	return strings.ToLower(val.(string))
-			//	//},
-			//},
 		},
 	}
 }

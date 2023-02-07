@@ -6,9 +6,8 @@ import (
 
 func ClusterProfileSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:          schema.TypeList,
-		Optional:      true,
-		ConflictsWith: []string{"pack"},
+		Type:     schema.TypeList,
+		Optional: true,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"id": {

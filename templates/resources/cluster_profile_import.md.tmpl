@@ -1,0 +1,22 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+## Example Usage
+
+
+```terraform
+resource "spectrocloud_cluster_profile_import" "import" {
+  import_file = "/tmp/profile_import.json"
+}
+```
+
+
+{{ .SchemaMarkdown | trimspace }}

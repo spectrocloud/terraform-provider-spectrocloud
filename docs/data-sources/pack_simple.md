@@ -35,6 +35,7 @@ data "spectrocloud_pack_simple" "pack" {
 
 ### Optional
 
+- `context` (String)
 - `registry_uid` (String) The unique identifier of the registry the pack belongs to.
 - `version` (String) The version of the pack.
 

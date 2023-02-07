@@ -11,6 +11,11 @@ func PackSchema() *schema.Schema {
 		Optional: true,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
+				"uid": {
+					Type:     schema.TypeString,
+					Computed: true,
+					Optional: true,
+				},
 				"type": {
 					Type:        schema.TypeString,
 					Optional:    true,
@@ -42,6 +47,10 @@ func PackSchema() *schema.Schema {
 					Optional: true,
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
+							"uid": {
+								Type:     schema.TypeString,
+								Computed: true,
+							},
 							"name": {
 								Type:        schema.TypeString,
 								Required:    true,
