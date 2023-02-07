@@ -1,0 +1,92 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+## Example Usage
+
+```terraform
+data "spectrocloud_cloudaccount_maas" "account" {
+  # id = <uid>
+  name = var.cluster_cloud_account_name
+}
+
+data "spectrocloud_cluster_profile" "profile" {
+  # id = <uid>
+  name = var.cluster_cluster_profile_name
+}
+
+data "spectrocloud_backup_storage_location" "bsl" {
+  name = var.backup_storage_location_name
+}
+
+resource "spectrocloud_cluster_maas" "cluster" {
+  name             = var.cluster_name
+  tags             = ["dev", "department:devops", "owner:bob"]
+  cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
+
+  cloud_config {
+    subscription_id = "subscription-id"
+    resource_group  = "dev"
+    ssh_key         = "ssh key value"
+    region          = "centralus"
+  }
+
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+
+    # To override or specify values for a cluster:
+
+    # pack {
+    #   name   = "spectro-byo-manifest"
+    #   tag    = "1.0.x"
+    #   values = <<-EOT
+    #     manifests:
+    #       byo-manifest:
+    #         contents: |
+    #           # Add manifests here
+    #           apiVersion: v1
+    #           kind: Namespace
+    #           metadata:
+    #             labels:
+    #               app: wordpress
+    #               app2: wordpress2
+    #             name: wordpress
+    #   EOT
+    # }
+  }
+
+  backup_policy {
+    schedule                  = "0 0 * * SUN"
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = "prod-backup"
+    expiry_in_hour            = 7200
+    include_disks             = true
+    include_cluster_resources = true
+  }
+
+  scan_policy {
+    configuration_scan_schedule = "0 0 * * SUN"
+    penetration_scan_schedule   = "0 0 * * SUN"
+    conformance_scan_schedule   = "0 0 1 * *"
+  }
+
+  machine_pool {
+    name                 = "worker-basic"
+    count                = 1
+    instance_type        = "Standard_DS4"
+    disk_size_gb         = 60
+    is_system_node_pool  = true
+    storage_account_type = "Standard_LRS"
+  }
+}
+```
+
+
+{{ .SchemaMarkdown | trimspace }}

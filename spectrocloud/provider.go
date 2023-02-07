@@ -38,7 +38,7 @@ func New(_ string) func() *schema.Provider {
 					Type:        schema.TypeString,
 					Optional:    true,
 					Sensitive:   true,
-					Description: "The Spectro Cloud API key. Can also be set with the `SPECTROCLOUD_API_KEY` environment variable.",
+					Description: "The Spectro Cloud API key. Can also be set with the `SPECTROCLOUD_APIKEY` environment variable.",
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_APIKEY", nil),
 				},
 				"trace": {

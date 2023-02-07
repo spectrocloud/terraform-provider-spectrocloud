@@ -114,7 +114,7 @@ provider GitHub [discussion board](https://github.com/spectrocloud/terraform-pro
 
 ### Optional
 
-- `api_key` (String, Sensitive) The Spectro Cloud API key. Can also be set with the `SPECTROCLOUD_API_KEY` environment variable.
+- `api_key` (String, Sensitive) The Spectro Cloud API key. Can also be set with the `SPECTROCLOUD_APIKEY` environment variable.
 - `host` (String) The Spectro Cloud API host url. Can also be set with the `SPECTROCLOUD_HOST` environment variable. Defaults to https://api.spectrocloud.com
 - `ignore_insecure_tls_error` (Boolean) Ignore insecure TLS errors for Spectro Cloud API endpoints. Defaults to false.
 - `password` (String, Sensitive) The Spectro Cloud user password. Can also be set with the `SPECTROCLOUD_PASSWORD` environment variable.
