@@ -35,3 +35,26 @@ The documentation for each respective resource is found in the [docs](/docs) fol
 ## Support
 
 For questions or issues with the provider, please post your questions on the provider [discussion board](/discussions).
+## Requirements
+
+No requirements.
+
+## Providers
+
+No providers.
+
+## Modules
+
+No modules.
+
+## Resources
+
+No resources.
+
+## Inputs
+
+No inputs.
+
+## Outputs
+
+No outputs.
