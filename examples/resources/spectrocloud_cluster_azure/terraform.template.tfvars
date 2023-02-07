@@ -1,8 +1,7 @@
 # Spectro Cloud credentials
 sc_host         = "{enter Spectro Cloud API endpoint}" #e.g: api.spectrocloud.com (for SaaS)
-sc_api_key = "{enter Spectro Cloud API Key}"
 sc_project_name = "{enter Spectro Cloud project Name}" #e.g: Default
-
+sc_api_key      = "{enter Spectro Cloud API Key}"
 
 # Azure Cloud Account credentials
 # Follow the Spectro Cloud documentation to provision a new Azure Enterprise Application.

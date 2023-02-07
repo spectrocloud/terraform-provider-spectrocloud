@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     spectrocloud = {
-      version = ">= 0.1"
+      version = ">= 0.11.1"
       source  = "spectrocloud/spectrocloud"
     }
   }
@@ -12,13 +12,10 @@ variable "sc_host" {
   default     = "api.spectrocloud.com"
 }
 
-variable "sc_username" {
-  description = "Spectro Cloud Username"
-}
-
-variable "sc_password" {
-  description = "Spectro Cloud Password"
+variable "sc_api_key" {
+  description = "Spectro Cloud API key"
   sensitive   = true
+  default     = ""
 }
 
 variable "sc_project_name" {
@@ -28,7 +25,7 @@ variable "sc_project_name" {
 
 provider "spectrocloud" {
   host         = var.sc_host
-  username     = var.sc_username
-  password     = var.sc_password
+  api_key      = var.sc_api_key
   project_name = var.sc_project_name
+  ignore_insecure_tls_error = true
 }

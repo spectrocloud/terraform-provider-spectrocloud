@@ -1,7 +1,9 @@
 
 resource "spectrocloud_cluster_azure" "cluster" {
   name               = "az-picard-2"
-  cluster_profile_id = spectrocloud_cluster_profile.profile.id
+  cluster_profile {
+    id = spectrocloud_cluster_profile.profile.id
+  }
   cloud_account_id   = spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
@@ -32,6 +34,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
   # }
 
   machine_pool {
+    is_system_node_pool     = false
     control_plane           = true
     control_plane_as_worker = true
     name                    = "master-pool"
@@ -45,6 +48,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
   }
 
   machine_pool {
+    is_system_node_pool     = true
     name          = "worker-basic"
     count         = 1
     instance_type = "Standard_D2_v3"

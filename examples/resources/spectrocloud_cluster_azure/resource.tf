@@ -1,17 +1,17 @@
-data "spectrocloud_cloudaccount_azure" "account" {
-  # id = <uid>
-  name = var.cluster_cloud_account_name
+data "spectrocloud_cluster_profile" "profile"{
+  name = "tf-js-azure-profile"
 }
 
-data "spectrocloud_cluster_profile" "profile" {
-  # id = <uid>
-  name = var.cluster_cluster_profile_name
+data "spectrocloud_cloudaccount_azure" "account"{
+  name = "acc-azure-ca"
 }
 
 resource "spectrocloud_cluster_azure" "cluster" {
-  name             = var.cluster_name
-  tags             = ["dev", "department:devops", "owner:bob"]
-  cloud_account_id = data.spectrocloud_cloudaccount_azure.account.id
+  name               = "tf-azure-js-1"
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+  }
+  cloud_account_id   = data.spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
     subscription_id = var.azure_subscription_id
@@ -20,31 +20,8 @@ resource "spectrocloud_cluster_azure" "cluster" {
     ssh_key         = var.cluster_ssh_public_key
   }
 
-  cluster_profile {
-    id = data.spectrocloud_cluster_profile.profile.id
-
-    # To override or specify values for a cluster:
-
-    # pack {
-    #   name   = "spectro-byo-manifest"
-    #   tag    = "1.0.x"
-    #   values = <<-EOT
-    #     manifests:
-    #       byo-manifest:
-    #         contents: |
-    #           # Add manifests here
-    #           apiVersion: v1
-    #           kind: Namespace
-    #           metadata:
-    #             labels:
-    #               app: wordpress
-    #               app2: wordpress2
-    #             name: wordpress
-    #   EOT
-    # }
-  }
-
   machine_pool {
+    is_system_node_pool     = false
     control_plane           = true
     control_plane_as_worker = true
     name                    = "master-pool"
@@ -58,6 +35,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
   }
 
   machine_pool {
+    is_system_node_pool = true
     name          = "worker-basic"
     count         = 1
     instance_type = "Standard_D2_v3"

@@ -39,7 +39,7 @@ data "spectrocloud_pack" "byom" {
 
 data "spectrocloud_pack" "csi" {
   name = "csi-azure"
-  # version  = "1.0.x"
+  version  = "1.20.0"
 }
 
 data "spectrocloud_pack" "cni" {
@@ -47,14 +47,21 @@ data "spectrocloud_pack" "cni" {
   version = "3.16.0"
 }
 
+data "spectrocloud_registry_pack" "registry" {
+  name = "Public Repo"
+
+}
+
 data "spectrocloud_pack" "k8s" {
   name    = "kubernetes"
-  version = "1.18.14"
+  version = "1.23.9"
+  cloud = ["azure"]
+  registry_uid = data.spectrocloud_registry_pack.registry.id
 }
 
 data "spectrocloud_pack" "ubuntu" {
   name = "ubuntu-azure"
-  # version  = "1.0.x"
+  version  = "20.04"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
@@ -84,7 +91,7 @@ resource "spectrocloud_cluster_profile" "profile" {
 
   pack {
     name   = "csi-azure"
-    tag    = "1.0.x"
+    tag    = "1.20.x"
     uid    = data.spectrocloud_pack.csi.id
     values = data.spectrocloud_pack.csi.values
   }
@@ -98,14 +105,14 @@ resource "spectrocloud_cluster_profile" "profile" {
 
   pack {
     name   = "kubernetes"
-    tag    = "1.18.x"
+    tag    = "1.23.9"
     uid    = data.spectrocloud_pack.k8s.id
     values = data.spectrocloud_pack.k8s.values
   }
 
   pack {
     name   = "ubuntu-azure"
-    tag    = "LTS__18.4.x"
+    tag    = "LTS__20.04"
     uid    = data.spectrocloud_pack.ubuntu.id
     values = data.spectrocloud_pack.ubuntu.values
   }
