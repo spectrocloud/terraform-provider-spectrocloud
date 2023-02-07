@@ -200,7 +200,7 @@ func resourceClusterAzure() *schema.Resource {
 						},
 						"is_system_node_pool": {
 							Type:     schema.TypeBool,
-							Required: true,
+							Optional: true,
 						},
 						"os_type": {
 							Type:     schema.TypeString,
