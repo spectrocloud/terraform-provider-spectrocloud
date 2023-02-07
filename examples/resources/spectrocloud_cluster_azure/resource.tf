@@ -21,7 +21,6 @@ resource "spectrocloud_cluster_azure" "cluster" {
   }
 
   machine_pool {
-    is_system_node_pool     = false
     control_plane           = true
     control_plane_as_worker = true
     name                    = "master-pool"
@@ -35,7 +34,6 @@ resource "spectrocloud_cluster_azure" "cluster" {
   }
 
   machine_pool {
-    is_system_node_pool = true
     name          = "worker-basic"
     count         = 1
     instance_type = "Standard_D2_v3"
