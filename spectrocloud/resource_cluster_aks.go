@@ -142,26 +142,7 @@ func resourceClusterAks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"taints": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"key": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"value": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"effect": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
-						},
+						"taints": schemas.ClusterTaintsSchema(),
 						"count": {
 							Type:     schema.TypeInt,
 							Required: true,
