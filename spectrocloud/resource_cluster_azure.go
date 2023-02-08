@@ -206,6 +206,7 @@ func resourceClusterAzure() *schema.Resource {
 						"is_system_node_pool": {
 							Type:        schema.TypeBool,
 							Optional:    true,
+							Default:     false,
 							Description: "Whether this machine pool is a system node pool.",
 						},
 						"os_type": {
