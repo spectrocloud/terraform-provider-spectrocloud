@@ -219,7 +219,7 @@ func resourceClusterVsphere() *schema.Resource {
 			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
 			"namespaces":           schemas.ClusterNamespacesSchema(),
 			"host_config":          schemas.ClusterHostConfigSchema(),
-			"location_config":      schemas.ClusterLocationSchemaComputed(),
+			"location_config":      schemas.ClusterLocationSchema(),
 			"skip_completion": {
 				Type:     schema.TypeBool,
 				Optional: true,
