@@ -603,11 +603,6 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 	}
 	addDisks := getAdditionalDisks(ins)
 
-	if m["name"].(string) == "master-pool" && len(addDisks) > 0 {
-		// If master pool has additional disks, return an error
-		return nil, fmt.Errorf("Attached disks are not allowed for the 'master-pool' machine pool")
-	}
-
 	updateStrategyType := getUpdateStrategy(m)
 	if m["name"].(string) == "master-pool" && updateStrategyType == "RollingUpdateScaleIn" {
 		// If master pool has RollingUpdateScaleIn as an update strategy, return an error
