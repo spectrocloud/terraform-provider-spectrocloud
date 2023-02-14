@@ -135,7 +135,6 @@ Required:
 - `azs` (Set of String) Availability zones for the machine pool.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (String) Azure instance type from the Azure portal.
-- `is_system_node_pool` (Boolean) Whether this machine pool is a system node pool.
 - `name` (String) Name of the machine pool. This must be unique within the cluster.
 
 Optional:
@@ -144,6 +143,7 @@ Optional:
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `disk` (Block List, Max: 1) Disk configuration for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--disk))
+- `is_system_node_pool` (Boolean) Whether this machine pool is a system node pool. Default value is `false'.
 - `os_type` (String) Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.

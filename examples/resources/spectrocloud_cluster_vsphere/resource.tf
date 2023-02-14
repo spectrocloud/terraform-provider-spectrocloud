@@ -1,9 +1,9 @@
-data "spectrocloud_cluster_profile" "vmware_profile"{
-  name = "vmware-public-repo"
+data "spectrocloud_cluster_profile" "vmware_profile" {
+  name    = "vmware-public-repo"
   version = "2.0.0"
   context = "tenant"
 }
-data "spectrocloud_cloudaccount_vsphere" "vmware_account"{
+data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
   name = "gm-pcg-wop-d"
 }
 

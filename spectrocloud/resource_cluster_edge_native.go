@@ -69,7 +69,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchSchedule,
-				Description:      The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.",
+				Description:      "The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.",
 			},
 			"os_patch_after": {
 				Type:             schema.TypeString,

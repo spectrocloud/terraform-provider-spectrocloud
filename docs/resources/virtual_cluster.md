@@ -64,7 +64,7 @@ resource "spectrocloud_virtual_cluster" "cluster" {
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `host_cluster_uid` (String)
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
-- `os_patch_after` (String) Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`
+- `os_patch_after` (String) The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`
 - `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
 - `os_patch_schedule` (String) Cron schedule for OS patching. This must be in the form of `0 0 * * *`.
 - `resources` (Block List) (see [below for nested schema](#nestedblock--resources))
