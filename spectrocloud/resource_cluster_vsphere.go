@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
@@ -21,6 +22,7 @@ func resourceClusterVsphere() *schema.Resource {
 		ReadContext:   resourceClusterVsphereRead,
 		UpdateContext: resourceClusterVsphereUpdate,
 		DeleteContext: resourceClusterDelete,
+		Description:   "A resource to manage a vSphere cluster in Pallette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
@@ -30,9 +32,10 @@ func resourceClusterVsphere() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the cluster.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -41,38 +44,52 @@ func resourceClusterVsphere() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "ID of the cloud account to be used for the cluster. This cloud account must be of type `vsphere`.",
 			},
 			"cloud_config_id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"os_patch_on_boot": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to apply OS patch on boot. Default is `false`.",
 			},
 			"os_patch_schedule": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchSchedule,
+				Description:      "The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.",
 			},
 			"os_patch_after": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
 			"kubeconfig": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -82,37 +99,45 @@ func resourceClusterVsphere() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"datacenter": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of the datacenter in vSphere. This is the name of the datacenter as it appears in vSphere.",
 						},
 						"folder": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of the folder in vSphere. This is the name of the folder as it appears in vSphere.",
 						},
 						"image_template_folder": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The name of the image template folder in vSphere. This is the name of the folder as it appears in vSphere.",
 						},
 
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The SSH key to be used for the cluster. This is the public key that will be used to access the cluster.",
 						},
 
 						"static_ip": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
+							Description: "Whether to use static IP addresses for the cluster. If `true`, the cluster will use static IP addresses. " +
+								"If `false`, the cluster will use DDNS. Default is `false`.",
 						},
 
 						// DHCP Properties
 						"network_type": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The type of network to use for the cluster. This can be `VIP` or `DDNS`.",
 						},
 						"network_search_domain": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The search domain to use for the cluster in case of DHCP.",
 						},
 					},
 				},
@@ -127,6 +152,7 @@ func resourceClusterVsphere() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "The name of the machine pool. This is used to identify the machine pool in the cluster.",
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -141,22 +167,25 @@ func resourceClusterVsphere() *schema.Resource {
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
+							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-
 							//ForceNew: true,
+							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
 						"count": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Number of nodes in the machine pool.",
 						},
 						"update_strategy": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "RollingUpdateScaleOut",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "RollingUpdateScaleOut",
+							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 						},
 						"instance_type": {
 							Type:     schema.TypeList,
@@ -165,16 +194,19 @@ func resourceClusterVsphere() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"disk_size_gb": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "The size of the disk in GB.",
 									},
 									"memory_mb": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "The amount of memory in MB.",
 									},
 									"cpu": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "The number of CPUs.",
 									},
 								},
 							},
@@ -189,24 +221,29 @@ func resourceClusterVsphere() *schema.Resource {
 										Computed: true,
 									},
 									"cluster": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the cluster to use for the machine pool. As it appears in the vSphere.",
 									},
 									"resource_pool": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the resource pool to use for the machine pool. As it appears in the vSphere.",
 									},
 									"datastore": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the datastore to use for the machine pool. As it appears in the vSphere.",
 									},
 									"network": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the network to use for the machine pool. As it appears in the vSphere.",
 									},
 									"static_ip_pool_id": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The ID of the static IP pool to use for the machine pool in case of static cluster placement.",
 									},
 								},
 							},
@@ -221,8 +258,10 @@ func resourceClusterVsphere() *schema.Resource {
 			"host_config":          schemas.ClusterHostConfigSchema(),
 			"location_config":      schemas.ClusterLocationSchema(),
 			"skip_completion": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
 		},
 	}

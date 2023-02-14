@@ -43,6 +43,7 @@ func resourceClusterImport() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"cloud": {
@@ -52,8 +53,10 @@ func resourceClusterImport() *schema.Resource {
 				ValidateDiagFunc: validateCloudType,
 			},
 			"cloud_config_id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"cluster_import_manifest_apply_command": {
 				Type:     schema.TypeString,

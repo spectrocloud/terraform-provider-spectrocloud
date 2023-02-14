@@ -18,6 +18,7 @@ func resourceCloudAccountVsphere() *schema.Resource {
 		ReadContext:   resourceCloudAccountVsphereRead,
 		UpdateContext: resourceCloudAccountVsphereUpdate,
 		DeleteContext: resourceCloudAccountVsphereDelete,
+		Description:   "A resource to manage a vSphere cloud account in Pallette.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

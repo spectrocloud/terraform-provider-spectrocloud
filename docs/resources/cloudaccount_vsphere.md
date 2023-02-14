@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cloudaccount_vsphere Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  A resource to manage a vSphere cloud account in Pallette.
 ---
 
 # spectrocloud_cloudaccount_vsphere (Resource)
 
-  
+  A resource to manage a vSphere cloud account in Pallette.
 
 ## Example Usage
 

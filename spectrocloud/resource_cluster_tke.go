@@ -20,6 +20,7 @@ func resourceClusterTke() *schema.Resource {
 		ReadContext:   resourceClusterTkeRead,
 		UpdateContext: resourceClusterTkeUpdate,
 		DeleteContext: resourceClusterDelete,
+		Description:   "Resource for managing TKE clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -41,6 +42,7 @@ func resourceClusterTke() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
@@ -53,12 +55,15 @@ func resourceClusterTke() *schema.Resource {
 				ForceNew: true,
 			},
 			"cloud_config_id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"kubeconfig": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -139,13 +144,15 @@ func resourceClusterTke() *schema.Resource {
 							Required: true,
 						},
 						"count": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Number of nodes in the machine pool.",
 						},
 						"update_strategy": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "RollingUpdateScaleOut",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "RollingUpdateScaleOut",
+							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 						},
 						"min": {
 							Type:     schema.TypeInt,
@@ -192,8 +199,10 @@ func resourceClusterTke() *schema.Resource {
 			"host_config":          schemas.ClusterHostConfigSchema(),
 			"location_config":      schemas.ClusterLocationSchemaComputed(),
 			"skip_completion": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
 		},
 	}

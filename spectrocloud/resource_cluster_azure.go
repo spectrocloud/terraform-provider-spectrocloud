@@ -60,11 +60,13 @@ func resourceClusterAzure() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Whether to apply OS patches on boot. This can be set to `true` or `false`.",
+				Default:     false,
+				Description: "Whether to apply OS patch on boot. Default is `false`.",
 			},
 			"os_patch_schedule": {
 				Type:             schema.TypeString,
@@ -231,7 +233,8 @@ func resourceClusterAzure() *schema.Resource {
 			"skip_completion": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "If true, the cluster will be created asynchronously.",
+				Default:     false,
+				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
 		},
 	}
