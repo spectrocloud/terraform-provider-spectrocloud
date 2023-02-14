@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cluster_vsphere Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  A resource to manage a vSphere cluster in Pallette.
 ---
 
 # spectrocloud_cluster_vsphere (Resource)
 
-  
+  A resource to manage a vSphere cluster in Pallette.
 
 ## Example Usage
 
@@ -19,49 +19,49 @@ description: |-
 
 ### Required
 
-- `cloud_account_id` (String)
+- `cloud_account_id` (String) ID of the cloud account to be used for the cluster. This cloud account must be of type `vsphere`.
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - `machine_pool` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String)
+- `name` (String) The name of the cluster.
 
 ### Optional
 
-- `apply_setting` (String)
+- `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
-- `os_patch_after` (String)
-- `os_patch_on_boot` (Boolean)
-- `os_patch_schedule` (String)
+- `os_patch_after` (String) Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`
+- `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
+- `os_patch_schedule` (String) Cron schedule for OS patching. This must be in the form of `0 0 * * *`.
 - `scan_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
-- `skip_completion` (Boolean)
-- `tags` (Set of String)
+- `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
+- `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
-- `cloud_config_id` (String)
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String)
+- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
 
 <a id="nestedblock--cloud_config"></a>
 ### Nested Schema for `cloud_config`
 
 Required:
 
-- `datacenter` (String)
-- `folder` (String)
-- `ssh_key` (String)
+- `datacenter` (String) The name of the datacenter in vSphere. This is the name of the datacenter as it appears in vSphere.
+- `folder` (String) The name of the folder in vSphere. This is the name of the folder as it appears in vSphere.
+- `ssh_key` (String) The SSH key to be used for the cluster. This is the public key that will be used to access the cluster.
 
 Optional:
 
-- `image_template_folder` (String)
-- `network_search_domain` (String)
-- `network_type` (String)
-- `static_ip` (Boolean)
+- `image_template_folder` (String) The name of the image template folder in vSphere. This is the name of the folder as it appears in vSphere.
+- `network_search_domain` (String) The search domain to use for the cluster in case of DHCP.
+- `network_type` (String) The type of network to use for the cluster. This can be `VIP` or `DDNS`.
+- `static_ip` (Boolean) Whether to use static IP addresses for the cluster. If `true`, the cluster will use static IP addresses. If `false`, the cluster will use DDNS. Default is `false`.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -69,27 +69,27 @@ Optional:
 
 Required:
 
-- `count` (Number)
+- `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
-- `name` (String)
+- `name` (String) The name of the machine pool. This is used to identify the machine pool in the cluster.
 - `placement` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
 
 - `additional_labels` (Map of String)
-- `control_plane` (Boolean)
-- `control_plane_as_worker` (Boolean)
+- `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
+- `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
-- `update_strategy` (String)
+- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
 <a id="nestedblock--machine_pool--instance_type"></a>
 ### Nested Schema for `machine_pool.instance_type`
 
 Required:
 
-- `cpu` (Number)
-- `disk_size_gb` (Number)
-- `memory_mb` (Number)
+- `cpu` (Number) The number of CPUs.
+- `disk_size_gb` (Number) The size of the disk in GB.
+- `memory_mb` (Number) The amount of memory in MB.
 
 
 <a id="nestedblock--machine_pool--placement"></a>
@@ -97,14 +97,14 @@ Required:
 
 Required:
 
-- `cluster` (String)
-- `datastore` (String)
-- `network` (String)
-- `resource_pool` (String)
+- `cluster` (String) The name of the cluster to use for the machine pool. As it appears in the vSphere.
+- `datastore` (String) The name of the datastore to use for the machine pool. As it appears in the vSphere.
+- `network` (String) The name of the network to use for the machine pool. As it appears in the vSphere.
+- `resource_pool` (String) The name of the resource pool to use for the machine pool. As it appears in the vSphere.
 
 Optional:
 
-- `static_ip_pool_id` (String)
+- `static_ip_pool_id` (String) The ID of the static IP pool to use for the machine pool in case of static cluster placement.
 
 Read-Only:
 
@@ -166,6 +166,7 @@ Optional:
 - `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
 - `tag` (String) The tag of the pack. The tag is the version of the pack.
 - `type` (String) The type of the pack. The default value is `spectro`.
+- `uid` (String)
 
 <a id="nestedblock--cluster_profile--pack--manifest"></a>
 ### Nested Schema for `cluster_profile.pack.manifest`
@@ -174,6 +175,10 @@ Required:
 
 - `content` (String) The content of the manifest. The content is the YAML content of the manifest.
 - `name` (String) The name of the manifest. The name must be unique within the pack.
+
+Read-Only:
+
+- `uid` (String)
 
 
 

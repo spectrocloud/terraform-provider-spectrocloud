@@ -60,12 +60,12 @@ resource "spectrocloud_cluster_import" "cluster" {
 ### Optional
 
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
-- `tags` (Set of String)
+- `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
-- `cloud_config_id` (String)
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `cluster_import_manifest` (String)
 - `cluster_import_manifest_apply_command` (String)
 - `id` (String) The ID of this resource.
@@ -95,6 +95,7 @@ Optional:
 - `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
 - `tag` (String) The tag of the pack. The tag is the version of the pack.
 - `type` (String) The type of the pack. The default value is `spectro`.
+- `uid` (String)
 
 <a id="nestedblock--cluster_profile--pack--manifest"></a>
 ### Nested Schema for `cluster_profile.pack.manifest`
@@ -103,6 +104,10 @@ Required:
 
 - `content` (String) The content of the manifest. The content is the YAML content of the manifest.
 - `name` (String) The name of the manifest. The name must be unique within the pack.
+
+Read-Only:
+
+- `uid` (String)
 
 
 

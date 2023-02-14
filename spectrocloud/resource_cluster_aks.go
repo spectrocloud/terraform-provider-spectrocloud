@@ -19,6 +19,7 @@ func resourceClusterAks() *schema.Resource {
 		ReadContext:   resourceClusterAksRead,
 		UpdateContext: resourceClusterAksUpdate,
 		DeleteContext: resourceClusterDelete,
+		Description:   "Resource for managing AKS clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -40,6 +41,7 @@ func resourceClusterAks() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
@@ -52,26 +54,33 @@ func resourceClusterAks() *schema.Resource {
 				ForceNew: true,
 			},
 			"cloud_config_id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"os_patch_on_boot": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to apply OS patch on boot. Default is `false`.",
 			},
 			"os_patch_schedule": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchSchedule,
+				Description:      "Cron schedule for OS patching. This must be in the form of `0 0 * * *`.",
 			},
 			"os_patch_after": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+				Description:      "Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
 			"kubeconfig": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -144,13 +153,15 @@ func resourceClusterAks() *schema.Resource {
 						},
 						"taints": schemas.ClusterTaintsSchema(),
 						"count": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Number of nodes in the machine pool.",
 						},
 						"update_strategy": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "RollingUpdateScaleOut",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "RollingUpdateScaleOut",
+							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -187,8 +198,10 @@ func resourceClusterAks() *schema.Resource {
 			"host_config":          schemas.ClusterHostConfigSchema(),
 			"location_config":      schemas.ClusterLocationSchemaComputed(),
 			"skip_completion": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
 		},
 	}

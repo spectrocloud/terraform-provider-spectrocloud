@@ -107,19 +107,19 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - `fargate_profile` (Block List) (see [below for nested schema](#nestedblock--fargate_profile))
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
-- `os_patch_after` (String)
-- `os_patch_on_boot` (Boolean)
-- `os_patch_schedule` (String)
+- `os_patch_after` (String) Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`
+- `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
+- `os_patch_schedule` (String) Cron schedule for OS patching. This must be in the form of `0 0 * * *`.
 - `scan_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
-- `skip_completion` (Boolean)
-- `tags` (Set of String)
+- `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
+- `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
-- `cloud_config_id` (String)
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String)
+- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
 - `location_config` (List of Object) (see [below for nested schema](#nestedatt--location_config))
 
 <a id="nestedblock--cloud_config"></a>
@@ -145,7 +145,7 @@ Optional:
 
 Required:
 
-- `count` (Number)
+- `count` (Number) Number of nodes in the machine pool.
 - `disk_size_gb` (Number)
 - `instance_type` (String)
 - `name` (String)
@@ -160,7 +160,7 @@ Optional:
 - `max_price` (String)
 - `min` (Number)
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
-- `update_strategy` (String)
+- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
 <a id="nestedblock--machine_pool--taints"></a>
 ### Nested Schema for `machine_pool.taints`
@@ -217,6 +217,7 @@ Optional:
 - `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
 - `tag` (String) The tag of the pack. The tag is the version of the pack.
 - `type` (String) The type of the pack. The default value is `spectro`.
+- `uid` (String)
 
 <a id="nestedblock--cluster_profile--pack--manifest"></a>
 ### Nested Schema for `cluster_profile.pack.manifest`
@@ -225,6 +226,10 @@ Required:
 
 - `content` (String) The content of the manifest. The content is the YAML content of the manifest.
 - `name` (String) The name of the manifest. The name must be unique within the pack.
+
+Read-Only:
+
+- `uid` (String)
 
 
 

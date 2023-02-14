@@ -54,6 +54,7 @@ func resourceClusterProfile() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
 			"description": {
 				Type:     schema.TypeString,
