@@ -6,6 +6,21 @@ func ClusterLocationSchema() *schema.Schema {
 	return &schema.Schema{
 		Type:     schema.TypeList,
 		Optional: true,
+		DiffSuppressFunc: func(k, oldValue, newValue string, d *schema.ResourceData) bool {
+			_, hasClusterConfig := d.GetOk("location_config")
+			if hasClusterConfig {
+				if d.Get("location_config") != nil {
+					for _, locationConfig := range d.Get("location_config").([]interface{}) {
+						lat := locationConfig.(map[string]interface{})["latitude"].(float64)
+						long := locationConfig.(map[string]interface{})["longitude"].(float64)
+						if lat == 0 && long == 0 {
+							return true
+						}
+					}
+				}
+			}
+			return false
+		},
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"country_code": {
