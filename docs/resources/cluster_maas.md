@@ -108,7 +108,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
-- `os_patch_after` (String) Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`
+- `os_patch_after` (String) The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`
 - `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
 - `os_patch_schedule` (String) Cron schedule for OS patching. This must be in the form of `0 0 * * *`.
 - `scan_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))

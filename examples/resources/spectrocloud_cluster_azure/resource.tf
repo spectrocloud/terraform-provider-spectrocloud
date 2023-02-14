@@ -1,17 +1,17 @@
-data "spectrocloud_cluster_profile" "profile"{
+data "spectrocloud_cluster_profile" "profile" {
   name = "tf-js-azure-profile"
 }
 
-data "spectrocloud_cloudaccount_azure" "account"{
+data "spectrocloud_cloudaccount_azure" "account" {
   name = "acc-azure-ca"
 }
 
 resource "spectrocloud_cluster_azure" "cluster" {
-  name               = "tf-azure-js-1"
+  name = "tf-azure-js-1"
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id
   }
-  cloud_account_id   = data.spectrocloud_cloudaccount_azure.account.id
+  cloud_account_id = data.spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
     subscription_id = var.azure_subscription_id
@@ -35,10 +35,10 @@ resource "spectrocloud_cluster_azure" "cluster" {
 
   machine_pool {
     is_system_node_pool = true
-    name          = "worker-basic"
-    count         = 1
-    instance_type = "Standard_D2_v3"
-    azs           = []
+    name                = "worker-basic"
+    count               = 1
+    instance_type       = "Standard_D2_v3"
+    azs                 = []
   }
 
 }
