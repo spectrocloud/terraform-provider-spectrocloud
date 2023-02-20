@@ -9,6 +9,9 @@ import (
 )
 
 func (h *V1Client) GetClusterNamespaceConfig(uid string) (*models.V1ClusterNamespaceResources, error) {
+	if h.GetClusterNamespaceConfigFn != nil {
+		return h.GetClusterNamespaceConfigFn(uid)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err

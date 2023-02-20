@@ -39,6 +39,9 @@ func (h *V1Client) DeleteCluster(uid string) error {
 }
 
 func (h *V1Client) GetCluster(uid string) (*models.V1SpectroCluster, error) {
+	if h.GetClusterFn != nil {
+		return h.GetClusterFn(uid)
+	}
 	cluster, err := h.GetClusterWithoutStatus(uid)
 	if err != nil {
 		return nil, err
@@ -52,6 +55,9 @@ func (h *V1Client) GetCluster(uid string) (*models.V1SpectroCluster, error) {
 }
 
 func (h *V1Client) GetClusterWithoutStatus(uid string) (*models.V1SpectroCluster, error) {
+	if h.GetClusterWithoutStatusFn != nil {
+		return h.GetClusterWithoutStatusFn(uid)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
@@ -115,6 +121,10 @@ func (h *V1Client) GetClusterByName(name string, ClusterContext string) (*models
 }
 
 func (h *V1Client) GetClusterKubeConfig(uid string) (string, error) {
+	if h.GetClusterKubeConfigFn != nil {
+		return h.GetClusterKubeConfigFn(uid)
+	}
+
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
