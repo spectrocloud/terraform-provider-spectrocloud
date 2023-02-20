@@ -65,6 +65,24 @@ func resourceClusterTke() *schema.Resource {
 				Computed:    true,
 				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
 			},
+			"os_patch_on_boot": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to apply OS patch on boot. Default is `false`.",
+			},
+			"os_patch_schedule": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+				Description:      "The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.",
+			},
+			"os_patch_after": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+				Description:      "Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`",
+			},
 			"cloud_config": {
 				Type:     schema.TypeList,
 				ForceNew: true,
