@@ -52,7 +52,15 @@ type V1Client struct {
 	RetryAttempts  int
 
 	// Cluster client(common)
-	GetClusterClientFn func() (clusterC.ClientService, error)
+	GetClusterClientFn          func() (clusterC.ClientService, error)
+	GetClusterWithoutStatusFn   func(string) (*models.V1SpectroCluster, error)
+	GetClusterFn                func(uid string) (*models.V1SpectroCluster, error)
+	GetCloudConfigVsphereFn     func(cloudConfigUid string) (*models.V1VsphereCloudConfig, error)
+	GetClusterKubeConfigFn      func(uid string) (string, error)
+	GetClusterBackupConfigFn    func(uid string) (*models.V1ClusterBackup, error)
+	GetClusterScanConfigFn      func(uid string) (*models.V1ClusterComplianceScan, error)
+	GetClusterRbacConfigFn      func(uid string) (*models.V1ClusterRbacs, error)
+	GetClusterNamespaceConfigFn func(uid string) (*models.V1ClusterNamespaceResources, error)
 
 	// Cluster Groups
 	CreateClusterGroupFn func(*models.V1ClusterGroupEntity) (string, error)
@@ -74,6 +82,7 @@ type V1Client struct {
 	ClustersPatchProfilesFn func(*clusterC.V1SpectroClustersPatchProfilesParams) error // used in application deployment
 	GetClusterProfileFn     func(string) (*models.V1ClusterProfile, error)
 	DeleteClusterProfileFn  func(string) error
+
 	// special function for nested mock
 	V1ClusterProfilesDeleteFn            func(params *clusterC.V1ClusterProfilesDeleteParams) (*clusterC.V1ClusterProfilesDeleteNoContent, error)
 	V1ClusterProfilesUIDMetadataUpdateFn func(params *clusterC.V1ClusterProfilesUIDMetadataUpdateParams) (*clusterC.V1ClusterProfilesUIDMetadataUpdateNoContent, error)
@@ -83,6 +92,10 @@ type V1Client struct {
 
 	//Registry
 	GetPackRegistryCommonByNameFn func(string) (*models.V1RegistryMetadata, error)
+
+	// VSphere Cluster
+	CreateClusterVsphereFn         func(*models.V1SpectroVsphereClusterEntity) (string, error)
+	GetVsphereClouldConfigValuesFn func(uid string) (*models.V1VsphereCloudConfig, error)
 }
 
 func New(hubbleHost, email, password, projectUID string, apikey string, transportDebug bool, retryAttempts int) *V1Client {

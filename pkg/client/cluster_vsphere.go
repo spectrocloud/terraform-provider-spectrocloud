@@ -8,6 +8,9 @@ import (
 )
 
 func (h *V1Client) CreateClusterVsphere(cluster *models.V1SpectroVsphereClusterEntity) (string, error) {
+	if h.CreateClusterVsphereFn != nil {
+		return h.CreateClusterVsphereFn(cluster)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return "", err
@@ -59,6 +62,9 @@ func (h *V1Client) DeleteMachinePoolVsphere(cloudConfigId string, machinePoolNam
 }
 
 func (h *V1Client) GetCloudConfigVsphere(configUID string) (*models.V1VsphereCloudConfig, error) {
+	if h.GetCloudConfigVsphereFn != nil {
+		return h.GetCloudConfigVsphereFn(configUID)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
@@ -115,6 +121,9 @@ func (h *V1Client) ImportClusterGeneric(meta *models.V1ObjectMetaInputEntity) (s
 }
 
 func (h *V1Client) GetVsphereClouldConfigValues(uid string) (*models.V1VsphereCloudConfig, error) {
+	if h.GetVsphereClouldConfigValuesFn != nil {
+		return h.GetVsphereClouldConfigValuesFn(uid)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err

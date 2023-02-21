@@ -9,6 +9,9 @@ import (
 )
 
 func (h *V1Client) GetClusterScanConfig(uid string) (*models.V1ClusterComplianceScan, error) {
+	if h.GetClusterScanConfigFn != nil {
+		return h.GetClusterScanConfigFn(uid)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err
