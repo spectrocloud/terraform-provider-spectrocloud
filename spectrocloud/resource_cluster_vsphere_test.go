@@ -151,30 +151,40 @@ func TestToVsphereCluster(t *testing.T) {
 	assert.Equal(false, vSphereSchema.Spec.CloudConfig.StaticIP)
 
 	// Verifying Master pool attributes
-	assert.Equal("master-pool", *vSphereSchema.Spec.Machinepoolconfig[0].PoolConfig.Name)
-	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[0].PoolConfig.IsControlPlane)
-	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[0].CloudConfig.InstanceType.DiskGiB)
-	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[0].CloudConfig.InstanceType.MemoryMiB)
-	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[0].CloudConfig.InstanceType.NumCPUs)
-	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[0].CloudConfig.Placements[0].Cluster)
-	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[0].CloudConfig.Placements[0].Datastore)
-	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[0].CloudConfig.Placements[0].ResourcePool)
-	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[0].CloudConfig.Placements[0].Network.NetworkName)
-	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[0].CloudConfig.Placements[0].Network.ParentPoolUID)
-	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[0].CloudConfig.Placements[0].Network.StaticIP)
+	masterPoolIndex := 0
+	workerPoolIndex := 1
+	if *vSphereSchema.Spec.Machinepoolconfig[0].PoolConfig.Name == "master-pool" {
+		masterPoolIndex = 0
+		workerPoolIndex = 1
+	} else {
+		masterPoolIndex = 1
+		workerPoolIndex = 0
+	}
+
+	assert.Equal("master-pool", *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].PoolConfig.Name)
+	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].PoolConfig.IsControlPlane)
+	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.InstanceType.DiskGiB)
+	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.InstanceType.MemoryMiB)
+	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.InstanceType.NumCPUs)
+	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Cluster)
+	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Datastore)
+	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].ResourcePool)
+	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Network.NetworkName)
+	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Network.ParentPoolUID)
+	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Network.StaticIP)
 
 	// Verifying Worker pool attributes
-	assert.Equal("worker-basic", *vSphereSchema.Spec.Machinepoolconfig[1].PoolConfig.Name)
-	assert.Equal(false, vSphereSchema.Spec.Machinepoolconfig[1].PoolConfig.IsControlPlane)
-	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[1].CloudConfig.InstanceType.DiskGiB)
-	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[1].CloudConfig.InstanceType.MemoryMiB)
-	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[1].CloudConfig.InstanceType.NumCPUs)
-	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[1].CloudConfig.Placements[0].Cluster)
-	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[1].CloudConfig.Placements[0].Datastore)
-	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[1].CloudConfig.Placements[0].ResourcePool)
-	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[1].CloudConfig.Placements[0].Network.NetworkName)
-	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[1].CloudConfig.Placements[0].Network.ParentPoolUID)
-	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[1].CloudConfig.Placements[0].Network.StaticIP)
+	assert.Equal("worker-basic", *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].PoolConfig.Name)
+	assert.Equal(false, vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].PoolConfig.IsControlPlane)
+	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.InstanceType.DiskGiB)
+	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.InstanceType.MemoryMiB)
+	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.InstanceType.NumCPUs)
+	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Cluster)
+	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Datastore)
+	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].ResourcePool)
+	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Network.NetworkName)
+	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Network.ParentPoolUID)
+	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Network.StaticIP)
 }
 
 func TestToCloudConfigUpdate(t *testing.T) {
@@ -239,49 +249,7 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 	d := prepareClusterVsphereTestData()
 	m := &client.V1Client{
 		GetCloudConfigVsphereFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
-			var mTaint []*models.V1Taint
-			mTaint = append(mTaint, &models.V1Taint{
-				Effect:    "start",
-				Key:       "owner",
-				TimeAdded: models.V1Time{},
-				Value:     "siva",
-			})
-			var mPool []*models.V1VsphereMachinePoolConfig
-			mPool = append(mPool, &models.V1VsphereMachinePoolConfig{
-				AdditionalLabels: map[string]string{
-					"type":  "unittest",
-					"owner": "siva",
-				},
-				AdditionalTags:       nil,
-				InfraProfileRef:      nil,
-				InfraProfileTemplate: nil,
-				InstanceType:         nil,
-				IsControlPlane:       nil,
-				Labels:               nil,
-				MaxSize:              0,
-				MinSize:              0,
-				Name:                 "",
-				Placements:           nil,
-				Size:                 0,
-				Taints:               mTaint,
-				UpdateStrategy: &models.V1UpdateStrategy{
-					Type: "",
-				},
-				UseControlPlaneAsWorker: false,
-			})
-			cloudConfig := &models.V1VsphereCloudConfig{
-				APIVersion: "v1",
-				Kind:       "",
-				Metadata:   nil,
-				Spec: &models.V1VsphereCloudConfigSpec{
-					CloudAccountRef:   nil,
-					ClusterConfig:     nil,
-					EdgeHostRef:       nil,
-					MachinePoolConfig: mPool,
-				},
-				Status: nil,
-			}
-			return cloudConfig, nil
+			return getCloudConfig(), nil
 		},
 		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
 			isHost := new(bool)
@@ -546,128 +514,98 @@ func TestResourceClusterVsphereReadError(t *testing.T) {
 	}
 }
 
+func getMachinePlacement() []*models.V1VspherePlacementConfig {
+	network := new(string)
+	*network = "test-net"
+	var placement []*models.V1VspherePlacementConfig
+	placement = append(placement, &models.V1VspherePlacementConfig{
+		Cluster:             "test-cluster",
+		Datacenter:          "vsphere",
+		Datastore:           "vcenter",
+		Folder:              "/test/",
+		ImageTemplateFolder: "",
+		Network: &models.V1VsphereNetworkConfig{
+			IPPool:      nil,
+			NetworkName: network,
+			ParentPoolRef: &models.V1ObjectReference{
+				UID: "test-pool-id",
+			},
+			StaticIP: false,
+		},
+		ResourcePool:      "",
+		StoragePolicyName: "",
+		UID:               "test-uid",
+	})
+	return placement
+}
+
+func getMPools() []*models.V1VsphereMachinePoolConfig {
+	var mTaint []*models.V1Taint
+	diskGb := new(int32)
+	*diskGb = 23
+	memMb := new(int64)
+	*memMb = 120
+	numCpu := new(int32)
+	*numCpu = 2
+	mTaint = append(mTaint, &models.V1Taint{
+		Effect:    "start",
+		Key:       "owner",
+		TimeAdded: models.V1Time{},
+		Value:     "siva",
+	})
+	var mPool []*models.V1VsphereMachinePoolConfig
+	mPool = append(mPool, &models.V1VsphereMachinePoolConfig{
+		AdditionalLabels: map[string]string{
+			"type":  "unittest",
+			"owner": "siva",
+		},
+		AdditionalTags:       nil,
+		InfraProfileRef:      nil,
+		InfraProfileTemplate: nil,
+		InstanceType: &models.V1VsphereInstanceType{
+			DiskGiB:   diskGb,
+			MemoryMiB: memMb,
+			NumCPUs:   numCpu,
+		},
+		IsControlPlane: nil,
+		Labels:         nil,
+		MaxSize:        0,
+		MinSize:        0,
+		Name:           "",
+		Placements:     getMachinePlacement(),
+		Size:           0,
+		Taints:         mTaint,
+		UpdateStrategy: &models.V1UpdateStrategy{
+			Type: "",
+		},
+		UseControlPlaneAsWorker: false,
+	})
+	return mPool
+}
+
+func getCloudConfig() *models.V1VsphereCloudConfig {
+	cloudConfig := &models.V1VsphereCloudConfig{
+		APIVersion: "v1",
+		Kind:       "",
+		Metadata:   nil,
+		Spec: &models.V1VsphereCloudConfigSpec{
+			CloudAccountRef:   nil,
+			ClusterConfig:     nil,
+			EdgeHostRef:       nil,
+			MachinePoolConfig: getMPools(),
+		},
+		Status: nil,
+	}
+	return cloudConfig
+}
+
 func TestFlattenCloudConfigVsphere(t *testing.T) {
 	d := prepareClusterVsphereTestData()
 	m := &client.V1Client{
 		GetCloudConfigVsphereFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
-			var mTaint []*models.V1Taint
-			diskGb := new(int32)
-			*diskGb = 23
-			memMb := new(int64)
-			*memMb = 120
-			numCpu := new(int32)
-			*numCpu = 2
-			network := new(string)
-			*network = "test-net"
-			mTaint = append(mTaint, &models.V1Taint{
-				Effect:    "start",
-				Key:       "owner",
-				TimeAdded: models.V1Time{},
-				Value:     "siva",
-			})
-			var place []*models.V1VspherePlacementConfig
-			place = append(place, &models.V1VspherePlacementConfig{
-				Cluster:             "test-cluster",
-				Datacenter:          "vsphere",
-				Datastore:           "vcenter",
-				Folder:              "/test/",
-				ImageTemplateFolder: "",
-				Network: &models.V1VsphereNetworkConfig{
-					IPPool:      nil,
-					NetworkName: network,
-					ParentPoolRef: &models.V1ObjectReference{
-						UID: "test-pool-id",
-					},
-					StaticIP: false,
-				},
-				ResourcePool:      "",
-				StoragePolicyName: "",
-				UID:               "test-uid",
-			})
-			var mPool []*models.V1VsphereMachinePoolConfig
-			mPool = append(mPool, &models.V1VsphereMachinePoolConfig{
-				AdditionalLabels: map[string]string{
-					"type":  "unittest",
-					"owner": "siva",
-				},
-				AdditionalTags:       nil,
-				InfraProfileRef:      nil,
-				InfraProfileTemplate: nil,
-				InstanceType: &models.V1VsphereInstanceType{
-					DiskGiB:   diskGb,
-					MemoryMiB: memMb,
-					NumCPUs:   numCpu,
-				},
-				IsControlPlane: nil,
-				Labels:         nil,
-				MaxSize:        0,
-				MinSize:        0,
-				Name:           "",
-				Placements:     place,
-				Size:           0,
-				Taints:         mTaint,
-				UpdateStrategy: &models.V1UpdateStrategy{
-					Type: "",
-				},
-				UseControlPlaneAsWorker: false,
-			})
-			cloudConfig := &models.V1VsphereCloudConfig{
-				APIVersion: "v1",
-				Kind:       "",
-				Metadata:   nil,
-				Spec: &models.V1VsphereCloudConfigSpec{
-					CloudAccountRef:   nil,
-					ClusterConfig:     nil,
-					EdgeHostRef:       nil,
-					MachinePoolConfig: mPool,
-				},
-				Status: nil,
-			}
-			return cloudConfig, nil
+			return getCloudConfig(), nil
 		},
 		GetVsphereClouldConfigValuesFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
-			var mPool []*models.V1VsphereMachinePoolConfig
-			var place []*models.V1VspherePlacementConfig
-			place = append(place, &models.V1VspherePlacementConfig{
-				Cluster:             "test-cluster",
-				Datacenter:          "vsphere",
-				Datastore:           "vcenter",
-				Folder:              "/test/",
-				ImageTemplateFolder: "",
-				Network: &models.V1VsphereNetworkConfig{
-					IPPool:      nil,
-					NetworkName: nil,
-					ParentPoolRef: &models.V1ObjectReference{
-						UID: "test-pool-id",
-					},
-					StaticIP: false,
-				},
-				ResourcePool:      "",
-				StoragePolicyName: "",
-				UID:               "test-uid",
-			})
-			mPool = append(mPool, &models.V1VsphereMachinePoolConfig{
-				AdditionalLabels: map[string]string{
-					"type":  "unittest",
-					"owner": "siva",
-				},
-				AdditionalTags:       nil,
-				InfraProfileRef:      nil,
-				InfraProfileTemplate: nil,
-				InstanceType:         nil,
-				IsControlPlane:       nil,
-				Labels:               nil,
-				MaxSize:              4,
-				MinSize:              1,
-				Name:                 "",
-				Placements:           nil,
-				Size:                 0,
-				Taints:               nil,
-				UpdateStrategy: &models.V1UpdateStrategy{
-					Type: "",
-				},
-				UseControlPlaneAsWorker: false,
-			})
 			vsphereConfig := &models.V1VsphereCloudConfig{
 				APIVersion: "v1",
 				Kind:       "",
@@ -696,7 +634,7 @@ func TestFlattenCloudConfigVsphere(t *testing.T) {
 						StaticIP: false,
 					},
 					EdgeHostRef:       nil,
-					MachinePoolConfig: mPool,
+					MachinePoolConfig: getMPools(),
 				},
 			}
 			return vsphereConfig, nil
