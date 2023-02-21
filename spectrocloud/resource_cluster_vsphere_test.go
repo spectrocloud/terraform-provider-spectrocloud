@@ -151,6 +151,7 @@ func TestToVsphereCluster(t *testing.T) {
 	assert.Equal(false, vSphereSchema.Spec.CloudConfig.StaticIP)
 
 	// Verifying Master pool attributes
+	assert.Equal(2, len(vSphereSchema.Spec.Machinepoolconfig))
 	masterPoolIndex := 0
 	workerPoolIndex := 1
 	if *vSphereSchema.Spec.Machinepoolconfig[0].PoolConfig.Name == "master-pool" {
