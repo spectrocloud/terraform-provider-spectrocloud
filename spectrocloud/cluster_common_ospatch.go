@@ -28,8 +28,8 @@ func toUpdateOsPatchEntityClusterRbac(config *models.V1OsPatchConfig) *models.V1
 func toOsPatchConfig(d *schema.ResourceData) *models.V1OsPatchConfig {
 	osPatchOnBoot := false
 	_, isOsPatchOnBoot := d.GetOk("os_patch_on_boot")
-	_, isOsPatchOnSchedule := d.GetOk("os_patch_on_boot")
-	_, isOsPatchAfter := d.GetOk("os_patch_on_boot")
+	_, isOsPatchOnSchedule := d.GetOk("os_patch_schedule")
+	_, isOsPatchAfter := d.GetOk("os_patch_after")
 	if isOsPatchOnBoot || isOsPatchOnSchedule || isOsPatchAfter {
 		if d.Get("os_patch_on_boot") != nil {
 			osPatchOnBoot = d.Get("os_patch_on_boot").(bool)
