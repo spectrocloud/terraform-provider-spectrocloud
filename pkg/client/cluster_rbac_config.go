@@ -8,6 +8,9 @@ import (
 )
 
 func (h *V1Client) GetClusterRbacConfig(uid string) (*models.V1ClusterRbacs, error) {
+	if h.GetClusterRbacConfigFn != nil {
+		return h.GetClusterRbacConfigFn(uid)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err

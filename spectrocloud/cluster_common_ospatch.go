@@ -27,28 +27,33 @@ func toUpdateOsPatchEntityClusterRbac(config *models.V1OsPatchConfig) *models.V1
 
 func toOsPatchConfig(d *schema.ResourceData) *models.V1OsPatchConfig {
 	osPatchOnBoot := false
-	if d.Get("os_patch_on_boot") != nil {
-		osPatchOnBoot = d.Get("os_patch_on_boot").(bool)
-	}
-	osPatchOnSchedule := d.Get("os_patch_schedule").(string)
-	osPatchAfter := d.Get("os_patch_after").(string)
-	if osPatchOnBoot || len(osPatchOnSchedule) > 0 || len(osPatchAfter) > 0 {
-		osPatchConfig := &models.V1OsPatchConfig{}
-		if osPatchOnBoot {
-			osPatchConfig.PatchOnBoot = osPatchOnBoot
+	_, isOsPatchOnBoot := d.GetOk("os_patch_on_boot")
+	_, isOsPatchOnSchedule := d.GetOk("os_patch_schedule")
+	_, isOsPatchAfter := d.GetOk("os_patch_after")
+	if isOsPatchOnBoot || isOsPatchOnSchedule || isOsPatchAfter {
+		if d.Get("os_patch_on_boot") != nil {
+			osPatchOnBoot = d.Get("os_patch_on_boot").(bool)
 		}
-		if len(osPatchOnSchedule) > 0 {
-			osPatchConfig.Schedule = osPatchOnSchedule
+		osPatchOnSchedule := d.Get("os_patch_schedule").(string)
+		osPatchAfter := d.Get("os_patch_after").(string)
+		if osPatchOnBoot || len(osPatchOnSchedule) > 0 || len(osPatchAfter) > 0 {
+			osPatchConfig := &models.V1OsPatchConfig{}
+			if osPatchOnBoot {
+				osPatchConfig.PatchOnBoot = osPatchOnBoot
+			}
+			if len(osPatchOnSchedule) > 0 {
+				osPatchConfig.Schedule = osPatchOnSchedule
+			}
+			if len(osPatchAfter) > 0 {
+				patchAfter, _ := time.Parse(time.RFC3339, osPatchAfter)
+				osPatchConfig.OnDemandPatchAfter = models.V1Time(patchAfter)
+			} else {
+				//setting Zero time in request
+				zeroTime, _ := time.Parse(time.RFC3339, "0001-01-01T00:00:00.000Z")
+				osPatchConfig.OnDemandPatchAfter = models.V1Time(zeroTime)
+			}
+			return osPatchConfig
 		}
-		if len(osPatchAfter) > 0 {
-			patchAfter, _ := time.Parse(time.RFC3339, osPatchAfter)
-			osPatchConfig.OnDemandPatchAfter = models.V1Time(patchAfter)
-		} else {
-			//setting Zero time in request
-			zeroTime, _ := time.Parse(time.RFC3339, "0001-01-01T00:00:00.000Z")
-			osPatchConfig.OnDemandPatchAfter = models.V1Time(zeroTime)
-		}
-		return osPatchConfig
 	}
 	return nil
 }

@@ -9,6 +9,9 @@ import (
 )
 
 func (h *V1Client) GetClusterBackupConfig(uid string) (*models.V1ClusterBackup, error) {
+	if h.GetClusterBackupConfigFn != nil {
+		return h.GetClusterBackupConfigFn(uid)
+	}
 	client, err := h.GetClusterClient()
 	if err != nil {
 		return nil, err

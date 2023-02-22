@@ -1,0 +1,680 @@
+package spectrocloud
+
+import (
+	"context"
+	"errors"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/hapi/models"
+	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func prepareClusterVsphereTestData() *schema.ResourceData {
+	d := resourceClusterVsphere().TestResourceData()
+
+	d.SetId("")
+	d.Set("name", "vsphere-picard-2")
+	cConfig := make([]map[string]interface{}, 0)
+	cConfig = append(cConfig, map[string]interface{}{
+		"id": "vmware-basic-infra-profile-id",
+	})
+	d.Set("cluster_profile", cConfig)
+	d.Set("cloud_account_id", "vmware-basic-account-id")
+
+	// Cluster Rbac binding
+	rbac := make([]map[string]interface{}, 0)
+	rbacRole := make([]interface{}, 0)
+	rbacRole = append(rbacRole, map[string]interface{}{
+		"kind": "Role",
+		"name": "testUserRoleFromNS",
+	})
+	rbacSubjects := make([]interface{}, 0)
+	rbacSubjects = append(rbacSubjects, map[string]interface{}{
+		"type":      "Role",
+		"name":      "testUserRoleFromNS",
+		"namespace": "testrolenamespace",
+	})
+	r := map[string]interface{}{
+		"type":      "RoleBinding1",
+		"namespace": "test5ns",
+		"role":      rbacRole,
+		"subjects":  rbacSubjects,
+	}
+	rbac = append(rbac, r)
+
+	// cloud config
+	cloudConfig := make([]map[string]interface{}, 0)
+	con := map[string]interface{}{
+		"ssh_key":               "ssh-rsa AAAAB3NzaC1y",
+		"datacenter":            "Datacenter",
+		"folder":                "sc_test/terraform",
+		"network_type":          "DDNS",
+		"network_search_domain": "spectrocloud.dev",
+	}
+	cloudConfig = append(cloudConfig, con)
+	d.Set("cloud_config", cloudConfig)
+
+	mPools := make([]map[string]interface{}, 0)
+
+	// Adding Master pool
+	masterPlacement := make([]interface{}, 0)
+	masterPlacement = append(masterPlacement, map[string]interface{}{
+		"id":                "",
+		"cluster":           "test cluster",
+		"resource_pool":     "Default",
+		"datastore":         "datastore55_2",
+		"network":           "VM Network",
+		"static_ip_pool_id": "testpoolid",
+	})
+	masterInstance := make([]interface{}, 0)
+	masterInstance = append(masterInstance, map[string]interface{}{
+		"disk_size_gb": 40,
+		"memory_mb":    8192,
+		"cpu":          4,
+	})
+	mPools = append(mPools, map[string]interface{}{
+		"control_plane":           true,
+		"control_plane_as_worker": true,
+		"name":                    "master-pool",
+		"count":                   1,
+		"placement":               masterPlacement,
+		"instance_type":           masterInstance,
+	})
+
+	// Adding Worker pool
+	workerPlacement := make([]interface{}, 0)
+	workerPlacement = append(workerPlacement, map[string]interface{}{
+		"id":                "",
+		"cluster":           "test cluster",
+		"resource_pool":     "Default",
+		"datastore":         "datastore55_2",
+		"network":           "VM Network",
+		"static_ip_pool_id": "testpoolid",
+	})
+
+	workerInstance := make([]interface{}, 0)
+	workerInstance = append(workerInstance, map[string]interface{}{
+		"disk_size_gb": 40,
+		"memory_mb":    8192,
+		"cpu":          4,
+	})
+
+	mPools = append(mPools, map[string]interface{}{
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"name":                    "worker-basic",
+		"count":                   1,
+		"placement":               workerPlacement,
+		"instance_type":           workerInstance,
+	})
+	d.Set("machine_pool", mPools)
+	return d
+}
+
+func TestToVsphereCluster(t *testing.T) {
+	assert := assert.New(t)
+	// Create a mock ResourceData object
+	d := prepareClusterVsphereTestData()
+
+	m := &client.V1Client{
+		GetClusterClientFn: func() (clusterC.ClientService, error) {
+			return &clusterC.Client{}, nil
+		},
+		GetClusterWithoutStatusFn: func(uid string) (*models.V1SpectroCluster, error) {
+			return &models.V1SpectroCluster{
+				Metadata: nil,
+				Spec:     nil,
+			}, nil
+		},
+	}
+
+	vSphereSchema := toVsphereCluster(m, d)
+
+	// Check the output against the expected values
+	// Verifying cluster name attribute
+	assert.Equal(d.Get("name"), vSphereSchema.Metadata.Name)
+
+	// Verifying cluster name attribute
+	assert.Equal("vmware-basic-infra-profile-id", vSphereSchema.Spec.Profiles[0].UID)
+
+	// Verifying account id attribute
+	assert.Equal("vmware-basic-account-id", vSphereSchema.Spec.CloudAccountUID)
+
+	// Verifying cloud config attributes
+	assert.Equal("spectrocloud.dev", vSphereSchema.Spec.CloudConfig.ControlPlaneEndpoint.DdnsSearchDomain)
+	assert.Equal("DDNS", vSphereSchema.Spec.CloudConfig.ControlPlaneEndpoint.Type)
+	assert.Equal("Datacenter", vSphereSchema.Spec.CloudConfig.Placement.Datacenter)
+	assert.Equal("sc_test/terraform", vSphereSchema.Spec.CloudConfig.Placement.Folder)
+	assert.Equal("ssh-rsa AAAAB3NzaC1y", vSphereSchema.Spec.CloudConfig.SSHKeys[0])
+	assert.Equal(false, vSphereSchema.Spec.CloudConfig.StaticIP)
+
+	// Verifying Master pool attributes
+	assert.Equal(2, len(vSphereSchema.Spec.Machinepoolconfig))
+	masterPoolIndex := 0
+	workerPoolIndex := 1
+	if *vSphereSchema.Spec.Machinepoolconfig[0].PoolConfig.Name == "master-pool" {
+		masterPoolIndex = 0
+		workerPoolIndex = 1
+	} else {
+		masterPoolIndex = 1
+		workerPoolIndex = 0
+	}
+
+	assert.Equal("master-pool", *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].PoolConfig.Name)
+	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].PoolConfig.IsControlPlane)
+	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.InstanceType.DiskGiB)
+	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.InstanceType.MemoryMiB)
+	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.InstanceType.NumCPUs)
+	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Cluster)
+	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Datastore)
+	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].ResourcePool)
+	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Network.NetworkName)
+	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Network.ParentPoolUID)
+	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Network.StaticIP)
+
+	// Verifying Worker pool attributes
+	assert.Equal("worker-basic", *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].PoolConfig.Name)
+	assert.Equal(false, vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].PoolConfig.IsControlPlane)
+	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.InstanceType.DiskGiB)
+	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.InstanceType.MemoryMiB)
+	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.InstanceType.NumCPUs)
+	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Cluster)
+	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Datastore)
+	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].ResourcePool)
+	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Network.NetworkName)
+	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Network.ParentPoolUID)
+	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Network.StaticIP)
+}
+
+func TestToCloudConfigUpdate(t *testing.T) {
+	assert := assert.New(t)
+	cloudConfig := map[string]interface{}{
+		"ssh_key":               "ssh-rsa AAAAB3NzaC1y",
+		"datacenter":            "Datacenter",
+		"folder":                "sc_test/terraform",
+		"network_type":          "DDNS",
+		"network_search_domain": "spectrocloud.dev",
+		"static_ip":             false,
+	}
+	cloudEntity := toCloudConfigUpdate(cloudConfig)
+	assert.Equal("spectrocloud.dev", cloudEntity.ClusterConfig.ControlPlaneEndpoint.DdnsSearchDomain)
+	assert.Equal("DDNS", cloudEntity.ClusterConfig.ControlPlaneEndpoint.Type)
+	assert.Equal("Datacenter", cloudEntity.ClusterConfig.Placement.Datacenter)
+	assert.Equal("sc_test/terraform", cloudEntity.ClusterConfig.Placement.Folder)
+	assert.Equal("spectro-templates", cloudEntity.ClusterConfig.Placement.ImageTemplateFolder)
+	assert.Equal("ssh-rsa AAAAB3NzaC1y", cloudEntity.ClusterConfig.SSHKeys[0])
+	assert.Equal(false, cloudEntity.ClusterConfig.StaticIP)
+}
+
+func TestResourceClusterVsphereCreate(t *testing.T) {
+
+	// Create a mock ResourceData object
+	d := prepareClusterVsphereTestData()
+	d.Set("skip_completion", true)
+	m := &client.V1Client{
+		CreateClusterVsphereFn: func(cluster *models.V1SpectroVsphereClusterEntity) (string, error) {
+			return "vsphere-cluster-uid", nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceClusterVsphereCreate(ctx, d, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+
+	if d.Id() != "vsphere-cluster-uid" {
+		t.Errorf("Expected ID to be 'test-uid', got %s", d.Id())
+	}
+}
+
+func TestResourceClusterVsphereCreateError(t *testing.T) {
+
+	d := prepareClusterVsphereTestData()
+	d.Set("skip_completion", true)
+	m := &client.V1Client{
+		CreateClusterVsphereFn: func(cluster *models.V1SpectroVsphereClusterEntity) (string, error) {
+			return "", errors.New("covering error case")
+		},
+	}
+	ctx := context.Background()
+	diags := resourceClusterVsphereCreate(ctx, d, m)
+	if diags[0].Summary != "covering error case" {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceClusterVsphereRead(t *testing.T) {
+	// Create a mock ResourceData object
+	d := prepareClusterVsphereTestData()
+	m := &client.V1Client{
+		GetCloudConfigVsphereFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
+			return getCloudConfig(), nil
+		},
+		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+			isHost := new(bool)
+			*isHost = true
+			cluster := &models.V1SpectroCluster{
+				APIVersion: "v1",
+				Metadata: &models.V1ObjectMeta{
+					Annotations:       nil,
+					CreationTimestamp: models.V1Time{},
+					DeletionTimestamp: models.V1Time{},
+					Labels: map[string]string{
+						"owner": "siva",
+					},
+					LastModifiedTimestamp: models.V1Time{},
+					Name:                  "test-vsphere-cluster-unit-test",
+					Namespace:             "",
+					ResourceVersion:       "",
+					SelfLink:              "",
+					UID:                   "vsphere-uid",
+				},
+				Spec: &models.V1SpectroClusterSpec{
+					CloudConfigRef: &models.V1ObjectReference{
+						APIVersion:      "",
+						FieldPath:       "",
+						Kind:            "",
+						Name:            "",
+						Namespace:       "",
+						ResourceVersion: "",
+						UID:             "test-cloud-config-uid",
+					},
+					CloudType: "",
+					ClusterConfig: &models.V1ClusterConfig{
+						ClusterRbac:                    nil,
+						ClusterResources:               nil,
+						ControlPlaneHealthCheckTimeout: "",
+						Fips:                           nil,
+						HostClusterConfig: &models.V1HostClusterConfig{
+							ClusterEndpoint: &models.V1HostClusterEndpoint{
+								Config: nil,
+								Type:   "LoadBalancer",
+							},
+							ClusterGroup:  nil,
+							HostCluster:   nil,
+							IsHostCluster: isHost,
+						},
+						LifecycleConfig:             nil,
+						MachineHealthConfig:         nil,
+						MachineManagementConfig:     nil,
+						UpdateWorkerPoolsInParallel: false,
+					},
+					ClusterProfileTemplates: nil,
+					ClusterType:             "",
+				},
+				Status: &models.V1SpectroClusterStatus{
+					State: "running",
+				},
+			}
+			return cluster, nil
+		},
+		GetClusterBackupConfigFn: func(uid string) (*models.V1ClusterBackup, error) {
+			clusterBackup := &models.V1ClusterBackup{
+				Metadata: nil,
+				Spec: &models.V1ClusterBackupSpec{
+					ClusterUID: "vsphere-cluster-uid",
+					Config: &models.V1ClusterBackupConfig{
+						BackupLocationUID:       "test-back-uid",
+						BackupName:              "unit-back",
+						BackupPrefix:            "vsphere",
+						DurationInHours:         3,
+						IncludeAllDisks:         false,
+						IncludeClusterResources: false,
+						LocationType:            "",
+						Namespaces:              nil,
+						Schedule: &models.V1ClusterFeatureSchedule{
+							ScheduledRunTime: "daily",
+						},
+					},
+				},
+				Status: nil,
+			}
+			return clusterBackup, nil
+		},
+		GetClusterKubeConfigFn: func(uid string) (string, error) {
+			return "testKubeConfig", nil
+		},
+		GetClusterScanConfigFn: func(uid string) (*models.V1ClusterComplianceScan, error) {
+			clusterCom := &models.V1ClusterComplianceScan{
+				Metadata: &models.V1ObjectMeta{
+					Annotations:           nil,
+					CreationTimestamp:     models.V1Time{},
+					DeletionTimestamp:     models.V1Time{},
+					Labels:                nil,
+					LastModifiedTimestamp: models.V1Time{},
+					Name:                  "vsphere-cluster",
+					Namespace:             "",
+					ResourceVersion:       "",
+					SelfLink:              "",
+					UID:                   "conpli-uid",
+				},
+				Spec: &models.V1ClusterComplianceScanSpec{
+					ClusterUID: "vsphere-cluster-uid",
+					DriverSpec: map[string]models.V1ComplianceScanDriverSpec{
+						"kube-bench": models.V1ComplianceScanDriverSpec{
+							Config: &models.V1ComplianceScanConfig{
+								Schedule: &models.V1ClusterFeatureSchedule{
+									ScheduledRunTime: "daily",
+								},
+							},
+							IsClusterConfig: false,
+						},
+						"kube-hunter": models.V1ComplianceScanDriverSpec{
+							Config: &models.V1ComplianceScanConfig{
+								Schedule: &models.V1ClusterFeatureSchedule{
+									ScheduledRunTime: "daily",
+								},
+							},
+							IsClusterConfig: false,
+						},
+						"sonobuoy": models.V1ComplianceScanDriverSpec{
+							Config: &models.V1ComplianceScanConfig{
+								Schedule: &models.V1ClusterFeatureSchedule{
+									ScheduledRunTime: "daily",
+								},
+							},
+							IsClusterConfig: false,
+						},
+					},
+				},
+			}
+			return clusterCom, nil
+		},
+		GetClusterRbacConfigFn: func(uid string) (*models.V1ClusterRbacs, error) {
+			var rbacs []*models.V1ClusterRbac
+			var subject []*models.V1ClusterRbacSubjects
+			var bindings []*models.V1ClusterRbacBinding
+			subject = append(subject, &models.V1ClusterRbacSubjects{
+				Name:      "test-subject",
+				Namespace: "vsphere-test",
+				Type:      "test-subject",
+			})
+			bindings = append(bindings, &models.V1ClusterRbacBinding{
+				Namespace: "vsphere-unittest",
+				Role: &models.V1ClusterRoleRef{
+					Kind: "scan",
+					Name: "test-kind",
+				},
+				Subjects: subject,
+				Type:     "test",
+			})
+			rbacs = append(rbacs, &models.V1ClusterRbac{
+				Metadata: nil,
+				Spec: &models.V1ClusterRbacSpec{
+					Bindings:      bindings,
+					RelatedObject: nil,
+				},
+				Status: nil,
+			})
+			clusterRbac := &models.V1ClusterRbacs{
+				Items: rbacs,
+			}
+			return clusterRbac, nil
+		},
+		GetClusterNamespaceConfigFn: func(uid string) (*models.V1ClusterNamespaceResources, error) {
+			var nResources []*models.V1ClusterNamespaceResource
+			nResources = append(nResources, &models.V1ClusterNamespaceResource{
+				Metadata: &models.V1ObjectMeta{
+					Annotations:           nil,
+					CreationTimestamp:     models.V1Time{},
+					DeletionTimestamp:     models.V1Time{},
+					Labels:                nil,
+					LastModifiedTimestamp: models.V1Time{},
+					Name:                  "test-namespace-unit",
+					Namespace:             "",
+					ResourceVersion:       "",
+					SelfLink:              "",
+					UID:                   "",
+				},
+				Spec: &models.V1ClusterNamespaceSpec{
+					IsRegex:       false,
+					RelatedObject: nil,
+					ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
+						CPUCores:  5,
+						MemoryMiB: 1234,
+					},
+				},
+				Status: nil,
+			})
+			namespaceResource := &models.V1ClusterNamespaceResources{
+				Items: nResources,
+			}
+			return namespaceResource, nil
+		},
+		GetClusterWithoutStatusFn: func(uid string) (*models.V1SpectroCluster, error) {
+			cluster := &models.V1SpectroCluster{
+				Metadata: nil,
+				Spec:     nil,
+			}
+			cluster.Status = &models.V1SpectroClusterStatus{
+				AbortTimestamp: models.V1Time{},
+				AddOnServices:  nil,
+				APIEndpoints:   nil,
+				ClusterImport:  nil,
+				Conditions:     nil,
+				Location: &models.V1ClusterLocation{
+					CountryCode: "IN",
+					CountryName: "India",
+					GeoLoc: &models.V1GeolocationLatlong{
+						Latitude:  12.4241231,
+						Longitude: 1932.12312,
+					},
+					RegionCode: "12",
+					RegionName: "Asia",
+				},
+				Nested:        nil,
+				Packs:         nil,
+				ProfileStatus: nil,
+				Services:      nil,
+				SpcApply:      nil,
+				State:         "running",
+				Upgrades:      nil,
+				Virtual:       nil,
+			}
+			return cluster, nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceClusterVsphereRead(ctx, d, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceClusterVsphereReadNilCluster(t *testing.T) {
+	// Create a mock ResourceData object
+	d := prepareClusterVsphereTestData()
+	m := &client.V1Client{
+		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+			return nil, nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceClusterVsphereRead(ctx, d, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+	assert.Equal(t, "", d.Id())
+}
+
+func TestResourceClusterVsphereReadError(t *testing.T) {
+	// Create a mock ResourceData object
+	d := prepareClusterVsphereTestData()
+	m := &client.V1Client{
+		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+			return nil, errors.New("unexpected Error")
+		},
+	}
+	ctx := context.Background()
+	diags := resourceClusterVsphereRead(ctx, d, m)
+	assert.Equal(t, len(diags), 1)
+	if diags[0].Summary != "unexpected Error" {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func getMachinePlacement() []*models.V1VspherePlacementConfig {
+	network := new(string)
+	*network = "test-net"
+	var placement []*models.V1VspherePlacementConfig
+	placement = append(placement, &models.V1VspherePlacementConfig{
+		Cluster:             "test-cluster",
+		Datacenter:          "vsphere",
+		Datastore:           "vcenter",
+		Folder:              "/test/",
+		ImageTemplateFolder: "",
+		Network: &models.V1VsphereNetworkConfig{
+			IPPool:      nil,
+			NetworkName: network,
+			ParentPoolRef: &models.V1ObjectReference{
+				UID: "test-pool-id",
+			},
+			StaticIP: false,
+		},
+		ResourcePool:      "",
+		StoragePolicyName: "",
+		UID:               "test-uid",
+	})
+	return placement
+}
+
+func getMPools() []*models.V1VsphereMachinePoolConfig {
+	var mTaint []*models.V1Taint
+	diskGb := new(int32)
+	*diskGb = 23
+	memMb := new(int64)
+	*memMb = 120
+	numCpu := new(int32)
+	*numCpu = 2
+	mTaint = append(mTaint, &models.V1Taint{
+		Effect:    "start",
+		Key:       "owner",
+		TimeAdded: models.V1Time{},
+		Value:     "siva",
+	})
+	var mPool []*models.V1VsphereMachinePoolConfig
+	mPool = append(mPool, &models.V1VsphereMachinePoolConfig{
+		AdditionalLabels: map[string]string{
+			"type":  "unittest",
+			"owner": "siva",
+		},
+		AdditionalTags:       nil,
+		InfraProfileRef:      nil,
+		InfraProfileTemplate: nil,
+		InstanceType: &models.V1VsphereInstanceType{
+			DiskGiB:   diskGb,
+			MemoryMiB: memMb,
+			NumCPUs:   numCpu,
+		},
+		IsControlPlane: nil,
+		Labels:         nil,
+		MaxSize:        0,
+		MinSize:        0,
+		Name:           "",
+		Placements:     getMachinePlacement(),
+		Size:           0,
+		Taints:         mTaint,
+		UpdateStrategy: &models.V1UpdateStrategy{
+			Type: "",
+		},
+		UseControlPlaneAsWorker: false,
+	})
+	return mPool
+}
+
+func getCloudConfig() *models.V1VsphereCloudConfig {
+	cloudConfig := &models.V1VsphereCloudConfig{
+		APIVersion: "v1",
+		Kind:       "",
+		Metadata:   nil,
+		Spec: &models.V1VsphereCloudConfigSpec{
+			CloudAccountRef:   nil,
+			ClusterConfig:     nil,
+			EdgeHostRef:       nil,
+			MachinePoolConfig: getMPools(),
+		},
+		Status: nil,
+	}
+	return cloudConfig
+}
+
+func TestFlattenCloudConfigVsphere(t *testing.T) {
+	d := prepareClusterVsphereTestData()
+	m := &client.V1Client{
+		GetCloudConfigVsphereFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
+			return getCloudConfig(), nil
+		},
+		GetVsphereClouldConfigValuesFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
+			vsphereConfig := &models.V1VsphereCloudConfig{
+				APIVersion: "v1",
+				Kind:       "",
+				Metadata:   nil,
+				Spec: &models.V1VsphereCloudConfigSpec{
+					CloudAccountRef: nil,
+					ClusterConfig: &models.V1VsphereClusterConfig{
+						ControlPlaneEndpoint: &models.V1ControlPlaneEndPoint{
+							DdnsSearchDomain: "spectro.dev.com",
+							Host:             "spectro.dev",
+							Type:             "test",
+						},
+						NtpServers: nil,
+						Placement: &models.V1VspherePlacementConfig{
+							Cluster:             "",
+							Datacenter:          "vpshere",
+							Datastore:           "testing",
+							Folder:              "test/unit/test",
+							ImageTemplateFolder: "",
+							Network:             nil,
+							ResourcePool:        "",
+							StoragePolicyName:   "",
+							UID:                 "",
+						},
+						SSHKeys:  []string{"ssh -A asdfasdf"},
+						StaticIP: false,
+					},
+					EdgeHostRef:       nil,
+					MachinePoolConfig: getMPools(),
+				},
+			}
+			return vsphereConfig, nil
+
+		},
+	}
+	diags := flattenCloudConfigVsphere("", d, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+
+}
+
+func TestFlattenClusterConfigsVsphereNil(t *testing.T) {
+	flatCloudConfig := flattenClusterConfigsVsphere(nil)
+	if flatCloudConfig == nil {
+		t.Errorf("flattenClusterConfigsVsphere returning value for nill: %#v", flatCloudConfig)
+	}
+}
+
+func TestFlattenMachinePoolConfigsVsphereNil(t *testing.T) {
+	flatPool := flattenMachinePoolConfigsVsphere(nil)
+	if len(flatPool) > 0 {
+		t.Errorf("flattenMachinePoolConfigsVsphere returning value for nill: %#v", flatPool)
+	}
+}
+
+func TestResourceClusterVsphereUpdate(t *testing.T) {
+	d := prepareClusterVsphereTestData()
+	m := &client.V1Client{
+		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+			return nil, nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceClusterVsphereUpdate(ctx, d, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+	assert.Equal(t, "", d.Id())
+
+}
