@@ -3,12 +3,13 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"log"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"log"
-	"time"
+	"github.com/spectrocloud/hapi/client"
 )
 
 var resourceApplicationCreatePendingStates = []string{

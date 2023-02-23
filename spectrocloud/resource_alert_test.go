@@ -1,10 +1,11 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"reflect"
 	"testing"
+
+	"github.com/spectrocloud/hapi/client"
+	"github.com/spectrocloud/hapi/models"
 )
 
 /*

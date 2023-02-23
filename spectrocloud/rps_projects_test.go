@@ -2,9 +2,10 @@ package spectrocloud
 
 import (
 	"fmt"
-	userC "github.com/spectrocloud/hapi/user/client/v1"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"testing"
+
+	"github.com/spectrocloud/hapi/client"
+	userC "github.com/spectrocloud/hapi/user/client/v1"
 )
 
 func Test1Scenario(t *testing.T) {

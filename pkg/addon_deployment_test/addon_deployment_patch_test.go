@@ -2,11 +2,12 @@ package addon_deployment_test
 
 import (
 	"fmt"
+	"testing"
+
+	"github.com/spectrocloud/hapi/client"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestPatchWithRetry(t *testing.T) {

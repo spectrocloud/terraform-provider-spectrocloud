@@ -2,11 +2,12 @@ package cluster_profile_test
 
 import (
 	"errors"
+	"testing"
+
+	"github.com/spectrocloud/hapi/client"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schema"
-	"testing"
 )
 
 func TestDeleteClusterProfileError(t *testing.T) {

@@ -397,6 +397,14 @@ github.com/spectrocloud/hapi v1.14.1-0.20221207125041-e32a92e03569 h1:fdzmi70dtx
 github.com/spectrocloud/hapi v1.14.1-0.20221207125041-e32a92e03569/go.mod h1:mHd7t0RTGnNBysMD9abHK88RN+dL5NWX9LsJ4iOqffo=
 github.com/spectrocloud/hapi v1.14.1-0.20221220073341-802bb2787b7e h1:4PWCUxmHZCKWrNvjrdrBkmEAH8QtzjZenarhvyflad4=
 github.com/spectrocloud/hapi v1.14.1-0.20221220073341-802bb2787b7e/go.mod h1:mHd7t0RTGnNBysMD9abHK88RN+dL5NWX9LsJ4iOqffo=
+github.com/spectrocloud/hapi v1.14.1-0.20230218181207-3d4902562f17 h1:de3sfFXkpmq+loCVJU5vHxWCNaqzOFAYQ/TAl+UFy0w=
+github.com/spectrocloud/hapi v1.14.1-0.20230218181207-3d4902562f17/go.mod h1:G8D2Kc9SmMiJbKcBnS140OefhJX9Rr7nqtFYmKbSZCw=
+github.com/spectrocloud/hapi v1.14.1-0.20230223160757-7fc51649aeb3 h1:LchTLMtKZgy/ljpxRpvnGDEGL0ietXbUHojwLIyZkSw=
+github.com/spectrocloud/hapi v1.14.1-0.20230223160757-7fc51649aeb3/go.mod h1:G8D2Kc9SmMiJbKcBnS140OefhJX9Rr7nqtFYmKbSZCw=
+github.com/spectrocloud/hapi v1.14.1-0.20230223162602-b76accc6c2de h1:oNWUXqEKv7CIMdvRad8gp7VwjQNrnk2WhX7XLP1BzNM=
+github.com/spectrocloud/hapi v1.14.1-0.20230223162602-b76accc6c2de/go.mod h1:G8D2Kc9SmMiJbKcBnS140OefhJX9Rr7nqtFYmKbSZCw=
+github.com/spectrocloud/hapi v1.14.1-0.20230223162824-ba5b285eda65 h1:0wcYmBf7sX6zp4AKdQJkT65lA93WRZWDQUyFBjmM7wM=
+github.com/spectrocloud/hapi v1.14.1-0.20230223162824-ba5b285eda65/go.mod h1:G8D2Kc9SmMiJbKcBnS140OefhJX9Rr7nqtFYmKbSZCw=
 github.com/spf13/cast v1.3.1/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
 github.com/spf13/cast v1.5.0/go.mod h1:SpXXQ5YoyJw6s3/6cMTQuxvgRl3PCJiyaX9p6b155UU=
