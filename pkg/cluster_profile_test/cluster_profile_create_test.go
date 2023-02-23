@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/hapi/client"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
 )
 

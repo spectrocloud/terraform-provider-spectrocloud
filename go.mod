@@ -3,14 +3,14 @@ module github.com/spectrocloud/terraform-provider-spectrocloud
 go 1.18
 
 require (
-	github.com/go-openapi/runtime v0.19.28
 	github.com/go-openapi/strfmt v0.20.1
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
-	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron v1.2.0
+	github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d
 	github.com/spectrocloud/hapi v1.14.1-0.20230223162824-ba5b285eda65
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20230223183248-e7e269be6ab6
 	github.com/stretchr/testify v1.7.2
 )
 
@@ -33,6 +33,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.5 // indirect
 	github.com/go-openapi/loads v0.20.2 // indirect
+	github.com/go-openapi/runtime v0.19.28 // indirect
 	github.com/go-openapi/spec v0.20.3 // indirect
 	github.com/go-openapi/swag v0.19.14 // indirect
 	github.com/go-openapi/validate v0.20.2 // indirect
@@ -74,14 +75,13 @@ require (
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/posener/complete v1.2.3 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.4.2 // indirect
-	github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d // indirect
 	github.com/spf13/cast v1.5.0 // indirect
-	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
 	github.com/vmihailenco/tagparser v0.1.1 // indirect

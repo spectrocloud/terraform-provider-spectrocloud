@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/spectrocloud/hapi/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 var resourceClusterProfileUpdatePendingStates = []string{

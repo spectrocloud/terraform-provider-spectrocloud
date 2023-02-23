@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/spectrocloud/hapi/client"
 	userC "github.com/spectrocloud/hapi/user/client/v1"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func Test1Scenario(t *testing.T) {

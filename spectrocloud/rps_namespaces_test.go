@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/spectrocloud/hapi/client"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func TestNameSpacesRPSScenario(t *testing.T) {

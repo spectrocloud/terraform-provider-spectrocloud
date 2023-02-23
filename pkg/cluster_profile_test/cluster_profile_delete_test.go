@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/spectrocloud/hapi/client"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schema"
 )
 

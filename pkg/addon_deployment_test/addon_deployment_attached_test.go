@@ -3,8 +3,8 @@ package addon_deployment_test
 import (
 	"testing"
 
-	"github.com/spectrocloud/hapi/client"
 	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
 )
 
