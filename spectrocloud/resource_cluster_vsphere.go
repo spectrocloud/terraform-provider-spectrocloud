@@ -445,7 +445,9 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	if d.HasChange("cloud_config") {
 		cloudConfig := toCloudConfigUpdate(d.Get("cloud_config").([]interface{})[0].(map[string]interface{}))
-		c.UpdateVsphereCloudConfigValues(cloudConfigId, cloudConfig)
+		if err := c.UpdateVsphereCloudConfigValues(cloudConfigId, cloudConfig); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if d.HasChange("machine_pool") {

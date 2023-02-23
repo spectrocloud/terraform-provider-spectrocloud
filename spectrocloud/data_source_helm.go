@@ -37,7 +37,9 @@ func dataSourceRegistryHelmRead(_ context.Context, d *schema.ResourceData, m int
 			return diag.FromErr(err)
 		}
 		d.SetId(registry.Metadata.UID)
-		d.Set("name", registry.Metadata.Name)
+		if err := d.Set("name", registry.Metadata.Name); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }

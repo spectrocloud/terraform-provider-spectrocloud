@@ -90,16 +90,14 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 		d.SetId("")
 		return diags
 	}
-	if macro != nil {
-		d.SetId(c.GetMacroId(uid, d.Get("name").(string)))
 
-		if err := d.Set("name", macro.Name); err != nil {
-			return diag.FromErr(err)
-		}
+	d.SetId(c.GetMacroId(uid, d.Get("name").(string)))
 
-		if err := d.Set("value", macro.Value); err != nil {
-			return diag.FromErr(err)
-		}
+	if err := d.Set("name", macro.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("value", macro.Value); err != nil {
+		return diag.FromErr(err)
 	}
 	return diags
 }

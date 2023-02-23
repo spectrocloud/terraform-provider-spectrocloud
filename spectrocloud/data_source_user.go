@@ -38,7 +38,9 @@ func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m interface{}
 			return diag.FromErr(err)
 		}
 		d.SetId(user.Metadata.UID)
-		d.Set("name", user.Metadata.Name)
+		if err := d.Set("name", user.Metadata.Name); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }

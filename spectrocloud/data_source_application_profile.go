@@ -44,8 +44,12 @@ func dataSourceApplicationProfileRead(_ context.Context, d *schema.ResourceData,
 			return diag.FromErr(err)
 		}
 		d.SetId(appUID)
-		d.Set("name", applicationProfile.Metadata.Name)
-		d.Set("version", getVersion)
+		if err := d.Set("name", applicationProfile.Metadata.Name); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("version", getVersion); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }

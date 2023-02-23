@@ -42,7 +42,9 @@ func dataSourcePCGRead(_ context.Context, d *schema.ResourceData, m interface{})
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
-		d.Set("name", v.(string))
+		if err := d.Set("name", v.(string)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }

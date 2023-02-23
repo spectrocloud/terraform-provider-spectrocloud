@@ -72,9 +72,15 @@ func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, 
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
-	d.Set("azure_tenant_id", *account.Spec.TenantID)
-	d.Set("azure_client_id", *account.Spec.ClientID)
+	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("azure_tenant_id", *account.Spec.TenantID); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("azure_client_id", *account.Spec.ClientID); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }

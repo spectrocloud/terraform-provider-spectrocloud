@@ -68,8 +68,12 @@ func dataSourceCloudAccountTencentRead(_ context.Context, d *schema.ResourceData
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
-	d.Set("tencent_secret_id", *account.Spec.SecretID)
+	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("tencent_secret_id", *account.Spec.SecretID); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }

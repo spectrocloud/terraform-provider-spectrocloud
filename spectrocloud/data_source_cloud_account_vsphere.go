@@ -64,7 +64,9 @@ func dataSourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
+	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }

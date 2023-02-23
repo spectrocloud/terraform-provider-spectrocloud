@@ -64,7 +64,9 @@ func dataSourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m 
 	}
 
 	d.SetId(account.Metadata.UID)
-	d.Set("name", account.Metadata.Name)
+	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }

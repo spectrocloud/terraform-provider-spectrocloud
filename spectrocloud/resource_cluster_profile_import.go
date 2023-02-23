@@ -78,7 +78,9 @@ func resourceClusterProfileImportRead(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	d.Set("import_file", clusterProfile)
+	if err := d.Set("import_file", clusterProfile); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }

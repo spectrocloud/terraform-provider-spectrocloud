@@ -38,7 +38,9 @@ func dataSourceProjectRead(_ context.Context, d *schema.ResourceData, m interfac
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
-		d.Set("name", v.(string))
+		if err := d.Set("name", v.(string)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }
