@@ -228,7 +228,6 @@ func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m i
 		cg := toClusterGroup(d)
 		return diag.FromErr(c.UpdateClusterGroupFn(cg.Metadata.UID, toClusterGroupUpdate(cg)))
 	}
-	//
 
 	// if there are changes in the name of  cluster group, update it using UpdateClusterGroupMeta()
 	if d.HasChanges("name", "tags") {
@@ -256,7 +255,7 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 	clusterRefs := make([]*models.V1ClusterGroupClusterRef, 0)
 	clusterRefObj, ok := d.GetOk("clusters")
 	if ok {
-		for i, _ := range clusterRefObj.([]interface{}) {
+		for i := range clusterRefObj.([]interface{}) {
 			resources := clusterRefObj.([]interface{})[i].(map[string]interface{})
 			mp := toClusterRef(resources)
 			clusterRefs = append(clusterRefs, mp)

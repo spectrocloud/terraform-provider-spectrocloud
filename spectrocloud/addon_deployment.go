@@ -84,7 +84,6 @@ func GetAddonDeploymentDiagPacks(d *schema.ResourceData, err error) ([]*models.V
 					diagPacks = append(diagPacks, p)
 				}
 			}
-			break
 		}
 	}
 

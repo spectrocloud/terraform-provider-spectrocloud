@@ -119,6 +119,9 @@ func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interfac
 	c := m.(*client.V1Client)
 	var err error
 	projectUid, err := getProjectID(d, m)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	var diags diag.Diagnostics
 	alertObj := toAlert(d)
 	uid, err := c.CreateAlert(alertObj, projectUid, d.Get("component").(string))
@@ -152,7 +155,7 @@ func toAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
 	channel.CreatedBy = d.Get("created_by").(string)
 	channel.AlertAllUsers = d.Get("alert_all_users").(bool)
 	_, hasIdentifier := d.GetOk("identifiers")
-	if hasIdentifier == true {
+	if hasIdentifier {
 		emailIDs := make([]string, 0)
 		for _, email := range d.Get("identifiers").(*schema.Set).List() {
 			emailIDs = append(emailIDs, email.(string))
@@ -160,7 +163,7 @@ func toAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
 		channel.Identifiers = emailIDs
 	}
 	_, hasHttp := d.GetOk("http")
-	if hasHttp == true {
+	if hasHttp {
 		http := d.Get("http").([]interface{})[0].(map[string]interface{})
 		headersMap := make(map[string]string)
 		if http["headers"] != nil {
@@ -183,6 +186,9 @@ func resourceAlertDelete(ctx context.Context, d *schema.ResourceData, m interfac
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	projectUid, err := getProjectID(d, m)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	err = c.DeleteAlerts(projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
 		return diag.FromErr(err)

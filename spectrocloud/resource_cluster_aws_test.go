@@ -1,9 +1,10 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/hapi/models"
 	"reflect"
 	"testing"
+
+	"github.com/spectrocloud/hapi/models"
 )
 
 func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
@@ -47,7 +48,7 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 		t.Fail()
 		t.Logf("Machine pool for master and worker is not returned by func - FlattenMachinePoolConfigsAws")
 	} else {
-		for i, _ := range machinePools {
+		for i := range machinePools {
 			k := machinePools[i].(map[string]interface{})
 			if k["update_strategy"] != "RollingUpdateScaleOut" {
 				t.Errorf("Machine pool - update strategy is not matching got %v, wanted %v", k["update_strategy"], "RollingUpdateScaleOut")
@@ -127,7 +128,7 @@ func TestFlattenMachinePoolConfigsAwsAZ(t *testing.T) {
 		t.Fail()
 		t.Logf("Machine pool for master and worker is not returned by func - FlattenMachinePoolConfigsAws")
 	} else {
-		for i, _ := range machinePools {
+		for i := range machinePools {
 			k := machinePools[i].(map[string]interface{})
 			if k["update_strategy"] != "Recreate" {
 				t.Errorf("Machine pool - update strategy is not matching got %v, wanted %v", k["update_strategy"], "Recreate")

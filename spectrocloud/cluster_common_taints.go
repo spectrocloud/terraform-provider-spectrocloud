@@ -48,7 +48,7 @@ func flattenClusterTaints(items []*models.V1Taint) []interface{} {
 }
 
 func SetAdditionalLabelsAndTaints(labels map[string]string, intaints []*models.V1Taint, oi map[string]interface{}) {
-	if labels == nil || len(labels) == 0 {
+	if len(labels) == 0 {
 		oi["additional_labels"] = make(map[string]interface{})
 	} else {
 		oi["additional_labels"] = labels

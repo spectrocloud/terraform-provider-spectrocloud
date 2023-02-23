@@ -804,11 +804,11 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {
 	m := fargateProfile.(map[string]interface{})
 
-	labels := make([]string, 0)
-	controlPlane, _ := m["control_plane"].(bool)
-	if controlPlane {
-		labels = append(labels, "master")
-	}
+	// labels := make([]string, 0)
+	// controlPlane, _ := m["control_plane"].(bool)
+	// if controlPlane {
+	// 	labels = append(labels, "master")
+	// }
 
 	selectors := make([]*models.V1FargateSelector, 0)
 	for _, val := range m["selector"].([]interface{}) {

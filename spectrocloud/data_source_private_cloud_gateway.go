@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/hapi/client"
 )
 
@@ -35,8 +36,7 @@ func dataSourcePCGRead(_ context.Context, d *schema.ResourceData, m interface{})
 	var diags diag.Diagnostics
 	if v, ok := d.GetOk("name"); ok {
 		name := v.(string)
-		var namePointer *string
-		namePointer = &name
+		namePointer := &name
 		uid, err := c.GetPrivateCloudGatewayID(namePointer)
 		if err != nil {
 			return diag.FromErr(err)

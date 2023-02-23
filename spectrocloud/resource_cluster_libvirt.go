@@ -621,7 +621,7 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 	updateStrategyType := getUpdateStrategy(m)
 	if m["name"].(string) == "master-pool" && updateStrategyType == "RollingUpdateScaleIn" {
 		// If master pool has RollingUpdateScaleIn as an update strategy, return an error
-		return nil, fmt.Errorf("Update strategy RollingUpdateScaleIn is not allowed for the 'master-pool' machine pool")
+		return nil, fmt.Errorf("update strategy RollingUpdateScaleIn is not allowed for the 'master-pool' machine pool")
 	}
 
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
@@ -680,10 +680,8 @@ func getAdditionalDisks(ins map[string]interface{}) []*models.V1LibvirtDiskSpec 
 				switch {
 				case j == "managed":
 					managed = prop.(bool)
-					break
 				case j == "size_in_gb":
 					size = int32(prop.(int))
-					break
 				default:
 					return nil
 				}

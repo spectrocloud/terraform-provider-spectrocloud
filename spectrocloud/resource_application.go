@@ -99,7 +99,7 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 	if err != nil && cluster == nil {
 		return diag.FromErr(errors.New(fmt.Sprintf("Cluster not found: %s", clusterUid)))
 	}*/
-	val_error := errors.New("config block should have either 'cluster_uid' or 'cluster_group_uid' attributes specified.")
+	val_error := errors.New("config block should have either 'cluster_uid' or 'cluster_group_uid' attributes specified")
 
 	var uid string
 	var err error
@@ -187,12 +187,15 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		cluster, err := c.GetCluster(clusterUid)
 		if err != nil && cluster == nil {
-			return diag.FromErr(errors.New(fmt.Sprintf("Cluster not found: %s", clusterUid)))
+			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 		}
 
 		addonDeployment := toAddonDeployment(c, d)
 
 		newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
 		if err != nil {
 			return diag.FromErr(err)

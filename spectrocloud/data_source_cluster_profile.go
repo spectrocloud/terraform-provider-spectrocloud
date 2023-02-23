@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -146,5 +145,5 @@ func getProfile(profiles []*models.V1ClusterProfileMetadata, d *schema.ResourceD
 			}
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Cluster profile not found name: %s, version: %s, context: %s", d.Get("name").(string), version, ProfileContext))
+	return nil, fmt.Errorf("cluster profile not found: name: %s, version: %s, context: %s", d.Get("name").(string), version, ProfileContext)
 }

@@ -3,9 +3,10 @@ package spectrocloud
 import (
 	"bytes"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"hash/fnv"
 	"sort"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceMachinePoolAzureHash(v interface{}) int {
@@ -363,7 +364,7 @@ func HashStringMapList(v interface{}) string {
 		hashes = append(hashes, HashStringMap(i))
 	}
 
-	sortedHashes := make([]string, len(hashes), len(hashes))
+	sortedHashes := make([]string, len(hashes))
 	copy(sortedHashes, hashes)
 	sort.Strings(sortedHashes)
 
@@ -387,7 +388,7 @@ func HashStringMap(v interface{}) string {
 		keys = append(keys, k)
 	}
 
-	sortedKeys := make([]string, len(keys), len(keys))
+	sortedKeys := make([]string, len(keys))
 	copy(sortedKeys, keys)
 	sort.Strings(sortedKeys)
 

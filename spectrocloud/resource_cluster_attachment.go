@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/hapi/client"
 	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
 
 func resourceAddonDeployment() *schema.Resource {
@@ -52,7 +52,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 
 	cluster, err := c.GetCluster(clusterUid)
 	if err != nil && cluster == nil {
-		return diag.FromErr(errors.New(fmt.Sprintf("Cluster not found: %s", clusterUid)))
+		return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 	}
 
 	addonDeployment := toAddonDeployment(c, d)
@@ -63,7 +63,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if isProfileAttached(cluster, addonDeployment.Profiles[0].UID) {
-		return updateAddonDeployment(ctx, d, m, c, err, cluster, clusterUid, diags)
+		return updateAddonDeployment(ctx, d, m, c, cluster, clusterUid, diags)
 		//return diag.FromErr(errors.New(fmt.Sprintf("Cluster: %s: Profile is already attached: %s", cluster.Metadata.UID, addonDeployment.Profiles[0].UID)))
 	}
 
@@ -145,19 +145,22 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 
 		cluster, err := c.GetCluster(clusterUid)
 		if err != nil && cluster == nil {
-			return diag.FromErr(errors.New(fmt.Sprintf("Cluster not found: %s", clusterUid)))
+			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 		}
 
-		return updateAddonDeployment(ctx, d, m, c, err, cluster, clusterUid, diags)
+		return updateAddonDeployment(ctx, d, m, c, cluster, clusterUid, diags)
 	}
 
 	return diags
 }
 
-func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, err error, cluster *models.V1SpectroCluster, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
+func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, cluster *models.V1SpectroCluster, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
 	addonDeployment := toAddonDeployment(c, d)
 
 	newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
 	if err != nil {
 		return diag.FromErr(err)

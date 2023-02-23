@@ -1,9 +1,8 @@
 package spectrocloud
 
 import (
-	"errors"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/hapi/client"
 	"github.com/spectrocloud/hapi/models"
 )
@@ -72,6 +71,6 @@ func getExtraFields(d *schema.ResourceData) (bool, []string) {
 	return include_all_clusters, nil
 }
 
-func detachWorkspaceBackupPolicy(c *client.V1Client) error {
-	return errors.New("Not implemented") // not implemented
-}
+// func detachWorkspaceBackupPolicy(c *client.V1Client) error {
+// 	return errors.New("not implemented")
+// }

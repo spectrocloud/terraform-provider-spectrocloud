@@ -2,14 +2,13 @@ package spectrocloud
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/hapi/client"
 	"github.com/spectrocloud/hapi/models"
 )
 
 func toClusterRBACsInputEntities(d *schema.ResourceData) []*models.V1ClusterRbacInputEntity {
-
 	rbacs := toRbacInputEntities(toClusterRbac(GetBindings(d)))
-
 	return rbacs
 }
 
@@ -20,9 +19,7 @@ func GetBindings(d *schema.ResourceData) []*models.V1ClusterRbacBinding {
 		return nil
 	}
 	for _, clusterRbac := range d.Get("cluster_rbac_binding").([]interface{}) {
-		for _, binding := range toClusterRBACBindings(clusterRbac) {
-			bindings = append(bindings, binding)
-		}
+		copy(bindings, toClusterRBACBindings(clusterRbac))
 	}
 
 	return bindings
@@ -46,12 +43,8 @@ func toRbacInputEntities(config *models.V1ClusterRbac) []*models.V1ClusterRbacIn
 		switch binding.Type {
 		case "ClusterRoleBinding":
 			clusterRoleBindings = append(clusterRoleBindings, binding)
-			break
 		case "RoleBinding":
 			roleBindings = append(roleBindings, binding)
-			break
-		default:
-			break
 		}
 
 	}

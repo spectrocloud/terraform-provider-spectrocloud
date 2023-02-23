@@ -450,7 +450,7 @@ func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfi
 	}
 
 	azs := make([]string, 0)
-	for k, _ := range m["az_subnets"].(map[string]interface{}) {
+	for k := range m["az_subnets"].(map[string]interface{}) {
 		azs = append(azs, k)
 	}
 
