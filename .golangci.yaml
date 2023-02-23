@@ -140,7 +140,3 @@ issues:
         - ineffassign
         - staticcheck
         - unused
-    - path: "^tests"
-      linters:
-        - cyclop
-        - errcheck

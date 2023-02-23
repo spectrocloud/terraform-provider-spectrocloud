@@ -28,7 +28,7 @@ lint: golangci-lint ## Run golangci-lint against code
 ##@ Test Targets
 .PHONY: testacc
 testacc: ## Run acceptance tests
-	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
+	TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./... -timeout 120m
 
 ##@ Development Targets
 dev-provider:  ## Generate dev provider

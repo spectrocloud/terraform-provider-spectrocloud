@@ -4,6 +4,7 @@
 
 bin
 __debug_bin
+profile.cov
 
 terraform.tfplan
 terraform.tfstate
