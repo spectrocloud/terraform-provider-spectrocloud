@@ -1,20 +1,40 @@
+# If you update this file, please follow:
+# https://suva.sh/posts/well-documented-makefiles/
+
+.DEFAULT_GOAL:=help
+
 DEV_PROVIDER_VERSION=100.100.100
 GOLANGCI_VERSION ?= 1.50.1
 
-default: testacc
+BIN_DIR ?= ./bin
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
 
+##@ Help Targets
+help:  ## Display this help
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[0m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+bin-dir:
+	test -d $(BIN_DIR) || mkdir $(BIN_DIR)
+
+##@ Static Analysis Targets
+fmt: ## Run go fmt against code
+	go fmt ./...
+vet: ## Run go vet against code
+	go vet ./...
 lint: golangci-lint ## Run golangci-lint against code
 	$(GOLANGCI_LINT) run
 
-# Run acceptance tests
+##@ Test Targets
 .PHONY: testacc
-testacc:
+testacc: ## Run acceptance tests
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
-dev-provider:
+##@ Development Targets
+dev-provider:  ## Generate dev provider
 	bash generate_dev_provider.sh $(DEV_PROVIDER_VERSION)
 
-# Tools
+# Tools Section
 
 golangci-lint: bin-dir
 	if ! test -f $(BIN_DIR)/golangci-lint-linux-amd64; then \

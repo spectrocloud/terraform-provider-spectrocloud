@@ -37,16 +37,13 @@ linters:
   disable-all: true
   enable:
     ## enabled by default
-    - deadcode # Finds unused code
     - errcheck # Errcheck is a program for checking for unchecked errors in go programs. These unchecked errors can be critical bugs in some cases
     - gosimple # Linter for Go source code that specializes in simplifying a code
     - govet # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
     - ineffassign # Detects when assignments to existing variables are not used
     - staticcheck # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
-    - structcheck # Finds unused struct fields
     - typecheck # Like the front-end of a Go compiler, parses and type-checks Go code
     - unused # Checks Go code for unused constants, variables, functions and types
-    - varcheck # Finds unused global variables and constants
     ## disabled by default
     - cyclop # checks function and package cyclomatic complexity
     - gocognit # Computes and checks the cognitive complexity of functions
@@ -138,19 +135,12 @@ issues:
   exclude-rules:
     - path: _test\.go
       linters:
-        - deadcode
         - errcheck
         - gosimple
         - ineffassign
         - staticcheck
         - unused
-        - varcheck
     - path: "^tests"
       linters:
         - cyclop
         - errcheck
-        - varcheck
-  # Specific exclude rules for deprecated fields that are still part of the codebase. These should be removed as the referenced deprecated item is removed from the project.
-    - linters:
-        - staticcheck
-      text: "SA1019: (bootstrapv1.ClusterStatus|scope.Config.Spec.UseExperimentalRetryJoin|DockerMachine.Spec.Bootstrapped|machineStatus.Bootstrapped) is deprecated"
