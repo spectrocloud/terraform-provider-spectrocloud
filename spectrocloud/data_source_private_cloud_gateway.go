@@ -37,7 +37,7 @@ func dataSourcePCGRead(_ context.Context, d *schema.ResourceData, m interface{})
 	if v, ok := d.GetOk("name"); ok {
 		name := v.(string)
 		namePointer := &name
-		uid, err := c.GetPrivateCloudGatewayID(namePointer)
+		uid, err := c.GetPCGId(namePointer)
 		if err != nil {
 			return diag.FromErr(err)
 		}

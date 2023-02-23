@@ -10,7 +10,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d
 	github.com/spectrocloud/hapi v1.14.1-0.20230223133532-7bc0fb867aa8
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20230223194453-98dd5d39d801
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20230223221201-7047ac676dcc
 	github.com/stretchr/testify v1.7.2
 )
 
