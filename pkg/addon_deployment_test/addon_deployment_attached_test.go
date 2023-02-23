@@ -1,10 +1,11 @@
 package addon_deployment_test
 
 import (
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIsProfileAttachedByNamePositive(t *testing.T) {

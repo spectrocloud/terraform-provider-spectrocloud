@@ -7,7 +7,7 @@ import (
 	"github.com/spectrocloud/hapi/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -90,16 +90,14 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 		d.SetId("")
 		return diags
 	}
-	if macro != nil {
-		d.SetId(c.GetMacroId(uid, d.Get("name").(string)))
 
-		if err := d.Set("name", macro.Name); err != nil {
-			return diag.FromErr(err)
-		}
+	d.SetId(c.GetMacroId(uid, d.Get("name").(string)))
 
-		if err := d.Set("value", macro.Value); err != nil {
-			return diag.FromErr(err)
-		}
+	if err := d.Set("name", macro.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("value", macro.Value); err != nil {
+		return diag.FromErr(err)
 	}
 	return diags
 }

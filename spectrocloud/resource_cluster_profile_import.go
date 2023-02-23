@@ -3,12 +3,13 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"os"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterProfileImport() *schema.Resource {
@@ -77,7 +78,9 @@ func resourceClusterProfileImportRead(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	d.Set("import_file", clusterProfile)
+	if err := d.Set("import_file", clusterProfile); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }

@@ -2,11 +2,12 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 var resourceClusterProfileUpdatePendingStates = []string{

@@ -15,16 +15,12 @@ func consumeResults(t *testing.T, retry Retry, ch chan int, done chan bool) Resu
 		switch v {
 		case -1:
 			stat.CODE_MINUS_ONE++
-			break
 		case retry.expected_code:
 			stat.CODE_EXPECTED++
-			break
 		case 200:
 			stat.CODE_NORMAL++
-			break
 		case 500:
 			stat.CODE_INTERNAL_ERROR++
-			break
 		default:
 			t.Fail()
 		}

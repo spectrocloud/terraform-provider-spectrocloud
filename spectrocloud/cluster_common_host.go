@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func toClusterHostConfigs(d *schema.ResourceData) *models.V1HostClusterConfig {
@@ -99,18 +99,8 @@ func flattenHostConfig(hostConfig *models.V1HostClusterConfig) []interface{} {
 
 func flattenSourceRanges(hostConfig *models.V1HostClusterConfig) string {
 	sourceRanges := make([]string, 0)
-	for _, r := range hostConfig.ClusterEndpoint.Config.LoadBalancerConfig.LoadBalancerSourceRanges {
-		sourceRanges = append(sourceRanges, r)
-	}
+	copy(sourceRanges, hostConfig.ClusterEndpoint.Config.LoadBalancerConfig.LoadBalancerSourceRanges)
 	return strings.Join(sourceRanges, ",")
-}
-
-func flattenExternalIPs(hostConfig *models.V1HostClusterConfig) string {
-	externalIPs := make([]string, 0)
-	for _, ip := range hostConfig.ClusterEndpoint.Config.LoadBalancerConfig.ExternalIPs {
-		externalIPs = append(externalIPs, ip)
-	}
-	return strings.Join(externalIPs, ",")
 }
 
 func updateHostConfig(c *client.V1Client, d *schema.ResourceData) error {

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -38,7 +38,9 @@ func dataSourceProjectRead(_ context.Context, d *schema.ResourceData, m interfac
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
-		d.Set("name", v.(string))
+		if err := d.Set("name", v.(string)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }

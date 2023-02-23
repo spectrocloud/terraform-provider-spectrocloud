@@ -2,12 +2,13 @@ package cluster_profile_test
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestCreateClusterProfile(t *testing.T) {

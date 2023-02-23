@@ -391,12 +391,10 @@ github.com/sirupsen/logrus v1.4.2 h1:SPIRibHv4MatM3XXNO2BJeFLZwZ2LvZgfQ5+UNI2im4
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d h1:ICP3awSALxQrtubNm79v1t/hUEoXi+YUzW26Pwtam0M=
 github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d/go.mod h1:HviEHWZZkcU+iQOxCeSr+IIRypm3HY/XsL1wkte/2SI=
-github.com/spectrocloud/hapi v1.14.1-0.20221113161733-44e4aa57533e h1:2GlzuQ2qb4TQ1rw2fOnWuB4kSKap4CR85T/WC3+DZFw=
-github.com/spectrocloud/hapi v1.14.1-0.20221113161733-44e4aa57533e/go.mod h1:mHd7t0RTGnNBysMD9abHK88RN+dL5NWX9LsJ4iOqffo=
-github.com/spectrocloud/hapi v1.14.1-0.20221207125041-e32a92e03569 h1:fdzmi70dtxnHm7YNHMAdLfLnuHH3B5nWVxYLO2r3t3s=
-github.com/spectrocloud/hapi v1.14.1-0.20221207125041-e32a92e03569/go.mod h1:mHd7t0RTGnNBysMD9abHK88RN+dL5NWX9LsJ4iOqffo=
-github.com/spectrocloud/hapi v1.14.1-0.20221220073341-802bb2787b7e h1:4PWCUxmHZCKWrNvjrdrBkmEAH8QtzjZenarhvyflad4=
-github.com/spectrocloud/hapi v1.14.1-0.20221220073341-802bb2787b7e/go.mod h1:mHd7t0RTGnNBysMD9abHK88RN+dL5NWX9LsJ4iOqffo=
+github.com/spectrocloud/hapi v1.14.1-0.20230223133532-7bc0fb867aa8 h1:vtzLhM3f/UNKTu8FVWZvsfuV/dpM8Ff2yWv8xhnow0E=
+github.com/spectrocloud/hapi v1.14.1-0.20230223133532-7bc0fb867aa8/go.mod h1:XH+b/FpU0DQTs2vxB5YHmOWRw0kkhvMT5ljKexADtH8=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20230223194453-98dd5d39d801 h1:KVge/jN6lCD6aaw1rZ7i/m5Pwu3ny6FVKRhfzq47FS4=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20230223194453-98dd5d39d801/go.mod h1:YIuYbjvcbjdOwpCMAyNXgdKzWfYjhgakw3DGd7eeGNM=
 github.com/spf13/cast v1.3.1/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
 github.com/spf13/cast v1.5.0/go.mod h1:SpXXQ5YoyJw6s3/6cMTQuxvgRl3PCJiyaX9p6b155UU=
@@ -404,7 +402,6 @@ github.com/spf13/cobra v0.0.3/go.mod h1:1l0Ry5zgKvJasoi3XT1TypsSe7PqH0Sj9dhYf7v3
 github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-github.com/stretchr/objx v0.2.0 h1:Hbg2NidpLE8veEBkEZTL3CvlkUIVzuU9jDplZO54c48=
 github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=

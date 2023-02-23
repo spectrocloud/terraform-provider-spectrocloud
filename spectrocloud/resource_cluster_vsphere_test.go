@@ -3,12 +3,14 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"github.com/stretchr/testify/assert"
-	"testing"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func prepareClusterVsphereTestData() *schema.ResourceData {
@@ -24,25 +26,25 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 	d.Set("cloud_account_id", "vmware-basic-account-id")
 
 	// Cluster Rbac binding
-	rbac := make([]map[string]interface{}, 0)
-	rbacRole := make([]interface{}, 0)
-	rbacRole = append(rbacRole, map[string]interface{}{
-		"kind": "Role",
-		"name": "testUserRoleFromNS",
-	})
-	rbacSubjects := make([]interface{}, 0)
-	rbacSubjects = append(rbacSubjects, map[string]interface{}{
-		"type":      "Role",
-		"name":      "testUserRoleFromNS",
-		"namespace": "testrolenamespace",
-	})
-	r := map[string]interface{}{
-		"type":      "RoleBinding1",
-		"namespace": "test5ns",
-		"role":      rbacRole,
-		"subjects":  rbacSubjects,
-	}
-	rbac = append(rbac, r)
+	// rbacRole := make([]interface{}, 0)
+	// rbacRole = append(rbacRole, map[string]interface{}{
+	// 	"kind": "Role",
+	// 	"name": "testUserRoleFromNS",
+	// })
+	// rbacSubjects := make([]interface{}, 0)
+	// rbacSubjects = append(rbacSubjects, map[string]interface{}{
+	// 	"type":      "Role",
+	// 	"name":      "testUserRoleFromNS",
+	// 	"namespace": "testrolenamespace",
+	// })
+	// rbac := make([]map[string]interface{}, 0)
+	// r := map[string]interface{}{
+	// 	"type":      "RoleBinding1",
+	// 	"namespace": "test5ns",
+	// 	"role":      rbacRole,
+	// 	"subjects":  rbacSubjects,
+	// }
+	// rbac = append(rbac, r)
 
 	// cloud config
 	cloudConfig := make([]map[string]interface{}, 0)
@@ -353,7 +355,7 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 				Spec: &models.V1ClusterComplianceScanSpec{
 					ClusterUID: "vsphere-cluster-uid",
 					DriverSpec: map[string]models.V1ComplianceScanDriverSpec{
-						"kube-bench": models.V1ComplianceScanDriverSpec{
+						"kube-bench": {
 							Config: &models.V1ComplianceScanConfig{
 								Schedule: &models.V1ClusterFeatureSchedule{
 									ScheduledRunTime: "daily",
@@ -361,7 +363,7 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 							},
 							IsClusterConfig: false,
 						},
-						"kube-hunter": models.V1ComplianceScanDriverSpec{
+						"kube-hunter": {
 							Config: &models.V1ComplianceScanConfig{
 								Schedule: &models.V1ClusterFeatureSchedule{
 									ScheduledRunTime: "daily",
@@ -369,7 +371,7 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 							},
 							IsClusterConfig: false,
 						},
-						"sonobuoy": models.V1ComplianceScanDriverSpec{
+						"sonobuoy": {
 							Config: &models.V1ComplianceScanConfig{
 								Schedule: &models.V1ClusterFeatureSchedule{
 									ScheduledRunTime: "daily",

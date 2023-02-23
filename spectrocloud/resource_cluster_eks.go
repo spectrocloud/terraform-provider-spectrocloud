@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterEks() *schema.Resource {
@@ -804,11 +804,11 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {
 	m := fargateProfile.(map[string]interface{})
 
-	labels := make([]string, 0)
-	controlPlane, _ := m["control_plane"].(bool)
-	if controlPlane {
-		labels = append(labels, "master")
-	}
+	// labels := make([]string, 0)
+	// controlPlane, _ := m["control_plane"].(bool)
+	// if controlPlane {
+	// 	labels = append(labels, "master")
+	// }
 
 	selectors := make([]*models.V1FargateSelector, 0)
 	for _, val := range m["selector"].([]interface{}) {

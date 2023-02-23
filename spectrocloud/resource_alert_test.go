@@ -1,10 +1,11 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"reflect"
 	"testing"
+
+	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 /*
@@ -147,6 +148,10 @@ func TestAlertCRUDEmail(t *testing.T) {
 		t.Logf("\n Unable to update email alert for UID - %s", baseConfig.AlertUid)
 	}
 	payload, err = conn.ReadAlert(projectId, baseConfig.component, baseConfig.AlertUid)
+	if err != nil {
+		t.Fail()
+		t.Logf("\n Unable to read email alert for UID - %s", baseConfig.AlertUid)
+	}
 	if payload.IsActive != false {
 		t.Fail()
 		t.Logf("\n Email alert update failed - %s", baseConfig.AlertUid)
@@ -213,6 +218,10 @@ func TestAlertCRUDHttp(t *testing.T) {
 		t.Logf("\n Unable to update email alert for UID - %s", baseConfig.AlertUid)
 	}
 	payload, err = conn.ReadAlert(projectId, baseConfig.component, baseConfig.AlertUid)
+	if err != nil {
+		t.Fail()
+		t.Logf("\n Unable to read email alert for UID - %s", baseConfig.AlertUid)
+	}
 	if payload.IsActive != false {
 		t.Fail()
 		t.Logf("\n HTTP alert update failed - %s", baseConfig.AlertUid)

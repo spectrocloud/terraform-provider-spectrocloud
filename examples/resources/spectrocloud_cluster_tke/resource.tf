@@ -1,9 +1,9 @@
 data "spectrocloud_cluster_profile" "profile" {
-  name = "tfmod-tke-prof-infra-yx4n4"
+  name    = "tfmod-tke-prof-infra-yx4n4"
   version = "2.2.2"
 }
 
-data "spectrocloud_cloudaccount_tencent" "tke_account"{
+data "spectrocloud_cloudaccount_tencent" "tke_account" {
   name = "tf-tke-account-ukagc"
 }
 

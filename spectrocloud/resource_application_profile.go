@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -13,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceApplicationProfile() *schema.Resource {
@@ -378,9 +379,7 @@ func toApplicationTiersUpdate(d *schema.ResourceData, c *client.V1Client) ([]*mo
 	var deleteTiers []string
 
 	createTiersMap := map[string]*models.V1AppTierEntity{}
-	tiers := make([]*models.V1AppTierEntity, 0)
 	for _, tier := range d.Get("pack").([]interface{}) {
-
 		if _, found := previousTiersMap[tier.(map[string]interface{})["name"].(string)]; found {
 			t := toApplicationProfilePackUpdate(tier)
 			updateTiersMap[t.Name] = t
@@ -389,7 +388,6 @@ func toApplicationTiersUpdate(d *schema.ResourceData, c *client.V1Client) ([]*mo
 				return nil, nil, nil, e
 			} else {
 				createTiers = append(createTiers, t)
-				tiers = append(tiers, t)
 				createTiersMap[*t.Name] = t
 			}
 		}

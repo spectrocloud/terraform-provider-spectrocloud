@@ -1,12 +1,13 @@
 package spectrocloud
 
 import (
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"strings"
 )
 
 func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
@@ -83,7 +84,6 @@ func GetAddonDeploymentDiagPacks(d *schema.ResourceData, err error) ([]*models.V
 					diagPacks = append(diagPacks, p)
 				}
 			}
-			break
 		}
 	}
 

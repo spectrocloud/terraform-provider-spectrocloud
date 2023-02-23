@@ -2,12 +2,13 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func toProfiles(c *client.V1Client, d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity {
@@ -82,9 +83,7 @@ func toPack(cluster *models.V1SpectroCluster, pSrc interface{}) *models.V1PackVa
 			if cluster != nil {
 				packs := make([]*models.V1PackRef, 0)
 				for _, profile := range cluster.Spec.ClusterProfileTemplates {
-					for _, pack := range profile.Packs {
-						packs = append(packs, pack)
-					}
+					copy(packs, profile.Packs)
 				}
 				uid = getManifestUID(data["name"].(string), packs)
 			}

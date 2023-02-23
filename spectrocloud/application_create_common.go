@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
@@ -45,7 +46,7 @@ func toAppDeploymentTargetClusterLimits(d *schema.ResourceData) *models.V1AppDep
 	configList := d.Get("config")
 	if configList.([]interface{})[0] != nil {
 		config := configList.([]interface{})[0].(map[string]interface{})
-		for i, _ := range config["limits"].([]interface{}) {
+		for i := range config["limits"].([]interface{}) {
 			if config["limits"].([]interface{})[i] != nil {
 				limits := config["limits"].([]interface{})[i].(map[string]interface{})
 				if limits["cpu"] != nil && limits["memory"] != nil {

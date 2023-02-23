@@ -2,16 +2,17 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"time"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterTke() *schema.Resource {
@@ -449,7 +450,7 @@ func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfi
 	}
 
 	azs := make([]string, 0)
-	for k, _ := range m["az_subnets"].(map[string]interface{}) {
+	for k := range m["az_subnets"].(map[string]interface{}) {
 		azs = append(azs, k)
 	}
 

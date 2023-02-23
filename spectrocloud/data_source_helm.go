@@ -2,8 +2,9 @@ package spectrocloud
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -36,7 +37,9 @@ func dataSourceRegistryHelmRead(_ context.Context, d *schema.ResourceData, m int
 			return diag.FromErr(err)
 		}
 		d.SetId(registry.Metadata.UID)
-		d.Set("name", registry.Metadata.Name)
+		if err := d.Set("name", registry.Metadata.Name); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }

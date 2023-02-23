@@ -2,9 +2,10 @@ package spectrocloud
 
 import (
 	"fmt"
-	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 	"testing"
+
+	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func TestNameSpacesRPSScenario(t *testing.T) {

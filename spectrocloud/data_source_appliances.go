@@ -2,11 +2,12 @@ package spectrocloud
 
 import (
 	"context"
+	"reflect"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
-	"reflect"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func dataSourceAppliances() *schema.Resource {

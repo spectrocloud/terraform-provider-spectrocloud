@@ -2,9 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"sort"
 	"strings"
@@ -12,8 +9,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func resourceClusterVsphere() *schema.Resource {
@@ -444,7 +445,9 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	if d.HasChange("cloud_config") {
 		cloudConfig := toCloudConfigUpdate(d.Get("cloud_config").([]interface{})[0].(map[string]interface{}))
-		c.UpdateVsphereCloudConfigValues(cloudConfigId, cloudConfig)
+		if err := c.UpdateVsphereCloudConfigValues(cloudConfigId, cloudConfig); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if d.HasChange("machine_pool") {
@@ -577,7 +580,7 @@ func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereCl
 
 func toCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1VsphereCloudClusterConfigEntity {
 	return &models.V1VsphereCloudClusterConfigEntity{
-		toCloudConfigCreate(cloudConfig),
+		ClusterConfig: toCloudConfigCreate(cloudConfig),
 	}
 }
 

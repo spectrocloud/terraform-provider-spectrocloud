@@ -2,10 +2,11 @@ package spectrocloud
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceCloudAccountGcp() *schema.Resource {
@@ -71,7 +72,6 @@ func resourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-//
 func resourceCloudAccountGcpUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 

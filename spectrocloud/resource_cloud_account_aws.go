@@ -2,16 +2,13 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
-	"github.com/hashicorp/go-cty/cty"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceCloudAccountAws() *schema.Resource {
@@ -185,13 +182,13 @@ func toAwsAccount(d *schema.ResourceData) *models.V1AwsAccount {
 	return account
 }
 
-func validateAwsCloudAccountType(data interface{}, path cty.Path) diag.Diagnostics {
-	var diags diag.Diagnostics
-	accType := data.(string)
-	for _, accessType := range []string{"secret", "sts"} {
-		if accessType == accType {
-			return diags
-		}
-	}
-	return diag.FromErr(fmt.Errorf("aws cloud account type '%s' is invalid. valid aws cloud account types are 'secret' and 'sts'", accType))
-}
+// func validateAwsCloudAccountType(data interface{}, path cty.Path) diag.Diagnostics {
+// 	var diags diag.Diagnostics
+// 	accType := data.(string)
+// 	for _, accessType := range []string{"secret", "sts"} {
+// 		if accessType == accType {
+// 			return diags
+// 		}
+// 	}
+// 	return diag.FromErr(fmt.Errorf("aws cloud account type '%s' is invalid. valid aws cloud account types are 'secret' and 'sts'", accType))
+// }
