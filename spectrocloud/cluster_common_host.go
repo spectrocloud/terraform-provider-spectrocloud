@@ -103,12 +103,6 @@ func flattenSourceRanges(hostConfig *models.V1HostClusterConfig) string {
 	return strings.Join(sourceRanges, ",")
 }
 
-// func flattenExternalIPs(hostConfig *models.V1HostClusterConfig) string {
-// 	externalIPs := make([]string, 0)
-// 	copy(externalIPs, hostConfig.ClusterEndpoint.Config.LoadBalancerConfig.ExternalIPs)
-// 	return strings.Join(externalIPs, ",")
-// }
-
 func updateHostConfig(c *client.V1Client, d *schema.ResourceData) error {
 	if hostConfigs := toClusterHostConfigs(d); hostConfigs != nil {
 		return c.ApplyClusterHostConfig(d.Id(), &models.V1HostClusterConfigEntity{
