@@ -336,7 +336,7 @@ func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *clie
 	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfig, err := c.GetVsphereClouldConfigValues(configUID)
+		cloudConfig, err := c.GetCloudConfigVsphereValues(configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -445,7 +445,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	if d.HasChange("cloud_config") {
 		cloudConfig := toCloudConfigUpdate(d.Get("cloud_config").([]interface{})[0].(map[string]interface{}))
-		if err := c.UpdateVsphereCloudConfigValues(cloudConfigId, cloudConfig); err != nil {
+		if err := c.UpdateCloudConfigVsphereValues(cloudConfigId, cloudConfig); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -528,7 +528,6 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroVsphereClusterEntity {
-	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
@@ -552,7 +551,6 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
-	// sort
 	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
 		return machinePoolConfigs[i].PoolConfig.IsControlPlane
 	})

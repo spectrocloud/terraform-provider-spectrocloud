@@ -608,7 +608,7 @@ func TestFlattenCloudConfigVsphere(t *testing.T) {
 		GetCloudConfigVsphereFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
 			return getCloudConfig(), nil
 		},
-		GetVsphereClouldConfigValuesFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
+		GetCloudConfigVsphereValuesFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
 			vsphereConfig := &models.V1VsphereCloudConfig{
 				APIVersion: "v1",
 				Kind:       "",
