@@ -391,8 +391,8 @@ github.com/sirupsen/logrus v1.4.2 h1:SPIRibHv4MatM3XXNO2BJeFLZwZ2LvZgfQ5+UNI2im4
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d h1:ICP3awSALxQrtubNm79v1t/hUEoXi+YUzW26Pwtam0M=
 github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d/go.mod h1:HviEHWZZkcU+iQOxCeSr+IIRypm3HY/XsL1wkte/2SI=
-github.com/spectrocloud/hapi v1.14.1-0.20230223162824-ba5b285eda65 h1:0wcYmBf7sX6zp4AKdQJkT65lA93WRZWDQUyFBjmM7wM=
-github.com/spectrocloud/hapi v1.14.1-0.20230223162824-ba5b285eda65/go.mod h1:G8D2Kc9SmMiJbKcBnS140OefhJX9Rr7nqtFYmKbSZCw=
+github.com/spectrocloud/hapi v1.14.1-0.20230223133532-7bc0fb867aa8 h1:vtzLhM3f/UNKTu8FVWZvsfuV/dpM8Ff2yWv8xhnow0E=
+github.com/spectrocloud/hapi v1.14.1-0.20230223133532-7bc0fb867aa8/go.mod h1:XH+b/FpU0DQTs2vxB5YHmOWRw0kkhvMT5ljKexADtH8=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20230223183248-e7e269be6ab6 h1:Ml2byZixJaXZpd0WNgbWFDHuv3zSTglXmHZmB2Gu2y8=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20230223183248-e7e269be6ab6/go.mod h1:YIuYbjvcbjdOwpCMAyNXgdKzWfYjhgakw3DGd7eeGNM=
 github.com/spf13/cast v1.3.1/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
