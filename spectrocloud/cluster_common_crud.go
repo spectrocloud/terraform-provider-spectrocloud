@@ -29,6 +29,12 @@ var resourceClusterCreatePendingStates = []string{
 	"Importing",
 }
 
+var virtualClusterLifecycleStates = []string{
+	"Resuming",
+	"Pausing",
+	"Paused",
+}
+
 func waitForClusterReady(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
@@ -36,6 +42,43 @@ func waitForClusterReady(ctx context.Context, d *schema.ResourceData, uid string
 		Pending:    resourceClusterReadyPendingStates,
 		Target:     []string{"Ready"},
 		Refresh:    resourceClusterReadyRefreshFunc(c, d.Id()),
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
+		MinTimeout: 10 * time.Second,
+		Delay:      30 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err := stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		return diag.FromErr(err), true
+	}
+	return nil, false
+}
+
+func waitForVirtualClusterLifecyclePause(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+	d.SetId(uid)
+	stateConf := &resource.StateChangeConf{
+		Pending:    virtualClusterLifecycleStates,
+		Target:     []string{"Paused"},
+		Refresh:    resourceVirtualClusterLifecycleStateRefreshFunc(c, d.Id()),
+		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
+		MinTimeout: 10 * time.Second,
+		Delay:      30 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err := stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		return diag.FromErr(err), true
+	}
+	return nil, false
+}
+func waitForVirtualClusterLifecycleResume(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+	d.SetId(uid)
+	stateConf := &resource.StateChangeConf{
+		Pending:    virtualClusterLifecycleStates,
+		Target:     []string{"Running"},
+		Refresh:    resourceVirtualClusterLifecycleStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
@@ -127,6 +170,22 @@ func resourceClusterStateRefreshFunc(c *client.V1Client, id string) resource.Sta
 		}
 
 		state := cluster.Status.State
+		log.Printf("Cluster state (%s): %s", id, state)
+
+		return cluster, state, nil
+	}
+}
+
+func resourceVirtualClusterLifecycleStateRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		cluster, err := c.GetCluster(id)
+		if err != nil {
+			return nil, "", err
+		} else if cluster == nil {
+			return nil, "Deleted", nil
+		}
+
+		state := cluster.Status.Virtual.LifecycleStatus.Status
 		log.Printf("Cluster state (%s): %s", id, state)
 
 		return cluster, state, nil
