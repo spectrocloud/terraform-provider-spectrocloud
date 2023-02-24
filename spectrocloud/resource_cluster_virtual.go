@@ -56,6 +56,12 @@ func resourceClusterVirtual() *schema.Resource {
 				Optional:     true,
 				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
 			},
+			"pause_cluster": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "To pause and resume cluster state. Set to true to pause running cluster & false to resume it.",
+			},
 			"resources": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -288,9 +294,37 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 	if done {
 		return diagnostics
 	}
+	if d.HasChange("pause_cluster") {
+		var body *models.V1LifecycleConfigEntity
+		pause := new(bool)
+		if d.Get("pause_cluster").(bool) {
+			*pause = true
+		} else {
+			*pause = false
+		}
+		body = &models.V1LifecycleConfigEntity{
+			LifecycleConfig: &models.V1LifecycleConfig{
+				Pause: pause,
+			},
+		}
+		_, err := c.VirtualClusterLifecycleConfigChange(d.Id(), body)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if *pause {
+			diagnostics, isError := waitForVirtualClusterLifecyclePause(ctx, d, d.Id(), diags, c)
+			if isError {
+				return diagnostics
+			}
+		} else {
+			diagnostics, isError := waitForVirtualClusterLifecycleResume(ctx, d, d.Id(), diags, c)
+			if isError {
+				return diagnostics
+			}
+		}
 
+	}
 	resourceClusterVirtualRead(ctx, d, m)
-
 	return diags
 }
 
