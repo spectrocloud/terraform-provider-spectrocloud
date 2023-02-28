@@ -1,11 +1,14 @@
 package spectrocloud
 
 import (
-	"reflect"
-	"testing"
-
+	"context"
+	"errors"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/stretchr/testify/assert"
+	"reflect"
+	"testing"
 )
 
 /*
@@ -233,5 +236,294 @@ func TestAlertCRUDHttp(t *testing.T) {
 	} else {
 		t.Fail()
 		t.Logf("\n HTTP Alert Delete Failed - %s", baseConfig.AlertUid)
+	}
+}
+
+func prepareAlertTestData() *schema.ResourceData {
+	rd := resourceAlert().TestResourceData()
+	rd.Set("type", "email")
+	rd.Set("is_active", true)
+	rd.Set("alert_all_users", false)
+	rd.Set("project", "Default")
+	emails := []string{"testuser1@spectrocloud.com", "testuser2@spectrocloud.com"}
+	rd.Set("identifiers", emails)
+	var http []map[string]interface{}
+	hookConfig := map[string]interface{}{
+		"method": "POST",
+		"url":    "https://www.openhook.com/spc/notify",
+		"body":   "{ \"text\": \"{{message}}\" }",
+		"headers": map[string]interface{}{
+			"tag":    "Health",
+			"source": "spectrocloud",
+		},
+	}
+	http = append(http, hookConfig)
+	rd.Set("http", http)
+	return rd
+}
+
+func TestGetProjectID(t *testing.T) {
+	assert := assert.New(t)
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+		},
+	}
+	pjtUid, err := getProjectID(rd, m)
+	if err != nil {
+		assert.Error(errors.New("unable to read project uid"))
+	}
+	assert.Equal("test-project-uid", pjtUid)
+}
+
+func TestGetProjectIDError(t *testing.T) {
+	assert := assert.New(t)
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "", errors.New("unable to read project uid")
+		},
+	}
+	pjtUid, err := getProjectID(rd, m)
+	if err == nil {
+		assert.Error(errors.New("unexpected Error"))
+	}
+	assert.Equal(err.Error(), "unable to read project uid")
+	assert.Equal("", pjtUid)
+}
+
+func TestResourceAlertCreate(t *testing.T) {
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+		},
+		CreateAlertFn: func(body *models.V1Channel, projectUID string, component string) (string, error) {
+			return "test-alert-ui", nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertCreate(ctx, rd, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceAlertCreateProjectUIDError(t *testing.T) {
+	assert := assert.New(t)
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "", errors.New("unable to read project uid")
+
+		},
+		CreateAlertFn: func(body *models.V1Channel, projectUID string, component string) (string, error) {
+			return "test-alert-uid", nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertCreate(ctx, rd, m)
+	assert.Equal(diags[0].Summary, "unable to read project uid")
+}
+
+func TestResourceAlertCreateAlertUIDError(t *testing.T) {
+	assert := assert.New(t)
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+		},
+		CreateAlertFn: func(body *models.V1Channel, projectUID string, component string) (string, error) {
+			return "", errors.New("alert creation failed")
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertCreate(ctx, rd, m)
+	assert.Equal(diags[0].Summary, "alert creation failed")
+}
+
+func TestResourceAlertUpdate(t *testing.T) {
+
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+		},
+		UpdateAlertFn: func(body *models.V1Channel, projectUID string, component string, alertUID string) (string, error) {
+			return "success", nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertUpdate(ctx, rd, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceAlertUpdateError(t *testing.T) {
+	assert := assert.New(t)
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+		},
+		UpdateAlertFn: func(body *models.V1Channel, projectUID string, component string, alertUID string) (string, error) {
+			return "", errors.New("alert update failed")
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertUpdate(ctx, rd, m)
+	assert.Equal(diags[0].Summary, "alert update failed")
+}
+
+func TestResourceAlertDelete(t *testing.T) {
+
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+		},
+		DeleteAlertsFn: func(projectUID string, component string, alertUID string) error {
+			return nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertDelete(ctx, rd, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceAlertDeleteProjectUIDError(t *testing.T) {
+	assert := assert.New(t)
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "", errors.New("unable to read project uid")
+		},
+		DeleteAlertsFn: func(projectUID string, component string, alertUID string) error {
+			return nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertDelete(ctx, rd, m)
+	assert.Equal(diags[0].Summary, "unable to read project uid")
+}
+
+func TestResourceAlertDeleteError(t *testing.T) {
+	assert := assert.New(t)
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+
+		},
+		DeleteAlertsFn: func(projectUID string, component string, alertUID string) error {
+			return errors.New("unable to delete alert")
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertDelete(ctx, rd, m)
+	assert.Equal(diags[0].Summary, "unable to delete alert")
+}
+
+func TestResourceAlertReadAlertNil(t *testing.T) {
+	rd := prepareAlertTestData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+
+		},
+		ReadAlertFn: func(projectUID string, component string, alertUID string) (*models.V1Channel, error) {
+			return nil, nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertRead(ctx, rd, m)
+
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceAlertReadAlertEmail(t *testing.T) {
+	rd := resourceAlert().TestResourceData()
+	rd.Set("type", "email")
+	rd.Set("is_active", true)
+	rd.Set("alert_all_users", false)
+	rd.Set("project", "Default")
+	emails := []string{"testuser1@spectrocloud.com", "testuser2@spectrocloud.com"}
+	rd.Set("identifiers", emails)
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+
+		},
+		ReadAlertFn: func(projectUID string, component string, alertUID string) (*models.V1Channel, error) {
+			rd.Set("UID", "alert-test-uid")
+			return toAlert(rd), nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertRead(ctx, rd, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceAlertReadAlertHttp(t *testing.T) {
+	rd := resourceAlert().TestResourceData()
+	rd.Set("type", "http")
+	rd.Set("is_active", true)
+	rd.Set("alert_all_users", false)
+	rd.Set("project", "Default")
+	emails := []string{"testuser1@spectrocloud.com", "testuser2@spectrocloud.com"}
+	rd.Set("identifiers", emails)
+	var http []map[string]interface{}
+	hookConfig := map[string]interface{}{
+		"method": "POST",
+		"url":    "https://www.openhook.com/spc/notify",
+		"body":   "{ \"text\": \"{{message}}\" }",
+		"headers": map[string]interface{}{
+			"tag":    "Health",
+			"source": "spectrocloud",
+		},
+	}
+	http = append(http, hookConfig)
+	rd.Set("http", http)
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+
+		},
+		ReadAlertFn: func(projectUID string, component string, alertUID string) (*models.V1Channel, error) {
+			rd.Set("UID", "alert-test-uid")
+			return toAlert(rd), nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertRead(ctx, rd, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceAlertReadNegative(t *testing.T) {
+	rd := resourceAlert().TestResourceData()
+	m := &client.V1Client{
+		GetProjectUIDFn: func(projectName string) (string, error) {
+			return "test-project-uid", nil
+
+		},
+		ReadAlertFn: func(projectUID string, component string, alertUID string) (*models.V1Channel, error) {
+			rd.Set("UID", "alert-test-uid")
+			return toAlert(rd), nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceAlertRead(ctx, rd, m)
+	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
 	}
 }
