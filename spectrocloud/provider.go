@@ -116,6 +116,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_addon_deployment": resourceAddonDeployment(),
 
+				"spectrocloud_virtual_machine": resourceVirtualMachine(),
+
 				"spectrocloud_application": resourceApplication(),
 
 				"spectrocloud_privatecloudgateway_ippool": resourcePrivateCloudGatewayIpPool(),
