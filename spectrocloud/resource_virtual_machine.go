@@ -10,69 +10,176 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
-func toVirtualMachineCreateRequest(d *schema.ResourceData) (*models.V1SpectroClusterVMCreateEntity, error) {
-	virtualMachine := &client.VirtualMachine{
+//func toVirtualMachineCreateRequest(d *schema.ResourceData) (*models.V1SpectroClusterVMCreateEntity, error) {
+//	virtualMachine := &client.VirtualMachine{
+//		APIVersion: "kubevirt.io/v1",
+//		APIGroup:   "kubevirt.io",
+//		Kind:       "VirtualMachine",
+//		Metadata: client.Metadata{
+//			Name:      d.Get("name").(string),
+//			Namespace: d.Get("namespace").(string),
+//		},
+//		Spec: toSpecCreateRequest(d),
+//	}
+//	return virtualMachine, nil
+//}
+
+func toVirtualMachineCreateRequest(d *schema.ResourceData) (*models.V1ClusterVirtualMachine, error) {
+	vmBody := &models.V1ClusterVirtualMachine{
 		APIVersion: "kubevirt.io/v1",
-		APIGroup:   "kubevirt.io",
 		Kind:       "VirtualMachine",
-		Metadata: client.Metadata{
+		Metadata: &models.V1VMObjectMeta{
 			Name:      d.Get("name").(string),
 			Namespace: d.Get("namespace").(string),
 		},
 		Spec: toSpecCreateRequest(d),
 	}
-	return virtualMachine, nil
+
+	return vmBody, nil
 }
 
-func toSpecCreateRequest(d *schema.ResourceData) client.Spec {
-	template := client.SpecTemplate{
-		Domain: client.Domain{
-			CPU: client.CPU{
-				Cores: d.Get("cpu_cores").(int),
-			},
-			Devices: client.Devices{
-				Disks: []client.Disk{
-					client.Disk{
-						Name: d.Get("disk_name").(string),
-						DiskType: client.DiskType{
-							Bus: d.Get("disk_bus").(string),
+func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachineSpec {
+	// Network
+	var vmNetworks []*models.V1VMNetwork
+	var networkName = new(string)
+	*networkName = d.Get("Network_name").(string)
+	vmNetworks = append(vmNetworks, &models.V1VMNetwork{
+		Name: networkName,
+	})
+
+	//VM Volume
+	var vmVolumes []*models.V1VMVolume
+	var vmImage = new(string)
+	*vmImage = d.Get("image").(string)
+	var containerDisk = new(string)
+	*containerDisk = "containerdisk"
+	vmVolumes = append(vmVolumes, &models.V1VMVolume{
+		Name: containerDisk,
+		ContainerDisk: &models.V1VMContainerDiskSource{
+			Image: vmImage,
+		},
+	})
+	var cloudinitdisk = new(string)
+	*cloudinitdisk = "cloudinitdisk"
+	vmVolumes = append(vmVolumes, &models.V1VMVolume{
+		Name: cloudinitdisk,
+		CloudInitNoCloud: &models.V1VMCloudInitNoCloudSource{
+			UserDataBase64: "SGkuXG4=",
+		},
+	})
+
+	// Default Disk Configuration
+	var vmdisks []*models.V1VMDisk
+	vmdisks = append(vmdisks, &models.V1VMDisk{
+		Name: containerDisk,
+		Disk: &models.V1VMDiskTarget{
+			Bus: "virtio",
+		},
+	})
+	vmdisks = append(vmdisks, &models.V1VMDisk{
+		Name: cloudinitdisk,
+		Disk: &models.V1VMDiskTarget{
+			Bus: "virtio",
+		},
+	})
+
+	// Interface
+	var vmInterfaces []*models.V1VMInterface
+	var def = new(string)
+	*def = "default"
+	vmInterfaces = append(vmInterfaces, &models.V1VMInterface{
+		Name:       def,
+		Masquerade: nil,
+	})
+
+	// memory
+	type vmRequest struct {
+		memory string
+		cpu    int64
+	}
+	vmspec := &models.V1ClusterVirtualMachineSpec{
+		RunStrategy: d.Get("state").(string),
+		Running:     d.Get("run_on_launch").(bool),
+		Template: &models.V1VMVirtualMachineInstanceTemplateSpec{
+			Spec: &models.V1VMVirtualMachineInstanceSpec{
+				DNSPolicy: "Default",
+				Domain: &models.V1VMDomainSpec{
+					Chassis: nil,
+					Clock:   nil,
+					CPU: &models.V1VMCPU{
+						Cores: d.Get("CPU").(int64),
+					},
+					Devices: &models.V1VMDevices{
+						Disks:      vmdisks,
+						Interfaces: vmInterfaces,
+					},
+					//Memory: &models.V1VMMemory{
+					//	Guest: models.V1VMQuantity(d.Get("memory").(string)),
+					//},
+					Resources: &models.V1VMResourceRequirements{
+						Requests: vmRequest{
+							memory: d.Get("memory").(string),
+							cpu:    d.Get("CPU").(int64),
 						},
 					},
 				},
-			},
-			Machine: client.Machine{
-				Type: "q35",
-			},
-			Resources: client.Resources{
-				Requests: client.Requests{
-					Memory: d.Get("memory").(string),
-				},
-			},
-		},
-		Networks: []client.Network{
-			client.Network{
-				Name: "default",
-				Pod:  client.Pod{},
-			},
-		},
-		Volumes: []client.Volume{
-			client.Volume{
-				Name: d.Get("volume_name").(string),
-				ContainerDisk: client.ContainerDisk{
-					Image: d.Get("image").(string),
-				},
-				CloudInitNoCloud: client.CloudInitNoCloud{
-					UserData: d.Get("user_data").(string),
-				},
+				Networks: vmNetworks,
+				Volumes:  vmVolumes,
 			},
 		},
 	}
-
-	return client.Spec{
-		Status:       d.Get("status").(string),
-		SpecTemplate: template,
-	}
+	return vmspec
 }
+
+//func toSpecCreateRequest(d *schema.ResourceData) client.Spec {
+//	template := client.SpecTemplate{
+//		Domain: client.Domain{
+//			CPU: client.CPU{
+//				Cores: d.Get("cpu_cores").(int),
+//			},
+//			Devices: client.Devices{
+//				Disks: []client.Disk{
+//					client.Disk{
+//						Name: d.Get("disk_name").(string),
+//						DiskType: client.DiskType{
+//							Bus: d.Get("disk_bus").(string),
+//						},
+//					},
+//				},
+//			},
+//			Machine: client.Machine{
+//				Type: "q35",
+//			},
+//			Resources: client.Resources{
+//				Requests: client.Requests{
+//					Memory: d.Get("memory").(string),
+//				},
+//			},
+//		},
+//		Networks: []client.Network{
+//			client.Network{
+//				Name: "default",
+//				Pod:  client.Pod{},
+//			},
+//		},
+//		Volumes: []client.Volume{
+//			client.Volume{
+//				Name: d.Get("volume_name").(string),
+//				ContainerDisk: client.ContainerDisk{
+//					Image: d.Get("image").(string),
+//				},
+//				CloudInitNoCloud: client.CloudInitNoCloud{
+//					UserData: d.Get("user_data").(string),
+//				},
+//			},
+//		},
+//	}
+//
+//	return client.Spec{
+//		Status:       d.Get("status").(string),
+//		SpecTemplate: template,
+//	}
+//}
 
 func resourceVirtualMachine() *schema.Resource {
 	return &schema.Resource{
@@ -103,6 +210,11 @@ func resourceVirtualMachine() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  1,
+			},
+			"run_on_launch": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
 			},
 			"memory": {
 				Type:     schema.TypeString,
@@ -138,7 +250,7 @@ func resourceVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	err = c.CreateVirtualMachine(cluster.Metadata.UID, virtualMachine)
+	_, err = c.CreateVirtualMachine(cluster.Metadata.UID, virtualMachine)
 	if err != nil {
 		return diag.FromErr(err)
 	}
