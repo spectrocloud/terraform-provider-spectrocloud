@@ -8,9 +8,9 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/gomi v1.14.1-0.20220727130240-fc64f32e394d
-	github.com/spectrocloud/hapi v1.14.1-0.20230223133532-7bc0fb867aa8
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20230301062447-e9d35641ad89
+	github.com/spectrocloud/gomi v1.14.1-0.20230227082335-00ec30f78888
+	github.com/spectrocloud/hapi v1.14.1-0.20230302200655-fca5fb7fe995
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20230303020117-ec0cf715dcbc
 	github.com/stretchr/testify v1.7.2
 )
 
@@ -87,10 +87,10 @@ require (
 	github.com/vmihailenco/tagparser v0.1.1 // indirect
 	github.com/zclconf/go-cty v1.12.1 // indirect
 	go.mongodb.org/mongo-driver v1.5.1 // indirect
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
-	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
-	golang.org/x/sys v0.0.0-20220627191245-f75cf1eec38b // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/crypto v0.5.0 // indirect
+	golang.org/x/net v0.5.0 // indirect
+	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/text v0.6.0 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/genproto v0.0.0-20200711021454-869866162049 // indirect
 	google.golang.org/grpc v1.50.1 // indirect

@@ -6,10 +6,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
-func toVirtualMachineCreateRequest(d *schema.ResourceData) (*client.VirtualMachine, error) {
+func toVirtualMachineCreateRequest(d *schema.ResourceData) (*models.V1SpectroClusterVMCreateEntity, error) {
 	virtualMachine := &client.VirtualMachine{
 		APIVersion: "kubevirt.io/v1",
 		APIGroup:   "kubevirt.io",
