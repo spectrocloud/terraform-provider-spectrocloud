@@ -16,6 +16,10 @@ description: |-
 # data "spectrocloud_cluster_profile" "profile" {
 #   # id = <uid>
 #   name = var.cluster_cluster_profile_name
+#
+#   # Cluster profiles live either in a project or in a tenant
+#   # set context to either 'project' or 'tenant' (org), defaults to project
+#   # context = tenant
 # }
 
 # # Example of a Basic add-on profile
