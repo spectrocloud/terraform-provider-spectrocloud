@@ -19,9 +19,10 @@ func GetBindings(d *schema.ResourceData) []*models.V1ClusterRbacBinding {
 		return nil
 	}
 	for _, clusterRbac := range d.Get("cluster_rbac_binding").([]interface{}) {
-		copy(bindings, toClusterRBACBindings(clusterRbac))
+		for _, rbacBinding := range toClusterRBACBindings(clusterRbac) {
+			bindings = append(bindings, rbacBinding)
+		}
 	}
-
 	return bindings
 }
 
