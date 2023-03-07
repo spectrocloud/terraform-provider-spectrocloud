@@ -42,7 +42,7 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 	// Network
 	var vmNetworks []*models.V1VMNetwork
 	var networkName = new(string)
-	*networkName = d.Get("Network_name").(string)
+	*networkName = d.Get("network_name").(string)
 	vmNetworks = append(vmNetworks, &models.V1VMNetwork{
 		Name: networkName,
 	})
@@ -65,6 +65,7 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 		Name: cloudinitdisk,
 		CloudInitNoCloud: &models.V1VMCloudInitNoCloudSource{
 			UserDataBase64: "SGkuXG4=",
+			UserData:       d.Get("cloudinit_user_data").(string),
 		},
 	})
 
@@ -107,7 +108,7 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 					Chassis: nil,
 					Clock:   nil,
 					CPU: &models.V1VMCPU{
-						Cores: d.Get("CPU").(int64),
+						Cores: int64(d.Get("cpu_cores").(int)),
 					},
 					Devices: &models.V1VMDevices{
 						Disks:      vmdisks,
@@ -119,7 +120,7 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 					Resources: &models.V1VMResourceRequirements{
 						Requests: vmRequest{
 							memory: d.Get("memory").(string),
-							cpu:    d.Get("CPU").(int64),
+							cpu:    int64(d.Get("cpu_cores").(int)),
 						},
 					},
 				},
@@ -226,6 +227,11 @@ func resourceVirtualMachine() *schema.Resource {
 				Optional: true,
 				Default:  "quay.io/kubevirt/alpine-container-disk-demo",
 			},
+			"network_name": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "default",
+			},
 			"cloudinit_user_data": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -255,7 +261,7 @@ func resourceVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	return resourceVirtualMachineRead(ctx, d, m)
+	return nil // resourceVirtualMachineRead(ctx, d, m)
 }
 
 func getVMId(clusterUid string, namespace string) string {
@@ -270,7 +276,7 @@ func resourceVirtualMachineRead(ctx context.Context, d *schema.ResourceData, m i
 	namespace := d.Get("namespace").(string)
 
 	// Call the client's method to retrieve the virtual machine details
-	vm, err := c.GetVirtualMachine(getVMId(name, namespace))
+	vm, err := c.GetVirtualMachine(getVMId(name, namespace), "", "")
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -279,7 +285,7 @@ func resourceVirtualMachineRead(ctx context.Context, d *schema.ResourceData, m i
 	d.SetId(fmt.Sprintf("%s/%s", vm.Metadata.Namespace, vm.Metadata.Name))
 	d.Set("name", vm.Metadata.Name)
 	d.Set("namespace", vm.Metadata.Namespace)
-	d.Set("status", vm.Spec.Status)
+	d.Set("status", vm.Spec)
 	// Set the domain details
 	/*domain := vm.Spec.SpecTemplate.Domain
 	if domain != nil {
