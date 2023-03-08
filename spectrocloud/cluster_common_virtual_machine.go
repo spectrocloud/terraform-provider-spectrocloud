@@ -17,8 +17,35 @@ var resourceVirtualMachineCreatePendingStates = []string{
 	"Running",
 }
 
-func waitForVirtualMachine(ctx context.Context, d *schema.ResourceData, cluster_uid string, vm_uid string, diags diag.Diagnostics, c *client.V1Client, state string) (diag.Diagnostics, bool) {
-	cluster, err := c.GetCluster(cluster_uid)
+//func waitForVirtualMachine(ctx context.Context, d *schema.ResourceData, cluster_uid string, vm_uid string, diags diag.Diagnostics, c *client.V1Client, state string) (diag.Diagnostics, bool) {
+//	cluster, err := c.GetCluster(cluster_uid)
+//	if err != nil {
+//		return diags, true
+//	}
+//
+//	if _, found := cluster.Metadata.Labels["skip_vms"]; found {
+//		return diags, true
+//	}
+//
+//	stateConf := &resource.StateChangeConf{
+//		Pending:    resourceVirtualMachineCreatePendingStates,
+//		Target:     []string{"True"},
+//		Refresh:    resourceVirtualMachineStateRefreshFunc(c, cluster_uid, vm_uid),
+//		Timeout:    d.Timeout(state) - 1*time.Minute,
+//		MinTimeout: 10 * time.Second,
+//		Delay:      30 * time.Second,
+//	}
+//
+//	// Wait, catching any errors
+//	_, err = stateConf.WaitForStateContext(ctx)
+//	if err != nil {
+//		return diag.FromErr(err), true
+//	}
+//	return nil, false
+//}
+
+func waitForVirtualMachineToRunning(ctx context.Context, d *schema.ResourceData, clusterUid string, vmName string, namespace string, diags diag.Diagnostics, c *client.V1Client, state string) (diag.Diagnostics, bool) {
+	cluster, err := c.GetCluster(clusterUid)
 	if err != nil {
 		return diags, true
 	}
@@ -29,8 +56,8 @@ func waitForVirtualMachine(ctx context.Context, d *schema.ResourceData, cluster_
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    resourceVirtualMachineCreatePendingStates,
-		Target:     []string{"True"},
-		Refresh:    resourceVirtualMachineStateRefreshFunc(c, cluster_uid, vm_uid),
+		Target:     []string{"Running"},
+		Refresh:    resourceVirtualMachineStateRefreshFunc(c, clusterUid, vmName, namespace),
 		Timeout:    d.Timeout(state) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
@@ -44,33 +71,29 @@ func waitForVirtualMachine(ctx context.Context, d *schema.ResourceData, cluster_
 	return nil, false
 }
 
-func waitForVirtualMachineCreation(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
-	return waitForVirtualMachine(ctx, d, cluster_uid, profile_uid, diags, c, schema.TimeoutCreate)
-}
+//func waitForVirtualMachineCreation(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+//	return waitForVirtualMachine(ctx, d, cluster_uid, profile_uid, diags, c, schema.TimeoutCreate)
+//}
+//
+//func waitForVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+//	return waitForVirtualMachine(ctx, d, cluster_uid, profile_uid, diags, c, schema.TimeoutUpdate)
+//}
 
-func waitForVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
-	return waitForVirtualMachine(ctx, d, cluster_uid, profile_uid, diags, c, schema.TimeoutUpdate)
-}
-
-func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, cluster_uid string, vm_uid string) resource.StateRefreshFunc {
+func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid string, vmName string, vmNamespace string) resource.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetCluster(cluster_uid)
+		//cluster, err := c.GetCluster(clusterUid)
+		//if err != nil {
+		//	return nil, "", err
+		//} else if cluster == nil {
+		//	return nil, "Deleted", nil
+		//}
+		vm, err := c.GetVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
 			return nil, "", err
-		} else if cluster == nil {
+		} else if vm == nil {
 			return nil, "Deleted", nil
 		}
 
-		//TODO: wait for nodes to be ready
-
-		return cluster, "True", nil
+		return vm, vm.Status.PrintableStatus, nil
 	}
-}
-
-// TODO: implement it.
-func resourceVirtualMachineDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
-	var diags diag.Diagnostics
-
-	return diags
 }
