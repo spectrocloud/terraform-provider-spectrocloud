@@ -2,10 +2,10 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"strings"
@@ -22,11 +22,22 @@ func resourceVirtualMachine() *schema.Resource {
 			"cluster_uid": {
 				Type:     schema.TypeString,
 				Required: true,
-				//ForceNew: true,
+				ForceNew: true,
+			},
+			"clone_name": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
 			},
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
+			},
+			"namespace": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
 			},
 			"labels": {
 				Type:     schema.TypeSet,
@@ -43,16 +54,11 @@ func resourceVirtualMachine() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"namespace": {
-				Type:     schema.TypeString,
-				Required: true,
-				//ForceNew: true,
-			},
 			"vm_action": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "Running",
-				ValidateFunc: validation.StringInSlice([]string{"start", "stop", "restart", "pause", "clone", "resume", "migrate", ""}, false),
+				ValidateFunc: validation.StringInSlice([]string{"start", "stop", "restart", "pause", "resume", "migrate", ""}, false),
 			},
 			"vm_state": {
 				Type:     schema.TypeString,
@@ -77,28 +83,44 @@ func resourceVirtualMachine() *schema.Resource {
 			"image_url": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"volume"},
-			},
-			"network": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
+				ConflictsWith: []string{"volume_spec"},
 			},
 			"cloud_init_user_data": {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Default:       "\n#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n",
-				ConflictsWith: []string{"volume"},
+				ConflictsWith: []string{"volume_spec"},
 			},
 			"devices": schemas.VMDeviceSchema(),
-			"volume":  schemas.VMVolumeSchema(),
+			"volume_spec": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"volume": schemas.VMVolumeSchema(),
+					},
+				},
+			},
+			"network_spec": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"network": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -113,24 +135,40 @@ func resourceVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if err != nil && cluster == nil {
-		return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
-	}
-	virtualMachine, err := toVirtualMachineCreateRequest(d)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	vm, err := c.CreateVirtualMachine(cluster.Metadata.UID, virtualMachine)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	d.SetId(vm.Metadata.Name)
-	if d.Get("run_on_launch").(bool) {
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, d.Get("cluster_uid").(string), d.Get("name").(string), d.Get("namespace").(string), diags, c, "create", "Running")
-		if diags.HasError() {
-			return diags
+	var vm *models.V1ClusterVirtualMachine
+	if cloneFromVM, ok := d.GetOk("clone_name"); ok && cloneFromVM != "" {
+		name := d.Get("name").(string)
+		nameSpace := d.Get("namespace").(string)
+		err := c.CloneVirtualMachine(clusterUid, cloneFromVM.(string), name, nameSpace)
+		if err != nil {
+			return diag.FromErr(err)
 		}
+		vm, err = c.GetVirtualMachine(clusterUid, name, nameSpace)
+		if d.Get("run_on_launch").(bool) {
+			diags = resourceVirtualMachineActions(c, ctx, d, "start", clusterUid, name, nameSpace)
+			if diags.HasError() {
+				return diags
+			}
+		}
+		d.SetId(name)
+	} else {
+		virtualMachine, err := toVirtualMachineCreateRequest(d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		vm, err = c.CreateVirtualMachine(cluster.Metadata.UID, virtualMachine)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if d.Get("run_on_launch").(bool) {
+			diags, _ = waitForVirtualMachineToTargetState(ctx, d, d.Get("cluster_uid").(string), d.Get("name").(string), d.Get("namespace").(string), diags, c, "create", "Running")
+			if diags.HasError() {
+				return diags
+			}
+		}
+		d.SetId(vm.Metadata.Name)
 	}
+
 	resourceVirtualMachineRead(ctx, d, m)
 	return diags
 }
@@ -184,16 +222,18 @@ func resourceVirtualMachineRead(ctx context.Context, d *schema.ResourceData, m i
 	}
 	d.Set("vm_state", vm.Status.PrintableStatus)
 	// setting back network
-	if _, ok := d.GetOk("network"); ok && vm.Spec.Template.Spec.Networks != nil {
+	if _, ok := d.GetOk("network_spec"); ok && vm.Spec.Template.Spec.Networks != nil {
 		d.Set("network", flattenVMNetwork(vm.Spec.Template.Spec.Networks))
 	}
 
 	// setting back volume
-	if _, ok := d.GetOk("volume"); ok && vm.Spec.Template.Spec.Volumes != nil {
+	if _, ok := d.GetOk("volume_spec"); ok && vm.Spec.Template.Spec.Volumes != nil {
 		d.Set("volume", flattenVMVolumes(vm.Spec.Template.Spec.Volumes))
 	}
 	// setting back devices
-	d.Set("devices", flattenVMDevices(d, domain.Devices))
+	if _, ok := d.GetOk("devices"); ok && domain.Devices != nil {
+		d.Set("devices", flattenVMDevices(d, domain.Devices))
+	}
 
 	return diags
 }
@@ -213,7 +253,7 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	needUpdate, updatedVmModel, err := toVirtualMachineUpdateRequest(d, vm)
+	needUpdate, needRestart, updatedVmModel, err := toVirtualMachineUpdateRequest(d, vm)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -223,6 +263,10 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 		if err != nil {
 			return diag.FromErr(err)
 		}
+	}
+	if needRestart {
+		stateToChange := "restart"
+		resourceVirtualMachineActions(c, ctx, d, stateToChange, clusterUid, vmName, vmNamespace)
 	}
 	if _, ok := d.GetOk("vm_action"); ok && d.HasChange("vm_action") {
 		stateToChange := d.Get("vm_action").(string)
@@ -235,11 +279,11 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *schema.ResourceData, stateToChange string, clusterUid string, vmName string, vmNamespace string) diag.Diagnostics {
 	var diags diag.Diagnostics
 	// need to add validation status and allowed actions
-	// Stopped  - start,clone
-	// Paused - restart, resume, clone
-	// Running - stop ,restart,pause,clone, migrate
+	// Stopped  - start
+	// Paused - restart, resume
+	// Running - stop ,restart,pause, migrate
 	switch strings.ToLower(stateToChange) {
-	//"start", "stop", "restart", "pause", "clone", "resume", "migrate"
+	//"start", "stop", "restart", "pause", "resume", "migrate"
 	case "start":
 		err := c.StartVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
@@ -279,8 +323,6 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 		if diags.HasError() {
 			return diags
 		}
-		break
-	case "clone":
 		break
 	case "resume":
 		err := c.ResumeVirtualMachine(clusterUid, vmName, vmNamespace)

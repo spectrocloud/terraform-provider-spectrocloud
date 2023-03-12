@@ -13,7 +13,6 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
-// fix as needed with real statuses
 var resourceVirtualMachineCreatePendingStates = []string{
 	"Stopped",
 	"Starting",
@@ -138,7 +137,7 @@ func prepareDevices(d *schema.ResourceData) ([]*models.V1VMDisk, []*models.V1VMI
 	}
 }
 
-func prepareDefaultVolume(d *schema.ResourceData) []*models.V1VMVolume {
+func prepareDefaultVolumeSpec(d *schema.ResourceData) []*models.V1VMVolume {
 	//VM Volume
 	var vmVolumes []*models.V1VMVolume
 	var vmImage = new(string)
@@ -163,15 +162,15 @@ func prepareDefaultVolume(d *schema.ResourceData) []*models.V1VMVolume {
 	return vmVolumes
 }
 
-func prepareVolume(d *schema.ResourceData) []*models.V1VMVolume {
-	if volumes, ok := d.GetOk("volume"); ok {
+func prepareVolumeSpec(d *schema.ResourceData) []*models.V1VMVolume {
+	if volumesSpec, ok := d.GetOk("volume_spec"); ok {
 		var vmVolumes []*models.V1VMVolume
+		volumes := volumesSpec.(*schema.Set).List()[0].(map[string]interface{})["volume"]
 		for _, vol := range volumes.([]interface{}) {
 			v := vol.(map[string]interface{})
 			cDisk := v["container_disk"].(*schema.Set).List()
 			cInit := v["cloud_init_no_cloud"].(*schema.Set).List()
 			if len(cDisk) > 0 {
-				//var vmDiskName = new(string)
 				vmDiskName := v["name"].(string)
 				var vmImg = new(string)
 				*vmImg = cDisk[0].(map[string]interface{})["image_url"].(string)
@@ -196,11 +195,11 @@ func prepareVolume(d *schema.ResourceData) []*models.V1VMVolume {
 		}
 		return vmVolumes
 	} else {
-		return prepareDefaultVolume(d)
+		return prepareDefaultVolumeSpec(d)
 	}
 }
 
-func prepareDefaultNetwork() []*models.V1VMNetwork {
+func prepareDefaultNetworkSpec() []*models.V1VMNetwork {
 	var vmNetworks []*models.V1VMNetwork
 	var networkName = new(string)
 	*networkName = "default" // d.Get("network").(map[string]interface{})["name"].(string)
@@ -211,11 +210,12 @@ func prepareDefaultNetwork() []*models.V1VMNetwork {
 	return vmNetworks
 }
 
-func prepareNetwork(d *schema.ResourceData) []*models.V1VMNetwork {
-	if network, ok := d.GetOk("network"); ok {
+func prepareNetworkSpec(d *schema.ResourceData) []*models.V1VMNetwork {
+	if network, ok := d.GetOk("network_spec"); ok {
 		var vmNetworks []*models.V1VMNetwork
 		var networkName = new(string)
-		for _, n := range network.([]interface{}) {
+		networkSpec := network.(*schema.Set).List()[0].(map[string]interface{})["network"]
+		for _, n := range networkSpec.([]interface{}) {
 			*networkName = n.(map[string]interface{})["name"].(string)
 			vmNetworks = append(vmNetworks, &models.V1VMNetwork{
 				Name: networkName,
@@ -224,7 +224,7 @@ func prepareNetwork(d *schema.ResourceData) []*models.V1VMNetwork {
 		}
 		return vmNetworks
 	} else {
-		return prepareDefaultNetwork()
+		return prepareDefaultNetworkSpec()
 	}
 }
 
@@ -240,18 +240,6 @@ func toVMLabels(d *schema.ResourceData) map[string]string {
 			}
 		}
 		return labels
-	} else {
-		return nil
-	}
-}
-
-func toVMAnnotations(d *schema.ResourceData) map[string]string {
-	annotation := make(map[string]string)
-	if _, ok := d.GetOk("annotations"); ok {
-		for k, a := range d.Get("annotations").(map[string]interface{}) {
-			annotation[k] = a.(string)
-		}
-		return annotation
 	} else {
 		return nil
 	}
@@ -290,17 +278,20 @@ func flattenVMLabels(labels map[string]string) []interface{} {
 }
 
 func flattenVMNetwork(network []*models.V1VMNetwork) []interface{} {
-	var net []interface{}
+	var netSpec []interface{}
+	var networks []interface{}
 	for _, n := range network {
-		net = append(net, map[string]interface{}{
+		networks = append(networks, map[string]interface{}{
 			"name": n.Name,
 		})
 	}
-	return net
+	netSpec = append(netSpec, networks)
+	return netSpec
 }
 
 func flattenVMVolumes(volumes []*models.V1VMVolume) []interface{} {
 	vol := make([]interface{}, 0)
+	var volSpec []interface{}
 	for _, v := range volumes {
 		if v.ContainerDisk != nil {
 			vol = append(vol, map[string]interface{}{
@@ -319,7 +310,8 @@ func flattenVMVolumes(volumes []*models.V1VMVolume) []interface{} {
 			})
 		}
 	}
-	return vol
+	volSpec = append(volSpec, vol)
+	return volSpec
 }
 
 func flattenVMDevices(d *schema.ResourceData, vmDevices *models.V1VMDevices) []interface{} {
@@ -375,9 +367,11 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 	var vmNetworks []*models.V1VMNetwork
 
 	//Handling Network
-	vmNetworks = prepareNetwork(d)
+	vmNetworks = prepareNetworkSpec(d)
+
 	// Handling Volume
-	vmVolumes = prepareVolume(d)
+	vmVolumes = prepareVolumeSpec(d)
+
 	// Handling Disk
 	vmDisks, vmInterfaces = prepareDevices(d)
 
@@ -404,36 +398,90 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 			},
 		},
 	}
+	if d.Get("run_on_launch").(bool) == false {
+		vmSpec.RunStrategy = "Manual"
+	}
 	return vmSpec
 }
 
-func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterVirtualMachine) (bool, *models.V1ClusterVirtualMachine, error) {
+func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterVirtualMachine) (bool, bool, *models.V1ClusterVirtualMachine, error) {
 	requireUpdate := false
-	if d.HasChange("name") {
-		vm.Metadata.Name = d.Get("name").(string)
-		requireUpdate = true
-	}
-	if d.HasChange("namespace") {
-		vm.Metadata.Namespace = d.Get("namespace").(string)
-		requireUpdate = true
-	}
+	needRestart := false
 	if d.HasChange("cpu_cores") {
 		vm.Spec.Template.Spec.Domain.CPU.Cores = int64(d.Get("cpu_cores").(int))
 		requireUpdate = true
+		needRestart = true
 	}
 	if d.HasChange("memory") {
 		vm.Spec.Template.Spec.Domain.Resources.Requests = map[string]interface{}{
 			"memory": d.Get("memory").(string),
 		}
 		requireUpdate = true
+		needRestart = true
 	}
 	if _, ok := d.GetOk("image_url"); ok && d.HasChange("image_url") {
 		vm.Metadata.Namespace = d.Get("namespace").(string)
 		requireUpdate = true
+		needRestart = true
+	}
+	if _, ok := d.GetOk("labels"); ok && d.HasChange("labels") {
+		vm.Metadata.Labels = toVMLabels(d)
+		requireUpdate = true
+	}
+	if _, ok := d.GetOk("annotations"); ok && d.HasChange("annotations") {
+		vm.Metadata.Annotations = toVMUpdateAnnotations(vm.Metadata.Annotations, d)
+		requireUpdate = true
+	}
+	if _, ok := d.GetOk("volume_spec"); ok && d.HasChange("volume_spec") {
+		vm.Spec.Template.Spec.Volumes = prepareVolumeSpec(d)
+		requireUpdate = true
+		needRestart = true
+	}
+	if _, ok := d.GetOk("network_spec"); ok && d.HasChange("network_spec") {
+		vm.Spec.Template.Spec.Networks = prepareNetworkSpec(d)
+		requireUpdate = true
+		needRestart = true
+	}
+	if _, ok := d.GetOk("devices"); ok && d.HasChange("devices") {
+		vm.Spec.Template.Spec.Domain.Devices.Disks, vm.Spec.Template.Spec.Domain.Devices.Interfaces = prepareDevices(d)
+		requireUpdate = true
+		needRestart = true
+	}
+	if run, ok := d.GetOk("run_on_launch"); ok && d.HasChange("run_on_launch") {
+		vm.Spec.Running = run.(bool)
+		if run.(bool) == true {
+			vm.Spec.RunStrategy = ""
+		} else {
+			vm.Spec.RunStrategy = "Manual"
+		}
+
 	}
 
 	// There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
 	vm.Spec.Template.Metadata.DeletionTimestamp = nil
 	vm.Metadata.DeletionTimestamp = nil
-	return requireUpdate, vm, nil
+	return requireUpdate, needRestart, vm, nil
+}
+
+func toVMAnnotations(d *schema.ResourceData) map[string]string {
+	annotation := make(map[string]string)
+	if _, ok := d.GetOk("annotations"); ok {
+		for k, a := range d.Get("annotations").(map[string]interface{}) {
+			annotation[k] = a.(string)
+		}
+		return annotation
+	} else {
+		return nil
+	}
+}
+
+func toVMUpdateAnnotations(existingAnnotation map[string]string, d *schema.ResourceData) map[string]string {
+	if _, ok := d.GetOk("annotations"); ok {
+		for k, a := range d.Get("annotations").(map[string]interface{}) {
+			existingAnnotation[k] = a.(string)
+		}
+		return existingAnnotation
+	} else {
+		return nil
+	}
 }
