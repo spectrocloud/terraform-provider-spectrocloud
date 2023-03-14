@@ -101,6 +101,7 @@ func TestResourceClusterGroupCreate(t *testing.T) {
 
 func TestResourceClusterGroupDelete(t *testing.T) {
 	testUid := "unit_test_uid"
+	testscope := "project"
 	m := &client.V1Client{
 		DeleteClusterGroupFn: func(uid string) error {
 			if uid != testUid {
@@ -109,7 +110,7 @@ func TestResourceClusterGroupDelete(t *testing.T) {
 			return nil
 		},
 	}
-	e := m.DeleteClusterGroup(testUid)
+	e := m.DeleteClusterGroup(testUid, testscope)
 	if e != nil {
 		t.Errorf("Expectred nil, got %s", e)
 	}
