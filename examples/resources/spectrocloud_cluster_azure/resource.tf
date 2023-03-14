@@ -1,9 +1,9 @@
 data "spectrocloud_cluster_profile" "profile" {
-  name = "tf-js-azure-profile"
+  name = "tf-js13-azure-profile"
 }
 
 data "spectrocloud_cloudaccount_azure" "account" {
-  name = "acc-azure-ca"
+  name = "jayesh-azure-ca"
 }
 
 resource "spectrocloud_cluster_azure" "cluster" {
@@ -36,7 +36,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
   machine_pool {
     is_system_node_pool = true
     name                = "worker-basic"
-    count               = 1
+    count               = 2
     instance_type       = "Standard_D2_v3"
     azs                 = []
   }
