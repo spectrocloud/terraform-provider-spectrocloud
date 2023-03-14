@@ -119,8 +119,9 @@ func resourceClusterGroupCreate(ctx context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 
 	cluster := toClusterGroup(d)
+	scope := d.Get("context").(string)
 
-	uid, err := c.CreateClusterGroup(cluster)
+	uid, err := c.CreateClusterGroup(cluster, scope)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -139,8 +140,9 @@ func resourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m inter
 	var diags diag.Diagnostics
 	//
 	uid := d.Id()
+	scope := d.Get("context").(string)
 	//
-	clusterGroup, err := c.GetClusterGroup(uid)
+	clusterGroup, err := c.GetClusterGroup(uid, scope)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if clusterGroup == nil {
@@ -228,11 +230,11 @@ func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m i
 		cg := toClusterGroup(d)
 		return diag.FromErr(c.UpdateClusterGroupFn(cg.Metadata.UID, toClusterGroupUpdate(cg)))
 	}
-
+	scope := d.Get("context").(string)
 	// if there are changes in the name of  cluster group, update it using UpdateClusterGroupMeta()
 	if d.HasChanges("name", "tags") {
 		clusterGroup := toClusterGroup(d)
-		err := c.UpdateClusterGroupMeta(clusterGroup)
+		err := c.UpdateClusterGroupMeta(clusterGroup, scope)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -240,7 +242,7 @@ func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m i
 	if d.HasChanges("config", "clusters") {
 		clusterGroup := toClusterGroup(d)
 
-		err := c.UpdateClusterGroup(clusterGroup.Metadata.UID, toClusterGroupUpdate(clusterGroup))
+		err := c.UpdateClusterGroup(clusterGroup.Metadata.UID, toClusterGroupUpdate(clusterGroup), scope)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -354,8 +356,8 @@ func resourceClusterGroupDelete(ctx context.Context, d *schema.ResourceData, m i
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-
-	err := c.DeleteClusterGroup(d.Id())
+	scope := d.Get("context").(string)
+	err := c.DeleteClusterGroup(d.Id(), scope)
 	if err != nil {
 		return diag.FromErr(err)
 	}
