@@ -531,7 +531,7 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 
 func validateMasterPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {
 	for _, machineConfig := range machinePool {
-		if machineConfig.PoolConfig.IsControlPlane == true {
+		if machineConfig.PoolConfig.IsControlPlane {
 			if *machineConfig.PoolConfig.Size%2 == 0 {
 				return diag.FromErr(fmt.Errorf("The master node pool size should be in an odd number. But it set to an even number '%d' in node name '%s' ", *machineConfig.PoolConfig.Size, *machineConfig.PoolConfig.Name))
 			}
