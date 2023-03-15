@@ -27,6 +27,7 @@ func VMVolumeSchema() *schema.Schema {
 							"image_url": {
 								Type:        schema.TypeString,
 								Required:    true,
+								ForceNew:    true,
 								Description: "The URL of the container image to use as the disk. This can be a local file path, a remote URL, or a registry URL.",
 							},
 						},

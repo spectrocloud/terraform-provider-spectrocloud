@@ -65,8 +65,7 @@ func resourceVirtualMachine() *schema.Resource {
 			"vm_action": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Default:      "start",
-				ValidateFunc: validation.StringInSlice([]string{"start", "stop", "restart", "pause", "resume", "migrate"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"", "start", "stop", "restart", "pause", "resume", "migrate"}, false),
 				Description:  "The action to be performed on the virtual machine. Valid values are: `start`, `stop`, `restart`, `pause`, `resume`, `migrate`. Default value is `start`.",
 			},
 			"vm_state": {
@@ -78,7 +77,6 @@ func resourceVirtualMachine() *schema.Resource {
 			"cpu_cores": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     1,
 				Description: "The number of CPU cores to be allocated to the virtual machine. Default value is `1`.",
 			},
 			"run_on_launch": {
@@ -90,11 +88,11 @@ func resourceVirtualMachine() *schema.Resource {
 			"memory": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Default:     "2G",
 				Description: "The amount of memory to be allocated to the virtual machine. Default value is `2G`.",
 			},
 			"image_url": {
 				Type:          schema.TypeString,
+				ForceNew:      true,
 				Optional:      true,
 				ConflictsWith: []string{"volume_spec"},
 				Description:   "The URL of the image(template) to be used for the virtual machine.",
@@ -220,11 +218,12 @@ func resourceVirtualMachineRead(ctx context.Context, d *schema.ResourceData, m i
 
 	domain := vm.Spec.Template.Spec.Domain
 	volume := vm.Spec.Template.Spec.Volumes
-	if domain.CPU != nil {
+
+	if _, ok := d.GetOk("cpu_cores"); ok && domain.CPU != nil {
 		d.Set("cpu_cores", domain.CPU.Cores)
 	}
 	if domain.Resources != nil {
-		if domain.Resources.Requests != nil {
+		if _, ok := d.GetOk("memory"); ok && domain.Resources.Requests != nil {
 			if memory := domain.Resources.Requests.(map[string]interface{})["memory"]; memory != nil && memory != "" {
 				d.Set("memory", memory.(string))
 			}
@@ -380,6 +379,10 @@ func resourceVirtualMachineDelete(ctx context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 
 	err := c.DeleteVirtualMachine(d.Get("cluster_uid").(string), d.Get("name").(string), d.Get("namespace").(string))
+	diags, _ = waitForVirtualMachineToTargetState(ctx, d, d.Get("cluster_uid").(string), d.Get("name").(string), d.Get("namespace").(string), diags, c, "delete", "Deleted")
+	if diags.HasError() {
+		return diags
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}

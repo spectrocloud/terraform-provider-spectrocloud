@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 	"strings"
 	"time"
@@ -25,6 +26,9 @@ var resourceVirtualMachineCreatePendingStates = []string{
 	"Pausing",
 	// Migration
 	"Migrating",
+	//Deleting VM
+	"Terminating",
+	"Deleted",
 }
 
 func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceData, clusterUid string, vmName string, namespace string, diags diag.Diagnostics, c *client.V1Client, state string, targetState string) (diag.Diagnostics, bool) {
@@ -64,11 +68,13 @@ func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid strin
 		//}
 		vm, err := c.GetVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
-			return nil, "", err
-		} else if vm == nil {
-			return nil, "Deleted", nil
+			if err.(*transport.TransportError).HttpCode == 500 && strings.Contains(err.(*transport.TransportError).Payload.Message, fmt.Sprintf("Failed to get virtual machine '%s'", vmName)) {
+				emptyVM := &models.V1ClusterVirtualMachine{}
+				return emptyVM, "Deleted", nil
+			} else {
+				return nil, "", err
+			}
 		}
-
 		return vm, vm.Status.PrintableStatus, nil
 	}
 }
@@ -264,11 +270,11 @@ func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterV
 		requireUpdate = true
 		needRestart = true
 	}
-	if _, ok := d.GetOk("image_url"); ok && d.HasChange("image_url") {
-		vm.Metadata.Namespace = d.Get("namespace").(string)
-		requireUpdate = true
-		needRestart = true
-	}
+	//if _, ok := d.GetOk("image_url"); ok && d.HasChange("image_url") {
+	//	vm.Metadata.Namespace = d.Get("namespace").(string)
+	//	requireUpdate = true
+	//	needRestart = true
+	//}
 	if _, ok := d.GetOk("labels"); ok && d.HasChange("labels") {
 		vm.Metadata.Labels = toVMLabels(d)
 		requireUpdate = true

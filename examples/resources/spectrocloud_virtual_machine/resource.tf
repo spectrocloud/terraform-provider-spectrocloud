@@ -1,5 +1,5 @@
 data "spectrocloud_cluster" "vm-enabled-cluster" {
-  name = "newyork"
+  name = "chicago"
   context = "tenant"
 }
 
@@ -15,6 +15,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-default" {
     tf : "true",
     owner: "siva1",
   }
+  vm_action = "resume"
 }
 
 resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
