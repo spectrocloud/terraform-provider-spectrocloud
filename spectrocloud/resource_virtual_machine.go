@@ -27,7 +27,7 @@ func resourceVirtualMachine() *schema.Resource {
 				ForceNew:    true,
 				Description: "The cluster UID to which the virtual machine belongs to.",
 			},
-			"clone_name": {
+			"base_vm_name": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
@@ -154,7 +154,8 @@ func resourceVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 	var vm *models.V1ClusterVirtualMachine
-	if cloneFromVM, ok := d.GetOk("clone_name"); ok && cloneFromVM != "" {
+	if cloneFromVM, ok := d.GetOk("base_vm_name"); ok && cloneFromVM != "" {
+		// Handling clone case
 		name := d.Get("name").(string)
 		nameSpace := d.Get("namespace").(string)
 		err := c.CloneVirtualMachine(clusterUid, cloneFromVM.(string), name, nameSpace)

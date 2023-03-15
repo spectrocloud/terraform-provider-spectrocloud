@@ -19,10 +19,9 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-default" {
 
 resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
   cluster_uid = data.spectrocloud_cluster.vm-enabled-cluster.id
-  clone_name = spectrocloud_virtual_machine.tf-test-vm-default.name
+  base_vm_name = spectrocloud_virtual_machine.tf-test-vm-default.name
   name = "tf-test-vm-clone-default"
   namespace = "default"
-  depends_on = [spectrocloud_virtual_machine.tf-test-vm-default]
 }
 
 resource "spectrocloud_virtual_machine" "tf-test-vm-custom" {
