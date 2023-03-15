@@ -2,13 +2,15 @@ package spectrocloud
 
 import (
 	"context"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"strings"
 )
 
 func resourceVirtualMachine() *schema.Resource {
@@ -20,24 +22,28 @@ func resourceVirtualMachine() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"cluster_uid": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The cluster UID to which the virtual machine belongs to.",
 			},
 			"clone_name": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "The name of the virtual machine to be cloned.",
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the virtual machine.",
 			},
 			"namespace": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The namespace of the virtual machine.",
 			},
 			"labels": {
 				Type:     schema.TypeSet,
@@ -46,6 +52,7 @@ func resourceVirtualMachine() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "The labels of the virtual machine.",
 			},
 			"annotations": {
 				Type:     schema.TypeMap,
@@ -53,43 +60,51 @@ func resourceVirtualMachine() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "The annotations of the virtual machine.",
 			},
 			"vm_action": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Default:      "Running",
-				ValidateFunc: validation.StringInSlice([]string{"start", "stop", "restart", "pause", "resume", "migrate", ""}, false),
+				Default:      "start",
+				ValidateFunc: validation.StringInSlice([]string{"start", "stop", "restart", "pause", "resume", "migrate"}, false),
+				Description:  "The action to be performed on the virtual machine. Valid values are: `start`, `stop`, `restart`, `pause`, `resume`, `migrate`. Default value is `start`.",
 			},
 			"vm_state": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "The state of the virtual machine. Some of possible values are: `running`, `stopped`, `paused`, `migrating`, `error`, `unknown`.",
 			},
 			"cpu_cores": {
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  1,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     1,
+				Description: "The number of CPU cores to be allocated to the virtual machine. Default value is `1`.",
 			},
 			"run_on_launch": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "If set to `true`, the virtual machine will be started when the cluster is launched. Default value is `true`.",
 			},
 			"memory": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "2G",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "2G",
+				Description: "The amount of memory to be allocated to the virtual machine. Default value is `2G`.",
 			},
 			"image_url": {
 				Type:          schema.TypeString,
 				Optional:      true,
 				ConflictsWith: []string{"volume_spec"},
+				Description:   "The URL of the image(template) to be used for the virtual machine.",
 			},
 			"cloud_init_user_data": {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Default:       "\n#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n",
 				ConflictsWith: []string{"volume_spec"},
+				Description:   "The cloud-init user data to be used for the virtual machine. Default value is `#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n`.",
 			},
 			"devices": schemas.VMDeviceSchema(),
 			"volume_spec": {
@@ -100,6 +115,7 @@ func resourceVirtualMachine() *schema.Resource {
 						"volume": schemas.VMVolumeSchema(),
 					},
 				},
+				Description: "Volume specification for the virtual machine.",
 			},
 			"network_spec": {
 				Type:     schema.TypeSet,
@@ -112,11 +128,13 @@ func resourceVirtualMachine() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"name": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the network to be attached to the virtual machine.",
 									},
 								},
 							},
+							Description: "Network specification for the virtual machine.",
 						},
 					},
 				},

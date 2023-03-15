@@ -3,8 +3,9 @@ package schemas
 import (
 	"bytes"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"hash/fnv"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func VMVolumeSchema() *schema.Schema {
@@ -24,11 +25,13 @@ func VMVolumeSchema() *schema.Schema {
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
 							"image_url": {
-								Type:     schema.TypeString,
-								Required: true,
+								Type:        schema.TypeString,
+								Required:    true,
+								Description: "The URL of the container image to use as the disk. This can be a local file path, a remote URL, or a registry URL.",
 							},
 						},
 					},
+					Description: "A container disk is a disk that is backed by a container image. The container image is expected to contain a disk image in a supported format. The disk image is extracted from the container image and used as the disk for the VM.",
 				},
 				"cloud_init_no_cloud": {
 					Type:     schema.TypeSet,
@@ -37,11 +40,13 @@ func VMVolumeSchema() *schema.Schema {
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
 							"user_data": {
-								Type:     schema.TypeString,
-								Required: true,
+								Type:        schema.TypeString,
+								Required:    true,
+								Description: "The user data to use for the cloud-init no cloud disk. This can be a local file path, a remote URL, or a registry URL.",
 							},
 						},
 					},
+					Description: "A cloud-init no cloud disk is a disk that is backed by a cloud-init no cloud image. The cloud-init no cloud image is expected to contain a disk image in a supported format. The disk image is extracted from the cloud-init no cloud image and used as the disk for the VM.",
 				},
 			},
 		},
