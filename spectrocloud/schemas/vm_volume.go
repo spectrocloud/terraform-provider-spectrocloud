@@ -47,7 +47,7 @@ func VMVolumeSchema() *schema.Schema {
 							},
 						},
 					},
-					Description: "A cloud-init no cloud disk is a disk that is backed by a cloud-init no cloud image. The cloud-init no cloud image is expected to contain a disk image in a supported format. The disk image is extracted from the cloud-init no cloud image and used as the disk for the VM.",
+					Description: "Used to specify a cloud-init `noCloud` image. The image is expected to contain a disk image in a supported format. The disk image is extracted from the cloud-init `noCloud `image and used as the disk for the VM",
 				},
 			},
 		},
