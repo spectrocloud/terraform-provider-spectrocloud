@@ -19,7 +19,7 @@ func resourceVirtualMachine() *schema.Resource {
 		ReadContext:   resourceVirtualMachineRead,
 		UpdateContext: resourceVirtualMachineUpdate,
 		DeleteContext: resourceVirtualMachineDelete,
-		Description: "A resource to manage Virtual Machines (VM) through Palette.",
+		Description:   "A resource to manage Virtual Machines (VM) through Palette.",
 
 		Schema: map[string]*schema.Schema{
 			"cluster_uid": {
@@ -206,27 +206,39 @@ func resourceVirtualMachineRead(ctx context.Context, d *schema.ResourceData, m i
 
 	// Update the resource data with the retrieved virtual machine metadata details
 	d.SetId(vm.Metadata.Name)
-	d.Set("name", vm.Metadata.Name)
-	d.Set("namespace", vm.Metadata.Namespace)
+	if err := d.Set("name", vm.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("namespace", vm.Metadata.Namespace); err != nil {
+		return diag.FromErr(err)
+	}
 
 	if _, ok := d.GetOk("labels"); ok {
-		d.Set("labels", flattenVMLabels(vm.Metadata.Labels))
+		if err := d.Set("labels", flattenVMLabels(vm.Metadata.Labels)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if _, ok := d.GetOk("annotations"); ok {
-		d.Set("annotations", flattenVMAnnotations(vm.Metadata.Annotations, d))
+		if err := d.Set("annotations", flattenVMAnnotations(vm.Metadata.Annotations, d)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	domain := vm.Spec.Template.Spec.Domain
 	volume := vm.Spec.Template.Spec.Volumes
 
 	if _, ok := d.GetOk("cpu_cores"); ok && domain.CPU != nil {
-		d.Set("cpu_cores", domain.CPU.Cores)
+		if err := d.Set("cpu_cores", domain.CPU.Cores); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	if domain.Resources != nil {
 		if _, ok := d.GetOk("memory"); ok && domain.Resources.Requests != nil {
 			if memory := domain.Resources.Requests.(map[string]interface{})["memory"]; memory != nil && memory != "" {
-				d.Set("memory", memory.(string))
+				if err := d.Set("memory", memory.(string)); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 	}
@@ -234,7 +246,9 @@ func resourceVirtualMachineRead(ctx context.Context, d *schema.ResourceData, m i
 		if _, volOk := d.GetOk("volume"); !volOk {
 			for _, v := range volume {
 				if v.ContainerDisk != nil {
-					d.Set("image_url", v.ContainerDisk.Image)
+					if err := d.Set("image_url", v.ContainerDisk.Image); err != nil {
+						return diag.FromErr(err)
+					}
 				}
 			}
 		}
@@ -242,16 +256,21 @@ func resourceVirtualMachineRead(ctx context.Context, d *schema.ResourceData, m i
 	d.Set("vm_state", vm.Status.PrintableStatus)
 	// setting back network
 	if _, ok := d.GetOk("network_spec"); ok && vm.Spec.Template.Spec.Networks != nil {
-		d.Set("network", flattenVMNetwork(vm.Spec.Template.Spec.Networks))
+		if err := d.Set("network_spec", flattenVMNetwork(vm.Spec.Template.Spec.Networks)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
-
 	// setting back volume
 	if _, ok := d.GetOk("volume_spec"); ok && vm.Spec.Template.Spec.Volumes != nil {
-		d.Set("volume", flattenVMVolumes(vm.Spec.Template.Spec.Volumes))
+		if err := d.Set("volume_spec", flattenVMVolumes(vm.Spec.Template.Spec.Volumes)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	// setting back devices
 	if _, ok := d.GetOk("devices"); ok && domain.Devices != nil {
-		d.Set("devices", flattenVMDevices(d, domain.Devices))
+		if err := d.Set("devices", flattenVMDevices(d, domain.Devices)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return diags
@@ -312,7 +331,6 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 		if diags.HasError() {
 			return diags
 		}
-		break
 	case "stop":
 		err := c.StopVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
@@ -322,7 +340,6 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 		if diags.HasError() {
 			return diags
 		}
-		break
 	case "restart":
 		err := c.RestartVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
@@ -332,7 +349,6 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 		if diags.HasError() {
 			return diags
 		}
-		break
 	case "pause":
 		err := c.PauseVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
@@ -342,7 +358,6 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 		if diags.HasError() {
 			return diags
 		}
-		break
 	case "resume":
 		err := c.ResumeVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
@@ -352,7 +367,6 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 		if diags.HasError() {
 			return diags
 		}
-		break
 	case "migrate":
 		err := c.MigrateVirtualMachineNodeToNode(clusterUid, vmName, vmNamespace)
 		if err != nil {
@@ -362,7 +376,6 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 		if diags.HasError() {
 			return diags
 		}
-		break
 	}
 	vm, err := c.GetVirtualMachine(clusterUid, vmName, vmNamespace)
 	if err != nil {

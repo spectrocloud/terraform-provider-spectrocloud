@@ -128,24 +128,27 @@ func flattenVMLabels(labels map[string]string) []interface{} {
 	}
 }
 
-func flattenVMNetwork(network []*models.V1VMNetwork) []interface{} {
-	var netSpec []interface{}
+func flattenVMNetwork(netModel []*models.V1VMNetwork) []interface{} {
+	result := make([]interface{}, 0)
+	netSpec := make(map[string]interface{})
 	var networks []interface{}
-	for _, n := range network {
+	for _, n := range netModel {
 		networks = append(networks, map[string]interface{}{
 			"name": n.Name,
 		})
 	}
-	netSpec = append(netSpec, networks)
-	return netSpec
+	netSpec["network"] = networks
+	result = append(result, netSpec)
+	return result
 }
 
-func flattenVMVolumes(volumes []*models.V1VMVolume) []interface{} {
-	vol := make([]interface{}, 0)
-	var volSpec []interface{}
-	for _, v := range volumes {
+func flattenVMVolumes(volumeModel []*models.V1VMVolume) []interface{} {
+	result := make([]interface{}, 0)
+	volumeSpec := make(map[string]interface{})
+	var volume []interface{}
+	for _, v := range volumeModel {
 		if v.ContainerDisk != nil {
-			vol = append(vol, map[string]interface{}{
+			volume = append(volume, map[string]interface{}{
 				"name": v.Name,
 				"container_disk": []interface{}{map[string]interface{}{
 					"image_url": v.ContainerDisk.Image,
@@ -153,7 +156,7 @@ func flattenVMVolumes(volumes []*models.V1VMVolume) []interface{} {
 			})
 		}
 		if v.CloudInitNoCloud != nil {
-			vol = append(vol, map[string]interface{}{
+			volume = append(volume, map[string]interface{}{
 				"name": v.Name,
 				"cloud_init_no_cloud": []interface{}{map[string]interface{}{
 					"user_data": v.CloudInitNoCloud.UserData,
@@ -161,12 +164,14 @@ func flattenVMVolumes(volumes []*models.V1VMVolume) []interface{} {
 			})
 		}
 	}
-	volSpec = append(volSpec, vol)
-	return volSpec
+	volumeSpec["volume"] = volume
+	result = append(result, volumeSpec)
+	return result
 }
 
 func flattenVMDevices(d *schema.ResourceData, vmDevices *models.V1VMDevices) []interface{} {
-	var devices []interface{}
+	result := make([]interface{}, 0)
+	devices := make(map[string]interface{})
 	if _, ok := d.GetOk("devices"); ok && vmDevices.Disks != nil {
 		var disks []interface{}
 		for _, disk := range vmDevices.Disks {
@@ -177,22 +182,23 @@ func flattenVMDevices(d *schema.ResourceData, vmDevices *models.V1VMDevices) []i
 				})
 			}
 		}
-		devices = append(devices, disks)
+		devices["disk"] = disks
 	}
 
 	//set back interface
 	if _, ok := d.GetOk("devices"); ok && vmDevices.Interfaces != nil {
 		var interfaces []interface{}
-		for _, inter := range vmDevices.Disks {
+		for _, inter := range vmDevices.Interfaces {
 			if inter != nil {
 				interfaces = append(interfaces, map[string]interface{}{
 					"name": inter.Name,
 				})
 			}
 		}
-		devices = append(devices, interfaces)
+		devices["interface"] = interfaces
 	}
-	return devices
+	result = append(result, devices)
+	return result
 }
 
 func toVirtualMachineCreateRequest(d *schema.ResourceData) (*models.V1ClusterVirtualMachine, error) {
@@ -212,18 +218,17 @@ func toVirtualMachineCreateRequest(d *schema.ResourceData) (*models.V1ClusterVir
 
 func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachineSpec {
 
-	var vmVolumes []*models.V1VMVolume
-	var vmDisks []*models.V1VMDisk
-	var vmInterfaces []*models.V1VMInterface
-	var vmNetworks []*models.V1VMNetwork
-
 	//Handling Network
+	var vmNetworks []*models.V1VMNetwork
 	vmNetworks = prepareNetworkSpec(d)
 
 	// Handling Volume
+	var vmVolumes []*models.V1VMVolume
 	vmVolumes = prepareVolumeSpec(d)
 
 	// Handling Disk
+	var vmDisks []*models.V1VMDisk
+	var vmInterfaces []*models.V1VMInterface
 	vmDisks, vmInterfaces = prepareDevices(d)
 
 	vmSpec := &models.V1ClusterVirtualMachineSpec{
@@ -249,7 +254,7 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 			},
 		},
 	}
-	if d.Get("run_on_launch").(bool) == false {
+	if !d.Get("run_on_launch").(bool) {
 		vmSpec.RunStrategy = "Manual"
 	}
 	return vmSpec
@@ -300,7 +305,7 @@ func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterV
 	}
 	if run, ok := d.GetOk("run_on_launch"); ok && d.HasChange("run_on_launch") {
 		vm.Spec.Running = run.(bool)
-		if run.(bool) == true {
+		if run.(bool) {
 			vm.Spec.RunStrategy = ""
 		} else {
 			vm.Spec.RunStrategy = "Manual"
