@@ -171,7 +171,7 @@ func resourceVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m
 				return diags
 			}
 		}
-		d.SetId(name)
+		d.SetId(vm.Metadata.Name)
 	} else {
 		virtualMachine, err := toVirtualMachineCreateRequest(d)
 		if err != nil {
