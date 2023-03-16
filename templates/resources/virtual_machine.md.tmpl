@@ -13,22 +13,22 @@ description: |-
 
 ```terraform
 data "spectrocloud_cluster" "vm-enabled-cluster" {
-  name = "chicago"
+  name    = "chicago"
   context = "tenant"
 }
 
 // Creating VM with default disk, volume and network
 resource "spectrocloud_virtual_machine" "tf-test-vm-default" {
   cluster_uid = data.spectrocloud_cluster.vm-enabled-cluster.id
-  name = "tf-test-vm-default"
-  namespace = "default"
-  cpu_cores = 1
-  memory = "2G"
-  image_url = "quay.io/kubevirt/fedora-cloud-container-disk-demo"
-  labels = ["tf-test=true", "env=sumit-dev"]
+  name        = "tf-test-vm-default"
+  namespace   = "default"
+  cpu_cores   = 1
+  memory      = "2G"
+  image_url   = "quay.io/kubevirt/fedora-cloud-container-disk-demo"
+  labels      = ["tf-test=true", "env=sumit-dev"]
   annotations = {
     tf : "true",
-    owner: "siva",
+    owner : "siva",
   }
   # To perform VM lifecycle actions allowed operations (stop, start, pause, resume, migrate (migrate node-to-node), restart)
   # vm_action = "stop"
@@ -36,23 +36,23 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-default" {
 
 // Creating VM by cloning existing VM
 resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
-  cluster_uid = data.spectrocloud_cluster.vm-enabled-cluster.id
+  cluster_uid  = data.spectrocloud_cluster.vm-enabled-cluster.id
   base_vm_name = spectrocloud_virtual_machine.tf-test-vm-default.name
-  name = "tf-test-vm-clone-default"
-  namespace = "default"
+  name         = "tf-test-vm-clone-default"
+  namespace    = "default"
 }
 
 // Creating VM with custom disks, volumes and networks.
 resource "spectrocloud_virtual_machine" "tf-test-vm-custom" {
   cluster_uid = data.spectrocloud_cluster.vm-enabled-cluster.id
-  name = "tf-test-vm-custom"
-  namespace = "default"
-  cpu_cores = 1
-  memory = "2G"
-  labels = ["tf-test=true", "env=sumit-dev"]
+  name        = "tf-test-vm-custom"
+  namespace   = "default"
+  cpu_cores   = 1
+  memory      = "2G"
+  labels      = ["tf-test=true", "env=sumit-dev"]
   annotations = {
     tf : "true",
-    owner: "siva1",
+    owner : "siva1",
   }
   devices {
     disk {
@@ -67,7 +67,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-custom" {
       name = "default"
     }
   }
-  volume_spec{
+  volume_spec {
     volume {
       name = "containerdisk0"
       container_disk {
@@ -82,13 +82,12 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-custom" {
     }
   }
 
-  network_spec{
+  network_spec {
     network {
       name = "default"
     }
   }
 }
-
 ```
 
 
