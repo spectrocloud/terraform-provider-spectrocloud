@@ -113,7 +113,7 @@ func resourceVirtualMachine() *schema.Resource {
 						"volume": schemas.VMVolumeSchema(),
 					},
 				},
-				Description: "Volume specification for the virtual machine.",
+				Description: "The volume specification for the virtual machine.",
 			},
 			"network_spec": {
 				Type:     schema.TypeSet,
