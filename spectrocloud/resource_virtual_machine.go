@@ -19,6 +19,7 @@ func resourceVirtualMachine() *schema.Resource {
 		ReadContext:   resourceVirtualMachineRead,
 		UpdateContext: resourceVirtualMachineUpdate,
 		DeleteContext: resourceVirtualMachineDelete,
+		Description: "A resource to manage Virtual Machines (VM) through Palette.",
 
 		Schema: map[string]*schema.Schema{
 			"cluster_uid": {
