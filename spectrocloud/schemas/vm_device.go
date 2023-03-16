@@ -34,7 +34,7 @@ func VMDeviceSchema() *schema.Schema {
 							"name": {
 								Type:        schema.TypeString,
 								Required:    true,
-								Description: "Name of the interface. This is the name that will be used to identify the device interface in the guest OS.",
+								Description: "The name of the interface. This is the name that will be used to identify the device interface in the guest OS.",
 							},
 						},
 					},
