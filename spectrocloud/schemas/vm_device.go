@@ -16,7 +16,7 @@ func VMDeviceSchema() *schema.Schema {
 							"name": {
 								Type:        schema.TypeString,
 								Required:    true,
-								Description: "Name of the disk. This is the name that will be used to identify the disk in the guest OS.",
+								Description: "The name of the disk. This is the name that will be used to identify the disk in the guest OS.",
 							},
 							"bus": {
 								Type:        schema.TypeString,
