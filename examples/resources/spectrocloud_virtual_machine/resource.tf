@@ -1,5 +1,5 @@
 data "spectrocloud_cluster" "vm-enabled-cluster" {
-  name    = "chicago"
+  name    = "paris"
   context = "tenant"
 }
 

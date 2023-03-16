@@ -162,6 +162,9 @@ func resourceVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m
 			return diag.FromErr(err)
 		}
 		vm, err = c.GetVirtualMachine(clusterUid, name, nameSpace)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if d.Get("run_on_launch").(bool) {
 			diags = resourceVirtualMachineActions(c, ctx, d, "start", clusterUid, name, nameSpace)
 			if diags.HasError() {
@@ -381,9 +384,6 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 		return diag.FromErr(err)
 	}
 	if err := d.Set("vm_state", vm.Status.PrintableStatus); err != nil {
-		return diag.FromErr(err)
-	}
-	if err != nil {
 		return diag.FromErr(err)
 	}
 	return diags
