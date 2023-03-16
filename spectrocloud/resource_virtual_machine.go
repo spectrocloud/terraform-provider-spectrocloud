@@ -31,7 +31,7 @@ func resourceVirtualMachine() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "The name of the virtual machine to be cloned.",
+				Description: "The name of the source virtual machine that a clone will be created of.",
 			},
 			"name": {
 				Type:        schema.TypeString,
