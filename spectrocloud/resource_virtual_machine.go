@@ -95,7 +95,7 @@ func resourceVirtualMachine() *schema.Resource {
 				ForceNew:      true,
 				Optional:      true,
 				ConflictsWith: []string{"volume_spec"},
-				Description:   "The URL of the image(template) to be used for the virtual machine.",
+				Description:   "The URL of the VM template image to be used for the virtual machine.",
 			},
 			"cloud_init_user_data": {
 				Type:          schema.TypeString,
