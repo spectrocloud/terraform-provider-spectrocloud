@@ -157,7 +157,7 @@ func resourceVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m
 		// Handling clone case
 		name := d.Get("name").(string)
 		nameSpace := d.Get("namespace").(string)
-		err := c.CloneVirtualMachine(clusterUid, cloneFromVM.(string), name, nameSpace)
+		err = c.CloneVirtualMachine(clusterUid, cloneFromVM.(string), name, nameSpace)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -253,7 +253,9 @@ func resourceVirtualMachineRead(ctx context.Context, d *schema.ResourceData, m i
 			}
 		}
 	}
-	d.Set("vm_state", vm.Status.PrintableStatus)
+	if err := d.Set("vm_state", vm.Status.PrintableStatus); err != nil {
+		return diag.FromErr(err)
+	}
 	// setting back network
 	if _, ok := d.GetOk("network_spec"); ok && vm.Spec.Template.Spec.Networks != nil {
 		if err := d.Set("network_spec", flattenVMNetwork(vm.Spec.Template.Spec.Networks)); err != nil {
@@ -368,10 +370,7 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 			return diags
 		}
 	case "migrate":
-		err := c.MigrateVirtualMachineNodeToNode(clusterUid, vmName, vmNamespace)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		_ = c.MigrateVirtualMachineNodeToNode(clusterUid, vmName, vmNamespace)
 		diags, _ = waitForVirtualMachineToTargetState(ctx, d, clusterUid, vmName, vmNamespace, diags, c, "update", "Running")
 		if diags.HasError() {
 			return diags
@@ -381,7 +380,9 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	d.Set("vm_state", vm.Status.PrintableStatus)
+	if err := d.Set("vm_state", vm.Status.PrintableStatus); err != nil {
+		return diag.FromErr(err)
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -219,12 +219,10 @@ func toVirtualMachineCreateRequest(d *schema.ResourceData) (*models.V1ClusterVir
 func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachineSpec {
 
 	//Handling Network
-	var vmNetworks []*models.V1VMNetwork
-	vmNetworks = prepareNetworkSpec(d)
+	vmNetworks := prepareNetworkSpec(d)
 
 	// Handling Volume
-	var vmVolumes []*models.V1VMVolume
-	vmVolumes = prepareVolumeSpec(d)
+	vmVolumes := prepareVolumeSpec(d)
 
 	// Handling Disk
 	var vmDisks []*models.V1VMDisk
