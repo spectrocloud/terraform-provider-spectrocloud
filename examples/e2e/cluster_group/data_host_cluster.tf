@@ -1,6 +1,6 @@
 # Look up in data source for a host cluster.
 data "spectrocloud_cluster" "host_cluster0" {
-  name    = "eks-dev-nik-7-tenant0"
+  name    = "newyork"
   context = "tenant"
 }
 

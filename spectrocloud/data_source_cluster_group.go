@@ -25,7 +25,7 @@ func dataSourceClusterGroup() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "tenant",
-				ValidateFunc: validation.StringInSlice([]string{"", "tenant", "system"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"", "tenant", "system", "project"}, false),
 				Description:  "The context of where the cluster group is located. Allowed values  are `system` or `tenant`. Defaults to 'tenant'.",
 			},
 		},
@@ -37,14 +37,28 @@ func dataSourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
 		GroupContext := d.Get("context").(string)
-		group, err := c.GetClusterGroupByName(name.(string), GroupContext)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if group != nil {
-			d.SetId(group.UID)
-			if err := d.Set("name", group.Name); err != nil {
+		switch GroupContext {
+		case "system", "tenant":
+			group, err := c.GetClusterGroupByName(name.(string), GroupContext)
+			if err != nil {
 				return diag.FromErr(err)
+			}
+			if group != nil {
+				d.SetId(group.UID)
+				if err := d.Set("name", group.Name); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		case "project":
+			group, err := c.GetClusterGroupByNameForProject(name.(string), GroupContext)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			if group != nil {
+				d.SetId(group.Metadata.UID)
+				if err := d.Set("name", group.Metadata.Name); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 	}
