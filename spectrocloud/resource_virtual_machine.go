@@ -132,7 +132,7 @@ func resourceVirtualMachine() *schema.Resource {
 									},
 								},
 							},
-							Description: "Network specification for the virtual machine.",
+							Description: "The network specification for the virtual machine.",
 						},
 					},
 				},
