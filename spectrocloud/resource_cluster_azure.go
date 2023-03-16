@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -248,6 +249,10 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 
 	cluster := toAzureCluster(c, d)
+	diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
+	if diags != nil {
+		return diags
+	}
 
 	uid, err := c.CreateClusterAzure(cluster)
 	if err != nil {
@@ -328,7 +333,7 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 
 		oi["azs"] = machinePool.Azs
-
+		oi["os_type"] = machinePool.OsType
 		if machinePool.OsDisk != nil {
 			d := make(map[string]interface{})
 			d["size_gb"] = machinePool.OsDisk.DiskSizeGB
@@ -352,6 +357,11 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
 	if d.HasChange("machine_pool") {
+		cluster := toAzureCluster(c, d)
+		diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
+		if diags != nil {
+			return diags
+		}
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
 			oraw = new(schema.Set)
@@ -517,4 +527,15 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 		},
 	}
 	return mp
+}
+
+func validateMasterPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {
+	for _, machineConfig := range machinePool {
+		if machineConfig.PoolConfig.IsControlPlane {
+			if *machineConfig.PoolConfig.Size%2 == 0 {
+				return diag.FromErr(fmt.Errorf("The master node pool size should be in an odd number. But it set to an even number '%d' in node name '%s' ", *machineConfig.PoolConfig.Size, *machineConfig.PoolConfig.Name))
+			}
+		}
+	}
+	return nil
 }

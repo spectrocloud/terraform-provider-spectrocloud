@@ -67,6 +67,7 @@ resource "spectrocloud_virtual_cluster" "cluster" {
 - `os_patch_after` (String) The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`
 - `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
 - `os_patch_schedule` (String) Cron schedule for OS patching. This must be in the form of `0 0 * * *`.
+- `pause_cluster` (Boolean) To pause and resume cluster state. Set to true to pause running cluster & false to resume it.
 - `resources` (Block List) (see [below for nested schema](#nestedblock--resources))
 - `scan_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
