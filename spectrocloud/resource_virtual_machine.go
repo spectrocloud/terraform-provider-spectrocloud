@@ -72,7 +72,7 @@ func resourceVirtualMachine() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
-				Description: "The state of the virtual machine. Some of possible values are: `running`, `stopped`, `paused`, `migrating`, `error`, `unknown`.",
+				Description: "The state of the virtual machine.  The virtual machine can be in one of the following states: `running`, `stopped`, `paused`, `migrating`, `error`, `unknown`.",
 			},
 			"cpu_cores": {
 				Type:        schema.TypeInt,
