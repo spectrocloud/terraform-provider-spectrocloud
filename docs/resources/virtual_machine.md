@@ -130,8 +130,30 @@ disable_root: false
 
 Required:
 
-- `disk` (List of List of Object)
-- `interface` (List of List of Object)
+- `disk` (Block List, Min: 1) (see [below for nested schema](#nestedblock--devices--disk))
+- `interface` (Block List, Min: 1) (see [below for nested schema](#nestedblock--devices--interface))
+
+<a id="nestedblock--devices--disk"></a>
+### Nested Schema for `devices.disk`
+
+Required:
+
+- `bus` (String) The bus type of the disk. This is the name that will be used to identify the disk in the guest OS.
+- `name` (String) The name of the disk. This is the name that will be used to identify the disk in the guest OS.
+
+
+<a id="nestedblock--devices--interface"></a>
+### Nested Schema for `devices.interface`
+
+Required:
+
+- `name` (String) The name of the interface. This is the name that will be used to identify the device interface in the guest OS.
+
+Optional:
+
+- `model` (String) The model of the interface.
+- `type` (String) The type of the interface. Can be one of `masquerade`, `bridge`, or `macvtap`. Defaults to `masquerade`.
+
 
 
 <a id="nestedblock--network_spec"></a>
@@ -185,6 +207,7 @@ Optional:
 
 - `cloud_init_no_cloud` (Block Set) Used to specify a cloud-init `noCloud` image. The image is expected to contain a disk image in a supported format. The disk image is extracted from the cloud-init `noCloud `image and used as the disk for the VM (see [below for nested schema](#nestedblock--volume_spec--volume--cloud_init_no_cloud))
 - `container_disk` (Block Set) A container disk is a disk that is backed by a container image. The container image is expected to contain a disk image in a supported format. The disk image is extracted from the container image and used as the disk for the VM. (see [below for nested schema](#nestedblock--volume_spec--volume--container_disk))
+- `data_volume` (Block Set) The name of the data volume to use as the disk. (see [below for nested schema](#nestedblock--volume_spec--volume--data_volume))
 
 <a id="nestedblock--volume_spec--volume--cloud_init_no_cloud"></a>
 ### Nested Schema for `volume_spec.volume.cloud_init_no_cloud`
@@ -200,3 +223,11 @@ Required:
 Required:
 
 - `image_url` (String) The URL of the container image to use as the disk. This can be a local file path, a remote URL, or a registry URL.
+
+
+<a id="nestedblock--volume_spec--volume--data_volume"></a>
+### Nested Schema for `volume_spec.volume.data_volume`
+
+Required:
+
+- `storage` (String) Storage size of the data volume.

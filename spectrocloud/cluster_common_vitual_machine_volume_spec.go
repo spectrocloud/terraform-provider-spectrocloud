@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 )
 
@@ -38,8 +39,19 @@ func prepareVolumeSpec(d *schema.ResourceData) []*models.V1VMVolume {
 			v := vol.(map[string]interface{})
 			cDisk := v["container_disk"].(*schema.Set).List()
 			cInit := v["cloud_init_no_cloud"].(*schema.Set).List()
+			dataVolumeDisk := v["data_volume"].(*schema.Set).List()
+
+			vmDiskName := v["name"].(string)
+
+			if len(dataVolumeDisk) > 0 {
+				vmVolumes = append(vmVolumes, &models.V1VMVolume{
+					Name: &vmDiskName,
+					DataVolume: &models.V1VMCoreDataVolumeSource{
+						Name: ptr.StringPtr("disk-0-vol"),
+					},
+				})
+			}
 			if len(cDisk) > 0 {
-				vmDiskName := v["name"].(string)
 				var vmImg = new(string)
 				*vmImg = cDisk[0].(map[string]interface{})["image_url"].(string)
 				vmVolumes = append(vmVolumes, &models.V1VMVolume{
@@ -50,16 +62,13 @@ func prepareVolumeSpec(d *schema.ResourceData) []*models.V1VMVolume {
 				})
 			}
 			if len(cInit) > 0 {
-				//var vmInitName = new(string)
-				vmInitName := v["name"].(string)
 				vmVolumes = append(vmVolumes, &models.V1VMVolume{
-					Name: &vmInitName,
+					Name: &vmDiskName,
 					CloudInitNoCloud: &models.V1VMCloudInitNoCloudSource{
 						UserData: cInit[0].(map[string]interface{})["user_data"].(string),
 					},
 				})
 			}
-
 		}
 		return vmVolumes
 	} else {
