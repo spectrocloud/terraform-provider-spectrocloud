@@ -181,7 +181,7 @@ func flattenVMVolumes(volumeModel []*models.V1VMVolume) []interface{} {
 			volume = append(volume, map[string]interface{}{
 				"name": v.Name,
 				"data_volume": []interface{}{map[string]interface{}{
-					"storage": "3Gi", // Hardcoded value for now, as you mentioned earlier
+					"storage": "3Gi",
 				}},
 			})
 		}
