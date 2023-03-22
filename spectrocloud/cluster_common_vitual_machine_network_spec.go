@@ -8,7 +8,7 @@ import (
 func prepareDefaultNetworkSpec() []*models.V1VMNetwork {
 	var vmNetworks []*models.V1VMNetwork
 	var networkName = new(string)
-	*networkName = "default" // d.Get("network").(map[string]interface{})["name"].(string)
+	*networkName = "default"
 	vmNetworks = append(vmNetworks, &models.V1VMNetwork{
 		Name: networkName,
 		Pod:  &models.V1VMPodNetwork{},
@@ -17,15 +17,56 @@ func prepareDefaultNetworkSpec() []*models.V1VMNetwork {
 }
 
 func prepareNetworkSpec(d *schema.ResourceData) []*models.V1VMNetwork {
-	if network, ok := d.GetOk("network_spec"); ok {
+	if networkSpecs, ok := d.GetOk("network_spec"); ok {
 		var vmNetworks []*models.V1VMNetwork
-		var networkName = new(string)
-		networkSpec := network.(*schema.Set).List()[0].(map[string]interface{})["network"]
-		for _, n := range networkSpec.([]interface{}) {
-			*networkName = n.(map[string]interface{})["name"].(string)
+		networkSpec := networkSpecs.(*schema.Set).List()[0].(map[string]interface{})["nic"]
+		for _, nic := range networkSpec.([]interface{}) {
+			var nicName *string
+			if name, ok := nic.(map[string]interface{})["name"].(string); ok {
+				nicName = &name
+			}
+
+			var pod *models.V1VMPodNetwork
+			var multus *models.V1VMMultusNetwork
+			if multusConfig, ok := nic.(map[string]interface{})["multus"]; ok && multusConfig != nil {
+				// if multusConfig is not empty
+				if len(multusConfig.([]interface{})) > 0 {
+					multusMap := multusConfig.([]interface{})[0].(map[string]interface{})
+
+					var multusName *string
+					if name, ok := multusMap["network_name"].(string); ok {
+						multusName = &name
+					}
+
+					var multusDefault bool
+					if defaultVal, ok := multusMap["default"].(bool); ok {
+						multusDefault = defaultVal
+					}
+
+					multus = &models.V1VMMultusNetwork{
+						NetworkName: multusName,
+						Default:     multusDefault,
+					}
+				} else {
+					multus = nil
+					pod = &models.V1VMPodNetwork{}
+				}
+			}
+
+			var networkType *string
+			if t, ok := nic.(map[string]interface{})["network_type"].(string); ok {
+				networkType = &t
+			}
+
+			if networkType != nil && *networkType == "pod" {
+				multus = nil
+				pod = &models.V1VMPodNetwork{}
+			}
+
 			vmNetworks = append(vmNetworks, &models.V1VMNetwork{
-				Name: networkName,
-				Pod:  &models.V1VMPodNetwork{},
+				Multus: multus,
+				Name:   nicName,
+				Pod:    pod,
 			})
 		}
 		return vmNetworks

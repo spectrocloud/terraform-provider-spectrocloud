@@ -116,28 +116,7 @@ func resourceVirtualMachine() *schema.Resource {
 				},
 				Description: "The volume specification for the virtual machine.",
 			},
-			"network_spec": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"network": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"name": {
-										Type:        schema.TypeString,
-										Required:    true,
-										Description: "The name of the network to be attached to the virtual machine.",
-									},
-								},
-							},
-							Description: "The network specification for the virtual machine.",
-						},
-					},
-				},
-			},
+			"network_spec": schemas.VMNicSchema(),
 		},
 	}
 }

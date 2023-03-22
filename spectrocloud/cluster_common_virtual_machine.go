@@ -3,10 +3,11 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"github.com/spectrocloud/hapi/apiutil/transport"
-	"github.com/spectrocloud/hapi/models"
 	"strings"
 	"time"
+
+	"github.com/spectrocloud/hapi/apiutil/transport"
+	"github.com/spectrocloud/hapi/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -131,13 +132,23 @@ func flattenVMLabels(labels map[string]string) []interface{} {
 func flattenVMNetwork(netModel []*models.V1VMNetwork) []interface{} {
 	result := make([]interface{}, 0)
 	netSpec := make(map[string]interface{})
-	var networks []interface{}
-	for _, n := range netModel {
-		networks = append(networks, map[string]interface{}{
-			"name": n.Name,
-		})
+	var nics []interface{}
+	for _, nic := range netModel {
+		nicSpec := make(map[string]interface{})
+		nicSpec["name"] = nic.Name
+		if nic.Pod != nil {
+			nicSpec["network_type"] = "pod"
+		} else {
+			if nic.Multus != nil {
+				multusSpec := make(map[string]interface{})
+				multusSpec["network_name"] = *nic.Multus.NetworkName
+				multusSpec["default"] = nic.Multus.Default
+				nicSpec["multus"] = []interface{}{multusSpec}
+			}
+		}
+		nics = append(nics, nicSpec)
 	}
-	netSpec["network"] = networks
+	netSpec["nic"] = nics
 	result = append(result, netSpec)
 	return result
 }
@@ -185,18 +196,29 @@ func flattenVMDevices(d *schema.ResourceData, vmDevices *models.V1VMDevices) []i
 		devices["disk"] = disks
 	}
 
-	//set back interface
 	if _, ok := d.GetOk("devices"); ok && vmDevices.Interfaces != nil {
 		var interfaces []interface{}
-		for _, inter := range vmDevices.Interfaces {
-			if inter != nil {
+		for _, iface := range vmDevices.Interfaces {
+			if iface != nil {
+				var ifaceType string
+				switch {
+				case iface.Bridge != nil:
+					ifaceType = "bridge"
+				case iface.Masquerade != nil:
+					ifaceType = "masquerade"
+				case iface.Macvtap != nil:
+					ifaceType = "macvtap"
+				}
 				interfaces = append(interfaces, map[string]interface{}{
-					"name": inter.Name,
+					"name":  iface.Name,
+					"type":  ifaceType,
+					"model": iface.Model,
 				})
 			}
 		}
 		devices["interface"] = interfaces
 	}
+
 	result = append(result, devices)
 	return result
 }
