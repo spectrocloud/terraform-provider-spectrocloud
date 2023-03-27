@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 var resourceVirtualMachineCreatePendingStates = []string{
@@ -324,10 +326,10 @@ func toDataVolumeTemplateSpecCreateRequest(dataVolumeSet interface{}, name strin
 			Metadata: &models.V1VMObjectMeta{
 				OwnerReferences: []*models.V1VMOwnerReference{
 					{
-						APIVersion: ptr.StringPtr("kubevirt.io/v1"),
-						Kind:       ptr.StringPtr("VirtualMachine"),
-						Name:       ptr.StringPtr(vmname),
-						UID:        ptr.StringPtr(""),
+						APIVersion: types.Ptr("kubevirt.io/v1"),
+						Kind:       types.Ptr("VirtualMachine"),
+						Name:       types.Ptr(vmname),
+						UID:        types.Ptr(""),
 					},
 				},
 				Name: "disk-0-vol",

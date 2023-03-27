@@ -158,31 +158,6 @@ Optional:
 
 Required:
 
-
-- `nic` (Block List) The network specification for the virtual machine. (see [below for nested schema](#nestedblock--network_spec--nic))
-
-<a id="nestedblock--network_spec--nic"></a>
-### Nested Schema for `network_spec.nic`
-=======
-- `network_name` (String) The name of the network attachment definition.
-
-Optional:
-
-- `default` (Boolean) Set this network as the default one for the pod.
-
-
-- `name` (String) The name of the network interface.
-
-Optional:
-
-- `multus` (Block List, Max: 1) The multus configuration for the network interface. (see [below for nested schema](#nestedblock--network_spec--nic--multus))
-- `network_type` (String) The name of the network to be attached to the virtual machine.
-
-<a id="nestedblock--network_spec--nic--multus"></a>
-### Nested Schema for `network_spec.nic.multus`
-
-Required:
-
 - `network_name` (String) The name of the network attachment definition.
 
 Optional:
