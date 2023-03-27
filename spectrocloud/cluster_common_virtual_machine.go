@@ -3,10 +3,11 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"github.com/spectrocloud/hapi/apiutil/transport"
-	"github.com/spectrocloud/hapi/models"
 	"strings"
 	"time"
+
+	"github.com/spectrocloud/hapi/apiutil/transport"
+	"github.com/spectrocloud/hapi/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -32,7 +33,7 @@ var resourceVirtualMachineCreatePendingStates = []string{
 }
 
 func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceData, clusterUid string, vmName string, namespace string, diags diag.Diagnostics, c *client.V1Client, state string, targetState string) (diag.Diagnostics, bool) {
-	vm, err := c.GetVirtualMachine(clusterUid, vmName, namespace)
+	vm, err := c.GetVirtualMachine(clusterUid, namespace, vmName)
 	if err != nil {
 		return diags, true
 	}
@@ -66,7 +67,7 @@ func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid strin
 		//} else if cluster == nil {
 		//	return nil, "Deleted", nil
 		//}
-		vm, err := c.GetVirtualMachine(clusterUid, vmName, vmNamespace)
+		vm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 		if err != nil {
 			if err.(*transport.TransportError).HttpCode == 500 && strings.Contains(err.(*transport.TransportError).Payload.Message, fmt.Sprintf("Failed to get virtual machine '%s'", vmName)) {
 				emptyVM := &models.V1ClusterVirtualMachine{}
