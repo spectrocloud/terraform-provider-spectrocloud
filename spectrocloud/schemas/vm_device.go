@@ -11,8 +11,16 @@ func VMDeviceSchema() *schema.Schema {
 		MaxItems: 1,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
-				"disk":      VMDiskSchema(),
-				"interface": VMInterfaceSchema(),
+				"disk": {
+					Type:     schema.TypeList,
+					Required: true,
+					Elem:     VMDiskSchema(),
+				},
+				"interface": {
+					Type:     schema.TypeList,
+					Required: true,
+					Elem:     VMInterfaceSchema(),
+				},
 			},
 		},
 	}

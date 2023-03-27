@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 
