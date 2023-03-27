@@ -335,8 +335,8 @@ func toDataVolumeTemplateSpecCreateRequest(dataVolumeSet interface{}, name strin
 				Name: "disk-0-vol",
 			},
 			Spec: &models.V1VMDataVolumeSpec{
-				//Storage: toV1VMStorageSpec(storage),
-				Pvc: toV1VMPersistentVolumeClaimSpec(storage),
+				Storage: toV1VMStorageSpec(storage),
+				Pvc:     toV1VMPersistentVolumeClaimSpec(storage),
 				Source: &models.V1VMDataVolumeSource{
 					Blank: make(map[string]interface{}),
 				},
