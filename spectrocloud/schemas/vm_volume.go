@@ -49,6 +49,21 @@ func VMVolumeSchema() *schema.Schema {
 					},
 					Description: "Used to specify a cloud-init `noCloud` image. The image is expected to contain a disk image in a supported format. The disk image is extracted from the cloud-init `noCloud `image and used as the disk for the VM",
 				},
+				"data_volume": {
+					Type:     schema.TypeSet,
+					Optional: true,
+					Set:      resourceDataVolumeHash,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"storage": {
+								Type:        schema.TypeString,
+								Required:    true,
+								Description: "Storage size of the data volume.",
+							},
+						},
+					},
+					Description: "The name of the data volume to use as the disk.",
+				},
 			},
 		},
 	}
@@ -68,6 +83,15 @@ func resourceCloudInitDiskHash(v interface{}) int {
 	m := v.(map[string]interface{})
 
 	buf.WriteString(fmt.Sprintf("%s-", m["user_data"].(string)))
+
+	return int(hash(buf.String()))
+}
+
+func resourceDataVolumeHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	buf.WriteString(fmt.Sprintf("%s-", m["storage"].(string)))
 
 	return int(hash(buf.String()))
 }

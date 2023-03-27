@@ -13,13 +13,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 var resourceVirtualMachineCreatePendingStates = []string{
 	"Stopped",
 	"Starting",
 	"Creating",
+	"Provisioning",
 	"Created",
+	"WaitingForVolumeBinding",
 	"Running",
 	// Restart|Stop
 	"Stopping",
@@ -174,6 +178,14 @@ func flattenVMVolumes(volumeModel []*models.V1VMVolume) []interface{} {
 				}},
 			})
 		}
+		if v.DataVolume != nil {
+			volume = append(volume, map[string]interface{}{
+				"name": v.Name,
+				"data_volume": []interface{}{map[string]interface{}{
+					"storage": "3Gi",
+				}},
+			})
+		}
 	}
 	volumeSpec["volume"] = volume
 	result = append(result, volumeSpec)
@@ -252,7 +264,8 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 	vmDisks, vmInterfaces = prepareDevices(d)
 
 	vmSpec := &models.V1ClusterVirtualMachineSpec{
-		Running: d.Get("run_on_launch").(bool),
+		DataVolumeTemplates: toDataVolumeTemplates(d),
+		Running:             d.Get("run_on_launch").(bool),
 		Template: &models.V1VMVirtualMachineInstanceTemplateSpec{
 			Spec: &models.V1VMVirtualMachineInstanceSpec{
 				Domain: &models.V1VMDomainSpec{
@@ -278,6 +291,87 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 		vmSpec.RunStrategy = "Manual"
 	}
 	return vmSpec
+}
+
+func toDataVolumeTemplates(d *schema.ResourceData) []*models.V1VMDataVolumeTemplateSpec {
+	volumeSpec := d.Get("volume_spec").(*schema.Set)
+	var dataVolumeTemplates []*models.V1VMDataVolumeTemplateSpec
+
+	if volumeSpec != nil {
+		volumeSpecList := volumeSpec.List()
+		for _, volume := range volumeSpecList {
+			volumeMap := volume.(map[string]interface{})
+			if volumeData, ok := volumeMap["volume"]; ok {
+				volumeDataList := volumeData.([]interface{})
+				for _, dataVolume := range volumeDataList {
+					dataVolumeMap := dataVolume.(map[string]interface{})
+					if _, ok := dataVolumeMap["data_volume"]; ok && len(dataVolumeMap["data_volume"].(*schema.Set).List()) > 0 {
+						dataVolumeTemplates = append(dataVolumeTemplates, toDataVolumeTemplateSpecCreateRequest(dataVolumeMap["data_volume"], dataVolumeMap["name"].(string), d.Get("name").(string)))
+					}
+				}
+			}
+		}
+	}
+	return dataVolumeTemplates
+}
+
+func toDataVolumeTemplateSpecCreateRequest(dataVolumeSet interface{}, name string, vmname string) *models.V1VMDataVolumeTemplateSpec {
+	dataVolumeList := dataVolumeSet.(*schema.Set).List()
+
+	for _, dataVolume := range dataVolumeList {
+		volume := dataVolume.(map[string]interface{})
+		storage := volume["storage"].(string)
+
+		dataVolumeTemplate := &models.V1VMDataVolumeTemplateSpec{
+			Metadata: &models.V1VMObjectMeta{
+				OwnerReferences: []*models.V1VMOwnerReference{
+					{
+						APIVersion: types.Ptr("kubevirt.io/v1"),
+						Kind:       types.Ptr("VirtualMachine"),
+						Name:       types.Ptr(vmname),
+						UID:        types.Ptr(""),
+					},
+				},
+				Name: "disk-0-vol",
+			},
+			Spec: &models.V1VMDataVolumeSpec{
+				Storage: toV1VMStorageSpec(storage),
+				Pvc:     toV1VMPersistentVolumeClaimSpec(storage),
+				Source: &models.V1VMDataVolumeSource{
+					Blank: make(map[string]interface{}),
+				},
+			},
+		}
+
+		return dataVolumeTemplate
+	}
+
+	return &models.V1VMDataVolumeTemplateSpec{}
+}
+
+func toV1VMPersistentVolumeClaimSpec(storage string) *models.V1VMPersistentVolumeClaimSpec {
+	return &models.V1VMPersistentVolumeClaimSpec{
+		Resources: &models.V1VMCoreResourceRequirements{
+			Requests: map[string]models.V1VMQuantity{
+				"storage": models.V1VMQuantity(storage),
+			},
+		},
+		StorageClassName: "sumit-storage-class",
+		AccessModes:      []string{"ReadWriteOnce"},
+	}
+}
+
+func toV1VMStorageSpec(storage string) *models.V1VMStorageSpec {
+	return &models.V1VMStorageSpec{
+		Resources: &models.V1VMCoreResourceRequirements{
+			Requests: map[string]models.V1VMQuantity{
+				"storage": models.V1VMQuantity(storage),
+			},
+		},
+		StorageClassName: "spectro-storage-class",
+		VolumeMode:       "Block",
+		AccessModes:      []string{"ReadWriteOnce"},
+	}
 }
 
 func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterVirtualMachine) (bool, bool, *models.V1ClusterVirtualMachine, error) {

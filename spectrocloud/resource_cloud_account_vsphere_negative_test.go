@@ -1,10 +1,12 @@
 package spectrocloud
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/hapi/models"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/hapi/models"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func skipSchemaAttributes(originalSchema map[string]*schema.Schema, keysToRemove []string) map[string]*schema.Schema {
@@ -36,8 +38,8 @@ func TestFlattenVsphereCloudAccountAttributes(t *testing.T) {
 			},
 		},
 		Spec: &models.V1VsphereCloudAccount{
-			VcenterServer: ptr.StringPtr("vcenter.example.com"),
-			Username:      ptr.StringPtr("user"),
+			VcenterServer: types.Ptr("vcenter.example.com"),
+			Username:      types.Ptr("user"),
 			Insecure:      false,
 		},
 	}
