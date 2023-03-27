@@ -262,8 +262,8 @@ func toSpecCreateRequest(d *schema.ResourceData) *models.V1ClusterVirtualMachine
 func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterVirtualMachine) (bool, bool, *models.V1ClusterVirtualMachine, error) {
 	requireUpdate := false
 	needRestart := false
-	if d.HasChange("cpu_cores") {
-		vm.Spec.Template.Spec.Domain.CPU.Cores = int64(d.Get("cpu_cores").(int))
+	if d.HasChange("cpu") {
+		vm.Spec.Template.Spec.Domain.CPU.Cores = int64(d.Get("cpu").(int))
 		requireUpdate = true
 		needRestart = true
 	}
@@ -287,12 +287,12 @@ func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterV
 		vm.Metadata.Annotations = toVMUpdateAnnotations(vm.Metadata.Annotations, d)
 		requireUpdate = true
 	}
-	if _, ok := d.GetOk("volume_spec"); ok && d.HasChange("volume_spec") {
+	if _, ok := d.GetOk("volume"); ok && d.HasChange("volume") {
 		vm.Spec.Template.Spec.Volumes = prepareVolumeSpec(d)
 		requireUpdate = true
 		needRestart = true
 	}
-	if _, ok := d.GetOk("network_spec"); ok && d.HasChange("network_spec") {
+	if _, ok := d.GetOk("network"); ok && d.HasChange("network") {
 		vm.Spec.Template.Spec.Networks = prepareNetworkSpec(d)
 		requireUpdate = true
 		needRestart = true
@@ -312,7 +312,7 @@ func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterV
 
 	}
 
-	// There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
+	// TODO: There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
 	vm.Spec.Template.Metadata.DeletionTimestamp = nil
 	vm.Metadata.DeletionTimestamp = nil
 	return requireUpdate, needRestart, vm, nil

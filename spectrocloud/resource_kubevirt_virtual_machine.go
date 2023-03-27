@@ -45,8 +45,8 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, resourceData *sch
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating new virtual machine: %#v", vm)
 	hapiVM := convert.ToHapiVm(vm)
+	log.Printf("[INFO] Creating new virtual machine: %#v", vm)
 	if _, err := cli.CreateVirtualMachine(resourceData.Get("cluster_uid").(string), hapiVM); err != nil {
 		return diag.FromErr(err)
 	}
@@ -152,10 +152,17 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 	clusterUid := d.Get("cluster_uid").(string)
-	vm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
+	currentVm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	// prepare new vm data
+	vm, err := virtualmachine.FromResourceData(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	hapiVM := convert.ToHapiVm(vm)
 
 	// needed to get context for the cluster
 	cluster, err := c.GetCluster(clusterUid)
@@ -163,13 +170,13 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	needUpdate, needRestart, updatedVmModel, err := toVirtualMachineUpdateRequest(d, vm)
+	needUpdate, needRestart, _, err := toVirtualMachineUpdateRequest(d, currentVm)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	if needUpdate {
-		_, err = c.UpdateVirtualMachine(cluster, vmName, updatedVmModel)
+		_, err = c.UpdateVirtualMachine(cluster, vmName, hapiVM)
 		if err != nil {
 			return diag.FromErr(err)
 		}
