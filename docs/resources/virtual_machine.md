@@ -111,7 +111,7 @@ password: spectro
 disable_root: false
 `.
 - `cpu_cores` (Number) The number of CPU cores to be allocated to the virtual machine. Default value is `1`.
-- `devices` (Block Set) (see [below for nested schema](#nestedblock--devices))
+- `devices` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--devices))
 - `image_url` (String) The URL of the VM template image to be used for the virtual machine.
 - `labels` (Set of String) The labels of the virtual machine.
 - `memory` (String) The amount of memory to be allocated to the virtual machine. Default value is `2G`.
@@ -130,25 +130,8 @@ disable_root: false
 
 Required:
 
-- `disk` (Block List, Min: 1) (see [below for nested schema](#nestedblock--devices--disk))
-- `interface` (Block List, Min: 1) (see [below for nested schema](#nestedblock--devices--interface))
-
-<a id="nestedblock--devices--disk"></a>
-### Nested Schema for `devices.disk`
-
-Required:
-
-- `bus` (String) The bus type of the disk. This is the name that will be used to identify the disk in the guest OS.
-- `name` (String) The name of the disk. This is the name that will be used to identify the disk in the guest OS.
-
-
-<a id="nestedblock--devices--interface"></a>
-### Nested Schema for `devices.interface`
-
-Required:
-
-- `name` (String) The name of the interface. This is the name that will be used to identify the device interface in the guest OS.
-
+- `disk` (List of List of Object)
+- `interface` (List of List of Object)
 
 
 <a id="nestedblock--network_spec"></a>
@@ -156,14 +139,31 @@ Required:
 
 Optional:
 
-- `network` (Block List) The network specification for the virtual machine. (see [below for nested schema](#nestedblock--network_spec--network))
+- `nic` (Block List) The network specification for the virtual machine. (see [below for nested schema](#nestedblock--network_spec--nic))
 
-<a id="nestedblock--network_spec--network"></a>
-### Nested Schema for `network_spec.network`
+<a id="nestedblock--network_spec--nic"></a>
+### Nested Schema for `network_spec.nic`
 
 Required:
 
-- `name` (String) The name of the network to be attached to the virtual machine.
+- `name` (String) The name of the network interface.
+
+Optional:
+
+- `multus` (Block List, Max: 1) The multus configuration for the network interface. (see [below for nested schema](#nestedblock--network_spec--nic--multus))
+- `network_type` (String) The name of the network to be attached to the virtual machine.
+
+<a id="nestedblock--network_spec--nic--multus"></a>
+### Nested Schema for `network_spec.nic.multus`
+
+Required:
+
+- `network_name` (String) The name of the network attachment definition.
+
+Optional:
+
+- `default` (Boolean) Set this network as the default one for the pod.
+
 
 
 

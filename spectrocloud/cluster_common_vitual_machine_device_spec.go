@@ -38,11 +38,10 @@ func prepareDevices(d *schema.ResourceData) ([]*models.V1VMDisk, []*models.V1VMI
 	if device, ok := d.GetOk("devices"); ok {
 		var vmDisks []*models.V1VMDisk
 		var vmInterfaces []*models.V1VMInterface
-		//var vmTempVar = new(string)
 
 		for _, d := range device.(*schema.Set).List() {
 			device := d.(map[string]interface{})
-			print(device)
+
 			// For Disk
 			for _, disk := range device["disk"].([]interface{}) {
 				diskName := disk.(map[string]interface{})["name"].(string)
@@ -53,15 +52,43 @@ func prepareDevices(d *schema.ResourceData) ([]*models.V1VMDisk, []*models.V1VMI
 					},
 				})
 			}
+
 			// For Interface
 			for _, inter := range device["interface"].([]interface{}) {
 				interName := inter.(map[string]interface{})["name"].(string)
-				vmInterfaces = append(vmInterfaces, &models.V1VMInterface{
-					Name:       &interName,
-					Masquerade: make(map[string]interface{}),
-				})
-			}
 
+				var interfaceModel string
+				if model, ok := inter.(map[string]interface{})["model"].(string); ok {
+					interfaceModel = model
+				} else {
+					interfaceModel = "virtio"
+				}
+
+				interfaceType := inter.(map[string]interface{})["type"].(string)
+				var vmInterface *models.V1VMInterface
+				switch interfaceType {
+				case "masquerade":
+					vmInterface = &models.V1VMInterface{
+						Name:       &interName,
+						Model:      interfaceModel,
+						Masquerade: make(map[string]interface{}),
+					}
+				case "bridge":
+					vmInterface = &models.V1VMInterface{
+						Name:   &interName,
+						Model:  interfaceModel,
+						Bridge: make(map[string]interface{}),
+					}
+				case "macvtap":
+					vmInterface = &models.V1VMInterface{
+						Name:    &interName,
+						Model:   interfaceModel,
+						Macvtap: make(map[string]interface{}),
+					}
+				}
+
+				vmInterfaces = append(vmInterfaces, vmInterface)
+			}
 		}
 		return vmDisks, vmInterfaces
 	} else {
