@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmDataVolumeSource(source *cdiv1.DataVolumeSource) *models.V1VMDataVolumeSource {
@@ -36,7 +37,7 @@ func ToHapiVmDataVolumeS3Source(s3 *cdiv1.DataVolumeSourceS3) *models.V1VMDataVo
 	return &models.V1VMDataVolumeSourceS3{
 		CertConfigMap: s3.CertConfigMap,
 		SecretRef:     s3.SecretRef,
-		URL:           ptr.StringPtr(s3.URL),
+		URL:           types.Ptr(s3.URL),
 	}
 }
 
@@ -70,7 +71,7 @@ func ToHapiVmDataVolumeRegistrySource(registry *cdiv1.DataVolumeSourceRegistry) 
 		ImageStream:   ImageStream,
 		PullMethod:    PullMethod,
 		SecretRef:     SecretRef,
-		URL:           ptr.String(registry.URL),
+		URL:           types.Val(registry.URL),
 	}
 }
 
@@ -79,8 +80,8 @@ func ToHapiVmDataVolumePvcSource(pvc *cdiv1.DataVolumeSourcePVC) *models.V1VMDat
 		return nil
 	}
 	return &models.V1VMDataVolumeSourcePVC{
-		Namespace: ptr.StringPtr(pvc.Namespace),
-		Name:      ptr.StringPtr(pvc.Name),
+		Namespace: types.Ptr(pvc.Namespace),
+		Name:      types.Ptr(pvc.Name),
 	}
 }
 
@@ -103,10 +104,10 @@ func ToHapiVmDataVolumeImageioSource(imageio *cdiv1.DataVolumeSourceImageIO) *mo
 		return nil
 	}
 	return &models.V1VMDataVolumeSourceImageIO{
-		URL:           ptr.StringPtr(imageio.URL),
+		URL:           types.Ptr(imageio.URL),
 		SecretRef:     imageio.SecretRef,
 		CertConfigMap: imageio.CertConfigMap,
-		DiskID:        ptr.StringPtr(imageio.DiskID),
+		DiskID:        types.Ptr(imageio.DiskID),
 	}
 }
 
@@ -119,7 +120,7 @@ func ToHapiVmDataVolumeHTTPSource(http *cdiv1.DataVolumeSourceHTTP) *models.V1VM
 		ExtraHeaders:       http.ExtraHeaders,
 		SecretExtraHeaders: http.SecretExtraHeaders,
 		SecretRef:          http.SecretRef,
-		URL:                ptr.StringPtr(http.URL),
+		URL:                types.Ptr(http.URL),
 	}
 }
 

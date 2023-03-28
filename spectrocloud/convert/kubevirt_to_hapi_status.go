@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmStatus(status kubevirtapiv1.VirtualMachineStatus) *models.V1ClusterVirtualMachineStatus {
@@ -44,8 +45,8 @@ func ToHapiVmStatusVolumeSnapshotStatus(k *kubevirtapiv1.VolumeSnapshotStatus) *
 		return nil
 	}
 	return &models.V1VMVolumeSnapshotStatus{
-		Enabled: ptr.BoolPtr(k.Enabled),
-		Name:    ptr.StringPtr(k.Name),
+		Enabled: types.Ptr(k.Enabled),
+		Name:    types.Ptr(k.Name),
 		Reason:  k.Reason,
 	}
 }
@@ -73,7 +74,7 @@ func ToHapiVmStatusRemoveVolumeOptions(options *kubevirtapiv1.RemoveVolumeOption
 		return nil
 	}
 	return &models.V1VMRemoveVolumeOptions{
-		Name:   ptr.StringPtr(options.Name),
+		Name:   types.Ptr(options.Name),
 		DryRun: options.DryRun,
 	}
 }
@@ -85,7 +86,7 @@ func ToHapiVmStatusAddVolumeOptions(options *kubevirtapiv1.AddVolumeOptions) *mo
 	return &models.V1VMAddVolumeOptions{
 		Disk:         ToHapiVmStatusDisk(options.Disk),
 		DryRun:       options.DryRun,
-		Name:         ptr.StringPtr(options.Name),
+		Name:         types.Ptr(options.Name),
 		VolumeSource: ToHapiVmStatusVolumeSource(options.VolumeSource),
 	}
 }
@@ -105,7 +106,7 @@ func ToHapiVmStatusPersistentVolumeClaim(claim *kubevirtapiv1.PersistentVolumeCl
 		return nil
 	}
 	return &models.V1VMPersistentVolumeClaimVolumeSource{
-		ClaimName:    ptr.StringPtr(claim.ClaimName),
+		ClaimName:    types.Ptr(claim.ClaimName),
 		Hotpluggable: claim.Hotpluggable,
 		ReadOnly:     claim.ReadOnly,
 	}
@@ -116,7 +117,7 @@ func ToHapiVmStatusDataVolume(volume *kubevirtapiv1.DataVolumeSource) *models.V1
 		return nil
 	}
 	return &models.V1VMCoreDataVolumeSource{
-		Name:         ptr.StringPtr(volume.Name),
+		Name:         types.Ptr(volume.Name),
 		Hotpluggable: volume.Hotpluggable,
 	}
 }
@@ -145,7 +146,7 @@ func ToHapiVmStatusDisk(disk *kubevirtapiv1.Disk) *models.V1VMDisk {
 		Disk:              ToHapiVmDiskTarget(disk.Disk),
 		Io:                string(disk.IO),
 		Lun:               ToHapiVmLunTarget(disk.LUN),
-		Name:              ptr.StringPtr(disk.Name),
+		Name:              types.Ptr(disk.Name),
 		Serial:            disk.Serial,
 		Shareable:         false,
 		Tag:               disk.Tag,
@@ -170,7 +171,7 @@ func ToHapiVmStatusStateChangeRequest(k *kubevirtapiv1.VirtualMachineStateChange
 		uid = string(*k.UID)
 	}
 	return &models.V1VMVirtualMachineStateChangeRequest{
-		Action: ptr.StringPtr(string(k.Action)),
+		Action: types.Ptr(string(k.Action)),
 		Data:   k.Data,
 		UID:    uid,
 	}
@@ -197,11 +198,11 @@ func ToHapiVmStatusMemoryDumpRequest(request *kubevirtapiv1.VirtualMachineMemory
 		FileName = *request.FileName
 	}
 	return &models.V1VMVirtualMachineMemoryDumpRequest{
-		ClaimName: ptr.StringPtr(request.ClaimName),
+		ClaimName: types.Ptr(request.ClaimName),
 		// TODO: EndTimestamp:   models.V1Time{},
 		FileName: FileName,
 		Message:  request.Message,
-		Phase:    ptr.StringPtr(string(request.Phase)),
+		Phase:    types.Ptr(string(request.Phase)),
 		Remove:   request.Remove,
 		// TODO: StartTimestamp: models.V1Time{},
 	}
@@ -215,8 +216,8 @@ func ToHapiVmStatusConditions(conditions []kubevirtapiv1.VirtualMachineCondition
 			// TODO: LastTransitionTime: condition.LastTransitionTime,
 			Message: condition.Message,
 			Reason:  condition.Reason,
-			Status:  ptr.StringPtr(string(condition.Status)),
-			Type:    ptr.StringPtr(string(condition.Type)),
+			Status:  types.Ptr(string(condition.Status)),
+			Type:    types.Ptr(string(condition.Type)),
 		})
 	}
 	return hapiConditions

@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmFilesystems(filesystems []kubevirtapiv1.Filesystem) []*models.V1VMFilesystem {
@@ -17,7 +18,7 @@ func ToHapiVmFilesystems(filesystems []kubevirtapiv1.Filesystem) []*models.V1VMF
 
 func ToHapiVmFilesystemItem(filesystem kubevirtapiv1.Filesystem) *models.V1VMFilesystem {
 	return &models.V1VMFilesystem{
-		Name: ptr.StringPtr(filesystem.Name),
+		Name: types.Ptr(filesystem.Name),
 		// TODO: Virtiofs: ToHapiVmVirtiofs(filesystem.Virtiofs),
 	}
 }

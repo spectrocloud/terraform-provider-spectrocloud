@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmCPU(cpu *kubevirtapiv1.CPU) *models.V1VMCPU {
@@ -18,7 +19,7 @@ func ToHapiVmCPU(cpu *kubevirtapiv1.CPU) *models.V1VMCPU {
 	features := make([]*models.V1VMCPUFeature, len(cpu.Features))
 	for i, f := range cpu.Features {
 		features[i] = &models.V1VMCPUFeature{
-			Name:   ptr.StringPtr(f.Name),
+			Name:   types.Ptr(f.Name),
 			Policy: f.Policy,
 		}
 	}

@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmDevices(devices kubevirtapiv1.Devices) *models.V1VMDevices {
@@ -51,8 +52,8 @@ func ToHapiVmInputs(inputs []kubevirtapiv1.Input) []*models.V1VMInput {
 func ToHapiVmInput(input kubevirtapiv1.Input) *models.V1VMInput {
 	return &models.V1VMInput{
 		Bus:  string(input.Bus),
-		Name: ptr.StringPtr(input.Name),
-		Type: ptr.StringPtr(string(input.Type)),
+		Name: types.Ptr(input.Name),
+		Type: types.Ptr(string(input.Type)),
 	}
 }
 
@@ -67,8 +68,8 @@ func ToHapiVmHostDevices(devices []kubevirtapiv1.HostDevice) []*models.V1VMHostD
 
 func ToHapiVmHostDevice(device kubevirtapiv1.HostDevice) *models.V1VMHostDevice {
 	return &models.V1VMHostDevice{
-		DeviceName: ptr.StringPtr(device.DeviceName),
-		Name:       ptr.StringPtr(device.Name),
+		DeviceName: types.Ptr(device.DeviceName),
+		Name:       types.Ptr(device.Name),
 		Tag:        device.Tag,
 	}
 }
@@ -84,8 +85,8 @@ func ToHapiVmGpus(gpus []kubevirtapiv1.GPU) []*models.V1VMGPU {
 
 func ToHapiVmGpu(u kubevirtapiv1.GPU) *models.V1VMGPU {
 	return &models.V1VMGPU{
-		DeviceName:        ptr.StringPtr(u.DeviceName),
-		Name:              ptr.StringPtr(u.Name),
+		DeviceName:        types.Ptr(u.DeviceName),
+		Name:              types.Ptr(u.Name),
 		Tag:               u.Tag,
 		VirtualGPUOptions: ToHapiVmVirtualGPUOptions(u.VirtualGPUOptions),
 	}

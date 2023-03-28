@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmDisks(disks []kubevirtapiv1.Disk) []*models.V1VMDisk {
@@ -34,7 +35,7 @@ func ToHapiVmDisk(disk kubevirtapiv1.Disk) *models.V1VMDisk {
 		Disk:              ToHapiVmDiskTarget(disk.Disk),
 		Io:                string(disk.IO),
 		Lun:               ToHapiVmLunTarget(disk.LUN),
-		Name:              ptr.StringPtr(disk.Name),
+		Name:              types.Ptr(disk.Name),
 		Serial:            disk.Serial,
 		Shareable:         false,
 		Tag:               disk.Tag,
@@ -91,7 +92,7 @@ func ToHapiVmCustomBlockSize(custom *kubevirtapiv1.CustomBlockSize) *models.V1VM
 	}
 
 	return &models.V1VMCustomBlockSize{
-		Physical: ptr.Int32Ptr(int32(custom.Physical)),
-		Logical:  ptr.Int32Ptr(int32(custom.Logical)),
+		Physical: types.Ptr(int32(custom.Physical)),
+		Logical:  types.Ptr(int32(custom.Logical)),
 	}
 }

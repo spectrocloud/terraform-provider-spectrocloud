@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmAccessCredentials(credentials []kubevirtapiv1.AccessCredential) []*models.V1VMAccessCredential {
@@ -11,7 +12,7 @@ func ToHapiVmAccessCredentials(credentials []kubevirtapiv1.AccessCredential) []*
 	for i, credential := range credentials {
 		var secretName *string
 		if credential.SSHPublicKey.Source.Secret != nil {
-			secretName = ptr.StringPtr(credential.SSHPublicKey.Source.Secret.SecretName)
+			secretName = types.Ptr(credential.SSHPublicKey.Source.Secret.SecretName)
 		}
 
 		var Users []string

@@ -1,11 +1,12 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	corev1 "k8s.io/api/core/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmDataVolumeTemplates(templates []kubevirtapiv1.DataVolumeTemplateSpec) []*models.V1VMDataVolumeTemplateSpec {
@@ -65,8 +66,8 @@ func ToHapiVmDataVolumeReference(ref *cdiv1.DataVolumeSourceRef) *models.V1VMDat
 		return nil
 	}
 	return &models.V1VMDataVolumeSourceRef{
-		Kind:      ptr.StringPtr(ref.Kind),
-		Name:      ptr.StringPtr(ref.Name),
+		Kind:      types.Ptr(ref.Kind),
+		Name:      types.Ptr(ref.Name),
 		Namespace: *ref.Namespace,
 	}
 }

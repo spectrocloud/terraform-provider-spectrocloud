@@ -1,10 +1,11 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"k8s.io/api/core/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmDownwardAPI(api *kubevirtapiv1.DownwardAPIVolumeSource) *models.V1VMDownwardAPIVolumeSource {
@@ -33,7 +34,7 @@ func ToHapiVmDownwardAPIVolumeFile(fields []v1.DownwardAPIVolumeFile) []*models.
 
 func ToHapiVmDownwardAPIVolumeFileItem(field v1.DownwardAPIVolumeFile) *models.V1VMDownwardAPIVolumeFile {
 	return &models.V1VMDownwardAPIVolumeFile{
-		Path:     ptr.StringPtr(field.Path),
+		Path:     types.Ptr(field.Path),
 		FieldRef: ToHapiVmObjectFieldSelector(field.FieldRef),
 		ResourceFieldRef: ToHapiVmResourceFieldSelector(
 			field.ResourceFieldRef,
@@ -49,7 +50,7 @@ func ToHapiVmResourceFieldSelector(ref *v1.ResourceFieldSelector) *models.V1VMRe
 
 	return &models.V1VMResourceFieldSelector{
 		ContainerName: ref.ContainerName,
-		Resource:      ptr.StringPtr(ref.Resource),
+		Resource:      types.Ptr(ref.Resource),
 		Divisor:       ToHapiVmQuantityDivisor(ref.Divisor),
 	}
 }
@@ -60,6 +61,6 @@ func ToHapiVmObjectFieldSelector(ref *v1.ObjectFieldSelector) *models.V1VMObject
 	}
 
 	return &models.V1VMObjectFieldSelector{
-		FieldPath: ptr.StringPtr(ref.FieldPath),
+		FieldPath: types.Ptr(ref.FieldPath),
 	}
 }

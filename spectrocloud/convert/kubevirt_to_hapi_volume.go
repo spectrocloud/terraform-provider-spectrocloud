@@ -1,10 +1,11 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"k8s.io/api/core/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmVolumes(volumes []kubevirtapiv1.Volume) []*models.V1VMVolume {
@@ -33,7 +34,7 @@ func ToHapiVmVolume(volume kubevirtapiv1.Volume) *models.V1VMVolume {
 		Ephemeral:             ToHapiVmEphemeral(volume.Ephemeral),
 		HostDisk:              ToHapiVmHostDisk(volume.HostDisk),
 		MemoryDump:            ToHapiVmMemoryDump(volume.MemoryDump),
-		Name:                  ptr.StringPtr(volume.Name),
+		Name:                  types.Ptr(volume.Name),
 		PersistentVolumeClaim: ToHapiVmPersistentVolumeClaimKubevirt(volume.PersistentVolumeClaim),
 		Secret:                ToHapiVMSecret(volume.Secret),
 		ServiceAccount:        ToHapiVMServiceAccount(volume.ServiceAccount),
@@ -68,7 +69,7 @@ func ToHapiVmPersistentVolumeClaimKubevirt(claim *kubevirtapiv1.PersistentVolume
 	}
 
 	return &models.V1VMPersistentVolumeClaimVolumeSource{
-		ClaimName:    ptr.StringPtr(claim.ClaimName),
+		ClaimName:    types.Ptr(claim.ClaimName),
 		Hotpluggable: claim.Hotpluggable,
 		ReadOnly:     claim.ReadOnly,
 	}
@@ -80,7 +81,7 @@ func ToHapiVmMemoryDump(dump *kubevirtapiv1.MemoryDumpVolumeSource) *models.V1VM
 	}
 
 	return &models.V1VMMemoryDumpVolumeSource{
-		ClaimName:    ptr.StringPtr(dump.ClaimName),
+		ClaimName:    types.Ptr(dump.ClaimName),
 		Hotpluggable: dump.Hotpluggable,
 		ReadOnly:     dump.ReadOnly,
 	}
@@ -102,7 +103,7 @@ func ToHapiVMPersistentVolumeClaimKubevirt(claim *kubevirtapiv1.PersistentVolume
 	}
 
 	return &models.V1VMPersistentVolumeClaimVolumeSource{
-		ClaimName:    ptr.StringPtr(claim.ClaimName),
+		ClaimName:    types.Ptr(claim.ClaimName),
 		Hotpluggable: claim.Hotpluggable,
 		ReadOnly:     claim.ReadOnly,
 	}

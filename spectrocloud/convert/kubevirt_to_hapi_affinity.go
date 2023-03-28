@@ -1,10 +1,11 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmAffinity(affinity *k8sv1.Affinity) *models.V1VMAffinity {
@@ -69,7 +70,7 @@ func ToHapiVmNodeSelectorRequirements(expressions []k8sv1.NodeSelectorRequiremen
 	for i, expression := range expressions {
 		ret[i] = &models.V1VMNodeSelectorRequirement{
 			Key:      &expression.Key,
-			Operator: ptr.StringPtr(string(expression.Operator)),
+			Operator: types.Ptr(string(expression.Operator)),
 			Values:   expression.Values,
 		}
 	}
@@ -138,7 +139,7 @@ func ToHapiVMLabelSelectorRequirement(expressions []metav1.LabelSelectorRequirem
 	for i, expression := range expressions {
 		ret[i] = &models.V1VMLabelSelectorRequirement{
 			Key:      &expression.Key,
-			Operator: ptr.StringPtr(string(expression.Operator)),
+			Operator: types.Ptr(string(expression.Operator)),
 			Values:   expression.Values,
 		}
 	}
@@ -189,7 +190,7 @@ func ToHapiVMNodeSelectorRequirement(expressions []k8sv1.NodeSelectorRequirement
 	for i, expression := range expressions {
 		ret[i] = &models.V1VMNodeSelectorRequirement{
 			Key:      &expression.Key,
-			Operator: ptr.StringPtr(string(expression.Operator)),
+			Operator: types.Ptr(string(expression.Operator)),
 			Values:   expression.Values,
 		}
 	}

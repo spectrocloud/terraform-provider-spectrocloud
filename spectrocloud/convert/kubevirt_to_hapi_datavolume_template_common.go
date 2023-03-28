@@ -1,11 +1,12 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmLabelSelector(selector *metav1.LabelSelector) *models.V1VMLabelSelector {
@@ -28,8 +29,8 @@ func ToHapiVmLabelSelectorRequirements(expressions []metav1.LabelSelectorRequire
 
 func ToHapiVmLabelSelectorRequirement(expression metav1.LabelSelectorRequirement) *models.V1VMLabelSelectorRequirement {
 	return &models.V1VMLabelSelectorRequirement{
-		Key:      ptr.StringPtr(expression.Key),
-		Operator: ptr.StringPtr(string(expression.Operator)),
+		Key:      types.Ptr(expression.Key),
+		Operator: types.Ptr(string(expression.Operator)),
 		Values:   expression.Values,
 	}
 }
@@ -40,8 +41,8 @@ func ToHapiVmTypedObjectReference(ref *corev1.TypedObjectReference) *models.V1VM
 	}
 	return &models.V1VMTypedLocalObjectReference{
 		APIGroup: *ref.APIGroup,
-		Kind:     ptr.StringPtr(ref.Kind),
-		Name:     ptr.StringPtr(ref.Name),
+		Kind:     types.Ptr(ref.Kind),
+		Name:     types.Ptr(ref.Name),
 	}
 }
 
@@ -55,8 +56,8 @@ func ToHapiVmCheckpoints(checkpoints []cdiv1.DataVolumeCheckpoint) []*models.V1V
 
 func ToHapiVmCheckpoint(checkpoint cdiv1.DataVolumeCheckpoint) *models.V1VMDataVolumeCheckpoint {
 	return &models.V1VMDataVolumeCheckpoint{
-		Current:  ptr.StringPtr(checkpoint.Current),
-		Previous: ptr.StringPtr(checkpoint.Previous),
+		Current:  types.Ptr(checkpoint.Current),
+		Previous: types.Ptr(checkpoint.Previous),
 	}
 }
 
@@ -91,7 +92,7 @@ func ToHapiVmTypedLocalObjectReference(ref *corev1.TypedLocalObjectReference) *m
 	}
 	return &models.V1VMTypedLocalObjectReference{
 		APIGroup: *ref.APIGroup,
-		Kind:     ptr.StringPtr(ref.Kind),
-		Name:     ptr.StringPtr(ref.Name),
+		Kind:     types.Ptr(ref.Kind),
+		Name:     types.Ptr(ref.Name),
 	}
 }

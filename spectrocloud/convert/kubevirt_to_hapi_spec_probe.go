@@ -1,11 +1,12 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmProbe(probe *kubevirtapiv1.Probe) *models.V1VMProbe {
@@ -55,8 +56,8 @@ func ToHapiVmHTTPHeaders(headers []v1.HTTPHeader) []*models.V1VMHTTPHeader {
 	var Headers []*models.V1VMHTTPHeader
 	for _, header := range headers {
 		Headers = append(Headers, &models.V1VMHTTPHeader{
-			Name:  ptr.StringPtr(header.Name),
-			Value: ptr.StringPtr(header.Value),
+			Name:  types.Ptr(header.Name),
+			Value: types.Ptr(header.Value),
 		})
 	}
 	return Headers
@@ -64,9 +65,9 @@ func ToHapiVmHTTPHeaders(headers []v1.HTTPHeader) []*models.V1VMHTTPHeader {
 
 func ToHapiVmIntOrString(port intstr.IntOrString) *string {
 	if port.Type == intstr.Int {
-		return ptr.StringPtr(string(port.IntVal))
+		return types.Ptr(string(port.IntVal))
 	}
-	return ptr.StringPtr(port.StrVal)
+	return types.Ptr(port.StrVal)
 }
 
 func ToHapiVmExecAction(exec *v1.ExecAction) *models.V1VMExecAction {
@@ -85,8 +86,8 @@ func ToHapiVmTopologySpreadConstraints(constraints []v1.TopologySpreadConstraint
 		Constraints = append(Constraints, &models.V1VMTopologySpreadConstraint{
 			LabelSelector:     ToHapiVmLabelSelector(constraint.LabelSelector),
 			MaxSkew:           &constraint.MaxSkew,
-			TopologyKey:       ptr.StringPtr(constraint.TopologyKey),
-			WhenUnsatisfiable: ptr.StringPtr(string(constraint.WhenUnsatisfiable)),
+			TopologyKey:       types.Ptr(constraint.TopologyKey),
+			WhenUnsatisfiable: types.Ptr(string(constraint.WhenUnsatisfiable)),
 		})
 	}
 	return Constraints

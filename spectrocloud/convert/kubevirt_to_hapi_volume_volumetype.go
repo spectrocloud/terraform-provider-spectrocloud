@@ -1,10 +1,11 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"k8s.io/api/core/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmConfigMap(configMap *kubevirtapiv1.ConfigMapVolumeSource) *models.V1VMConfigMapVolumeSource {
@@ -25,7 +26,7 @@ func ToHapiVmDataVolume(volume *kubevirtapiv1.DataVolumeSource) *models.V1VMCore
 	}
 
 	return &models.V1VMCoreDataVolumeSource{
-		Name:         ptr.StringPtr(volume.Name),
+		Name:         types.Ptr(volume.Name),
 		Hotpluggable: volume.Hotpluggable,
 	}
 }
@@ -46,7 +47,7 @@ func ToHapiVmPersistentVolumeClaim(claim *v1.PersistentVolumeClaimVolumeSource) 
 	}
 
 	return &models.V1VMPersistentVolumeClaimVolumeSource{
-		ClaimName: ptr.StringPtr(claim.ClaimName),
+		ClaimName: types.Ptr(claim.ClaimName),
 		// TODO: Hotpluggable: claim.Hotpluggable, NO SUCH FIELD!
 		ReadOnly: claim.ReadOnly,
 	}

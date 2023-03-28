@@ -4,11 +4,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func TestCreateClusterProfile(t *testing.T) {
@@ -29,7 +30,7 @@ func TestCreateClusterProfile(t *testing.T) {
 			expectedReturnedUID: "1",
 			getClientError:      nil,
 			v1ClusterProfilesCreateFn: func(params *clusterC.V1ClusterProfilesCreateParams) (*clusterC.V1ClusterProfilesCreateCreated, error) {
-				response := &clusterC.V1ClusterProfilesCreateCreated{Payload: &models.V1UID{UID: ptr.StringPtr("1")}}
+				response := &clusterC.V1ClusterProfilesCreateCreated{Payload: &models.V1UID{UID: types.Ptr("1")}}
 				return response, nil
 			},
 		},
@@ -41,7 +42,7 @@ func TestCreateClusterProfile(t *testing.T) {
 			expectedReturnedUID: "2",
 			getClientError:      nil,
 			v1ClusterProfilesCreateFn: func(params *clusterC.V1ClusterProfilesCreateParams) (*clusterC.V1ClusterProfilesCreateCreated, error) {
-				response := &clusterC.V1ClusterProfilesCreateCreated{Payload: &models.V1UID{UID: ptr.StringPtr("2")}}
+				response := &clusterC.V1ClusterProfilesCreateCreated{Payload: &models.V1UID{UID: types.Ptr("2")}}
 				return response, nil
 			},
 		},

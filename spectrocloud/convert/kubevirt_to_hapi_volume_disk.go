@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmCloudInitNoCloud(cloud *kubevirtapiv1.CloudInitNoCloudSource) *models.V1VMCloudInitNoCloudSource {
@@ -28,9 +29,9 @@ func ToHapiVmHostDisk(disk *kubevirtapiv1.HostDisk) *models.V1VMHostDisk {
 
 	return &models.V1VMHostDisk{
 		Capacity: ToHapiVmQuantityDivisor(disk.Capacity),
-		Path:     ptr.StringPtr(disk.Path),
+		Path:     types.Ptr(disk.Path),
 		Shared:   *disk.Shared,
-		Type:     ptr.StringPtr(string(disk.Type)),
+		Type:     types.Ptr(string(disk.Type)),
 	}
 }
 
@@ -50,7 +51,7 @@ func ToHapiVmContainerDisk(disk *kubevirtapiv1.ContainerDiskSource) *models.V1VM
 	}
 
 	return &models.V1VMContainerDiskSource{
-		Image:           ptr.StringPtr(disk.Image),
+		Image:           types.Ptr(disk.Image),
 		ImagePullPolicy: string(disk.ImagePullPolicy),
 		ImagePullSecret: disk.ImagePullSecret,
 		Path:            disk.Path,

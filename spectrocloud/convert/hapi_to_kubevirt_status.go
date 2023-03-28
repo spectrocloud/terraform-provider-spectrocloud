@@ -1,10 +1,11 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	k8sv1 "k8s.io/api/core/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToKubevirtVMStatus(status *models.V1ClusterVirtualMachineStatus) kubevirtapiv1.VirtualMachineStatus {
@@ -15,8 +16,8 @@ func ToKubevirtVMStatus(status *models.V1ClusterVirtualMachineStatus) kubevirtap
 	}
 
 	return kubevirtapiv1.VirtualMachineStatus{
-		SnapshotInProgress:     ptr.StringPtr(status.SnapshotInProgress),
-		RestoreInProgress:      ptr.StringPtr(status.RestoreInProgress),
+		SnapshotInProgress:     types.Ptr(status.SnapshotInProgress),
+		RestoreInProgress:      types.Ptr(status.RestoreInProgress),
 		Created:                status.Created,
 		Ready:                  status.Ready,
 		PrintableStatus:        PrintableStatus,

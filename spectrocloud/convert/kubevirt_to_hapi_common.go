@@ -4,11 +4,12 @@ import (
 	"encoding/base64"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVm(vm *kubevirtapiv1.VirtualMachine) *models.V1ClusterVirtualMachine {
@@ -42,12 +43,12 @@ func ToHapiVmOwnerReferences(references []metav1.OwnerReference) []*models.V1VMO
 	ret := make([]*models.V1VMOwnerReference, len(references))
 	for i, reference := range references {
 		ret[i] = &models.V1VMOwnerReference{
-			APIVersion:         ptr.StringPtr(reference.APIVersion),
+			APIVersion:         types.Ptr(reference.APIVersion),
 			BlockOwnerDeletion: *reference.BlockOwnerDeletion,
 			Controller:         *reference.Controller,
-			Kind:               ptr.StringPtr(reference.Kind),
-			Name:               ptr.StringPtr(reference.Name),
-			UID:                ptr.StringPtr(string(reference.UID)),
+			Kind:               types.Ptr(reference.Kind),
+			Name:               types.Ptr(reference.Name),
+			UID:                types.Ptr(string(reference.UID)),
 		}
 	}
 

@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmInterfaces(interfaces []kubevirtapiv1.Interface) []*models.V1VMInterface {
@@ -30,7 +31,7 @@ func ToHapiVmInterface(iface kubevirtapiv1.Interface) *models.V1VMInterface {
 		Macvtap:     ToHapiVMInterfaceMacvtap(iface.InterfaceBindingMethod.Macvtap),
 		Masquerade:  ToHapiVMInterfaceMasquerade(iface.InterfaceBindingMethod.Masquerade),
 		Model:       iface.Model,
-		Name:        ptr.StringPtr(iface.Name),
+		Name:        types.Ptr(iface.Name),
 		Passt:       ToHapiVMInterfacePasst(iface.InterfaceBindingMethod.Passt),
 		PciAddress:  iface.PciAddress,
 		Ports:       ToHapiVMPorts(iface.Ports),
@@ -52,7 +53,7 @@ func ToHapiVMPorts(ports []kubevirtapiv1.Port) []*models.V1VMPort {
 func ToHapiVMPort(port kubevirtapiv1.Port) *models.V1VMPort {
 	return &models.V1VMPort{
 		Name:     port.Name,
-		Port:     ptr.Int32Ptr(port.Port),
+		Port:     types.Ptr(port.Port),
 		Protocol: port.Protocol,
 	}
 }
@@ -87,8 +88,8 @@ func ToHapiVmPrivateOptions(options []kubevirtapiv1.DHCPPrivateOptions) []*model
 
 func ToHapiVmPrivateOption(option kubevirtapiv1.DHCPPrivateOptions) *models.V1VMDHCPPrivateOptions {
 	return &models.V1VMDHCPPrivateOptions{
-		Option: ptr.Int32Ptr(int32(option.Option)),
-		Value:  ptr.StringPtr(option.Value),
+		Option: types.Ptr(int32(option.Option)),
+		Value:  types.Ptr(option.Value),
 	}
 }
 

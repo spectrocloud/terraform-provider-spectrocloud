@@ -1,10 +1,11 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmSpec(spec *kubevirtapiv1.VirtualMachineSpec) *models.V1ClusterVirtualMachineSpec {
@@ -103,12 +104,12 @@ func ToHapiVMOwnerReferences(references []metav1.OwnerReference) []*models.V1VMO
 	var result []*models.V1VMOwnerReference
 	for _, reference := range references {
 		result = append(result, &models.V1VMOwnerReference{
-			APIVersion:         ptr.StringPtr(reference.APIVersion),
+			APIVersion:         types.Ptr(reference.APIVersion),
 			Controller:         *reference.Controller,
 			BlockOwnerDeletion: *reference.BlockOwnerDeletion,
-			Kind:               ptr.StringPtr(reference.Kind),
-			Name:               ptr.StringPtr(reference.Name),
-			UID:                ptr.StringPtr(string(reference.UID)),
+			Kind:               types.Ptr(reference.Kind),
+			Name:               types.Ptr(reference.Name),
+			UID:                types.Ptr(string(reference.UID)),
 		})
 	}
 	return result

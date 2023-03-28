@@ -1,9 +1,10 @@
 package convert
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func ToHapiVmNetworks(networks []kubevirtapiv1.Network) []*models.V1VMNetwork {
@@ -11,7 +12,7 @@ func ToHapiVmNetworks(networks []kubevirtapiv1.Network) []*models.V1VMNetwork {
 	for _, network := range networks {
 		hapiNetworks = append(hapiNetworks, &models.V1VMNetwork{
 			Multus: ToHapiVmMultus(network.Multus),
-			Name:   ptr.StringPtr(network.Name),
+			Name:   types.Ptr(network.Name),
 			Pod:    ToHapiVmPodNetwork(network.Pod),
 		})
 	}
@@ -36,6 +37,6 @@ func ToHapiVmMultus(multus *kubevirtapiv1.MultusNetwork) *models.V1VMMultusNetwo
 
 	return &models.V1VMMultusNetwork{
 		Default:     multus.Default,
-		NetworkName: ptr.StringPtr(multus.NetworkName),
+		NetworkName: types.Ptr(multus.NetworkName),
 	}
 }

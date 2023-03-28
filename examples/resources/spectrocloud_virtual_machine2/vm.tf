@@ -67,7 +67,7 @@ resource "spectrocloud_virtual_machine" "virtual_machine" {
               interface_binding_method = "InterfaceMasquerade"
             }
             interface {
-              name = "additional"
+              name                     = "additional"
               interface_binding_method = "InterfaceBridge"
             }
           }
@@ -83,11 +83,11 @@ resource "spectrocloud_virtual_machine" "virtual_machine" {
           network_source {
             multus {
               network_name = "macvlan-conf"
-              default = false
+              default      = false
             }
           }
         }
-/*        affinity {
+        /*        affinity {
           pod_anti_affinity {
             preferred_during_scheduling_ignored_during_execution {
               weight = 100
