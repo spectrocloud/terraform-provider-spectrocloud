@@ -18,6 +18,8 @@ func ToHapiVm(vm *kubevirtapiv1.VirtualMachine) *models.V1ClusterVirtualMachine 
 		GracePeriodSeconds = *vm.DeletionGracePeriodSeconds
 	}
 
+	Spec, _ := ToHapiVmSpecM(vm.Spec)
+
 	hapiVM := &models.V1ClusterVirtualMachine{
 		Metadata: &models.V1VMObjectMeta{
 			Annotations:                vm.Annotations,
@@ -33,7 +35,7 @@ func ToHapiVm(vm *kubevirtapiv1.VirtualMachine) *models.V1ClusterVirtualMachine 
 			ResourceVersion:            vm.ResourceVersion,
 			UID:                        string(vm.UID),
 		},
-		Spec:   ToHapiVmSpec(&vm.Spec),
+		Spec:   Spec,
 		Status: ToHapiVmStatus(vm.Status),
 	}
 	return hapiVM
