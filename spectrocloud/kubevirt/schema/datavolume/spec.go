@@ -65,10 +65,13 @@ func ExpandDataVolumeSpec(dataVolumeSpec []interface{}) (cdiv1.DataVolumeSpec, e
 }
 
 func FlattenDataVolumeSpec(spec cdiv1.DataVolumeSpec) []interface{} {
-	att := map[string]interface{}{
-		"source":       flattenDataVolumeSource(spec.Source),
-		"pvc":          k8s.FlattenPersistentVolumeClaimSpec(*spec.PVC),
-		"content_type": string(spec.ContentType),
+	if spec.PVC != nil {
+		att := map[string]interface{}{
+			"source":       flattenDataVolumeSource(spec.Source),
+			"pvc":          k8s.FlattenPersistentVolumeClaimSpec(*spec.PVC),
+			"content_type": string(spec.ContentType),
+		}
+		return []interface{}{att}
 	}
-	return []interface{}{att}
+	return []interface{}{}
 }

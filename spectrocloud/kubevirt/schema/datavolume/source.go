@@ -156,15 +156,17 @@ func expandDataVolumeSourcePVC(dataVolumeSourcePVC []interface{}) *cdiv1.DataVol
 
 func flattenDataVolumeSource(in *cdiv1.DataVolumeSource) []interface{} {
 	att := make(map[string]interface{})
+	if in != nil {
+		if in.HTTP != nil {
+			att["http"] = flattenDataVolumeSourceHTTP(*in.HTTP)
+		}
+		if in.PVC != nil {
+			att["pvc"] = flattenDataVolumeSourcePVC(*in.PVC)
+		}
 
-	if in.HTTP != nil {
-		att["http"] = flattenDataVolumeSourceHTTP(*in.HTTP)
+		return []interface{}{att}
 	}
-	if in.PVC != nil {
-		att["pvc"] = flattenDataVolumeSourcePVC(*in.PVC)
-	}
-
-	return []interface{}{att}
+	return []interface{}{}
 }
 
 func flattenDataVolumeSourceHTTP(in cdiv1.DataVolumeSourceHTTP) []interface{} {
