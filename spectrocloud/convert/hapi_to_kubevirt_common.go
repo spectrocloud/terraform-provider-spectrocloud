@@ -16,6 +16,7 @@ func ToKubevirtVM(hapiVM *models.V1ClusterVirtualMachine) *kubevirtapiv1.Virtual
 	}
 
 	Spec, _ := ToKubevirtVMSpecM(hapiVM.Spec)
+	Status, _ := ToKubevirtVMStatusM(hapiVM.Status)
 	kubevirtVM := &kubevirtapiv1.VirtualMachine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       hapiVM.Kind,
@@ -36,7 +37,7 @@ func ToKubevirtVM(hapiVM *models.V1ClusterVirtualMachine) *kubevirtapiv1.Virtual
 			ManagedFields:              ToKubevirtVMManagedFields(hapiVM.Metadata.ManagedFields),
 		},
 		Spec:   Spec,
-		Status: ToKubevirtVMStatus(hapiVM.Status),
+		Status: Status,
 	}
 	return kubevirtVM
 }

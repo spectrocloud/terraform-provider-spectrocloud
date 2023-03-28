@@ -1,12 +1,31 @@
 package convert
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	k8sv1 "k8s.io/api/core/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
-
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
+
+func ToKubevirtVMStatusM(status *models.V1ClusterVirtualMachineStatus) (kubevirtapiv1.VirtualMachineStatus, error) {
+	var kubevirtVMStatus kubevirtapiv1.VirtualMachineStatus
+
+	// Marshal the input spec to JSON
+	hapiClusterVMSpecJSON, err := json.Marshal(status)
+	if err != nil {
+		return kubevirtVMStatus, fmt.Errorf("failed to marshal models.V1ClusterVirtualMachineSpec to JSON: %v", err)
+	}
+
+	// Unmarshal the JSON to the desired Kubevirt VM spec
+	err = json.Unmarshal(hapiClusterVMSpecJSON, &kubevirtVMStatus)
+	if err != nil {
+		return kubevirtVMStatus, fmt.Errorf("failed to unmarshal JSON to kubevirtapiv1.VirtualMachineSpec: %v", err)
+	}
+
+	return kubevirtVMStatus, nil
+}
 
 func ToKubevirtVMStatus(status *models.V1ClusterVirtualMachineStatus) kubevirtapiv1.VirtualMachineStatus {
 
