@@ -52,6 +52,14 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 	}
 
 	hapiVM, err := convert.ToHapiVm(virtualMachineToCreate)
+	if _, ok := d.GetOk("run_on_launch"); ok {
+		if !d.Get("run_on_launch").(bool) {
+			hapiVM.Spec.RunStrategy = "Manual"
+		} else {
+			hapiVM.Spec.Running = d.Get("run_on_launch").(bool)
+		}
+	}
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
