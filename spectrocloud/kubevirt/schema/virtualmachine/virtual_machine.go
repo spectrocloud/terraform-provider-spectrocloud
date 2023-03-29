@@ -2,6 +2,7 @@ package virtualmachine
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
 
@@ -31,11 +32,11 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Default:     true,
 			Description: "If set to `true`, the virtual machine will be started when the cluster is launched. Default value is `true`.",
 		},
-		"vm_state": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Computed:    true,
-			Description: "The state of the virtual machine.  The virtual machine can be in one of the following states: `running`, `stopped`, `paused`, `migrating`, `error`, `unknown`.",
+		"vm_action": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			ValidateFunc: validation.StringInSlice([]string{"", "start", "stop", "restart", "pause", "resume", "migrate"}, false),
+			Description:  "The action to be performed on the virtual machine. Valid values are: `start`, `stop`, `restart`, `pause`, `resume`, `migrate`. Default value is `start`.",
 		},
 		"metadata": k8s.NamespacedMetadataSchema("VirtualMachine", false),
 		"spec":     virtualMachineSpecSchema(),
