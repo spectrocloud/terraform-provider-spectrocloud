@@ -12,13 +12,20 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
-func ToHapiVm(vm *kubevirtapiv1.VirtualMachine) *models.V1ClusterVirtualMachine {
+func ToHapiVm(vm *kubevirtapiv1.VirtualMachine) (*models.V1ClusterVirtualMachine, error) {
 	var GracePeriodSeconds int64
 	if vm.DeletionGracePeriodSeconds != nil {
 		GracePeriodSeconds = *vm.DeletionGracePeriodSeconds
 	}
 
-	Spec, _ := ToHapiVmSpecM(vm.Spec)
+	Spec, err := ToHapiVmSpecM(vm.Spec)
+	if err != nil {
+		return nil, err
+	}
+	Status, err := ToHapiVmStatusM(vm.Status)
+	if err != nil {
+		return nil, err
+	}
 
 	hapiVM := &models.V1ClusterVirtualMachine{
 		Metadata: &models.V1VMObjectMeta{
@@ -36,9 +43,9 @@ func ToHapiVm(vm *kubevirtapiv1.VirtualMachine) *models.V1ClusterVirtualMachine 
 			UID:                        string(vm.UID),
 		},
 		Spec:   Spec,
-		Status: ToHapiVmStatus(vm.Status),
+		Status: Status,
 	}
-	return hapiVM
+	return hapiVM, nil
 }
 
 func ToHapiVmOwnerReferences(references []metav1.OwnerReference) []*models.V1VMOwnerReference {

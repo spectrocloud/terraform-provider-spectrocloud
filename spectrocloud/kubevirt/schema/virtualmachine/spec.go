@@ -41,7 +41,7 @@ func virtualMachineSpecSchema() *schema.Schema {
 		Type: schema.TypeList,
 
 		Description: fmt.Sprintf("VirtualMachineSpec describes how the proper VirtualMachine should look like."),
-		Required:    true,
+		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{
 			Schema: fields,

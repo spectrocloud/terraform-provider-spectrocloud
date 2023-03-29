@@ -36,8 +36,61 @@ func resourceKubevirtVirtualMachine() *schema.Resource {
 		Schema: virtualmachine.VirtualMachineFields(),
 	}
 }
+func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := m.(*client.V1Client)
 
-func resourceKubevirtVirtualMachineCreate(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
+	clusterUid := d.Get("cluster_uid").(string)
+	cluster, err := c.GetCluster(clusterUid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	virtualMachineToCreate, err := virtualmachine.FromResourceData(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	hapiVM, err := convert.ToHapiVm(virtualMachineToCreate)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if cloneFromVM, ok := d.GetOk("base_vm_name"); ok && cloneFromVM != "" {
+		// Handling clone case
+		err = c.CloneVirtualMachine(clusterUid, cloneFromVM.(string), hapiVM.Metadata.Name, hapiVM.Metadata.Namespace)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		vm, err := c.GetVirtualMachine(clusterUid, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if d.Get("run_on_launch").(bool) {
+			diags = resourceVirtualMachineActions(c, ctx, d, "start", clusterUid, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace)
+			if diags.HasError() {
+				return diags
+			}
+		}
+		d.SetId(utils.BuildId(clusterUid, vm.Metadata))
+	} else {
+		vm, err := c.CreateVirtualMachine(cluster.Metadata.UID, hapiVM)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if d.Get("run_on_launch").(bool) {
+			diags, _ = waitForVirtualMachineToTargetState(ctx, d, cluster.Metadata.UID, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace, diags, c, "create", "Running")
+			if diags.HasError() {
+				return diags
+			}
+		}
+		d.SetId(utils.BuildId(clusterUid, vm.Metadata))
+	}
+
+	resourceKubevirtVirtualMachineRead(ctx, d, m)
+	return diags
+}
+
+/*func resourceKubevirtVirtualMachineCreate(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	cli := (meta).(*client.V1Client)
 
 	vm, err := virtualmachine.FromResourceData(resourceData)
@@ -95,19 +148,19 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, resourceData *sch
 	}
 
 	return resourceKubevirtVirtualMachineRead(ctx, resourceData, meta)
-}
+}*/
 
 func resourceKubevirtVirtualMachineRead(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	cli := (meta).(*client.V1Client)
 
-	namespace, name, err := utils.IdParts(resourceData.Id())
+	clusterUid, namespace, name, err := utils.IdParts(resourceData.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading virtual machine %s", name)
 
-	hapiVM, err := cli.GetVirtualMachine(resourceData.Get("cluster_uid").(string), namespace, name)
+	hapiVM, err := cli.GetVirtualMachine(clusterUid, namespace, name)
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
@@ -147,11 +200,10 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 		return resourceKubevirtVirtualMachineRead(ctx, resourceData, meta)
 	}*/
 	c := m.(*client.V1Client)
-	vmNamespace, vmName, err := utils.IdParts(d.Id())
+	clusterUid, vmNamespace, vmName, err := utils.IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	clusterUid := d.Get("cluster_uid").(string)
 	currentVm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 	if err != nil {
 		return diag.FromErr(err)
@@ -162,7 +214,10 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	hapiVM := convert.ToHapiVm(vm)
+	hapiVM, err := convert.ToHapiVm(vm)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	// needed to get context for the cluster
 	cluster, err := c.GetCluster(clusterUid)
@@ -264,7 +319,7 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 }
 
 func resourceKubevirtVirtualMachineDelete(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	namespace, name, err := utils.IdParts(resourceData.Id())
+	clusterUid, namespace, name, err := utils.IdParts(resourceData.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -272,7 +327,7 @@ func resourceKubevirtVirtualMachineDelete(ctx context.Context, resourceData *sch
 	cli := (meta).(*client.V1Client)
 
 	log.Printf("[INFO] Deleting virtual machine: %#v", name)
-	if err := cli.DeleteVirtualMachine(resourceData.Get("cluster_uid").(string), namespace, name); err != nil {
+	if err := cli.DeleteVirtualMachine(clusterUid, namespace, name); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -309,7 +364,7 @@ func resourceKubevirtVirtualMachineDelete(ctx context.Context, resourceData *sch
 }
 
 func resourceKubevirtVirtualMachineExists(resourceData *schema.ResourceData, meta interface{}) (bool, error) {
-	namespace, name, err := utils.IdParts(resourceData.Id())
+	clusterUid, namespace, name, err := utils.IdParts(resourceData.Id())
 	if err != nil {
 		return false, err
 	}
@@ -317,7 +372,7 @@ func resourceKubevirtVirtualMachineExists(resourceData *schema.ResourceData, met
 	cli := (meta).(*client.V1Client)
 
 	log.Printf("[INFO] Checking virtual machine %s", name)
-	if _, err := cli.GetVirtualMachine(resourceData.Get("cluster_uid").(string), namespace, name); err != nil {
+	if _, err := cli.GetVirtualMachine(clusterUid, namespace, name); err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
 			return false, nil
 		}

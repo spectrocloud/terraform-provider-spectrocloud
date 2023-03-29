@@ -1,5 +1,6 @@
 resource "spectrocloud_virtual_machine" "virtual_machine" {
   cluster_uid = "6414899fa4e47d6788678ecf"
+  run_on_launch = false
   metadata {
     name      = "test-vm"
     namespace = "default"
@@ -8,7 +9,7 @@ resource "spectrocloud_virtual_machine" "virtual_machine" {
     }
   }
   spec {
-    run_strategy = "Always"
+    run_strategy = "Manual"
     data_volume_templates {
       metadata {
         name      = "test-vm-bootvolume"
@@ -103,6 +104,19 @@ resource "spectrocloud_virtual_machine" "virtual_machine" {
           }
         }*/
       }
+    }
+  }
+}
+
+// Creating VM by cloning existing VM
+resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
+  cluster_uid  = "6414899fa4e47d6788678ecf"
+  base_vm_name = spectrocloud_virtual_machine.virtual_machine.metadata.0.name
+  metadata {
+    name      = "tf-test-vm-clone-default"
+    namespace = "default"
+    labels = {
+      "key1" = "value1"
     }
   }
 }

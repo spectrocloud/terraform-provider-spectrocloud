@@ -28,8 +28,8 @@ func virtualMachineStatusSchema() *schema.Schema {
 	fields := virtualMachineStatusFields()
 
 	return &schema.Schema{
-		Type: schema.TypeList,
-
+		Type:        schema.TypeList,
+		Computed:    true,
 		Description: fmt.Sprintf("VirtualMachineStatus represents the status returned by the controller to describe how the VirtualMachine is doing."),
 		Optional:    true,
 		MaxItems:    1,

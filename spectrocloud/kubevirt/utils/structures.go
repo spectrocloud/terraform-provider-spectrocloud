@@ -6,23 +6,23 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/hapi/models"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func IdParts(id string) (string, string, error) {
+func IdParts(id string) (string, string, string, error) {
 	parts := strings.Split(id, "/")
-	if len(parts) != 2 {
+	if len(parts) != 3 {
 		err := fmt.Errorf("Unexpected ID format (%q), expected %q.", id, "namespace/name")
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return parts[0], parts[1], nil
+	return parts[0], parts[1], parts[2], nil
 }
 
-func BuildId(meta metav1.ObjectMeta) string {
-	return meta.Namespace + "/" + meta.Name
+func BuildId(clusterUid string, meta *models.V1VMObjectMeta) string {
+	return clusterUid + "/" + meta.Namespace + "/" + meta.Name
 }
 
 func FlattenStringMap(m map[string]string) map[string]interface{} {
