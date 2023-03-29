@@ -31,6 +31,12 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Default:     true,
 			Description: "If set to `true`, the virtual machine will be started when the cluster is launched. Default value is `true`.",
 		},
+		"vm_state": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "The state of the virtual machine.  The virtual machine can be in one of the following states: `running`, `stopped`, `paused`, `migrating`, `error`, `unknown`.",
+		},
 		"metadata": k8s.NamespacedMetadataSchema("VirtualMachine", false),
 		"spec":     virtualMachineSpecSchema(),
 		"status":   virtualMachineStatusSchema(),
