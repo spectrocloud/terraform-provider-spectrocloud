@@ -1,8 +1,6 @@
 package virtualmachine
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
@@ -22,8 +20,8 @@ func dataVolumeTemplatesSchema() *schema.Schema {
 
 	return &schema.Schema{
 		Type:        schema.TypeList,
-		Description: fmt.Sprintf("dataVolumeTemplates is a list of dataVolumes that the VirtualMachineInstance template can reference."),
-		Required:    true,
+		Description: "dataVolumeTemplates is a list of dataVolumes that the VirtualMachineInstance template can reference.",
+		Optional:    true,
 		Elem: &schema.Resource{
 			Schema: fields,
 		},

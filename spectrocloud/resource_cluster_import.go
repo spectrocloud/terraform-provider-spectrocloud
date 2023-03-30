@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -13,7 +15,6 @@ import (
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -79,7 +80,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Target:     []string{"Pending"},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,

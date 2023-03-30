@@ -20,11 +20,10 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Description: "The cluster UID to which the virtual machine belongs to.",
 		},
 		"base_vm_name": {
-			Type:          schema.TypeString,
-			Optional:      true,
-			ForceNew:      true,
-			ConflictsWith: []string{"spec"},
-			Description:   "The name of the source virtual machine that a clone will be created of.",
+			Type:        schema.TypeString,
+			Optional:    true,
+			ForceNew:    true,
+			Description: "The name of the source virtual machine that a clone will be created of.",
 		},
 		"run_on_launch": {
 			Type:        schema.TypeBool,

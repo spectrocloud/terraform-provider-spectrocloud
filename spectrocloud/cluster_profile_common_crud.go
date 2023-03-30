@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -15,7 +15,7 @@ var resourceClusterProfileUpdatePendingStates = []string{
 }
 
 func waitForProfileDownload(ctx context.Context, c *client.V1Client, id string, timeout time.Duration) error {
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterProfileUpdatePendingStates,
 		Target:     []string{"true"}, // canBeApplied=true
 		Refresh:    resourceClusterProfileStateRefreshFunc(c, id),
@@ -29,7 +29,7 @@ func waitForProfileDownload(ctx context.Context, c *client.V1Client, id string, 
 	return err
 }
 
-func resourceClusterProfileStateRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
+func resourceClusterProfileStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(id)
 		if err != nil {

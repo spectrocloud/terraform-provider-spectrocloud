@@ -1,8 +1,6 @@
 package virtualmachine
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	k8sv1 "k8s.io/api/core/v1"
@@ -62,7 +60,7 @@ func virtualMachineConditionsSchema() *schema.Schema {
 	return &schema.Schema{
 		Type: schema.TypeList,
 
-		Description: fmt.Sprintf("Hold the state information of the VirtualMachine and its VirtualMachineInstance."),
+		Description: "Hold the state information of the VirtualMachine and its VirtualMachineInstance.",
 		Required:    true,
 		Elem: &schema.Resource{
 			Schema: fields,

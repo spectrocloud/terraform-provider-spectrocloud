@@ -9,8 +9,21 @@ import (
 
 func dataVolumeSourceFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-		"http": dataVolumeSourceHTTPSchema(),
-		"pvc":  dataVolumeSourcePVCSchema(),
+		"blank": dataVolumeSourceBlankSchema(),
+		"http":  dataVolumeSourceHTTPSchema(),
+		"pvc":   dataVolumeSourcePVCSchema(),
+	}
+}
+
+func dataVolumeSourceBlankSchema() *schema.Schema {
+	return &schema.Schema{
+		Type:        schema.TypeList,
+		Description: "DataVolumeSourceBlank provides the parameters to create a Data Volume from an empty source.",
+		Optional:    true,
+		MaxItems:    1,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{},
+		},
 	}
 }
 
@@ -105,8 +118,19 @@ func expandDataVolumeSource(dataVolumeSource []interface{}) *cdiv1.DataVolumeSou
 
 	in := dataVolumeSource[0].(map[string]interface{})
 
+	result.Blank = expandDataVolumeSourceBlank(in["blank"].([]interface{}))
 	result.HTTP = expandDataVolumeSourceHTTP(in["http"].([]interface{}))
 	result.PVC = expandDataVolumeSourcePVC(in["pvc"].([]interface{}))
+
+	return result
+}
+
+func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) *cdiv1.DataVolumeBlankImage {
+	if len(dataVolumeSourceBlank) == 0 || dataVolumeSourceBlank[0] == nil {
+		return nil
+	}
+
+	result := &cdiv1.DataVolumeBlankImage{}
 
 	return result
 }

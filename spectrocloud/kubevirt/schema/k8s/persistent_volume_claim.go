@@ -1,12 +1,15 @@
 package k8s
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	api "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
@@ -15,7 +18,6 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			Type:        schema.TypeSet,
 			Description: "A set of the desired access modes the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes-1",
 			Required:    true,
-			ForceNew:    true,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 				ValidateFunc: validation.StringInSlice([]string{
@@ -70,7 +72,12 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			Description: "Name of the storage class requested by the claim",
 			Optional:    true,
 			Computed:    true,
-			ForceNew:    true,
+		},
+		"volume_mode": {
+			Type:        schema.TypeString,
+			Description: "volumeMode defines what type of volume is required by the claim. Value of Filesystem is implied when not included in claim spec.",
+			Optional:    true,
+			Computed:    true,
 		},
 	}
 }
@@ -104,6 +111,9 @@ func FlattenPersistentVolumeClaimSpec(in v1.PersistentVolumeClaimSpec) []interfa
 	}
 	if in.StorageClassName != nil {
 		att["storage_class_name"] = *in.StorageClassName
+	}
+	if in.VolumeMode != nil {
+		att["volume_mode"] = *in.VolumeMode
 	}
 	return []interface{}{att}
 }
@@ -141,6 +151,16 @@ func ExpandPersistentVolumeClaimSpec(l []interface{}) (*v1.PersistentVolumeClaim
 	}
 	if v, ok := in["storage_class_name"].(string); ok && v != "" {
 		obj.StorageClassName = utils.PtrToString(v)
+	}
+	if v, ok := in["volume_mode"].(string); ok && v != "" {
+		switch v {
+		case string(v1.PersistentVolumeBlock):
+			obj.VolumeMode = types.Ptr(v1.PersistentVolumeBlock)
+		case string(v1.PersistentVolumeFilesystem):
+			obj.VolumeMode = types.Ptr(v1.PersistentVolumeFilesystem)
+		default:
+			return nil, fmt.Errorf("invalid volume mode: %s", v)
+		}
 	}
 	return obj, nil
 }

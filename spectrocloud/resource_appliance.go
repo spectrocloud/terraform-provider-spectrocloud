@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/hapi/models"
@@ -75,7 +75,7 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 	// Wait, catching any errors
 	if d.Get("wait") != nil && d.Get("wait").(bool) {
-		stateConf := &resource.StateChangeConf{
+		stateConf := &retry.StateChangeConf{
 			Pending:    resourceApplianceCreatePendingStates,
 			Target:     []string{"ready_healthy"},
 			Refresh:    resourceApplianceStateRefreshFunc(c, d.Id()),
@@ -93,7 +93,7 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 	return diags
 }
 
-func resourceApplianceStateRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
+func resourceApplianceStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		appliance, err := c.GetAppliance(id)
 		if err != nil {

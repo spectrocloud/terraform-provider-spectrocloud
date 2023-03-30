@@ -1,8 +1,6 @@
 package virtualmachine
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -42,7 +40,7 @@ func virtualMachineStateChangeRequestsSchema() *schema.Schema {
 	return &schema.Schema{
 		Type: schema.TypeList,
 
-		Description: fmt.Sprintf("StateChangeRequests indicates a list of actions that should be taken on a VMI."),
+		Description: "StateChangeRequests indicates a list of actions that should be taken on a VMI.",
 		Required:    true,
 		Elem: &schema.Resource{
 			Schema: fields,

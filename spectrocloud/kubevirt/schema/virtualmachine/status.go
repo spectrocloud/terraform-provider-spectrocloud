@@ -1,8 +1,6 @@
 package virtualmachine
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
@@ -30,7 +28,7 @@ func virtualMachineStatusSchema() *schema.Schema {
 	return &schema.Schema{
 		Type:        schema.TypeList,
 		Computed:    true,
-		Description: fmt.Sprintf("VirtualMachineStatus represents the status returned by the controller to describe how the VirtualMachine is doing."),
+		Description: "VirtualMachineStatus represents the status returned by the controller to describe how the VirtualMachine is doing.",
 		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{

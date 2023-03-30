@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -38,7 +38,7 @@ var virtualClusterLifecycleStates = []string{
 func waitForClusterReady(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterReadyPendingStates,
 		Target:     []string{"Ready"},
 		Refresh:    resourceClusterReadyRefreshFunc(c, d.Id()),
@@ -57,7 +57,7 @@ func waitForClusterReady(ctx context.Context, d *schema.ResourceData, uid string
 
 func waitForVirtualClusterLifecyclePause(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
 	d.SetId(uid)
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    virtualClusterLifecycleStates,
 		Target:     []string{"Paused"},
 		Refresh:    resourceVirtualClusterLifecycleStateRefreshFunc(c, d.Id()),
@@ -75,7 +75,7 @@ func waitForVirtualClusterLifecyclePause(ctx context.Context, d *schema.Resource
 }
 func waitForVirtualClusterLifecycleResume(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
 	d.SetId(uid)
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    virtualClusterLifecycleStates,
 		Target:     []string{"Running"},
 		Refresh:    resourceVirtualClusterLifecycleStateRefreshFunc(c, d.Id()),
@@ -92,7 +92,7 @@ func waitForVirtualClusterLifecycleResume(ctx context.Context, d *schema.Resourc
 	return nil, false
 }
 
-func resourceClusterReadyRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
+func resourceClusterReadyRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetClusterWithoutStatus(id)
 		if err != nil {
@@ -122,7 +122,7 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid str
 		return diagnostics, true
 	}
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
 		Target:     []string{"Running"},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
@@ -146,7 +146,7 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid str
 //		"upgrading",
 //	}
 func waitForClusterDeletion(ctx context.Context, c *client.V1Client, id string, timeout time.Duration) error {
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterDeletePendingStates,
 		Target:     nil, // wait for deleted
 		Refresh:    resourceClusterStateRefreshFunc(c, id),
@@ -160,7 +160,7 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, id string, 
 	return err
 }
 
-func resourceClusterStateRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
+func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(id)
 		if err != nil {
@@ -176,7 +176,7 @@ func resourceClusterStateRefreshFunc(c *client.V1Client, id string) resource.Sta
 	}
 }
 
-func resourceVirtualClusterLifecycleStateRefreshFunc(c *client.V1Client, id string) resource.StateRefreshFunc {
+func resourceVirtualClusterLifecycleStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(id)
 		if err != nil {

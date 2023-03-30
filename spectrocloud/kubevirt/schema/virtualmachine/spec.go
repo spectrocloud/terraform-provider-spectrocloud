@@ -1,8 +1,6 @@
 package virtualmachine
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
@@ -40,7 +38,7 @@ func virtualMachineSpecSchema() *schema.Schema {
 	return &schema.Schema{
 		Type: schema.TypeList,
 
-		Description: fmt.Sprintf("VirtualMachineSpec describes how the proper VirtualMachine should look like."),
+		Description: "VirtualMachineSpec describes how the proper VirtualMachine should look like.",
 		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{

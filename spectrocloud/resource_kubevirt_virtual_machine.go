@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,7 +27,7 @@ func resourceKubevirtVirtualMachine() *schema.Resource {
 		UpdateContext: resourceVirtualMachineUpdate,
 		DeleteContext: resourceKubevirtVirtualMachineDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(40 * time.Minute),
@@ -69,7 +69,7 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		vm, err := c.GetVirtualMachine(clusterUid, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace)
+		vm, err := c.GetVirtualMachine(clusterUid, hapiVM.Metadata.Namespace, hapiVM.Metadata.Name)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -239,6 +239,9 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	if needUpdate {
+		// TODO: There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
+		hapiVM.Spec.Template.Metadata.DeletionTimestamp = nil
+		hapiVM.Metadata.DeletionTimestamp = nil
 		_, err = c.UpdateVirtualMachine(cluster, vmName, hapiVM)
 		if err != nil {
 			return diag.FromErr(err)
@@ -316,11 +319,8 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 			return diags
 		}
 	}
-	vm, err := c.GetVirtualMachine(clusterUid, vmName, vmNamespace)
+	_, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 	if err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("vm_state", vm.Status.PrintableStatus); err != nil {
 		return diag.FromErr(err)
 	}
 	return diags
@@ -340,7 +340,7 @@ func resourceKubevirtVirtualMachineDelete(ctx context.Context, resourceData *sch
 	}
 
 	// Wait for virtual machine instance to be removed:
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending: []string{"Deleting"},
 		Timeout: resourceData.Timeout(schema.TimeoutDelete),
 		Refresh: func() (interface{}, string, error) {
@@ -361,7 +361,7 @@ func resourceKubevirtVirtualMachineDelete(ctx context.Context, resourceData *sch
 		},
 	}
 
-	if _, err := stateConf.WaitForState(); err != nil {
+	if _, err := stateConf.WaitForStateContext(ctx); err != nil {
 		return diag.FromErr(fmt.Errorf("%s", err))
 	}
 

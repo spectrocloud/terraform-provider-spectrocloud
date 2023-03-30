@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
@@ -46,7 +46,7 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 		return diags, true
 	}
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    resourceVirtualMachineCreatePendingStates,
 		Target:     []string{targetState},
 		Refresh:    resourceVirtualMachineStateRefreshFunc(c, clusterUid, vmName, namespace),
@@ -63,7 +63,7 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 	return nil, false
 }
 
-func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid string, vmName string, vmNamespace string) resource.StateRefreshFunc {
+func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid string, vmName string, vmNamespace string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		//cluster, err := c.GetCluster(clusterUid)
 		//if err != nil {
@@ -427,9 +427,6 @@ func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterV
 
 	}
 
-	// TODO: There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
-	vm.Spec.Template.Metadata.DeletionTimestamp = nil
-	vm.Metadata.DeletionTimestamp = nil
 	return requireUpdate, needRestart, vm, nil
 }
 
