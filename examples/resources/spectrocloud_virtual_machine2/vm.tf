@@ -88,7 +88,7 @@ resource "spectrocloud_virtual_machine" "virtual_machine" {
             }
           }
         }
-        /*        affinity {
+        /*       affinity {
           pod_anti_affinity {
             preferred_during_scheduling_ignored_during_execution {
               weight = 100
@@ -117,6 +117,177 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
     namespace = "default"
     labels = {
       "key1" = "value1"
+    }
+  }
+}
+
+
+#Creates a VM with cloud init and contianer disk
+resource "spectrocloud_virtual_machine" "tf-test-vm-default" {
+  cluster_uid = "6419c4e33964c35b04e62656"
+  #run_on_launch = true
+  vm_action = "stop"
+  metadata {
+    name      = "test-vm"
+    namespace = "default"
+    labels = {
+      "key1" = "value1"
+    }
+  }
+  spec {
+    template {
+      metadata {
+        labels = {
+          "kubevirt.io/vm" = "test-vm-cont"
+        }
+      }
+      spec {
+        volume {
+          name = "test-vm-containerdisk1"
+          volume_source {
+            container_disk {
+              image_url = "quay.io/kubevirt/fedora-cloud-container-disk-demo"
+            }
+          }
+        }
+        volume {
+          name = "cloudintdisk"
+          volume_source {
+            cloud_init_config_drive {
+              user_data = "\n#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n"
+            }
+          }
+        }
+        domain {
+          resources {
+            requests = {
+              memory = "8G"
+              cpu    = 2
+            }
+          }
+          devices {
+            disk {
+              name = "test-vm-containerdisk1"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            disk {
+              name = "cloudintdisk"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            interface {
+              name                     = "main"
+              interface_binding_method = "InterfaceMasquerade"
+            }
+          }
+        }
+        network {
+          name = "main"
+          network_source {
+            pod {}
+          }
+        }
+      }
+    }
+  }
+}
+
+
+# Create a VM with default cloud init disk, container disk and multus network interface with interface binding method as sr-iov
+resource "spectrocloud_virtual_machine" "tf-test-vm-multinetwork" {
+  cluster_uid = "6419c4e33964c35b04e62656"
+  #run_on_launch = true
+  vm_action = "stop"
+  metadata {
+    name      = "test-vm-ni"
+    namespace = "default"
+    labels = {
+      "key1" = "value1"
+    }
+  }
+  spec {
+    template {
+      metadata {
+        labels = {
+          "kubevirt.io/vm" = "test-vm-cont"
+        }
+      }
+      spec {
+        volume {
+          name = "test-vm-containerdisk1"
+          volume_source {
+            container_disk {
+              image_url = "quay.io/kubevirt/fedora-cloud-container-disk-demo"
+            }
+          }
+        }
+        volume {
+          name = "cloudintdisk"
+          volume_source {
+            cloud_init_config_drive {
+              user_data = "\n#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n"
+            }
+          }
+        }
+        domain {
+          resources {
+            requests = {
+              memory = "8G"
+              cpu    = 2
+            }
+          }
+          devices {
+            disk {
+              name = "test-vm-containerdisk1"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            disk {
+              name = "cloudintdisk"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            interface {
+              name                     = "main"
+              interface_binding_method = "InterfaceMasquerade"
+              model                   = "virtio"
+            }
+            interface {
+              name                     = "additional"
+              interface_binding_method = "InterfaceSRIOV"
+              model                   = "e1000e"
+            }
+          }
+        }
+        network {
+          name = "main"
+          network_source {
+            pod {}
+          }
+        }
+        network {
+          name                     = "additional"
+          network_source {
+            multus {
+              network_name = "macvlan-conf"
+              default      = false
+            }
+          }
+        }
+      }
     }
   }
 }
