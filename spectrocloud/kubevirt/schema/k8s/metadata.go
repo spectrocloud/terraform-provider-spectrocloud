@@ -41,6 +41,7 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 			Description:  fmt.Sprintf("Name of the %s, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names", objectName),
 			Optional:     true,
 			Computed:     true,
+			ForceNew:     true,
 			ValidateFunc: utils.ValidateName,
 		},
 		"resource_version": {
@@ -98,6 +99,7 @@ func namespacedMetadataSchemaIsTemplate(objectName string, generatableName, isTe
 		Type:        schema.TypeString,
 		Description: fmt.Sprintf("Namespace defines the space within which name of the %s must be unique.", objectName),
 		Optional:    true,
+		ForceNew:    true,
 		Default: (func() interface{} {
 			if isTemplate {
 				return nil
