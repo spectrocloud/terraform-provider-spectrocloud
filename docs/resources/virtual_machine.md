@@ -98,12 +98,15 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-custom" {
 
 - `cluster_uid` (String) The cluster UID to which the virtual machine belongs to.
 - `metadata` (Block List, Min: 1, Max: 1) Standard VirtualMachine's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
-- `spec` (Block List, Min: 1, Max: 1) VirtualMachineSpec describes how the proper VirtualMachine should look like. (see [below for nested schema](#nestedblock--spec))
 
 ### Optional
 
+- `base_vm_name` (String) The name of the source virtual machine that a clone will be created of.
+- `run_on_launch` (Boolean) If set to `true`, the virtual machine will be started when the cluster is launched. Default value is `true`.
+- `spec` (Block List, Max: 1) VirtualMachineSpec describes how the proper VirtualMachine should look like. (see [below for nested schema](#nestedblock--spec))
 - `status` (Block List, Max: 1) VirtualMachineStatus represents the status returned by the controller to describe how the VirtualMachine is doing. (see [below for nested schema](#nestedblock--status))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `vm_action` (String) The action to be performed on the virtual machine. Valid values are: `start`, `stop`, `restart`, `pause`, `resume`, `migrate`. Default value is `start`.
 
 ### Read-Only
 
@@ -130,12 +133,9 @@ Read-Only:
 <a id="nestedblock--spec"></a>
 ### Nested Schema for `spec`
 
-Required:
-
-- `data_volume_templates` (Block List, Min: 1) dataVolumeTemplates is a list of dataVolumes that the VirtualMachineInstance template can reference. (see [below for nested schema](#nestedblock--spec--data_volume_templates))
-
 Optional:
 
+- `data_volume_templates` (Block List) dataVolumeTemplates is a list of dataVolumes that the VirtualMachineInstance template can reference. (see [below for nested schema](#nestedblock--spec--data_volume_templates))
 - `run_strategy` (String) Running state indicates the requested running state of the VirtualMachineInstance, mutually exclusive with Running.
 - `template` (Block List, Max: 1) Template is the direct specification of VirtualMachineInstance. (see [below for nested schema](#nestedblock--spec--template))
 
@@ -189,6 +189,7 @@ Optional:
 
 - `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--spec--data_volume_templates--spec--pvc--selector))
 - `storage_class_name` (String) Name of the storage class requested by the claim
+- `volume_mode` (String) volumeMode defines what type of volume is required by the claim. Value of Filesystem is implied when not included in claim spec.
 - `volume_name` (String) The binding reference to the PersistentVolume backing this claim.
 
 <a id="nestedblock--spec--data_volume_templates--spec--pvc--resources"></a>
@@ -225,8 +226,13 @@ Optional:
 
 Optional:
 
+- `blank` (Block List, Max: 1) DataVolumeSourceBlank provides the parameters to create a Data Volume from an empty source. (see [below for nested schema](#nestedblock--spec--data_volume_templates--spec--source--blank))
 - `http` (Block List, Max: 1) DataVolumeSourceHTTP provides the parameters to create a Data Volume from an HTTP source. (see [below for nested schema](#nestedblock--spec--data_volume_templates--spec--source--http))
 - `pvc` (Block List, Max: 1) DataVolumeSourcePVC provides the parameters to create a Data Volume from an existing PVC. (see [below for nested schema](#nestedblock--spec--data_volume_templates--spec--source--pvc))
+
+<a id="nestedblock--spec--data_volume_templates--spec--source--blank"></a>
+### Nested Schema for `spec.data_volume_templates.spec.source.blank`
+
 
 <a id="nestedblock--spec--data_volume_templates--spec--source--http"></a>
 ### Nested Schema for `spec.data_volume_templates.spec.source.http`
@@ -583,8 +589,12 @@ Optional:
 
 Required:
 
-- `interface_binding_method` (String) Represents the method which will be used to connect the interface to the guest.
+- `interface_binding_method` (String) Represents the Interface model, One of: e1000, e1000e, ne2k_pci, pcnet, rtl8139, virtio. Defaults to virtio.
 - `name` (String) Logical name of the interface as well as a reference to the associated networks.
+
+Optional:
+
+- `model` (String) Represents the method which will be used to connect the interface to the guest.
 
 
 
@@ -696,7 +706,14 @@ Required:
 Optional:
 
 - `cloud_init_config_drive` (Block List, Max: 1) CloudInitConfigDrive represents a cloud-init Config Drive user-data source. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--cloud_init_config_drive))
+- `cloud_init_no_cloud` (Block Set) Used to specify a cloud-init `noCloud` image. The image is expected to contain a disk image in a supported format. The disk image is extracted from the cloud-init `noCloud `image and used as the disk for the VM (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--cloud_init_no_cloud))
+- `config_map` (Block List, Max: 1) ConfigMapVolumeSource adapts a ConfigMap into a volume. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--config_map))
+- `container_disk` (Block Set) A container disk is a disk that is backed by a container image. The container image is expected to contain a disk image in a supported format. The disk image is extracted from the container image and used as the disk for the VM. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--container_disk))
 - `data_volume` (Block List, Max: 1) DataVolume represents the dynamic creation a PVC for this volume as well as the process of populating that PVC with a disk image. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--data_volume))
+- `empty_disk` (Block List, Max: 1) EmptyDisk represents a temporary disk which shares the VM's lifecycle. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--empty_disk))
+- `ephemeral` (Block List, Max: 1) EphemeralVolumeSource represents a volume that is populated with the contents of a pod. Ephemeral volumes do not support ownership management or SELinux relabeling. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--ephemeral))
+- `host_disk` (Block List, Max: 1) HostDisk represents a disk created on the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--host_disk))
+- `persistent_volume_claim` (Block List, Max: 1) PersistentVolumeClaimVolumeSource represents a reference to a PersistentVolumeClaim in the same namespace. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--persistent_volume_claim))
 - `service_account` (Block List, Max: 1) ServiceAccountVolumeSource represents a reference to a service account. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--service_account))
 
 <a id="nestedblock--spec--template--spec--volume--volume_source--cloud_init_config_drive"></a>
@@ -728,12 +745,94 @@ Required:
 
 
 
+<a id="nestedblock--spec--template--spec--volume--volume_source--cloud_init_no_cloud"></a>
+### Nested Schema for `spec.template.spec.volume.volume_source.cloud_init_no_cloud`
+
+Required:
+
+- `user_data` (String) The user data to use for the cloud-init no cloud disk. This can be a local file path, a remote URL, or a registry URL.
+
+
+<a id="nestedblock--spec--template--spec--volume--volume_source--config_map"></a>
+### Nested Schema for `spec.template.spec.volume.volume_source.config_map`
+
+Optional:
+
+- `default_mode` (Number) Optional: mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.
+- `items` (Block List) If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error unless it is marked optional. Paths must be relative and may not contain the '..' path or start with '..'. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--config_map--items))
+
+<a id="nestedblock--spec--template--spec--volume--volume_source--config_map--items"></a>
+### Nested Schema for `spec.template.spec.volume.volume_source.config_map.items`
+
+Optional:
+
+- `key` (String)
+
+
+
+<a id="nestedblock--spec--template--spec--volume--volume_source--container_disk"></a>
+### Nested Schema for `spec.template.spec.volume.volume_source.container_disk`
+
+Required:
+
+- `image_url` (String) The URL of the container image to use as the disk. This can be a local file path, a remote URL, or a registry URL.
+
+
 <a id="nestedblock--spec--template--spec--volume--volume_source--data_volume"></a>
 ### Nested Schema for `spec.template.spec.volume.volume_source.data_volume`
 
 Required:
 
 - `name` (String) Name represents the name of the DataVolume in the same namespace.
+
+
+<a id="nestedblock--spec--template--spec--volume--volume_source--empty_disk"></a>
+### Nested Schema for `spec.template.spec.volume.volume_source.empty_disk`
+
+Required:
+
+- `capacity` (String) Capacity of the sparse disk.
+
+
+<a id="nestedblock--spec--template--spec--volume--volume_source--ephemeral"></a>
+### Nested Schema for `spec.template.spec.volume.volume_source.ephemeral`
+
+Optional:
+
+- `persistent_volume_claim` (Block List, Max: 1) PersistentVolumeClaimVolumeSource represents a reference to a PersistentVolumeClaim in the same namespace. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_source--ephemeral--persistent_volume_claim))
+
+<a id="nestedblock--spec--template--spec--volume--volume_source--ephemeral--persistent_volume_claim"></a>
+### Nested Schema for `spec.template.spec.volume.volume_source.ephemeral.persistent_volume_claim`
+
+Required:
+
+- `claim_name` (String) ClaimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+
+Optional:
+
+- `read_only` (Boolean) Will force the ReadOnly setting in VolumeMounts. Default false.
+
+
+
+<a id="nestedblock--spec--template--spec--volume--volume_source--host_disk"></a>
+### Nested Schema for `spec.template.spec.volume.volume_source.host_disk`
+
+Required:
+
+- `path` (String) Path of the disk.
+- `type` (String) Type of the disk, supported values are disk, directory, socket, char, block.
+
+
+<a id="nestedblock--spec--template--spec--volume--volume_source--persistent_volume_claim"></a>
+### Nested Schema for `spec.template.spec.volume.volume_source.persistent_volume_claim`
+
+Required:
+
+- `claim_name` (String) ClaimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
+
+Optional:
+
+- `read_only` (Boolean) Will force the ReadOnly setting in VolumeMounts. Default false.
 
 
 <a id="nestedblock--spec--template--spec--volume--volume_source--service_account"></a>
