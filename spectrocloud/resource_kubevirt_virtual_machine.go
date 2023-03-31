@@ -212,7 +212,7 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	currentVm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
+	_, err = c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -233,24 +233,42 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	needUpdate, needRestart, _, err := toVirtualMachineUpdateRequest(d, currentVm)
+	if _, ok := d.GetOk("run_on_launch"); ok {
+		if !d.Get("run_on_launch").(bool) {
+			hapiVM.Spec.RunStrategy = "Manual"
+		} else {
+			hapiVM.Spec.Running = d.Get("run_on_launch").(bool)
+		}
+	}
+	_, err = c.UpdateVirtualMachine(cluster, vmName, hapiVM)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	if needUpdate {
-		// TODO: There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
-		hapiVM.Spec.Template.Metadata.DeletionTimestamp = nil
-		hapiVM.Metadata.DeletionTimestamp = nil
-		_, err = c.UpdateVirtualMachine(cluster, vmName, hapiVM)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	if needRestart {
-		stateToChange := "restart"
-		resourceVirtualMachineActions(c, ctx, d, stateToChange, clusterUid, vmName, vmNamespace)
-	}
+	// Currently Restarts are handled via vm_actions through config later will remove below code
+	//needUpdate, needRestart, _, err := toVirtualMachineUpdateRequest(d, currentVm)
+	//if err != nil {
+	//	return diag.FromErr(err)
+	//}
+	//if needUpdate {
+	//	// TODO: There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
+	//	//hapiVM.Spec.Template.Metadata.DeletionTimestamp = nil
+	//	//hapiVM.Metadata.DeletionTimestamp = nil
+	//	if _, ok := d.GetOk("run_on_launch"); ok {
+	//		if !d.Get("run_on_launch").(bool) {
+	//			hapiVM.Spec.RunStrategy = "Manual"
+	//		} else {
+	//			hapiVM.Spec.Running = d.Get("run_on_launch").(bool)
+	//		}
+	//	}
+	//	_, err = c.UpdateVirtualMachine(cluster, vmName, hapiVM)
+	//	if err != nil {
+	//		return diag.FromErr(err)
+	//	}
+	//}
+	//if needRestart {
+	//	stateToChange := "restart"
+	//	resourceVirtualMachineActions(c, ctx, d, stateToChange, clusterUid, vmName, vmNamespace)
+	//}
 	if _, ok := d.GetOk("vm_action"); ok && d.HasChange("vm_action") {
 		stateToChange := d.Get("vm_action").(string)
 		resourceVirtualMachineActions(c, ctx, d, stateToChange, clusterUid, vmName, vmNamespace)

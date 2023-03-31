@@ -121,8 +121,8 @@ func domainSpecFields() map[string]*schema.Schema {
 								"model": {
 									Type:     schema.TypeString,
 									Optional: true,
-									Default:  "virtio",
 									ValidateFunc: validation.StringInSlice([]string{
+										"",
 										"e1000",
 										"e1000e",
 										"ne2k_pci",
@@ -311,6 +311,9 @@ func expandInterfaces(interfaces []interface{}) []kubevirtapiv1.Interface {
 		if v, ok := in["interface_binding_method"].(string); ok {
 			result[i].InterfaceBindingMethod = expandInterfaceBindingMethod(v)
 		}
+		if v, ok := in["model"].(string); ok {
+			result[i].Model = v
+		}
 	}
 
 	return result
@@ -405,7 +408,7 @@ func flattenInterfaces(in []kubevirtapiv1.Interface) []interface{} {
 
 		c["name"] = v.Name
 		c["interface_binding_method"] = flattenInterfaceBindingMethod(v.InterfaceBindingMethod)
-
+		c["model"] = v.Model
 		att[i] = c
 	}
 
