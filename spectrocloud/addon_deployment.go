@@ -18,7 +18,11 @@ func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *mo
 	if err != nil {
 		return nil, false
 	}
-	clusterProfile, err := c.GetClusterProfile(profileId)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return nil, false
+	}
+	clusterProfile, err := c.GetClusterProfile(clusterC, profileId)
 	if err != nil {
 		return nil, false
 	}

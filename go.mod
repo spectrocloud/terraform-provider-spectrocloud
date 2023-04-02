@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.24.1
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/hapi v1.14.1-0.20230315115513-301628ae2f5e
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20230316081205-081fc39f073c
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20230402042857-c29e763a9c1f
 	github.com/stretchr/testify v1.7.2
 )
 
@@ -100,4 +100,4 @@ require (
 )
 
 //replace github.com/spectrocloud/hapi => ../hapi
-//replace github.com/spectrocloud/palette-sdk-go => ../../palette-sdk-go
+//replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go

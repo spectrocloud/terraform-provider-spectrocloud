@@ -48,10 +48,14 @@ func dataSourceClusterProfile() *schema.Resource {
 
 func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
+	hashboardC, err := c.GetHashboard()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-	profiles, err := c.GetClusterProfiles()
+	profiles, err := c.GetClusterProfiles(hashboardC)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -126,16 +130,21 @@ func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEn
 }
 
 func getProfile(profiles []*models.V1ClusterProfileMetadata, d *schema.ResourceData, version string, ProfileContext string, c *client.V1Client) (*models.V1ClusterProfile, error) {
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, p := range profiles {
 		if v, ok := d.GetOk("id"); ok && v.(string) == p.Metadata.UID {
-			fullProfile, err := c.GetClusterProfile(p.Metadata.UID)
+			fullProfile, err := c.GetClusterProfile(clusterC, p.Metadata.UID)
 			if err != nil {
 				return nil, err
 			}
 			return fullProfile, nil
 		} else if v, ok := d.GetOk("name"); ok && v.(string) == p.Metadata.Name {
 			if p.Spec.Version == version || (p.Spec.Version == "" && version == "1.0.0") {
-				fullProfile, err := c.GetClusterProfile(p.Metadata.UID)
+				fullProfile, err := c.GetClusterProfile(clusterC, p.Metadata.UID)
 				if err != nil {
 					return nil, err
 				}
