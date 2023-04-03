@@ -80,6 +80,10 @@ func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid strin
 				return nil, "", err
 			}
 		}
+		if vm == nil {
+			emptyVM := &models.V1ClusterVirtualMachine{}
+			return emptyVM, "", nil
+		}
 		return vm, vm.Status.PrintableStatus, nil
 	}
 }
