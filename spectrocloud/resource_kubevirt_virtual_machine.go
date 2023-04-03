@@ -46,6 +46,10 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	// if cluster is nil(deleted or not found), return error
+	if cluster == nil {
+		return diag.FromErr(fmt.Errorf("cluster not found for uid %s", clusterUid))
+	}
 	virtualMachineToCreate, err := virtualmachine.FromResourceData(d)
 	if err != nil {
 		return diag.FromErr(err)
