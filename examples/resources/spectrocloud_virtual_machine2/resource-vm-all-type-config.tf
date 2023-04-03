@@ -10,6 +10,7 @@ locals {
 resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
   cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   run_on_launch = false
+  # vm_action = "start" //["start", "stop", "pause", "resume", "migrate", "restart"]
   metadata {
     name      = "tf-test-vm-data-volume-template"
     namespace = "default"
@@ -121,8 +122,6 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
 # Creates a VM with cloud init and contianer disk (with all default values)
 resource "spectrocloud_virtual_machine" "tf-test-vm-default" {
   cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
-  # run_on_launch = true
-  vm_action = "stop"
   metadata {
     name      = "test-vm-default-container-disk"
     namespace = "default"
@@ -211,8 +210,6 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
 # Create a VM with default cloud init disk, container disk , multus network interface with interface binding method as sr-iov and network model
 resource "spectrocloud_virtual_machine" "tf-test-vm-multinetwork" {
   cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
-  # run_on_launch = true
-  # vm_action = "stop"
   metadata {
     name      = "tf-test-vm-multi-network-interface"
     namespace = "default"
