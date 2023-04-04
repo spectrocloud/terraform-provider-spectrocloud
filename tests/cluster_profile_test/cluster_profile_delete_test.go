@@ -8,7 +8,7 @@ import (
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schema"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/tests"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 )
 
 func TestDeleteClusterProfileError(t *testing.T) {
@@ -17,13 +17,13 @@ func TestDeleteClusterProfileError(t *testing.T) {
 		uid           string
 		profile       *models.V1ClusterProfile
 		expectedError error
-		mock          *tests.HapiMock
+		mock          *mock.ClusterClientMock
 	}{
 		{
 			name:          "GetProfileError",
 			uid:           "1",
 			expectedError: errors.New("GetProfileError"),
-			mock: &tests.HapiMock{
+			mock: &mock.ClusterClientMock{
 				GetClusterProfilesResponse: nil,
 				GetClusterProfilesErr:      errors.New("GetProfileError"),
 			},
@@ -45,13 +45,13 @@ func TestDeleteClusterProfile(t *testing.T) {
 		uid           string
 		profile       *models.V1ClusterProfile
 		expectedError error
-		mock          *tests.HapiMock
+		mock          *mock.ClusterClientMock
 	}{
 		{
 			name:          "Success",
 			uid:           "1",
 			expectedError: nil,
-			mock: &tests.HapiMock{
+			mock: &mock.ClusterClientMock{
 				GetClusterProfilesResponse: &clusterC.V1ClusterProfilesGetOK{
 					Payload: &models.V1ClusterProfile{Metadata: &models.V1ObjectMeta{Annotations: map[string]string{"scope": "project"}}},
 				},
@@ -62,7 +62,7 @@ func TestDeleteClusterProfile(t *testing.T) {
 			name:          "Success",
 			uid:           "2",
 			expectedError: nil,
-			mock: &tests.HapiMock{
+			mock: &mock.ClusterClientMock{
 				GetClusterProfilesResponse: &clusterC.V1ClusterProfilesGetOK{
 					Payload: &models.V1ClusterProfile{Metadata: &models.V1ObjectMeta{Annotations: map[string]string{"scope": "tenant"}}},
 				},
@@ -73,7 +73,7 @@ func TestDeleteClusterProfile(t *testing.T) {
 			name:          "Invalid scope",
 			uid:           "3",
 			expectedError: errors.New("invalid scope"),
-			mock: &tests.HapiMock{
+			mock: &mock.ClusterClientMock{
 				GetClusterProfilesResponse: &clusterC.V1ClusterProfilesGetOK{
 					Payload: &models.V1ClusterProfile{Metadata: &models.V1ObjectMeta{Annotations: map[string]string{"scope": "invalid"}}},
 				},

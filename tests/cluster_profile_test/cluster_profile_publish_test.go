@@ -6,7 +6,7 @@ import (
 
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schema"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/tests"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 )
 
 func TestPublishClusterProfile(t *testing.T) {
@@ -15,14 +15,14 @@ func TestPublishClusterProfile(t *testing.T) {
 		uid            string
 		ProfileContext string
 		expectedError  error
-		mock           *tests.HapiMock
+		mock           *mock.ClusterClientMock
 	}{
 		{
 			name:           "Success",
 			uid:            "1",
 			ProfileContext: "project",
 			expectedError:  nil,
-			mock: &tests.HapiMock{
+			mock: &mock.ClusterClientMock{
 				PublishClusterProfileErr: nil,
 			},
 		},
@@ -31,7 +31,7 @@ func TestPublishClusterProfile(t *testing.T) {
 			uid:            "2",
 			ProfileContext: "tenant",
 			expectedError:  errors.New("error publishing cluster profile"),
-			mock: &tests.HapiMock{
+			mock: &mock.ClusterClientMock{
 				PublishClusterProfileErr: errors.New("error publishing cluster profile"),
 			},
 		},
@@ -40,7 +40,7 @@ func TestPublishClusterProfile(t *testing.T) {
 			uid:            "3",
 			ProfileContext: "invalid",
 			expectedError:  errors.New("invalid scope"),
-			mock:           &tests.HapiMock{},
+			mock:           &mock.ClusterClientMock{},
 		},
 	}
 

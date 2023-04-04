@@ -1,29 +1,24 @@
 package addon_deployment_test
 
 import (
-	"fmt"
+	"errors"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/spectrocloud/hapi/models"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"github.com/stretchr/testify/assert"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 )
 
 func TestPatchWithRetry(t *testing.T) {
-	// Create a mock V1Client
-	var patchCalled int
-
-	// Create a mock for client.V1SpectroClustersPatchProfiles(params)
-	h := &client.V1Client{
+	// Create a cluster client mock
+	h := client.V1Client{
 		RetryAttempts: 3,
-		ClustersPatchProfilesFn: func(params *clusterC.V1SpectroClustersPatchProfilesParams) error {
-			patchCalled++
-			if patchCalled < 3 {
-				return fmt.Errorf("test error")
-			}
-			return nil
-		},
+	}
+	mock := &mock.ClusterClientMock{
+		PatchSPCProfilesErr: errors.New("test error"),
 	}
 
 	// Create mock params
@@ -37,9 +32,9 @@ func TestPatchWithRetry(t *testing.T) {
 	}
 
 	// Call patchWithRetry
-	err := client.PatchWithRetry(h, params)
+	err := h.PatchWithRetry(mock, params)
 
 	// Assert patch was called 3 times and there was no error
-	assert.Equal(t, 3, patchCalled)
+	assert.Equal(t, 3, mock.PatchSPCProfilesCount)
 	assert.NoError(t, err)
 }

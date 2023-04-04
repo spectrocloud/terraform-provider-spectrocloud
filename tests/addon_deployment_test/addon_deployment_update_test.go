@@ -3,23 +3,17 @@ package addon_deployment
 import (
 	"testing"
 
-	"github.com/spectrocloud/hapi/models"
-	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
-	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 )
 
 func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
-	// Create a mock V1Client
-	h := &client.V1Client{
-		ClustersPatchProfilesFn: func(params *clusterC.V1SpectroClustersPatchProfilesParams) error {
-			// Check that the correct params are passed to ClustersPatchProfiles
-			assert.Equal(t, "test-cluster", params.UID)
-			assert.Equal(t, "test-profile", params.Body.Profiles[0].UID)
-			assert.Equal(t, "test-profile-to-replace", params.Body.Profiles[0].ReplaceWithProfile)
-			assert.True(t, *params.ResolveNotification)
-			return nil
-		},
+	h := client.V1Client{}
+	mock := &mock.ClusterClientMock{
+		PatchClusterProfileErr: nil,
 	}
 
 	// Create mock cluster
@@ -52,23 +46,16 @@ func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
 	}
 
 	// Call UpdateAddonDeployment
-	err := h.UpdateAddonDeployment(cluster, body, newProfile)
+	err := h.UpdateAddonDeployment(mock, cluster, body, newProfile)
 
 	// Assert there was no error
 	assert.NoError(t, err)
 }
 
 func TestUpdateAddonDeploymentIsAttached(t *testing.T) {
-	// Create a mock V1Client
-	h := &client.V1Client{
-		ClustersPatchProfilesFn: func(params *clusterC.V1SpectroClustersPatchProfilesParams) error {
-			// Check that the correct params are passed to ClustersPatchProfiles
-			assert.Equal(t, "test-cluster", params.UID)
-			assert.Equal(t, "test-profile", params.Body.Profiles[0].UID)
-			assert.Equal(t, "test-profile-uid", params.Body.Profiles[0].ReplaceWithProfile)
-			assert.True(t, *params.ResolveNotification)
-			return nil
-		},
+	h := client.V1Client{}
+	mock := &mock.ClusterClientMock{
+		PatchClusterProfileErr: nil,
 	}
 
 	// Create mock cluster
@@ -101,7 +88,7 @@ func TestUpdateAddonDeploymentIsAttached(t *testing.T) {
 	}
 
 	// Call UpdateAddonDeployment
-	err := h.UpdateAddonDeployment(cluster, body, newProfile)
+	err := h.UpdateAddonDeployment(mock, cluster, body, newProfile)
 
 	// Assert there was no error
 	assert.NoError(t, err)

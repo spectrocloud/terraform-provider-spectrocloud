@@ -6,7 +6,7 @@ import (
 
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/tests"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +16,7 @@ func TestUpdateClusterProfile(t *testing.T) {
 		clusterProfile *models.V1ClusterProfileUpdateEntity
 		ProfileContext string
 		expectedError  error
-		mock           *tests.HapiMock
+		mock           *mock.ClusterClientMock
 	}{
 		{
 			name: "Success",
@@ -27,7 +27,7 @@ func TestUpdateClusterProfile(t *testing.T) {
 			},
 			ProfileContext: "project",
 			expectedError:  nil,
-			mock: &tests.HapiMock{
+			mock: &mock.ClusterClientMock{
 				UpdateClusterProfileErr: nil,
 			},
 		},
@@ -40,7 +40,7 @@ func TestUpdateClusterProfile(t *testing.T) {
 			},
 			ProfileContext: "tenant",
 			expectedError:  errors.New("error updating cluster profile"),
-			mock: &tests.HapiMock{
+			mock: &mock.ClusterClientMock{
 				UpdateClusterProfileErr: errors.New("error updating cluster profile"),
 			},
 		},
@@ -53,7 +53,7 @@ func TestUpdateClusterProfile(t *testing.T) {
 			},
 			ProfileContext: "invalid",
 			expectedError:  errors.New("invalid scope"),
-			mock:           &tests.HapiMock{},
+			mock:           &mock.ClusterClientMock{},
 		},
 	}
 

@@ -48,7 +48,7 @@ func dataSourceClusterProfile() *schema.Resource {
 
 func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	hashboardC, err := c.GetHashboard()
+	hashboardC, err := c.GetHashboardClient()
 	if err != nil {
 		return diag.FromErr(err)
 	}

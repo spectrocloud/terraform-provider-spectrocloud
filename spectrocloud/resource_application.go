@@ -200,7 +200,7 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
+		err = c.UpdateAddonDeployment(clusterC, cluster, addonDeployment, newProfile)
 		if err != nil {
 			return diag.FromErr(err)
 		}
