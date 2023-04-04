@@ -77,13 +77,18 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if d.Get("run_on_launch").(bool) {
-			diags = resourceVirtualMachineActions(c, ctx, d, "start", clusterUid, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace)
-			if diags.HasError() {
-				return diags
-			}
-		}
 		d.SetId(utils.BuildId(clusterUid, vm.Metadata))
+		// apply the rest of configuration after clone to override it.
+		hapiVM.Metadata.ResourceVersion = vm.Metadata.ResourceVersion // set resource version to avoid conflict
+		/*		//	// TODO: There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
+				hapiVM.Spec.Template.Metadata.DeletionTimestamp = nil
+				hapiVM.Metadata.DeletionTimestamp = nil
+				hapiVM.Spec.Template.Metadata.CreationTimestamp = ""
+				hapiVM.Metadata.CreationTimestamp = ""*/
+		_, err = c.UpdateVirtualMachine(cluster, hapiVM.Metadata.Name, hapiVM)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	} else {
 		vm, err := c.CreateVirtualMachine(cluster.Metadata.UID, hapiVM)
 		if err != nil {

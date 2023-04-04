@@ -205,6 +205,70 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
       "key1" = "value1"
     }
   }
+  spec {
+    template {
+      metadata {
+        labels = {
+          "kubevirt.io/vm" = "test-vm-cont"
+        }
+      }
+      spec {
+        volume {
+          name = "test-vm-containerdisk1"
+          volume_source {
+            container_disk {
+              image_url = "quay.io/kubevirt/fedora-cloud-container-disk-demo"
+            }
+          }
+        }
+        volume {
+          name = "cloudintdisk"
+          volume_source {
+            cloud_init_config_drive {
+              user_data = "\n#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n"
+            }
+          }
+        }
+        domain {
+          resources {
+            requests = {
+              memory = "2G"
+              cpu    = 2
+            }
+          }
+          devices {
+            disk {
+              name = "test-vm-containerdisk1"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            disk {
+              name = "cloudintdisk"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            interface {
+              name                     = "main"
+              interface_binding_method = "InterfaceMasquerade"
+            }
+          }
+        }
+        network {
+          name = "main"
+          network_source {
+            pod {}
+          }
+        }
+      }
+    }
+  }
+
 }
 
 # Create a VM with default cloud init disk, container disk , multus network interface with interface binding method as sr-iov and network model
