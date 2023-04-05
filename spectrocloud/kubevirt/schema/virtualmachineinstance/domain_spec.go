@@ -391,7 +391,9 @@ func flattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
 	att := make(map[string]interface{})
 
 	att["resources"] = flattenResources(in.Resources)
-	att["cpu"] = flattenCPU(in.CPU)
+	if in.CPU != nil {
+		att["cpu"] = flattenCPU(in.CPU)
+	}
 	att["devices"] = flattenDevices(in.Devices)
 
 	return []interface{}{att}
@@ -400,10 +402,15 @@ func flattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
 func flattenCPU(in *kubevirtapiv1.CPU) []interface{} {
 	att := make(map[string]interface{})
 
-	att["cores"] = in.Cores
-	att["sockets"] = in.Sockets
-	att["threads"] = in.Threads
-
+	if in.Cores != 0 {
+		att["cores"] = in.Cores
+	}
+	if in.Sockets != 0 {
+		att["sockets"] = in.Sockets
+	}
+	if in.Threads != 0 {
+		att["threads"] = in.Threads
+	}
 	return []interface{}{att}
 }
 
