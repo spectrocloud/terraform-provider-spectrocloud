@@ -121,7 +121,7 @@ func resourceVirtualMachine() *schema.Resource {
 	}
 }
 
-func resourceVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceKubevirtVirtualMachineCreate(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type

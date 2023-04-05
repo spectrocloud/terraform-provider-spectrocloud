@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
@@ -37,7 +37,7 @@ var resourceVirtualMachineCreatePendingStates = []string{
 }
 
 func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceData, clusterUid string, vmName string, namespace string, diags diag.Diagnostics, c *client.V1Client, state string, targetState string) (diag.Diagnostics, bool) {
-	vm, err := c.GetVirtualMachine(clusterUid, vmName, namespace)
+	vm, err := c.GetVirtualMachine(clusterUid, namespace, vmName)
 	if err != nil {
 		return diags, true
 	}
@@ -46,7 +46,7 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 		return diags, true
 	}
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    resourceVirtualMachineCreatePendingStates,
 		Target:     []string{targetState},
 		Refresh:    resourceVirtualMachineStateRefreshFunc(c, clusterUid, vmName, namespace),
@@ -63,7 +63,7 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 	return nil, false
 }
 
-func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid string, vmName string, vmNamespace string) resource.StateRefreshFunc {
+func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid string, vmName string, vmNamespace string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		//cluster, err := c.GetCluster(clusterUid)
 		//if err != nil {
@@ -71,7 +71,7 @@ func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid strin
 		//} else if cluster == nil {
 		//	return nil, "Deleted", nil
 		//}
-		vm, err := c.GetVirtualMachine(clusterUid, vmName, vmNamespace)
+		vm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 		if err != nil {
 			if err.(*transport.TransportError).HttpCode == 500 && strings.Contains(err.(*transport.TransportError).Payload.Message, fmt.Sprintf("Failed to get virtual machine '%s'", vmName)) {
 				emptyVM := &models.V1ClusterVirtualMachine{}
@@ -79,6 +79,10 @@ func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid strin
 			} else {
 				return nil, "", err
 			}
+		}
+		if vm == nil {
+			emptyVM := &models.V1ClusterVirtualMachine{}
+			return emptyVM, "", nil
 		}
 		return vm, vm.Status.PrintableStatus, nil
 	}
@@ -377,8 +381,8 @@ func toV1VMStorageSpec(storage string) *models.V1VMStorageSpec {
 func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterVirtualMachine) (bool, bool, *models.V1ClusterVirtualMachine, error) {
 	requireUpdate := false
 	needRestart := false
-	if d.HasChange("cpu_cores") {
-		vm.Spec.Template.Spec.Domain.CPU.Cores = int64(d.Get("cpu_cores").(int))
+	if d.HasChange("cpu") {
+		vm.Spec.Template.Spec.Domain.CPU.Cores = int64(d.Get("cpu").(int))
 		requireUpdate = true
 		needRestart = true
 	}
@@ -402,12 +406,12 @@ func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterV
 		vm.Metadata.Annotations = toVMUpdateAnnotations(vm.Metadata.Annotations, d)
 		requireUpdate = true
 	}
-	if _, ok := d.GetOk("volume_spec"); ok && d.HasChange("volume_spec") {
+	if _, ok := d.GetOk("volume"); ok && d.HasChange("volume") {
 		vm.Spec.Template.Spec.Volumes = prepareVolumeSpec(d)
 		requireUpdate = true
 		needRestart = true
 	}
-	if _, ok := d.GetOk("network_spec"); ok && d.HasChange("network_spec") {
+	if _, ok := d.GetOk("network"); ok && d.HasChange("network") {
 		vm.Spec.Template.Spec.Networks = prepareNetworkSpec(d)
 		requireUpdate = true
 		needRestart = true
@@ -427,9 +431,6 @@ func toVirtualMachineUpdateRequest(d *schema.ResourceData, vm *models.V1ClusterV
 
 	}
 
-	// There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
-	vm.Spec.Template.Metadata.DeletionTimestamp = nil
-	vm.Metadata.DeletionTimestamp = nil
 	return requireUpdate, needRestart, vm, nil
 }
 
