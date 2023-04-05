@@ -539,6 +539,10 @@ Required:
 - `devices` (Block List, Min: 1, Max: 1) Devices allows adding disks, network interfaces, ... (see [below for nested schema](#nestedblock--spec--template--spec--domain--devices))
 - `resources` (Block List, Min: 1, Max: 1) Resources describes the Compute Resources required by this vmi. (see [below for nested schema](#nestedblock--spec--template--spec--domain--resources))
 
+Optional:
+
+- `cpu` (Block List, Max: 1) CPU allows to specifying the CPU topology. Valid resource keys are "cores" , "sockets" and "threads" (see [below for nested schema](#nestedblock--spec--template--spec--domain--cpu))
+
 <a id="nestedblock--spec--template--spec--domain--devices"></a>
 ### Nested Schema for `spec.template.spec.domain.devices`
 
@@ -603,9 +607,19 @@ Optional:
 
 Optional:
 
-- `limits` (Map of String) Requests is a description of the initial vmi resources.
+- `limits` (Map of String) Requests is the maximum amount of compute resources allowed. Valid resource keys are "memory" and "cpu"
 - `over_commit_guest_overhead` (Boolean) Don't ask the scheduler to take the guest-management overhead into account. Instead put the overhead only into the container's memory limit. This can lead to crashes if all memory is in use on a node. Defaults to false.
 - `requests` (Map of String) Requests is a description of the initial vmi resources.
+
+
+<a id="nestedblock--spec--template--spec--domain--cpu"></a>
+### Nested Schema for `spec.template.spec.domain.cpu`
+
+Optional:
+
+- `cores` (Number) Cores is the number of cores inside the vmi. Must be a value greater or equal 1
+- `sockets` (Number) Sockets is the number of sockets inside the vmi. Must be a value greater or equal 1.
+- `threads` (Number) Threads is the number of threads inside the vmi. Must be a value greater or equal 1.
 
 
 

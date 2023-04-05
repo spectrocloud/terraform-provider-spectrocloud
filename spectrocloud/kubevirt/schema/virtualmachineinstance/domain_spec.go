@@ -24,12 +24,37 @@ func domainSpecFields() map[string]*schema.Schema {
 					},
 					"limits": {
 						Type:        schema.TypeMap,
-						Description: "Requests is a description of the initial vmi resources.",
+						Description: "Requests is the maximum amount of compute resources allowed. Valid resource keys are \"memory\" and \"cpu\"",
 						Optional:    true,
 					},
 					"over_commit_guest_overhead": {
 						Type:        schema.TypeBool,
 						Description: "Don't ask the scheduler to take the guest-management overhead into account. Instead put the overhead only into the container's memory limit. This can lead to crashes if all memory is in use on a node. Defaults to false.",
+						Optional:    true,
+					},
+				},
+			},
+		},
+		"cpu": {
+			Type:        schema.TypeList,
+			Description: "CPU allows to specifying the CPU topology. Valid resource keys are \"cores\" , \"sockets\" and \"threads\"",
+			MaxItems:    1,
+			Optional:    true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"cores": {
+						Type:        schema.TypeInt,
+						Description: "Cores is the number of cores inside the vmi. Must be a value greater or equal 1",
+						Optional:    true,
+					},
+					"sockets": {
+						Type:        schema.TypeInt,
+						Description: "Sockets is the number of sockets inside the vmi. Must be a value greater or equal 1.",
+						Optional:    true,
+					},
+					"threads": {
+						Type:        schema.TypeInt,
+						Description: "Threads is the number of threads inside the vmi. Must be a value greater or equal 1.",
 						Optional:    true,
 					},
 				},
@@ -178,6 +203,13 @@ func expandDomainSpec(domainSpec []interface{}) (kubevirtapiv1.DomainSpec, error
 		}
 		result.Devices = devices
 	}
+	if v, ok := in["cpu"].([]interface{}); ok {
+		cpu, err := expandCPU(v)
+		if err != nil {
+			return result, err
+		}
+		result.CPU = &cpu
+	}
 
 	return result, nil
 }
@@ -226,6 +258,27 @@ func expandDevices(devices []interface{}) (kubevirtapiv1.Devices, error) {
 	}
 	if v, ok := in["interface"].([]interface{}); ok {
 		result.Interfaces = expandInterfaces(v)
+	}
+
+	return result, nil
+}
+func expandCPU(cpu []interface{}) (kubevirtapiv1.CPU, error) {
+	result := kubevirtapiv1.CPU{}
+
+	if len(cpu) == 0 || cpu[0] == nil {
+		return result, nil
+	}
+
+	in := cpu[0].(map[string]interface{})
+
+	if v, ok := in["cores"].(int); ok {
+		result.Cores = uint32(v)
+	}
+	if v, ok := in["sockets"].(int); ok {
+		result.Sockets = uint32(v)
+	}
+	if v, ok := in["threads"].(int); ok {
+		result.Threads = uint32(v)
 	}
 
 	return result, nil
@@ -338,7 +391,18 @@ func flattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
 	att := make(map[string]interface{})
 
 	att["resources"] = flattenResources(in.Resources)
+	att["cpu"] = flattenCPU(in.CPU)
 	att["devices"] = flattenDevices(in.Devices)
+
+	return []interface{}{att}
+}
+
+func flattenCPU(in *kubevirtapiv1.CPU) []interface{} {
+	att := make(map[string]interface{})
+
+	att["cores"] = in.Cores
+	att["sockets"] = in.Sockets
+	att["threads"] = in.Threads
 
 	return []interface{}{att}
 }
