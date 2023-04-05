@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -55,7 +56,7 @@ func waitForApplicationUpdate(ctx context.Context, d *schema.ResourceData, diags
 	return waitForApplication(ctx, d, diags, c, schema.TimeoutUpdate)
 }
 
-func resourceApplicationStateRefreshFunc(c *client.V1Client, d *schema.ResourceData, retryAttempts int, duration int) resource.StateRefreshFunc {
+func resourceApplicationStateRefreshFunc(c *client.V1Client, d *schema.ResourceData, retryAttempts int, duration int) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		application, err := c.GetApplication(d.Id())
 		if err != nil {

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -31,7 +31,7 @@ func waitForAddonDeployment(ctx context.Context, d *schema.ResourceData, cluster
 		return diags, true
 	}
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    resourceAddonDeploymentCreatePendingStates,
 		Target:     []string{"True"},
 		Refresh:    resourceAddonDeploymentStateRefreshFunc(c, cluster_uid, profile_uid),
@@ -56,7 +56,7 @@ func waitForAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, c
 	return waitForAddonDeployment(ctx, d, cluster_uid, profile_uid, diags, c, schema.TimeoutUpdate)
 }
 
-func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, cluster_uid string, profile_uid string) resource.StateRefreshFunc {
+func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, cluster_uid string, profile_uid string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(cluster_uid)
 		if err != nil {
