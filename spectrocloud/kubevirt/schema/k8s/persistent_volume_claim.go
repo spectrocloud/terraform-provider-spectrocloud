@@ -189,7 +189,7 @@ func expandResourceRequirements(l []interface{}) (*v1.ResourceRequirements, erro
 }
 
 func expandPersistentVolumeAccessModes(s []interface{}) []api.PersistentVolumeAccessMode {
-	out := make([]api.PersistentVolumeAccessMode, len(s), len(s))
+	out := make([]api.PersistentVolumeAccessMode, len(s))
 	for i, v := range s {
 		out[i] = api.PersistentVolumeAccessMode(v.(string))
 	}
@@ -197,7 +197,7 @@ func expandPersistentVolumeAccessModes(s []interface{}) []api.PersistentVolumeAc
 }
 
 func flattenPersistentVolumeAccessModes(in []api.PersistentVolumeAccessMode) *schema.Set {
-	var out = make([]interface{}, len(in), len(in))
+	var out = make([]interface{}, len(in))
 	for i, v := range in {
 		out[i] = string(v)
 	}

@@ -81,6 +81,10 @@ func resourceClusterProfile() *schema.Resource {
 
 func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -92,13 +96,13 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 
 	// Create
 	ProfileContext := d.Get("context").(string)
-	uid, err := c.CreateClusterProfile(clusterProfile, ProfileContext)
+	uid, err := c.CreateClusterProfile(clusterC, clusterProfile, ProfileContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	// And then publish
-	if err = c.PublishClusterProfile(uid, ProfileContext); err != nil {
+	if err = c.PublishClusterProfile(clusterC, uid, ProfileContext); err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
@@ -108,10 +112,14 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	var diags diag.Diagnostics
 
-	cp, err := c.GetClusterProfile(d.Id())
+	cp, err := c.GetClusterProfile(clusterC, d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cp == nil {
@@ -154,13 +162,17 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 
 func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") {
 		log.Printf("Updating packs")
-		cp, err := c.GetClusterProfile(d.Id())
+		cp, err := c.GetClusterProfile(clusterC, d.Id())
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -174,13 +186,13 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 
 		ProfileContext := d.Get("context").(string)
-		if err := c.UpdateClusterProfile(cluster, ProfileContext); err != nil {
+		if err := c.UpdateClusterProfile(clusterC, cluster, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PatchClusterProfile(cluster, metadata, ProfileContext); err != nil {
+		if err := c.PatchClusterProfile(clusterC, cluster, metadata, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PublishClusterProfile(cluster.Metadata.UID, ProfileContext); err != nil {
+		if err := c.PublishClusterProfile(clusterC, cluster.Metadata.UID, ProfileContext); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -192,11 +204,14 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	var diags diag.Diagnostics
 
-	err := c.DeleteClusterProfile(d.Id())
-	if err != nil {
+	if err := c.DeleteClusterProfile(clusterC, d.Id()); err != nil {
 		return diag.FromErr(err)
 	}
 

@@ -109,7 +109,7 @@ resource "spectrocloud_virtual_machine" "virtual_machine" {
 }
 
 // Creating VM by cloning existing VM
-resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
+/*resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
   cluster_uid  = "6414899fa4e47d6788678ecf"
   base_vm_name = spectrocloud_virtual_machine.virtual_machine.metadata.0.name
   metadata {
@@ -119,6 +119,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
       "key1" = "value1"
     }
   }
+}*/
 }
 
 

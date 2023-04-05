@@ -45,6 +45,11 @@ func resourceAddonDeployment() *schema.Resource {
 
 func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
@@ -67,12 +72,12 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 		//return diag.FromErr(errors.New(fmt.Sprintf("Cluster: %s: Profile is already attached: %s", cluster.Metadata.UID, addonDeployment.Profiles[0].UID)))
 	}
 
-	err = c.CreateAddonDeployment(cluster.Metadata.UID, addonDeployment)
+	err = c.CreateAddonDeployment(clusterC, cluster.Metadata.UID, addonDeployment)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+	clusterProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -155,18 +160,23 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, cluster *models.V1SpectroCluster, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	addonDeployment := toAddonDeployment(c, d)
 
-	newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+	newProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
+	err = c.UpdateAddonDeployment(clusterC, cluster, addonDeployment, newProfile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+	clusterProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

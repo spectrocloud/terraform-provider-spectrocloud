@@ -4,19 +4,19 @@ go 1.18
 
 require (
 	github.com/go-openapi/strfmt v0.21.5
+	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.26.1
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/hapi v1.14.1-0.20230317084133-6a290ae86693
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20230327174315-0bcf2ac616f4
-	github.com/stretchr/testify v1.8.2
+	github.com/spectrocloud/hapi v1.14.1-0.20230315115513-301628ae2f5e
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20230404004301-0e4bcff8f3e7
+	github.com/stretchr/testify v1.8.0
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.26.3
-	k8s.io/apimachinery v0.26.3
+	k8s.io/api v0.23.5
+	k8s.io/apimachinery v0.23.5
 	kubevirt.io/api v0.59.0
 	kubevirt.io/containerized-data-importer-api v1.56.0
-
 )
 
 require (
@@ -45,7 +45,6 @@ require (
 	github.com/go-openapi/validate v0.20.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

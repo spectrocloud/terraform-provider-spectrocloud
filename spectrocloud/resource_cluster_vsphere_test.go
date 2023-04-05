@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/spectrocloud/hapi/models"
-	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -121,9 +120,6 @@ func TestToVsphereCluster(t *testing.T) {
 	d := prepareClusterVsphereTestData()
 
 	m := &client.V1Client{
-		GetClusterClientFn: func() (clusterC.ClientService, error) {
-			return &clusterC.Client{}, nil
-		},
 		GetClusterWithoutStatusFn: func(uid string) (*models.V1SpectroCluster, error) {
 			return &models.V1SpectroCluster{
 				Metadata: nil,

@@ -182,6 +182,10 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 	if d.HasChanges("cluster_uid", "cluster_profile") {
 		c := m.(*client.V1Client)
+		clusterC, err := c.GetClusterClient()
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
 		clusterUid := d.Get("cluster_uid").(string)
 
@@ -192,16 +196,16 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		addonDeployment := toAddonDeployment(c, d)
 
-		newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+		newProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
+		err = c.UpdateAddonDeployment(clusterC, cluster, addonDeployment, newProfile)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 
-		clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+		clusterProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
 		if err != nil {
 			return diag.FromErr(err)
 		}

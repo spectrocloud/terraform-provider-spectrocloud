@@ -1,8 +1,6 @@
 package datavolume
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
@@ -31,7 +29,7 @@ func DataVolumeSpecSchema() *schema.Schema {
 
 	return &schema.Schema{
 		Type:        schema.TypeList,
-		Description: fmt.Sprintf("DataVolumeSpec defines our specification for a DataVolume type"),
+		Description: "DataVolumeSpec defines our specification for a DataVolume type",
 		Required:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{

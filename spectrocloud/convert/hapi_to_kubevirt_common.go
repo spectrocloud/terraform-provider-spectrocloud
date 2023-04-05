@@ -2,6 +2,7 @@ package convert
 
 import (
 	"encoding/base64"
+	"errors"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/spectrocloud/hapi/models"
@@ -10,13 +11,27 @@ import (
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
 
-func ToKubevirtVM(hapiVM *models.V1ClusterVirtualMachine) *kubevirtapiv1.VirtualMachine {
+func ToKubevirtVM(hapiVM *models.V1ClusterVirtualMachine) (*kubevirtapiv1.VirtualMachine, error) {
 	if hapiVM == nil {
-		return nil
+		return nil, errors.New("hapiVM is nil")
 	}
 
-	Spec, _ := ToKubevirtVMSpecM(hapiVM.Spec)
-	Status, _ := ToKubevirtVMStatusM(hapiVM.Status)
+	Spec, err := ToKubevirtVMSpecM(hapiVM.Spec)
+	if err != nil {
+		return nil, err
+	}
+	Status, err := ToKubevirtVMStatusM(hapiVM.Status)
+	if err != nil {
+		return nil, err
+	}
+	OwnerReferences, err := ToKubevirtVMOwnerReferences(hapiVM.Metadata.OwnerReferences)
+	if err != nil {
+		return nil, err
+	}
+	ManagedFields, err := ToKubevirtVMManagedFields(hapiVM.Metadata.ManagedFields)
+	if err != nil {
+		return nil, err
+	}
 	kubevirtVM := &kubevirtapiv1.VirtualMachine{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       hapiVM.Kind,
@@ -32,17 +47,17 @@ func ToKubevirtVM(hapiVM *models.V1ClusterVirtualMachine) *kubevirtapiv1.Virtual
 			DeletionGracePeriodSeconds: &hapiVM.Metadata.DeletionGracePeriodSeconds,
 			Labels:                     hapiVM.Metadata.Labels,
 			Annotations:                hapiVM.Metadata.Annotations,
-			OwnerReferences:            ToKubevirtVMOwnerReferences(hapiVM.Metadata.OwnerReferences),
+			OwnerReferences:            OwnerReferences,
 			Finalizers:                 hapiVM.Metadata.Finalizers,
-			ManagedFields:              ToKubevirtVMManagedFields(hapiVM.Metadata.ManagedFields),
+			ManagedFields:              ManagedFields,
 		},
 		Spec:   Spec,
 		Status: Status,
 	}
-	return kubevirtVM
+	return kubevirtVM, nil
 }
 
-func ToKubevirtVMOwnerReferences(references []*models.V1VMOwnerReference) []metav1.OwnerReference {
+func ToKubevirtVMOwnerReferences(references []*models.V1VMOwnerReference) ([]metav1.OwnerReference, error) {
 	ret := make([]metav1.OwnerReference, len(references))
 	for i, reference := range references {
 		ret[i] = metav1.OwnerReference{
@@ -55,41 +70,51 @@ func ToKubevirtVMOwnerReferences(references []*models.V1VMOwnerReference) []meta
 		}
 	}
 
-	return ret
+	return ret, nil
 }
 
-func ToKubevirtVMManagedFields(fields []*models.V1VMManagedFieldsEntry) []metav1.ManagedFieldsEntry {
+func ToKubevirtVMManagedFields(fields []*models.V1VMManagedFieldsEntry) ([]metav1.ManagedFieldsEntry, error) {
 	ret := make([]metav1.ManagedFieldsEntry, len(fields))
 	for i, field := range fields {
+		FieldsV1, err := ToKvVmFieldsV1(field.FieldsV1)
+		if err != nil {
+			return nil, err
+		}
 		ret[i] = metav1.ManagedFieldsEntry{
 			APIVersion: field.APIVersion,
 			FieldsType: field.FieldsType,
-			FieldsV1:   ToKvVmFieldsV1(field.FieldsV1),
+			FieldsV1:   FieldsV1,
 			Manager:    field.Manager,
 			Operation:  ToKvVmManagedFieldsOperationType(field.Operation),
 			// TODO: Time:       ToKubevirtTime(field.Time),
 		}
 	}
 
-	return ret
+	return ret, nil
 }
 
-func ToKvVmFieldsV1(v1 *models.V1VMFieldsV1) *metav1.FieldsV1 {
-	return &metav1.FieldsV1{
-		Raw: StrfmtBase64ToByte(v1.Raw),
+func ToKvVmFieldsV1(v1 *models.V1VMFieldsV1) (*metav1.FieldsV1, error) {
+	Raw, err := StrfmtBase64ToByte(v1.Raw)
+	if err != nil {
+		return nil, err
 	}
+	Fields := &metav1.FieldsV1{
+		Raw: Raw,
+	}
+
+	return Fields, nil
 }
 
-func StrfmtBase64ToByte(raw []strfmt.Base64) []byte {
+func StrfmtBase64ToByte(raw []strfmt.Base64) ([]byte, error) {
 	var res []byte
 	for _, s := range raw {
 		decoded, err := base64.StdEncoding.DecodeString(string(s))
 		if err != nil {
-			// TODO: Handle error
+			return nil, err
 		}
 		res = append(res, decoded...)
 	}
-	return res
+	return res, nil
 }
 
 func ToKvVmManagedFieldsOperationType(operation string) metav1.ManagedFieldsOperationType {

@@ -1,8 +1,6 @@
 package virtualmachineinstance
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -241,7 +239,7 @@ func volumesSchema() *schema.Schema {
 	return &schema.Schema{
 		Type: schema.TypeList,
 
-		Description: fmt.Sprintf("Specification of the desired behavior of the VirtualMachineInstance on the host."),
+		Description: "Specification of the desired behavior of the VirtualMachineInstance on the host.",
 		Optional:    true,
 		Elem: &schema.Resource{
 			Schema: fields,
@@ -569,9 +567,9 @@ func flattenVolumeSource(in kubevirtapiv1.VolumeSource) []interface{} {
 	if in.HostDisk != nil {
 		att["host_disk"] = flattenHostDisk(*in.HostDisk)
 	}
-	if in.PersistentVolumeClaim != nil {
-		//att["persistent_volume_claim"] = flattenPersistentVolumeClaim(in.PersistentVolumeClaim)
-	}
+	/*if in.PersistentVolumeClaim != nil {
+		att["persistent_volume_claim"] = flattenPersistentVolumeClaim(in.PersistentVolumeClaim)
+	}*/
 	if in.ConfigMap != nil {
 		att["config_map"] = flattenConfigMap(*in.ConfigMap)
 	}
@@ -659,14 +657,6 @@ func flattenHostDisk(in kubevirtapiv1.HostDisk) []interface{} {
 
 	att["path"] = in.Path
 	att["type"] = in.Type
-
-	return []interface{}{att}
-}
-
-func flattenPVC(in kubevirtapiv1.PersistentVolumeClaimVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-
-	att["claim_name"] = in.ClaimName
 
 	return []interface{}{att}
 }

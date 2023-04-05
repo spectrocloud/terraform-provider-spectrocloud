@@ -8,7 +8,7 @@ import (
 )
 
 func DiffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOperations {
-	ops := make([]PatchOperation, 0, 0)
+	ops := make([]PatchOperation, 0)
 
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
 

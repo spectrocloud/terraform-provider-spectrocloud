@@ -64,7 +64,7 @@ func ExpandStringMapToByteMap(m map[string]interface{}) map[string][]byte {
 }
 
 func ExpandStringSlice(s []interface{}) []string {
-	result := make([]string, len(s), len(s))
+	result := make([]string, len(s))
 	for k, v := range s {
 		// Handle the Terraform parser bug which turns empty strings in lists to nil.
 		if v == nil {
@@ -109,7 +109,7 @@ func PtrToInt64(i int64) *int64 {
 }
 
 func SliceOfString(slice []interface{}) []string {
-	result := make([]string, len(slice), len(slice))
+	result := make([]string, len(slice))
 	for i, s := range slice {
 		result[i] = s.(string)
 	}
@@ -126,7 +126,7 @@ func Base64EncodeStringMap(m map[string]interface{}) map[string]interface{} {
 }
 
 func NewStringSet(f schema.SchemaSetFunc, in []string) *schema.Set {
-	var out = make([]interface{}, len(in), len(in))
+	var out = make([]interface{}, len(in))
 	for i, v := range in {
 		out[i] = v
 	}
@@ -134,7 +134,7 @@ func NewStringSet(f schema.SchemaSetFunc, in []string) *schema.Set {
 }
 
 func NewInt64Set(f schema.SchemaSetFunc, in []int64) *schema.Set {
-	var out = make([]interface{}, len(in), len(in))
+	var out = make([]interface{}, len(in))
 	for i, v := range in {
 		out[i] = int(v)
 	}

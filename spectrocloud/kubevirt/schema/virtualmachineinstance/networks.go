@@ -1,8 +1,6 @@
 package virtualmachineinstance
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
@@ -68,7 +66,7 @@ func networksSchema() *schema.Schema {
 	return &schema.Schema{
 		Type: schema.TypeList,
 
-		Description: fmt.Sprintf("List of networks that can be attached to a vm's virtual interface."),
+		Description: "List of networks that can be attached to a vm's virtual interface.",
 		Optional:    true,
 		Elem: &schema.Resource{
 			Schema: fields,

@@ -3,6 +3,7 @@ package datavolume
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"gotest.tools/assert"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/test_utils/expand_utils"
@@ -97,7 +98,10 @@ func TestFlattenDataVolumeTemplates(t *testing.T) {
 		nullifyUncomparableFields(&output)
 		nullifyUncomparableFields(&tc.ExpectedOutput)
 
-		assert.DeepEqual(t, output, tc.ExpectedOutput)
+		if diff := cmp.Diff(tc.ExpectedOutput, output); diff != "" {
+			t.Errorf("Unexpected result (-want +got):\n%s", diff)
+		}
+		//assert.DeepEqual(t, output, tc.ExpectedOutput)
 	}
 }
 
