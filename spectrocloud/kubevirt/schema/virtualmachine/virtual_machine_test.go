@@ -3,6 +3,7 @@ package virtualmachine
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -124,7 +125,10 @@ func TestFlattenVirtualMachineSpec(t *testing.T) {
 		nullifyUncomparableFields(&output)
 		nullifyUncomparableFields(&tc.expectedOutput)
 
-		assert.DeepEqual(t, output, tc.expectedOutput)
+		if diff := cmp.Diff(tc.expectedOutput, output); diff != "" {
+			t.Errorf("Unexpected result (-want +got):\n%s", diff)
+		}
+		//assert.DeepEqual(t, output, tc.expectedOutput)
 	}
 }
 

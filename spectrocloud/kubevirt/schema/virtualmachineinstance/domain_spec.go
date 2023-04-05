@@ -408,7 +408,9 @@ func flattenInterfaces(in []kubevirtapiv1.Interface) []interface{} {
 
 		c["name"] = v.Name
 		c["interface_binding_method"] = flattenInterfaceBindingMethod(v.InterfaceBindingMethod)
-		c["model"] = v.Model
+		if v.Model != "" {
+			c["model"] = v.Model
+		}
 		att[i] = c
 	}
 
