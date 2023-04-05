@@ -1,4 +1,4 @@
-data spectrocloud_cluster "vm_enabled_base_cluster" {
+data "spectrocloud_cluster" "vm_enabled_base_cluster" {
   name = "shruthi-aws-ugadi"
 }
 locals {
@@ -8,7 +8,7 @@ locals {
 
 // Creating VM with Data Volume Templates
 resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
-  cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_uid   = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   run_on_launch = false
   # vm_action = "start" //["start", "stop", "pause", "resume", "migrate", "restart"]
   metadata {
@@ -59,10 +59,19 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
           }
         }
         domain {
+          cpu {
+            cores   = 2
+            sockets = 2
+            threads = 50
+          }
           resources {
             requests = {
               memory = "8G"
               cpu    = 2
+            }
+            limits = {
+              cpu    = 4
+              memory = "20G"
             }
           }
           devices {
@@ -196,7 +205,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-default" {
 
 // Creating VM by cloning existing VM
 resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
-  cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_uid  = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   base_vm_name = spectrocloud_virtual_machine.tf-test-vm-default.metadata.0.name
   metadata {
     name      = "tf-test-vm-clone-default"
@@ -332,12 +341,12 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-multinetwork" {
             interface {
               name                     = "main"
               interface_binding_method = "InterfaceMasquerade"
-              model                   = "virtio"
+              model                    = "virtio"
             }
             interface {
               name                     = "additional"
               interface_binding_method = "InterfaceBridge"
-              model                   = "e1000e"
+              model                    = "e1000e"
             }
           }
         }
@@ -348,7 +357,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-multinetwork" {
           }
         }
         network {
-          name                     = "additional"
+          name = "additional"
           network_source {
             multus {
               network_name = "macvlan-conf"
@@ -466,7 +475,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
               name = "cloudintdisk"
               disk_device {
                 disk {
-                  bus = "virtio"
+                  bus       = "virtio"
                   read_only = false
                   # pci_address = "0000:03:07.0"
                 }
@@ -476,12 +485,12 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
             interface {
               name                     = "main"
               interface_binding_method = "InterfaceMasquerade" //["InterfaceBridge", "InterfaceSlirp", "InterfaceMasquerade","InterfaceSRIOV",]
-              model                   = "virtio"
+              model                    = "virtio"
             }
             interface {
               name                     = "additional"
               interface_binding_method = "InterfaceBridge"
-              model                   = "e1000e" // ["", "e1000", "e1000e", "ne2k_pci", "pcnet", "rtl8139", "virtio"]
+              model                    = "e1000e" // ["", "e1000", "e1000e", "ne2k_pci", "pcnet", "rtl8139", "virtio"]
             }
           }
         }
@@ -492,7 +501,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
           }
         }
         network {
-          name                     = "additional"
+          name = "additional"
           network_source {
             multus {
               network_name = "macvlan-conf"
