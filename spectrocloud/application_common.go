@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -31,7 +30,7 @@ func waitForApplication(ctx context.Context, d *schema.ResourceData, diags diag.
 		return diags, true
 	}
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    resourceApplicationCreatePendingStates,
 		Target:     []string{"True"},
 		Refresh:    resourceApplicationStateRefreshFunc(c, d, 5, 60),

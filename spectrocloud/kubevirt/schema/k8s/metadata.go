@@ -2,8 +2,6 @@ package k8s
 
 import (
 	"fmt"
-	"net/url"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -60,33 +58,6 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 			Computed:    true,
 		},
 	}
-}
-
-func metadataSchema(objectName string, generatableName bool) *schema.Schema {
-	fields := metadataFields(objectName)
-
-	if generatableName {
-		fields["generate_name"] = &schema.Schema{
-			Type:          schema.TypeString,
-			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
-			Optional:      true,
-			ForceNew:      true,
-			ValidateFunc:  utils.ValidateGenerateName,
-			ConflictsWith: []string{"metadata.0.name"},
-		}
-		fields["name"].ConflictsWith = []string{"metadata.0.generate_name"}
-	}
-
-	return &schema.Schema{
-		Type:        schema.TypeList,
-		Description: fmt.Sprintf("Standard %s's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata", objectName),
-		Required:    true,
-		MaxItems:    1,
-		Elem: &schema.Resource{
-			Schema: fields,
-		},
-	}
-
 }
 
 func NamespacedMetadataSchema(objectName string, generatableName bool) *schema.Schema {
@@ -196,39 +167,4 @@ func AppendPatchOps(keyPrefix, pathPrefix string, resourceData *schema.ResourceD
 		ops = append(ops, diffOps...)
 	}
 	return ops
-}
-
-func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
-	for k := range m {
-		if isInternalKey(k) && !isKeyInMap(k, d) {
-			delete(m, k)
-		}
-	}
-	return m
-}
-
-func isKeyInMap(key string, d map[string]interface{}) bool {
-	if d == nil {
-		return false
-	}
-	for k := range d {
-		if k == key {
-			return true
-		}
-	}
-	return false
-}
-
-func isInternalKey(annotationKey string) bool {
-	u, err := url.Parse("//" + annotationKey)
-	if err == nil && strings.HasSuffix(u.Hostname(), "kubernetes.io") {
-		return true
-	}
-
-	// Specific to DaemonSet annotations, generated & controlled by the server.
-	if strings.Contains(annotationKey, "deprecated.daemonset.template.generation") {
-		return true
-	}
-
-	return false
 }

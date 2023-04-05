@@ -1,8 +1,6 @@
 package datavolume
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
@@ -32,7 +30,7 @@ func dataVolumeSourceSchema() *schema.Schema {
 
 	return &schema.Schema{
 		Type:        schema.TypeList,
-		Description: fmt.Sprintf("Source is the src of the data for the requested DataVolume."),
+		Description: "Source is the src of the data for the requested DataVolume.",
 		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{
@@ -181,6 +179,9 @@ func expandDataVolumeSourcePVC(dataVolumeSourcePVC []interface{}) *cdiv1.DataVol
 func flattenDataVolumeSource(in *cdiv1.DataVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	if in != nil {
+		if in.Blank != nil {
+			att["blank"] = flattenDataVolumeSourceBlank()
+		}
 		if in.HTTP != nil {
 			att["http"] = flattenDataVolumeSourceHTTP(*in.HTTP)
 		}
@@ -191,6 +192,11 @@ func flattenDataVolumeSource(in *cdiv1.DataVolumeSource) []interface{} {
 		return []interface{}{att}
 	}
 	return []interface{}{}
+}
+
+func flattenDataVolumeSourceBlank() []interface{} {
+	att := map[string]interface{}{}
+	return []interface{}{att}
 }
 
 func flattenDataVolumeSourceHTTP(in cdiv1.DataVolumeSourceHTTP) []interface{} {

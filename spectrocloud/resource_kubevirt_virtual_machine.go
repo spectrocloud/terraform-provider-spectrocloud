@@ -182,7 +182,10 @@ func resourceKubevirtVirtualMachineRead(ctx context.Context, resourceData *schem
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}
-	vm := convert.ToKubevirtVM(hapiVM)
+	vm, err := convert.ToKubevirtVM(hapiVM)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if vm == nil {
 		return nil
 	}
@@ -396,23 +399,4 @@ func resourceKubevirtVirtualMachineDelete(ctx context.Context, resourceData *sch
 
 	resourceData.SetId("")
 	return nil
-}
-
-func resourceKubevirtVirtualMachineExists(resourceData *schema.ResourceData, meta interface{}) (bool, error) {
-	clusterUid, namespace, name, err := utils.IdParts(resourceData.Id())
-	if err != nil {
-		return false, err
-	}
-
-	cli := (meta).(*client.V1Client)
-
-	log.Printf("[INFO] Checking virtual machine %s", name)
-	if _, err := cli.GetVirtualMachine(clusterUid, namespace, name); err != nil {
-		if statusErr, ok := err.(*errors.StatusError); ok && statusErr.ErrStatus.Code == 404 {
-			return false, nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-		return true, err
-	}
-	return true, nil
 }

@@ -1,8 +1,6 @@
 package virtualmachineinstance
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
@@ -19,7 +17,7 @@ func probeSchema() *schema.Schema {
 	return &schema.Schema{
 		Type: schema.TypeList,
 
-		Description: fmt.Sprintf("Specification of the desired behavior of the VirtualMachineInstance on the host."),
+		Description: "Specification of the desired behavior of the VirtualMachineInstance on the host.",
 		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{

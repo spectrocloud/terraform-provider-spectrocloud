@@ -1,8 +1,6 @@
 package datavolume
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
@@ -35,11 +33,11 @@ func dataVolumeStatusFields() map[string]*schema.Schema {
 			}, false),
 		},
 		"progress": {
-			Type:         schema.TypeString,
-			Description:  "DataVolumePhase is the current phase of the DataVolume.",
-			Optional:     true,
-			Computed:     true,
-			ValidateFunc: utils.StringIsIntInRange(0, 100),
+			Type:             schema.TypeString,
+			Description:      "DataVolumePhase is the current phase of the DataVolume.",
+			Optional:         true,
+			Computed:         true,
+			ValidateDiagFunc: utils.StringIsIntInRange(0, 100),
 		},
 	}
 }
@@ -49,7 +47,7 @@ func dataVolumeStatusSchema() *schema.Schema {
 
 	return &schema.Schema{
 		Type:        schema.TypeList,
-		Description: fmt.Sprintf("DataVolumeStatus provides the parameters to store the phase of the Data Volume"),
+		Description: "DataVolumeStatus provides the parameters to store the phase of the Data Volume",
 		Optional:    true,
 		MaxItems:    1,
 		Computed:    true,

@@ -1,0 +1,173 @@
+resource "spectrocloud_virtual_machine" "virtual_machine_cont" {
+  cluster_uid = "6414899fa4e47d6788678ecf"
+  #run_on_launch = true
+  vm_action = "stop"
+  metadata {
+    name      = "test-vm-cont"
+    namespace = "default"
+    labels = {
+      "key1" = "value1"
+    }
+  }
+  spec {
+    data_volume_templates {
+      metadata {
+        name      = "test-vm-bootvolume"
+        namespace = "default"
+      }
+      spec {
+        source {
+          blank {}
+        }
+        pvc {
+          access_modes = ["ReadWriteOnce"]
+          resources {
+            requests = {
+              storage = "5Gi"
+            }
+          }
+          storage_class_name = "sumit-storage-class"
+          volume_mode        = "Block"
+        }
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          "kubevirt.io/vm" = "test-vm-cont"
+        }
+      }
+      spec {
+        volume {
+          name = "test-vm-containerdisk1"
+          volume_source {
+            container_disk {
+              image_url = "gcr.io/spectro-images-public/release/vm-dashboard/os/fedora-container-disk:37"
+            }
+          }
+        }
+        volume {
+          name = "test-vm-volumedisk1"
+          volume_source {
+            data_volume {
+              name = "test-vm-bootvolume"
+            }
+          }
+        }
+        domain {
+          resources {
+            requests = {
+              memory = "8G"
+              cpu    = 2
+            }
+          }
+          devices {
+            disk {
+              name = "test-vm-containerdisk1"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            disk {
+              name = "test-vm-volumedisk1"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            interface {
+              name                     = "main"
+              interface_binding_method = "InterfaceMasquerade"
+            }
+          }
+        }
+        network {
+          name = "main"
+          network_source {
+            pod {}
+          }
+        }
+        /*        affinity {
+          pod_anti_affinity {
+            preferred_during_scheduling_ignored_during_execution {
+              weight = 100
+              pod_affinity_term {
+                label_selector {
+                  match_labels = {
+                    anti-affinity-key = "anti-affinity-val"
+                  }
+                }
+                topology_key = "kubernetes.io/hostname"
+              }
+            }
+          }
+        }*/
+      }
+    }
+  }
+}
+
+
+/*resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
+  cluster_uid  = "6414899fa4e47d6788678ecf"
+  run_on_launch = false
+  vm_action    = "stop"
+  base_vm_name = spectrocloud_virtual_machine.virtual_machine_cont.metadata.0.name
+  metadata {
+    name      = "tf-test-vm-clone-default"
+    namespace = "default"
+    labels = {
+      "key1" = "value1"
+    }
+  }
+  spec {
+    template {
+      metadata {
+        labels = {
+          "kubevirt.io/vm" = "test-vm-cont"
+        }
+      }
+      spec {
+        volume {
+          name = "test-vm-containerdisk1"
+          volume_source {
+            container_disk {
+              image_url = "quay.io/kubevirt/fedora-cloud-container-disk-demo"
+            }
+          }
+        }
+        domain {
+          resources {
+            requests = {
+              memory = "8G"
+              cpu    = 2
+            }
+          }
+          devices {
+            disk {
+              name = "test-vm-containerdisk1"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            interface {
+              name                     = "main"
+              interface_binding_method = "InterfaceMasquerade"
+            }
+          }
+        }
+        network {
+          name = "main"
+          network_source {
+            pod {}
+          }
+        }
+      }
+    }
+  }
+}*/

@@ -283,7 +283,7 @@ func flattenNodeSelector(in *v1.NodeSelector) []interface{} {
 }
 
 func flattenPreferredSchedulingTerm(in []v1.PreferredSchedulingTerm) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		m["weight"] = int(n.Weight)
@@ -294,7 +294,7 @@ func flattenPreferredSchedulingTerm(in []v1.PreferredSchedulingTerm) []interface
 }
 
 func flattenPodAffinityTerms(in []v1.PodAffinityTerm) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		m["namespaces"] = utils.NewStringSet(schema.HashString, n.Namespaces)
@@ -308,7 +308,7 @@ func flattenPodAffinityTerms(in []v1.PodAffinityTerm) []interface{} {
 }
 
 func flattenWeightedPodAffinityTerms(in []v1.WeightedPodAffinityTerm) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		m := make(map[string]interface{})
 		m["weight"] = int(n.Weight)
@@ -319,7 +319,7 @@ func flattenWeightedPodAffinityTerms(in []v1.WeightedPodAffinityTerm) []interfac
 }
 
 func flattenNodeSelectorTerms(in []api.NodeSelectorTerm) []interface{} {
-	att := make([]interface{}, len(in), len(in))
+	att := make([]interface{}, len(in))
 	for i, n := range in {
 		att[i] = flattenNodeSelectorTerm(n)[0]
 	}
@@ -430,7 +430,7 @@ func expandPreferredSchedulingTerms(t []interface{}) []v1.PreferredSchedulingTer
 	if len(t) == 0 || t[0] == nil {
 		return []v1.PreferredSchedulingTerm{}
 	}
-	obj := make([]v1.PreferredSchedulingTerm, len(t), len(t))
+	obj := make([]v1.PreferredSchedulingTerm, len(t))
 	for i, n := range t {
 		in := n.(map[string]interface{})
 		if v, ok := in["weight"].(int); ok {
@@ -447,7 +447,7 @@ func expandPodAffinityTerms(t []interface{}) []v1.PodAffinityTerm {
 	if len(t) == 0 || t[0] == nil {
 		return []v1.PodAffinityTerm{}
 	}
-	obj := make([]v1.PodAffinityTerm, len(t), len(t))
+	obj := make([]v1.PodAffinityTerm, len(t))
 	for i, n := range t {
 		in := n.(map[string]interface{})
 		if v, ok := in["label_selector"].([]interface{}); ok && len(v) > 0 {
@@ -467,7 +467,7 @@ func expandWeightedPodAffinityTerms(t []interface{}) []v1.WeightedPodAffinityTer
 	if len(t) == 0 || t[0] == nil {
 		return []v1.WeightedPodAffinityTerm{}
 	}
-	obj := make([]v1.WeightedPodAffinityTerm, len(t), len(t))
+	obj := make([]v1.WeightedPodAffinityTerm, len(t))
 	for i, n := range t {
 		in := n.(map[string]interface{})
 		if v, ok := in["weight"].(int); ok {
@@ -484,7 +484,7 @@ func expandNodeSelectorTerms(l []interface{}) []api.NodeSelectorTerm {
 	if len(l) == 0 || l[0] == nil {
 		return []api.NodeSelectorTerm{}
 	}
-	obj := make([]api.NodeSelectorTerm, len(l), len(l))
+	obj := make([]api.NodeSelectorTerm, len(l))
 	for i, n := range l {
 		obj[i] = *expandNodeSelectorTerm([]interface{}{n})
 	}

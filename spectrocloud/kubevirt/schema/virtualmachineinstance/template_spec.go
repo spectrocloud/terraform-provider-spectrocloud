@@ -1,8 +1,6 @@
 package virtualmachineinstance
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
@@ -22,7 +20,7 @@ func VirtualMachineInstanceTemplateSpecSchema() *schema.Schema {
 	return &schema.Schema{
 		Type: schema.TypeList,
 
-		Description: fmt.Sprintf("Template is the direct specification of VirtualMachineInstance."),
+		Description: "Template is the direct specification of VirtualMachineInstance.",
 		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{

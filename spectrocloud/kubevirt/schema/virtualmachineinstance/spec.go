@@ -1,8 +1,6 @@
 package virtualmachineinstance
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	k8sv1 "k8s.io/api/core/v1"
@@ -82,7 +80,7 @@ func virtualMachineInstanceSpecSchema() *schema.Schema {
 	return &schema.Schema{
 		Type: schema.TypeList,
 
-		Description: fmt.Sprintf("Template is the direct specification of VirtualMachineInstance."),
+		Description: "Template is the direct specification of VirtualMachineInstance.",
 		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{

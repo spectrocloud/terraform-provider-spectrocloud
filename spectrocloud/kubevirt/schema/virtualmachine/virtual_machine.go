@@ -7,8 +7,6 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
 
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
-
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils/patch"
 )
 
 func VirtualMachineFields() map[string]*schema.Schema {
@@ -43,46 +41,6 @@ func VirtualMachineFields() map[string]*schema.Schema {
 	}
 }
 
-func ExpandVirtualMachine(virtualMachine []interface{}) (*kubevirtapiv1.VirtualMachine, error) {
-	result := &kubevirtapiv1.VirtualMachine{}
-
-	if len(virtualMachine) == 0 || virtualMachine[0] == nil {
-		return result, nil
-	}
-
-	in := virtualMachine[0].(map[string]interface{})
-
-	if v, ok := in["metadata"].([]interface{}); ok {
-		result.ObjectMeta = k8s.ExpandMetadata(v)
-	}
-	if v, ok := in["spec"].([]interface{}); ok {
-		spec, err := expandVirtualMachineSpec(v)
-		if err != nil {
-			return result, err
-		}
-		result.Spec = spec
-	}
-	if v, ok := in["status"].([]interface{}); ok {
-		status, err := expandVirtualMachineStatus(v)
-		if err != nil {
-			return result, err
-		}
-		result.Status = status
-	}
-
-	return result, nil
-}
-
-func FlattenVirtualMachine(in kubevirtapiv1.VirtualMachine) []interface{} {
-	att := make(map[string]interface{})
-
-	att["metadata"] = k8s.FlattenMetadata(in.ObjectMeta)
-	att["spec"] = flattenVirtualMachineSpec(in.Spec)
-	att["status"] = flattenVirtualMachineStatus(in.Status)
-
-	return []interface{}{att}
-}
-
 func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.VirtualMachine, error) {
 	result := &kubevirtapiv1.VirtualMachine{}
 
@@ -113,8 +71,4 @@ func ToResourceData(vm kubevirtapiv1.VirtualMachine, resourceData *schema.Resour
 	}
 
 	return nil
-}
-
-func AppendPatchOps(keyPrefix, pathPrefix string, resourceData *schema.ResourceData, ops []patch.PatchOperation) patch.PatchOperations {
-	return k8s.AppendPatchOps(keyPrefix+"metadata.0.", pathPrefix+"/metadata/", resourceData, ops)
 }

@@ -18,6 +18,7 @@ import (
 func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 	return cdiv1.DataVolumeSpec{
 		Source: &cdiv1.DataVolumeSource{
+			Blank: &cdiv1.DataVolumeBlankImage{},
 			HTTP: &cdiv1.DataVolumeSourceHTTP{
 				URL:           "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2",
 				SecretRef:     "secret_ref",
@@ -341,6 +342,9 @@ func GetBaseOutputForVirtualMachine() interface{} {
 						},
 						"source": []interface{}{
 							map[string]interface{}{
+								"blank": []interface{}{
+									map[string]interface{}{},
+								},
 								"http": []interface{}{
 									map[string]interface{}{
 										"url":             "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2",
