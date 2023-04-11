@@ -290,18 +290,30 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 			Labels: toTags(d),
 		},
 		Spec: &models.V1ClusterGroupSpec{
-			Type:        "hostCluster",
-			ClusterRefs: clusterRefs,
-			ClustersConfig: &models.V1ClusterGroupClustersConfig{
-				EndpointType:       endpointType,
-				LimitConfig:        clusterGroupLimitConfig,
-				HostClustersConfig: hostClusterConfig,
-				Values:             values,
-			},
+			Type:           "hostCluster",
+			ClusterRefs:    clusterRefs,
+			ClustersConfig: GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, values),
 		},
 	}
 
 	return ret
+}
+
+func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig, hostClusterConfig []*models.V1ClusterGroupHostClusterConfig, endpointType string, values string) *models.V1ClusterGroupClustersConfig {
+	if values != "" {
+		return &models.V1ClusterGroupClustersConfig{
+			EndpointType:       endpointType,
+			LimitConfig:        clusterGroupLimitConfig,
+			HostClustersConfig: hostClusterConfig,
+			Values:             values,
+		}
+	} else {
+		return &models.V1ClusterGroupClustersConfig{
+			EndpointType:       endpointType,
+			LimitConfig:        clusterGroupLimitConfig,
+			HostClustersConfig: hostClusterConfig,
+		}
+	}
 }
 
 func toHostClusterConfigs(clusterConfig []interface{}) []*models.V1ClusterGroupHostClusterConfig {
