@@ -265,11 +265,15 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 	}
 
 	var clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig
+	var values string
 	resourcesObj, ok := d.GetOk("config")
 	endpointType := "Ingress" // default endpoint type is ingress
 	if ok {
 		resources := resourcesObj.([]interface{})[0].(map[string]interface{})
 		clusterGroupLimitConfig = toClusterGroupLimitConfig(resources)
+		if resources["values"] != nil {
+			values = resources["values"].(string)
+		}
 		if resources["host_endpoint_type"] != nil {
 			endpointType = resources["host_endpoint_type"].(string)
 		}
@@ -292,6 +296,7 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 				EndpointType:       endpointType,
 				LimitConfig:        clusterGroupLimitConfig,
 				HostClustersConfig: hostClusterConfig,
+				Values:             values,
 			},
 		},
 	}

@@ -23,6 +23,7 @@ func prepareClusterGroupTestData() *schema.ResourceData {
 			"memory_in_mb":             4096,
 			"storage_in_gb":            100,
 			"oversubscription_percent": 200,
+			"values":                   "namespace: test-namespace",
 		},
 	})
 	d.Set("clusters", []map[string]interface{}{
@@ -54,6 +55,7 @@ func TestToClusterGroup(t *testing.T) {
 	assert.Equal(int32(4096), output.Spec.ClustersConfig.LimitConfig.MemoryMiB)
 	assert.Equal(int32(100), output.Spec.ClustersConfig.LimitConfig.StorageGiB)
 	assert.Equal(int32(200), output.Spec.ClustersConfig.LimitConfig.OverSubscription)
+	assert.Equal("namespace: test-namespace", output.Spec.ClustersConfig.Values)
 	assert.Equal("LoadBalancer", output.Spec.ClustersConfig.EndpointType)
 }
 
