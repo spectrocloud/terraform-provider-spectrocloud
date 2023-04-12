@@ -23,6 +23,7 @@ func prepareClusterGroupTestData() *schema.ResourceData {
 			"memory_in_mb":             4096,
 			"storage_in_gb":            100,
 			"oversubscription_percent": 200,
+			"values":                   "namespace: test-namespace",
 		},
 	})
 	d.Set("clusters", []map[string]interface{}{
@@ -54,7 +55,34 @@ func TestToClusterGroup(t *testing.T) {
 	assert.Equal(int32(4096), output.Spec.ClustersConfig.LimitConfig.MemoryMiB)
 	assert.Equal(int32(100), output.Spec.ClustersConfig.LimitConfig.StorageGiB)
 	assert.Equal(int32(200), output.Spec.ClustersConfig.LimitConfig.OverSubscription)
+	assert.Equal("namespace: test-namespace", output.Spec.ClustersConfig.Values)
 	assert.Equal("LoadBalancer", output.Spec.ClustersConfig.EndpointType)
+}
+
+func TestDefaultValuesSet(t *testing.T) {
+	clusterGroupLimitConfig := &models.V1ClusterGroupLimitConfig{}
+	hostClusterConfig := []*models.V1ClusterGroupHostClusterConfig{{}}
+	endpointType := "testEndpointType"
+	nonEmptyValues := "testValues"
+	emptyValues := ""
+
+	t.Run("Test with non-empty values", func(t *testing.T) {
+		result := GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, nonEmptyValues)
+
+		assert.Equal(t, endpointType, result.EndpointType)
+		assert.Equal(t, clusterGroupLimitConfig, result.LimitConfig)
+		assert.Equal(t, hostClusterConfig, result.HostClustersConfig)
+		assert.Equal(t, nonEmptyValues, result.Values)
+	})
+
+	t.Run("Test with empty values", func(t *testing.T) {
+		result := GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, emptyValues)
+
+		assert.Equal(t, endpointType, result.EndpointType)
+		assert.Equal(t, clusterGroupLimitConfig, result.LimitConfig)
+		assert.Equal(t, hostClusterConfig, result.HostClustersConfig)
+		assert.Equal(t, "", result.Values)
+	})
 }
 
 func TestToClusterGroupLimitConfig(t *testing.T) {
