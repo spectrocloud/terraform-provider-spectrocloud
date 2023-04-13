@@ -1,22 +1,21 @@
 package client
 
 import (
-	"github.com/spectrocloud/hapi/models"
 	"hash/fnv"
 	"strconv"
 
+	"github.com/spectrocloud/hapi/models"
 	userC "github.com/spectrocloud/hapi/user/client/v1"
 )
 
-func (h *V1Client) CreateMacros(uid string, body *models.V1Macros) error {
+func (h *V1Client) CreateMacros(uid string, macros *models.V1Macros) error {
 	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
-
 	if uid != "" {
-		params := userC.NewV1ProjectsUIDMacrosUpdateParams().WithContext(h.Ctx).WithUID(uid).WithBody(body)
-		_, err := client.V1ProjectsUIDMacrosUpdate(params)
+		params := userC.NewV1ProjectsUIDMacrosCreateParams().WithContext(h.Ctx).WithUID(uid).WithBody(macros)
+		_, err := client.V1ProjectsUIDMacrosCreate(params)
 		if err != nil {
 			return err
 		}
@@ -25,8 +24,8 @@ func (h *V1Client) CreateMacros(uid string, body *models.V1Macros) error {
 		if err != nil {
 			return err
 		}
-		params := userC.NewV1TenantsUIDMacrosUpdateParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(body)
-		_, err = client.V1TenantsUIDMacrosUpdate(params)
+		params := userC.NewV1TenantsUIDMacrosCreateParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(macros)
+		_, err = client.V1TenantsUIDMacrosCreate(params)
 		if err != nil {
 			return err
 		}
@@ -40,11 +39,10 @@ func (h *V1Client) GetMacro(name string, projectUID string) (*models.V1Macro, er
 	if err != nil {
 		return nil, err
 	}
-
-	id := h.StringHash(name)
+	id := h.GetMacroId(projectUID, name)
 
 	for _, macro := range macros {
-		if h.StringHash(macro.Name) == id {
+		if h.GetMacroId(projectUID, macro.Name) == id {
 			return macro, nil
 		}
 	}
@@ -89,19 +87,14 @@ func (h *V1Client) StringHash(name string) string {
 	return strconv.FormatUint(uint64(hash(name)), 10)
 }
 
-func (h *V1Client) UpdateMacros(macros []*models.V1Macro, uid string) error {
+func (h *V1Client) UpdateMacros(uid string, macros *models.V1Macros) error {
 	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
-
-	body := &models.V1Macros{
-		Macros: macros,
-	}
-
 	if uid != "" {
-		params := userC.NewV1ProjectsUIDMacrosUpdateParams().WithContext(h.Ctx).WithUID(uid).WithBody(body)
-		_, err := client.V1ProjectsUIDMacrosUpdate(params)
+		params := userC.NewV1ProjectsUIDMacrosUpdateByMacroNameParams().WithContext(h.Ctx).WithUID(uid).WithBody(macros)
+		_, err := client.V1ProjectsUIDMacrosUpdateByMacroName(params)
 		return err
 
 	} else {
@@ -109,33 +102,55 @@ func (h *V1Client) UpdateMacros(macros []*models.V1Macro, uid string) error {
 		if err != nil || tenantUID == "" {
 			return err
 		}
-
-		params := userC.NewV1TenantsUIDMacrosUpdateParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(body)
-		_, err = client.V1TenantsUIDMacrosUpdate(params)
+		params := userC.NewV1TenantsUIDMacrosUpdateByMacroNameParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(macros)
+		_, err = client.V1TenantsUIDMacrosUpdateByMacroName(params)
 		return err
-
 	}
 }
 
-func (h *V1Client) DeleteMacros(name string, uid string) error {
-	macros, err := h.GetMacros(uid)
+func (h *V1Client) DeleteMacros(uid string, body *models.V1Macros) error {
+
+	client, err := h.GetUserClient()
 	if err != nil {
 		return err
 	}
 
-	keep_macros := make([]*models.V1Macro, 0)
-
-	for _, macro := range macros {
-		if macro.Name != name {
-			keep_macros = append(keep_macros, macro)
+	if uid != "" {
+		params := userC.NewV1ProjectsUIDMacrosDeleteByMacroNameParams().WithContext(h.Ctx).WithUID(uid).WithBody(body)
+		_, err := client.V1ProjectsUIDMacrosDeleteByMacroName(params)
+		if err != nil {
+			return err
+		}
+	} else {
+		tenantUID, err := h.GetTenantUID()
+		if err != nil {
+			return err
+		}
+		params := userC.NewV1TenantsUIDMacrosDeleteByMacroNameParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(body)
+		_, err = client.V1TenantsUIDMacrosDeleteByMacroName(params)
+		if err != nil {
+			return err
 		}
 	}
-
-	return h.UpdateMacros(keep_macros, uid)
+	_, err = h.GetMacros(uid)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func hash(s string) uint32 {
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(s))
 	return h.Sum32()
+}
+
+func (h *V1Client) GetMacroId(uid string, name string) string {
+	var hash string
+	if uid != "" {
+		hash = h.StringHash(name + uid)
+	} else {
+		hash = h.StringHash(name + "%tenant")
+	}
+	return hash
 }
