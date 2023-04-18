@@ -59,6 +59,14 @@ func resourceRegistryOciEcr() *schema.Resource {
 							Required:     true,
 							ValidateFunc: validation.StringInSlice([]string{"secret", "sts"}, false),
 						},
+						"access_key": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"secret_key": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"arn": {
 							Type:     schema.TypeString,
 							Optional: true,
