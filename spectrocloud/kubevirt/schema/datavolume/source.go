@@ -3,6 +3,8 @@ package datavolume
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func dataVolumeSourceFields() map[string]*schema.Schema {
@@ -144,6 +146,7 @@ func expandDataVolumeSource(dataVolumeSource []interface{}) *cdiv1.DataVolumeSou
 	result.Blank = expandDataVolumeSourceBlank(in["blank"].([]interface{}))
 	result.HTTP = expandDataVolumeSourceHTTP(in["http"].([]interface{}))
 	result.PVC = expandDataVolumeSourcePVC(in["pvc"].([]interface{}))
+	result.Registry = expandDataVolumeSourceRegistry(in["registry"].([]interface{}))
 
 	return result
 }
@@ -194,6 +197,22 @@ func expandDataVolumeSourcePVC(dataVolumeSourcePVC []interface{}) *cdiv1.DataVol
 	}
 	if v, ok := in["name"].(string); ok {
 		result.Name = v
+	}
+
+	return result
+}
+
+func expandDataVolumeSourceRegistry(dataVolumeSourceRegistry []interface{}) *cdiv1.DataVolumeSourceRegistry {
+	if len(dataVolumeSourceRegistry) == 0 || dataVolumeSourceRegistry[0] == nil {
+		return nil
+	}
+
+	result := &cdiv1.DataVolumeSourceRegistry{}
+
+	in := dataVolumeSourceRegistry[0].(map[string]interface{})
+
+	if v, ok := in["image_url"].(string); ok {
+		result.URL = types.Ptr(v)
 	}
 
 	return result

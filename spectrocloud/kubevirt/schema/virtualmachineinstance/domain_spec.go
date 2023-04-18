@@ -3,6 +3,7 @@ package virtualmachineinstance
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"k8s.io/apimachinery/pkg/api/resource"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
@@ -55,6 +56,21 @@ func domainSpecFields() map[string]*schema.Schema {
 					"threads": {
 						Type:        schema.TypeInt,
 						Description: "Threads is the number of threads inside the vmi. Must be a value greater or equal 1.",
+						Optional:    true,
+					},
+				},
+			},
+		},
+		"memory": {
+			Type:        schema.TypeList,
+			Description: "Memory allows specifying the vmi memory features.",
+			MaxItems:    1,
+			Optional:    true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"guest": {
+						Type:        schema.TypeString,
+						Description: "Guest is the amount of memory allocated to the vmi. This value must be less than or equal to the limit if specified.",
 						Optional:    true,
 					},
 				},
@@ -210,6 +226,13 @@ func expandDomainSpec(domainSpec []interface{}) (kubevirtapiv1.DomainSpec, error
 		}
 		result.CPU = &cpu
 	}
+	if v, ok := in["memory"].([]interface{}); ok {
+		memory, err := expandMemory(v)
+		if err != nil {
+			return result, err
+		}
+		result.Memory = &memory
+	}
 
 	return result, nil
 }
@@ -279,6 +302,26 @@ func expandCPU(cpu []interface{}) (kubevirtapiv1.CPU, error) {
 	}
 	if v, ok := in["threads"].(int); ok {
 		result.Threads = uint32(v)
+	}
+
+	return result, nil
+}
+
+func expandMemory(memory []interface{}) (kubevirtapiv1.Memory, error) {
+	result := kubevirtapiv1.Memory{}
+
+	if len(memory) == 0 || memory[0] == nil {
+		return result, nil
+	}
+
+	in := memory[0].(map[string]interface{})
+
+	if v, ok := in["guest"].(string); ok {
+		got, err := resource.ParseQuantity(v)
+		if err != nil {
+			return result, err
+		}
+		result.Guest = &got
 	}
 
 	return result, nil
@@ -394,6 +437,9 @@ func flattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
 	if in.CPU != nil {
 		att["cpu"] = flattenCPU(in.CPU)
 	}
+	if in.Memory != nil {
+		att["memory"] = flattenMemory(in.Memory)
+	}
 	att["devices"] = flattenDevices(in.Devices)
 
 	return []interface{}{att}
@@ -411,6 +457,16 @@ func flattenCPU(in *kubevirtapiv1.CPU) []interface{} {
 	if in.Threads != 0 {
 		att["threads"] = in.Threads
 	}
+	return []interface{}{att}
+}
+
+func flattenMemory(in *kubevirtapiv1.Memory) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.Guest != nil {
+		att["guest"] = in.Guest.String()
+	}
+
 	return []interface{}{att}
 }
 
