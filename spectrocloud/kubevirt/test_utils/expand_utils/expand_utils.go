@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	test_entities "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/test_utils/entities"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 
@@ -44,6 +45,11 @@ func GetBaseInputForDataVolume() interface{} {
 								"name":      "name",
 							},
 						},
+						"registry": []interface{}{
+							map[string]interface{}{
+								"image_url": "docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04",
+							},
+						},
 					},
 				},
 				"pvc": []interface{}{
@@ -82,6 +88,9 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 			PVC: &cdiv1.DataVolumeSourcePVC{
 				Namespace: "namespace",
 				Name:      "name",
+			},
+			Registry: &cdiv1.DataVolumeSourceRegistry{
+				URL: types.Ptr("docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"),
 			},
 		},
 		PVC: &k8sv1.PersistentVolumeClaimSpec{

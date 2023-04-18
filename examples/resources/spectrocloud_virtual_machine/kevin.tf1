@@ -1,0 +1,103 @@
+data "spectrocloud_cluster" "vm-cluster" {
+  name    = "vm-mgmt-latest-01"
+  context = "project"
+}
+
+resource "spectrocloud_virtual_machine" "tf-test-vm" {
+  cluster_uid = data.spectrocloud_cluster.vm-cluster.id
+  #vm_action = "start"
+
+  metadata {
+    name      = "tf-test-vm"
+    namespace = "default"
+    labels = {
+      tf-managed = "true"
+      env        = "kevin"
+    }
+    annotations = {
+      tf : "true",
+      owner : "kevin",
+    }
+  }
+
+  spec {
+    data_volume_templates {
+      metadata {
+        name = "vm-test-dv-1"
+      }
+      spec {
+        pvc {
+          access_modes = ["ReadWriteMany"]
+          resources {
+            requests = {
+              storage = "5Gi"
+            }
+          }
+          storage_class_name = "spectro-storage-class"
+        }
+        source {
+          registry {
+            image_url = "docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"
+          }
+          #pvc {
+          #  name = "vm-hybrid-app-1-dv"
+          #  namespace = "default"
+          #}
+        }
+      }
+    }
+    template {
+      metadata {}
+      spec {
+        domain {
+          cpu {
+            cores = 2
+          }
+          memory {
+            guest = "4Gi"
+          }
+          devices {
+            disk {
+              name = "datavolume-os"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            interface {
+              interface_binding_method = "InterfaceMasquerade"
+              model                    = "virtio"
+              name                     = "nic-0"
+            }
+          }
+          resources {
+            over_commit_guest_overhead = true
+            limits = {
+              cpu    = "2"
+              memory = "4Gi"
+            }
+            requests = {
+              cpu    = "2"
+              memory = "2Gi"
+            }
+          }
+        }
+        network {
+          name = "nic-0"
+          network_source {
+            pod {}
+          }
+        }
+        volume {
+          name = "datavolume-os"
+          volume_source {
+            data_volume {
+              name = "vm-test-dv-1"
+            }
+          }
+        }
+      }
+    }
+  }
+}
