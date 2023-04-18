@@ -7,9 +7,10 @@ import (
 
 func dataVolumeSourceFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-		"blank": dataVolumeSourceBlankSchema(),
-		"http":  dataVolumeSourceHTTPSchema(),
-		"pvc":   dataVolumeSourcePVCSchema(),
+		"blank":    dataVolumeSourceBlankSchema(),
+		"http":     dataVolumeSourceHTTPSchema(),
+		"pvc":      dataVolumeSourcePVCSchema(),
+		"registry": dataVolumeSourceRegistrySchema(),
 	}
 }
 
@@ -90,6 +91,16 @@ func dataVolumeSourcePVCFields() map[string]*schema.Schema {
 	}
 }
 
+func dataVolumeSourceRegistryFields() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"image_url": {
+			Type:        schema.TypeString,
+			Description: "The registry URL of the image to download.",
+			Optional:    true,
+		},
+	}
+}
+
 func dataVolumeSourcePVCSchema() *schema.Schema {
 	fields := dataVolumeSourcePVCFields()
 
@@ -103,6 +114,20 @@ func dataVolumeSourcePVCSchema() *schema.Schema {
 		},
 	}
 
+}
+
+func dataVolumeSourceRegistrySchema() *schema.Schema {
+	fields := dataVolumeSourceRegistryFields()
+
+	return &schema.Schema{
+		Type:        schema.TypeList,
+		Description: "DataVolumeSourceRegistry provides the parameters to create a Data Volume from an existing PVC.",
+		Optional:    true,
+		MaxItems:    1,
+		Elem: &schema.Resource{
+			Schema: fields,
+		},
+	}
 }
 
 // Expanders
@@ -188,6 +213,9 @@ func flattenDataVolumeSource(in *cdiv1.DataVolumeSource) []interface{} {
 		if in.PVC != nil {
 			att["pvc"] = flattenDataVolumeSourcePVC(*in.PVC)
 		}
+		if in.Registry != nil {
+			att["registry"] = flattenDataVolumeSourceRegistry(*in.Registry)
+		}
 
 		return []interface{}{att}
 	}
@@ -212,6 +240,13 @@ func flattenDataVolumeSourcePVC(in cdiv1.DataVolumeSourcePVC) []interface{} {
 	att := map[string]interface{}{
 		"namespace": in.Namespace,
 		"name":      in.Name,
+	}
+	return []interface{}{att}
+}
+
+func flattenDataVolumeSourceRegistry(in cdiv1.DataVolumeSourceRegistry) []interface{} {
+	att := map[string]interface{}{
+		"image_url": in.URL,
 	}
 	return []interface{}{att}
 }
