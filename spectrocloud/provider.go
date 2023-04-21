@@ -160,7 +160,6 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_appliance":           dataSourceAppliance(),
 				"spectrocloud_appliances":          dataSourceAppliances(),
 				"spectrocloud_cluster":             dataSourceCluster(),
-				"spectrocloud_cluster_kube_config": dataSourceClusterKubeConfig(),
 				"spectrocloud_cluster_group":       dataSourceClusterGroup(),
 				"spectrocloud_application_profile": dataSourceApplicationProfile(),
 				"spectrocloud_workspace":           dataSourceWorkspace(),
