@@ -151,7 +151,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 						"host_uids": {
 							Type:       schema.TypeList,
 							Optional:   true,
-							Deprecated: "This field is deprecated. Use `edge_host` instead.",
+							Deprecated: "This field is deprecated from provider 0.13.0. Use `edge_host` instead.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
