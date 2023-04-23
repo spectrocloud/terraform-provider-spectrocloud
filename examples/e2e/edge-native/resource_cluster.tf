@@ -16,14 +16,20 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     control_plane_as_worker = true
     name                    = "master-pool"
 
-    host_uids = [spectrocloud_appliance.appliance0.uid]
+    edge_host {
+      host_uid = spectrocloud_appliance.appliance0.uid
+      static_ip = "126.10.10.23"
+    }
 
   }
 
   machine_pool {
     name      = "worker-pool"
-    host_uids = [spectrocloud_appliance.appliance1.uid]
 
+    edge_host {
+      host_uid = spectrocloud_appliance.appliance1.uid
+      static_ip = "136.10.10.24"
+    }
   }
 
 }

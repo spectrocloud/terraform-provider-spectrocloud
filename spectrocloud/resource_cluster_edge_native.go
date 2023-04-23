@@ -149,10 +149,29 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 						},
 						"host_uids": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:       schema.TypeList,
+							Optional:   true,
+							Deprecated: "This field is deprecated from provider 0.13.0. Use `edge_host` instead.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
+							},
+						},
+						"edge_host": {
+							Type:     schema.TypeList,
+							Required: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"host_uid": {
+										Type:        schema.TypeString,
+										Description: "Edge host id",
+										Required:    true,
+									},
+									"static_ip": {
+										Type:        schema.TypeString,
+										Description: "Edge host static IP",
+										Optional:    true,
+									},
+								},
 							},
 						},
 					},
@@ -256,11 +275,14 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
-		hosts := make([]string, 0)
+		var hosts []map[string]string
 		for _, host := range machinePool.Hosts {
-			hosts = append(hosts, *host.HostUID)
+			hosts = append(hosts, map[string]string{
+				"host_uid":  *host.HostUID,
+				"static_ip": host.StaticIP,
+			})
 		}
-		oi["host_uids"] = hosts
+		oi["edge_host"] = hosts
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
 		ois = append(ois, oi)
@@ -411,16 +433,18 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 }
 
 func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudConfigEntity {
-	if m["host_uids"] == nil {
+	edgeHostIdsLen := len(m["edge_host"].([]interface{}))
+	edgeHosts := make([]*models.V1EdgeNativeMachinePoolHostEntity, 0)
+	if m["edge_host"] == nil || edgeHostIdsLen == 0 {
 		return nil
 	}
-	edgeHosts := make([]*models.V1EdgeNativeMachinePoolHostEntity, 0)
-	for _, host := range m["host_uids"].([]interface{}) {
+	for _, host := range m["edge_host"].([]interface{}) {
+		hostId := host.(map[string]interface{})["host_uid"].(string)
 		edgeHosts = append(edgeHosts, &models.V1EdgeNativeMachinePoolHostEntity{
-			HostUID: types.Ptr(host.(string)),
+			HostUID:  &hostId,
+			StaticIP: host.(map[string]interface{})["static_ip"].(string),
 		})
 	}
-
 	return &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 		EdgeHosts: edgeHosts,
 	}
