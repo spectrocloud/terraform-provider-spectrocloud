@@ -54,8 +54,10 @@ Required:
 
 Optional:
 
+- `access_key` (String)
 - `arn` (String)
 - `external_id` (String)
+- `secret_key` (String)
 
 
 <a id="nestedblock--timeouts"></a>
