@@ -1,5 +1,7 @@
 data "spectrocloud_cluster" "vm_enabled_base_cluster" {
-  name = "shruthi-aws-ugadi"
+  #name = "shruthi-aws-ugadi"
+  name = "milwaukee"
+  context = "tenant"
 }
 locals {
   # storage_class_name = "sumit-storage-class"
@@ -27,9 +29,12 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
       }
       spec {
         source {
-          http {
-            url = "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
+          registry {
+            image_url = "gcr.io/spectro-images-public/release/vm-dashboard/os/ubuntu-container-disk:20.04"
           }
+          /*http {
+            url = "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
+          }*/
         }
         pvc {
           access_modes = ["ReadWriteOnce"]
@@ -63,6 +68,9 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
             cores   = 2
             sockets = 2
             threads = 50
+          }
+          memory {
+            guest = "16G"
           }
           resources {
             requests = {

@@ -229,6 +229,7 @@ Optional:
 - `blank` (Block List, Max: 1) DataVolumeSourceBlank provides the parameters to create a Data Volume from an empty source. (see [below for nested schema](#nestedblock--spec--data_volume_templates--spec--source--blank))
 - `http` (Block List, Max: 1) DataVolumeSourceHTTP provides the parameters to create a Data Volume from an HTTP source. (see [below for nested schema](#nestedblock--spec--data_volume_templates--spec--source--http))
 - `pvc` (Block List, Max: 1) DataVolumeSourcePVC provides the parameters to create a Data Volume from an existing PVC. (see [below for nested schema](#nestedblock--spec--data_volume_templates--spec--source--pvc))
+- `registry` (Block List, Max: 1) DataVolumeSourceRegistry provides the parameters to create a Data Volume from an existing PVC. (see [below for nested schema](#nestedblock--spec--data_volume_templates--spec--source--registry))
 
 <a id="nestedblock--spec--data_volume_templates--spec--source--blank"></a>
 ### Nested Schema for `spec.data_volume_templates.spec.source.blank`
@@ -251,6 +252,14 @@ Optional:
 
 - `name` (String) The name of the PVC.
 - `namespace` (String) The namespace which the PVC located in.
+
+
+<a id="nestedblock--spec--data_volume_templates--spec--source--registry"></a>
+### Nested Schema for `spec.data_volume_templates.spec.source.registry`
+
+Optional:
+
+- `image_url` (String) The registry URL of the image to download.
 
 
 
@@ -542,6 +551,7 @@ Required:
 Optional:
 
 - `cpu` (Block List, Max: 1) CPU allows to specifying the CPU topology. Valid resource keys are "cores" , "sockets" and "threads" (see [below for nested schema](#nestedblock--spec--template--spec--domain--cpu))
+- `memory` (Block List, Max: 1) Memory allows specifying the vmi memory features. (see [below for nested schema](#nestedblock--spec--template--spec--domain--memory))
 
 <a id="nestedblock--spec--template--spec--domain--devices"></a>
 ### Nested Schema for `spec.template.spec.domain.devices`
@@ -620,6 +630,14 @@ Optional:
 - `cores` (Number) Cores is the number of cores inside the vmi. Must be a value greater or equal 1
 - `sockets` (Number) Sockets is the number of sockets inside the vmi. Must be a value greater or equal 1.
 - `threads` (Number) Threads is the number of threads inside the vmi. Must be a value greater or equal 1.
+
+
+<a id="nestedblock--spec--template--spec--domain--memory"></a>
+### Nested Schema for `spec.template.spec.domain.memory`
+
+Optional:
+
+- `guest` (String) Guest is the amount of memory allocated to the vmi. This value must be less than or equal to the limit if specified.
 
 
 
