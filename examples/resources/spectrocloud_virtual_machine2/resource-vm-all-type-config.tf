@@ -513,3 +513,106 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
     }
   }
 }
+
+
+# Creates a VM with registry and cloud init disk (with all default values) having over commit guest overhead values enabled
+resource "spectrocloud_virtual_machine" "tf-registry_disk" {
+  cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  metadata {
+    name      = "test-vm-default-registry-disk"
+    namespace = "default"
+    labels = {
+      "key1" = "value1"
+    }
+  }
+  spec {
+    data_volume_templates {
+      metadata {
+        name      = "test-vm-registryvolume"
+        namespace = "default"
+      }
+      spec {
+        source {
+          registry {
+            image_url = "docker://gcr.io/spectro-images-public/release/vm-dashboard/os/ubuntu-container-disk:20.04"
+          }
+        }
+        pvc {
+          access_modes = ["ReadWriteMany"]
+          resources {
+            requests = {
+              storage = "10Gi"
+            }
+          }
+          storage_class_name = local.storage_class_name
+
+        }
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          "kubevirt.io/vm" = "test-vm-cont"
+        }
+      }
+      spec {
+        volume {
+          name = "test-vm-registryvolumedisk1"
+          volume_source {
+            data_volume {
+              name = "test-vm-registryvolume"
+            }
+          }
+        }
+        volume {
+          name = "cloudintdisk"
+          volume_source {
+            cloud_init_config_drive {
+              user_data = "\n#cloud-config\nssh_pwauth: True\nchpasswd: { expire: False }\npassword: spectro\ndisable_root: false\n"
+            }
+          }
+        }
+        domain {
+          resources {
+            over_commit_guest_overhead = true
+            requests = {
+              memory = "1G"
+              cpu    = 1
+            }
+          }
+          memory {
+            guest = "2G"
+          }
+          devices {
+            disk {
+              name = "test-vm-registryvolumedisk1"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            disk {
+              name = "cloudintdisk"
+              disk_device {
+                disk {
+                  bus = "virtio"
+                }
+              }
+            }
+            interface {
+              name                     = "main"
+              interface_binding_method = "InterfaceMasquerade"
+            }
+          }
+        }
+        network {
+          name = "main"
+          network_source {
+            pod {}
+          }
+        }
+      }
+    }
+  }
+}
