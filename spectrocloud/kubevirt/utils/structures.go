@@ -21,8 +21,22 @@ func IdParts(id string) (string, string, string, error) {
 	return parts[0], parts[1], parts[2], nil
 }
 
+func IdPartsDV(id string) (string, string, string, string, error) {
+	parts := strings.Split(id, "/")
+	if len(parts) != 4 {
+		err := fmt.Errorf("Unexpected ID format (%q), expected %q.", id, "namespace/name")
+		return "", "", "", "", err
+	}
+
+	return parts[0], parts[1], parts[2], parts[3], nil
+}
+
 func BuildId(clusterUid string, meta *models.V1VMObjectMeta) string {
 	return clusterUid + "/" + meta.Namespace + "/" + meta.Name
+}
+
+func BuildIdDV(clusterUid string, vm_namespace string, vm_name string, meta *models.V1VMObjectMeta) string {
+	return clusterUid + "/" + vm_namespace + "/" + vm_name + "/" + meta.Name
 }
 
 func FlattenStringMap(m map[string]string) map[string]interface{} {

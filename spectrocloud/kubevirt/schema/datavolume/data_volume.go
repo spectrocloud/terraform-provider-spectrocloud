@@ -11,9 +11,25 @@ import (
 
 func DataVolumeFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-		"metadata": k8s.NamespacedMetadataSchema("DataVolume", false),
-		"spec":     DataVolumeSpecSchema(),
-		"status":   dataVolumeStatusSchema(),
+		"cluster_uid": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The cluster UID to which the virtual machine belongs to.",
+		},
+		"vm_name": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The name of the virtual machine to which the data volume belongs to.",
+		},
+		"vm_namespace": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The namespace of the virtual machine to which the data volume belongs to.",
+		},
+		"add_volume_options": DataVolumeOptionsSchema(),
+		"metadata":           k8s.NamespacedMetadataSchema("DataVolume", false),
+		"spec":               DataVolumeSpecSchema(),
+		"status":             dataVolumeStatusSchema(),
 	}
 }
 
