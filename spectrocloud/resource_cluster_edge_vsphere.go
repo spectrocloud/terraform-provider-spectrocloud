@@ -140,6 +140,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						"datacenter": {
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 						"folder": {
 							Type:     schema.TypeString,
@@ -158,21 +159,25 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						"vip": {
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 
 						"static_ip": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
+							ForceNew: true,
 						},
 
 						"network_type": {
 							Type:     schema.TypeString,
 							Optional: true,
+							ForceNew: true,
 						},
 						"network_search_domain": {
 							Type:     schema.TypeString,
 							Optional: true,
+							ForceNew: true,
 						},
 					},
 				},
@@ -663,8 +668,9 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 	}
 
 	cluster.Spec.CloudConfig.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
-		Host: vip,
-		Type: cloudConfig["network_type"].(string),
+		Host:             vip,
+		Type:             cloudConfig["network_type"].(string),
+		DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
 	}
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)

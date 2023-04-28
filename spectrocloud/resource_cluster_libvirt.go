@@ -23,6 +23,7 @@ func resourceClusterLibvirt() *schema.Resource {
 		ReadContext:   resourceClusterLibvirtRead,
 		UpdateContext: resourceClusterVirtUpdate,
 		DeleteContext: resourceClusterDelete,
+		Description:   "Resource for managing Libvirt clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -163,6 +164,20 @@ func resourceClusterLibvirt() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+						},
+						// DHCP or VIP Properties
+						"network_search_domain": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "The search domain to use for the cluster in case of DHCP.",
+						},
+						"network_type": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "VIP",
+							ForceNew:    true,
+							Description: "The type of network to use for the cluster. This can be `VIP` or `DDNS`.",
 						},
 					},
 				},
@@ -755,8 +770,9 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 				NtpServers: toNtpServers(cloudConfig),
 				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
 				ControlPlaneEndpoint: &models.V1LibvirtControlPlaneEndPoint{
-					Host: cloudConfig["vip"].(string),
-					Type: "VIP",
+					Host:             cloudConfig["vip"].(string),
+					Type:             cloudConfig["network_type"].(string),
+					DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
 				},
 			},
 		},
