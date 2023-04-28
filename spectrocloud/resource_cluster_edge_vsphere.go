@@ -154,7 +154,6 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						"ssh_key": {
 							Type:     schema.TypeString,
 							Optional: true,
-							ForceNew: true,
 						},
 
 						"vip": {

@@ -152,17 +152,14 @@ func resourceClusterLibvirt() *schema.Resource {
 						"ssh_key": {
 							Type:     schema.TypeString,
 							Required: true,
-							ForceNew: true,
 						},
 						"vip": {
 							Type:     schema.TypeString,
 							Required: true,
-							ForceNew: true,
 						},
 						"ntp_servers": {
 							Type:     schema.TypeSet,
 							Optional: true,
-							ForceNew: true,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
