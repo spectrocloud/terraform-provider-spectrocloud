@@ -17,17 +17,17 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     name                    = "master-pool"
 
     edge_host {
-      host_uid = spectrocloud_appliance.appliance0.uid
+      host_uid  = spectrocloud_appliance.appliance0.uid
       static_ip = "126.10.10.23"
     }
 
   }
 
   machine_pool {
-    name      = "worker-pool"
+    name = "worker-pool"
 
     edge_host {
-      host_uid = spectrocloud_appliance.appliance1.uid
+      host_uid  = spectrocloud_appliance.appliance1.uid
       static_ip = "136.10.10.24"
     }
   }

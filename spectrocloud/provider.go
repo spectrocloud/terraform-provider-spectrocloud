@@ -118,6 +118,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_virtual_machine": resourceKubevirtVirtualMachine(),
 
+				"spectrocloud_datavolume": resourceKubevirtDataVolume(),
+
 				"spectrocloud_application": resourceApplication(),
 
 				"spectrocloud_privatecloudgateway_ippool": resourcePrivateCloudGatewayIpPool(),
