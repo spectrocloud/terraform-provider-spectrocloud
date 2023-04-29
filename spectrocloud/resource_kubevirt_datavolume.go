@@ -106,6 +106,9 @@ func resourceKubevirtDataVolumeRead(ctx context.Context, resourceData *schema.Re
 			kvVolume, err := convert.FromHapiVolume(&models.V1VMAddVolumeEntity{
 				DataVolumeTemplate: dv,
 			})
+			if err != nil {
+				return diag.FromErr(err)
+			}
 			err = datavolume.ToResourceData(*kvVolume, resourceData)
 			if err != nil {
 				return diag.FromErr(err)
