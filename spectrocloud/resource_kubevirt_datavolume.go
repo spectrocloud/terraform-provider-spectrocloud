@@ -48,6 +48,9 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, resourceData *schema.
 	AddVolumeOptions := ExpandAddVolumeOptions(addVolumeOptionsData)
 
 	hapiVolume, err := convert.ToHapiVolume(dv, AddVolumeOptions)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	log.Printf("[INFO] Creating new data volume: %#v", dv)
 	// Warning or errors can be collected in a slice type
