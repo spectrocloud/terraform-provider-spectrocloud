@@ -13,7 +13,6 @@ import (
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/convert"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/datavolume"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachine"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
@@ -95,18 +94,21 @@ func resourceKubevirtDataVolumeRead(ctx context.Context, resourceData *schema.Re
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}
-	vm, err := convert.ToKubevirtVM(hapiVM)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if vm == nil {
-		return nil
-	}
-	log.Printf("[INFO] Received virtual machine: %#v", vm)
 
-	err = virtualmachine.ToResourceData(*vm, resourceData)
-	if err != nil {
-		return diag.FromErr(err)
+	// Read data volume templates from vm.Spec.DataVolumeTemplates and filter by name
+	for _, dv := range hapiVM.Spec.DataVolumeTemplates {
+		name := dv.Metadata.Name
+		namespace := dv.Metadata.Namespace
+		if name == resourceData.Get("name") && namespace == resourceData.Get("namespace") {
+			kvVolume, err := convert.FromHapiVolume(&models.V1VMAddVolumeEntity{
+				DataVolumeTemplate: dv,
+			})
+			err = datavolume.ToResourceData(*kvVolume, resourceData)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			break
+		}
 	}
 	return nil
 }
@@ -125,7 +127,7 @@ func resourceKubevirtDataVolumeDelete(ctx context.Context, resourceData *schema.
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	clusterUid, namespace, name, err := utils.IdParts(resourceData.Id())
+	clusterUid, namespace, vm_name, vol_name, err := utils.IdPartsDV(resourceData.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -135,12 +137,17 @@ func resourceKubevirtDataVolumeDelete(ctx context.Context, resourceData *schema.
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Deleting data volume: %#v", name)
-	if err := c.DeleteDataVolume(clusterUid, namespace, name, &models.V1VMRemoveVolumeEntity{}); err != nil {
+	log.Printf("[INFO] Deleting data volume: %#v", vm_name)
+	if err := c.DeleteDataVolume(clusterUid, namespace, vm_name, &models.V1VMRemoveVolumeEntity{
+		Persist: true,
+		RemoveVolumeOptions: &models.V1VMRemoveVolumeOptions{
+			Name: types.Ptr(vol_name),
+		},
+	}); err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] data volume %s deleted", name)
+	log.Printf("[INFO] data volume %s deleted", vm_name)
 
 	resourceData.SetId("")
 	return diags

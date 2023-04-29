@@ -1,5 +1,5 @@
 data "spectrocloud_cluster" "cluster" {
-  name = "client-101"
+  name    = "client-101"
   context = "tenant"
 }
 

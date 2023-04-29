@@ -65,6 +65,7 @@ Optional:
 
 Required:
 
+- `edge_host` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--edge_host))
 - `name` (String)
 
 Optional:
@@ -72,9 +73,21 @@ Optional:
 - `additional_labels` (Map of String)
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
-- `host_uids` (List of String)
+- `host_uids` (List of String, Deprecated)
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
+
+<a id="nestedblock--machine_pool--edge_host"></a>
+### Nested Schema for `machine_pool.edge_host`
+
+Required:
+
+- `host_uid` (String) Edge host id
+
+Optional:
+
+- `static_ip` (String) Edge host static IP
+
 
 <a id="nestedblock--machine_pool--taints"></a>
 ### Nested Schema for `machine_pool.taints`
