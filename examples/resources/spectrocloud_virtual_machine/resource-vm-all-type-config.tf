@@ -1,6 +1,6 @@
 data "spectrocloud_cluster" "vm_enabled_base_cluster" {
   #name = "shruthi-aws-ugadi"
-  name = "milwaukee"
+  name    = "milwaukee"
   context = "tenant"
 }
 locals {

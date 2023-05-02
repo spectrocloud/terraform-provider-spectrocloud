@@ -98,8 +98,9 @@ func flattenHostConfig(hostConfig *models.V1HostClusterConfig) []interface{} {
 }
 
 func flattenSourceRanges(hostConfig *models.V1HostClusterConfig) string {
-	sourceRanges := make([]string, 0)
-	copy(sourceRanges, hostConfig.ClusterEndpoint.Config.LoadBalancerConfig.LoadBalancerSourceRanges)
+	srcRanges := hostConfig.ClusterEndpoint.Config.LoadBalancerConfig.LoadBalancerSourceRanges
+	sourceRanges := make([]string, len(srcRanges))
+	copy(sourceRanges, srcRanges)
 	return strings.Join(sourceRanges, ",")
 }
 
