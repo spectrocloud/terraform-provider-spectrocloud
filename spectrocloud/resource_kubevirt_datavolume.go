@@ -98,11 +98,16 @@ func resourceKubevirtDataVolumeRead(ctx context.Context, resourceData *schema.Re
 		return diag.FromErr(err)
 	}
 
+	metadataSlice := resourceData.Get("metadata").([]interface{})
+	rd_metadata := metadataSlice[0].(map[string]interface{})
+	rd_metadataName := rd_metadata["name"].(string)
+	rd_metadataNamespace := rd_metadata["namespace"].(string)
 	// Read data volume templates from vm.Spec.DataVolumeTemplates and filter by name
 	for _, dv := range hapiVM.Spec.DataVolumeTemplates {
 		name := dv.Metadata.Name
 		namespace := dv.Metadata.Namespace
-		if name == resourceData.Get("name") && namespace == resourceData.Get("namespace") {
+
+		if name == rd_metadataName && namespace == rd_metadataNamespace {
 			kvVolume, err := convert.FromHapiVolume(&models.V1VMAddVolumeEntity{
 				DataVolumeTemplate: dv,
 			})
@@ -116,7 +121,7 @@ func resourceKubevirtDataVolumeRead(ctx context.Context, resourceData *schema.Re
 			break
 		}
 	}
-	return nil
+	return diag.Diagnostics{}
 }
 
 func resourceKubevirtDataVolumeUpdate(ctx context.Context, resourceData *schema.ResourceData, m interface{}) diag.Diagnostics {
