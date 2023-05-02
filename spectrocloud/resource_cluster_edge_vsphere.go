@@ -453,8 +453,9 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 	}
 
 	cluster.Spec.CloudConfig.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
-		Host: vip,
-		Type: cloudConfig["network_type"].(string),
+		Host:             vip,
+		Type:             cloudConfig["network_type"].(string),
+		DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
 	}
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
