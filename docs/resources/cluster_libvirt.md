@@ -57,6 +57,8 @@ Required:
 
 Optional:
 
+- `network_search_domain` (String) The search domain to use for the cluster in case of DHCP.
+- `network_type` (String) The type of network to use for the cluster. This can be `VIP` or `DDNS`.
 - `ntp_servers` (Set of String)
 
 
