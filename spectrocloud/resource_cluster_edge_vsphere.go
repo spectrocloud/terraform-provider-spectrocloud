@@ -88,7 +88,6 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						"datacenter": {
 							Type:     schema.TypeString,
 							Required: true,
-							ForceNew: true,
 						},
 						"folder": {
 							Type:     schema.TypeString,
@@ -102,13 +101,11 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						"ssh_key": {
 							Type:     schema.TypeString,
 							Optional: true,
-							ForceNew: true,
 						},
 
 						"vip": {
 							Type:     schema.TypeString,
 							Required: true,
-							ForceNew: true,
 						},
 
 						"static_ip": {
@@ -120,12 +117,10 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						"network_type": {
 							Type:     schema.TypeString,
 							Optional: true,
-							ForceNew: true,
 						},
 						"network_search_domain": {
 							Type:     schema.TypeString,
 							Optional: true,
-							ForceNew: true,
 						},
 					},
 				},
