@@ -5,8 +5,6 @@ import (
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
-
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils/patch"
 )
 
 func DataVolumeFields() map[string]*schema.Schema {
@@ -101,8 +99,4 @@ func ToResourceData(dv cdiv1.DataVolume, resourceData *schema.ResourceData) erro
 	}
 
 	return nil
-}
-
-func AppendPatchOps(keyPrefix, pathPrefix string, resourceData *schema.ResourceData, ops []patch.PatchOperation) patch.PatchOperations {
-	return k8s.AppendPatchOps(keyPrefix+"metadata.0.", pathPrefix+"/metadata/", resourceData, ops)
 }
