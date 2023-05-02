@@ -83,7 +83,7 @@ func toPack(cluster *models.V1SpectroCluster, pSrc interface{}) *models.V1PackVa
 			if cluster != nil {
 				packs := make([]*models.V1PackRef, 0)
 				for _, profile := range cluster.Spec.ClusterProfileTemplates {
-					copy(packs, profile.Packs)
+					packs = append(packs, profile.Packs...)
 				}
 				uid = getManifestUID(data["name"].(string), packs)
 			}
