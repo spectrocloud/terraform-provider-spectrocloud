@@ -1,8 +1,9 @@
 package schemas
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func PackSchema() *schema.Schema {
@@ -39,7 +40,7 @@ func PackSchema() *schema.Schema {
 				},
 				"values": {
 					Type:        schema.TypeString,
-					Required:    true,
+					Optional:    true,
 					Description: "The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format. ",
 				},
 				"manifest": {
