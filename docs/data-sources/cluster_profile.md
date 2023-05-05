@@ -42,7 +42,6 @@ output "same" {
 Required:
 
 - `name` (String) The name of the pack. The name must be unique within the cluster profile.
-- `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
 Optional:
 
@@ -51,6 +50,7 @@ Optional:
 - `tag` (String) The tag of the pack. The tag is the version of the pack.
 - `type` (String) The type of the pack. The default value is `spectro`.
 - `uid` (String)
+- `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
 <a id="nestedblock--pack--manifest"></a>
 ### Nested Schema for `pack.manifest`
