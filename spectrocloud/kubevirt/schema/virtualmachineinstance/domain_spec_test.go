@@ -16,6 +16,29 @@ func TestFlattenDomainSpec(t *testing.T) {
 	}{
 		{
 			input: kubevirtapiv1.DomainSpec{
+				CPU:    &kubevirtapiv1.CPU{}, // empty CPU and Memory should be ignored
+				Memory: &kubevirtapiv1.Memory{},
+			},
+			expectedOutput: []interface{}{
+				map[string]interface{}{
+					"devices": []interface{}{
+						map[string]interface{}{
+							"disk":      []interface{}{},
+							"interface": []interface{}{},
+						},
+					},
+					"resources": []interface{}{
+						map[string]interface{}{
+							"limits":                     map[string]interface{}{},
+							"over_commit_guest_overhead": false,
+							"requests":                   map[string]interface{}{},
+						},
+					},
+				},
+			},
+		},
+		{
+			input: kubevirtapiv1.DomainSpec{
 				CPU: &kubevirtapiv1.CPU{
 					Cores:   2,
 					Sockets: 1,
