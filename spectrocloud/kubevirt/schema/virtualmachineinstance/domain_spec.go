@@ -434,10 +434,10 @@ func flattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
 	att := make(map[string]interface{})
 
 	att["resources"] = flattenResources(in.Resources)
-	if in.CPU != nil {
+	if in.CPU != nil && in.CPU.Cores != 0 {
 		att["cpu"] = flattenCPU(in.CPU)
 	}
-	if in.Memory != nil {
+	if in.Memory != nil && (in.Memory.Guest != nil || in.Memory.Hugepages != nil) {
 		att["memory"] = flattenMemory(in.Memory)
 	}
 	att["devices"] = flattenDevices(in.Devices)
