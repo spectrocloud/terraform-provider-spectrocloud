@@ -325,22 +325,6 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
-func resourceMachinePoolEdgeHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	buf.WriteString(HashStringMap(m["additional_labels"]))
-	buf.WriteString(HashStringMapList(m["taints"]))
-
-	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
-	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
-	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
-	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
-	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
-
-	return int(hash(buf.String()))
-}
-
 func resourceClusterHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
