@@ -73,6 +73,12 @@ func domainSpecFields() map[string]*schema.Schema {
 						Description: "Guest is the amount of memory allocated to the vmi. This value must be less than or equal to the limit if specified.",
 						Optional:    true,
 					},
+					"hugepages": {
+						Type: schema.TypeString,
+						// PageSize specifies the hugepage size, for x86_64 architecture valid values are 1Gi and 2Mi.
+						Description: "Hugepages attribute specifies the hugepage size, for x86_64 architecture valid values are 1Gi and 2Mi.",
+						Optional:    true,
+					},
 				},
 			},
 		},
@@ -219,7 +225,7 @@ func expandDomainSpec(domainSpec []interface{}) (kubevirtapiv1.DomainSpec, error
 		}
 		result.Devices = devices
 	}
-	if v, ok := in["cpu"].([]interface{}); ok {
+	if v, ok := in["cpu"].(map[string]interface{}); ok {
 		cpu, err := expandCPU(v)
 		if err != nil {
 			return result, err
@@ -285,22 +291,20 @@ func expandDevices(devices []interface{}) (kubevirtapiv1.Devices, error) {
 
 	return result, nil
 }
-func expandCPU(cpu []interface{}) (kubevirtapiv1.CPU, error) {
+func expandCPU(cpu map[string]interface{}) (kubevirtapiv1.CPU, error) {
 	result := kubevirtapiv1.CPU{}
 
-	if len(cpu) == 0 || cpu[0] == nil {
+	if len(cpu) == 0 {
 		return result, nil
 	}
 
-	in := cpu[0].(map[string]interface{})
-
-	if v, ok := in["cores"].(int); ok {
+	if v, ok := cpu["cores"].(int); ok {
 		result.Cores = uint32(v)
 	}
-	if v, ok := in["sockets"].(int); ok {
+	if v, ok := cpu["sockets"].(int); ok {
 		result.Sockets = uint32(v)
 	}
-	if v, ok := in["threads"].(int); ok {
+	if v, ok := cpu["threads"].(int); ok {
 		result.Threads = uint32(v)
 	}
 
@@ -322,6 +326,12 @@ func expandMemory(memory []interface{}) (kubevirtapiv1.Memory, error) {
 			return result, err
 		}
 		result.Guest = &got
+	}
+
+	if v, ok := in["hugepages"].(string); ok {
+		result.Hugepages = &kubevirtapiv1.Hugepages{
+			PageSize: v,
+		}
 	}
 
 	return result, nil
@@ -465,6 +475,10 @@ func flattenMemory(in *kubevirtapiv1.Memory) []interface{} {
 
 	if in.Guest != nil {
 		att["guest"] = in.Guest.String()
+	}
+
+	if in.Hugepages != nil {
+		att["hugepages"] = in.Hugepages.PageSize
 	}
 
 	return []interface{}{att}
