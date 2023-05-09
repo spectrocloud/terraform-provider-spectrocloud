@@ -638,6 +638,7 @@ Optional:
 Optional:
 
 - `guest` (String) Guest is the amount of memory allocated to the vmi. This value must be less than or equal to the limit if specified.
+- `hugepages` (String) Hugepages attribute specifies the hugepage size, for x86_64 architecture valid values are 1Gi and 2Mi.
 
 
 
