@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
@@ -444,6 +443,10 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
 	if d.HasChange("cloud_config") {
+		occ, ncc := d.GetChange("cloud_config")
+		if occ.([]interface{})[0].(map[string]interface{})["datacenter"] != ncc.([]interface{})[0].(map[string]interface{})["datacenter"] {
+			return diag.Errorf("Validation error: %s", "Datacenter value cannot be updated after cluster provisioning. Kindly destroy and recreate with updated Datacenter attribute.")
+		}
 		cloudConfig := toCloudConfigUpdate(d.Get("cloud_config").([]interface{})[0].(map[string]interface{}))
 		if err := c.UpdateCloudConfigVsphereValues(cloudConfigId, cloudConfig); err != nil {
 			return diag.FromErr(err)
@@ -452,6 +455,19 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
+		if oraw != nil && nraw != nil {
+			for i, _ := range nraw.(*schema.Set).List() {
+				oldPlacement := oraw.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
+				newPlacement := nraw.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
+				hasChange := false
+				if (oldPlacement["cluster"] != newPlacement["cluster"]) || (oldPlacement["datastore"] != newPlacement["datastore"]) || (oldPlacement["network"] != newPlacement["network"]) {
+					hasChange = true
+				}
+				if hasChange {
+					return diag.Errorf("Validation error: %s", "Datastore, Network, and ComputeCluster values cannot be updated after cluster provisioning. Kindly destroy and recreate with updated placement attributes")
+				}
+			}
+		}
 		if oraw == nil {
 			oraw = new(schema.Set)
 		}
