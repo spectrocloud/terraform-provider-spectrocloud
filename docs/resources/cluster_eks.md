@@ -156,11 +156,23 @@ Optional:
 - `az_subnets` (Map of String)
 - `azs` (List of String)
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
+- `eks_launch_template` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--eks_launch_template))
 - `max` (Number)
 - `max_price` (String)
 - `min` (Number)
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
+
+<a id="nestedblock--machine_pool--eks_launch_template"></a>
+### Nested Schema for `machine_pool.eks_launch_template`
+
+Optional:
+
+- `ami_id` (String) The ID of the custom Amazon Machine Image (AMI).
+- `root_volume_iops` (Number) The number of input/output operations per second (IOPS) for the root volume.
+- `root_volume_throughput` (Number) The throughput of the root volume in MiB/s.
+- `root_volume_type` (String) The type of the root volume.
+
 
 <a id="nestedblock--machine_pool--taints"></a>
 ### Nested Schema for `machine_pool.taints`

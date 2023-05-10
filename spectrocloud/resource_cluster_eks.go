@@ -233,6 +233,7 @@ func resourceClusterEks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"eks_launch_template": schemas.EksLaunchTemplate(),
 					},
 				},
 			},
@@ -322,7 +323,6 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-//goland:noinspection GoUnhandledErrorResult
 func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -429,7 +429,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 
 		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
-		if *machinePool.IsControlPlane {
+		if machinePool.IsControlPlane != nil && *machinePool.IsControlPlane {
 			continue
 		}
 
@@ -453,10 +453,31 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 			oi["azs"] = machinePool.Azs
 		}
 
+		oi["eks_launch_template"] = flattenEksLaunchTemplate(machinePool.AwsLaunchTemplate)
+
 		ois = append(ois, oi)
 	}
 
 	return ois
+}
+
+func flattenEksLaunchTemplate(launchTemplate *models.V1AwsLaunchTemplate) []interface{} {
+	if launchTemplate == nil {
+		return make([]interface{}, 0)
+	}
+
+	lt := make(map[string]interface{})
+
+	if launchTemplate.Ami != nil {
+		lt["ami_id"] = launchTemplate.Ami.ID
+	}
+	if launchTemplate.RootVolume != nil {
+		lt["root_volume_type"] = launchTemplate.RootVolume.Type
+		lt["root_volume_iops"] = launchTemplate.RootVolume.Iops
+		lt["root_volume_throughput"] = launchTemplate.RootVolume.Throughput
+	}
+
+	return []interface{}{lt}
 }
 
 func flattenFargateProfilesEks(fargateProfiles []*models.V1FargateProfile) []interface{} {
@@ -798,7 +819,48 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		}
 	}
 
+	mp.CloudConfig.AwsLaunchTemplate = setAwsLaunchTemplate(m)
+
 	return mp
+}
+
+func setAwsLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunchTemplate {
+	var launchTemplate *models.V1AwsLaunchTemplate
+
+	if machinePool["eks_launch_template"] != nil {
+		eksLaunchTemplateList := machinePool["eks_launch_template"].([]interface{})
+		if len(eksLaunchTemplateList) == 0 {
+			return nil
+		}
+
+		eksLaunchTemplate := eksLaunchTemplateList[0].(map[string]interface{})
+
+		if eksLaunchTemplate["ami_id"] != nil || eksLaunchTemplate["root_volume_type"] != nil || eksLaunchTemplate["root_volume_iops"] != nil || eksLaunchTemplate["root_volume_throughput"] != nil {
+			launchTemplate = &models.V1AwsLaunchTemplate{
+				RootVolume: &models.V1AwsRootVolume{},
+			}
+
+			if eksLaunchTemplate["ami_id"] != nil {
+				launchTemplate.Ami = &models.V1AwsAmiReference{
+					ID: eksLaunchTemplate["ami_id"].(string),
+				}
+			}
+
+			if eksLaunchTemplate["root_volume_type"] != nil {
+				launchTemplate.RootVolume.Type = eksLaunchTemplate["root_volume_type"].(string)
+			}
+
+			if eksLaunchTemplate["root_volume_iops"] != nil {
+				launchTemplate.RootVolume.Iops = int64(eksLaunchTemplate["root_volume_iops"].(int))
+			}
+
+			if eksLaunchTemplate["root_volume_throughput"] != nil {
+				launchTemplate.RootVolume.Throughput = int64(eksLaunchTemplate["root_volume_throughput"].(int))
+			}
+		}
+	}
+
+	return launchTemplate
 }
 
 func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {
