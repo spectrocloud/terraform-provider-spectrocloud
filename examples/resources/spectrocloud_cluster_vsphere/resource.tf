@@ -4,7 +4,7 @@ data "spectrocloud_cluster_profile" "vmware_profile" {
   context = "tenant"
 }
 data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
-  name = var.shared_vmware_cloud_account_name
+  name = "gmgateway1"
 }
 
 
