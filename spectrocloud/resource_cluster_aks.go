@@ -280,7 +280,7 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 
 		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
-		if *machinePool.IsControlPlane {
+		if machinePool.IsControlPlane != nil && *machinePool.IsControlPlane {
 			continue
 		}
 

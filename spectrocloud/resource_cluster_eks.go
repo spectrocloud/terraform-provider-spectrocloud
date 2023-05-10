@@ -323,7 +323,6 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-//goland:noinspection GoUnhandledErrorResult
 func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -430,7 +429,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 
 		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
-		if *machinePool.IsControlPlane {
+		if machinePool.IsControlPlane != nil && *machinePool.IsControlPlane {
 			continue
 		}
 

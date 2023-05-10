@@ -13,7 +13,7 @@ func getUpdateStrategy(m map[string]interface{}) string {
 }
 
 func flattenUpdateStrategy(updateStrategy *models.V1UpdateStrategy, oi map[string]interface{}) {
-	if updateStrategy.Type != "" {
+	if updateStrategy != nil && updateStrategy.Type != "" {
 		oi["update_strategy"] = updateStrategy.Type
 	} else {
 		oi["update_strategy"] = "RollingUpdateScaleOut"
