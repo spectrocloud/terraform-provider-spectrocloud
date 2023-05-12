@@ -434,6 +434,19 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	return ois
 }
 
+func ValidateMachinePoolChange(oraw interface{}, nraw interface{}) bool {
+	hasChange := false
+	for i, nm := range nraw.(*schema.Set).List() {
+		oldPlacement := oraw.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
+		newPlacement := nm.(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
+		if (oldPlacement["cluster"] != newPlacement["cluster"]) || (oldPlacement["datastore"] != newPlacement["datastore"]) || (oldPlacement["network"] != newPlacement["network"]) {
+			hasChange = true
+			return hasChange
+		}
+	}
+	return hasChange
+}
+
 func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -456,16 +469,8 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw != nil && nraw != nil {
-			for i, _ := range nraw.(*schema.Set).List() {
-				oldPlacement := oraw.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
-				newPlacement := nraw.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
-				hasChange := false
-				if (oldPlacement["cluster"] != newPlacement["cluster"]) || (oldPlacement["datastore"] != newPlacement["datastore"]) || (oldPlacement["network"] != newPlacement["network"]) {
-					hasChange = true
-				}
-				if hasChange {
-					return diag.Errorf("Validation error: %s", "Datastore, Network, and ComputeCluster values cannot be updated after cluster provisioning. Kindly destroy and recreate with updated placement attributes")
-				}
+			if ValidateMachinePoolChange(oraw, nraw) {
+				return diag.Errorf("Validation error: %s", "Datastore, Network, and ComputeCluster values cannot be updated after cluster provisioning. Kindly destroy and recreate with updated placement attributes")
 			}
 		}
 		if oraw == nil {
