@@ -7,15 +7,23 @@ terraform {
   }
 }
 
-variable "sc_host" {}
-variable "sc_username" {}
-variable "sc_password" {}
-variable "sc_project_name" {}
+variable "sc_host" {
+  description = "Spectro Cloud Endpoint"
+  default     = "api.spectrocloud.com"
+}
+
+variable "sc_api_key" {
+  description = "Spectro Cloud API key"
+}
+
+variable "sc_project_name" {
+  description = "Spectro Cloud Project (e.g: Default)"
+  default     = "Default"
+}
 
 provider "spectrocloud" {
   host         = var.sc_host
-  username     = var.sc_username
-  password     = var.sc_password
+  api_key      = var.sc_api_key
   project_name = var.sc_project_name
-  trace        = true
 }
+
