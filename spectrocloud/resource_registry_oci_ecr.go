@@ -64,8 +64,9 @@ func resourceRegistryOciEcr() *schema.Resource {
 							Optional: true,
 						},
 						"secret_key": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:      schema.TypeString,
+							Optional:  true,
+							Sensitive: true,
 						},
 						"arn": {
 							Type:     schema.TypeString,
@@ -125,6 +126,15 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		acc["arn"] = registry.Spec.Credentials.Sts.Arn
 		acc["external_id"] = registry.Spec.Credentials.Sts.ExternalID
 		acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSts
+		credentials = append(credentials, acc)
+		if err := d.Set("credentials", credentials); err != nil {
+			return diag.FromErr(err)
+		}
+	} else if registry.Spec.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
+		credentials := make([]interface{}, 0, 1)
+		acc := make(map[string]interface{})
+		acc["access_key"] = registry.Spec.Credentials.AccessKey
+		acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
