@@ -119,8 +119,8 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 	if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
 		return diag.FromErr(err)
 	}
-
-	if registry.Spec.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSts {
+	switch registry.Spec.Credentials.CredentialType {
+	case models.V1AwsCloudAccountCredentialTypeSts:
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		acc["arn"] = registry.Spec.Credentials.Sts.Arn
@@ -130,7 +130,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
 		}
-	} else if registry.Spec.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
+	case models.V1AwsCloudAccountCredentialTypeSecret:
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		acc["access_key"] = registry.Spec.Credentials.AccessKey
@@ -139,12 +139,11 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
 		}
-	} else {
+	default:
 		errMsg := fmt.Sprintf("Registry type %s not implemented.", registry.Spec.Credentials.CredentialType)
 		err = errors.New(errMsg)
 		return diag.FromErr(err)
 	}
-
 	return diags
 }
 
