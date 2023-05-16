@@ -60,7 +60,7 @@ func resourceClusterCoxedge() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The AWS cloud account id to use for this cluster.",
+				Description: "The CoxEdge cloud account id to use for this cluster.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -169,17 +169,15 @@ func resourceClusterCoxedge() *schema.Resource {
 						},
 						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-							//ForceNew: true,
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
 							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
 						},
 						"control_plane_as_worker": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-							//ForceNew: true,
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
 							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
 						"name": {
@@ -197,7 +195,7 @@ func resourceClusterCoxedge() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
-						"cloud_config": {
+						"cox_config": {
 							Type:        schema.TypeList,
 							ForceNew:    true,
 							Required:    true,
@@ -229,7 +227,19 @@ func resourceClusterCoxedge() *schema.Resource {
 											},
 										},
 									},
-									// Add other fields as needed
+									"deployments": {
+										Type:        schema.TypeList,
+										Optional:    true,
+										Description: "The deployments associated with this machine pool.",
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Optional: true,
+												},
+											},
+										},
+									},
 								},
 							},
 						},
@@ -376,10 +386,13 @@ func flattenMachinePoolConfigsCoxEdge(machinePools []*models.V1CoxEdgeMachinePoo
 		oi["count"] = int(machinePool.Size)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
-		// Assuming you have flatten functions for these complex types
-		oi["deployments"] = flattenCoxEdgeDeployments(machinePool.Deployments)
-		oi["persistent_storage"] = flattenCoxEdgePersistentStorages(machinePool.PersistentStorages)
-		oi["s_rules"] = flattenCoxEdgeSecurityGroupRules(machinePool.SecurityGroupRules)
+		coxConfig := make(map[string]interface{})
+		// Assuming "spec" is a string representation of the machine pool configuration
+		coxConfig["spec"] = machinePool.Spec
+		coxConfig["persistent_storage"] = flattenCoxEdgePersistentStorages(machinePool.PersistentStorages)
+		coxConfig["deployments"] = flattenCoxEdgeDeployments(machinePool.Deployments)
+
+		oi["cox_config"] = []interface{}{coxConfig}
 
 		ois[i] = oi
 	}
@@ -392,15 +405,16 @@ func flattenCoxEdgeDeployments(deployments []*models.V1CoxEdgeDeployment) []inte
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0)
+	ois := make([]interface{}, len(deployments))
 
-	for _, deployment := range deployments {
+	for i, deployment := range deployments {
 		oi := make(map[string]interface{})
 
-		// Fill in the map with fields from the deployment.
 		oi["name"] = deployment.Name
 
-		ois = append(ois, oi)
+		// Add other attributes from the deployment as needed
+
+		ois[i] = oi
 	}
 
 	return ois
@@ -411,15 +425,15 @@ func flattenCoxEdgePersistentStorages(persistentStorages []*models.V1CoxEdgeLoad
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0)
+	ois := make([]interface{}, len(persistentStorages))
 
-	for _, persistentStorage := range persistentStorages {
+	for i, persistentStorage := range persistentStorages {
 		oi := make(map[string]interface{})
 
-		// Fill in the map with fields from the persistentStorage.
-		oi["name"] = persistentStorage.Path
+		oi["path"] = persistentStorage.Path
+		oi["size"] = persistentStorage.Size
 
-		ois = append(ois, oi)
+		ois[i] = oi
 	}
 
 	return ois
@@ -430,15 +444,19 @@ func flattenCoxEdgeSecurityGroupRules(securityGroupRules []*models.V1CoxEdgeSecu
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0)
+	ois := make([]interface{}, len(securityGroupRules))
 
-	for _, securityGroupRule := range securityGroupRules {
+	for i, rule := range securityGroupRules {
 		oi := make(map[string]interface{})
 
-		// Fill in the map with fields from the securityGroupRule.
-		oi["name"] = securityGroupRule.Type
+		oi["action"] = rule.Action
+		oi["description"] = rule.Description
+		oi["port_range"] = rule.PortRange
+		oi["protocol"] = rule.Protocol
+		oi["source"] = rule.Source
+		oi["type"] = rule.Type
 
-		ois = append(ois, oi)
+		ois[i] = oi
 	}
 
 	return ois
@@ -605,7 +623,7 @@ func toMachinePoolCoxEdge(machinePool interface{}) *models.V1CoxEdgeMachinePoolC
 			Deployments:        deployments,
 			PersistentStorages: persistentStorages,
 			SecurityGroupRules: securityGroupRules,
-			Spec:               m["cloud_config"].([]interface{})[0].(map[string]interface{})["spec"].(string),
+			Spec:               m["cox_config"].([]interface{})[0].(map[string]interface{})["spec"].(string),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
