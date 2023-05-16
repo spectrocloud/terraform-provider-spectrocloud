@@ -240,6 +240,7 @@ func resourceClusterCoxedge() *schema.Resource {
 											},
 										},
 									},
+
 								},
 							},
 						},
@@ -412,9 +413,8 @@ func flattenCoxEdgeDeployments(deployments []*models.V1CoxEdgeDeployment) []inte
 
 		oi["name"] = deployment.Name
 
-		// Add other attributes from the deployment as needed
-
 		ois[i] = oi
+
 	}
 
 	return ois
@@ -457,6 +457,7 @@ func flattenCoxEdgeSecurityGroupRules(securityGroupRules []*models.V1CoxEdgeSecu
 		oi["type"] = rule.Type
 
 		ois[i] = oi
+
 	}
 
 	return ois

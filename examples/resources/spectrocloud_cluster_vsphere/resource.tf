@@ -1,18 +1,19 @@
 data "spectrocloud_cluster_profile" "vmware_profile" {
   name    = "vmware-public-repo"
-  version = "2.0.0"
+  version = "1.0.0"
   context = "tenant"
 }
 data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
-  name = "gm-pcg-wop-d"
+  name = "gmgateway1"
 }
 
 
 resource "spectrocloud_cluster_vsphere" "cluster" {
-  name               = "vsphere-picard-2"
-  cluster_profile_id = data.spectrocloud_cluster_profile.vmware_profile.id
-  cloud_account_id   = data.spectrocloud_cloudaccount_vsphere.vmware_account.id
-
+  name             = "vsphere-picard-2"
+  cloud_account_id = data.spectrocloud_cloudaccount_vsphere.vmware_account.id
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.vmware_profile.id
+  }
   cloud_config {
     ssh_key = var.cluster_ssh_public_key
 
