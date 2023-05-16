@@ -15,7 +15,7 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
-func resourceClusterCoxedge() *schema.Resource {
+func resourceClusterCoxEdge() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceCoxEdgeClusterCreate,
 		ReadContext:   resourceCoxEdgeClusterRead,
@@ -240,7 +240,6 @@ func resourceClusterCoxedge() *schema.Resource {
 											},
 										},
 									},
-
 								},
 							},
 						},
