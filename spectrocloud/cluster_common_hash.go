@@ -136,6 +136,29 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceMachinePoolCoxEdgeHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	buf.WriteString(HashStringMap(m["additional_labels"]))
+	buf.WriteString(HashStringMapList(m["taints"]))
+
+	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
+	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", m["spec"].(string)))
+
+	if m["minSize"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["minSize"].(int)))
+	}
+	if m["maxSize"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["maxSize"].(int)))
+	}
+	buf.WriteString(fmt.Sprintf("%t-", m["useControlPlaneAsWorker"].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m["isControlPlane"].(bool)))
+
+	return int(hash(buf.String()))
+}
+
 func resourceMachinePoolTkeHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
