@@ -3,3 +3,8 @@ cluster_cluster_profile_name = "AddOnAWS"
 cluster_name = "aws-import-1"
 
 cloud_type = "aws"
+
+# Spectro Cloud credentials
+sc_host         = "{enter Spectro Cloud Host}" #e.g: api.spectrocloud.com (for SaaS)
+sc_api_key      = "{enter Spectro Cloud API endpoint}"
+sc_project_name = "{enter Spectro Cloud project Name}" #e.g: Default
