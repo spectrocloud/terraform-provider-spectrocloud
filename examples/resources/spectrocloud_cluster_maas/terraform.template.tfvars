@@ -5,6 +5,6 @@ backup_storage_location_name = "prod-backup-s3"
 cluster_name = "maas-1"
 
 # Spectro Cloud credentials
-sc_host         = "{enter Spectro Cloud Host}" #e.g: api.spectrocloud.com (for SaaS)
-sc_api_key      = "{enter Spectro Cloud API endpoint}"
-sc_project_name = "{enter Spectro Cloud project Name}" #e.g: Default
+sc_host         = "{Enter Spectro Cloud API Host}" #e.g: api.spectrocloud.com (for SaaS)
+sc_api_key      = "{Enter Spectro Cloud API Key}"
+sc_project_name = "{Enter Spectro Cloud Project Name}" #e.g: Default
