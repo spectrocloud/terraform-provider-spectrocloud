@@ -77,6 +77,9 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 		if err != nil {
 			return diag.FromErr(err)
 		}
+		if vm == nil {
+			return diag.FromErr(fmt.Errorf("virtual machine not found after clone operation %s, %s, %s", clusterUid, hapiVM.Metadata.Namespace, hapiVM.Metadata.Name))
+		}
 		d.SetId(utils.BuildId(clusterUid, vm.Metadata))
 		// apply the rest of configuration after clone to override it.
 		hapiVM.Metadata.ResourceVersion = vm.Metadata.ResourceVersion // set resource version to avoid conflict
@@ -143,9 +146,12 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	_, err = c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
+	hapiVM, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if hapiVM == nil {
+		return diag.FromErr(fmt.Errorf("cannot read virtual machine %s, %s, %s", clusterUid, vmNamespace, vmName))
 	}
 
 	// prepare new vm data
@@ -153,7 +159,7 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	hapiVM, err := convert.ToHapiVm(vm)
+	hapiVM, err = convert.ToHapiVm(vm)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -244,9 +250,12 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 			return diags
 		}
 	}
-	_, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
+	hapiVM, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if hapiVM == nil {
+		return diag.FromErr(fmt.Errorf("cannot read virtual machine after update %s, %s, %s", clusterUid, vmNamespace, vmName))
 	}
 	return diags
 }

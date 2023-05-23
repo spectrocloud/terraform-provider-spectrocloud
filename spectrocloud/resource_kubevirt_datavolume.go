@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -96,6 +97,9 @@ func resourceKubevirtDataVolumeRead(ctx context.Context, resourceData *schema.Re
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
+	}
+	if hapiVM == nil {
+		return diag.FromErr(fmt.Errorf("virtual machine not found %s, %s, %s to read data volume", clusterUid, namespace, vm_name))
 	}
 
 	metadataSlice := resourceData.Get("metadata").([]interface{})
