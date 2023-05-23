@@ -3,9 +3,10 @@ package spectrocloud
 import (
 	"bytes"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"hash/fnv"
 	"sort"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceMachinePoolAzureHash(v interface{}) int {
@@ -265,6 +266,10 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+
+	if v, found := m["xsl_template"]; found {
+		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
+	}
 
 	if v, found := m["instance_type"]; found {
 		if len(v.([]interface{})) > 0 {

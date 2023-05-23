@@ -3,17 +3,19 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -377,6 +379,11 @@ func resourceClusterLibvirt() *schema.Resource {
 								},
 							},
 						},
+						"xsl_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "XSL template to use.",
+						},
 					},
 				},
 			},
@@ -671,6 +678,7 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 			placements[j] = pj
 		}
 		oi["placements"] = placements
+		oi["xsl_template"] = machinePool.XslTemplate
 
 		ois = append(ois, oi)
 	}
@@ -860,12 +868,18 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 		return nil, fmt.Errorf("Update strategy RollingUpdateScaleIn is not allowed for the 'master-pool' machine pool")
 	}
 
+	var xlstemplate string
+	if m["xsl_template"] != nil {
+		xlstemplate = m["xsl_template"].(string)
+	}
+
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
 		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{
 			Placements:       placements,
 			RootDiskInGB:     types.Ptr(int32(ins["disk_size_gb"].(int))),
 			NonRootDisksInGB: addDisks,
 			InstanceType:     &instanceType,
+			XslTemplate:      xlstemplate,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
