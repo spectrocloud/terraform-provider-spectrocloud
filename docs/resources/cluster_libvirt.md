@@ -79,6 +79,7 @@ Optional:
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
+- `xsl_template` (String) XSL template to use.
 
 <a id="nestedblock--machine_pool--instance_type"></a>
 ### Nested Schema for `machine_pool.instance_type`
