@@ -42,6 +42,10 @@ func PackSchema() *schema.Schema {
 					Type:        schema.TypeString,
 					Optional:    true,
 					Description: "The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format. ",
+					DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+						// UI strips the trailing newline on save
+						return strings.TrimSpace(old) == strings.TrimSpace(new)
+					},
 				},
 				"manifest": {
 					Type:     schema.TypeList,
