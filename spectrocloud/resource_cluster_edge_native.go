@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	schemas "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
@@ -143,10 +145,11 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
 						"update_strategy": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Default:     "RollingUpdateScaleOut",
-							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"host_uids": {
 							Type:       schema.TypeList,
