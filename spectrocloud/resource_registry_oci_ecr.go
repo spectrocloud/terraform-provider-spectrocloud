@@ -64,8 +64,9 @@ func resourceRegistryOciEcr() *schema.Resource {
 							Optional: true,
 						},
 						"secret_key": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:      schema.TypeString,
+							Optional:  true,
+							Sensitive: true,
 						},
 						"arn": {
 							Type:     schema.TypeString,
@@ -118,8 +119,8 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 	if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
 		return diag.FromErr(err)
 	}
-
-	if registry.Spec.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSts {
+	switch registry.Spec.Credentials.CredentialType {
+	case models.V1AwsCloudAccountCredentialTypeSts:
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		acc["arn"] = registry.Spec.Credentials.Sts.Arn
@@ -129,12 +130,20 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
 		}
-	} else {
+	case models.V1AwsCloudAccountCredentialTypeSecret:
+		credentials := make([]interface{}, 0, 1)
+		acc := make(map[string]interface{})
+		acc["access_key"] = registry.Spec.Credentials.AccessKey
+		acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
+		credentials = append(credentials, acc)
+		if err := d.Set("credentials", credentials); err != nil {
+			return diag.FromErr(err)
+		}
+	default:
 		errMsg := fmt.Sprintf("Registry type %s not implemented.", registry.Spec.Credentials.CredentialType)
 		err = errors.New(errMsg)
 		return diag.FromErr(err)
 	}
-
 	return diags
 }
 

@@ -1,4 +1,5 @@
-sc_host         = "{enter host}"
-sc_api_key      = "{SpectroCloud api key}"
-sc_project_name = "{enter Project}"
+# Spectro Cloud credentials
+sc_host         = "{Enter Spectro Cloud API Host}" #e.g: api.spectrocloud.com (for SaaS)
+sc_api_key      = "{Enter Spectro Cloud API Key}"
+sc_project_name = "{Enter Spectro Cloud Project Name}" #e.g: Default
 

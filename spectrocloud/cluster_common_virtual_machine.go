@@ -39,6 +39,9 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 	if err != nil {
 		return diags, true
 	}
+	if vm == nil {
+		return diag.FromErr(fmt.Errorf("virtual machine not found when waiting for state %s, %s, %s", clusterUid, namespace, vmName)), true
+	}
 
 	if _, found := vm.Metadata.Labels["skip_vms"]; found {
 		return diags, true
@@ -63,12 +66,6 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 
 func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid string, vmName string, vmNamespace string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		//cluster, err := c.GetCluster(clusterUid)
-		//if err != nil {
-		//	return nil, "", err
-		//} else if cluster == nil {
-		//	return nil, "Deleted", nil
-		//}
 		vm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 		if err != nil {
 			if err.(*transport.TransportError).HttpCode == 500 && strings.Contains(err.(*transport.TransportError).Payload.Message, fmt.Sprintf("Failed to get virtual machine '%s'", vmName)) {
