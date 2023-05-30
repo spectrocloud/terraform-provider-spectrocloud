@@ -282,6 +282,11 @@ func resourceClusterLibvirt() *schema.Resource {
 								},
 							},
 						},
+						"xsl_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "XSL template to use.",
+						},
 					},
 				},
 			},
@@ -455,6 +460,7 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 			placements[j] = pj
 		}
 		oi["placements"] = placements
+		oi["xsl_template"] = machinePool.XslTemplate
 
 		ois = append(ois, oi)
 	}
@@ -639,12 +645,18 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 		return nil, fmt.Errorf("update strategy RollingUpdateScaleIn is not allowed for the 'master-pool' machine pool")
 	}
 
+	var xlstemplate string
+	if m["xsl_template"] != nil {
+		xlstemplate = m["xsl_template"].(string)
+	}
+
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
 		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{
 			Placements:       placements,
 			RootDiskInGB:     types.Ptr(int32(ins["disk_size_gb"].(int))),
 			NonRootDisksInGB: addDisks,
 			InstanceType:     &instanceType,
+			XslTemplate:      xlstemplate,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),

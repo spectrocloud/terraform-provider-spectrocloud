@@ -290,6 +290,10 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
+	if v, found := m["xsl_template"]; found {
+		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
+	}
+
 	if v, found := m["instance_type"]; found {
 		if len(v.([]interface{})) > 0 {
 			ins := v.([]interface{})[0].(map[string]interface{})
