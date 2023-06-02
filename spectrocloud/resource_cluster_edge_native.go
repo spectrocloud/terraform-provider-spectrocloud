@@ -105,6 +105,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "A list of NTP servers to be used by the cluster.",
 						},
 					},
 				},

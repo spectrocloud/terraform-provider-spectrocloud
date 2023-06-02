@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
@@ -138,6 +139,15 @@ func resourceClusterVsphere() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Description: "The search domain to use for the cluster in case of DHCP.",
+						},
+						"ntp_servers": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "A list of NTP servers to be used by the cluster.",
 						},
 					},
 				},
