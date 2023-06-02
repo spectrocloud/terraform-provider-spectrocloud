@@ -145,16 +145,15 @@ func resourceMachinePoolCoxEdgeHash(v interface{}) int {
 
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
-	buf.WriteString(fmt.Sprintf("%s-", m["spec"].(string)))
 
 	if m["minSize"] != nil {
-		buf.WriteString(fmt.Sprintf("%d-", m["minSize"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
 	}
 	if m["maxSize"] != nil {
-		buf.WriteString(fmt.Sprintf("%d-", m["maxSize"].(int)))
+		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
 	}
-	buf.WriteString(fmt.Sprintf("%t-", m["useControlPlaneAsWorker"].(bool)))
-	buf.WriteString(fmt.Sprintf("%t-", m["isControlPlane"].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
+	buf.WriteString(fmt.Sprintf("%t-", m["control_plane"].(bool)))
 
 	return int(hash(buf.String()))
 }
