@@ -6,6 +6,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
@@ -166,10 +168,11 @@ func resourceClusterOpenStack() *schema.Resource {
 							Description: "Number of nodes in the machine pool.",
 						},
 						"update_strategy": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Default:     "RollingUpdateScaleOut",
-							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"instance_type": {
 							Type:     schema.TypeString,

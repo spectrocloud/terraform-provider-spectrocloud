@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
@@ -162,10 +163,11 @@ func resourceClusterAzure() *schema.Resource {
 							Description: "Azure instance type from the Azure portal.",
 						},
 						"update_strategy": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Default:     "RollingUpdateScaleOut",
-							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"disk": {
 							Type:     schema.TypeList,

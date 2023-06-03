@@ -83,7 +83,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cluster_eks": resourceClusterEks(),
 
-				"spectrocloud_cluster_coxedge": resourceClusterCoxedge(),
+				"spectrocloud_cloudaccount_coxedge": resourceCloudAccountCoxEdge(),
+				"spectrocloud_cluster_coxedge":      resourceClusterCoxEdge(),
 
 				"spectrocloud_cloudaccount_tencent": resourceCloudAccountTencent(),
 				"spectrocloud_cluster_tke":          resourceClusterTke(),

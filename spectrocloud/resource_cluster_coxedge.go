@@ -15,7 +15,7 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
-func resourceClusterCoxedge() *schema.Resource {
+func resourceClusterCoxEdge() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceCoxEdgeClusterCreate,
 		ReadContext:   resourceCoxEdgeClusterRead,
@@ -60,7 +60,7 @@ func resourceClusterCoxedge() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The AWS cloud account id to use for this cluster.",
+				Description: "The CoxEdge cloud account id to use for this cluster.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -169,35 +169,35 @@ func resourceClusterCoxedge() *schema.Resource {
 						},
 						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-							//ForceNew: true,
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
 							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
 						},
 						"control_plane_as_worker": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-							//ForceNew: true,
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
 							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
 						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Name of the machine pool. This must be unique within the cluster. ",
 						},
 						"update_strategy": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Default:     "RollingUpdateScaleOut",
-							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"count": {
 							Type:        schema.TypeInt,
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
-						"cloud_config": {
+						"cox_config": {
 							Type:        schema.TypeList,
 							ForceNew:    true,
 							Required:    true,
@@ -206,9 +206,10 @@ func resourceClusterCoxedge() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"spec": {
-										Type:     schema.TypeString,
-										ForceNew: true,
-										Required: true,
+										Type:        schema.TypeString,
+										ForceNew:    true,
+										Required:    true,
+										Description: "The Cox Edge environment configuration settings that apply to the machine pool.",
 									},
 									"persistent_storage": {
 										Type:     schema.TypeList,
@@ -217,19 +218,86 @@ func resourceClusterCoxedge() *schema.Resource {
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"path": {
-													Type:     schema.TypeString,
-													ForceNew: true,
-													Required: true,
+													Type:        schema.TypeString,
+													ForceNew:    true,
+													Required:    true,
+													Description: "Mount path for the persistent storage. ",
 												},
 												"size": {
-													Type:     schema.TypeInt,
-													ForceNew: true,
-													Required: true,
+													Type:        schema.TypeInt,
+													ForceNew:    true,
+													Required:    true,
+													Description: "Size of the persistent storage in GB. ",
 												},
 											},
 										},
 									},
-									// Add other fields as needed
+									"deployments": {
+										Type:        schema.TypeList,
+										Optional:    true,
+										Description: "The deployments associated with this machine pool.",
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Description: "The name of the deployment. ",
+												},
+												"instances_per_pop": {
+													Type:        schema.TypeInt,
+													Optional:    true,
+													Description: "The number of instances per pop. ",
+												},
+												"pops": {
+													Type:        schema.TypeList,
+													Elem:        &schema.Schema{Type: schema.TypeString},
+													Optional:    true,
+													Description: "The pops to deploy to. ",
+												},
+											},
+										},
+									},
+									"security_group_rules": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"action": {
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validation.StringInSlice([]string{"allow", "deny"}, false),
+													Description:  "Action for the rule, 'allow' or 'deny'.",
+												},
+												"description": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Description: "Description of what this rule is used for.",
+												},
+												"port_range": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Description: "Port range for the rule. Could be a single port or a range like '80-433'.",
+												},
+												"protocol": {
+													Type:         schema.TypeString,
+													Optional:     true,
+													ValidateFunc: validation.StringInSlice([]string{"TCP", "UDP"}, false),
+													Description:  "Protocol for the rule, for example 'TCP' or 'UDP'.",
+												},
+												"source": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Description: "Source IP range for the rule, in CIDR notation.",
+												},
+												"type": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Description: "Type of the rule 'inbound' or 'outbound'.",
+												},
+											},
+										},
+										Description: "List of security group rules that apply to this cox_config.",
+									},
 								},
 							},
 						},
@@ -258,7 +326,10 @@ func resourceCoxEdgeClusterCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toCoxEdgeCluster(c, d)
+	cluster, err := toCoxEdgeCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterCoxEdge(cluster, ClusterContext)
@@ -366,6 +437,10 @@ func flattenMachinePoolConfigsCoxEdge(machinePools []*models.V1CoxEdgeMachinePoo
 	ois := make([]interface{}, len(machinePools))
 
 	for i, machinePool := range machinePools {
+		if machinePool == nil {
+			continue
+		}
+
 		oi := make(map[string]interface{})
 
 		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
@@ -376,10 +451,13 @@ func flattenMachinePoolConfigsCoxEdge(machinePools []*models.V1CoxEdgeMachinePoo
 		oi["count"] = int(machinePool.Size)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
-		// Assuming you have flatten functions for these complex types
-		oi["deployments"] = flattenCoxEdgeDeployments(machinePool.Deployments)
-		oi["persistent_storage"] = flattenCoxEdgePersistentStorages(machinePool.PersistentStorages)
-		oi["s_rules"] = flattenCoxEdgeSecurityGroupRules(machinePool.SecurityGroupRules)
+		coxConfig := make(map[string]interface{})
+		coxConfig["spec"] = machinePool.Spec
+		coxConfig["persistent_storage"] = flattenCoxEdgePersistentStorages(machinePool.PersistentStorages)
+		coxConfig["deployments"] = flattenCoxEdgeDeployments(machinePool.Deployments)
+		coxConfig["security_group_rules"] = flattenCoxEdgeSecurityGroupRules(machinePool.SecurityGroupRules)
+
+		oi["cox_config"] = []interface{}{coxConfig}
 
 		ois[i] = oi
 	}
@@ -392,15 +470,20 @@ func flattenCoxEdgeDeployments(deployments []*models.V1CoxEdgeDeployment) []inte
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0)
+	ois := make([]interface{}, len(deployments))
 
-	for _, deployment := range deployments {
+	for i, deployment := range deployments {
 		oi := make(map[string]interface{})
 
-		// Fill in the map with fields from the deployment.
 		oi["name"] = deployment.Name
 
-		ois = append(ois, oi)
+		oi["instances_per_pop"] = deployment.InstancesPerPop
+
+		if deployment.Pops != nil {
+			oi["pops"] = deployment.Pops
+		}
+
+		ois[i] = oi
 	}
 
 	return ois
@@ -411,15 +494,15 @@ func flattenCoxEdgePersistentStorages(persistentStorages []*models.V1CoxEdgeLoad
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0)
+	ois := make([]interface{}, len(persistentStorages))
 
-	for _, persistentStorage := range persistentStorages {
+	for i, persistentStorage := range persistentStorages {
 		oi := make(map[string]interface{})
 
-		// Fill in the map with fields from the persistentStorage.
-		oi["name"] = persistentStorage.Path
+		oi["path"] = persistentStorage.Path
+		oi["size"] = persistentStorage.Size
 
-		ois = append(ois, oi)
+		ois[i] = oi
 	}
 
 	return ois
@@ -430,15 +513,23 @@ func flattenCoxEdgeSecurityGroupRules(securityGroupRules []*models.V1CoxEdgeSecu
 		return make([]interface{}, 0)
 	}
 
-	ois := make([]interface{}, 0)
+	ois := make([]interface{}, len(securityGroupRules))
 
-	for _, securityGroupRule := range securityGroupRules {
+	for i, rule := range securityGroupRules {
+		if rule == nil {
+			continue
+		}
+
 		oi := make(map[string]interface{})
 
-		// Fill in the map with fields from the securityGroupRule.
-		oi["name"] = securityGroupRule.Type
+		oi["action"] = rule.Action
+		oi["description"] = rule.Description
+		oi["port_range"] = rule.PortRange
+		oi["protocol"] = rule.Protocol
+		oi["source"] = rule.Source
+		oi["type"] = rule.Type
 
-		ois = append(ois, oi)
+		ois[i] = oi
 	}
 
 	return ois
@@ -477,9 +568,11 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 			name := machinePoolResource["name"].(string)
 			hash := resourceMachinePoolCoxEdgeHash(machinePoolResource)
 
-			machinePool := toMachinePoolCoxEdge(machinePoolResource)
+			machinePool, err := toMachinePoolCoxEdge(machinePoolResource)
+			if err != nil {
+				return diag.FromErr(err)
+			}
 
-			var err error
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
 				err = c.CreateMachinePoolCoxEdge(cloudConfigId, machinePool)
@@ -518,12 +611,15 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroCoxEdgeClusterEntity {
+func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroCoxEdgeClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	machinePoolConfigs := make([]*models.V1CoxEdgeMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolCoxEdge(machinePool)
+		mp, err := toMachinePoolCoxEdge(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -566,10 +662,10 @@ func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 		},
 	}
 
-	return cluster
+	return cluster, nil
 }
 
-func toMachinePoolCoxEdge(machinePool interface{}) *models.V1CoxEdgeMachinePoolConfigEntity {
+func toMachinePoolCoxEdge(machinePool interface{}) (*models.V1CoxEdgeMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -580,23 +676,33 @@ func toMachinePoolCoxEdge(machinePool interface{}) *models.V1CoxEdgeMachinePoolC
 	}
 
 	deployments := make([]*models.V1CoxEdgeDeployment, 0)
-	if m["deployments"] != nil {
-		for _, deployment := range m["deployments"].([]interface{}) {
-			deployments = append(deployments, toCoxEdgeDeployment(deployment))
-		}
-	}
-
 	persistentStorages := make([]*models.V1CoxEdgeLoadPersistentStorage, 0)
-	if m["persistent_storage"] != nil {
-		for _, persistentStorage := range m["persistent_storage"].([]interface{}) {
-			persistentStorages = append(persistentStorages, toCoxEdgePersistentStorage(persistentStorage))
-		}
-	}
-
 	securityGroupRules := make([]*models.V1CoxEdgeSecurityGroupRule, 0)
-	if m["s_rules"] != nil {
-		for _, securityGroupRule := range m["s_rules"].([]interface{}) {
-			securityGroupRules = append(securityGroupRules, toCoxEdgeSecurityGroupRule(securityGroupRule))
+
+	if m["cox_config"] != nil && m["cox_config"].([]interface{})[0] != nil {
+		CoxConfig := m["cox_config"].([]interface{})[0]
+
+		if CoxConfig.(map[string]interface{})["deployments"] != nil {
+			for _, deployment := range CoxConfig.(map[string]interface{})["deployments"].([]interface{}) {
+				deployments = append(deployments, toCoxEdgeDeployment(deployment))
+			}
+		}
+
+		if CoxConfig.(map[string]interface{})["persistent_storage"] != nil {
+			for _, persistentStorage := range CoxConfig.(map[string]interface{})["persistent_storage"].([]interface{}) {
+				storage, err := toCoxEdgePersistentStorage(persistentStorage)
+				if err != nil {
+					return nil, err
+				}
+				persistentStorages = append(persistentStorages, storage)
+			}
+		}
+		SecGroups := CoxConfig.(map[string]interface{})["security_group_rules"]
+		// get security groups
+		if SecGroups != nil {
+			for _, securityGroupRule := range SecGroups.([]interface{}) {
+				securityGroupRules = append(securityGroupRules, toCoxEdgeSecurityGroupRule(securityGroupRule))
+			}
 		}
 	}
 
@@ -605,7 +711,7 @@ func toMachinePoolCoxEdge(machinePool interface{}) *models.V1CoxEdgeMachinePoolC
 			Deployments:        deployments,
 			PersistentStorages: persistentStorages,
 			SecurityGroupRules: securityGroupRules,
-			Spec:               m["cloud_config"].([]interface{})[0].(map[string]interface{})["spec"].(string),
+			Spec:               m["cox_config"].([]interface{})[0].(map[string]interface{})["spec"].(string),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
@@ -621,26 +727,66 @@ func toMachinePoolCoxEdge(machinePool interface{}) *models.V1CoxEdgeMachinePoolC
 		},
 	}
 
-	return mp
+	return mp, nil
 }
 
 func toCoxEdgeDeployment(deployment interface{}) *models.V1CoxEdgeDeployment {
 	d := deployment.(map[string]interface{})
 
+	popsInterface, ok := d["pops"].([]interface{})
+	if !ok {
+		popsInterface = make([]interface{}, 0)
+	}
+
+	pops := make([]string, len(popsInterface))
+	for i, v := range popsInterface {
+		pops[i] = v.(string)
+	}
+
+	instancesPerPop := 0
+	if val, ok := d["instances_per_pop"]; ok {
+		instancesPerPop = val.(int)
+	}
+
 	return &models.V1CoxEdgeDeployment{
-		Name: d["name"].(string),
+		Name:            d["name"].(string),
+		Pops:            pops,
+		InstancesPerPop: int32(instancesPerPop),
 	}
 }
 
-func toCoxEdgePersistentStorage(persistentStorage interface{}) *models.V1CoxEdgeLoadPersistentStorage {
-
-	return &models.V1CoxEdgeLoadPersistentStorage{}
+func toCoxEdgePersistentStorage(persistentStorage interface{}) (*models.V1CoxEdgeLoadPersistentStorage, error) {
+	path := persistentStorage.(map[string]interface{})["path"].(string)
+	size := persistentStorage.(map[string]interface{})["size"].(int)
+	return &models.V1CoxEdgeLoadPersistentStorage{
+		Path: path,
+		Size: int64(size),
+	}, nil
 }
 
 func toCoxEdgeSecurityGroupRule(securityGroupRule interface{}) *models.V1CoxEdgeSecurityGroupRule {
 	sgr := securityGroupRule.(map[string]interface{})
 
-	return &models.V1CoxEdgeSecurityGroupRule{
-		Protocol: sgr["protocol"].(string),
+	coxEdgeSecurityGroupRule := &models.V1CoxEdgeSecurityGroupRule{}
+
+	if protocol, ok := sgr["protocol"].(string); ok {
+		coxEdgeSecurityGroupRule.Protocol = protocol
 	}
+	if portRange, ok := sgr["port_range"].(string); ok {
+		coxEdgeSecurityGroupRule.PortRange = portRange
+	}
+	if action, ok := sgr["action"].(string); ok {
+		coxEdgeSecurityGroupRule.Action = action
+	}
+	if source, ok := sgr["source"].(string); ok {
+		coxEdgeSecurityGroupRule.Source = source
+	}
+	if description, ok := sgr["description"].(string); ok {
+		coxEdgeSecurityGroupRule.Description = description
+	}
+	if typ, ok := sgr["type"].(string); ok {
+		coxEdgeSecurityGroupRule.Type = typ
+	}
+
+	return coxEdgeSecurityGroupRule
 }

@@ -167,10 +167,11 @@ func resourceClusterLibvirt() *schema.Resource {
 							Description: "Number of nodes in the machine pool.",
 						},
 						"update_strategy": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Default:     "RollingUpdateScaleOut",
-							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"instance_type": {
 							Type:     schema.TypeList,
@@ -281,6 +282,11 @@ func resourceClusterLibvirt() *schema.Resource {
 									},
 								},
 							},
+						},
+						"xsl_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "XSL template to use.",
 						},
 					},
 				},
@@ -455,6 +461,7 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 			placements[j] = pj
 		}
 		oi["placements"] = placements
+		oi["xsl_template"] = machinePool.XslTemplate
 
 		ois = append(ois, oi)
 	}
@@ -639,12 +646,18 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 		return nil, fmt.Errorf("update strategy RollingUpdateScaleIn is not allowed for the 'master-pool' machine pool")
 	}
 
+	var xlstemplate string
+	if m["xsl_template"] != nil {
+		xlstemplate = m["xsl_template"].(string)
+	}
+
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
 		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{
 			Placements:       placements,
 			RootDiskInGB:     types.Ptr(int32(ins["disk_size_gb"].(int))),
 			NonRootDisksInGB: addDisks,
 			InstanceType:     &instanceType,
+			XslTemplate:      xlstemplate,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
