@@ -500,7 +500,7 @@ func getImageTemplateFolder(cloudConfig map[string]interface{}) string {
 
 func getClusterConfigEntity(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
 	clusterConfigEntity := &models.V1VsphereClusterConfigEntity{
-		NtpServers: nil,
+		NtpServers: toNtpServers(cloudConfig),
 		Placement: &models.V1VspherePlacementConfigEntity{
 			Datacenter:          cloudConfig["datacenter"].(string),
 			Folder:              cloudConfig["folder"].(string),

@@ -61,6 +61,7 @@ Optional:
 - `image_template_folder` (String) The name of the image template folder in vSphere. This is the name of the folder as it appears in vSphere.
 - `network_search_domain` (String) The search domain to use for the cluster in case of DHCP.
 - `network_type` (String) The type of network to use for the cluster. This can be `VIP` or `DDNS`.
+- `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
 - `static_ip` (Boolean) Whether to use static IP addresses for the cluster. If `true`, the cluster will use static IP addresses. If `false`, the cluster will use DDNS. Default is `false`.
 
 

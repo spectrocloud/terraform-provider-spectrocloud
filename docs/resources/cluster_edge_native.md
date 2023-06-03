@@ -56,7 +56,7 @@ Required:
 
 Optional:
 
-- `ntp_servers` (Set of String)
+- `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
 - `vip` (String)
 
 

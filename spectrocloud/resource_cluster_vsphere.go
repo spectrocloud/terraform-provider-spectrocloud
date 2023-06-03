@@ -140,6 +140,15 @@ func resourceClusterVsphere() *schema.Resource {
 							Optional:    true,
 							Description: "The search domain to use for the cluster in case of DHCP.",
 						},
+						"ntp_servers": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "A list of NTP servers to be used by the cluster.",
+						},
 					},
 				},
 			},
@@ -376,6 +385,10 @@ func flattenClusterConfigsVsphere(cloudConfig *models.V1VsphereCloudConfig) inte
 
 	if cpEndpoint.DdnsSearchDomain != "" {
 		ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
+	}
+
+	if cloudConfig.Spec.ClusterConfig.NtpServers != nil {
+		ret["ntp_servers"] = cloudConfig.Spec.ClusterConfig.NtpServers
 	}
 
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
