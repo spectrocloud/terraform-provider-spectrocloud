@@ -3,6 +3,8 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -617,7 +619,7 @@ func TestFlattenCloudConfigVsphere(t *testing.T) {
 							Host:             "spectro.dev",
 							Type:             "test",
 						},
-						NtpServers: nil,
+						NtpServers: strings.Split("pool.ntp.org],", ","),
 						Placement: &models.V1VspherePlacementConfig{
 							Cluster:             "",
 							Datacenter:          "vpshere",
@@ -645,6 +647,52 @@ func TestFlattenCloudConfigVsphere(t *testing.T) {
 		t.Errorf("Unexpected diagnostics: %#v", diags)
 	}
 
+}
+
+func TestFlattenClusterConfigsVsphere(t *testing.T) {
+	inputCloudConfig := &models.V1VsphereCloudConfig{
+		Spec: &models.V1VsphereCloudConfigSpec{
+			ClusterConfig: &models.V1VsphereClusterConfig{
+				SSHKeys:    []string{"SSHKey1"},
+				StaticIP:   true,
+				NtpServers: []string{"ntp1", "ntp2"},
+				Placement: &models.V1VspherePlacementConfig{
+					Datacenter: "Datacenter1",
+					Folder:     "Folder1",
+				},
+				ControlPlaneEndpoint: &models.V1ControlPlaneEndPoint{
+					Type:             "VIP",
+					DdnsSearchDomain: "example.dev",
+				},
+			},
+		},
+	}
+
+	flattenedConfig := flattenClusterConfigsVsphere(inputCloudConfig)
+
+	flattenedConfigMap := flattenedConfig.([]interface{})[0].(map[string]interface{})
+	if flattenedConfigMap["datacenter"].(string) != inputCloudConfig.Spec.ClusterConfig.Placement.Datacenter {
+		t.Errorf("Failed to flatten 'datacenter' field correctly")
+	}
+	if flattenedConfigMap["folder"].(string) != inputCloudConfig.Spec.ClusterConfig.Placement.Folder {
+		t.Errorf("Failed to flatten 'folder' field correctly")
+	}
+	if flattenedConfigMap["ssh_key"].(string) != strings.TrimSpace(inputCloudConfig.Spec.ClusterConfig.SSHKeys[0]) {
+		t.Errorf("Failed to flatten 'ssh_key' field correctly")
+	}
+	if flattenedConfigMap["static_ip"].(bool) != inputCloudConfig.Spec.ClusterConfig.StaticIP {
+		t.Errorf("Failed to flatten 'static_ip' field correctly")
+	}
+	if flattenedConfigMap["network_type"].(string) != inputCloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint.Type {
+		t.Errorf("Failed to flatten 'network_type' field correctly")
+	}
+	if flattenedConfigMap["network_search_domain"].(string) != inputCloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint.DdnsSearchDomain {
+		t.Errorf("Failed to flatten 'network_search_domain' field correctly")
+	}
+	flattenedNtpServers := flattenedConfigMap["ntp_servers"].([]string)
+	if !reflect.DeepEqual(flattenedNtpServers, inputCloudConfig.Spec.ClusterConfig.NtpServers) {
+		t.Errorf("Failed to flatten 'ntp_servers' field correctly")
+	}
 }
 
 func TestFlattenClusterConfigsVsphereNil(t *testing.T) {
