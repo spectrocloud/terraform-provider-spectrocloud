@@ -386,6 +386,10 @@ func flattenClusterConfigsVsphere(cloudConfig *models.V1VsphereCloudConfig) inte
 		ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
 	}
 
+	if cloudConfig.Spec.ClusterConfig.NtpServers != nil {
+		ret["ntp_servers"] = cloudConfig.Spec.ClusterConfig.NtpServers
+	}
+
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
 	return cloudConfigFlatten
