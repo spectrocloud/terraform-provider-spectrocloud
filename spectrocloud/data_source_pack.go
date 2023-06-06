@@ -76,17 +76,39 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		}
 		if v.(string) == "helm" {
 			if regUID, ok := d.GetOk("registry_uid"); ok {
-				registry, err := c.GetHelmRegistry(regUID.(string))
+				_, err := c.GetHelmRegistry(regUID.(string))
 				if err != nil {
 					return diag.FromErr(err)
 				}
-				if registry.Spec.IsPrivate {
-					return diags
+				// we don't have provision to get all helm chart/packs from helm public registry, hence skipping validation
+				return diags
+				//if registry.Spec.IsPrivate {
+				//	return diags
+				//}
+			}
+		}
+		if v.(string) == "oci" {
+			if regUID, ok := d.GetOk("registry_uid"); ok {
+				_, err := c.GetOciBasicRegistry(regUID.(string))
+				if err != nil {
+					return diag.FromErr(err)
 				}
+				// we don't have provision to get all helm chart/packs from oci basic type registry, hence skipping validation
+				return diags
+			}
+		}
+		if v.(string) == "ecr" {
+			if regUID, ok := d.GetOk("registry_uid"); ok {
+				_, err := c.GetOciRegistry(regUID.(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+				// we don't have provision to get all helm chart/packs from ECR type registry, hence skipping validation
+				return diags
 			}
 		}
 	}
-
+	// Validation is only for spectro packs
 	filters := make([]string, 0)
 	registryUID := ""
 	if v, ok := d.GetOk("filters"); ok {
