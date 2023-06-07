@@ -85,6 +85,26 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 				}
 			}
 		}
+		if v.(string) == "oci" {
+			if regUID, ok := d.GetOk("registry_uid"); ok {
+				_, err := c.GetOciBasicRegistry(regUID.(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+				// we don't have provision to get all helm chart/packs from oci basic type registry, hence skipping validation
+				return diags
+			}
+		}
+		if v.(string) == "ecr" {
+			if regUID, ok := d.GetOk("registry_uid"); ok {
+				_, err := c.GetOciRegistry(regUID.(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+				// we don't have provision to get all helm chart/packs from ECR type registry, hence skipping validation
+				return diags
+			}
+		}
 	}
 
 	filters := make([]string, 0)
