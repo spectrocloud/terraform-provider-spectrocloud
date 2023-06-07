@@ -148,11 +148,11 @@ func TestFlattenSpec(t *testing.T) {
 		input  *models.V1TagFilterSpec
 		output []interface{}
 	}{
-		/*{
+		{
 			name:   "nil spec",
 			input:  nil,
 			output: []interface{}{},
-		},*/
+		},
 		{
 			name: "valid spec",
 			input: &models.V1TagFilterSpec{
