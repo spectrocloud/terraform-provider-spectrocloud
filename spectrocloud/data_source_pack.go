@@ -80,7 +80,6 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 				if err != nil {
 					return diag.FromErr(err)
 				}
-				return diags
 				if registry.Spec.IsPrivate {
 					return diags
 				}
