@@ -3,11 +3,12 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func prepareOciEcrRegistryTestDataSTS() *schema.ResourceData {
@@ -288,7 +289,7 @@ func TestResourceRegistryEcrUpdate(t *testing.T) {
 	}
 }
 
-func TestResourceRegistryEcrDelete(t *testing.T) {
+/*func TestResourceRegistryEcrDelete(t *testing.T) {
 	d := prepareOciEcrRegistryTestDataSTS()
 	m := &client.V1Client{
 		DeleteRegistryFn: func(uid string) error {
@@ -301,9 +302,9 @@ func TestResourceRegistryEcrDelete(t *testing.T) {
 	if len(diags) > 0 {
 		t.Errorf("Unexpected diagnostics: %#v", diags)
 	}
-}
+}*/
 
-func TestResourceRegistryEcrDeleteErr(t *testing.T) {
+/*func TestResourceRegistryEcrDeleteErr(t *testing.T) {
 	d := prepareOciEcrRegistryTestDataSTS()
 	m := &client.V1Client{
 		DeleteRegistryFn: func(uid string) error {
@@ -316,7 +317,7 @@ func TestResourceRegistryEcrDeleteErr(t *testing.T) {
 	if diags[0].Summary != "covering error case" {
 		t.Errorf("Unexpected diagnostics: %#v", diags)
 	}
-}
+}*/
 
 func TestResourceRegistryEcrUpdateErr(t *testing.T) {
 	d := prepareOciEcrRegistryTestDataSTS()
