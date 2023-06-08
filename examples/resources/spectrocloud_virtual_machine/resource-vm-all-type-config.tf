@@ -1,10 +1,8 @@
 data "spectrocloud_cluster" "vm_enabled_base_cluster" {
-  #name = "shruthi-aws-ugadi"
   name    = "milwaukee"
   context = "tenant"
 }
 locals {
-  # storage_class_name = "sumit-storage-class"
   storage_class_name = "spectro-storage-class-immediate"
 }
 
