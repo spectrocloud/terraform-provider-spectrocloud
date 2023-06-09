@@ -149,6 +149,14 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"ssh_keys": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
 						"vip": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -397,8 +405,10 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toEdgeNativeCluster(c, d)
-
+	cluster, err := toEdgeNativeCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	uid, err := c.CreateClusterEdgeNative(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -560,9 +570,12 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	return diags
 }
 
-func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroEdgeNativeClusterEntity {
+func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroEdgeNativeClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-
+	sshKeys, err := toSSHKeys(cloudConfig)
+	if err != nil {
+		return nil, err
+	}
 	controlPlaneEndpoint := &models.V1EdgeNativeControlPlaneEndPoint{}
 	if cloudConfig["vip"] != nil {
 		vip := cloudConfig["vip"].(string)
@@ -584,7 +597,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1S
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1EdgeNativeClusterConfig{
 				NtpServers:           toNtpServers(cloudConfig),
-				SSHKeys:              []string{cloudConfig["ssh_key"].(string)},
+				SSHKeys:              sshKeys,
 				ControlPlaneEndpoint: controlPlaneEndpoint,
 			},
 		},
@@ -598,7 +611,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1S
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachinePoolConfigEntity {

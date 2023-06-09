@@ -153,7 +153,15 @@ func resourceClusterLibvirt() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"ssh_key": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
+						},
+						"ssh_keys": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
 						},
 						"vip": {
 							Type:     schema.TypeString,
@@ -764,7 +772,10 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroLibvirtClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-
+	sshKeys, err := toSSHKeys(cloudConfig)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroLibvirtClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -776,7 +787,7 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1LibvirtClusterConfig{
 				NtpServers: toNtpServers(cloudConfig),
-				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
+				SSHKeys:    sshKeys, // []string{cloudConfig["ssh_key"].(string)},
 				ControlPlaneEndpoint: &models.V1LibvirtControlPlaneEndPoint{
 					Host:             cloudConfig["vip"].(string),
 					Type:             cloudConfig["network_type"].(string),
