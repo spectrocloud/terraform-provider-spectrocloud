@@ -155,7 +155,14 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-
+						"ssh_keys": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
 						"vip": {
 							Type:     schema.TypeString,
 							Required: true,
@@ -689,12 +696,10 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 	return cluster
 }
 
-func getSSHKey(cloudConfig map[string]interface{}) string {
-	sshKey := ""
-	if cloudConfig["ssh_key"] != nil {
-		sshKey = strings.TrimSpace(cloudConfig["ssh_key"].(string))
-	}
-	return sshKey
+func getSSHKey(cloudConfig map[string]interface{}) []string {
+
+	sshKeys, _ := toSSHKeys(cloudConfig)
+	return sshKeys
 }
 
 func getStaticIP(cloudConfig map[string]interface{}) bool {
@@ -718,7 +723,7 @@ func getClusterConfigEntity(cloudConfig map[string]interface{}) *models.V1Vspher
 			Folder:              cloudConfig["folder"].(string),
 			ImageTemplateFolder: getImageTemplateFolder(cloudConfig),
 		},
-		SSHKeys:  []string{getSSHKey(cloudConfig)},
+		SSHKeys:  getSSHKey(cloudConfig),
 		StaticIP: getStaticIP(cloudConfig),
 	}
 	return clusterConfigEntity
