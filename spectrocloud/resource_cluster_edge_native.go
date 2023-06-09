@@ -147,7 +147,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"ssh_key": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 						},
 						"ssh_keys": {
 							Type:     schema.TypeSet,
