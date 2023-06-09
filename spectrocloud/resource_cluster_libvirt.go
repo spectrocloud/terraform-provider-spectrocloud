@@ -787,7 +787,7 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1LibvirtClusterConfig{
 				NtpServers: toNtpServers(cloudConfig),
-				SSHKeys:    sshKeys, // []string{cloudConfig["ssh_key"].(string)},
+				SSHKeys:    sshKeys,
 				ControlPlaneEndpoint: &models.V1LibvirtControlPlaneEndPoint{
 					Host:             cloudConfig["vip"].(string),
 					Type:             cloudConfig["network_type"].(string),
