@@ -97,7 +97,7 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		}
 		if v.(string) == "ecr" {
 			if regUID, ok := d.GetOk("registry_uid"); ok {
-				_, err := c.GetOciRegistry(regUID.(string))
+				_, err := c.GetOciEcrRegistry(regUID.(string))
 				if err != nil {
 					return diag.FromErr(err)
 				}
