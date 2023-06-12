@@ -160,6 +160,23 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, id string, 
 	return err
 }
 
+func waitForClusterDeletionAndForceDelete(ctx context.Context, c *client.V1Client, id string, timeout time.Duration) error {
+	stateConf := &retry.StateChangeConf{
+		Pending:    resourceClusterDeletePendingStates,
+		Target:     nil, // wait for deleted
+		Refresh:    resourceClusterStateRefreshFunc(c, id),
+		Timeout:    timeout,
+		MinTimeout: 10 * time.Second,
+		Delay:      30 * time.Second,
+	}
+
+	_, err := stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		c.ForceDeleteCluster(id, true)
+	}
+	return err
+}
+
 func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(id)
@@ -196,15 +213,22 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-
-	err := c.DeleteCluster(d.Id())
+	var err error
+	err = c.DeleteCluster(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	if err := waitForClusterDeletion(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
+	if d.Get("force_delete") == true {
+		err = waitForClusterDeletionAndForceDelete(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)) //d.Timeout("default")
+	} else {
+		err = waitForClusterDeletion(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete))
+	}
+	if err != nil {
 		return diag.FromErr(err)
 	}
+	//if err := waitForClusterDeletion(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
+	//	return diag.FromErr(err)
+	//}
 
 	return diags
 }

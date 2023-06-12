@@ -303,6 +303,12 @@ func resourceClusterLibvirt() *schema.Resource {
 				Default:     false,
 				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
 		},
 	}
 }
