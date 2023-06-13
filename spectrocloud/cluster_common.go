@@ -1,8 +1,10 @@
 package spectrocloud
 
 import (
+	"errors"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+	"strings"
 )
 
 var (
@@ -41,4 +43,18 @@ func toClusterResourceConfig(d *schema.ResourceData) *models.V1ClusterResourcesE
 		Namespaces: toClusterNamespaces(d),
 		Rbacs:      toClusterRBACsInputEntities(d),
 	}
+}
+
+func toSSHKeys(cloudConfig map[string]interface{}) ([]string, error) {
+	var sshKeys []string
+	if cloudConfig["ssh_key"] != "" && len(cloudConfig["ssh_keys"].(*schema.Set).List()) == 0 {
+		sshKeys = []string{strings.TrimSpace(cloudConfig["ssh_key"].(string))}
+	} else if cloudConfig["ssh_key"] == "" && len(cloudConfig["ssh_keys"].(*schema.Set).List()) >= 0 {
+		for _, sk := range cloudConfig["ssh_keys"].(*schema.Set).List() {
+			sshKeys = append(sshKeys, strings.TrimSpace(sk.(string)))
+		}
+	} else {
+		return nil, errors.New("validation ssh_key: Kindly specify any one attribute ssh_key or ssh_keys")
+	}
+	return sshKeys, nil
 }
