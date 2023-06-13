@@ -100,13 +100,15 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						},
 
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:         schema.TypeString,
+							Optional:     true,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
 						},
 						"ssh_keys": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Set:      schema.HashString,
+							Type:         schema.TypeSet,
+							Optional:     true,
+							Set:          schema.HashString,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
