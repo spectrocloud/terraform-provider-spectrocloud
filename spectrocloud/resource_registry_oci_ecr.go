@@ -101,7 +101,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
-	registry, err := c.GetOciRegistry(d.Id())
+	registry, err := c.GetOciEcrRegistry(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	} else if registry == nil {
@@ -163,7 +163,7 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 func resourceRegistryEcrDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	err := c.DeleteRegistry(d.Id())
+	err := c.DeleteOciEcrRegistry(c.ClusterC, d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

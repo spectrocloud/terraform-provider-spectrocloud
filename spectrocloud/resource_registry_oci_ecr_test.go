@@ -3,11 +3,15 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
-	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 )
 
 func prepareOciEcrRegistryTestDataSTS() *schema.ResourceData {
@@ -289,33 +293,72 @@ func TestResourceRegistryEcrUpdate(t *testing.T) {
 }
 
 func TestResourceRegistryEcrDelete(t *testing.T) {
-	d := prepareOciEcrRegistryTestDataSTS()
-	m := &client.V1Client{
-		DeleteRegistryFn: func(uid string) error {
-			return nil
+	testCases := []struct {
+		name                  string
+		expectedReturnedUID   string
+		expectedReturnedDiags diag.Diagnostics
+		expectedError         error
+		mock                  *mock.ClusterClientMock
+	}{
+		{
+			name:                  "EcrDelete",
+			expectedReturnedUID:   "",
+			expectedReturnedDiags: diag.Diagnostics{},
+			expectedError:         nil,
+			mock: &mock.ClusterClientMock{
+				DeleteEcrRegistryErr: nil,
+			},
+		},
+		{
+			name:                  "EcrDeleteErr",
+			expectedReturnedUID:   "",
+			expectedReturnedDiags: diag.FromErr(errors.New("covering error case")),
+			expectedError:         errors.New("covering error case"),
+			mock: &mock.ClusterClientMock{
+				DeleteEcrRegistryErr: errors.New("covering error case"),
+			},
 		},
 	}
-	ctx := context.Background()
-	diags := resourceRegistryEcrDelete(ctx, d, m)
-	assert.Equal(t, "", d.Id())
-	if len(diags) > 0 {
-		t.Errorf("Unexpected diagnostics: %#v", diags)
-	}
-}
 
-func TestResourceRegistryEcrDeleteErr(t *testing.T) {
-	d := prepareOciEcrRegistryTestDataSTS()
-	m := &client.V1Client{
-		DeleteRegistryFn: func(uid string) error {
-			return errors.New("covering error case")
-		},
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			d := prepareOciEcrRegistryTestDataSTS()
+
+			h := &client.V1Client{
+				ClusterC: tc.mock,
+			}
+
+			ctx := context.Background()
+			diags := resourceRegistryEcrDelete(ctx, d, h)
+			assert.Equal(t, "", d.Id())
+
+			if len(diags) != len(tc.expectedReturnedDiags) {
+				t.Fail()
+				t.Logf("Expected diags count: %v", len(tc.expectedReturnedDiags))
+				t.Logf("Actual diags count: %v", len(diags))
+			} else {
+				for i := range diags {
+					if diags[i].Severity != tc.expectedReturnedDiags[i].Severity {
+						t.Fail()
+						t.Logf("Expected severity: %v", tc.expectedReturnedDiags[i].Severity)
+						t.Logf("Actual severity: %v", diags[i].Severity)
+					}
+					if diags[i].Summary != tc.expectedReturnedDiags[i].Summary {
+						t.Fail()
+						t.Logf("Expected summary: %v", tc.expectedReturnedDiags[i].Summary)
+						t.Logf("Actual summary: %v", diags[i].Summary)
+					}
+					if diags[i].Detail != tc.expectedReturnedDiags[i].Detail {
+						t.Fail()
+						t.Logf("Expected detail: %v", tc.expectedReturnedDiags[i].Detail)
+						t.Logf("Actual detail: %v", diags[i].Detail)
+					}
+				}
+			}
+		})
 	}
-	ctx := context.Background()
-	diags := resourceRegistryEcrDelete(ctx, d, m)
-	assert.Equal(t, "", d.Id())
-	if diags[0].Summary != "covering error case" {
-		t.Errorf("Unexpected diagnostics: %#v", diags)
-	}
+
 }
 
 func TestResourceRegistryEcrUpdateErr(t *testing.T) {

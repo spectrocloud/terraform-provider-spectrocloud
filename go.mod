@@ -9,8 +9,8 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.13.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.26.1
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/hapi v1.14.1-0.20230602112755-6de112717b70
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20230603193044-5a3df16309f3
+	github.com/spectrocloud/hapi v1.14.1-0.20230608125540-8e9ff1906d0f
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20230612225610-614e307c6a84
 	github.com/stretchr/testify v1.8.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.23.5
