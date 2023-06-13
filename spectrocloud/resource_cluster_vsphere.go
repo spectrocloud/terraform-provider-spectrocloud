@@ -23,7 +23,7 @@ func resourceClusterVsphere() *schema.Resource {
 		ReadContext:   resourceClusterVsphereRead,
 		UpdateContext: resourceClusterVsphereUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "A resource to manage a vSphere cluster in Pallette.",
+		Description:   "A resource to manage a vSphere cluster in Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
