@@ -16,6 +16,8 @@ type ClusterClientMock struct {
 	PatchSPCProfilesCount        int
 	CreateClusterProfileResponse *clusterC.V1ClusterProfilesCreateCreated
 	GetClusterProfilesResponse   *clusterC.V1ClusterProfilesGetOK
+
+	DeleteEcrRegistryErr error
 }
 
 func (m *ClusterClientMock) V1ClusterProfilesGet(params *clusterC.V1ClusterProfilesGetParams) (*clusterC.V1ClusterProfilesGetOK, error) {
@@ -48,4 +50,8 @@ func (m *ClusterClientMock) V1SpectroClustersPatchProfiles(params *clusterC.V1Sp
 		return nil, m.PatchSPCProfilesErr
 	}
 	return nil, nil
+}
+
+func (m *ClusterClientMock) V1EcrRegistriesUIDDelete(params *clusterC.V1EcrRegistriesUIDDeleteParams) (*clusterC.V1EcrRegistriesUIDDeleteNoContent, error) {
+	return nil, m.DeleteEcrRegistryErr
 }
