@@ -22,7 +22,10 @@ func dataSourceUser() *schema.Resource {
 			},
 			"name": {
 				Type:     schema.TypeString,
-				Computed: true,
+				Optional: true,
+			},
+			"email": {
+				Type:     schema.TypeString,
 				Optional: true,
 			},
 		},
@@ -32,8 +35,20 @@ func dataSourceUser() *schema.Resource {
 func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
+
 	if v, ok := d.GetOk("name"); ok {
-		user, err := c.GetUser(v.(string))
+		user, err := c.GetUserByName(v.(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		d.SetId(user.Metadata.UID)
+		if err := d.Set("name", user.Metadata.Name); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if v, ok := d.GetOk("email"); ok {
+		user, err := c.GetUserByEmail(v.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}

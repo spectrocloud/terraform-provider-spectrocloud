@@ -104,14 +104,20 @@ func dataSourceFilterRead(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 
 	d.SetId(FilterSummary.Metadata.UID)
-	d.Set("metadata", []interface{}{map[string]interface{}{
+	err = d.Set("metadata", []interface{}{map[string]interface{}{
 		"name":        FilterSummary.Metadata.Name,
 		"annotations": FilterSummary.Metadata.Annotations,
 		"labels":      FilterSummary.Metadata.Labels,
 	}})
-	d.Set("spec", []interface{}{map[string]interface{}{
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("spec", []interface{}{map[string]interface{}{
 		"filter_group": flattenFilterGroup(FilterSummary.Spec.FilterGroup),
 	}})
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }

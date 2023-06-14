@@ -28,9 +28,10 @@ func resourceTeam() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the team. ",
 			},
 			"users": {
 				Type:     schema.TypeSet,
@@ -39,6 +40,7 @@ func resourceTeam() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "List of user ids to be associated with the team. ",
 			},
 			"project_role_mapping": {
 				Type:     schema.TypeList,
@@ -46,8 +48,9 @@ func resourceTeam() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Project id to be associated with the team.",
 						},
 						"roles": {
 							Type:     schema.TypeSet,
@@ -56,9 +59,43 @@ func resourceTeam() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "List of project roles to be associated with the team. ",
 						},
 					},
 				},
+				Description: "List of project roles to be associated with the team. ",
+			},
+			"tenant_role_mapping": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "List of tenant role ids to be associated with the team. ",
+			},
+			"workspace_role_mapping": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Workspace id to be associated with the team.",
+						},
+						"roles": {
+							Type:     schema.TypeSet,
+							Required: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of project roles to be associated with the team. ",
+						},
+					},
+				},
+				Description: "List of workspace roles to be associated with the team. ",
 			},
 		},
 	}
@@ -79,6 +116,19 @@ func resourceTeamCreate(ctx context.Context, d *schema.ResourceData, m interface
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	//associate tenant roles with team
+	err = c.AssociateTeamTenantRole(uid, toTeamTenantRoleMapping(d))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	//associate workspace roles with team
+	err = c.AssociateTeamWorkspaceRole(uid, toTeamWorkspaceRoleMapping(d))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	d.SetId(uid)
 
 	return diags
@@ -104,29 +154,85 @@ func resourceTeamRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		return diag.FromErr(err)
 	}
 
-	projectRoles, err := c.GetTeamProjectRoleAssociation(d.Id())
+	err = setProjectRoles(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	if projectRoles != nil && len(projectRoles.Projects) > 0 {
-		mappings := make([]interface{}, 0)
-		for _, data := range projectRoles.Projects {
-			dataMap := make(map[string]interface{})
-			roles := make([]string, 0)
-			for _, role := range data.Roles {
-				roles = append(roles, role.UID)
-			}
-			dataMap["id"] = data.UID
-			dataMap["roles"] = roles
-			mappings = append(mappings, dataMap)
-		}
-		if err := d.Set("project_role_mapping", mappings); err != nil {
+	err = setTenantRoles(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	{
+		workspaceRoles, err := c.GetTeamWorkspaceRoleAssociation(d.Id())
+		if err != nil {
 			return diag.FromErr(err)
+		}
+
+		if workspaceRoles != nil && len(workspaceRoles.Projects) > 0 {
+			mappings := make([]interface{}, 0)
+			for _, data := range workspaceRoles.Projects {
+				dataMap := make(map[string]interface{})
+				roles := make([]string, 0)
+				for _, role := range data.Workspaces {
+					roles = append(roles, role.UID)
+				}
+				dataMap["id"] = data.UID
+				dataMap["roles"] = roles
+				mappings = append(mappings, dataMap)
+			}
+			if err := d.Set("workspace_role_mapping", mappings); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
 	return diags
+}
+
+func setProjectRoles(c *client.V1Client, d *schema.ResourceData) error {
+	{
+		projectRoles, err := c.GetTeamProjectRoleAssociation(d.Id())
+		if err != nil {
+			return err
+		}
+
+		if projectRoles != nil && len(projectRoles.Projects) > 0 {
+			mappings := make([]interface{}, 0)
+			for _, data := range projectRoles.Projects {
+				dataMap := make(map[string]interface{})
+				roles := make([]string, 0)
+				for _, role := range data.Roles {
+					roles = append(roles, role.UID)
+				}
+				dataMap["id"] = data.UID
+				dataMap["roles"] = roles
+				mappings = append(mappings, dataMap)
+			}
+			if err := d.Set("project_role_mapping", mappings); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func setTenantRoles(c *client.V1Client, d *schema.ResourceData) error {
+	{
+		tenantRoles, err := c.GetTeamTenantRoleAssociation(d.Id())
+		if err != nil {
+			return err
+		}
+		tenantRolesIDs := make([]string, 0)
+		for _, role := range tenantRoles.Roles {
+			tenantRolesIDs = append(tenantRolesIDs, role.UID)
+		}
+		if err := d.Set("tenant_role_mapping", tenantRolesIDs); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func resourceTeamUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -140,6 +246,18 @@ func resourceTeamUpdate(ctx context.Context, d *schema.ResourceData, m interface
 
 	//associate roles with team
 	err = c.AssociateTeamProjectRole(d.Id(), toTeamProjectRoleMapping(d))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	//associate tenant roles with team
+	err = c.AssociateTeamTenantRole(d.Id(), toTeamTenantRoleMapping(d))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	//associate workspace roles with team
+	err = c.AssociateTeamWorkspaceRole(d.Id(), toTeamWorkspaceRoleMapping(d))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -181,8 +299,8 @@ func toTeam(d *schema.ResourceData) *models.V1Team {
 
 func toTeamProjectRoleMapping(d *schema.ResourceData) *models.V1ProjectRolesPatch {
 	projects := make([]*models.V1ProjectRolesPatchProjectsItems0, 0)
-	mappings := d.Get("project_role_mapping").([]interface{})
-	for _, mapping := range mappings {
+	projectRoleMappings := d.Get("project_role_mapping").([]interface{})
+	for _, mapping := range projectRoleMappings {
 		data := mapping.(map[string]interface{})
 
 		roles := make([]string, 0)
@@ -200,5 +318,42 @@ func toTeamProjectRoleMapping(d *schema.ResourceData) *models.V1ProjectRolesPatc
 
 	return &models.V1ProjectRolesPatch{
 		Projects: projects,
+	}
+}
+
+func toTeamTenantRoleMapping(d *schema.ResourceData) *models.V1TeamTenantRolesUpdate {
+	roles := make([]string, 0)
+	if d.Get("tenant_role_mapping") != nil {
+		for _, role := range d.Get("tenant_role_mapping").(*schema.Set).List() {
+			roles = append(roles, role.(string))
+		}
+	}
+
+	return &models.V1TeamTenantRolesUpdate{
+		Roles: roles,
+	}
+}
+
+func toTeamWorkspaceRoleMapping(d *schema.ResourceData) *models.V1WorkspacesRolesPatch {
+	workspaces := make([]*models.V1WorkspaceRolesPatch, 0)
+	projectRoleMappings := d.Get("workspace_role_mapping").([]interface{})
+	for _, mapping := range projectRoleMappings {
+		data := mapping.(map[string]interface{})
+
+		roles := make([]string, 0)
+		if data["roles"] != nil {
+			for _, role := range data["roles"].(*schema.Set).List() {
+				roles = append(roles, role.(string))
+			}
+		}
+
+		workspaces = append(workspaces, &models.V1WorkspaceRolesPatch{
+			UID:   data["id"].(string),
+			Roles: roles,
+		})
+	}
+
+	return &models.V1WorkspacesRolesPatch{
+		Workspaces: workspaces,
 	}
 }
