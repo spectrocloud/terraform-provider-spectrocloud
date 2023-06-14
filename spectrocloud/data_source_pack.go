@@ -76,13 +76,12 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		}
 		if v.(string) == "helm" {
 			if regUID, ok := d.GetOk("registry_uid"); ok {
-				registry, err := c.GetHelmRegistry(regUID.(string))
+				_, err := c.GetHelmRegistry(regUID.(string))
 				if err != nil {
 					return diag.FromErr(err)
 				}
-				if registry.Spec.IsPrivate {
-					return diags
-				}
+				// we don't have provision to get all helm chart/packs from helm registry, hence skipping validation
+				return diags
 			}
 		}
 		if v.(string) == "oci" {
