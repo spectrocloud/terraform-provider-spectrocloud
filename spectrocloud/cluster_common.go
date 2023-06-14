@@ -47,14 +47,17 @@ func toClusterResourceConfig(d *schema.ResourceData) *models.V1ClusterResourcesE
 
 func toSSHKeys(cloudConfig map[string]interface{}) ([]string, error) {
 	var sshKeys []string
-	if cloudConfig["ssh_key"] != "" && len(cloudConfig["ssh_keys"].(*schema.Set).List()) == 0 {
-		sshKeys = []string{strings.TrimSpace(cloudConfig["ssh_key"].(string))}
-	} else if cloudConfig["ssh_key"] == "" && len(cloudConfig["ssh_keys"].(*schema.Set).List()) >= 0 {
-		for _, sk := range cloudConfig["ssh_keys"].(*schema.Set).List() {
+	sshKeysList := cloudConfig["ssh_keys"].(*schema.Set).List()
+	sshKey := cloudConfig["ssh_key"].(string)
+	if sshKey != "" && len(sshKeysList) == 0 {
+		sshKeys = []string{strings.TrimSpace(sshKey)}
+		return sshKeys, nil
+	}
+	if sshKey == "" && len(sshKeysList) > 0 {
+		for _, sk := range sshKeysList {
 			sshKeys = append(sshKeys, strings.TrimSpace(sk.(string)))
 		}
-	} else {
-		return nil, errors.New("validation ssh_key: Kindly specify any one attribute ssh_key or ssh_keys")
+		return sshKeys, nil
 	}
-	return sshKeys, nil
+	return nil, errors.New("validation ssh_key: Kindly specify any one attribute ssh_key or ssh_keys")
 }
