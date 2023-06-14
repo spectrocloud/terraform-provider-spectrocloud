@@ -309,6 +309,12 @@ func resourceClusterLibvirt() *schema.Resource {
 				Default:     false,
 				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
 			},
+			"force_delete_delay": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     60,
+				Description: "By `force_delete_delay` user can set a delay time (minutes) to enforce force delete. Default is set to `60` (minimum is 20).",
+			},
 		},
 	}
 }

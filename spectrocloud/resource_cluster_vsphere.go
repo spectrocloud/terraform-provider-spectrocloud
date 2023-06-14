@@ -280,6 +280,12 @@ func resourceClusterVsphere() *schema.Resource {
 				Default:     false,
 				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
 			},
+			"force_delete_delay": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     60,
+				Description: "By `force_delete_delay` user can set a delay time (minutes) to enforce force delete. default time is set 60 min. Its applicable only when force delete set to `true`",
+			},
 		},
 	}
 }

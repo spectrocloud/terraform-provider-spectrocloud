@@ -202,7 +202,9 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 		return diag.FromErr(err)
 	}
 	if forceDelete, ok := d.GetOk("force_delete"); ok && forceDelete == true {
-		err = waitForClusterDeletion(ctx, c, d.Id(), d.Timeout("default")) // It will wait for 20 minutes and try force_delete
+		forceDeleteDelay := d.Get("force_delete_delay").(int)
+		forceDeleteDelaDuration := time.Duration(forceDeleteDelay) * time.Minute
+		err = waitForClusterDeletion(ctx, c, d.Id(), forceDeleteDelaDuration) // It will wait for 60 minutes and try force_delete
 		if err != nil {
 			err = c.ForceDeleteCluster(d.Id(), true)
 			if err != nil {
