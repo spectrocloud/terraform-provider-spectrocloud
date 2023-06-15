@@ -18,11 +18,7 @@ func dataSourceUser() *schema.Resource {
 				Type:          schema.TypeString,
 				Computed:      true,
 				Optional:      true,
-				ConflictsWith: []string{"name"},
-			},
-			"name": {
-				Type:     schema.TypeString,
-				Optional: true,
+				ConflictsWith: []string{"email"},
 			},
 			"email": {
 				Type:     schema.TypeString,
@@ -36,24 +32,13 @@ func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m interface{}
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
-	if v, ok := d.GetOk("name"); ok {
-		user, err := c.GetUserByName(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		d.SetId(user.Metadata.UID)
-		if err := d.Set("name", user.Metadata.Name); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
 	if v, ok := d.GetOk("email"); ok {
 		user, err := c.GetUserByEmail(v.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 		d.SetId(user.Metadata.UID)
-		if err := d.Set("name", user.Metadata.Name); err != nil {
+		if err := d.Set("email", user.Spec.EmailID); err != nil {
 			return diag.FromErr(err)
 		}
 	}
