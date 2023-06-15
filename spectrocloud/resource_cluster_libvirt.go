@@ -312,7 +312,7 @@ func resourceClusterLibvirt() *schema.Resource {
 			"force_delete_delay": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     60,
+				Default:     20,
 				Description: "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20 minutes.",
 			},
 		},
