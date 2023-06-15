@@ -38,6 +38,7 @@ func resourceSSHKey() *schema.Resource {
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
+				ForceNew:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 			},
@@ -86,7 +87,8 @@ func resourceSSHKeyRead(ctx context.Context, d *schema.ResourceData, m interface
 func resourceSSHKeyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	err := c.UpdateSSHKey(d.Id(), toSSHKey(d))
+	SSHKeyContext := d.Get("context").(string)
+	err := c.UpdateSSHKey(d.Id(), toSSHKey(d), SSHKeyContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -96,8 +98,8 @@ func resourceSSHKeyUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 func resourceSSHKeyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-
-	err := c.DeleteSSHKey(d.Id())
+	SSHKeyContext := d.Get("context").(string)
+	err := c.DeleteSSHKey(d.Id(), SSHKeyContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
