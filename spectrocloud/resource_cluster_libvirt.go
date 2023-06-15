@@ -310,10 +310,11 @@ func resourceClusterLibvirt() *schema.Resource {
 				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
 			},
 			"force_delete_delay": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     20,
-				Description: "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20 minutes.",
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20 & maximum is 60 minutes.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntBetween(20, 60)),
 			},
 		},
 	}
