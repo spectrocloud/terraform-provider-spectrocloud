@@ -325,8 +325,8 @@ func resourceClusterLibvirt() *schema.Resource {
 				Type:             schema.TypeInt,
 				Optional:         true,
 				Default:          20,
-				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20 & maximum is 60 minutes.",
-				ValidateDiagFunc: validation.ToDiagFunc(validation.IntBetween(20, 60)),
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
 			},
 		},
 	}

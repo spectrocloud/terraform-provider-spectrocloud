@@ -194,22 +194,35 @@ func resourceVirtualClusterLifecycleStateRefreshFunc(c *client.V1Client, id stri
 
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-
 	var diags diag.Diagnostics
 	var err error
-	err = c.DeleteCluster(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
 	if forceDelete, ok := d.GetOk("force_delete"); ok && forceDelete == true {
 		forceDeleteDelay := d.Get("force_delete_delay").(int)
 		forceDeleteDelaDuration := time.Duration(forceDeleteDelay) * time.Minute
-		err = waitForClusterDeletion(ctx, c, d.Id(), forceDeleteDelaDuration) // It will wait for 60 minutes and try force_delete
-		if err != nil {
-			err = c.ForceDeleteCluster(d.Id(), true)
+		if forceDeleteDelaDuration <= d.Timeout(schema.TimeoutDelete) {
+			err = c.DeleteCluster(d.Id())
 			if err != nil {
 				return diag.FromErr(err)
 			}
+			err = waitForClusterDeletion(ctx, c, d.Id(), forceDeleteDelaDuration) // It will wait for 20 minutes by default and try force_delete
+			if err != nil {
+				err = c.ForceDeleteCluster(d.Id(), true)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		} else {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  "Force delete validation failed",
+				Detail:   "`force_delete_delay` is should not be greater than default delete timeout.",
+			})
+			return diags
+		}
+	} else {
+		err = c.DeleteCluster(d.Id())
+		if err != nil {
+			return diag.FromErr(err)
 		}
 	}
 	if err := waitForClusterDeletion(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
