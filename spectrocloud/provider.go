@@ -71,6 +71,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_macro": resourceMacro(),
 
+				"spectrocloud_filter": resourceFilter(),
+
 				"spectrocloud_application_profile":    resourceApplicationProfile(),
 				"spectrocloud_cluster_profile":        resourceClusterProfile(),
 				"spectrocloud_cluster_profile_import": resourceClusterProfileImport(),
@@ -138,7 +140,10 @@ func New(_ string) func() *schema.Provider {
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_user":    dataSourceUser(),
 				"spectrocloud_project": dataSourceProject(),
-				"spectrocloud_role":    dataSourceRole(),
+
+				"spectrocloud_filter": dataSourceFilter(),
+
+				"spectrocloud_role": dataSourceRole(),
 
 				"spectrocloud_pack":        dataSourcePack(),
 				"spectrocloud_pack_simple": dataSourcePackSimple(),
