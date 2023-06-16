@@ -189,7 +189,7 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		clusterUid := d.Get("cluster_uid").(string)
 
-		cluster, err := c.GetCluster(clusterUid)
+		cluster, err := c.GetCluster(clusterC, clusterUid)
 		if err != nil && cluster == nil {
 			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 		}

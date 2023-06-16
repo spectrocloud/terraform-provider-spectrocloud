@@ -12,8 +12,7 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
   name             = "vsphere-picard-2"
   skip_completion = true
   # For Force Delete enforcement
-  # force_delete = true
-  # force_delete_delay = 25
+  # force_delete_timeout = 25
   cloud_account_id = data.spectrocloud_cloudaccount_vsphere.vmware_account.id
   cluster_profile {
     id = data.spectrocloud_cluster_profile.vmware_profile.id

@@ -31,7 +31,11 @@ func waitForProfileDownload(ctx context.Context, c *client.V1Client, id string, 
 
 func resourceClusterProfileStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetCluster(id)
+		clusterC, err := c.GetClusterClient()
+		if err != nil {
+			return nil, "", err
+		}
+		cluster, err := c.GetCluster(clusterC, id)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {

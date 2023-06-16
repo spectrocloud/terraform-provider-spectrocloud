@@ -68,6 +68,7 @@ func resourceClusterImport() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"force_delete_timeout": schemas.ForceDeleteTimeoutSchema(),
 		},
 	}
 }
@@ -111,7 +112,12 @@ func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m int
 
 	var diags diag.Diagnostics
 	uid := d.Id()
-	cluster, err := c.GetCluster(uid)
+
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	cluster, err := c.GetCluster(clusterC, uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {

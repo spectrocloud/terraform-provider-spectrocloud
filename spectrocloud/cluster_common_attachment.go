@@ -22,7 +22,11 @@ var resourceAddonDeploymentCreatePendingStates = []string{
 }
 
 func waitForAddonDeployment(ctx context.Context, d *schema.ResourceData, cluster_uid string, profile_uid string, diags diag.Diagnostics, c *client.V1Client, state string) (diag.Diagnostics, bool) {
-	cluster, err := c.GetCluster(cluster_uid)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err), true
+	}
+	cluster, err := c.GetCluster(clusterC, cluster_uid)
 	if err != nil {
 		return diags, true
 	}
@@ -58,7 +62,11 @@ func waitForAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, c
 
 func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, cluster_uid string, profile_uid string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetCluster(cluster_uid)
+		clusterC, err := c.GetClusterClient()
+		if err != nil {
+			return nil, "", err
+		}
+		cluster, err := c.GetCluster(clusterC, cluster_uid)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {
@@ -110,7 +118,7 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 
 	var diags diag.Diagnostics
 	cluster_uid := d.Get("cluster_uid").(string)
-	cluster, err := c.GetCluster(cluster_uid)
+	cluster, err := c.GetCluster(clusterC, cluster_uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {

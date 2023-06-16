@@ -162,7 +162,11 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, id string, 
 
 func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetCluster(id)
+		clusterC, err := c.GetClusterClient()
+		if err != nil {
+			return nil, "", err
+		}
+		cluster, err := c.GetCluster(clusterC, id)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {
@@ -178,7 +182,11 @@ func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateR
 
 func resourceVirtualClusterLifecycleStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetCluster(id)
+		clusterC, err := c.GetClusterClient()
+		if err != nil {
+			return nil, "", err
+		}
+		cluster, err := c.GetCluster(clusterC, id)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {
@@ -196,24 +204,32 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	var err error
-	err = c.DeleteCluster(d.Id())
+
+	err := c.DeleteCluster(c.ClusterC, d.Id(), false)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if forceDelete, ok := d.GetOk("force_delete"); ok && forceDelete == true {
-		forceDeleteDelay := d.Get("force_delete_delay").(int)
-		forceDeleteDelaDuration := time.Duration(forceDeleteDelay) * time.Minute
-		err = waitForClusterDeletion(ctx, c, d.Id(), forceDeleteDelaDuration) // It will wait for 60 minutes and try force_delete
-		if err != nil {
-			err = c.ForceDeleteCluster(d.Id(), true)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
-	if err := waitForClusterDeletion(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
+	err = waitForClusterDeletion(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete))
+	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	if d.Get("force_delete_timeout") != nil {
+		err = c.DeleteCluster(c.ClusterC, d.Id(), true)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		forceDeleteDurationStr := d.Get("force_delete_timeout").(string)
+		forceDeleteDuration, err := time.ParseDuration(forceDeleteDurationStr)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		err = waitForClusterDeletion(ctx, c, d.Id(), forceDeleteDuration)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	return diags
 }

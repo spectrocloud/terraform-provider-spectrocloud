@@ -12,6 +12,7 @@ import (
 
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
 
@@ -55,7 +56,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 
 	clusterUid := d.Get("cluster_uid").(string)
 
-	cluster, err := c.GetCluster(clusterUid)
+	cluster, err := c.GetCluster(clusterC, clusterUid)
 	if err != nil && cluster == nil {
 		return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 	}
@@ -126,7 +127,12 @@ func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	uid := d.Get("cluster_uid").(string)
-	cluster, err := c.GetCluster(uid)
+
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	cluster, err := c.GetCluster(clusterC, uid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -148,7 +154,11 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 
 		clusterUid := d.Get("cluster_uid").(string)
 
-		cluster, err := c.GetCluster(clusterUid)
+		clusterC, err := c.GetClusterClient()
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		cluster, err := c.GetCluster(clusterC, clusterUid)
 		if err != nil && cluster == nil {
 			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 		}

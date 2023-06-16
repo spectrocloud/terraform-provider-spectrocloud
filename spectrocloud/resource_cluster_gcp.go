@@ -185,6 +185,7 @@ func resourceClusterGcp() *schema.Resource {
 				Default:     false,
 				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
+			"force_delete_timeout": schemas.ForceDeleteTimeoutSchema(),
 		},
 	}
 }
@@ -220,7 +221,11 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 
 	uid := d.Id()
 
-	cluster, err := c.GetCluster(uid)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	cluster, err := c.GetCluster(clusterC, uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {

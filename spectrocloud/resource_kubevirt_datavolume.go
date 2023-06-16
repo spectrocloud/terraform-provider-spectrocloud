@@ -56,7 +56,11 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, resourceData *schema.
 	log.Printf("[INFO] Creating new data volume: %#v", dv)
 	// Warning or errors can be collected in a slice type
 	clusterUid := resourceData.Get("cluster_uid").(string)
-	_, err = c.GetCluster(clusterUid)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	_, err = c.GetCluster(clusterC, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -147,7 +151,11 @@ func resourceKubevirtDataVolumeDelete(ctx context.Context, resourceData *schema.
 		return diag.FromErr(err)
 	}
 
-	_, err = c.GetCluster(clusterUid)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	_, err = c.GetCluster(clusterC, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}

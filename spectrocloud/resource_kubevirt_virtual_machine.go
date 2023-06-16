@@ -42,7 +42,12 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 	clusterUid := d.Get("cluster_uid").(string)
-	cluster, err := c.GetCluster(clusterUid)
+
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	cluster, err := c.GetCluster(clusterC, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -165,7 +170,11 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	// needed to get context for the cluster
-	cluster, err := c.GetCluster(clusterUid)
+	clusterC, err := c.GetClusterClient()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	cluster, err := c.GetCluster(clusterC, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
