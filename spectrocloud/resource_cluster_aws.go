@@ -192,6 +192,7 @@ func resourceClusterAws() *schema.Resource {
 								Required: true,
 							},
 						},
+						"aws_launch_template": schemas.AwsLaunchTemplate(),
 					},
 				},
 			},
@@ -487,5 +488,8 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 			MaxPrice: maxPrice,
 		}
 	}
+
+	mp.CloudConfig.AwsLaunchTemplate = setAwsLaunchTemplate(m)
+
 	return mp
 }

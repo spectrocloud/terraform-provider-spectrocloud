@@ -233,7 +233,7 @@ func resourceClusterEks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"eks_launch_template": schemas.EksLaunchTemplate(),
+						"eks_launch_template": schemas.AwsLaunchTemplate(),
 					},
 				},
 			},

@@ -2,7 +2,7 @@ package schemas
 
 import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-func EksLaunchTemplate() *schema.Schema {
+func AwsLaunchTemplate() *schema.Schema {
 	return &schema.Schema{
 		Type:     schema.TypeList,
 		Optional: true,
