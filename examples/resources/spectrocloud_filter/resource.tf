@@ -8,17 +8,17 @@ resource "spectrocloud_filter" "example" {
       conjunction = "and"
 
       filters {
-        key = "testtag1"
+        key      = "testtag1"
         negation = false
         operator = "eq"
-        values = ["spectro__tag"]
+        values   = ["spectro__tag"]
       }
 
       filters {
-        key = "testtag2"
+        key      = "testtag2"
         negation = true
         operator = "eq"
-        values = ["spectro__tag"]
+        values   = ["spectro__tag"]
       }
     }
   }

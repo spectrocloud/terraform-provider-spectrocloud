@@ -26,7 +26,7 @@ data "spectrocloud_user" "user1" {
 
 ### Optional
 
-- `name` (String)
+- `email` (String)
 
 ### Read-Only
 
