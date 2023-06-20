@@ -29,7 +29,7 @@ func resourceSSHKey() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The name of the ssh key.",
+				Description: "Name of the ssh key. This name is used to identify the ssh key in the Spectro Cloud UI.",
 			},
 			"ssh_key": {
 				Type:      schema.TypeString,
@@ -38,6 +38,7 @@ func resourceSSHKey() *schema.Resource {
 				StateFunc: func(val any) string {
 					return base64.StdEncoding.EncodeToString([]byte(val.(string)))
 				},
+				Description: "The SSH key to be used for the cluster. This is the public key that will be used to access the cluster.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -45,6 +46,7 @@ func resourceSSHKey() *schema.Resource {
 				ForceNew:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "Context of the ssh key. This can be either project or tenant. If not specified, the default value is project.",
 			},
 		},
 	}
