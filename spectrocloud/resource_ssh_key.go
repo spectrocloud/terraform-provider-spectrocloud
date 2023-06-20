@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"encoding/base64"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -17,7 +18,6 @@ func resourceSSHKey() *schema.Resource {
 		UpdateContext: resourceSSHKeyUpdate,
 		DeleteContext: resourceSSHKeyDelete,
 		Description:   "A resource for creating and managing ssh keys.",
-
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
@@ -32,8 +32,12 @@ func resourceSSHKey() *schema.Resource {
 				Description: "The name of the ssh key.",
 			},
 			"ssh_key": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
+				Sensitive: true,
+				StateFunc: func(val any) string {
+					return base64.StdEncoding.EncodeToString([]byte(val.(string)))
+				},
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -75,8 +79,8 @@ func resourceSSHKeyRead(ctx context.Context, d *schema.ResourceData, m interface
 	if err := d.Set("name", SSHKey.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
-
-	if err := d.Set("ssh_key", SSHKey.Spec.PublicKey); err != nil {
+	// Setting back public ssh key into sate file leads to security break hence commenting it out
+	if err := d.Set("ssh_key", base64.StdEncoding.EncodeToString([]byte(SSHKey.Spec.PublicKey))); err != nil {
 		return diag.FromErr(err)
 	}
 

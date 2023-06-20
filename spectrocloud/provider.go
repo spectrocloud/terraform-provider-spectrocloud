@@ -171,6 +171,7 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_private_cloud_gateway": dataSourcePCG(),
 				"spectrocloud_ippool":                dataSourcePrivateCloudGatewayIpPool(),
+				"spectrocloud_ssh_key":               dataSourceSSHKey(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}
