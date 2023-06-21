@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -449,17 +451,39 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	return ois
 }
 
-func ValidateMachinePoolChange(oraw interface{}, nraw interface{}) bool {
-	hasChange := false
-	for i, nm := range nraw.(*schema.Set).List() {
-		oldPlacement := oraw.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
-		newPlacement := nm.(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
-		if (oldPlacement["cluster"] != newPlacement["cluster"]) || (oldPlacement["datastore"] != newPlacement["datastore"]) || (oldPlacement["network"] != newPlacement["network"]) {
-			hasChange = true
-			return hasChange
+func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, error) {
+	for _, nMachinePool := range nMPool.(*schema.Set).List() {
+		if nMachinePool.(map[string]interface{})["control_plane"] == true {
+			var oPlacements []interface{}
+			for i, oMachinePool := range oMPool.(*schema.Set).List() {
+				if oMachinePool.(map[string]interface{})["control_plane"] == true {
+					oPlacements = oMPool.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})
+				}
+			}
+			nPlacements := nMachinePool.(map[string]interface{})["placement"].([]interface{})
+			if len(nPlacements) != len(oPlacements) {
+				errMsg := fmt.Sprintf("Placement validation error - Adding/Removing placement component in control plance is not allowed. To update the placement configuration in the control plane, Kindly recreate the cluster.")
+				return true, errors.New(errMsg)
+			}
+			for pIndex, nP := range nPlacements {
+				oPlacement := oPlacements[pIndex].(map[string]interface{})
+				nPlacement := nP.(map[string]interface{})
+				if oPlacement["cluster"] != nPlacement["cluster"] {
+					errMsg := fmt.Sprintf("Placement validation error (cluster/datastore/network cannot be updated in control plane) - Trying to updated `ComputeCluster` value. Old value - %s, New value - %s ", oPlacement["cluster"], nPlacement["cluster"])
+					return true, errors.New(errMsg)
+				}
+				if oPlacement["datastore"] != nPlacement["datastore"] {
+					errMsg := fmt.Sprintf("Placement validation error (cluster/datastore/network cannot be updated in control plane) - Trying to updated `DataStore` value. Old value - %s, New value - %s ", oPlacement["datastore"], nPlacement["datastore"])
+					return true, errors.New(errMsg)
+				}
+				if oPlacement["network"] != nPlacement["network"] {
+					errMsg := fmt.Sprintf("Placement validation error (cluster/datastore/network cannot be updated in control plane) - Trying to updated `Network` value. Old value - %s, New value - %s ", oPlacement["network"], nPlacement["network"])
+					return true, errors.New(errMsg)
+				}
+			}
 		}
 	}
-	return hasChange
+	return false, nil
 }
 
 func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -484,8 +508,9 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw != nil && nraw != nil {
-			if ValidateMachinePoolChange(oraw, nraw) {
-				return diag.Errorf("Validation error: %s", "Datastore, Network, and ComputeCluster values cannot be updated after cluster provisioning. Kindly destroy and recreate with updated placement attributes")
+			if ok, err := ValidateMachinePoolChange(oraw, nraw); ok {
+				return diag.Errorf(err.Error())
+				//return diag.Errorf("Validation error: %s", "Datastore, Network, and ComputeCluster values cannot be updated after cluster provisioning. Kindly destroy and recreate with updated placement attributes")
 			}
 		}
 		if oraw == nil {

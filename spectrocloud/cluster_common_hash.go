@@ -210,6 +210,12 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 		}
 	}
 
+	if placements, found := m["placement"]; found {
+		for _, p := range placements.([]interface{}) {
+			buf.WriteString(HashStringMap(p))
+		}
+	}
+
 	return int(hash(buf.String()))
 }
 
