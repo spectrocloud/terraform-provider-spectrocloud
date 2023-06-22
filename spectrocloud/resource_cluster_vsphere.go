@@ -452,19 +452,23 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 }
 
 func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, error) {
+	var oPlacements []interface{}
+	// Identifying control plane placements from machine pool interface before change
+	for i, oMachinePool := range oMPool.(*schema.Set).List() {
+		if oMachinePool.(map[string]interface{})["control_plane"] == true {
+			oPlacements = oMPool.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})
+		}
+	}
 	for _, nMachinePool := range nMPool.(*schema.Set).List() {
+		// Identifying control plane placements from machine pool interface after change
 		if nMachinePool.(map[string]interface{})["control_plane"] == true {
-			var oPlacements []interface{}
-			for i, oMachinePool := range oMPool.(*schema.Set).List() {
-				if oMachinePool.(map[string]interface{})["control_plane"] == true {
-					oPlacements = oMPool.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})
-				}
-			}
 			nPlacements := nMachinePool.(map[string]interface{})["placement"].([]interface{})
+			// Validating any New or old placements got added/removed.
 			if len(nPlacements) != len(oPlacements) {
 				errMsg := fmt.Sprintf("Placement validation error - Adding/Removing placement component in control plance is not allowed. To update the placement configuration in the control plane, Kindly recreate the cluster.")
 				return true, errors.New(errMsg)
 			}
+			// Need to add sort with all fields
 			for pIndex, nP := range nPlacements {
 				oPlacement := oPlacements[pIndex].(map[string]interface{})
 				nPlacement := nP.(map[string]interface{})
