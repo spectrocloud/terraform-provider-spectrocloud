@@ -210,6 +210,16 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 		}
 	}
 
+	if placements, found := m["placement"]; found {
+		for _, p := range placements.([]interface{}) {
+			place := p.(map[string]interface{})
+			buf.WriteString(fmt.Sprintf("%s-", place["cluster"].(string)))
+			buf.WriteString(fmt.Sprintf("%s-", place["resource_pool"].(string)))
+			buf.WriteString(fmt.Sprintf("%s-", place["datastore"].(string)))
+			buf.WriteString(fmt.Sprintf("%s-", place["network"].(string)))
+			buf.WriteString(fmt.Sprintf("%s-", place["static_ip_pool_id"].(string)))
+		}
+	}
 	return int(hash(buf.String()))
 }
 
