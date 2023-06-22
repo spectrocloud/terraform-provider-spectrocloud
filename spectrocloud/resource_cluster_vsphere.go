@@ -451,6 +451,24 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	return ois
 }
 
+func sortPlacementStructs(structs []interface{}) {
+	sort.Slice(structs, func(i, j int) bool {
+		clusterI := structs[i].(map[string]interface{})["cluster"]
+		clusterJ := structs[j].(map[string]interface{})["cluster"]
+		if clusterI != clusterJ {
+			return clusterI.(string) < clusterJ.(string)
+		}
+		datastoreI := structs[i].(map[string]interface{})["datastore"]
+		datastoreJ := structs[j].(map[string]interface{})["datastore"]
+		if datastoreI != datastoreJ {
+			return datastoreI.(string) < datastoreJ.(string)
+		}
+		networkI := structs[i].(map[string]interface{})["network"]
+		networkJ := structs[j].(map[string]interface{})["network"]
+		return networkI.(string) < networkJ.(string)
+	})
+}
+
 func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, error) {
 	var oPlacements []interface{}
 	var nPlacements []interface{}
@@ -468,25 +486,30 @@ func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, er
 	}
 	// Validating any New or old placements got added/removed.
 	if len(nPlacements) != len(oPlacements) {
-		errMsg := fmt.Sprintf("Placement validation error - Adding/Removing placement component in control plance is not allowed. To update the placement configuration in the control plane, Kindly recreate the cluster.")
+		errMsg := `Placement validation error - Adding/Removing placement component in control plane is not allowed. 
+To update the placement configuration in the control plane, kindly recreate the cluster.`
 		return true, errors.New(errMsg)
 	}
-	// Need to add sort with all fields
-	// oPlacements and nPlacements
 
+	// Need to add sort with all fields
+	// oPlacements and nPlacements for correct comparison in case order was changed
+	sortPlacementStructs(oPlacements)
+	sortPlacementStructs(nPlacements)
+
+	// Validating any New or old placements got changed.
 	for pIndex, nP := range nPlacements {
 		oPlacement := oPlacements[pIndex].(map[string]interface{})
 		nPlacement := nP.(map[string]interface{})
 		if oPlacement["cluster"] != nPlacement["cluster"] {
-			errMsg := fmt.Sprintf("Placement validation error (cluster/datastore/network cannot be updated in control plane) - Trying to updated `ComputeCluster` value. Old value - %s, New value - %s ", oPlacement["cluster"], nPlacement["cluster"])
+			errMsg := fmt.Sprintf("Placement validation error: Trying to update `ComputeCluster` value. Old value - %s, New value - %s ", oPlacement["cluster"], nPlacement["cluster"])
 			return true, errors.New(errMsg)
 		}
 		if oPlacement["datastore"] != nPlacement["datastore"] {
-			errMsg := fmt.Sprintf("Placement validation error (cluster/datastore/network cannot be updated in control plane) - Trying to updated `DataStore` value. Old value - %s, New value - %s ", oPlacement["datastore"], nPlacement["datastore"])
+			errMsg := fmt.Sprintf("Placement validation error: Trying to updated `DataStore` value. Old value - %s, New value - %s ", oPlacement["datastore"], nPlacement["datastore"])
 			return true, errors.New(errMsg)
 		}
 		if oPlacement["network"] != nPlacement["network"] {
-			errMsg := fmt.Sprintf("Placement validation error (cluster/datastore/network cannot be updated in control plane) - Trying to updated `Network` value. Old value - %s, New value - %s ", oPlacement["network"], nPlacement["network"])
+			errMsg := fmt.Sprintf("Placement validation error: Trying to updated `Network` value. Old value - %s, New value - %s ", oPlacement["network"], nPlacement["network"])
 			return true, errors.New(errMsg)
 		}
 	}
