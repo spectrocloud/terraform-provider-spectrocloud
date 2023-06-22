@@ -148,27 +148,6 @@ func (h *V1Client) GetOciRegistryByName(registryName string) (*models.V1OciRegis
 	return nil, fmt.Errorf("Registry '%s' not found.", registryName)
 }
 
-func (h *V1Client) GetOciRegistryByID(registryId string) (*models.V1OciRegistry, error) {
-	client, err := h.GetClusterClient()
-	if err != nil {
-		return nil, err
-	}
-
-	params := clusterC.NewV1OciRegistriesSummaryParams()
-	registries, err := client.V1OciRegistriesSummary(params)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, registry := range registries.Payload.Items {
-		if registry.Metadata.UID == registryId {
-			return registry, nil
-		}
-	}
-
-	return nil, fmt.Errorf("Registry '%s' not found.", registryId)
-}
-
 func (h *V1Client) GetOciRegistry(uid string) (*models.V1EcrRegistry, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {

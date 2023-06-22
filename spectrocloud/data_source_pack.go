@@ -86,13 +86,9 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 			}
 		}
 		if v.(string) == "oci" {
-			if regUID, ok := d.GetOk("registry_uid"); ok {
-				// For oci type registry it doesn't matter we need to just check given registry is valid
-				_, err := c.GetOciRegistryByID(regUID.(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
+			if _, ok := d.GetOk("registry_uid"); ok {
 				// we don't have provision to get all helm chart/packs from oci basic type registry, hence skipping validation
+				// we will move registry validation in profile creation (TBU)
 				return diags
 			}
 		}
