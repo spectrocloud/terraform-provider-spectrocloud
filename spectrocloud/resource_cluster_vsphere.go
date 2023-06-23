@@ -540,7 +540,6 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 		if oraw != nil && nraw != nil {
 			if ok, err := ValidateMachinePoolChange(oraw, nraw); ok {
 				return diag.Errorf(err.Error())
-				//return diag.Errorf("Validation error: %s", "Datastore, Network, and ComputeCluster values cannot be updated after cluster provisioning. Kindly destroy and recreate with updated placement attributes")
 			}
 		}
 		if oraw == nil {
