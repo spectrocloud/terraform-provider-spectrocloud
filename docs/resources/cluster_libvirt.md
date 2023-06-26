@@ -52,7 +52,6 @@ description: |-
 
 Required:
 
-- `ssh_key` (String)
 - `vip` (String)
 
 Optional:
@@ -60,6 +59,8 @@ Optional:
 - `network_search_domain` (String) The search domain to use for the cluster in case of DHCP.
 - `network_type` (String) The type of network to use for the cluster. This can be `VIP` or `DDNS`.
 - `ntp_servers` (Set of String)
+- `ssh_key` (String) SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
+- `ssh_keys` (Set of String) List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 
 
 <a id="nestedblock--machine_pool"></a>

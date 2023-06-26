@@ -60,7 +60,8 @@ Optional:
 - `image_template_folder` (String)
 - `network_search_domain` (String)
 - `network_type` (String)
-- `ssh_key` (String)
+- `ssh_key` (String) SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
+- `ssh_keys` (Set of String) List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 - `static_ip` (Boolean)
 
 
