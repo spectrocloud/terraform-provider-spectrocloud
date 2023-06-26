@@ -263,6 +263,13 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
+	if m["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
+	}
+	if m["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
+	}
+
 	if v, found := m["instance_type"]; found {
 		if len(v.([]interface{})) > 0 {
 			ins := v.([]interface{})[0].(map[string]interface{})
