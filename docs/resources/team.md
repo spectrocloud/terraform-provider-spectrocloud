@@ -61,13 +61,15 @@ resource "spectrocloud_team" "t1" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) Name of the team.
 
 ### Optional
 
-- `project_role_mapping` (Block List) (see [below for nested schema](#nestedblock--project_role_mapping))
+- `project_role_mapping` (Block Set) List of project roles to be associated with the team. (see [below for nested schema](#nestedblock--project_role_mapping))
+- `tenant_role_mapping` (Set of String) List of tenant role ids to be associated with the team.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `users` (Set of String)
+- `users` (Set of String) List of user ids to be associated with the team.
+- `workspace_role_mapping` (Block Set) List of workspace roles to be associated with the team. (see [below for nested schema](#nestedblock--workspace_role_mapping))
 
 ### Read-Only
 
@@ -78,11 +80,8 @@ resource "spectrocloud_team" "t1" {
 
 Required:
 
-- `roles` (Set of String)
-
-Read-Only:
-
-- `id` (String) The ID of this resource.
+- `id` (String) Project id to be associated with the team.
+- `roles` (Set of String) List of project roles to be associated with the team.
 
 
 <a id="nestedblock--timeouts"></a>
@@ -93,3 +92,26 @@ Optional:
 - `create` (String)
 - `delete` (String)
 - `update` (String)
+
+
+<a id="nestedblock--workspace_role_mapping"></a>
+### Nested Schema for `workspace_role_mapping`
+
+Required:
+
+- `id` (String) Project id to be associated with the team.
+
+Optional:
+
+- `workspace` (Block Set) List of workspace roles to be associated with the team. (see [below for nested schema](#nestedblock--workspace_role_mapping--workspace))
+
+<a id="nestedblock--workspace_role_mapping--workspace"></a>
+### Nested Schema for `workspace_role_mapping.workspace`
+
+Required:
+
+- `id` (String) Workspace id to be associated with the team.
+
+Optional:
+
+- `roles` (Set of String) List of workspace roles to be associated with the team.
