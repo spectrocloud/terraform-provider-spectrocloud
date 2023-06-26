@@ -137,6 +137,14 @@ func resourceClusterMaas() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"min": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
+						"max": {
+							Type:     schema.TypeInt,
+							Optional: true,
+						},
 						"instance_type": {
 							Type:     schema.TypeList,
 							Required: true,
@@ -289,6 +297,8 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		oi["count"] = int(machinePool.Size)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
+		oi["min"] = int(machinePool.MinSize)
+		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
 
 		if machinePool.InstanceType != nil {
@@ -434,6 +444,17 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 	InstanceType := m["instance_type"].([]interface{})[0].(map[string]interface{})
 	Placement := m["placement"].([]interface{})[0].(map[string]interface{})
 	log.Printf("Create machine pool %s", InstanceType)
+
+	min := int32(m["count"].(int))
+	max := int32(m["count"].(int))
+
+	if m["min"] != nil {
+		min = int32(m["min"].(int))
+	}
+
+	if m["max"] != nil {
+		max = int32(m["max"].(int))
+	}
 	mp := &models.V1MaasMachinePoolConfigEntity{
 		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
 			Azs: azs,
@@ -454,6 +475,8 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
+			MinSize:                 min,
+			MaxSize:                 max,
 		},
 	}
 	return mp
