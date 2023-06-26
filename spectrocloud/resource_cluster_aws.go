@@ -341,27 +341,29 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			if name != "" {
-				hash := resourceMachinePoolAwsHash(machinePoolResource)
-				vpcId := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})["vpc_id"]
-				machinePool := toMachinePoolAws(machinePoolResource, vpcId.(string))
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				if name != "" {
+					hash := resourceMachinePoolAwsHash(machinePoolResource)
+					vpcId := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})["vpc_id"]
+					machinePool := toMachinePoolAws(machinePoolResource, vpcId.(string))
 
-				var err error
-				if oldMachinePool, ok := osMap[name]; !ok {
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
-				} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
-					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
+					var err error
+					if oldMachinePool, ok := osMap[name]; !ok {
+						log.Printf("Create machine pool %s", name)
+						err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
+					} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
+						log.Printf("Change in machine pool %s", name)
+						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
+					}
+
+					if err != nil {
+						return diag.FromErr(err)
+					}
+
+					// Processed (if exists)
+					delete(osMap, name)
 				}
-
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				// Processed (if exists)
-				delete(osMap, name)
 			}
 		}
 

@@ -330,25 +330,28 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolTkeHash(machinePoolResource)
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolTkeHash(machinePoolResource)
 
-			machinePool := toMachinePoolTke(machinePoolResource)
+				machinePool := toMachinePoolTke(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolTke(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolTkeHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolTke(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolTke(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolTkeHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolTke(cloudConfigId, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				delete(osMap, name)
 			}
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			delete(osMap, name)
 		}
 
 		for _, mp := range osMap {

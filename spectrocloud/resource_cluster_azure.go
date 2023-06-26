@@ -383,26 +383,28 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolAzureHash(machinePoolResource)
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolAzureHash(machinePoolResource)
 
-			machinePool := toMachinePoolAzure(machinePoolResource)
+				machinePool := toMachinePoolAzure(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolAzure(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolAzureHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolAzure(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolAzure(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolAzureHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolAzure(cloudConfigId, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools

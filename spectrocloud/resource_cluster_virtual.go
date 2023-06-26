@@ -258,25 +258,28 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolVirtualHash(machinePoolResource)
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolVirtualHash(machinePoolResource)
 
-			machinePool := toMachinePoolVirtual(machinePoolResource)
+				machinePool := toMachinePoolVirtual(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolVirtual(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolVirtualHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolVirtual(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolVirtual(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolVirtualHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolVirtual(cloudConfigId, machinePool)
+				}
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-			if err != nil {
-				return diag.FromErr(err)
-			}
 
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools

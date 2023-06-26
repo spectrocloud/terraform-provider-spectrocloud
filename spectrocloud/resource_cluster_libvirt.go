@@ -509,31 +509,33 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			if name == "" {
-				continue
-			}
-			hash := resourceMachinePoolLibvirtHash(machinePoolResource)
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				if name == "" {
+					continue
+				}
+				hash := resourceMachinePoolLibvirtHash(machinePoolResource)
 
-			machinePool, err := toMachinePoolLibvirt(machinePoolResource)
-			if err != nil {
-				return diag.FromErr(err)
-			}
+				machinePool, err := toMachinePoolLibvirt(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolLibvirt(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolLibvirtHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolLibvirt(cloudConfigId, machinePool)
-			}
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolLibvirt(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolLibvirtHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolLibvirt(cloudConfigId, machinePool)
+				}
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			// Processed (if exists)
-			delete(osMap, name)
+				// Processed (if exists)
+				delete(osMap, name)
+			}
 		}
 
 		// Deleted old machine pools

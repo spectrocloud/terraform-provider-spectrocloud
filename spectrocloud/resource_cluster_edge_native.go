@@ -339,29 +339,31 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			if name == "" {
-				continue
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				if name == "" {
+					continue
+				}
+				hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
+
+				machinePool := toMachinePoolEdgeNative(machinePoolResource)
+
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-			hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
-
-			machinePool := toMachinePoolEdgeNative(machinePoolResource)
-
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
-			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
