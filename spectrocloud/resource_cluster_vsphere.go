@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -449,17 +451,69 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	return ois
 }
 
-func ValidateMachinePoolChange(oraw interface{}, nraw interface{}) bool {
-	hasChange := false
-	for i, nm := range nraw.(*schema.Set).List() {
-		oldPlacement := oraw.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
-		newPlacement := nm.(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
-		if (oldPlacement["cluster"] != newPlacement["cluster"]) || (oldPlacement["datastore"] != newPlacement["datastore"]) || (oldPlacement["network"] != newPlacement["network"]) {
-			hasChange = true
-			return hasChange
+func sortPlacementStructs(structs []interface{}) {
+	sort.Slice(structs, func(i, j int) bool {
+		clusterI := structs[i].(map[string]interface{})["cluster"]
+		clusterJ := structs[j].(map[string]interface{})["cluster"]
+		if clusterI != clusterJ {
+			return clusterI.(string) < clusterJ.(string)
+		}
+		datastoreI := structs[i].(map[string]interface{})["datastore"]
+		datastoreJ := structs[j].(map[string]interface{})["datastore"]
+		if datastoreI != datastoreJ {
+			return datastoreI.(string) < datastoreJ.(string)
+		}
+		networkI := structs[i].(map[string]interface{})["network"]
+		networkJ := structs[j].(map[string]interface{})["network"]
+		return networkI.(string) < networkJ.(string)
+	})
+}
+
+func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, error) {
+	var oPlacements []interface{}
+	var nPlacements []interface{}
+	// Identifying control plane placements from machine pool interface before change
+	for i, oMachinePool := range oMPool.(*schema.Set).List() {
+		if oMachinePool.(map[string]interface{})["control_plane"] == true {
+			oPlacements = oMPool.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})
 		}
 	}
-	return hasChange
+	// Identifying control plane placements from machine pool interface after change
+	for _, nMachinePool := range nMPool.(*schema.Set).List() {
+		if nMachinePool.(map[string]interface{})["control_plane"] == true {
+			nPlacements = nMachinePool.(map[string]interface{})["placement"].([]interface{})
+		}
+	}
+	// Validating any New or old placements got added/removed.
+	if len(nPlacements) != len(oPlacements) {
+		errMsg := `Placement validation error - Adding/Removing placement component in control plane is not allowed. 
+To update the placement configuration in the control plane, kindly recreate the cluster.`
+		return true, errors.New(errMsg)
+	}
+
+	// Need to add sort with all fields
+	// oPlacements and nPlacements for correct comparison in case order was changed
+	sortPlacementStructs(oPlacements)
+	sortPlacementStructs(nPlacements)
+
+	// Validating any New or old placements got changed.
+	for pIndex, nP := range nPlacements {
+		oPlacement := oPlacements[pIndex].(map[string]interface{})
+		nPlacement := nP.(map[string]interface{})
+		if oPlacement["cluster"] != nPlacement["cluster"] {
+			errMsg := fmt.Sprintf("Placement validation error: Trying to update `ComputeCluster` value. Old value - %s, New value - %s ", oPlacement["cluster"], nPlacement["cluster"])
+			return true, errors.New(errMsg)
+		}
+		if oPlacement["datastore"] != nPlacement["datastore"] {
+			errMsg := fmt.Sprintf("Placement validation error: Trying to updated `DataStore` value. Old value - %s, New value - %s ", oPlacement["datastore"], nPlacement["datastore"])
+			return true, errors.New(errMsg)
+		}
+		if oPlacement["network"] != nPlacement["network"] {
+			errMsg := fmt.Sprintf("Placement validation error: Trying to updated `Network` value. Old value - %s, New value - %s ", oPlacement["network"], nPlacement["network"])
+			return true, errors.New(errMsg)
+		}
+	}
+	return false, nil
 }
 
 func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -484,8 +538,8 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw != nil && nraw != nil {
-			if ValidateMachinePoolChange(oraw, nraw) {
-				return diag.Errorf("Validation error: %s", "Datastore, Network, and ComputeCluster values cannot be updated after cluster provisioning. Kindly destroy and recreate with updated placement attributes")
+			if ok, err := ValidateMachinePoolChange(oraw, nraw); ok {
+				return diag.Errorf(err.Error())
 			}
 		}
 		if oraw == nil {
@@ -506,36 +560,38 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolVsphereHash(machinePoolResource)
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolVsphereHash(machinePoolResource)
 
-			machinePool := toMachinePoolVsphere(machinePoolResource)
+				machinePool := toMachinePoolVsphere(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				oldMachinePool := toMachinePoolVsphere(oldMachinePool)
-				oldPlacements := oldMachinePool.CloudConfig.Placements
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					oldMachinePool := toMachinePoolVsphere(oldMachinePool)
+					oldPlacements := oldMachinePool.CloudConfig.Placements
 
-				// set the placement ids
-				for i, p := range machinePool.CloudConfig.Placements {
-					if len(oldPlacements) > i {
-						p.UID = oldPlacements[i].UID
+					// set the placement ids
+					for i, p := range machinePool.CloudConfig.Placements {
+						if len(oldPlacements) > i {
+							p.UID = oldPlacements[i].UID
+						}
 					}
+
+					err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
 				}
 
-				err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
-			}
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			if err != nil {
-				return diag.FromErr(err)
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
