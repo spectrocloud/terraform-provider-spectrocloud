@@ -463,6 +463,11 @@ func sortPlacementStructs(structs []interface{}) {
 		if datastoreI != datastoreJ {
 			return datastoreI.(string) < datastoreJ.(string)
 		}
+		resourcePoolI := structs[i].(map[string]interface{})["resource_pool"]
+		resourcePoolJ := structs[j].(map[string]interface{})["resource_pool"]
+		if resourcePoolI != resourcePoolJ {
+			return resourcePoolI.(string) < resourcePoolJ.(string)
+		}
 		networkI := structs[i].(map[string]interface{})["network"]
 		networkJ := structs[j].(map[string]interface{})["network"]
 		return networkI.(string) < networkJ.(string)
@@ -501,15 +506,19 @@ To update the placement configuration in the control plane, kindly recreate the 
 		oPlacement := oPlacements[pIndex].(map[string]interface{})
 		nPlacement := nP.(map[string]interface{})
 		if oPlacement["cluster"] != nPlacement["cluster"] {
-			errMsg := fmt.Sprintf("Placement validation error: Trying to update `ComputeCluster` value. Old value - %s, New value - %s ", oPlacement["cluster"], nPlacement["cluster"])
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `ComputeCluster` value. Old value - %s, New value - %s ", oPlacement["cluster"], nPlacement["cluster"])
 			return true, errors.New(errMsg)
 		}
 		if oPlacement["datastore"] != nPlacement["datastore"] {
-			errMsg := fmt.Sprintf("Placement validation error: Trying to updated `DataStore` value. Old value - %s, New value - %s ", oPlacement["datastore"], nPlacement["datastore"])
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `DataStore` value. Old value - %s, New value - %s ", oPlacement["datastore"], nPlacement["datastore"])
+			return true, errors.New(errMsg)
+		}
+		if oPlacement["resource_pool"] != nPlacement["resource_pool"] {
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `resource_pool` value. Old value - %s, New value - %s ", oPlacement["resource_pool"], nPlacement["resource_pool"])
 			return true, errors.New(errMsg)
 		}
 		if oPlacement["network"] != nPlacement["network"] {
-			errMsg := fmt.Sprintf("Placement validation error: Trying to updated `Network` value. Old value - %s, New value - %s ", oPlacement["network"], nPlacement["network"])
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `Network` value. Old value - %s, New value - %s ", oPlacement["network"], nPlacement["network"])
 			return true, errors.New(errMsg)
 		}
 	}
