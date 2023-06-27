@@ -138,12 +138,14 @@ func resourceClusterMaas() *schema.Resource {
 							Description: "Number of nodes in the machine pool.",
 						},
 						"min": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"max": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"instance_type": {
 							Type:     schema.TypeList,
