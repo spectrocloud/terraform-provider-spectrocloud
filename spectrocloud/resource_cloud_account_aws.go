@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func resourceCloudAccountAws() *schema.Resource {
@@ -52,6 +55,21 @@ func resourceCloudAccountAws() *schema.Resource {
 				Optional:  true,
 				Sensitive: true,
 			},
+			"partition": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "aws",
+				ValidateFunc: validation.StringInSlice([]string{"aws", "aws-us-gov"}, false),
+				Description: `The AWS partition in which the cloud account is located. 
+Can be 'aws' for standard AWS regions or 'aws-us-gov' for AWS GovCloud (US) regions.
+Default is 'aws'.`,
+			},
+			"policy_arns": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Description: "A set of ARNs for the IAM policies that should be associated with the cloud account.",
+			},
 		},
 	}
 }
@@ -62,7 +80,10 @@ func resourceCloudAccountAwsCreate(ctx context.Context, d *schema.ResourceData, 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	account := toAwsAccount(d)
+	account, err := toAwsAccount(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	AccountContext := d.Get("context").(string)
 	uid, err := c.CreateCloudAccountAws(account, AccountContext)
@@ -111,6 +132,16 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 	}
+	if account.Spec.Partition != nil {
+		if err := d.Set("partition", account.Spec.Partition); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if account.Spec.PolicyARNs != nil {
+		if err := d.Set("policy_arns", account.Spec.PolicyARNs); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	return diags
 }
@@ -121,9 +152,12 @@ func resourceCloudAccountAwsUpdate(ctx context.Context, d *schema.ResourceData, 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	account := toAwsAccount(d)
+	account, err := toAwsAccount(d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	err := c.UpdateCloudAccountAws(account)
+	err = c.UpdateCloudAccountAws(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -150,7 +184,7 @@ func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m 
 	return diags
 }
 
-func toAwsAccount(d *schema.ResourceData) *models.V1AwsAccount {
+func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 	account := &models.V1AwsAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
@@ -172,6 +206,10 @@ func toAwsAccount(d *schema.ResourceData) *models.V1AwsAccount {
 		account.Spec.AccessKey = d.Get("aws_access_key").(string)
 		account.Spec.SecretKey = d.Get("aws_secret_key").(string)
 	} else if d.Get("type").(string) == "sts" {
+		// if partition is us-gov return error
+		if d.Get("partition").(string) == "aws-us-gov" {
+			return nil, fmt.Errorf("sts credentials are not supported in aws-us-gov partition")
+		}
 		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
 		account.Spec.Sts = &models.V1AwsStsCredentials{
 			Arn:        d.Get("arn").(string),
@@ -179,16 +217,20 @@ func toAwsAccount(d *schema.ResourceData) *models.V1AwsAccount {
 		}
 	}
 
-	return account
-}
+	// add partition to account
+	if d.Get("partition") != nil {
+		account.Spec.Partition = types.Ptr(d.Get("partition").(string))
+	}
 
-// func validateAwsCloudAccountType(data interface{}, path cty.Path) diag.Diagnostics {
-// 	var diags diag.Diagnostics
-// 	accType := data.(string)
-// 	for _, accessType := range []string{"secret", "sts"} {
-// 		if accessType == accType {
-// 			return diags
-// 		}
-// 	}
-// 	return diag.FromErr(fmt.Errorf("aws cloud account type '%s' is invalid. valid aws cloud account types are 'secret' and 'sts'", accType))
-// }
+	// add policy arns to account
+	if d.Get("policy_arns") != nil && len(d.Get("policy_arns").(*schema.Set).List()) > 0 {
+		policyArns := d.Get("policy_arns").(*schema.Set).List()
+		policies := make([]string, 0)
+		for _, v := range policyArns {
+			policies = append(policies, v.(string))
+		}
+		account.Spec.PolicyARNs = policies
+	}
+
+	return account, nil
+}
