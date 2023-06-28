@@ -14,7 +14,7 @@ import (
 
 func VirtualMachineFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-		//flatten metadata
+		//flatten metadata data attributes
 		"name": {
 			Type:         schema.TypeString,
 			Description:  fmt.Sprintf("Name of the virtual machine, must be unique. Cannot be updated."),
@@ -36,6 +36,34 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Optional:     true,
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: utils.ValidateLabels,
+		},
+		"annotations": {
+			Type:         schema.TypeMap,
+			Description:  fmt.Sprintf("An unstructured key value map stored with the VM that may be used to store arbitrary metadata."),
+			Optional:     true,
+			Elem:         &schema.Schema{Type: schema.TypeString},
+			ValidateFunc: utils.ValidateAnnotations,
+			Computed:     true,
+		},
+		"generation": {
+			Type:        schema.TypeInt,
+			Description: "A sequence number representing a specific generation of the desired state.",
+			Computed:    true,
+		},
+		"resource_version": {
+			Type:        schema.TypeString,
+			Description: fmt.Sprintf("An opaque value that represents the internal version of this VM that can be used by clients to determine when VM has changed."),
+			Computed:    true,
+		},
+		"self_link": {
+			Type:        schema.TypeString,
+			Description: fmt.Sprintf("A URL representing this VM."),
+			Computed:    true,
+		},
+		"uid": {
+			Type:        schema.TypeString,
+			Description: fmt.Sprintf("The unique in time and space value for this VM."),
+			Computed:    true,
 		},
 
 		"cluster_uid": {
@@ -65,7 +93,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 
 		//"metadata": k8s.NamespacedMetadataSchema("VirtualMachine", false),
 		//"spec":     virtualMachineSpecSchema(),
-		"status": virtualMachineStatusSchema(),
+
 		//Added for Flattening it
 		"data_volume_templates": dataVolumeTemplatesSchema(),
 		"run_strategy": {
@@ -300,13 +328,15 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			}, false),
 		},
 		"pod_dns_config": k8s.PodDnsConfigSchema(),
+		
+		"status": virtualMachineStatusSchema(),
 	}
 }
 
 func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.VirtualMachine, error) {
 	result := &kubevirtapiv1.VirtualMachine{}
 
-	result.ObjectMeta = k8s.ExpandMetadata(resourceData)
+	result.ObjectMeta = k8s.ConvertToBasicMetadata(resourceData)
 	spec, err := expandVirtualMachineSpec(resourceData)
 	if err != nil {
 		return result, err

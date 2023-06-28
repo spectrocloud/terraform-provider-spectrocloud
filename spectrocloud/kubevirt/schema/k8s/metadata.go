@@ -104,31 +104,57 @@ func BuildId(meta metav1.ObjectMeta) string {
 	return meta.Namespace + "/" + meta.Name
 }
 
-func ExpandMetadata(d *schema.ResourceData) metav1.ObjectMeta {
-	meta := metav1.ObjectMeta{}
-	//if len(in) < 1 {
-	//	return meta
-	//}
-	//m := in[0].(map[string]interface{})
-
+func ConvertToBasicMetadata(d *schema.ResourceData) metav1.ObjectMeta {
+	var meta []interface{}
+	metaValues := make(map[string]interface{})
 	if v, ok := d.GetOk("annotations"); ok && len(v.(map[string]interface{})) > 0 {
-		meta.Annotations = utils.ExpandStringMap(v.(map[string]interface{}))
+		metaValues["annotations"] = utils.ExpandStringMap(v.(map[string]interface{}))
 	}
 
 	if v, ok := d.GetOk("labels"); ok && len(v.(map[string]interface{})) > 0 {
-		meta.Labels = utils.ExpandStringMap(v.(map[string]interface{}))
+		metaValues["labels"] = utils.ExpandStringMap(v.(map[string]interface{}))
 	}
 
 	if v, ok := d.GetOk("generate_name"); ok {
-		meta.GenerateName = v.(string)
+		metaValues["generate_name"] = v.(string)
 	}
 	if v, ok := d.GetOk("name"); ok {
-		meta.Name = v.(string)
+		metaValues["name"] = v.(string)
 	}
 	if v, ok := d.GetOk("namespace"); ok {
-		meta.Namespace = v.(string)
+		metaValues["namespace"] = v.(string)
 	}
 	if v, ok := d.GetOk("resource_version"); ok {
+		metaValues["resource_version"] = v.(string)
+	}
+	return ExpandMetadata(meta)
+}
+
+func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
+	meta := metav1.ObjectMeta{}
+	if len(in) < 1 {
+		return meta
+	}
+	m := in[0].(map[string]interface{})
+
+	if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 {
+		meta.Annotations = utils.ExpandStringMap(m["annotations"].(map[string]interface{}))
+	}
+
+	if v, ok := m["labels"].(map[string]interface{}); ok && len(v) > 0 {
+		meta.Labels = utils.ExpandStringMap(m["labels"].(map[string]interface{}))
+	}
+
+	if v, ok := m["generate_name"]; ok {
+		meta.GenerateName = v.(string)
+	}
+	if v, ok := m["name"]; ok {
+		meta.Name = v.(string)
+	}
+	if v, ok := m["namespace"]; ok {
+		meta.Namespace = v.(string)
+	}
+	if v, ok := m["resource_version"]; ok {
 		meta.ResourceVersion = v.(string)
 	}
 

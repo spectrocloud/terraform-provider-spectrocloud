@@ -40,7 +40,7 @@ func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*kubevirt
 	//in := virtualMachine[0].(map[string]interface{})
 
 	// we have removed metadata for template hence trying to apply same metadata (TBD)***
-	result.ObjectMeta = k8s.ExpandMetadata(d)
+	result.ObjectMeta = k8s.ConvertToBasicMetadata(d)
 
 	//if v, ok := in["metadata"].([]interface{}); ok {
 	//	result.ObjectMeta = k8s.ExpandMetadata(d)

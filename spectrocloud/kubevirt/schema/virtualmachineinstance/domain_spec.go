@@ -225,7 +225,7 @@ func expandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) 
 	//	}
 	//	result.Devices = devices
 	//}
-	if devices, err := expandDevices(v); err == nil {
+	if devices, err := expandDevices(d); err == nil {
 		result.Devices = devices
 	} else {
 		return result, err
@@ -278,20 +278,20 @@ func expandResources(resources []interface{}) (kubevirtapiv1.ResourceRequirement
 	return result, nil
 }
 
-func expandDevices(devices []interface{}) (kubevirtapiv1.Devices, error) {
+func expandDevices(d *schema.ResourceData) (kubevirtapiv1.Devices, error) {
 	result := kubevirtapiv1.Devices{}
 
-	if len(devices) == 0 || devices[0] == nil {
-		return result, nil
-	}
+	//if len(devices) == 0 || devices[0] == nil {
+	//	return result, nil
+	//}
+	//
+	//in := devices[0].(map[string]interface{})
 
-	in := devices[0].(map[string]interface{})
-
-	if v, ok := in["disk"].([]interface{}); ok {
-		result.Disks = expandDisks(v)
+	if v, ok := d.GetOk("disk"); ok {
+		result.Disks = expandDisks(v.([]interface{}))
 	}
-	if v, ok := in["interface"].([]interface{}); ok {
-		result.Interfaces = expandInterfaces(v)
+	if v, ok := d.GetOk("interface"); ok {
+		result.Interfaces = expandInterfaces(v.([]interface{}))
 	}
 
 	return result, nil
