@@ -172,12 +172,14 @@ func resourceClusterAks() *schema.Resource {
 							Required: true,
 						},
 						"min": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"max": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"disk_size_gb": {
 							Type:     schema.TypeInt,

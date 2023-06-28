@@ -138,12 +138,14 @@ func resourceClusterMaas() *schema.Resource {
 							Description: "Number of nodes in the machine pool.",
 						},
 						"min": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"max": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"instance_type": {
 							Type:     schema.TypeList,
@@ -345,6 +347,7 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
 				hash := resourceMachinePoolMaasHash(machinePoolResource)

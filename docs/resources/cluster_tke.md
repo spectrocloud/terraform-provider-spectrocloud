@@ -77,9 +77,9 @@ Optional:
 - `az_subnets` (Map of String)
 - `azs` (List of String)
 - `capacity_type` (String)
-- `max` (Number)
+- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `max_price` (String)
-- `min` (Number)
+- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
