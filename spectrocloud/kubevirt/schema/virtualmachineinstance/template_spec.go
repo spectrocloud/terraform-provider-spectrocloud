@@ -30,24 +30,32 @@ func VirtualMachineInstanceTemplateSpecSchema() *schema.Schema {
 
 }
 
-func ExpandVirtualMachineInstanceTemplateSpec(virtualMachine []interface{}) (*kubevirtapiv1.VirtualMachineInstanceTemplateSpec, error) {
-	if len(virtualMachine) == 0 || virtualMachine[0] == nil {
-		return nil, nil
-	}
+func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*kubevirtapiv1.VirtualMachineInstanceTemplateSpec, error) {
+	//if len(virtualMachine) == 0 || virtualMachine[0] == nil {
+	//	return nil, nil
+	//}
 
 	result := &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{}
 
-	in := virtualMachine[0].(map[string]interface{})
+	//in := virtualMachine[0].(map[string]interface{})
 
-	if v, ok := in["metadata"].([]interface{}); ok {
-		result.ObjectMeta = k8s.ExpandMetadata(v)
-	}
-	if v, ok := in["spec"].([]interface{}); ok {
-		spec, err := expandVirtualMachineInstanceSpec(v)
-		if err != nil {
-			return result, err
-		}
+	// we have removed metadata for template hence trying to apply same metadata (TBD)***
+	result.ObjectMeta = k8s.ExpandMetadata(d)
+
+	//if v, ok := in["metadata"].([]interface{}); ok {
+	//	result.ObjectMeta = k8s.ExpandMetadata(d)
+	//}
+	//if v, ok := in["spec"].([]interface{}); ok {
+	//	spec, err := expandVirtualMachineInstanceSpec(v)
+	//	if err != nil {
+	//		return result, err
+	//	}
+	//	result.Spec = spec
+	//}
+	if spec, err := expandVirtualMachineInstanceSpec(d); err == nil {
 		result.Spec = spec
+	} else {
+		return result, err
 	}
 
 	return result, nil

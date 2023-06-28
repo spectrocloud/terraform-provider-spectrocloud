@@ -60,7 +60,7 @@ func networkFields() map[string]*schema.Schema {
 	}
 }
 
-func networksSchema() *schema.Schema {
+func NetworksSchema() *schema.Schema {
 	fields := networkFields()
 
 	return &schema.Schema{

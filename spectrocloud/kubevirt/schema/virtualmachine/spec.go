@@ -48,33 +48,40 @@ func virtualMachineSpecSchema() *schema.Schema {
 
 }
 
-func expandVirtualMachineSpec(virtualMachine []interface{}) (kubevirtapiv1.VirtualMachineSpec, error) {
+func expandVirtualMachineSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineSpec, error) {
 	result := kubevirtapiv1.VirtualMachineSpec{}
 
-	if len(virtualMachine) == 0 || virtualMachine[0] == nil {
-		return result, nil
-	}
-
-	in := virtualMachine[0].(map[string]interface{})
+	//if len(virtualMachine) == 0 || virtualMachine[0] == nil {
+	//	return result, nil
+	//}
+	//
+	//in := virtualMachine[0].(map[string]interface{})
 
 	// if v, ok := in["running"].(bool); ok {
 	// 	result.Running = &v
 	// }
-	if v, ok := in["run_strategy"].(string); ok {
-		if v != "" {
-			runStrategy := kubevirtapiv1.VirtualMachineRunStrategy(v)
+	if v, ok := d.GetOk("run_strategy"); ok {
+		if v.(string) != "" {
+			runStrategy := kubevirtapiv1.VirtualMachineRunStrategy(v.(string))
 			result.RunStrategy = &runStrategy
 		}
 	}
-	if v, ok := in["template"].([]interface{}); ok {
-		template, err := virtualmachineinstance.ExpandVirtualMachineInstanceTemplateSpec(v)
-		if err != nil {
-			return result, err
-		}
+	//if v, ok := d.GetOk("template"].([]interface{}); ok {
+	//	template, err := virtualmachineinstance.ExpandVirtualMachineInstanceTemplateSpec(v)
+	//	if err != nil {
+	//		return result, err
+	//	}
+	//	result.Template = template
+	//}
+
+	if template, err := virtualmachineinstance.ExpandVirtualMachineInstanceTemplateSpec(d); err == nil && template != nil {
 		result.Template = template
+	} else {
+		return result, err
 	}
-	if v, ok := in["data_volume_templates"].([]interface{}); ok {
-		dataVolumeTemplates, err := expandDataVolumeTemplates(v)
+
+	if v, ok := d.GetOk("data_volume_templates"); ok {
+		dataVolumeTemplates, err := expandDataVolumeTemplates(v.([]interface{}))
 		if err != nil {
 			return result, err
 		}

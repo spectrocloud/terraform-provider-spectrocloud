@@ -202,38 +202,43 @@ func domainSpecSchema() *schema.Schema {
 
 }
 
-func expandDomainSpec(domainSpec []interface{}) (kubevirtapiv1.DomainSpec, error) {
+func expandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) {
 	result := kubevirtapiv1.DomainSpec{}
 
-	if len(domainSpec) == 0 || domainSpec[0] == nil {
-		return result, nil
-	}
+	//if len(domainSpec) == 0 || domainSpec[0] == nil {
+	//	return result, nil
+	//}
+	//
+	//in := domainSpec[0].(map[string]interface{})
 
-	in := domainSpec[0].(map[string]interface{})
-
-	if v, ok := in["resources"].([]interface{}); ok {
-		resources, err := expandResources(v)
+	if v, ok := d.GetOk("resources"); ok {
+		resources, err := expandResources(v.([]interface{}))
 		if err != nil {
 			return result, err
 		}
 		result.Resources = resources
 	}
-	if v, ok := in["devices"].([]interface{}); ok {
-		devices, err := expandDevices(v)
-		if err != nil {
-			return result, err
-		}
+	//if v, ok := in["devices"].([]interface{}); ok {
+	//	devices, err := expandDevices(v)
+	//	if err != nil {
+	//		return result, err
+	//	}
+	//	result.Devices = devices
+	//}
+	if devices, err := expandDevices(v); err == nil {
 		result.Devices = devices
+	} else {
+		return result, err
 	}
-	if v, ok := in["cpu"].(map[string]interface{}); ok {
-		cpu, err := expandCPU(v)
+	if v, ok := d.GetOk("cpu"); ok {
+		cpu, err := expandCPU(v.(map[string]interface{}))
 		if err != nil {
 			return result, err
 		}
 		result.CPU = &cpu
 	}
-	if v, ok := in["memory"].([]interface{}); ok {
-		memory, err := expandMemory(v)
+	if v, ok := d.GetOk("memory"); ok {
+		memory, err := expandMemory(v.([]interface{}))
 		if err != nil {
 			return result, err
 		}
