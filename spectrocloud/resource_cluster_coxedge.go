@@ -337,7 +337,7 @@ func resourceCoxEdgeClusterCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -352,9 +352,7 @@ func resourceCoxEdgeClusterRead(_ context.Context, d *schema.ResourceData, m int
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {

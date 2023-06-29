@@ -39,6 +39,12 @@ func resourceClusterLibvirt() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -335,7 +341,8 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -350,10 +357,8 @@ func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	//
-	uid := d.Id()
-	//
-	cluster, err := c.GetCluster(uid)
+
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {

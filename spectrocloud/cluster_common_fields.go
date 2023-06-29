@@ -63,7 +63,9 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	if clusterStatus, err := c.GetClusterWithoutStatus(d.Id()); err != nil {
+	clusterContext := d.Get("context").(string)
+
+	if clusterStatus, err := c.GetClusterWithoutStatus(clusterContext, d.Id()); err != nil {
 		return diag.FromErr(err), true
 	} else if clusterStatus != nil && clusterStatus.Status != nil && clusterStatus.Status.Location != nil {
 		if err := d.Set("location_config", flattenLocationConfig(clusterStatus.Status.Location)); err != nil {

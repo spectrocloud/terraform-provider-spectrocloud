@@ -18,6 +18,7 @@ func prepareDataVolumeTestData() *schema.ResourceData {
 	rd := resourceKubevirtDataVolume().TestResourceData()
 
 	rd.Set("cluster_uid", "cluster-123")
+	rd.Set("cluster_context", "tenant")
 	rd.Set("vm_name", "vm-test")
 	rd.Set("vm_namespace", "default")
 	rd.Set("metadata", []interface{}{
@@ -88,7 +89,7 @@ func TestCreateDataVolumePositive(t *testing.T) {
 
 	// Mock the V1Client
 	m := &client.V1Client{
-		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope string, uid string) (*models.V1SpectroCluster, error) {
 			isHost := new(bool)
 			*isHost = true
 			cluster := &models.V1SpectroCluster{
@@ -165,7 +166,7 @@ func TestCreateDataVolumePositive(t *testing.T) {
 	}
 
 	// Check if resourceData ID was set correctly
-	expectedID := utils.BuildIdDV("cluster-123", "default", "vm-test", &models.V1VMObjectMeta{
+	expectedID := utils.BuildIdDV("tenant", "cluster-123", "default", "vm-test", &models.V1VMObjectMeta{
 		Name:      "vol-test",
 		Namespace: "default",
 	})
@@ -188,7 +189,7 @@ func TestCreateDataVolume(t *testing.T) {
 			}
 			return "data-volume-id", nil
 		},
-		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope string, uid string) (*models.V1SpectroCluster, error) {
 			isHost := new(bool)
 			*isHost = true
 			cluster := &models.V1SpectroCluster{

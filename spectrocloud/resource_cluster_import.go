@@ -80,9 +80,10 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
+	ClusterContext := d.Get("context").(string)
 	stateConf := &retry.StateChangeConf{
 		Target:     []string{"Pending"},
-		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
+		Refresh:    resourceClusterStateRefreshFunc(c, ClusterContext, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 1 * time.Second,
 		Delay:      5 * time.Second,
@@ -105,16 +106,15 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	cloudType := d.Get("cloud").(string)
-
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	uid := d.Id()
-	cluster, err := c.GetCluster(uid)
+
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
+		// Deleted - Terraform will recreate it
 		d.SetId("")
 		return diags
 	}
@@ -123,6 +123,7 @@ func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
+	cloudType := d.Get("cloud").(string)
 	if cluster.Status.State == "Running" {
 		switch cloudType {
 		case "aws":

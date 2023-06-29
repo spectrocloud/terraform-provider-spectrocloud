@@ -56,6 +56,10 @@ func resourceApplication() *schema.Resource {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
+						"cluster_context": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
 						"cluster_name": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -188,8 +192,9 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 		}
 
 		clusterUid := d.Get("cluster_uid").(string)
+		clusterScope := d.Get("cluster_context").(string)
 
-		cluster, err := c.GetCluster(clusterUid)
+		cluster, err := c.GetCluster(clusterScope, clusterUid)
 		if err != nil && cluster == nil {
 			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 		}
