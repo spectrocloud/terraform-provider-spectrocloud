@@ -335,23 +335,26 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolAksHash(machinePoolResource)
+                        // since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolAksHash(machinePoolResource)
 
-			machinePool := toMachinePoolAks(machinePoolResource)
+				machinePool := toMachinePoolAks(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolAks(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolAksHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolAks(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolAks(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolAksHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolAks(cloudConfigId, machinePool)
+				}
+				if err != nil {
+					return diag.FromErr(err)
+				}
+				delete(osMap, name)
 			}
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
