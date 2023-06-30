@@ -339,6 +339,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
+                        // since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
 				if name == "" {
