@@ -18,6 +18,7 @@ description: |-
 
 ### Required
 
+- `cluster_context` (String)
 - `cluster_uid` (String)
 
 ### Optional

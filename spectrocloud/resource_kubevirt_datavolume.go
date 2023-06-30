@@ -56,7 +56,8 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, resourceData *schema.
 	log.Printf("[INFO] Creating new data volume: %#v", dv)
 	// Warning or errors can be collected in a slice type
 	clusterUid := resourceData.Get("cluster_uid").(string)
-	_, err = c.GetCluster(clusterUid)
+	ClusterContext := resourceData.Get("cluster_context").(string)
+	_, err = c.GetCluster(ClusterContext, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -71,14 +72,14 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, resourceData *schema.
 	}
 	vmNamespace := resourceData.Get("vm_namespace").(string)
 
-	if _, err := c.CreateDataVolume(clusterUid, vmName, hapiVolume); err != nil {
+	if _, err := c.CreateDataVolume(ClusterContext, clusterUid, vmName, hapiVolume); err != nil {
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new data volume: %#v", dv)
 	if err := datavolume.ToResourceData(*dv, resourceData); err != nil {
 		return diag.FromErr(err)
 	}
-	resourceData.SetId(utils.BuildIdDV(clusterUid, vmNamespace, vmName, hapiVolume.DataVolumeTemplate.Metadata))
+	resourceData.SetId(utils.BuildIdDV(ClusterContext, clusterUid, vmNamespace, vmName, hapiVolume.DataVolumeTemplate.Metadata))
 
 	return diags
 }
@@ -86,14 +87,14 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, resourceData *schema.
 func resourceKubevirtDataVolumeRead(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	cli := (meta).(*client.V1Client)
 
-	clusterUid, namespace, vm_name, _, err := utils.IdPartsDV(resourceData.Id())
+	scope, clusterUid, namespace, vm_name, _, err := utils.IdPartsDV(resourceData.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading virtual machine %s", vm_name)
 
-	hapiVM, err := cli.GetVirtualMachine(clusterUid, namespace, vm_name)
+	hapiVM, err := cli.GetVirtualMachine(scope, clusterUid, namespace, vm_name)
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
@@ -142,18 +143,18 @@ func resourceKubevirtDataVolumeDelete(ctx context.Context, resourceData *schema.
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	clusterUid, namespace, vm_name, vol_name, err := utils.IdPartsDV(resourceData.Id())
+	scope, clusterUid, namespace, vm_name, vol_name, err := utils.IdPartsDV(resourceData.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	_, err = c.GetCluster(clusterUid)
+	_, err = c.GetCluster(scope, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting data volume: %#v", vm_name)
-	if err := c.DeleteDataVolume(clusterUid, namespace, vm_name, &models.V1VMRemoveVolumeEntity{
+	if err := c.DeleteDataVolume(scope, clusterUid, namespace, vm_name, &models.V1VMRemoveVolumeEntity{
 		Persist: true,
 		RemoveVolumeOptions: &models.V1VMRemoveVolumeOptions{
 			Name: types.Ptr(vol_name),
