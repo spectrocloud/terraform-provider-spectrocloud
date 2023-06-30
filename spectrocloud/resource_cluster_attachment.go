@@ -12,6 +12,7 @@ import (
 
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
 
@@ -31,6 +32,10 @@ func resourceAddonDeployment() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"cluster_uid": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"cluster_context": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -54,15 +59,16 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	clusterUid := d.Get("cluster_uid").(string)
+	clusterScope := d.Get("cluster_context").(string)
 
-	cluster, err := c.GetCluster(clusterUid)
+	cluster, err := c.GetCluster(clusterScope, clusterUid)
 	if err != nil && cluster == nil {
 		return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 	}
 
 	addonDeployment := toAddonDeployment(c, d)
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c, false)
+	diagnostics, isError := waitForClusterCreation(ctx, d, clusterScope, clusterUid, diags, c, false)
 	if isError {
 		return diagnostics
 	}
@@ -83,7 +89,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 	d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
 
-	diagnostics, isError = waitForAddonDeploymentCreation(ctx, d, cluster.Metadata.UID, addonDeployment.Profiles[0].UID, diags, c)
+	diagnostics, isError = waitForAddonDeploymentCreation(ctx, d, *cluster, addonDeployment.Profiles[0].UID, diags, c)
 	if isError {
 		return diagnostics
 	}
@@ -125,8 +131,9 @@ func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m in
 
 	var diags diag.Diagnostics
 
-	uid := d.Get("cluster_uid").(string)
-	cluster, err := c.GetCluster(uid)
+	clusterUid := d.Get("cluster_uid").(string)
+	clusterScope := d.Get("cluster_context").(string)
+	cluster, err := c.GetCluster(clusterScope, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -147,8 +154,9 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 		c := m.(*client.V1Client)
 
 		clusterUid := d.Get("cluster_uid").(string)
+		clusterScope := d.Get("cluster_context").(string)
 
-		cluster, err := c.GetCluster(clusterUid)
+		cluster, err := c.GetCluster(clusterScope, clusterUid)
 		if err != nil && cluster == nil {
 			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 		}
@@ -181,7 +189,7 @@ func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interf
 		return diag.FromErr(err)
 	}
 	d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
-	diagnostics, isError := waitForAddonDeploymentUpdate(ctx, d, cluster.Metadata.UID, addonDeployment.Profiles[0].UID, diags, c)
+	diagnostics, isError := waitForAddonDeploymentUpdate(ctx, d, *cluster, addonDeployment.Profiles[0].UID, diags, c)
 	if isError {
 		return diagnostics
 	}

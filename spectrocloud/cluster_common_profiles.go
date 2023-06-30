@@ -8,14 +8,17 @@ import (
 
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func toProfiles(c *client.V1Client, d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity {
 	var cluster *models.V1SpectroCluster
 	var err error
+	clusterContext := d.Get("context").(string)
+
 	if d.Id() != "" {
-		cluster, err = c.GetClusterWithoutStatus(d.Id())
+		cluster, err = c.GetClusterWithoutStatus(clusterContext, d.Id())
 		if err != nil {
 			return nil
 		}
@@ -114,7 +117,8 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	}
 
 	ctx := context.Background()
-	if err := waitForProfileDownload(ctx, c, d.Id(), d.Timeout(schema.TimeoutUpdate)); err != nil {
+	clusterContext := d.Get("context").(string)
+	if err := waitForProfileDownload(ctx, c, clusterContext, d.Id(), d.Timeout(schema.TimeoutUpdate)); err != nil {
 		return err
 	}
 
