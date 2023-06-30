@@ -317,26 +317,29 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolGcpHash(machinePoolResource)
+                        // since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolGcpHash(machinePoolResource)
 
-			machinePool := toMachinePoolGcp(machinePoolResource)
+				machinePool := toMachinePoolGcp(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolGcp(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolGcpHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolGcp(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolGcp(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolGcpHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolGcp(cloudConfigId, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
