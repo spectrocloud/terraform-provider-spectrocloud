@@ -161,24 +161,50 @@ func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
 	return meta
 }
 
-func FlattenMetadata(meta metav1.ObjectMeta) []interface{} {
-	m := make(map[string]interface{})
-	m["annotations"] = utils.FlattenStringMap(meta.Annotations)
-	if meta.GenerateName != "" {
-		m["generate_name"] = meta.GenerateName
+func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) error {
+	//m := make(map[string]interface{})
+	//m["annotations"] = utils.FlattenStringMap(meta.Annotations)
+	//if meta.GenerateName != "" {
+	//	m["generate_name"] = meta.GenerateName
+	//}
+	//m["labels"] = utils.FlattenStringMap(meta.Labels)
+	//m["name"] = meta.Name
+	//m["resource_version"] = meta.ResourceVersion
+	//m["self_link"] = meta.SelfLink
+	//m["uid"] = fmt.Sprintf("%v", meta.UID)
+	//m["generation"] = meta.Generation
+	//
+	//if meta.Namespace != "" {
+	//	m["namespace"] = meta.Namespace
+	//}
+	//return []interface{}{m}
+	var err error
+	if err = resourceData.Set("annotations", utils.FlattenStringMap(meta.Annotations)); err != nil {
+		return err
 	}
-	m["labels"] = utils.FlattenStringMap(meta.Labels)
-	m["name"] = meta.Name
-	m["resource_version"] = meta.ResourceVersion
-	m["self_link"] = meta.SelfLink
-	m["uid"] = fmt.Sprintf("%v", meta.UID)
-	m["generation"] = meta.Generation
-
-	if meta.Namespace != "" {
-		m["namespace"] = meta.Namespace
+	if err = resourceData.Set("labels", utils.FlattenStringMap(meta.Labels)); err != nil {
+		return err
+	}
+	if err = resourceData.Set("name", meta.Name); err != nil {
+		return err
+	}
+	if err = resourceData.Set("resource_version", meta.ResourceVersion); err != nil {
+		return err
+	}
+	if err = resourceData.Set("self_link", meta.SelfLink); err != nil {
+		return err
+	}
+	if err = resourceData.Set("uid", fmt.Sprintf("%v", meta.UID)); err != nil {
+		return err
+	}
+	if err = resourceData.Set("generation", fmt.Sprintf("%v", meta.Generation)); err != nil {
+		return err
+	}
+	if err = resourceData.Set("namespace", fmt.Sprintf("%v", meta.Namespace)); err != nil {
+		return err
 	}
 
-	return []interface{}{m}
+	return err
 }
 
 func AppendPatchOps(keyPrefix, pathPrefix string, resourceData *schema.ResourceData, ops []patch.PatchOperation) patch.PatchOperations {

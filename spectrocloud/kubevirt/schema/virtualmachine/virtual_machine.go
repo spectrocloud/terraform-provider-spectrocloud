@@ -18,8 +18,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 		"name": {
 			Type:         schema.TypeString,
 			Description:  fmt.Sprintf("Name of the virtual machine, must be unique. Cannot be updated."),
-			Optional:     true,
-			Computed:     true,
+			Required:     true,
 			ForceNew:     true,
 			ValidateFunc: utils.ValidateName,
 		},
@@ -328,7 +327,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			}, false),
 		},
 		"pod_dns_config": k8s.PodDnsConfigSchema(),
-		
+
 		"status": virtualMachineStatusSchema(),
 	}
 }
@@ -352,9 +351,10 @@ func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.Virtual
 }
 
 func ToResourceData(vm kubevirtapiv1.VirtualMachine, resourceData *schema.ResourceData) error {
-	if err := resourceData.Set("metadata", k8s.FlattenMetadata(vm.ObjectMeta)); err != nil {
+	if err := resourceData.Set("metadata", k8s.FlattenMetadata(vm.ObjectMeta, resourceData)); err != nil {
 		return err
 	}
+
 	if err := resourceData.Set("spec", flattenVirtualMachineSpec(vm.Spec)); err != nil {
 		return err
 	}
