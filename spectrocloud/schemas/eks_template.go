@@ -29,6 +29,16 @@ func AwsLaunchTemplate() *schema.Schema {
 					Optional:    true,
 					Description: "The throughput of the root volume in MiB/s.",
 				},
+				// set of strings: additional security groups to attach to the instance
+				"additional_security_groups": {
+					Type: schema.TypeSet,
+					Set:  schema.HashString,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+					Optional:    true,
+					Description: "Additional security groups to attach to the instance.",
+				},
 			},
 		},
 	}
