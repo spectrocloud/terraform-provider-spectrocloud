@@ -82,9 +82,9 @@ func resourceSSHKeyRead(ctx context.Context, d *schema.ResourceData, m interface
 		return diag.FromErr(err)
 	}
 	// Setting back public ssh key into sate file leads to security break hence commenting it out
-	if err := d.Set("ssh_key", base64.StdEncoding.EncodeToString([]byte(SSHKey.Spec.PublicKey))); err != nil {
-		return diag.FromErr(err)
-	}
+	//if err := d.Set("ssh_key", base64.StdEncoding.EncodeToString([]byte(SSHKey.Spec.PublicKey))); err != nil {
+	//	return diag.FromErr(err)
+	//}
 
 	return diags
 

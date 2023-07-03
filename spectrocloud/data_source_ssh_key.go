@@ -34,7 +34,7 @@ func dataSourceSSHKey() *schema.Resource {
 				StateFunc: func(val any) string {
 					return base64.StdEncoding.EncodeToString([]byte(val.(string)))
 				},
-				Description: "The SSH key to be used for the cluster. This is the public key that will be used to access the cluster.",
+				Description: "The SSH key value",
 			},
 			"context": {
 				Type:         schema.TypeString,
