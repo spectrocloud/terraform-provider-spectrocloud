@@ -245,12 +245,12 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	cluster := toAwsCluster(c, d)
 
-	uid, err := c.CreateClusterAws(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterAws(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
 	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
