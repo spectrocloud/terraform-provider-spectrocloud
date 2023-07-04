@@ -829,12 +829,12 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		}
 	}
 
-	mp.CloudConfig.AwsLaunchTemplate = setAwsLaunchTemplate(m)
+	mp.CloudConfig.AwsLaunchTemplate = setEksLaunchTemplate(m)
 
 	return mp
 }
 
-func setAwsLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunchTemplate {
+func setEksLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunchTemplate {
 	var launchTemplate *models.V1AwsLaunchTemplate
 
 	if machinePool["eks_launch_template"] != nil {
@@ -874,19 +874,25 @@ func setAwsLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunc
 			launchTemplate.RootVolume.Throughput = int64(eksLaunchTemplate["root_volume_throughput"].(int))
 		}
 
-		if eksLaunchTemplate["additional_security_groups"] != nil {
-			securityGroups := expandStringList(eksLaunchTemplate["additional_security_groups"].(*schema.Set).List())
-			additionalSecurityGroups := make([]*models.V1AwsResourceReference, 0)
-			for _, securityGroup := range securityGroups {
-				additionalSecurityGroups = append(additionalSecurityGroups, &models.V1AwsResourceReference{
-					ID: securityGroup,
-				})
-			}
-			launchTemplate.AdditionalSecurityGroups = additionalSecurityGroups
-		}
+		launchTemplate.AdditionalSecurityGroups = setAdditionalSecurityGroups(eksLaunchTemplate)
 	}
 
 	return launchTemplate
+}
+
+func setAdditionalSecurityGroups(eksLaunchTemplate map[string]interface{}) []*models.V1AwsResourceReference {
+	if eksLaunchTemplate["additional_security_groups"] != nil {
+		securityGroups := expandStringList(eksLaunchTemplate["additional_security_groups"].(*schema.Set).List())
+		additionalSecurityGroups := make([]*models.V1AwsResourceReference, 0)
+		for _, securityGroup := range securityGroups {
+			additionalSecurityGroups = append(additionalSecurityGroups, &models.V1AwsResourceReference{
+				ID: securityGroup,
+			})
+		}
+		return additionalSecurityGroups
+	}
+
+	return nil
 }
 
 func hasNoneOfKeys(m map[string]interface{}, keys []string) bool {

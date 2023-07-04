@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -96,11 +97,29 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+
+	if m["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
+	}
+	if m["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
+	}
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
+	if m["azs"] != nil {
+		azsSet := m["azs"].(*schema.Set)
+		azsList := azsSet.List()
+		azsListStr := make([]string, len(azsList))
+		for i, v := range azsList {
+			azsListStr[i] = v.(string)
+		}
+		sort.Strings(azsListStr)
+		azsStr := strings.Join(azsListStr, "-")
+		buf.WriteString(fmt.Sprintf("%s-", azsStr))
+	}
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 	buf.WriteString(HashStringMap(m["az_subnets"]))
 
