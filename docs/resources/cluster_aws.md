@@ -179,13 +179,16 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
+- `additional_security_groups` (Set of String) Additional security groups to attach to the instance.
 - `az_subnets` (Map of String) Mutually exclusive with `azs`. Use `az_subnets` for Static provisioning.
 - `azs` (Set of String) Mutually exclusive with `az_subnets`. Use `azs` for Dynamic provisioning.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `disk_size_gb` (Number)
+- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `max_price` (String)
+- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
