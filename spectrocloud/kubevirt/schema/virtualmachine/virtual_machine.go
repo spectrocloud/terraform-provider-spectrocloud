@@ -21,21 +21,21 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Required:     true,
 			ForceNew:     true,
 			ValidateFunc: utils.ValidateName,
-		},
+		}, //set back done
 		"namespace": {
 			Type:        schema.TypeString,
 			Description: fmt.Sprintf("Namespace defines the space within, Name must be unique."),
 			Optional:    true,
 			ForceNew:    true,
 			Default:     "default",
-		},
+		}, //set back done
 		"labels": {
 			Type:         schema.TypeMap,
 			Description:  fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select). May match selectors of replication controllers and services."),
 			Optional:     true,
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: utils.ValidateLabels,
-		},
+		}, //set back done
 		"annotations": {
 			Type:         schema.TypeMap,
 			Description:  fmt.Sprintf("An unstructured key value map stored with the VM that may be used to store arbitrary metadata."),
@@ -43,22 +43,22 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: utils.ValidateAnnotations,
 			Computed:     true,
-		},
+		}, //set back done
 		"generation": {
 			Type:        schema.TypeInt,
 			Description: "A sequence number representing a specific generation of the desired state.",
 			Computed:    true,
-		},
+		}, //set back done
 		"resource_version": {
 			Type:        schema.TypeString,
 			Description: fmt.Sprintf("An opaque value that represents the internal version of this VM that can be used by clients to determine when VM has changed."),
 			Computed:    true,
-		},
+		}, //set back done
 		"self_link": {
 			Type:        schema.TypeString,
 			Description: fmt.Sprintf("A URL representing this VM."),
 			Computed:    true,
-		},
+		}, //set back done
 		"uid": {
 			Type:        schema.TypeString,
 			Description: fmt.Sprintf("The unique in time and space value for this VM."),
@@ -70,31 +70,31 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Required:    true,
 			ForceNew:    true,
 			Description: "The cluster UID to which the virtual machine belongs to.",
-		},
+		}, // No need to set back
 		"base_vm_name": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			ForceNew:    true,
 			Description: "The name of the source virtual machine that a clone will be created of.",
-		},
+		}, // No need to set back
 		"run_on_launch": {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Default:     true,
 			Description: "If set to `true`, the virtual machine will be started when the cluster is launched. Default value is `true`.",
-		},
+		}, // No need to set back
 		"vm_action": {
 			Type:         schema.TypeString,
 			Optional:     true,
 			ValidateFunc: validation.StringInSlice([]string{"", "start", "stop", "restart", "pause", "resume", "migrate"}, false),
 			Description:  "The action to be performed on the virtual machine. Valid values are: `start`, `stop`, `restart`, `pause`, `resume`, `migrate`. Default value is `start`.",
-		},
+		}, // No need to set back
 
 		//"metadata": k8s.NamespacedMetadataSchema("VirtualMachine", false),
 		//"spec":     virtualMachineSpecSchema(),
 
 		//Added for Flattening it
-		"data_volume_templates": dataVolumeTemplatesSchema(),
+		"data_volume_templates": dataVolumeTemplatesSchema(), //set back done
 		"run_strategy": {
 			Type:        schema.TypeString,
 			Description: "Running state indicates the requested running state of the VirtualMachineInstance, mutually exclusive with Running.",
@@ -106,7 +106,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 				"Manual",
 				"RerunOnFailure",
 			}, false),
-		},
+		}, //set back done
 		"disk": {
 			Type:        schema.TypeList,
 			Description: "Disks describes disks, cdroms, floppy and luns which are connected to the vmi.",
@@ -158,7 +158,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 					},
 				},
 			},
-		},
+		}, //set back done
 		"interface": {
 			Type:        schema.TypeList,
 			Description: "Interfaces describe network interfaces which are added to the vmi.",
@@ -197,7 +197,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 					},
 				},
 			},
-		},
+		}, //set back done
 		"resources": {
 			Type:        schema.TypeList,
 			Description: "Resources describes the Compute Resources required by this vmi.",
@@ -222,7 +222,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 					},
 				},
 			},
-		},
+		}, //set back done
 		"cpu": {
 			Type:        schema.TypeList,
 			Description: "CPU allows to specifying the CPU topology. Valid resource keys are \"cores\" , \"sockets\" and \"threads\"",
@@ -247,7 +247,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 					},
 				},
 			},
-		},
+		}, //set back done
 		"memory": {
 			Type:        schema.TypeList,
 			Description: "Memory allows specifying the vmi memory features.",
@@ -268,28 +268,28 @@ func VirtualMachineFields() map[string]*schema.Schema {
 					},
 				},
 			},
-		},
-		"network": virtualmachineinstance.NetworksSchema(),
-		"volume":  virtualmachineinstance.VolumesSchema(),
+		}, //set back done
+		"network": virtualmachineinstance.NetworksSchema(), //set back done
+		"volume":  virtualmachineinstance.VolumesSchema(),  //set back done
 
 		"priority_class_name": {
 			Type:        schema.TypeString,
 			Description: "If specified, indicates the pod's priority. If not specified, the pod priority will be default or zero if there is no default.",
 			Optional:    true,
-		},
+		}, //set back done
 		"node_selector": {
 			Type:        schema.TypeMap,
 			Description: "NodeSelector is a selector which must be true for the vmi to fit on a node. Selector which must match a node's labels for the vmi to be scheduled on that node.",
 			Optional:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-		},
-		"affinity": k8s.AffinitySchema(),
+		}, //set back done
+		"affinity": k8s.AffinitySchema(), //set back done
 		"scheduler_name": {
 			Type:        schema.TypeString,
 			Description: "If specified, the VMI will be dispatched by specified scheduler. If not specified, the VMI will be dispatched by default scheduler.",
 			Optional:    true,
-		},
-		"tolerations": k8s.TolerationSchema(),
+		}, //set back done
+		"tolerations": k8s.TolerationSchema(), //set back done
 		"eviction_strategy": {
 			Type:        schema.TypeString,
 			Description: "EvictionStrategy can be set to \"LiveMigrate\" if the VirtualMachineInstance should be migrated instead of shut-off in case of a node drain.",
@@ -297,24 +297,24 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			ValidateFunc: validation.StringInSlice([]string{
 				"LiveMigrate",
 			}, false),
-		},
+		}, //set back done
 		"termination_grace_period_seconds": {
 			Type:        schema.TypeInt,
 			Description: "Grace period observed after signalling a VirtualMachineInstance to stop after which the VirtualMachineInstance is force terminated.",
 			Optional:    true,
-		},
-		"liveness_probe":  virtualmachineinstance.ProbeSchema(),
-		"readiness_probe": virtualmachineinstance.ProbeSchema(),
+		}, //set back done
+		"liveness_probe":  virtualmachineinstance.ProbeSchema(), //set back done
+		"readiness_probe": virtualmachineinstance.ProbeSchema(), //set back done
 		"hostname": {
 			Type:        schema.TypeString,
 			Description: "Specifies the hostname of the vmi.",
 			Optional:    true,
-		},
+		}, //set back done
 		"subdomain": {
 			Type:        schema.TypeString,
 			Description: "If specified, the fully qualified vmi hostname will be \"<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>\".",
 			Optional:    true,
-		},
+		}, //set back done
 		"dns_policy": {
 			Type:        schema.TypeString,
 			Description: "DNSPolicy defines how a pod's DNS will be configured.",
@@ -325,10 +325,10 @@ func VirtualMachineFields() map[string]*schema.Schema {
 				"Default",
 				"None",
 			}, false),
-		},
+		}, //set back done
 		"pod_dns_config": k8s.PodDnsConfigSchema(),
 
-		"status": virtualMachineStatusSchema(),
+		"status": virtualMachineStatusSchema(), //set back done
 	}
 }
 
@@ -351,11 +351,16 @@ func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.Virtual
 }
 
 func ToResourceData(vm kubevirtapiv1.VirtualMachine, resourceData *schema.ResourceData) error {
-	if err := resourceData.Set("metadata", k8s.FlattenMetadata(vm.ObjectMeta, resourceData)); err != nil {
+	//if err := resourceData.Set("metadata", k8s.FlattenMetadata(vm.ObjectMeta, resourceData)); err != nil {
+	//	return err
+	//}
+	if err := k8s.FlattenMetadata(vm.ObjectMeta, resourceData); err != nil {
 		return err
 	}
-
-	if err := resourceData.Set("spec", flattenVirtualMachineSpec(vm.Spec, resourceData)); err != nil {
+	//if err := resourceData.Set("spec", flattenVirtualMachineSpec(vm.Spec, resourceData)); err != nil {
+	//	return err
+	//}
+	if err := FlattenVMMToSpectroSchema(vm.Spec, resourceData); err != nil {
 		return err
 	}
 	if err := resourceData.Set("status", flattenVirtualMachineStatus(vm.Status)); err != nil {

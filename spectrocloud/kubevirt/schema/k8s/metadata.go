@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
@@ -198,7 +197,7 @@ func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) 
 	if err = resourceData.Set("uid", fmt.Sprintf("%v", meta.UID)); err != nil {
 		return err
 	}
-	if err = resourceData.Set("generation", fmt.Sprintf("%v", meta.Generation)); err != nil {
+	if err = resourceData.Set("generation", int(meta.Generation)); err != nil { //fmt.Sprintf("%v", meta.Generation)
 		return err
 	}
 	if err = resourceData.Set("namespace", fmt.Sprintf("%v", meta.Namespace)); err != nil {

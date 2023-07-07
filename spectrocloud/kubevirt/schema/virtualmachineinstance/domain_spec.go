@@ -334,8 +334,10 @@ func expandMemory(memory []interface{}) (kubevirtapiv1.Memory, error) {
 	}
 
 	if v, ok := in["hugepages"].(string); ok {
-		result.Hugepages = &kubevirtapiv1.Hugepages{
-			PageSize: v,
+		if in["hugepages"].(string) != "" {
+			result.Hugepages = &kubevirtapiv1.Hugepages{
+				PageSize: v,
+			}
 		}
 	}
 

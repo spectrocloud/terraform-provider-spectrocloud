@@ -172,11 +172,12 @@ func expandVirtualMachineInstanceSpec(d *schema.ResourceData) (kubevirtapiv1.Vir
 	return result, nil
 }
 
-func flattenVirtualMachineInstanceSpec(in kubevirtapiv1.VirtualMachineInstanceSpec) []interface{} {
+func flattenVirtualMachineInstanceSpec(in kubevirtapiv1.VirtualMachineInstanceSpec, resourceData *schema.ResourceData) []interface{} {
 	att := make(map[string]interface{})
 
 	att["priority_class_name"] = in.PriorityClassName
 	att["domain"] = flattenDomainSpec(in.Domain)
+
 	att["node_selector"] = utils.FlattenStringMap(in.NodeSelector)
 	att["affinity"] = k8s.FlattenAffinity(in.Affinity)
 	att["scheduler_name"] = in.SchedulerName

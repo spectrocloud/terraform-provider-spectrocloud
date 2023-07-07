@@ -110,3 +110,101 @@ func flattenVirtualMachineSpec(in kubevirtapiv1.VirtualMachineSpec, resourceData
 
 	return []interface{}{att}
 }
+
+func FlattenVMMToSpectroSchema(in kubevirtapiv1.VirtualMachineSpec, resourceData *schema.ResourceData) error {
+	VM := flattenVirtualMachineSpec(in, resourceData)[0].(map[string]interface{})
+	VMTemplate := VM["template"]
+	VMTemplateSpec := VMTemplate.([]interface{})[0].(map[string]interface{})["spec"]
+	VMTemplateSpecAttributes := VMTemplateSpec.([]interface{})[0].(map[string]interface{})
+	if err := resourceData.Set("run_strategy", VM["run_strategy"]); err != nil {
+		return err
+	}
+	if err := resourceData.Set("node_selector", VMTemplateSpecAttributes["node_selector"]); err != nil {
+		return err
+	}
+	if err := resourceData.Set("affinity", VMTemplateSpecAttributes["affinity"]); err != nil {
+		return err
+	}
+	if err := resourceData.Set("scheduler_name", VMTemplateSpecAttributes["scheduler_name"]); err != nil {
+		return err
+	}
+	if err := resourceData.Set("hostname", VMTemplateSpecAttributes["hostname"]); err != nil {
+		return err
+	}
+	if err := resourceData.Set("subdomain", VMTemplateSpecAttributes["subdomain"]); err != nil {
+		return err
+	}
+	if err := resourceData.Set("dns_policy", VMTemplateSpecAttributes["dns_policy"]); err != nil {
+		return err
+	}
+	if err := resourceData.Set("priority_class_name", VMTemplateSpecAttributes["priority_class_name"]); err != nil {
+		return err
+	}
+	if err := resourceData.Set("network", VMTemplateSpecAttributes["network"]); err != nil {
+		return err
+	}
+	if err := resourceData.Set("volume", VMTemplateSpecAttributes["volume"]); err != nil {
+		return err
+	}
+
+	// Setting up domain
+	vmDomain := VMTemplateSpecAttributes["domain"].([]interface{})[0].(map[string]interface{})
+	vmTolerations := VMTemplateSpecAttributes["tolerations"]
+	resource := vmDomain["resources"]
+	cpu := vmDomain["cpu"]
+	memory := vmDomain["memory"]
+	device := vmDomain["devices"].([]interface{})[0].(map[string]interface{})
+	disks := device["disk"]
+	interfaces := device["interface"]
+
+	if err := resourceData.Set("cpu", cpu); err != nil {
+		return err
+	}
+	if err := resourceData.Set("memory", memory); err != nil {
+		return err
+	}
+	if err := resourceData.Set("resources", resource); err != nil {
+		return err
+	}
+	if err := resourceData.Set("disk", disks); err != nil {
+		return err
+	}
+	if err := resourceData.Set("interface", interfaces); err != nil {
+		return err
+	}
+
+	if err := resourceData.Set("tolerations", vmTolerations); err != nil {
+		return err
+	}
+
+	if v, ok := VMTemplateSpecAttributes["eviction_strategy"]; ok != true {
+		if err := resourceData.Set("eviction_strategy", v); err != nil {
+			return err
+		}
+	}
+	if v, ok := VMTemplateSpecAttributes["termination_grace_period_seconds"]; ok != true {
+		if err := resourceData.Set("termination_grace_period_seconds", v); err != nil {
+			return err
+		}
+	}
+	if v, ok := VMTemplateSpecAttributes["liveness_probe"]; ok != true {
+		if err := resourceData.Set("liveness_probe", v); err != nil {
+			return err
+		}
+	}
+	if v, ok := VMTemplateSpecAttributes["readiness_probe"]; ok != true {
+		if err := resourceData.Set("readiness_probe", v); err != nil {
+			return err
+		}
+	}
+	if v, ok := VMTemplateSpecAttributes["pod_dns_config"]; ok != true {
+		if err := resourceData.Set("pod_dns_config", v); err != nil {
+			return err
+		}
+	}
+
+	if err := resourceData.Set("data_volume_templates", VM["data_volume_templates"]); err != nil {
+		return err
+	}
+	return nil
+}

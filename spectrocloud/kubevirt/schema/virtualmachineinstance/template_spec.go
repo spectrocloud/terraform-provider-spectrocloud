@@ -65,7 +65,7 @@ func FlattenVirtualMachineInstanceTemplateSpec(in kubevirtapiv1.VirtualMachineIn
 	att := make(map[string]interface{})
 
 	att["metadata"] = k8s.FlattenMetadata(in.ObjectMeta, resourceData)
-	att["spec"] = flattenVirtualMachineInstanceSpec(in.Spec)
+	att["spec"] = flattenVirtualMachineInstanceSpec(in.Spec, resourceData)
 
 	return []interface{}{att}
 }
