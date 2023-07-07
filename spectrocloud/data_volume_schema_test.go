@@ -123,7 +123,6 @@ func TestCreateDataVolumePositive(t *testing.T) {
 						ClusterRbac:                    nil,
 						ClusterResources:               nil,
 						ControlPlaneHealthCheckTimeout: "",
-						Fips:                           nil,
 						HostClusterConfig: &models.V1HostClusterConfig{
 							ClusterEndpoint: &models.V1HostClusterEndpoint{
 								Config: nil,
@@ -223,7 +222,6 @@ func TestCreateDataVolume(t *testing.T) {
 						ClusterRbac:                    nil,
 						ClusterResources:               nil,
 						ControlPlaneHealthCheckTimeout: "",
-						Fips:                           nil,
 						HostClusterConfig: &models.V1HostClusterConfig{
 							ClusterEndpoint: &models.V1HostClusterEndpoint{
 								Config: nil,

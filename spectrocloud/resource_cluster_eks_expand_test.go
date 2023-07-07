@@ -53,7 +53,7 @@ func TestSetAwsLaunchTemplate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := setAwsLaunchTemplate(tc.input)
+			result := setEksLaunchTemplate(tc.input)
 			if !reflect.DeepEqual(result, tc.expected) {
 				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
 			}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -96,11 +97,29 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+
+	if m["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
+	}
+	if m["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
+	}
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
+	if m["azs"] != nil {
+		azsSet := m["azs"].(*schema.Set)
+		azsList := azsSet.List()
+		azsListStr := make([]string, len(azsList))
+		for i, v := range azsList {
+			azsListStr[i] = v.(string)
+		}
+		sort.Strings(azsListStr)
+		azsStr := strings.Join(azsListStr, "-")
+		buf.WriteString(fmt.Sprintf("%s-", azsStr))
+	}
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 	buf.WriteString(HashStringMap(m["az_subnets"]))
 
@@ -133,7 +152,38 @@ func resourceMachinePoolEksHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
 	}
 
+	if m["eks_launch_template"] != nil {
+		buf.WriteString(eksLaunchTemplate(m["eks_launch_template"]))
+	}
+
 	return int(hash(buf.String()))
+}
+
+func eksLaunchTemplate(v interface{}) string {
+	var buf bytes.Buffer
+	if len(v.([]interface{})) > 0 {
+		m := v.([]interface{})[0].(map[string]interface{})
+
+		if m["ami_id"] != nil {
+			buf.WriteString(fmt.Sprintf("%s-", m["ami_id"].(string)))
+		}
+		if m["root_volume_type"] != nil {
+			buf.WriteString(fmt.Sprintf("%s-", m["root_volume_type"].(string)))
+		}
+		if m["root_volume_iops"] != nil {
+			buf.WriteString(fmt.Sprintf("%d-", m["root_volume_iops"].(int)))
+		}
+		if m["root_volume_throughput"] != nil {
+			buf.WriteString(fmt.Sprintf("%d-", m["root_volume_throughput"].(int)))
+		}
+		if m["additional_security_groups"] != nil {
+			for _, sg := range m["additional_security_groups"].(*schema.Set).List() {
+				buf.WriteString(fmt.Sprintf("%s-", sg.(string)))
+			}
+		}
+	}
+
+	return buf.String()
 }
 
 func resourceMachinePoolCoxEdgeHash(v interface{}) int {

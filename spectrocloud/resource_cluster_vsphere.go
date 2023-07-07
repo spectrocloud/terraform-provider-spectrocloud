@@ -294,12 +294,12 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 
 	cluster := toVsphereCluster(c, d)
 
-	uid, err := c.CreateClusterVsphere(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterVsphere(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
 	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
