@@ -59,12 +59,12 @@ func ExpandDataVolumeTemplates(dataVolumes []interface{}) ([]cdiv1.DataVolume, e
 	return result, nil
 }
 
-func FlattenDataVolumeTemplates(in []cdiv1.DataVolume) []interface{} {
+func FlattenDataVolumeTemplates(in []cdiv1.DataVolume, resourceData *schema.ResourceData) []interface{} {
 	att := make([]interface{}, len(in))
 
 	for i, v := range in {
 		c := make(map[string]interface{})
-		c["metadata"] = k8s.FlattenMetadata(v.ObjectMeta)
+		c["metadata"] = k8s.FlattenMetadata(v.ObjectMeta, resourceData)
 		c["spec"] = FlattenDataVolumeSpec(v.Spec)
 		c["status"] = flattenDataVolumeStatus(v.Status)
 		att[i] = c
@@ -88,7 +88,7 @@ func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, err
 }
 
 func ToResourceData(dv cdiv1.DataVolume, resourceData *schema.ResourceData) error {
-	if err := resourceData.Set("metadata", k8s.FlattenMetadata(dv.ObjectMeta)); err != nil {
+	if err := resourceData.Set("metadata", k8s.FlattenMetadata(dv.ObjectMeta, resourceData)); err != nil {
 		return err
 	}
 	if err := resourceData.Set("spec", FlattenDataVolumeSpec(dv.Spec)); err != nil {

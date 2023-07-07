@@ -12,4 +12,5 @@ provider "spectrocloud" {
   api_key      = var.sc_api_key
   project_name = var.sc_project_name
   trace        = true
+  ignore_insecure_tls_error = true
 }

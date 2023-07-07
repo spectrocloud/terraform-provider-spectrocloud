@@ -355,7 +355,7 @@ func ToResourceData(vm kubevirtapiv1.VirtualMachine, resourceData *schema.Resour
 		return err
 	}
 
-	if err := resourceData.Set("spec", flattenVirtualMachineSpec(vm.Spec)); err != nil {
+	if err := resourceData.Set("spec", flattenVirtualMachineSpec(vm.Spec, resourceData)); err != nil {
 		return err
 	}
 	if err := resourceData.Set("status", flattenVirtualMachineStatus(vm.Status)); err != nil {

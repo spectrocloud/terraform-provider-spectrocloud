@@ -127,6 +127,7 @@ func ConvertToBasicMetadata(d *schema.ResourceData) metav1.ObjectMeta {
 	if v, ok := d.GetOk("resource_version"); ok {
 		metaValues["resource_version"] = v.(string)
 	}
+	meta = append(meta, metaValues)
 	return ExpandMetadata(meta)
 }
 
@@ -137,12 +138,12 @@ func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
 	}
 	m := in[0].(map[string]interface{})
 
-	if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 {
-		meta.Annotations = utils.ExpandStringMap(m["annotations"].(map[string]interface{}))
+	if v, ok := m["annotations"].(map[string]string); ok && len(v) > 0 {
+		meta.Annotations = m["annotations"].(map[string]string) //utils.ExpandStringMap(m["annotations"].(map[string]interface{}))
 	}
 
-	if v, ok := m["labels"].(map[string]interface{}); ok && len(v) > 0 {
-		meta.Labels = utils.ExpandStringMap(m["labels"].(map[string]interface{}))
+	if v, ok := m["labels"].(map[string]string); ok && len(v) > 0 {
+		meta.Labels = m["labels"].(map[string]string) //utils.ExpandStringMap(m["labels"])
 	}
 
 	if v, ok := m["generate_name"]; ok {

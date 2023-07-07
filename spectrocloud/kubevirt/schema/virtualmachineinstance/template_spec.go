@@ -61,10 +61,10 @@ func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*kubevirt
 	return result, nil
 }
 
-func FlattenVirtualMachineInstanceTemplateSpec(in kubevirtapiv1.VirtualMachineInstanceTemplateSpec) []interface{} {
+func FlattenVirtualMachineInstanceTemplateSpec(in kubevirtapiv1.VirtualMachineInstanceTemplateSpec, resourceData *schema.ResourceData) []interface{} {
 	att := make(map[string]interface{})
 
-	att["metadata"] = k8s.FlattenMetadata(in.ObjectMeta)
+	att["metadata"] = k8s.FlattenMetadata(in.ObjectMeta, resourceData)
 	att["spec"] = flattenVirtualMachineInstanceSpec(in.Spec)
 
 	return []interface{}{att}

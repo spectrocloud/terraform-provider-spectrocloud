@@ -231,7 +231,7 @@ func expandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) 
 		return result, err
 	}
 	if v, ok := d.GetOk("cpu"); ok {
-		cpu, err := expandCPU(v.(map[string]interface{}))
+		cpu, err := expandCPU(v.([]interface{})[0].(map[string]interface{}))
 		if err != nil {
 			return result, err
 		}

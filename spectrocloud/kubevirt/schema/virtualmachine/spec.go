@@ -91,19 +91,19 @@ func expandVirtualMachineSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMach
 	return result, nil
 }
 
-func flattenVirtualMachineSpec(in kubevirtapiv1.VirtualMachineSpec) []interface{} {
+func flattenVirtualMachineSpec(in kubevirtapiv1.VirtualMachineSpec, resourceData *schema.ResourceData) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.RunStrategy != nil {
 		att["run_strategy"] = string(*in.RunStrategy)
 	}
 	if in.Template != nil {
-		att["template"] = virtualmachineinstance.FlattenVirtualMachineInstanceTemplateSpec(*in.Template)
+		att["template"] = virtualmachineinstance.FlattenVirtualMachineInstanceTemplateSpec(*in.Template, resourceData)
 	} else {
 		att["template"] = []interface{}{} // Set to empty value
 	}
 	if in.DataVolumeTemplates != nil {
-		att["data_volume_templates"] = flattenDataVolumeTemplates(in.DataVolumeTemplates)
+		att["data_volume_templates"] = flattenDataVolumeTemplates(in.DataVolumeTemplates, resourceData)
 	} else {
 		att["data_volume_templates"] = []interface{}{} // Set to empty value
 	}
