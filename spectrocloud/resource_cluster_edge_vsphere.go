@@ -266,12 +266,12 @@ func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceDat
 
 	cluster := toEdgeVsphereCluster(c, d)
 
-	uid, err := c.CreateClusterEdgeVsphere(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterEdgeVsphere(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
 	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics

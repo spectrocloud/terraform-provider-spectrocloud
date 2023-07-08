@@ -222,12 +222,12 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 
 	cluster := toOpenStackCluster(c, d)
 
-	uid, err := c.CreateClusterOpenStack(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterOpenStack(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
 	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics

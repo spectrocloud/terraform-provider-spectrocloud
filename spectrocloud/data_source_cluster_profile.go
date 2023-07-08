@@ -129,7 +129,7 @@ func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEn
 	return diagPacks, nil, false
 }
 
-func getProfile(profiles []*models.V1ClusterProfileMetadata, d *schema.ResourceData, version string, ProfileContext string, c *client.V1Client) (*models.V1ClusterProfile, error) {
+func getProfile(profiles []*models.V1ClusterProfileMetadata, d *schema.ResourceData, version, ProfileContext string, c *client.V1Client) (*models.V1ClusterProfile, error) {
 	clusterC, err := c.GetClusterClient()
 	if err != nil {
 		return nil, err

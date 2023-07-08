@@ -262,12 +262,12 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 		return diags
 	}
 
-	uid, err := c.CreateClusterAzure(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterAzure(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
 	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics

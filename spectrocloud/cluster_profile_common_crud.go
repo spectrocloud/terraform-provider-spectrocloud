@@ -14,7 +14,7 @@ var resourceClusterProfileUpdatePendingStates = []string{
 	"false",
 }
 
-func waitForProfileDownload(ctx context.Context, c *client.V1Client, scope string, id string, timeout time.Duration) error {
+func waitForProfileDownload(ctx context.Context, c *client.V1Client, scope, id string, timeout time.Duration) error {
 	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterProfileUpdatePendingStates,
 		Target:     []string{"true"}, // canBeApplied=true
@@ -29,7 +29,7 @@ func waitForProfileDownload(ctx context.Context, c *client.V1Client, scope strin
 	return err
 }
 
-func resourceClusterProfileStateRefreshFunc(c *client.V1Client, scope string, id string) retry.StateRefreshFunc {
+func resourceClusterProfileStateRefreshFunc(c *client.V1Client, scope, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(scope, id)
 		if err != nil {

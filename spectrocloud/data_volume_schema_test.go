@@ -89,7 +89,7 @@ func TestCreateDataVolumePositive(t *testing.T) {
 
 	// Mock the V1Client
 	m := &client.V1Client{
-		GetClusterFn: func(scope string, uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			isHost := new(bool)
 			*isHost = true
 			cluster := &models.V1SpectroCluster{
@@ -146,7 +146,7 @@ func TestCreateDataVolumePositive(t *testing.T) {
 			}
 			return cluster, nil
 		},
-		CreateDataVolumeFn: func(uid string, name string, body *models.V1VMAddVolumeEntity) (string, error) {
+		CreateDataVolumeFn: func(uid, name string, body *models.V1VMAddVolumeEntity) (string, error) {
 			// Check if input parameters match the expected values
 			assert.Equal(uid, "cluster-123")
 			assert.Equal(name, "vm-test")
@@ -176,7 +176,7 @@ func TestCreateDataVolume(t *testing.T) {
 	rd := prepareDataVolumeTestData()
 
 	m := &client.V1Client{
-		CreateDataVolumeFn: func(uid string, name string, body *models.V1VMAddVolumeEntity) (string, error) {
+		CreateDataVolumeFn: func(uid, name string, body *models.V1VMAddVolumeEntity) (string, error) {
 			if uid != "cluster-123" {
 				return "", errors.New("unexpected cluster_uid")
 			}
@@ -188,7 +188,7 @@ func TestCreateDataVolume(t *testing.T) {
 			}
 			return "data-volume-id", nil
 		},
-		GetClusterFn: func(scope string, uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			isHost := new(bool)
 			*isHost = true
 			cluster := &models.V1SpectroCluster{
@@ -256,7 +256,7 @@ func TestDeleteDataVolume(t *testing.T) {
 	rd := prepareDataVolumeTestData()
 
 	m := &client.V1Client{
-		DeleteDataVolumeFn: func(uid string, namespace string, name string, body *models.V1VMRemoveVolumeEntity) error {
+		DeleteDataVolumeFn: func(uid, namespace, name string, body *models.V1VMRemoveVolumeEntity) error {
 			if uid != "cluster-123" {
 				return errors.New("unexpected cluster_uid")
 			}

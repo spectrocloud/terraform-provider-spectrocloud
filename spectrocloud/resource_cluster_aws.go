@@ -285,10 +285,11 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 }
 
 func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigAws(configUID); err != nil {
+	if config, err := c.GetCloudConfigAws(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
@@ -376,7 +377,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -408,10 +409,10 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 					var err error
 					if oldMachinePool, ok := osMap[name]; !ok {
 						log.Printf("Create machine pool %s", name)
-						err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
+						err = c.CreateMachinePoolAws(cloudConfigId, machinePool, ClusterContext)
 					} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
 						log.Printf("Change in machine pool %s", name)
-						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
+						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool, ClusterContext)
 					}
 
 					if err != nil {
@@ -429,15 +430,11 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAws(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolAws(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {

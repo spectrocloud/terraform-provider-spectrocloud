@@ -203,12 +203,12 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	cluster := toGcpCluster(c, d)
 
-	uid, err := c.CreateClusterGcp(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterGcp(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
 	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
