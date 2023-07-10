@@ -97,13 +97,13 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if d.Get("run_on_launch").(bool) {
-			diags, _ = waitForVirtualMachineToTargetState(ctx, d, cluster.Metadata.UID, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace, diags, c, "create", "Running")
-			if diags.HasError() {
-				return diags
-			}
-		}
 		d.SetId(utils.BuildId(clusterUid, vm.Metadata))
+	}
+	if d.Get("run_on_launch").(bool) {
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, cluster.Metadata.UID, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace, diags, c, "create", "Running")
+		if diags.HasError() {
+			return diags
+		}
 	}
 
 	resourceKubevirtVirtualMachineRead(ctx, d, m)

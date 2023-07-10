@@ -93,22 +93,10 @@ func virtualMachineInstanceSpecSchema() *schema.Schema {
 func expandVirtualMachineInstanceSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineInstanceSpec, error) {
 	result := kubevirtapiv1.VirtualMachineInstanceSpec{}
 
-	//if len(virtualMachineInstanceSpec) == 0 || virtualMachineInstanceSpec[0] == nil {
-	//	return result, nil
-	//}
-
-	//in := virtualMachineInstanceSpec[0].(map[string]interface{})
-
 	if v, ok := d.GetOk("priority_class_name"); ok {
 		result.PriorityClassName = v.(string)
 	}
-	//if v, ok := d.GetOk("domain"); ok {
-	//	domain, err := expandDomainSpec(v.([]interface{}))
-	//	if err != nil {
-	//		return result, err
-	//	}
-	//	result.Domain = domain
-	//}
+
 	if domain, err := expandDomainSpec(d); err == nil {
 		result.Domain = domain
 	} else {

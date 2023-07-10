@@ -8,8 +8,7 @@ locals {
 }
 
 
-// Create a VM with default cloud init disk, container disk , multus network interface with interface binding method as sr-iov and network model
-
+// Create a VM with default cloud init disk, container disk , interface and network
 resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
   cluster_uid   = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   run_on_launch = true
@@ -97,6 +96,17 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
   labels = {
     "tf" = "test"
   }
+  resources {
+    requests = {
+      memory = "1Gi"
+      cpu    = 2
+    }
+    limits = {
+      cpu    = 2
+      memory = "1Gi"
+    }
+  }
+  // For Cloning VM's disk, volume, interface, cpu, memory and network or optional, Those configuration will get cloned from base vm.
   volume {
     name = "containerdisk"
     volume_source {
@@ -139,17 +149,6 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
   }
   memory {
     guest = "1Gi"
-  }
-
-  resources {
-    requests = {
-      memory = "1Gi"
-      cpu    = 2
-    }
-    limits = {
-      cpu    = 2
-      memory = "1Gi"
-    }
   }
 
   interface {

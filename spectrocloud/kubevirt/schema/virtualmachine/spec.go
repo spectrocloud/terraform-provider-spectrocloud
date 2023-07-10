@@ -51,28 +51,12 @@ func virtualMachineSpecSchema() *schema.Schema {
 func expandVirtualMachineSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineSpec, error) {
 	result := kubevirtapiv1.VirtualMachineSpec{}
 
-	//if len(virtualMachine) == 0 || virtualMachine[0] == nil {
-	//	return result, nil
-	//}
-	//
-	//in := virtualMachine[0].(map[string]interface{})
-
-	// if v, ok := in["running"].(bool); ok {
-	// 	result.Running = &v
-	// }
 	if v, ok := d.GetOk("run_strategy"); ok {
 		if v.(string) != "" {
 			runStrategy := kubevirtapiv1.VirtualMachineRunStrategy(v.(string))
 			result.RunStrategy = &runStrategy
 		}
 	}
-	//if v, ok := d.GetOk("template"].([]interface{}); ok {
-	//	template, err := virtualmachineinstance.ExpandVirtualMachineInstanceTemplateSpec(v)
-	//	if err != nil {
-	//		return result, err
-	//	}
-	//	result.Template = template
-	//}
 
 	if template, err := virtualmachineinstance.ExpandVirtualMachineInstanceTemplateSpec(d); err == nil && template != nil {
 		result.Template = template
