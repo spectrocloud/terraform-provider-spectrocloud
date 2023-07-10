@@ -59,6 +59,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Description: fmt.Sprintf("A URL representing this VM."),
 			Computed:    true,
 		}, //set back done
+
 		"uid": {
 			Type:        schema.TypeString,
 			Description: fmt.Sprintf("The unique in time and space value for this VM."),
@@ -268,7 +269,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 					},
 				},
 			},
-		}, //set back done
+		},                                                  //set back done
 		"network": virtualmachineinstance.NetworksSchema(), //set back done
 		"volume":  virtualmachineinstance.VolumesSchema(),  //set back done
 
@@ -282,13 +283,13 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Description: "NodeSelector is a selector which must be true for the vmi to fit on a node. Selector which must match a node's labels for the vmi to be scheduled on that node.",
 			Optional:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-		}, //set back done
+		},                                //set back done
 		"affinity": k8s.AffinitySchema(), //set back done
 		"scheduler_name": {
 			Type:        schema.TypeString,
 			Description: "If specified, the VMI will be dispatched by specified scheduler. If not specified, the VMI will be dispatched by default scheduler.",
 			Optional:    true,
-		}, //set back done
+		},                                     //set back done
 		"tolerations": k8s.TolerationSchema(), //set back done
 		"eviction_strategy": {
 			Type:        schema.TypeString,
@@ -302,7 +303,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Type:        schema.TypeInt,
 			Description: "Grace period observed after signalling a VirtualMachineInstance to stop after which the VirtualMachineInstance is force terminated.",
 			Optional:    true,
-		}, //set back done
+		},                                                       //set back done
 		"liveness_probe":  virtualmachineinstance.ProbeSchema(), //set back done
 		"readiness_probe": virtualmachineinstance.ProbeSchema(), //set back done
 		"hostname": {

@@ -188,8 +188,10 @@ func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) 
 	if err = resourceData.Set("name", meta.Name); err != nil {
 		return err
 	}
-	if err = resourceData.Set("resource_version", meta.ResourceVersion); err != nil {
-		return err
+	if resourceData.Get("resource_version") == "" {
+		if err = resourceData.Set("resource_version", meta.ResourceVersion); err != nil {
+			return err
+		}
 	}
 	if err = resourceData.Set("self_link", meta.SelfLink); err != nil {
 		return err
