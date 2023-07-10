@@ -1,7 +1,6 @@
 package virtualmachine
 
 import (
-	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
@@ -16,7 +15,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 		// Flatten metadata data attributes
 		"name": {
 			Type:         schema.TypeString,
-			Description:  fmt.Sprintf("Name of the virtual machine, must be unique. Cannot be updated."),
+			Description:  "Name of the virtual machine, must be unique. Cannot be updated.",
 			Required:     true,
 			ForceNew:     true,
 			ValidateFunc: utils.ValidateName,
