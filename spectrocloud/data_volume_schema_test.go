@@ -3,7 +3,6 @@ package spectrocloud
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -258,37 +257,37 @@ func TestCreateDataVolume(t *testing.T) {
 	resourceKubevirtDataVolumeCreate(ctx, rd, m)
 }
 
-func TestDeleteDataVolume(t *testing.T) {
-	var diags diag.Diagnostics
-	assert := assert.New(t)
-	_ = prepareDataVolumeTestData()
-
-	_ = &client.V1Client{
-		DeleteDataVolumeFn: func(uid string, namespace string, name string, body *models.V1VMRemoveVolumeEntity) error {
-			if uid != "cluster-123" {
-				return errors.New("unexpected cluster_uid")
-			}
-			if namespace != "default" {
-				return errors.New("unexpected vm_namespace")
-			}
-			if name != "vm-test" {
-				return errors.New("unexpected vm_name")
-			}
-			if *body.RemoveVolumeOptions.Name != "vol-test" {
-				return errors.New("unexpected volume name")
-			}
-			return nil
-		},
-	}
-
-	_ = context.Background()
-
-	if diags.HasError() {
-		assert.Error(errors.New("delete operation failed"))
-	} else {
-		assert.NoError(nil)
-	}
-}
+//func TestDeleteDataVolume(t *testing.T) {
+//	var diags diag.Diagnostics
+//	assert := assert.New(t)
+//	_ = prepareDataVolumeTestData()
+//
+//	_ = &client.V1Client{
+//		DeleteDataVolumeFn: func(uid string, namespace string, name string, body *models.V1VMRemoveVolumeEntity) error {
+//			if uid != "cluster-123" {
+//				return errors.New("unexpected cluster_uid")
+//			}
+//			if namespace != "default" {
+//				return errors.New("unexpected vm_namespace")
+//			}
+//			if name != "vm-test" {
+//				return errors.New("unexpected vm_name")
+//			}
+//			if *body.RemoveVolumeOptions.Name != "vol-test" {
+//				return errors.New("unexpected volume name")
+//			}
+//			return nil
+//		},
+//	}
+//
+//	_ = context.Background()
+//
+//	if diags.HasError() {
+//		assert.Error(errors.New("delete operation failed"))
+//	} else {
+//		assert.NoError(nil)
+//	}
+//}
 
 func TestReadDataVolumeWithoutStatus(t *testing.T) {
 	assert := assert.New(t)
