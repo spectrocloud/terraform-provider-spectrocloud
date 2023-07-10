@@ -23,21 +23,21 @@ func VirtualMachineFields() map[string]*schema.Schema {
 		},
 		"namespace": {
 			Type:        schema.TypeString,
-			Description: fmt.Sprintf("Namespace defines the space within, Name must be unique."),
+			Description: "Namespace defines the space within, Name must be unique.",
 			Optional:    true,
 			ForceNew:    true,
 			Default:     "default",
 		},
 		"labels": {
 			Type:         schema.TypeMap,
-			Description:  fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select). May match selectors of replication controllers and services."),
+			Description:  "Map of string keys and values that can be used to organize and categorize (scope and select). May match selectors of replication controllers and services.",
 			Optional:     true,
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: utils.ValidateLabels,
 		},
 		"annotations": {
 			Type:         schema.TypeMap,
-			Description:  fmt.Sprintf("An unstructured key value map stored with the VM that may be used to store arbitrary metadata."),
+			Description:  "An unstructured key value map stored with the VM that may be used to store arbitrary metadata.",
 			Optional:     true,
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: utils.ValidateAnnotations,
@@ -50,18 +50,18 @@ func VirtualMachineFields() map[string]*schema.Schema {
 		},
 		"resource_version": {
 			Type:        schema.TypeString,
-			Description: fmt.Sprintf("An opaque value that represents the internal version of this VM that can be used by clients to determine when VM has changed."),
+			Description: "An opaque value that represents the internal version of this VM that can be used by clients to determine when VM has changed.",
 			Computed:    true,
 		},
 		"self_link": {
 			Type:        schema.TypeString,
-			Description: fmt.Sprintf("A URL representing this VM."),
+			Description: "A URL representing this VM.",
 			Computed:    true,
 		},
 
 		"uid": {
 			Type:        schema.TypeString,
-			Description: fmt.Sprintf("The unique in time and space value for this VM."),
+			Description: "The unique in time and space value for this VM.",
 			Computed:    true,
 		},
 
