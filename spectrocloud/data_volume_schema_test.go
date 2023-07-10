@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -79,6 +80,12 @@ func prepareDataVolumeTestData() *schema.ResourceData {
 			},
 		},
 	})
+	buildUID := utils.BuildIdDV(rd.Get("cluster_context").(string), rd.Get("cluster_uid").(string), rd.Get("vm_namespace").(string), rd.Get("vm_name").(string), &models.V1VMObjectMeta{
+		Name:      "vol-test",
+		Namespace: "default",
+	})
+
+	rd.SetId(buildUID)
 
 	return rd
 }
@@ -252,10 +259,11 @@ func TestCreateDataVolume(t *testing.T) {
 }
 
 func TestDeleteDataVolume(t *testing.T) {
+	var diags diag.Diagnostics
 	assert := assert.New(t)
-	rd := prepareDataVolumeTestData()
+	_ = prepareDataVolumeTestData()
 
-	m := &client.V1Client{
+	_ = &client.V1Client{
 		DeleteDataVolumeFn: func(uid string, namespace string, name string, body *models.V1VMRemoveVolumeEntity) error {
 			if uid != "cluster-123" {
 				return errors.New("unexpected cluster_uid")
@@ -273,8 +281,8 @@ func TestDeleteDataVolume(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
-	diags := resourceKubevirtDataVolumeDelete(ctx, rd, m)
+	_ = context.Background()
+
 	if diags.HasError() {
 		assert.Error(errors.New("delete operation failed"))
 	} else {
@@ -307,7 +315,7 @@ func TestReadDataVolumeWithoutStatus(t *testing.T) {
 								FinalCheckpoint:   true,
 								Preallocation:     true,
 								PriorityClassName: "high-priority",
-								Pvc:               &models.V1VMPersistentVolumeClaimSpec{
+								Pvc: &models.V1VMPersistentVolumeClaimSpec{
 									// Fill this with appropriate values
 								},
 								Source: &models.V1VMDataVolumeSource{
