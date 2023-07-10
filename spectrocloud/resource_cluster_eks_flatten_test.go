@@ -31,6 +31,12 @@ func TestFlattenEksLaunchTemplate(t *testing.T) {
 					Iops:       100,
 					Throughput: 125,
 				},
+				// add security group "sg-12345678"
+				AdditionalSecurityGroups: []*models.V1AwsResourceReference{
+					{
+						ID: "sg-12345678",
+					},
+				},
 			},
 			expected: []interface{}{
 				map[string]interface{}{
@@ -38,6 +44,9 @@ func TestFlattenEksLaunchTemplate(t *testing.T) {
 					"root_volume_type":       "gp2",
 					"root_volume_iops":       int64(100),
 					"root_volume_throughput": int64(125),
+					"additional_security_groups": []string{
+						"sg-12345678",
+					},
 				},
 			},
 		},

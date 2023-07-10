@@ -1,8 +1,9 @@
 package spectrocloud
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestToAwsAccountCTXProjectSecret(t *testing.T) {
@@ -12,7 +13,8 @@ func TestToAwsAccountCTXProjectSecret(t *testing.T) {
 	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
 	rd.Set("context", "project")
 	rd.Set("type", "secret")
-	acc := toAwsAccount(rd)
+	acc, err := toAwsAccount(rd)
+	assert.NoError(t, err)
 
 	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
 	assert.Equal(t, rd.Get("aws_access_key"), acc.Spec.AccessKey)
@@ -28,7 +30,8 @@ func TestToAwsAccountCTXTenantSecret(t *testing.T) {
 	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
 	rd.Set("context", "tenant")
 	rd.Set("type", "secret")
-	acc := toAwsAccount(rd)
+	acc, err := toAwsAccount(rd)
+	assert.NoError(t, err)
 
 	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
 	assert.Equal(t, rd.Get("aws_access_key"), acc.Spec.AccessKey)
@@ -44,8 +47,9 @@ func TestToAwsAccountCTXProjectSTS(t *testing.T) {
 	rd.Set("arn", "ARN::AWSAD:12312sdTEd")
 	rd.Set("external_id", "TEST-External23423ID")
 	rd.Set("context", "project")
+	acc, err := toAwsAccount(rd)
+	assert.NoError(t, err)
 
-	acc := toAwsAccount(rd)
 	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
 	assert.Equal(t, rd.Get("arn"), acc.Spec.Sts.Arn)
 	assert.Equal(t, rd.Get("external_id"), acc.Spec.Sts.ExternalID)
@@ -60,8 +64,9 @@ func TestToAwsAccountCTXTenantSTS(t *testing.T) {
 	rd.Set("arn", "ARN::AWSAD:12312sdTEd")
 	rd.Set("external_id", "TEST-External23423ID")
 	rd.Set("context", "tenant")
+	acc, err := toAwsAccount(rd)
+	assert.NoError(t, err)
 
-	acc := toAwsAccount(rd)
 	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
 	assert.Equal(t, rd.Get("arn"), acc.Spec.Sts.Arn)
 	assert.Equal(t, rd.Get("external_id"), acc.Spec.Sts.ExternalID)

@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -36,6 +37,12 @@ func resourceClusterAws() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -150,6 +157,16 @@ func resourceClusterAws() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"min": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
+						"max": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
 						"capacity_type": {
 							Type:         schema.TypeString,
 							Default:      "on-demand",
@@ -192,6 +209,15 @@ func resourceClusterAws() *schema.Resource {
 								Required: true,
 							},
 						},
+						"additional_security_groups": {
+							Type: schema.TypeSet,
+							Set:  schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Optional:    true,
+							Description: "Additional security groups to attach to the instance.",
+						},
 					},
 				},
 			},
@@ -219,12 +245,13 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	cluster := toAwsCluster(c, d)
 
-	uid, err := c.CreateClusterAws(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterAws(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -239,10 +266,8 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	//
-	uid := d.Id()
-	//
-	cluster, err := c.GetCluster(uid)
+
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -288,12 +313,16 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 
 		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
-		oi["control_plane"] = machinePool.IsControlPlane
+		if machinePool.IsControlPlane != nil {
+			oi["control_plane"] = *machinePool.IsControlPlane
+		}
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
+		oi["min"] = int(machinePool.MinSize)
+		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
 		if machinePool.CapacityType != nil {
 			oi["capacity_type"] = machinePool.CapacityType
@@ -307,8 +336,35 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		} else {
 			oi["azs"] = machinePool.Azs
 		}
+
+		if machinePool.AdditionalSecurityGroups != nil && len(machinePool.AdditionalSecurityGroups) > 0 {
+			additionalSecuritygroup := make([]string, 0)
+			for _, sg := range machinePool.AdditionalSecurityGroups {
+				additionalSecuritygroup = append(additionalSecuritygroup, sg.ID)
+			}
+			oi["additional_security_groups"] = additionalSecuritygroup
+		}
+
 		ois[i] = oi
 	}
+
+	sort.SliceStable(ois, func(i, j int) bool {
+		var controlPlaneI, controlPlaneJ bool
+		if ois[i].(map[string]interface{})["control_plane"] != nil {
+			controlPlaneI = ois[i].(map[string]interface{})["control_plane"].(bool)
+		}
+		if ois[j].(map[string]interface{})["control_plane"] != nil {
+			controlPlaneJ = ois[j].(map[string]interface{})["control_plane"].(bool)
+		}
+
+		// If both are control planes or both are not, sort by name
+		if controlPlaneI == controlPlaneJ {
+			return ois[i].(map[string]interface{})["name"].(string) < ois[j].(map[string]interface{})["name"].(string)
+		}
+
+		// Otherwise, control planes come first
+		return controlPlaneI && !controlPlaneJ
+	})
 
 	return ois
 }
@@ -341,27 +397,30 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			if name != "" {
-				hash := resourceMachinePoolAwsHash(machinePoolResource)
-				vpcId := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})["vpc_id"]
-				machinePool := toMachinePoolAws(machinePoolResource, vpcId.(string))
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				if name != "" {
+					hash := resourceMachinePoolAwsHash(machinePoolResource)
+					vpcId := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})["vpc_id"]
+					machinePool := toMachinePoolAws(machinePoolResource, vpcId.(string))
 
-				var err error
-				if oldMachinePool, ok := osMap[name]; !ok {
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
-				} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
-					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
+					var err error
+					if oldMachinePool, ok := osMap[name]; !ok {
+						log.Printf("Create machine pool %s", name)
+						err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
+					} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
+						log.Printf("Change in machine pool %s", name)
+						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
+					}
+
+					if err != nil {
+						return diag.FromErr(err)
+					}
+
+					// Processed (if exists)
+					delete(osMap, name)
 				}
-
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				// Processed (if exists)
-				delete(osMap, name)
 			}
 		}
 
@@ -412,12 +471,24 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 		},
 	}
 
-	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AwsMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolAws(machinePool, cluster.Spec.CloudConfig.VpcID)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
+
+	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
+		controlPlaneI := machinePoolConfigs[i].PoolConfig.IsControlPlane
+		controlPlaneJ := machinePoolConfigs[j].PoolConfig.IsControlPlane
+
+		// If both are control planes or both are not, sort by name
+		if controlPlaneI == controlPlaneJ {
+			return *machinePoolConfigs[i].PoolConfig.Name < *machinePoolConfigs[j].PoolConfig.Name
+		}
+
+		// Otherwise, control planes come first
+		return controlPlaneI && !controlPlaneJ
+	})
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
@@ -455,6 +526,17 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 			azs = append(azs, az.(string))
 		}
 	}
+	min := int32(m["count"].(int))
+	max := int32(m["count"].(int))
+
+	if m["min"] != nil {
+		min = int32(m["min"].(int))
+	}
+
+	if m["max"] != nil {
+		max = int32(m["max"].(int))
+	}
+
 	mp := &models.V1AwsMachinePoolConfigEntity{
 		CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
 			Azs:            azs,
@@ -473,6 +555,8 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
+			MinSize:                 min,
+			MaxSize:                 max,
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
@@ -487,5 +571,10 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 			MaxPrice: maxPrice,
 		}
 	}
+
+	if m["additional_security_groups"] != nil {
+		mp.CloudConfig.AdditionalSecurityGroups = setAdditionalSecurityGroups(m)
+	}
+
 	return mp
 }

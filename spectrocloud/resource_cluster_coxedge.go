@@ -337,7 +337,7 @@ func resourceCoxEdgeClusterCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -352,9 +352,7 @@ func resourceCoxEdgeClusterRead(_ context.Context, d *schema.ResourceData, m int
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -565,29 +563,32 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolCoxEdgeHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolCoxEdgeHash(machinePoolResource)
 
-			machinePool, err := toMachinePoolCoxEdge(machinePoolResource)
-			if err != nil {
-				return diag.FromErr(err)
+				machinePool, err := toMachinePoolCoxEdge(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolCoxEdge(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolCoxEdgeHash(oldMachinePool) {
+					// TODO
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolCoxEdge(cloudConfigId, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolCoxEdge(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolCoxEdgeHash(oldMachinePool) {
-				// TODO
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolCoxEdge(cloudConfigId, machinePool)
-			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools

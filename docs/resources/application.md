@@ -54,6 +54,10 @@ resource "spectrocloud_application" "application" {
 <a id="nestedblock--config"></a>
 ### Nested Schema for `config`
 
+Required:
+
+- `cluster_context` (String)
+
 Optional:
 
 - `cluster_group_uid` (String)

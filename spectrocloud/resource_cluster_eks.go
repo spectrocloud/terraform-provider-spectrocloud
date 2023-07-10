@@ -235,7 +235,7 @@ func resourceClusterEks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"eks_launch_template": schemas.EksLaunchTemplate(),
+						"eks_launch_template": schemas.AwsLaunchTemplate(),
 					},
 				},
 			},
@@ -315,7 +315,7 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -330,9 +330,7 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -478,6 +476,13 @@ func flattenEksLaunchTemplate(launchTemplate *models.V1AwsLaunchTemplate) []inte
 		lt["root_volume_iops"] = launchTemplate.RootVolume.Iops
 		lt["root_volume_throughput"] = launchTemplate.RootVolume.Throughput
 	}
+	if launchTemplate.AdditionalSecurityGroups != nil && len(launchTemplate.AdditionalSecurityGroups) > 0 {
+		var additionalSecurityGroups []string
+		for _, sg := range launchTemplate.AdditionalSecurityGroups {
+			additionalSecurityGroups = append(additionalSecurityGroups, sg.ID)
+		}
+		lt["additional_security_groups"] = additionalSecurityGroups
+	}
 
 	return []interface{}{lt}
 }
@@ -560,27 +565,30 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolEksHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolEksHash(machinePoolResource)
 
-			machinePool := toMachinePoolEks(machinePoolResource)
+				machinePool := toMachinePoolEks(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolEks(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
-				// TODO
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolEks(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
+					// TODO
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -821,12 +829,12 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		}
 	}
 
-	mp.CloudConfig.AwsLaunchTemplate = setAwsLaunchTemplate(m)
+	mp.CloudConfig.AwsLaunchTemplate = setEksLaunchTemplate(m)
 
 	return mp
 }
 
-func setAwsLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunchTemplate {
+func setEksLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunchTemplate {
 	var launchTemplate *models.V1AwsLaunchTemplate
 
 	if machinePool["eks_launch_template"] != nil {
@@ -837,32 +845,63 @@ func setAwsLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunc
 
 		eksLaunchTemplate := eksLaunchTemplateList[0].(map[string]interface{})
 
-		if eksLaunchTemplate["ami_id"] != nil || eksLaunchTemplate["root_volume_type"] != nil || eksLaunchTemplate["root_volume_iops"] != nil || eksLaunchTemplate["root_volume_throughput"] != nil {
-			launchTemplate = &models.V1AwsLaunchTemplate{
-				RootVolume: &models.V1AwsRootVolume{},
-			}
+		keys := []string{"ami_id", "root_volume_type", "root_volume_iops", "root_volume_throughput", "additional_security_groups"}
 
-			if eksLaunchTemplate["ami_id"] != nil {
-				launchTemplate.Ami = &models.V1AwsAmiReference{
-					ID: eksLaunchTemplate["ami_id"].(string),
-				}
-			}
+		// if at least one key is present continue function body, otherwise return launchTemplate
+		if hasNoneOfKeys(eksLaunchTemplate, keys) {
+			return launchTemplate
+		}
 
-			if eksLaunchTemplate["root_volume_type"] != nil {
-				launchTemplate.RootVolume.Type = eksLaunchTemplate["root_volume_type"].(string)
-			}
+		launchTemplate = &models.V1AwsLaunchTemplate{
+			RootVolume: &models.V1AwsRootVolume{},
+		}
 
-			if eksLaunchTemplate["root_volume_iops"] != nil {
-				launchTemplate.RootVolume.Iops = int64(eksLaunchTemplate["root_volume_iops"].(int))
-			}
-
-			if eksLaunchTemplate["root_volume_throughput"] != nil {
-				launchTemplate.RootVolume.Throughput = int64(eksLaunchTemplate["root_volume_throughput"].(int))
+		if eksLaunchTemplate["ami_id"] != nil {
+			launchTemplate.Ami = &models.V1AwsAmiReference{
+				ID: eksLaunchTemplate["ami_id"].(string),
 			}
 		}
+
+		if eksLaunchTemplate["root_volume_type"] != nil {
+			launchTemplate.RootVolume.Type = eksLaunchTemplate["root_volume_type"].(string)
+		}
+
+		if eksLaunchTemplate["root_volume_iops"] != nil {
+			launchTemplate.RootVolume.Iops = int64(eksLaunchTemplate["root_volume_iops"].(int))
+		}
+
+		if eksLaunchTemplate["root_volume_throughput"] != nil {
+			launchTemplate.RootVolume.Throughput = int64(eksLaunchTemplate["root_volume_throughput"].(int))
+		}
+
+		launchTemplate.AdditionalSecurityGroups = setAdditionalSecurityGroups(eksLaunchTemplate)
 	}
 
 	return launchTemplate
+}
+
+func setAdditionalSecurityGroups(eksLaunchTemplate map[string]interface{}) []*models.V1AwsResourceReference {
+	if eksLaunchTemplate["additional_security_groups"] != nil {
+		securityGroups := expandStringList(eksLaunchTemplate["additional_security_groups"].(*schema.Set).List())
+		additionalSecurityGroups := make([]*models.V1AwsResourceReference, 0)
+		for _, securityGroup := range securityGroups {
+			additionalSecurityGroups = append(additionalSecurityGroups, &models.V1AwsResourceReference{
+				ID: securityGroup,
+			})
+		}
+		return additionalSecurityGroups
+	}
+
+	return nil
+}
+
+func hasNoneOfKeys(m map[string]interface{}, keys []string) bool {
+	for _, key := range keys {
+		if m[key] != nil {
+			return false
+		}
+	}
+	return true
 }
 
 func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {

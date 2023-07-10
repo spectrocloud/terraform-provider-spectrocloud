@@ -9,7 +9,11 @@ import (
 
 // read common fields like kubeconfig, tags, backup policy, scan policy, cluster_rbac_binding, namespaces
 func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
-	kubecfg, err := c.GetClusterKubeConfig(d.Id())
+	ClusterContext := "project"
+	if cluster.Metadata.Annotations["scope"] != "" {
+		ClusterContext = cluster.Metadata.Annotations["scope"]
+	}
+	kubecfg, err := c.GetClusterKubeConfig(d.Id(), ClusterContext)
 	if err != nil {
 		return diag.FromErr(err), true
 	}
@@ -21,7 +25,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		return diag.FromErr(err), true
 	}
 
-	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
+	if policy, err := c.GetClusterBackupConfig(d.Id(), ClusterContext); err != nil {
 		return diag.FromErr(err), true
 	} else if policy != nil && policy.Spec.Config != nil {
 		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
@@ -63,7 +67,9 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	if clusterStatus, err := c.GetClusterWithoutStatus(d.Id()); err != nil {
+	clusterContext := d.Get("context").(string)
+
+	if clusterStatus, err := c.GetClusterWithoutStatus(clusterContext, d.Id()); err != nil {
 		return diag.FromErr(err), true
 	} else if clusterStatus != nil && clusterStatus.Status != nil && clusterStatus.Status.Location != nil {
 		if err := d.Set("location_config", flattenLocationConfig(clusterStatus.Status.Location)); err != nil {

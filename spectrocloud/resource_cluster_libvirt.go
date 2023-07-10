@@ -39,6 +39,12 @@ func resourceClusterLibvirt() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -335,7 +341,8 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -350,10 +357,8 @@ func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	//
-	uid := d.Id()
-	//
-	cluster, err := c.GetCluster(uid)
+
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -509,31 +514,34 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			if name == "" {
-				continue
-			}
-			hash := resourceMachinePoolLibvirtHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				if name == "" {
+					continue
+				}
+				hash := resourceMachinePoolLibvirtHash(machinePoolResource)
 
-			machinePool, err := toMachinePoolLibvirt(machinePoolResource)
-			if err != nil {
-				return diag.FromErr(err)
-			}
+				machinePool, err := toMachinePoolLibvirt(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolLibvirt(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolLibvirtHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolLibvirt(cloudConfigId, machinePool)
-			}
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolLibvirt(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolLibvirtHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolLibvirt(cloudConfigId, machinePool)
+				}
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			// Processed (if exists)
-			delete(osMap, name)
+				// Processed (if exists)
+				delete(osMap, name)
+			}
 		}
 
 		// Deleted old machine pools
