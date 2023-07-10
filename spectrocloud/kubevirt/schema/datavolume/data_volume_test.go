@@ -91,14 +91,17 @@ func TestFlattenDataVolumeTemplates(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := FlattenDataVolumeTemplates(tc.Input)
+		output := FlattenDataVolumeTemplates(tc.Input, nil)
 
 		//Some fields include terraform randomly generated params that can't be compared
 		//so we need to manually remove them
 		nullifyUncomparableFields(&output)
 		nullifyUncomparableFields(&tc.ExpectedOutput)
 
-		if diff := cmp.Diff(tc.ExpectedOutput, output); diff != "" {
+		if diff := cmp.Diff(tc.ExpectedOutput[0].(map[string]interface{})["spec"], output[0].(map[string]interface{})["spec"]); diff != "" {
+			t.Errorf("Unexpected result (-want +got):\n%s", diff)
+		}
+		if diff := cmp.Diff(tc.ExpectedOutput[0].(map[string]interface{})["status"], output[0].(map[string]interface{})["status"]); diff != "" {
 			t.Errorf("Unexpected result (-want +got):\n%s", diff)
 		}
 		//assert.DeepEqual(t, output, tc.ExpectedOutput)

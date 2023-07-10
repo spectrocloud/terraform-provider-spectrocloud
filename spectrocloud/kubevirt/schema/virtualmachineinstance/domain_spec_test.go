@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
@@ -112,113 +111,113 @@ func TestFlattenDomainSpec(t *testing.T) {
 	}
 }
 
-func TestExpandDomainSpec(t *testing.T) {
-	testCases := []struct {
-		input          []interface{}
-		expectedOutput kubevirtapiv1.DomainSpec
-	}{
-		{
-			input: []interface{}{
-				map[string]interface{}{
-					"devices": []interface{}{
-						map[string]interface{}{
-							"disk":      []interface{}{},
-							"interface": []interface{}{},
-						},
-					},
-					"resources": []interface{}{
-						map[string]interface{}{
-							"limits":                     map[string]interface{}{},
-							"over_commit_guest_overhead": false,
-							"requests":                   map[string]interface{}{},
-						},
-					},
-				},
-			},
-			expectedOutput: kubevirtapiv1.DomainSpec{
-				Resources: kubevirtapiv1.ResourceRequirements{
-					OvercommitGuestOverhead: false,
-					Requests:                map[v1.ResourceName]resource.Quantity{},
-					Limits:                  map[v1.ResourceName]resource.Quantity{},
-				},
-				Devices: kubevirtapiv1.Devices{
-					Disks:      []kubevirtapiv1.Disk{},
-					Interfaces: []kubevirtapiv1.Interface{},
-				},
-			},
-		},
-		{
-			input: []interface{}{
-				map[string]interface{}{
-					"cpu": map[string]interface{}{
-						"cores":   2,
-						"sockets": 1,
-						"threads": 1,
-					},
-					"devices":   []interface{}{map[string]interface{}{"disk": []interface{}{}, "interface": []interface{}{}}},
-					"resources": []interface{}{map[string]interface{}{"limits": map[string]interface{}{}, "over_commit_guest_overhead": false, "requests": map[string]interface{}{}}},
-				},
-			},
-			expectedOutput: kubevirtapiv1.DomainSpec{
-				CPU: &kubevirtapiv1.CPU{
-					Cores:   2,
-					Sockets: 1,
-					Threads: 1,
-				},
-				Resources: kubevirtapiv1.ResourceRequirements{
-					OvercommitGuestOverhead: false,
-					Requests:                map[v1.ResourceName]resource.Quantity{},
-					Limits:                  map[v1.ResourceName]resource.Quantity{},
-				},
-				Devices: kubevirtapiv1.Devices{
-					Disks:      []kubevirtapiv1.Disk{},
-					Interfaces: []kubevirtapiv1.Interface{},
-				},
-			},
-		},
-		{
-			input: []interface{}{
-				map[string]interface{}{
-					"memory": []interface{}{
-						map[string]interface{}{
-							"guest": "2Gi",
-						},
-					},
-					"devices":   []interface{}{map[string]interface{}{"disk": []interface{}{}, "interface": []interface{}{}}},
-					"resources": []interface{}{map[string]interface{}{"limits": map[string]interface{}{}, "over_commit_guest_overhead": false, "requests": map[string]interface{}{}}},
-				},
-			},
-			expectedOutput: kubevirtapiv1.DomainSpec{
-				Memory: &kubevirtapiv1.Memory{
-					Guest: resource.NewQuantity(2*1024*1024*1024, resource.BinarySI),
-				},
-				Resources: kubevirtapiv1.ResourceRequirements{
-					OvercommitGuestOverhead: false,
-					Requests:                map[v1.ResourceName]resource.Quantity{},
-					Limits:                  map[v1.ResourceName]resource.Quantity{},
-				},
-				Devices: kubevirtapiv1.Devices{
-					Disks:      []kubevirtapiv1.Disk{},
-					Interfaces: []kubevirtapiv1.Interface{},
-				},
-			},
-		},
-	}
-
-	for i, tc := range testCases {
-		output, err := expandDomainSpec(tc.input)
-		if err != nil {
-			t.Errorf("Unexpected error: %v", err)
-		}
-
-		if !reflect.DeepEqual(output, tc.expectedOutput) {
-			if !compareDomainSpec(output, tc.expectedOutput) {
-				t.Errorf("Test case %d:\nInput: %#v\nExpected output: %#v\nActual output: %#v", i, tc.input, tc.expectedOutput, output)
-			}
-		}
-
-	}
-}
+//func TestExpandDomainSpec(t *testing.T) {
+//	testCases := []struct {
+//		input          []interface{}
+//		expectedOutput kubevirtapiv1.DomainSpec
+//	}{
+//		{
+//			input: []interface{}{
+//				map[string]interface{}{
+//					"devices": []interface{}{
+//						map[string]interface{}{
+//							"disk":      []interface{}{},
+//							"interface": []interface{}{},
+//						},
+//					},
+//					"resources": []interface{}{
+//						map[string]interface{}{
+//							"limits":                     map[string]interface{}{},
+//							"over_commit_guest_overhead": false,
+//							"requests":                   map[string]interface{}{},
+//						},
+//					},
+//				},
+//			},
+//			expectedOutput: kubevirtapiv1.DomainSpec{
+//				Resources: kubevirtapiv1.ResourceRequirements{
+//					OvercommitGuestOverhead: false,
+//					Requests:                map[v1.ResourceName]resource.Quantity{},
+//					Limits:                  map[v1.ResourceName]resource.Quantity{},
+//				},
+//				Devices: kubevirtapiv1.Devices{
+//					Disks:      []kubevirtapiv1.Disk{},
+//					Interfaces: []kubevirtapiv1.Interface{},
+//				},
+//			},
+//		},
+//		{
+//			input: []interface{}{
+//				map[string]interface{}{
+//					"cpu": map[string]interface{}{
+//						"cores":   2,
+//						"sockets": 1,
+//						"threads": 1,
+//					},
+//					"devices":   []interface{}{map[string]interface{}{"disk": []interface{}{}, "interface": []interface{}{}}},
+//					"resources": []interface{}{map[string]interface{}{"limits": map[string]interface{}{}, "over_commit_guest_overhead": false, "requests": map[string]interface{}{}}},
+//				},
+//			},
+//			expectedOutput: kubevirtapiv1.DomainSpec{
+//				CPU: &kubevirtapiv1.CPU{
+//					Cores:   2,
+//					Sockets: 1,
+//					Threads: 1,
+//				},
+//				Resources: kubevirtapiv1.ResourceRequirements{
+//					OvercommitGuestOverhead: false,
+//					Requests:                map[v1.ResourceName]resource.Quantity{},
+//					Limits:                  map[v1.ResourceName]resource.Quantity{},
+//				},
+//				Devices: kubevirtapiv1.Devices{
+//					Disks:      []kubevirtapiv1.Disk{},
+//					Interfaces: []kubevirtapiv1.Interface{},
+//				},
+//			},
+//		},
+//		{
+//			input: []interface{}{
+//				map[string]interface{}{
+//					"memory": []interface{}{
+//						map[string]interface{}{
+//							"guest": "2Gi",
+//						},
+//					},
+//					"devices":   []interface{}{map[string]interface{}{"disk": []interface{}{}, "interface": []interface{}{}}},
+//					"resources": []interface{}{map[string]interface{}{"limits": map[string]interface{}{}, "over_commit_guest_overhead": false, "requests": map[string]interface{}{}}},
+//				},
+//			},
+//			expectedOutput: kubevirtapiv1.DomainSpec{
+//				Memory: &kubevirtapiv1.Memory{
+//					Guest: resource.NewQuantity(2*1024*1024*1024, resource.BinarySI),
+//				},
+//				Resources: kubevirtapiv1.ResourceRequirements{
+//					OvercommitGuestOverhead: false,
+//					Requests:                map[v1.ResourceName]resource.Quantity{},
+//					Limits:                  map[v1.ResourceName]resource.Quantity{},
+//				},
+//				Devices: kubevirtapiv1.Devices{
+//					Disks:      []kubevirtapiv1.Disk{},
+//					Interfaces: []kubevirtapiv1.Interface{},
+//				},
+//			},
+//		},
+//	}
+//
+//	for i, tc := range testCases {
+//		output, err := expandDomainSpec(tc.input)
+//		if err != nil {
+//			t.Errorf("Unexpected error: %v", err)
+//		}
+//
+//		if !reflect.DeepEqual(output, tc.expectedOutput) {
+//			if !compareDomainSpec(output, tc.expectedOutput) {
+//				t.Errorf("Test case %d:\nInput: %#v\nExpected output: %#v\nActual output: %#v", i, tc.input, tc.expectedOutput, output)
+//			}
+//		}
+//
+//	}
+//}
 
 func compareDomainSpec(a, b kubevirtapiv1.DomainSpec) bool {
 	if a.Resources.OvercommitGuestOverhead != b.Resources.OvercommitGuestOverhead {

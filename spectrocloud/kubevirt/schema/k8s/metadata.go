@@ -163,6 +163,9 @@ func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
 
 func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) error {
 	var err error
+	if resourceData == nil {
+		return err
+	}
 	if err = resourceData.Set("annotations", utils.FlattenStringMap(meta.Annotations)); err != nil {
 		return err
 	}
