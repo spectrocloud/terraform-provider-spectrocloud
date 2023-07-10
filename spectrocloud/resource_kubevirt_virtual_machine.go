@@ -8,11 +8,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/convert"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachine"
@@ -101,7 +98,7 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 		d.SetId(utils.BuildId(ClusterContext, clusterUid, vm.Metadata))
 	}
 	if d.Get("run_on_launch").(bool) {
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, cluster.Metadata.UID, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace, diags, c, "create", "Running")
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, ClusterContext, cluster.Metadata.UID, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace, diags, c, "create", "Running")
 		if diags.HasError() {
 			return diags
 		}
@@ -263,6 +260,7 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 }
 
 func resourceKubevirtVirtualMachineDelete(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
 	scope, clusterUid, namespace, name, err := utils.IdParts(resourceData.Id())
 	if err != nil {
 		return diag.FromErr(err)
@@ -274,33 +272,10 @@ func resourceKubevirtVirtualMachineDelete(ctx context.Context, resourceData *sch
 	if err := cli.DeleteVirtualMachine(scope, clusterUid, namespace, name); err != nil {
 		return diag.FromErr(err)
 	}
-
-	// Wait for virtual machine instance to be removed:
-	stateConf := &retry.StateChangeConf{
-		Pending: []string{"Deleting"},
-		Timeout: resourceData.Timeout(schema.TimeoutDelete),
-		Refresh: func() (interface{}, string, error) {
-			vm, err := cli.GetVirtualMachine(scope, resourceData.Get("cluster_uid").(string), namespace, name)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return nil, "", nil
-				}
-				return vm, "", err
-			}
-
-			if vm == nil {
-				return nil, "", nil
-			}
-
-			//log.Printf("[DEBUG] Virtual machine %s is being deleted", vm.GetName())
-			return vm, "Deleting", nil
-		},
+	diags, _ = waitForVirtualMachineToTargetState(ctx, resourceData, scope, clusterUid, name, namespace, diags, cli, "delete", "Deleted")
+	if diags.HasError() {
+		return diags
 	}
-
-	if _, err := stateConf.WaitForStateContext(ctx); err != nil {
-		return diag.FromErr(fmt.Errorf("%s", err))
-	}
-
 	log.Printf("[INFO] virtual machine %s deleted", name)
 
 	resourceData.SetId("")

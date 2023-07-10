@@ -70,25 +70,31 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Required:    true,
 			ForceNew:    true,
 			Description: "The cluster UID to which the virtual machine belongs to.",
-		}, // No need to set back
+		},
+		"cluster_context": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Default:      "project",
+			ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+		},
 		"base_vm_name": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			ForceNew:    true,
 			Description: "The name of the source virtual machine that a clone will be created of.",
-		}, // No need to set back
+		},
 		"run_on_launch": {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Default:     true,
 			Description: "If set to `true`, the virtual machine will be started when the cluster is launched. Default value is `true`.",
-		}, // No need to set back
+		},
 		"vm_action": {
 			Type:         schema.TypeString,
 			Optional:     true,
 			ValidateFunc: validation.StringInSlice([]string{"", "start", "stop", "restart", "pause", "resume", "migrate"}, false),
 			Description:  "The action to be performed on the virtual machine. Valid values are: `start`, `stop`, `restart`, `pause`, `resume`, `migrate`. Default value is `start`.",
-		}, // No need to set back
+		},
 		"data_volume_templates": dataVolumeTemplatesSchema(),
 		"run_strategy": {
 			Type:        schema.TypeString,
