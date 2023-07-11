@@ -97,7 +97,7 @@ func expandVirtualMachineInstanceSpec(d *schema.ResourceData) (kubevirtapiv1.Vir
 		result.PriorityClassName = v.(string)
 	}
 
-	if domain, err := expandDomainSpec(d); err == nil {
+	if domain, err := ExpandDomainSpec(d); err == nil {
 		result.Domain = domain
 	} else {
 		return result, err
@@ -164,7 +164,7 @@ func flattenVirtualMachineInstanceSpec(in kubevirtapiv1.VirtualMachineInstanceSp
 	att := make(map[string]interface{})
 
 	att["priority_class_name"] = in.PriorityClassName
-	att["domain"] = flattenDomainSpec(in.Domain)
+	att["domain"] = FlattenDomainSpec(in.Domain)
 
 	att["node_selector"] = utils.FlattenStringMap(in.NodeSelector)
 	att["affinity"] = k8s.FlattenAffinity(in.Affinity)

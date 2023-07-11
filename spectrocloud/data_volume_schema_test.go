@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -26,6 +27,9 @@ func prepareDataVolumeTestData() *schema.ResourceData {
 			"name":      "vol-test",
 			"namespace": "default",
 			"labels": map[string]interface{}{
+				"key1": "value1",
+			},
+			"annotations": map[string]interface{}{
 				"key1": "value1",
 			},
 		},
@@ -257,42 +261,54 @@ func TestCreateDataVolume(t *testing.T) {
 	resourceKubevirtDataVolumeCreate(ctx, rd, m)
 }
 
-//func TestDeleteDataVolume(t *testing.T) {
-//	var diags diag.Diagnostics
-//	assert := assert.New(t)
-//	_ = prepareDataVolumeTestData()
-//
-//	_ = &client.V1Client{
-//		DeleteDataVolumeFn: func(uid string, namespace string, name string, body *models.V1VMRemoveVolumeEntity) error {
-//			if uid != "cluster-123" {
-//				return errors.New("unexpected cluster_uid")
-//			}
-//			if namespace != "default" {
-//				return errors.New("unexpected vm_namespace")
-//			}
-//			if name != "vm-test" {
-//				return errors.New("unexpected vm_name")
-//			}
-//			if *body.RemoveVolumeOptions.Name != "vol-test" {
-//				return errors.New("unexpected volume name")
-//			}
-//			return nil
-//		},
-//	}
-//
-//	_ = context.Background()
-//
-//	if diags.HasError() {
-//		assert.Error(errors.New("delete operation failed"))
-//	} else {
-//		assert.NoError(nil)
-//	}
-//}
+func TestDeleteDataVolume(t *testing.T) {
+	var diags diag.Diagnostics
+	assert := assert.New(t)
+	rd := prepareDataVolumeTestData()
+
+	m := &client.V1Client{
+		DeleteDataVolumeFn: func(uid string, namespace string, name string, body *models.V1VMRemoveVolumeEntity) error {
+			if uid != "cluster-123" {
+				return errors.New("unexpected cluster_uid")
+			}
+			if namespace != "default" {
+				return errors.New("unexpected vm_namespace")
+			}
+			if name != "vm-test" {
+				return errors.New("unexpected vm_name")
+			}
+			if *body.RemoveVolumeOptions.Name != "vol-test" {
+				return errors.New("unexpected volume name")
+			}
+			return nil
+		},
+		GetClusterWithoutStatusFn: func(uid string) (*models.V1SpectroCluster, error) {
+			if uid != "cluster-123" {
+				return nil, errors.New("unexpected cluster_uid")
+			}
+			return &models.V1SpectroCluster{
+				Metadata: nil,
+				Spec:     nil,
+				Status: &models.V1SpectroClusterStatus{
+					State: "Deleted",
+				},
+			}, nil
+		},
+	}
+
+	ctx := context.Background()
+	diags = resourceKubevirtDataVolumeDelete(ctx, rd, m)
+	if diags.HasError() {
+		assert.Error(errors.New("delete operation failed"))
+	} else {
+		assert.NoError(nil)
+	}
+}
 
 func TestReadDataVolumeWithoutStatus(t *testing.T) {
 	assert := assert.New(t)
 	rd := prepareDataVolumeTestData()
-	rd.SetId("cluster-123/default/vm-test/vol-test")
+	rd.SetId("project/cluster-123/default/vm-test/vol-test")
 	m := &client.V1Client{
 		GetVirtualMachineWithoutStatusFn: func(uid string) (*models.V1ClusterVirtualMachine, error) {
 			if uid != "cluster-123" {
@@ -314,7 +330,7 @@ func TestReadDataVolumeWithoutStatus(t *testing.T) {
 								FinalCheckpoint:   true,
 								Preallocation:     true,
 								PriorityClassName: "high-priority",
-								Pvc: &models.V1VMPersistentVolumeClaimSpec{
+								Pvc:               &models.V1VMPersistentVolumeClaimSpec{
 									// Fill this with appropriate values
 								},
 								Source: &models.V1VMDataVolumeSource{

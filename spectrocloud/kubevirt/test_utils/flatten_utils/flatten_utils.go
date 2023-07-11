@@ -66,12 +66,8 @@ func GetBaseInputForDataVolume() cdiv1.DataVolume {
 
 func GetBaseInputForDataVolumeTemplateSpec() kubevirtapiv1.DataVolumeTemplateSpec {
 	return kubevirtapiv1.DataVolumeTemplateSpec{
-		ObjectMeta: v1.ObjectMeta{
-			GenerateName: "generate_name",
-			Name:         "test-vm-bootvolume",
-			Namespace:    "tenantcluster",
-		},
-		Spec: getDataVolumeSpec(),
+		ObjectMeta: v1.ObjectMeta{},
+		Spec:       getDataVolumeSpec(),
 	}
 }
 
@@ -162,17 +158,7 @@ func GetBaseInputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 			GetBaseInputForDataVolumeTemplateSpec(),
 		},
 		Template: &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{
-			ObjectMeta: v1.ObjectMeta{
-				Annotations: map[string]string{
-					"annotation_key": "annotation_value",
-				},
-				Labels: map[string]string{
-					"kubevirt.io/vm": "test-vm",
-				},
-				GenerateName: "generate_name",
-				Name:         "name",
-				Namespace:    "namespace",
-			},
+			ObjectMeta: v1.ObjectMeta{},
 			Spec: kubevirtapiv1.VirtualMachineInstanceSpec{
 				PriorityClassName: "priority_class_name",
 				Volumes: []kubevirtapiv1.Volume{
@@ -311,19 +297,7 @@ func GetBaseOutputForVirtualMachine() interface{} {
 	return map[string]interface{}{
 		"data_volume_templates": []interface{}{
 			map[string]interface{}{
-				"metadata": []interface{}{
-					map[string]interface{}{
-						"annotations":      interface{}(map[string]interface{}(nil)),
-						"labels":           interface{}(map[string]interface{}(nil)),
-						"name":             "test-vm-bootvolume",
-						"resource_version": interface{}(""),
-						"self_link":        interface{}(""),
-						"uid":              interface{}(""),
-						"generation":       interface{}(int64(0)),
-						"namespace":        "tenantcluster",
-						"generate_name":    "generate_name",
-					},
-				},
+				"metadata": nil,
 				"spec": []interface{}{
 					map[string]interface{}{
 						"pvc": []interface{}{
@@ -382,23 +356,7 @@ func GetBaseOutputForVirtualMachine() interface{} {
 		"run_strategy": "Always",
 		"template": []interface{}{
 			map[string]interface{}{
-				"metadata": []interface{}{
-					map[string]interface{}{
-						"annotations": map[string]interface{}{
-							"annotation_key": "annotation_value",
-						},
-						"labels": map[string]interface{}{
-							"kubevirt.io/vm": "test-vm",
-						},
-						"generate_name":    "generate_name",
-						"name":             "name",
-						"namespace":        "namespace",
-						"resource_version": interface{}(""),
-						"self_link":        interface{}(""),
-						"uid":              interface{}(""),
-						"generation":       interface{}(int64(0)),
-					},
-				},
+				"metadata": nil,
 				"spec": []interface{}{
 					map[string]interface{}{
 						"node_selector": map[string]interface{}{

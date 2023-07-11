@@ -17,12 +17,10 @@ import (
 )
 
 func GetBaseInputForDataVolume() interface{} {
-	return map[string]interface{}{
+	return []interface{}{map[string]interface{}{
 		"metadata": []interface{}{
 			map[string]interface{}{
-				"generate_name": "generate_name",
-				"name":          "test-vm-bootvolume",
-				"namespace":     "tenantcluster",
+				"name": "test-vm-bootvolume",
 			},
 		},
 		"spec": []interface{}{
@@ -73,7 +71,7 @@ func GetBaseInputForDataVolume() interface{} {
 				"content_type": "content_type",
 			},
 		},
-	}
+	}}
 }
 
 func getDataVolumeSpec() cdiv1.DataVolumeSpec {
@@ -137,182 +135,150 @@ func GetBaseOutputForDataVolume() cdiv1.DataVolume {
 
 func GetBaseInputForVirtualMachine() interface{} {
 	return map[string]interface{}{
-		"data_volume_templates": []interface{}{
-			GetBaseInputForDataVolume(),
+		"data_volume_templates": GetBaseInputForDataVolume(),
+		"run_strategy":          "Always",
+		"annotations": map[string]interface{}{
+			"annotation_key": "annotation_value",
 		},
-		"run_strategy": "Always",
-		"template": []interface{}{
+		"labels": map[string]interface{}{
+			"kubevirt.io/vm": "test-vm",
+		},
+		"generate_name":       "generate_name",
+		"name":                "name",
+		"namespace":           "namespace",
+		"priority_class_name": "priority_class_name",
+		"resources": []interface{}{
 			map[string]interface{}{
-				"metadata": []interface{}{
+				"requests": map[string]interface{}{
+					"cpu":    "4",
+					"memory": "10G",
+				},
+				"limits": map[string]interface{}{
+					"cpu":    "8",
+					"memory": "20G",
+				},
+				"over_commit_guest_overhead": false,
+			},
+		},
+		"disk": []interface{}{
+			map[string]interface{}{
+				"disk_device": []interface{}{
 					map[string]interface{}{
-						"annotations": map[string]interface{}{
-							"annotation_key": "annotation_value",
+						"disk": []interface{}{
+							map[string]interface{}{
+								"bus":         "virtio",
+								"read_only":   true,
+								"pci_address": "pci_address",
+							},
 						},
-						"labels": map[string]interface{}{
-							"kubevirt.io/vm": "test-vm",
-						},
-						"generate_name": "generate_name",
-						"name":          "name",
-						"namespace":     "namespace",
 					},
 				},
-				"spec": []interface{}{
+				"name":   "test-vm-datavolumedisk1",
+				"serial": "serial",
+			},
+		},
+		"interface": []interface{}{
+			map[string]interface{}{
+				"interface_binding_method": "InterfaceBridge",
+				"name":                     "main",
+			},
+		},
+		"node_selector": map[string]interface{}{
+			"node_selector_key": "node_selector_value",
+		},
+		"affinity": []interface{}{
+			map[string]interface{}{
+				"node_affinity": []interface{}{
 					map[string]interface{}{
-						"priority_class_name": "priority_class_name",
-						"domain": []interface{}{
+						"required_during_scheduling_ignored_during_execution":  test_entities.NodeRequiredDuringSchedulingIgnoredDuringExecution,
+						"preferred_during_scheduling_ignored_during_execution": test_entities.NodePreferredDuringSchedulingIgnoredDuringExecution,
+					},
+				},
+				"pod_affinity": []interface{}{
+					map[string]interface{}{
+						"preferred_during_scheduling_ignored_during_execution": test_entities.PodPreferredDuringSchedulingIgnoredDuringExecutionTerraform,
+						"required_during_scheduling_ignored_during_execution":  test_entities.PodRequiredDuringSchedulingIgnoredDuringExecutionTerraform,
+					},
+				},
+				"pod_anti_affinity": []interface{}{
+					map[string]interface{}{
+						"preferred_during_scheduling_ignored_during_execution": test_entities.PodPreferredDuringSchedulingIgnoredDuringExecutionTerraform,
+						"required_during_scheduling_ignored_during_execution":  test_entities.PodRequiredDuringSchedulingIgnoredDuringExecutionTerraform,
+					},
+				},
+			},
+		},
+		"scheduler_name": "scheduler_name",
+		"tolerations": []interface{}{
+			map[string]interface{}{
+				"effect":             "effect",
+				"key":                "key",
+				"operator":           "operator",
+				"toleration_seconds": "60",
+				"value":              "value",
+			},
+		},
+		"eviction_strategy":                "eviction_strategy",
+		"termination_grace_period_seconds": 120,
+		"volume": []interface{}{
+			map[string]interface{}{
+				"name": "test-vm-datavolumedisk1",
+				"volume_source": []interface{}{
+					map[string]interface{}{
+						"data_volume": []interface{}{
 							map[string]interface{}{
-								"resources": []interface{}{
-									map[string]interface{}{
-										"requests": map[string]interface{}{
-											"cpu":    4,
-											"memory": "10G",
-										},
-										"limits": map[string]interface{}{
-											"cpu":    8,
-											"memory": "20G",
-										},
-										"over_commit_guest_overhead": false,
-									},
-								},
-								"devices": []interface{}{
-									map[string]interface{}{
-										"disk": []interface{}{
-											map[string]interface{}{
-												"disk_device": []interface{}{
-													map[string]interface{}{
-														"disk": []interface{}{
-															map[string]interface{}{
-																"bus":         "virtio",
-																"read_only":   true,
-																"pci_address": "pci_address",
-															},
-														},
-													},
-												},
-												"name":   "test-vm-datavolumedisk1",
-												"serial": "serial",
-											},
-										},
-										"interface": []interface{}{
-											map[string]interface{}{
-												"interface_binding_method": "InterfaceBridge",
-												"name":                     "main",
-											},
-										},
-									},
-								},
+								"name": "test-vm-bootvolume",
 							},
 						},
-						"node_selector": map[string]interface{}{
-							"node_selector_key": "node_selector_value",
-						},
-						"affinity": []interface{}{
+						"cloud_init_config_drive": []interface{}{
 							map[string]interface{}{
-								"node_affinity": []interface{}{
+								"user_data_secret_ref": []interface{}{
 									map[string]interface{}{
-										"required_during_scheduling_ignored_during_execution":  test_entities.NodeRequiredDuringSchedulingIgnoredDuringExecution,
-										"preferred_during_scheduling_ignored_during_execution": test_entities.NodePreferredDuringSchedulingIgnoredDuringExecution,
+										"name": "name",
 									},
 								},
-								"pod_affinity": []interface{}{
+								"user_data_base64": "user_data_base64",
+								"user_data":        "user_data",
+								"network_data_secret_ref": []interface{}{
 									map[string]interface{}{
-										"preferred_during_scheduling_ignored_during_execution": test_entities.PodPreferredDuringSchedulingIgnoredDuringExecutionTerraform,
-										"required_during_scheduling_ignored_during_execution":  test_entities.PodRequiredDuringSchedulingIgnoredDuringExecutionTerraform,
+										"name": "name",
 									},
 								},
-								"pod_anti_affinity": []interface{}{
-									map[string]interface{}{
-										"preferred_during_scheduling_ignored_during_execution": test_entities.PodPreferredDuringSchedulingIgnoredDuringExecutionTerraform,
-										"required_during_scheduling_ignored_during_execution":  test_entities.PodRequiredDuringSchedulingIgnoredDuringExecutionTerraform,
-									},
-								},
+								"network_data_base64": "network_data_base64",
+								"network_data":        "network_data",
 							},
 						},
-						"scheduler_name": "scheduler_name",
-						"tolerations": []interface{}{
+						"service_account": []interface{}{
 							map[string]interface{}{
-								"effect":             "effect",
-								"key":                "key",
-								"operator":           "operator",
-								"toleration_seconds": "60",
-								"value":              "value",
-							},
-						},
-						"eviction_strategy":                "eviction_strategy",
-						"termination_grace_period_seconds": 120,
-						"volume": []interface{}{
-							map[string]interface{}{
-								"name": "test-vm-datavolumedisk1",
-								"volume_source": []interface{}{
-									map[string]interface{}{
-										"data_volume": []interface{}{
-											map[string]interface{}{
-												"name": "test-vm-bootvolume",
-											},
-										},
-										"cloud_init_config_drive": []interface{}{
-											map[string]interface{}{
-												"user_data_secret_ref": []interface{}{
-													map[string]interface{}{
-														"name": "name",
-													},
-												},
-												"user_data_base64": "user_data_base64",
-												"user_data":        "user_data",
-												"network_data_secret_ref": []interface{}{
-													map[string]interface{}{
-														"name": "name",
-													},
-												},
-												"network_data_base64": "network_data_base64",
-												"network_data":        "network_data",
-											},
-										},
-										"service_account": []interface{}{
-											map[string]interface{}{
-												"service_account_name": "service_account_name",
-											},
-										},
-									},
-								},
-							},
-						},
-						"hostname":  "hostname",
-						"subdomain": "subdomain",
-						"network": []interface{}{
-							map[string]interface{}{
-								"name": "main",
-								"network_source": []interface{}{
-									map[string]interface{}{
-										"pod": []interface{}{
-											map[string]interface{}{
-												"vm_network_cidr": "vm_network_cidr",
-											},
-										},
-										"multus": []interface{}{
-											map[string]interface{}{
-												"network_name": "tenantcluster",
-											},
-										},
-									},
-								},
-							},
-						},
-						"dns_policy": "dns_policy",
-						"pod_dns_config": []interface{}{
-							map[string]interface{}{
-								"option": []interface{}{
-									map[string]interface{}{
-										"name":  "name",
-										"value": "value",
-									},
-								},
+								"service_account_name": "service_account_name",
 							},
 						},
 					},
 				},
 			},
 		},
+		"hostname":  "hostname",
+		"subdomain": "subdomain",
+		"network": []interface{}{
+			map[string]interface{}{
+				"name": "main",
+				"network_source": []interface{}{
+					map[string]interface{}{
+						"pod": []interface{}{
+							map[string]interface{}{
+								"vm_network_cidr": "vm_network_cidr",
+							},
+						},
+						"multus": []interface{}{
+							map[string]interface{}{
+								"network_name": "tenantcluster",
+							},
+						},
+					},
+				},
+			},
+		},
+		"dns_policy": "dns_policy",
 	}
 }
 
@@ -322,9 +288,7 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 			strategy := kubevirtapiv1.VirtualMachineRunStrategy("Always")
 			return &strategy
 		})(),
-		DataVolumeTemplates: []kubevirtapiv1.DataVolumeTemplateSpec{
-			getBaseOutputForDataVolumeTemplateSpec(),
-		},
+		DataVolumeTemplates: nil,
 		Template: &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{
 			ObjectMeta: v1.ObjectMeta{
 				Annotations: map[string]string{
@@ -378,30 +342,7 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 				NodeSelector: map[string]string{
 					"node_selector_key": "node_selector_value",
 				},
-				Affinity: &k8sv1.Affinity{
-					NodeAffinity: &k8sv1.NodeAffinity{
-						RequiredDuringSchedulingIgnoredDuringExecution: &k8sv1.NodeSelector{
-							NodeSelectorTerms: test_entities.NodeSelectorTermAPI,
-						},
-						PreferredDuringSchedulingIgnoredDuringExecution: []k8sv1.PreferredSchedulingTerm{
-							{
-								Weight: int32(10),
-								Preference: k8sv1.NodeSelectorTerm{
-									MatchExpressions: test_entities.MatchExpressionAPI,
-									MatchFields:      test_entities.MatchFieldsAPI,
-								},
-							},
-						},
-					},
-					PodAffinity: &k8sv1.PodAffinity{
-						PreferredDuringSchedulingIgnoredDuringExecution: test_entities.PodPreferredDuringSchedulingIgnoredDuringExecutionAPI,
-						RequiredDuringSchedulingIgnoredDuringExecution:  test_entities.PodRequiredDuringSchedulingIgnoredDuringExecutionAPI,
-					},
-					PodAntiAffinity: &k8sv1.PodAntiAffinity{
-						PreferredDuringSchedulingIgnoredDuringExecution: test_entities.PodPreferredDuringSchedulingIgnoredDuringExecutionAPI,
-						RequiredDuringSchedulingIgnoredDuringExecution:  test_entities.PodRequiredDuringSchedulingIgnoredDuringExecutionAPI,
-					},
-				},
+				Affinity:      nil,
 				SchedulerName: "scheduler_name",
 				Tolerations: []k8sv1.Toleration{
 					{
@@ -458,14 +399,7 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 					},
 				},
 				DNSPolicy: k8sv1.DNSPolicy("dns_policy"),
-				DNSConfig: &k8sv1.PodDNSConfig{
-					Options: []k8sv1.PodDNSConfigOption{
-						{
-							Name:  "name",
-							Value: (func() *string { retval := "value"; return &retval })(),
-						},
-					},
-				},
+				DNSConfig: nil,
 			},
 		},
 	}

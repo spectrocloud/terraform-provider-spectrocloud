@@ -20,6 +20,12 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			ForceNew:     true,
 			ValidateFunc: utils.ValidateName,
 		},
+		"generate_name": {
+			Type:         schema.TypeString,
+			Description:  "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
+			Optional:     true,
+			ValidateFunc: utils.ValidateGenerateName,
+		},
 		"namespace": {
 			Type:        schema.TypeString,
 			Description: "Namespace defines the space within, Name must be unique.",
@@ -335,7 +341,7 @@ func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.Virtual
 	result := &kubevirtapiv1.VirtualMachine{}
 
 	result.ObjectMeta = k8s.ConvertToBasicMetadata(resourceData)
-	spec, err := expandVirtualMachineSpec(resourceData)
+	spec, err := ExpandVirtualMachineSpec(resourceData)
 	if err != nil {
 		return result, err
 	}

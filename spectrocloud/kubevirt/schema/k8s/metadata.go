@@ -161,6 +161,26 @@ func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
 	return meta
 }
 
+func FlattenMetadataDataVolume(meta metav1.ObjectMeta) []interface{} {
+	m := make(map[string]interface{})
+	m["annotations"] = utils.FlattenStringMap(meta.Annotations)
+	if meta.GenerateName != "" {
+		m["generate_name"] = meta.GenerateName
+	}
+	m["labels"] = utils.FlattenStringMap(meta.Labels)
+	m["name"] = meta.Name
+	m["resource_version"] = meta.ResourceVersion
+	m["self_link"] = meta.SelfLink
+	m["uid"] = fmt.Sprintf("%v", meta.UID)
+	m["generation"] = meta.Generation
+
+	if meta.Namespace != "" {
+		m["namespace"] = meta.Namespace
+	}
+
+	return []interface{}{m}
+}
+
 func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) error {
 	var err error
 	if resourceData == nil {

@@ -19,5 +19,5 @@ func GetDomainResources(vm interface{}) interface{} {
 }
 
 func GetVirtualMachineTolerations(vm interface{}) interface{} {
-	return vm.(map[string]interface{})["template"].([]interface{})[0].(map[string]interface{})["spec"].([]interface{})[0].(map[string]interface{})["tolerations"].([]interface{})[0]
+	return vm.(map[string]interface{})["tolerations"].([]interface{})[0]
 }

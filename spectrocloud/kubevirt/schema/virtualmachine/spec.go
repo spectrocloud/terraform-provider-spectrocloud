@@ -47,7 +47,7 @@ import (
 //
 //}
 
-func expandVirtualMachineSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineSpec, error) {
+func ExpandVirtualMachineSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineSpec, error) {
 	result := kubevirtapiv1.VirtualMachineSpec{}
 
 	if v, ok := d.GetOk("run_strategy"); ok {
@@ -74,7 +74,7 @@ func expandVirtualMachineSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMach
 	return result, nil
 }
 
-func flattenVirtualMachineSpec(in kubevirtapiv1.VirtualMachineSpec, resourceData *schema.ResourceData) []interface{} {
+func FlattenVirtualMachineSpec(in kubevirtapiv1.VirtualMachineSpec, resourceData *schema.ResourceData) []interface{} {
 	att := make(map[string]interface{})
 
 	if in.RunStrategy != nil {
@@ -95,7 +95,7 @@ func flattenVirtualMachineSpec(in kubevirtapiv1.VirtualMachineSpec, resourceData
 }
 
 func FlattenVMMToSpectroSchema(in kubevirtapiv1.VirtualMachineSpec, resourceData *schema.ResourceData) error {
-	VM := flattenVirtualMachineSpec(in, resourceData)[0].(map[string]interface{})
+	VM := FlattenVirtualMachineSpec(in, resourceData)[0].(map[string]interface{})
 	VMTemplate := VM["template"]
 	VMTemplateSpec := VMTemplate.([]interface{})[0].(map[string]interface{})["spec"]
 	VMTemplateSpecAttributes := VMTemplateSpec.([]interface{})[0].(map[string]interface{})
