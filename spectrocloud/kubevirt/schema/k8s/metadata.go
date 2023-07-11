@@ -6,8 +6,6 @@ import (
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils/patch"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -97,10 +95,6 @@ func namespacedMetadataSchemaIsTemplate(objectName string, generatableName, isTe
 			Schema: fields,
 		},
 	}
-}
-
-func BuildId(meta metav1.ObjectMeta) string {
-	return meta.Namespace + "/" + meta.Name
 }
 
 func ConvertToBasicMetadata(d *schema.ResourceData) metav1.ObjectMeta {
@@ -214,18 +208,4 @@ func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) 
 	}
 
 	return err
-}
-
-func AppendPatchOps(keyPrefix, pathPrefix string, resourceData *schema.ResourceData, ops []patch.PatchOperation) patch.PatchOperations {
-	if resourceData.HasChange(keyPrefix + "annotations") {
-		oldV, newV := resourceData.GetChange(keyPrefix + "annotations")
-		diffOps := patch.DiffStringMap(pathPrefix+"annotations", oldV.(map[string]interface{}), newV.(map[string]interface{}))
-		ops = append(ops, diffOps...)
-	}
-	if resourceData.HasChange(keyPrefix + "labels") {
-		oldV, newV := resourceData.GetChange(keyPrefix + "labels")
-		diffOps := patch.DiffStringMap(pathPrefix+"labels", oldV.(map[string]interface{}), newV.(map[string]interface{}))
-		ops = append(ops, diffOps...)
-	}
-	return ops
 }

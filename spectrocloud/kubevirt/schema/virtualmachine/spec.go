@@ -7,46 +7,6 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachineinstance"
 )
 
-//func virtualMachineSpecFields() map[string]*schema.Schema {
-//	return map[string]*schema.Schema{
-//		// "running": &schema.Schema{
-//		// 	Type:        schema.TypeBool,
-//		// 	Description: "Running controls whether the associatied VirtualMachineInstance is created or not.",
-//		// 	Optional:    true,
-//		// },
-//		"run_strategy": {
-//			Type:        schema.TypeString,
-//			Description: "Running state indicates the requested running state of the VirtualMachineInstance, mutually exclusive with Running.",
-//			Optional:    true,
-//			ValidateFunc: validation.StringInSlice([]string{
-//				"",
-//				"Always",
-//				"Halted",
-//				"Manual",
-//				"RerunOnFailure",
-//			}, false),
-//		},
-//		"template":              virtualmachineinstance.VirtualMachineInstanceTemplateSpecSchema(),
-//		"data_volume_templates": dataVolumeTemplatesSchema(),
-//	}
-//}
-
-//func virtualMachineSpecSchema() *schema.Schema {
-//	fields := virtualMachineSpecFields()
-//
-//	return &schema.Schema{
-//		Type: schema.TypeList,
-//
-//		Description: "VirtualMachineSpec describes how the proper VirtualMachine should look like.",
-//		Optional:    true,
-//		MaxItems:    1,
-//		Elem: &schema.Resource{
-//			Schema: fields,
-//		},
-//	}
-//
-//}
-
 func ExpandVirtualMachineSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineSpec, error) {
 	result := kubevirtapiv1.VirtualMachineSpec{}
 

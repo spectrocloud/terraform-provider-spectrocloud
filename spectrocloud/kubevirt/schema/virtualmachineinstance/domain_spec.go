@@ -277,6 +277,7 @@ func expandDevices(d *schema.ResourceData) (kubevirtapiv1.Devices, error) {
 
 	return result, nil
 }
+
 func expandCPU(cpu map[string]interface{}) (kubevirtapiv1.CPU, error) {
 	result := kubevirtapiv1.CPU{}
 

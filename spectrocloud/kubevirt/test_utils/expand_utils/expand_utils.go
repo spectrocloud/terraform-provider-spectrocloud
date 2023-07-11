@@ -111,17 +111,6 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 	}
 }
 
-func getBaseOutputForDataVolumeTemplateSpec() kubevirtapiv1.DataVolumeTemplateSpec {
-	return kubevirtapiv1.DataVolumeTemplateSpec{
-		ObjectMeta: v1.ObjectMeta{
-			GenerateName: "generate_name",
-			Name:         "test-vm-bootvolume",
-			Namespace:    "tenantcluster",
-		},
-		Spec: getDataVolumeSpec(),
-	}
-}
-
 func GetBaseOutputForDataVolume() cdiv1.DataVolume {
 	return cdiv1.DataVolume{
 		ObjectMeta: v1.ObjectMeta{
