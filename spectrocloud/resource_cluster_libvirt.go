@@ -336,12 +336,12 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	uid, err := c.CreateClusterLibvirt(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterLibvirt(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
 	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
@@ -378,10 +378,11 @@ func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m int
 }
 
 func flattenCloudConfigLibvirt(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigLibvirt(configUID); err != nil {
+	if config, err := c.GetCloudConfigLibvirt(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsLibvirt(config.Spec.MachinePoolConfig)
@@ -493,7 +494,7 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -529,10 +530,10 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolLibvirt(cloudConfigId, machinePool)
+					err = c.CreateMachinePoolLibvirt(cloudConfigId, ClusterContext, machinePool)
 				} else if hash != resourceMachinePoolLibvirtHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolLibvirt(cloudConfigId, machinePool)
+					err = c.UpdateMachinePoolLibvirt(cloudConfigId, ClusterContext, machinePool)
 				}
 
 				if err != nil {
@@ -549,7 +550,7 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolLibvirt(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolLibvirt(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}

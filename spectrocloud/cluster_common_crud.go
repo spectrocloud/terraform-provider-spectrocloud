@@ -36,7 +36,7 @@ var virtualClusterLifecycleStates = []string{
 	"Paused",
 }
 
-func waitForClusterReady(ctx context.Context, d *schema.ResourceData, scope string, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+func waitForClusterReady(ctx context.Context, d *schema.ResourceData, scope, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
 	stateConf := &retry.StateChangeConf{
@@ -97,7 +97,7 @@ func waitForVirtualClusterLifecycleResume(ctx context.Context, d *schema.Resourc
 	return nil, false
 }
 
-func resourceClusterReadyRefreshFunc(c *client.V1Client, scope string, id string) retry.StateRefreshFunc {
+func resourceClusterReadyRefreshFunc(c *client.V1Client, scope, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetClusterWithoutStatus(scope, id)
 		if err != nil {
@@ -109,7 +109,7 @@ func resourceClusterReadyRefreshFunc(c *client.V1Client, scope string, id string
 	}
 }
 
-func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, scope string, uid string, diags diag.Diagnostics, c *client.V1Client, initial bool) (diag.Diagnostics, bool) {
+func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, scope, uid string, diags diag.Diagnostics, c *client.V1Client, initial bool) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
 	if initial { // only skip_completion when initally creating a cluster, do not skip when attach addon profile
@@ -150,7 +150,7 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, scope s
 //		"resetting-master-credentials",
 //		"upgrading",
 //	}
-func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope string, id string, timeout time.Duration) error {
+func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope, id string, timeout time.Duration) error {
 	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterDeletePendingStates,
 		Target:     nil, // wait for deleted
@@ -165,7 +165,7 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope strin
 	return err
 }
 
-func resourceClusterStateRefreshFunc(c *client.V1Client, scope string, id string) retry.StateRefreshFunc {
+func resourceClusterStateRefreshFunc(c *client.V1Client, scope, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(scope, id)
 		if err != nil {
@@ -181,7 +181,7 @@ func resourceClusterStateRefreshFunc(c *client.V1Client, scope string, id string
 	}
 }
 
-func resourceVirtualClusterLifecycleStateRefreshFunc(c *client.V1Client, scope string, id string) retry.StateRefreshFunc {
+func resourceVirtualClusterLifecycleStateRefreshFunc(c *client.V1Client, scope, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetCluster(scope, id)
 		if err != nil {

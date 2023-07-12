@@ -41,7 +41,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	if rbac, err := c.GetClusterRbacConfig(d.Id()); err != nil {
+	if rbac, err := c.GetClusterRbacConfig(d.Id(), ClusterContext); err != nil {
 		return diag.FromErr(err), true
 	} else if rbac != nil && rbac.Items != nil {
 		if err := d.Set("cluster_rbac_binding", flattenClusterRBAC(rbac.Items)); err != nil {

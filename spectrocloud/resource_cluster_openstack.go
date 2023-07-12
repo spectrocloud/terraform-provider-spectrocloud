@@ -222,12 +222,12 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 
 	cluster := toOpenStackCluster(c, d)
 
-	uid, err := c.CreateClusterOpenStack(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterOpenStack(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
 	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
@@ -319,7 +319,8 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigOpenStack(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigOpenStack(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsOpenStack(config.Spec.MachinePoolConfig)
@@ -372,7 +373,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -403,10 +404,10 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 				var err error
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolOpenStack(cloudConfigId, machinePool)
+					err = c.CreateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
 				} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool)
+					err = c.UpdateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
 				}
 
 				if err != nil {
@@ -423,7 +424,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}

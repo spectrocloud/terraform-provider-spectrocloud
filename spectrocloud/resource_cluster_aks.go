@@ -262,7 +262,8 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigAks(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigAks(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
@@ -314,7 +315,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	_ = d.Get("machine_pool")
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -345,10 +346,10 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 				var err error
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolAks(cloudConfigId, machinePool)
+					err = c.CreateMachinePoolAks(cloudConfigId, machinePool, ClusterContext)
 				} else if hash != resourceMachinePoolAksHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolAks(cloudConfigId, machinePool)
+					err = c.UpdateMachinePoolAks(cloudConfigId, machinePool, ClusterContext)
 				}
 				if err != nil {
 					return diag.FromErr(err)
@@ -362,7 +363,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAks(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolAks(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
