@@ -80,6 +80,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Type:         schema.TypeString,
 			Optional:     true,
 			Default:      "project",
+			Description:  "Context of the cluster. Allowed values are `project`, `tenant`. Default value is `project`.",
 			ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 		},
 		"base_vm_name": {
