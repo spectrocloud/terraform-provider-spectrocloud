@@ -252,7 +252,7 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 		GetCloudConfigVsphereFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
 			return getCloudConfig(), nil
 		},
-		GetClusterFn: func(scope string, uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			isHost := new(bool)
 			*isHost = true
 			cluster := &models.V1SpectroCluster{
@@ -486,7 +486,7 @@ func TestResourceClusterVsphereReadNilCluster(t *testing.T) {
 	// Create a mock ResourceData object
 	d := prepareClusterVsphereTestData()
 	m := &client.V1Client{
-		GetClusterFn: func(scope string, uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			return nil, nil
 		},
 	}
@@ -502,7 +502,7 @@ func TestResourceClusterVsphereReadError(t *testing.T) {
 	// Create a mock ResourceData object
 	d := prepareClusterVsphereTestData()
 	m := &client.V1Client{
-		GetClusterFn: func(scope string, uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			return nil, errors.New("unexpected Error")
 		},
 	}
@@ -711,7 +711,7 @@ func TestFlattenMachinePoolConfigsVsphereNil(t *testing.T) {
 func TestResourceClusterVsphereUpdate(t *testing.T) {
 	d := prepareClusterVsphereTestData()
 	m := &client.V1Client{
-		GetClusterFn: func(scope string, uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			return nil, nil
 		},
 	}

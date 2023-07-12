@@ -31,11 +31,11 @@ func IdPartsDV(id string) (string, string, string, string, string, error) {
 	return parts[0], parts[1], parts[2], parts[3], parts[4], nil
 }
 
-func BuildId(clusterScope string, clusterUid string, meta *models.V1VMObjectMeta) string {
+func BuildId(clusterScope, clusterUid string, meta *models.V1VMObjectMeta) string {
 	return clusterScope + "/" + clusterUid + "/" + meta.Namespace + "/" + meta.Name
 }
 
-func BuildIdDV(clusterScope string, clusterUid string, vm_namespace string, vm_name string, meta *models.V1VMObjectMeta) string {
+func BuildIdDV(clusterScope, clusterUid, vm_namespace, vm_name string, meta *models.V1VMObjectMeta) string {
 	return clusterScope + "/" + clusterUid + "/" + vm_namespace + "/" + vm_name + "/" + meta.Name
 }
 

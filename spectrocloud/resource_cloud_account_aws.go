@@ -30,6 +30,7 @@ func resourceCloudAccountAws() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the AWS configuration. Can be `project` or `tenant`.",
 			},
 			"aws_access_key": {
 				Type:     schema.TypeString,
@@ -105,7 +106,8 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 
 	uid := d.Id()
 
-	account, err := c.GetCloudAccountAws(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountAws(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -174,7 +176,8 @@ func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m 
 
 	cloudAccountID := d.Id()
 
-	err := c.DeleteCloudAccountAws(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountAws(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}

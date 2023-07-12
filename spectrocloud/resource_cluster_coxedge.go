@@ -367,7 +367,8 @@ func resourceCoxEdgeClusterRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	var config *models.V1CoxEdgeCloudConfig
-	if config, err = c.GetCloudConfigCoxEdge(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err = c.GetCloudConfigCoxEdge(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -540,9 +541,7 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
-	_ = d.Get("machine_pool")
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -575,11 +574,11 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolCoxEdge(cloudConfigId, machinePool)
+					err = c.CreateMachinePoolCoxEdge(cloudConfigId, machinePool, ClusterContext)
 				} else if hash != resourceMachinePoolCoxEdgeHash(oldMachinePool) {
 					// TODO
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolCoxEdge(cloudConfigId, machinePool)
+					err = c.UpdateMachinePoolCoxEdge(cloudConfigId, machinePool, ClusterContext)
 				}
 
 				if err != nil {
@@ -596,7 +595,7 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolCoxEdge(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolCoxEdge(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}

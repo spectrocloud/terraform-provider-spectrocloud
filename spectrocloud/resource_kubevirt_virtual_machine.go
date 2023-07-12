@@ -191,7 +191,7 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 	return resourceKubevirtVirtualMachineRead(ctx, d, m)
 }
 
-func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *schema.ResourceData, stateToChange string, scope string, clusterUid string, vmName string, vmNamespace string) diag.Diagnostics {
+func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *schema.ResourceData, stateToChange, scope, clusterUid, vmName, vmNamespace string) diag.Diagnostics {
 	var diags diag.Diagnostics
 	ClusterContext := d.Get("cluster_context").(string)
 	// need to add validation status and allowed actions

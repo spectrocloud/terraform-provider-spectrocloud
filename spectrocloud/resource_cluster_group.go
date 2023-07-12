@@ -299,7 +299,7 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 	return ret
 }
 
-func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig, hostClusterConfig []*models.V1ClusterGroupHostClusterConfig, endpointType string, values string) *models.V1ClusterGroupClustersConfig {
+func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig, hostClusterConfig []*models.V1ClusterGroupHostClusterConfig, endpointType, values string) *models.V1ClusterGroupClustersConfig {
 	if values != "" {
 		return &models.V1ClusterGroupClustersConfig{
 			EndpointType:       endpointType,
