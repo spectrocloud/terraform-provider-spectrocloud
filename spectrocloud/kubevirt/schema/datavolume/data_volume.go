@@ -35,48 +35,6 @@ func DataVolumeFields() map[string]*schema.Schema {
 	}
 }
 
-func ExpandDataVolumeTemplates(dataVolumes []interface{}) ([]cdiv1.DataVolume, error) {
-	result := make([]cdiv1.DataVolume, len(dataVolumes))
-
-	if len(dataVolumes) == 0 || dataVolumes[0] == nil {
-		return result, nil
-	}
-
-	for i, dataVolume := range dataVolumes {
-		in := dataVolume.(map[string]interface{})
-
-		if v, ok := in["metadata"].([]interface{}); ok {
-			result[i].ObjectMeta = k8s.ExpandMetadata(v)
-		}
-		if v, ok := in["spec"].([]interface{}); ok {
-			spec, err := ExpandDataVolumeSpec(v)
-			if err != nil {
-				return result, err
-			}
-			result[i].Spec = spec
-		}
-		if v, ok := in["status"].([]interface{}); ok {
-			result[i].Status = expandDataVolumeStatus(v)
-		}
-	}
-
-	return result, nil
-}
-
-func FlattenDataVolumeTemplates(in []cdiv1.DataVolume, resourceData *schema.ResourceData) []interface{} {
-	att := make([]interface{}, len(in))
-
-	for i, v := range in {
-		c := make(map[string]interface{})
-		c["metadata"] = k8s.FlattenMetadata(v.ObjectMeta, resourceData)
-		c["spec"] = FlattenDataVolumeSpec(v.Spec)
-		c["status"] = flattenDataVolumeStatus(v.Status)
-		att[i] = c
-	}
-
-	return att
-}
-
 func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, error) {
 	result := &cdiv1.DataVolume{}
 
