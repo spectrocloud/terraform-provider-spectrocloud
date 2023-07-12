@@ -10,11 +10,11 @@ locals {
 
 // Create a VM with default cloud init disk, container disk , interface and network
 resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
-  cluster_uid   = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  run_on_launch = true
-  name      = "tf-test-vm-basic-type"
-  namespace = "default"
+  run_on_launch   = true
+  name            = "tf-test-vm-basic-type"
+  namespace       = "default"
   labels = {
     "tf" = "test"
   }
@@ -89,12 +89,12 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
 // Cloning VM with base_vm_name "tf-test-vm-basic-type"
 #/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
-  cluster_uid  = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  base_vm_name = spectrocloud_virtual_machine.tf-test-vm-basic-type.name
-  name      = "tf-test-vm-clone"
-  namespace = "default"
-  run_on_launch = true
+  base_vm_name    = spectrocloud_virtual_machine.tf-test-vm-basic-type.name
+  name            = "tf-test-vm-clone"
+  namespace       = "default"
+  run_on_launch   = true
   labels = {
     "tf" = "test"
   }
@@ -170,11 +170,11 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
 // Creating VM with data volume template
 #/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
-  cluster_uid   = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  run_on_launch = true
-  name      = "tf-test-vm-data-volume-template"
-  namespace = "default"
+  run_on_launch   = true
+  name            = "tf-test-vm-data-volume-template"
+  namespace       = "default"
   labels = {
     "tf" = "test"
   }
@@ -272,10 +272,10 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
 # Create a VM with default cloud init disk, container disk , multus network interface with interface binding method as sr-iov and network model
 #/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-multi-networks" {
-  cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  name      = "tf-test-vm-multi-network-interface"
-  namespace = "default"
+  name            = "tf-test-vm-multi-network-interface"
+  namespace       = "default"
   labels = {
     "key1" = "value1"
   }
@@ -352,54 +352,54 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-multi-networks" {
 # Create a VM with default with all available day2 attributes
 #/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
-  cluster_uid = data.spectrocloud_cluster.vm_enabled_base_cluster.id
+  cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  name      = "tf-test-vm-all-option-spec-day2"
-  namespace = "default"
+  name            = "tf-test-vm-all-option-spec-day2"
+  namespace       = "default"
   labels = {
     "key1" = "value1"
   }
-#  Sample Day 2 Operation attributes
-#  priority_class_name = "high"
-#  scheduler_name = "test"
-#  node_selector = {
-#    "test_vmi" = "node_labels"
-#  }
-#  eviction_strategy = "LiveMigrate"
-#  termination_grace_period_seconds = 60
-#  hostname = "spectro-com"
-#  subdomain = "test-spectro-com"
-#  dns_policy = "Default" //["ClusterFirstWithHostNet", "ClusterFirst", "Default", "None"]
-#  tolerations {
-#    effect = "NoExecute" // ["NoSchedule", "PreferNoSchedule", "NoExecute"]
-#    key = "tolerationKey"
-#    operator = "Equal" // ["Exists", "Equal"]
-#    toleration_seconds = "60"
-#    value = "taintValue"
-#  }
-#  pod_dns_config {
-#    nameservers = ["10.0.0.10", "10.0.0.11"]
-#    option {
-#      name = "test_dns_name"
-#      value = "dns_value"
-#    }
-#    searches = ["policy1", "policy2"]
-#  }
-#  affinity {
-#    pod_anti_affinity {
-#      preferred_during_scheduling_ignored_during_execution {
-#        weight = 10
-#        pod_affinity_term {
-#          label_selector {
-#            match_labels = {
-#              anti-affinity-key = "anti-affinity-val"
-#            }
-#          }
-#          topology_key = "kubernetes.io/hostname"
-#        }
-#      }
-#    }
-#  }
+  #  Sample Day 2 Operation attributes
+  #  priority_class_name = "high"
+  #  scheduler_name = "test"
+  #  node_selector = {
+  #    "test_vmi" = "node_labels"
+  #  }
+  #  eviction_strategy = "LiveMigrate"
+  #  termination_grace_period_seconds = 60
+  #  hostname = "spectro-com"
+  #  subdomain = "test-spectro-com"
+  #  dns_policy = "Default" //["ClusterFirstWithHostNet", "ClusterFirst", "Default", "None"]
+  #  tolerations {
+  #    effect = "NoExecute" // ["NoSchedule", "PreferNoSchedule", "NoExecute"]
+  #    key = "tolerationKey"
+  #    operator = "Equal" // ["Exists", "Equal"]
+  #    toleration_seconds = "60"
+  #    value = "taintValue"
+  #  }
+  #  pod_dns_config {
+  #    nameservers = ["10.0.0.10", "10.0.0.11"]
+  #    option {
+  #      name = "test_dns_name"
+  #      value = "dns_value"
+  #    }
+  #    searches = ["policy1", "policy2"]
+  #  }
+  #  affinity {
+  #    pod_anti_affinity {
+  #      preferred_during_scheduling_ignored_during_execution {
+  #        weight = 10
+  #        pod_affinity_term {
+  #          label_selector {
+  #            match_labels = {
+  #              anti-affinity-key = "anti-affinity-val"
+  #            }
+  #          }
+  #          topology_key = "kubernetes.io/hostname"
+  #        }
+  #      }
+  #    }
+  #  }
   volume {
     name = "test-vm-containerdisk1"
     volume_source {
@@ -454,11 +454,11 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
     model                    = "virtio"
   }
 
-#  interface {
-#    name                     = "additional"
-#    interface_binding_method = "InterfaceBridge"
-#    model                    = "e1000e" // ["", "e1000", "e1000e", "ne2k_pci", "pcnet", "rtl8139", "virtio"]
-#  }
+  #  interface {
+  #    name                     = "additional"
+  #    interface_binding_method = "InterfaceBridge"
+  #    model                    = "e1000e" // ["", "e1000", "e1000e", "ne2k_pci", "pcnet", "rtl8139", "virtio"]
+  #  }
 
   network {
     name = "main"
@@ -467,15 +467,15 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
     }
   }
 
-#  network {
-#    name = "additional"
-#    network_source {
-#      multus {
-#        network_name = "macvlan-conf"
-#        default      = false
-#      }
-#    }
-#  }
+  #  network {
+  #    name = "additional"
+  #    network_source {
+  #      multus {
+  #        network_name = "macvlan-conf"
+  #        default      = false
+  #      }
+  #    }
+  #  }
 
 
 }

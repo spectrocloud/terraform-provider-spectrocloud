@@ -42,6 +42,7 @@ resource "spectrocloud_cloudaccount_openstack" "account" {
 ### Optional
 
 - `ca_certificate` (String)
+- `context` (String) The context of the OpenStack configuration. Can be `project` or `tenant`.
 - `openstack_allow_insecure` (Boolean)
 
 ### Read-Only

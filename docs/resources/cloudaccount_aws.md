@@ -32,7 +32,7 @@ resource "spectrocloud_cloudaccount_aws" "aws-1" {
 - `arn` (String)
 - `aws_access_key` (String)
 - `aws_secret_key` (String, Sensitive)
-- `context` (String)
+- `context` (String) The context of the AWS configuration. Can be `project` or `tenant`.
 - `external_id` (String, Sensitive)
 - `partition` (String) The AWS partition in which the cloud account is located. 
 Can be 'aws' for standard AWS regions or 'aws-us-gov' for AWS GovCloud (US) regions.

@@ -29,6 +29,7 @@ resource "spectrocloud_cloudaccount_maas" "maas-1" {
 
 ### Optional
 
+- `context` (String) The context of the MAAS configuration. Can be `project` or `tenant`.
 - `maas_api_endpoint` (String)
 - `maas_api_key` (String, Sensitive)
 - `private_cloud_gateway_id` (String)
