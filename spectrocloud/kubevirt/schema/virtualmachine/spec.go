@@ -56,9 +56,23 @@ func FlattenVirtualMachineSpec(in kubevirtapiv1.VirtualMachineSpec, resourceData
 
 func FlattenVMMToSpectroSchema(in kubevirtapiv1.VirtualMachineSpec, resourceData *schema.ResourceData) error {
 	VM := FlattenVirtualMachineSpec(in, resourceData)[0].(map[string]interface{})
+	// template spec
 	VMTemplate := VM["template"]
 	VMTemplateSpec := VMTemplate.([]interface{})[0].(map[string]interface{})["spec"]
 	VMTemplateSpecAttributes := VMTemplateSpec.([]interface{})[0].(map[string]interface{})
+
+	// domain spec
+	vmDomain := VMTemplateSpecAttributes["domain"].([]interface{})[0].(map[string]interface{})
+	vmTolerations := VMTemplateSpecAttributes["tolerations"]
+	resource := vmDomain["resources"]
+	cpu := vmDomain["cpu"]
+	memory := vmDomain["memory"]
+	device := vmDomain["devices"].([]interface{})[0].(map[string]interface{})
+	disks := device["disk"]
+	interfaces := device["interface"]
+
+	// Not checking key exist for all required attributes, this will be revamped. if needed.
+
 	if err := resourceData.Set("run_strategy", VM["run_strategy"]); err != nil {
 		return err
 	}
@@ -89,17 +103,6 @@ func FlattenVMMToSpectroSchema(in kubevirtapiv1.VirtualMachineSpec, resourceData
 	if err := resourceData.Set("volume", VMTemplateSpecAttributes["volume"]); err != nil {
 		return err
 	}
-
-	// Setting up domain
-	vmDomain := VMTemplateSpecAttributes["domain"].([]interface{})[0].(map[string]interface{})
-	vmTolerations := VMTemplateSpecAttributes["tolerations"]
-	resource := vmDomain["resources"]
-	cpu := vmDomain["cpu"]
-	memory := vmDomain["memory"]
-	device := vmDomain["devices"].([]interface{})[0].(map[string]interface{})
-	disks := device["disk"]
-	interfaces := device["interface"]
-
 	if err := resourceData.Set("cpu", cpu); err != nil {
 		return err
 	}
@@ -115,11 +118,11 @@ func FlattenVMMToSpectroSchema(in kubevirtapiv1.VirtualMachineSpec, resourceData
 	if err := resourceData.Set("interface", interfaces); err != nil {
 		return err
 	}
-
 	if err := resourceData.Set("tolerations", vmTolerations); err != nil {
 		return err
 	}
 
+	// checking key exist for all optional attributes
 	if v, ok := VMTemplateSpecAttributes["eviction_strategy"]; !ok {
 		if err := resourceData.Set("eviction_strategy", v); err != nil {
 			return err
