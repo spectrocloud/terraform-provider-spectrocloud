@@ -259,7 +259,8 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigTke(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigTke(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
@@ -315,7 +316,7 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	_ = d.Get("machine_pool")
 
 	if d.HasChange("machine_pool") {
@@ -348,10 +349,10 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 				var err error
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolTke(cloudConfigId, machinePool)
+					err = c.CreateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
 				} else if hash != resourceMachinePoolTkeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolTke(cloudConfigId, machinePool)
+					err = c.UpdateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
 				}
 
 				if err != nil {
@@ -367,7 +368,7 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolTke(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolTke(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}

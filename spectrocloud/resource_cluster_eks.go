@@ -345,7 +345,8 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	var config *models.V1EksCloudConfig
-	if config, err = c.GetCloudConfigEks(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err = c.GetCloudConfigEks(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -524,7 +525,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("fargate_profile") {
 		fargateProfiles := make([]*models.V1FargateProfile, 0)
 		for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
@@ -537,7 +538,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			FargateProfiles: fargateProfiles,
 		}
 
-		err := c.UpdateFargateProfilesEks(cloudConfigId, fargateProfilesList)
+		err := c.UpdateFargateProfilesEks(cloudConfigId, ClusterContext, fargateProfilesList)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -575,11 +576,11 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 				var err error
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolEks(cloudConfigId, machinePool)
+					err = c.CreateMachinePoolEks(cloudConfigId, ClusterContext, machinePool)
 				} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
 					// TODO
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
+					err = c.UpdateMachinePoolEks(cloudConfigId, ClusterContext, machinePool)
 				}
 
 				if err != nil {
@@ -596,71 +597,11 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEks(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolEks(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-
-	//if d.HasChange("fargate_profile") {
-	//	oraw, nraw := d.GetChange("fargate_profile")
-	//	if oraw == nil {
-	//		oraw = new(schema.Set)
-	//	}
-	//	if nraw == nil {
-	//		nraw = new(schema.Set)
-	//	}
-	//
-	//	os := oraw.([]interface{})
-	//	ns := nraw.([]interface{})
-	//
-	//	osMap := make(map[string]interface{})
-	//	for _, mp := range os {
-	//		fargateProfile := mp.(map[string]interface{})
-	//		osMap[fargateProfile["name"].(string)] = fargateProfile
-	//	}
-	//
-	//	for _, mp := range ns {
-	//		fargateProfileResource := mp.(map[string]interface{})
-	//		name := fargateProfileResource["name"].(string)
-	//		hash := resourceFargateProfileEksHash(fargateProfileResource)
-	//
-	//		fargateProfile := toFargateProfileEks(fargateProfileResource)
-	//
-	//		var err error
-	//		if oldMachinePool, ok := osMap[name]; !ok {
-	//			log.Printf("Create fargate profile %s", name)
-	//			err = c.CreateFargateProfileEks(cloudConfigId, fargateProfile)
-	//		} else if hash != resourceFargateProfileEksHash(oldMachinePool) {
-	//			// TODO
-	//			log.Printf("Change in fargate profile %s", name)
-	//			err = c.UpdateFargateProfileEks(cloudConfigId, fargateProfile)
-	//		}
-	//
-	//		if err != nil {
-	//			return diag.FromErr(err)
-	//		}
-	//
-	//		// Processed (if exists)
-	//		delete(osMap, name)
-	//	}
-	//
-	//	// Deleted old fargate profiles
-	//	for _, mp := range osMap {
-	//		fargateProfile := mp.(map[string]interface{})
-	//		name := fargateProfile["name"].(string)
-	//		log.Printf("Deleted fargate profile %s", name)
-	//		if err := c.DeleteFargateProfileEks(cloudConfigId, name); err != nil {
-	//			return diag.FromErr(err)
-	//		}
-	//	}
-	//}
-	//
-
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {

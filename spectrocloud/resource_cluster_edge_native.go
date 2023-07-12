@@ -269,10 +269,11 @@ func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m 
 }
 
 func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
+	if config, err := c.GetCloudConfigEdgeNative(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
@@ -323,7 +324,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -357,10 +358,10 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 				var err error
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
+					err = c.CreateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
 				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
+					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
 				}
 
 				if err != nil {
@@ -377,7 +378,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
