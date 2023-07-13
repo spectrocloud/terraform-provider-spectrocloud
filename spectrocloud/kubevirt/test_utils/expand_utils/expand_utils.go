@@ -18,6 +18,7 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 	limitStorage, _ := resource.ParseQuantity("20Gi")
 	requestStorage, _ := resource.ParseQuantity("10Gi")
 	storageClassName := "standard"
+	volumeMode := "Block"
 	return cdiv1.DataVolumeSpec{
 		Source: &cdiv1.DataVolumeSource{
 			HTTP: &cdiv1.DataVolumeSourceHTTP{
@@ -51,6 +52,7 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 			},
 			VolumeName:       "volume_name",
 			StorageClassName: &storageClassName,
+			VolumeMode:       (*k8sv1.PersistentVolumeMode)(&volumeMode),
 		},
 		ContentType: "content_type",
 	}
@@ -115,6 +117,7 @@ func GetBaseInputForDataVolume() interface{} {
 						"selector":           test_entities.LabelSelectorTerraform,
 						"volume_name":        "volume_name",
 						"storage_class_name": "standard",
+						"volume_mode":        "Block",
 					},
 				},
 				"content_type": "content_type",
