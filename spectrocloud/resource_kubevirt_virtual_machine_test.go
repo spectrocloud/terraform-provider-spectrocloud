@@ -420,7 +420,7 @@ func compareDomainSpec(a, b kubevirtapiv1.DomainSpec) bool {
 func prepareExpandVirtualMachineSpec(input interface{}) *schema.ResourceData {
 	rd := prepareBasicResourceData()
 	in := input.([]interface{})[0].(map[string]interface{})
-	//rd.Set("data_volume_templates", in["data_volume_templates"])
+	rd.Set("data_volume_templates", in["data_volume_templates"])
 	rd.Set("run_strategy", in["run_strategy"])
 	rd.Set("annotations", in["annotations"])
 	rd.Set("labels", in["labels"])
@@ -497,8 +497,8 @@ func prepareExpandVirtualMachineSpecBadDomainResourceLimits(input []interface{})
 }
 
 func TestExpandVirtualMachineSpec(t *testing.T) {
-	baseOutput := expand_utils.GetBaseOutputForVirtualMachine()
 	input := expand_utils.GetBaseInputForVirtualMachine()
+	baseOutput := expand_utils.GetBaseOutputForVirtualMachine()
 
 	cases := []struct {
 		input                *schema.ResourceData
@@ -631,6 +631,27 @@ func nullifyUncomparableFields(output *[]interface{}) {
 
 	nodePreferredMatchFields := nodePreference["match_fields"].([]interface{})[0].(map[string]interface{})["values"]
 	test_utils.NullifySchemaSetFunction(nodePreferredMatchFields.(*schema.Set))
+}
+
+func TestFlattenVMMToSpectroSchema(t *testing.T) {
+	input := expand_utils.GetBaseOutputForVirtualMachine()
+	inter := expand_utils.GetBaseInputForVirtualMachine()
+
+	cases := []struct {
+		input          kubevirtapiv1.VirtualMachineSpec
+		expectedOutput error
+	}{
+		{
+			input:          input,
+			expectedOutput: nil,
+		},
+	}
+	for _, tc := range cases {
+		err := vm.FlattenVMMToSpectroSchema(tc.input, prepareExpandVirtualMachineSpec([]interface{}{inter}))
+		if diff := cmp.Diff(tc.expectedOutput, err); diff != "" {
+			t.Errorf("Unexpected result (-want +got):\n%s", diff)
+		}
+	}
 }
 
 // VM Spec Test's End

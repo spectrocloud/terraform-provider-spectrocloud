@@ -2,19 +2,68 @@ package expand_utils
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
 	test_entities "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/test_utils/entities"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
-
+	corev1 "k8s.io/api/core/v1"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
-
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
+
+func getDataVolumeSpec() cdiv1.DataVolumeSpec {
+	imgURL := "docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"
+	limitStorage, _ := resource.ParseQuantity("20Gi")
+	requestStorage, _ := resource.ParseQuantity("10Gi")
+	storageClassName := "standard"
+	return cdiv1.DataVolumeSpec{
+		Source: &cdiv1.DataVolumeSource{
+			HTTP: &cdiv1.DataVolumeSourceHTTP{
+				URL:           "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2",
+				SecretRef:     "secret_ref",
+				CertConfigMap: "cert_config_map",
+			},
+			Registry: &cdiv1.DataVolumeSourceRegistry{
+				URL: &imgURL,
+			},
+			PVC: &cdiv1.DataVolumeSourcePVC{
+				Namespace: "namespace",
+				Name:      "name",
+			},
+			Blank: nil,
+		},
+		PVC: &corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+			Resources: k8sv1.ResourceRequirements{
+				Requests: k8sv1.ResourceList{
+					"storage": requestStorage,
+				},
+				Limits: k8sv1.ResourceList{
+					"storage": limitStorage,
+				},
+			},
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"anti-affinity-key": "anti-affinity-val",
+				},
+			},
+			VolumeName:       "volume_name",
+			StorageClassName: &storageClassName,
+		},
+		ContentType: "content_type",
+	}
+}
+
+func getBaseOutputForDataVolumeTemplateSpec() kubevirtapiv1.DataVolumeTemplateSpec {
+	return kubevirtapiv1.DataVolumeTemplateSpec{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "test-vm-bootvolume",
+		},
+		Spec: getDataVolumeSpec(),
+	}
+}
 
 func GetBaseInputForDataVolume() interface{} {
 	return []interface{}{map[string]interface{}{
@@ -72,54 +121,6 @@ func GetBaseInputForDataVolume() interface{} {
 			},
 		},
 	}}
-}
-
-func getDataVolumeSpec() cdiv1.DataVolumeSpec {
-	return cdiv1.DataVolumeSpec{
-		Source: &cdiv1.DataVolumeSource{
-			Blank: &cdiv1.DataVolumeBlankImage{},
-			HTTP: &cdiv1.DataVolumeSourceHTTP{
-				URL:           "https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2",
-				SecretRef:     "secret_ref",
-				CertConfigMap: "cert_config_map",
-			},
-			PVC: &cdiv1.DataVolumeSourcePVC{
-				Namespace: "namespace",
-				Name:      "name",
-			},
-			Registry: &cdiv1.DataVolumeSourceRegistry{
-				URL: types.Ptr("docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"),
-			},
-		},
-		PVC: &k8sv1.PersistentVolumeClaimSpec{
-			AccessModes: []k8sv1.PersistentVolumeAccessMode{
-				"ReadWriteOnce",
-			},
-			Resources: k8sv1.ResourceRequirements{
-				Requests: k8sv1.ResourceList{
-					"storage": (func() resource.Quantity { res, _ := resource.ParseQuantity("10Gi"); return res })(),
-				},
-				Limits: k8sv1.ResourceList{
-					"storage": (func() resource.Quantity { res, _ := resource.ParseQuantity("20Gi"); return res })(),
-				},
-			},
-			Selector:         test_entities.LabelSelectorAPI,
-			VolumeName:       "volume_name",
-			StorageClassName: (func() *string { str := "standard"; return &str })(),
-		},
-		ContentType: cdiv1.DataVolumeContentType("content_type"),
-	}
-}
-
-func GetBaseOutputForDataVolume() cdiv1.DataVolume {
-	return cdiv1.DataVolume{
-		ObjectMeta: v1.ObjectMeta{
-			GenerateName: "generate_name",
-			Name:         "test-vm-bootvolume",
-			Namespace:    "tenantcluster",
-		},
-		Spec: getDataVolumeSpec(),
-	}
 }
 
 func GetBaseInputForVirtualMachine() interface{} {
@@ -277,7 +278,9 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 			strategy := kubevirtapiv1.VirtualMachineRunStrategy("Always")
 			return &strategy
 		})(),
-		DataVolumeTemplates: nil,
+		DataVolumeTemplates: []kubevirtapiv1.DataVolumeTemplateSpec{
+			getBaseOutputForDataVolumeTemplateSpec(),
+		},
 		Template: &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{
 			ObjectMeta: v1.ObjectMeta{
 				Annotations: map[string]string{
