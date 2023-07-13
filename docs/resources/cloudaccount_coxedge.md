@@ -26,7 +26,7 @@ description: |-
 
 ### Optional
 
-- `context` (String) The context of the CoxEdge configuration.
+- `context` (String) The context of the CoxEdge configuration. Can be `project` or `tenant`.
 
 ### Read-Only
 

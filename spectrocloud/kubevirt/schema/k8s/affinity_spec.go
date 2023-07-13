@@ -214,6 +214,9 @@ func weightedPodAffinityTermFields() map[string]*schema.Schema {
 
 func FlattenAffinity(in *v1.Affinity) []interface{} {
 	att := make(map[string]interface{})
+	if in == nil {
+		return nil
+	}
 	if in.NodeAffinity != nil {
 		att["node_affinity"] = flattenNodeAffinity(in.NodeAffinity)
 	}

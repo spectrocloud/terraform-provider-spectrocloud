@@ -31,6 +31,10 @@ resource "spectrocloud_cloudaccount_azure" "azure-1" {
 - `azure_tenant_id` (String)
 - `name` (String)
 
+### Optional
+
+- `context` (String) The context of the Azure configuration. Can be `project` or `tenant`.
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.

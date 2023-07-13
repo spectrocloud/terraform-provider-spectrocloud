@@ -30,34 +30,26 @@ func VirtualMachineInstanceTemplateSpecSchema() *schema.Schema {
 
 }
 
-func ExpandVirtualMachineInstanceTemplateSpec(virtualMachine []interface{}) (*kubevirtapiv1.VirtualMachineInstanceTemplateSpec, error) {
-	if len(virtualMachine) == 0 || virtualMachine[0] == nil {
-		return nil, nil
-	}
-
+func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*kubevirtapiv1.VirtualMachineInstanceTemplateSpec, error) {
 	result := &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{}
 
-	in := virtualMachine[0].(map[string]interface{})
+	// we have removed metadata for template hence trying to apply same metadata (TBD)***
+	result.ObjectMeta = k8s.ConvertToBasicMetadata(d)
 
-	if v, ok := in["metadata"].([]interface{}); ok {
-		result.ObjectMeta = k8s.ExpandMetadata(v)
-	}
-	if v, ok := in["spec"].([]interface{}); ok {
-		spec, err := expandVirtualMachineInstanceSpec(v)
-		if err != nil {
-			return result, err
-		}
+	if spec, err := expandVirtualMachineInstanceSpec(d); err == nil {
 		result.Spec = spec
+	} else {
+		return result, err
 	}
 
 	return result, nil
 }
 
-func FlattenVirtualMachineInstanceTemplateSpec(in kubevirtapiv1.VirtualMachineInstanceTemplateSpec) []interface{} {
+func FlattenVirtualMachineInstanceTemplateSpec(in kubevirtapiv1.VirtualMachineInstanceTemplateSpec, resourceData *schema.ResourceData) []interface{} {
 	att := make(map[string]interface{})
 
-	att["metadata"] = k8s.FlattenMetadata(in.ObjectMeta)
-	att["spec"] = flattenVirtualMachineInstanceSpec(in.Spec)
+	att["metadata"] = k8s.FlattenMetadata(in.ObjectMeta, resourceData)
+	att["spec"] = flattenVirtualMachineInstanceSpec(in.Spec, resourceData)
 
 	return []interface{}{att}
 }

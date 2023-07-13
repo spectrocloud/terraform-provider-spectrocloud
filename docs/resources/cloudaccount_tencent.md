@@ -28,6 +28,7 @@ resource "spectrocloud_cloudaccount_tencent" "tencent-1" {
 
 ### Optional
 
+- `context` (String) The context of the Tencent configuration. Can be `project` or `tenant`.
 - `tencent_secret_id` (String)
 - `tencent_secret_key` (String, Sensitive)
 
