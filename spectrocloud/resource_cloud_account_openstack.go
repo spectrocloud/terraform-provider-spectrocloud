@@ -78,8 +78,8 @@ func resourceCloudAccountOpenStackCreate(ctx context.Context, d *schema.Resource
 	var diags diag.Diagnostics
 
 	account := toOpenStackAccount(d)
-
-	uid, err := c.CreateCloudAccountOpenStack(account)
+	AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountOpenStack(account, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -97,8 +97,8 @@ func resourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-
-	account, err := c.GetCloudAccountOpenStack(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountOpenStack(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -162,8 +162,8 @@ func resourceCloudAccountOpenStackDelete(_ context.Context, d *schema.ResourceDa
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-
-	err := c.DeleteCloudAccountOpenStack(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountOpenStack(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}

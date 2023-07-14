@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -90,8 +91,8 @@ func resourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-
-	account, err := c.GetCloudAccountVsphere(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountVsphere(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -155,8 +156,8 @@ func resourceCloudAccountVsphereDelete(_ context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-
-	err := c.DeleteCloudAccountVsphere(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountVsphere(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}

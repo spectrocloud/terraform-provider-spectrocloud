@@ -89,7 +89,8 @@ func resourceCloudAccountCoxEdgeRead(_ context.Context, d *schema.ResourceData, 
 
 	uid := d.Id()
 
-	account, err := c.GetCloudAccountCoxEdge(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountCoxEdge(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -141,8 +142,8 @@ func resourceCloudAccountCoxEdgeDelete(_ context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-
-	err := c.DeleteCloudAccountCoxEdge(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountCoxEdge(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
