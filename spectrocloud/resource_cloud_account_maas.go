@@ -52,8 +52,8 @@ func resourceCloudAccountMaasCreate(ctx context.Context, d *schema.ResourceData,
 	var diags diag.Diagnostics
 
 	account := toMaasAccount(d)
-
-	uid, err := c.CreateCloudAccountMaas(account)
+	AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountMaas(account, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -71,8 +71,8 @@ func resourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-
-	account, err := c.GetCloudAccountMaas(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountMaas(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -98,7 +98,6 @@ func resourceCloudAccountMaasUpdate(ctx context.Context, d *schema.ResourceData,
 	var diags diag.Diagnostics
 
 	account := toMaasAccount(d)
-
 	err := c.UpdateCloudAccountMaas(account)
 	if err != nil {
 		return diag.FromErr(err)
@@ -115,8 +114,8 @@ func resourceCloudAccountMaasDelete(_ context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-
-	err := c.DeleteCloudAccountMaas(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountMaas(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
