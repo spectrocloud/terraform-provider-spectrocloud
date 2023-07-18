@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -209,10 +208,6 @@ func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 		account.Spec.AccessKey = d.Get("aws_access_key").(string)
 		account.Spec.SecretKey = d.Get("aws_secret_key").(string)
 	} else if d.Get("type").(string) == "sts" {
-		// if partition is us-gov return error
-		if d.Get("partition").(string) == "aws-us-gov" {
-			return nil, fmt.Errorf("sts credentials are not supported in aws-us-gov partition")
-		}
 		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
 		account.Spec.Sts = &models.V1AwsStsCredentials{
 			Arn:        d.Get("arn").(string),
