@@ -13,20 +13,25 @@ import (
 )
 
 func toProfiles(c *client.V1Client, d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity {
+	clusterContext := d.Get("context").(string)
+	return toProfilesCommon(c, d, clusterContext)
+}
+
+func toAddonDeplProfiles(c *client.V1Client, d *schema.ResourceData) []*models.V1SpectroClusterProfileEntity {
+	clusterContext := d.Get("cluster_context").(string)
+	return toProfilesCommon(c, d, clusterContext)
+}
+
+func toProfilesCommon(c *client.V1Client, d *schema.ResourceData, context string) []*models.V1SpectroClusterProfileEntity {
 	var cluster *models.V1SpectroCluster
 	var err error
-	clusterContext := d.Get("context").(string)
-
 	if d.Id() != "" {
-		cluster, err = c.GetClusterWithoutStatus(clusterContext, d.Id())
+		cluster, err = c.GetClusterWithoutStatus(context, d.Id())
 		if err != nil {
 			return nil
 		}
 	}
-	return toProfilesCommon(d, cluster)
-}
 
-func toProfilesCommon(d *schema.ResourceData, cluster *models.V1SpectroCluster) []*models.V1SpectroClusterProfileEntity {
 	resp := make([]*models.V1SpectroClusterProfileEntity, 0)
 	profiles := d.Get("cluster_profile").([]interface{})
 	if len(profiles) > 0 {

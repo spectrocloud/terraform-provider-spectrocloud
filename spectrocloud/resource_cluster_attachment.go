@@ -201,7 +201,7 @@ func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interf
 
 func toAddonDeployment(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroClusterProfiles {
 	return &models.V1SpectroClusterProfiles{
-		Profiles:         toProfiles(c, d),
+		Profiles:         toAddonDeplProfiles(c, d),
 		SpcApplySettings: toSpcApplySettings(d),
 	}
 }
