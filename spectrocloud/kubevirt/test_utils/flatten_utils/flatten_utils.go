@@ -294,10 +294,21 @@ func GetBaseInputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 }
 
 func GetBaseOutputForVirtualMachine() interface{} {
+
 	return map[string]interface{}{
 		"data_volume_templates": []interface{}{
 			map[string]interface{}{
-				"metadata": nil,
+				"metadata": []any{
+					map[string]any{
+						"annotations":      map[string]any(nil),
+						"generation":       int64(0),
+						"labels":           map[string]any(nil),
+						"name":             string(""),
+						"resource_version": string(""),
+						"self_link":        string(""),
+						"uid":              string(""),
+					},
+				},
 				"spec": []interface{}{
 					map[string]interface{}{
 						"pvc": []interface{}{
@@ -356,7 +367,6 @@ func GetBaseOutputForVirtualMachine() interface{} {
 		"run_strategy": "Always",
 		"template": []interface{}{
 			map[string]interface{}{
-				"metadata": nil,
 				"spec": []interface{}{
 					map[string]interface{}{
 						"node_selector": map[string]interface{}{
