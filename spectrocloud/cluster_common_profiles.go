@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 
@@ -31,7 +30,7 @@ func toProfilesCommon(c *client.V1Client, d *schema.ResourceData, clusterUID, co
 	if clusterUID != "" {
 		cluster, err = c.GetClusterWithoutStatus(context, clusterUID)
 		if err != nil || cluster == nil {
-			return nil, errors.New(fmt.Sprintf("Cluster %s cannot be retrieved in context %s", clusterUID, context))
+			return nil, fmt.Errorf("cluster %s cannot be retrieved in context %s", clusterUID, context)
 		}
 	}
 
