@@ -178,6 +178,51 @@ func prepareClusterImportTestData(id string) *schema.ResourceData {
 func prepareAddonDeploymentTestData(id string) *schema.ResourceData {
 	d := resourceAddonDeployment().TestResourceData()
 	d.SetId(id)
+
+	// Set the cluster_uid, cluster_context, and apply_setting fields
+	d.Set("cluster_uid", "cluster-123")
+	d.Set("cluster_context", "tenant")
+	d.Set("apply_setting", "test-setting")
+
+	// Set up the cluster_profile field
+	profiles := []interface{}{
+		map[string]interface{}{
+			"id": "profile-1",
+			"pack": []interface{}{
+				map[string]interface{}{
+					"name":   "pack-1",
+					"values": "value-1",
+					"tag":    "tag-1",
+					"type":   "type-1",
+					"manifest": []interface{}{
+						map[string]interface{}{
+							"name":    "manifest-1",
+							"content": "content-1",
+						},
+					},
+				},
+			},
+		},
+		map[string]interface{}{
+			"id": "profile-2",
+			"pack": []interface{}{
+				map[string]interface{}{
+					"name":   "pack-2",
+					"values": "value-2",
+					"tag":    "tag-2",
+					"type":   "type-2",
+					"manifest": []interface{}{
+						map[string]interface{}{
+							"name":    "manifest-2",
+							"content": "content-2",
+						},
+					},
+				},
+			},
+		},
+	}
+	d.Set("cluster_profile", profiles)
+
 	return d
 }
 

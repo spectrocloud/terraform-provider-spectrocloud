@@ -410,6 +410,11 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 				Type: "IP", // only IP type for now no DDNS
 			}
 	}
+
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroEdgeNativeClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -417,7 +422,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroEdgeNativeClusterEntitySpec{
-			Profiles: toProfiles(c, d),
+			Profiles: profiles,
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1EdgeNativeClusterConfig{
 				NtpServers:           toNtpServers(cloudConfig),

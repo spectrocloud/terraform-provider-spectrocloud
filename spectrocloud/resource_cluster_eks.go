@@ -307,7 +307,10 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toEksCluster(c, d)
+	cluster, err := toEksCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterEks(cluster, ClusterContext)
@@ -614,7 +617,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 // to create
-func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
+func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroEksClusterEntity, error) {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("Eks_client_secret").(string))
@@ -627,6 +630,10 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroE
 		}
 	}
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroEksClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -635,7 +642,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroE
 		},
 		Spec: &models.V1SpectroEksClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
 				BastionDisabled:  true,
@@ -696,7 +703,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroE
 
 	cluster.Spec.FargateProfiles = fargateProfiles
 
-	return cluster
+	return cluster, nil
 }
 
 func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEntity {

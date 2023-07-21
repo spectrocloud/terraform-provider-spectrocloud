@@ -640,6 +640,10 @@ func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 		}
 	}
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroCoxEdgeClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -649,7 +653,7 @@ func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 		Spec: &models.V1SpectroCoxEdgeClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			CloudType:       types.Ptr("coxedge"),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1CoxEdgeClusterConfig{
 				CoxEdgeLoadBalancerConfig:       LoadBalancer,

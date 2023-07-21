@@ -256,7 +256,10 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toAzureCluster(c, d)
+	cluster, err := toAzureCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
 	if diags != nil {
 		return diags
@@ -365,7 +368,10 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
-		cluster := toAzureCluster(c, d)
+		cluster, err := toAzureCluster(c, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
 		if diags != nil {
 			return diags
@@ -435,11 +441,15 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
+func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroAzureClusterEntity, error) {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -448,7 +458,7 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectr
 		},
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
 				Location:       types.Ptr(cloudConfig["region"].(string)),
@@ -469,7 +479,7 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectr
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfigEntity {

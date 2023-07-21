@@ -66,7 +66,10 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 	}
 
-	addonDeployment := toAddonDeployment(c, d)
+	addonDeployment, err := toAddonDeployment(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	diagnostics, isError := waitForClusterCreation(ctx, d, clusterScope, clusterUid, diags, c, false)
 	if isError {
@@ -173,7 +176,13 @@ func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interf
 		return diag.FromErr(err)
 	}
 
-	addonDeployment := toAddonDeployment(c, d)
+	addonDeployment, err := toAddonDeployment(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if addonDeployment.Profiles == nil || len(addonDeployment.Profiles) == 0 {
+		return diag.FromErr(errors.New("Cannot convert addon deployment: zero profiles found"))
+	}
 
 	newProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
 	if err != nil {
@@ -199,9 +208,17 @@ func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interf
 	return diags
 }
 
-func toAddonDeployment(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroClusterProfiles {
-	return &models.V1SpectroClusterProfiles{
-		Profiles:         toAddonDeplProfiles(c, d),
-		SpcApplySettings: toSpcApplySettings(d),
+func toAddonDeployment(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroClusterProfiles, error) {
+	profiles, err := toAddonDeplProfiles(c, d)
+	if err != nil {
+		return nil, err
 	}
+	settings, err := toSpcApplySettings(d)
+	if err != nil {
+		return nil, err
+	}
+	return &models.V1SpectroClusterProfiles{
+		Profiles:         profiles,
+		SpcApplySettings: settings,
+	}, nil
 }
