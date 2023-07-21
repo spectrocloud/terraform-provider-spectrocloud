@@ -35,7 +35,7 @@ func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*kubevirt
 	result := &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{}
 
 	// we have removed metadata for template hence set empty metadata object (TBD)***
-	result.ObjectMeta = metav1.ObjectMeta{} //k8s.ConvertToBasicMetadata(d)
+	result.ObjectMeta = metav1.ObjectMeta{}
 
 	if spec, err := expandVirtualMachineInstanceSpec(d); err == nil {
 		result.Spec = spec
@@ -49,8 +49,7 @@ func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*kubevirt
 func FlattenVirtualMachineInstanceTemplateSpec(in kubevirtapiv1.VirtualMachineInstanceTemplateSpec, resourceData *schema.ResourceData) []interface{} {
 	att := make(map[string]interface{})
 
-	// Since we removed metadata support in VM instance Spec commented below line
-	//att["metadata"] = k8s.FlattenMetadata(in.ObjectMeta, resourceData)
+	// Since we removed metadata support in VM instance Spec metadata is not set.
 	att["spec"] = flattenVirtualMachineInstanceSpec(in.Spec, resourceData)
 
 	return []interface{}{att}
