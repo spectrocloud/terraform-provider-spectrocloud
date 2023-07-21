@@ -59,7 +59,7 @@ func flattenDataVolumeTemplates(in []kubevirtapiv1.DataVolumeTemplateSpec, resou
 
 	for i, v := range in {
 		c := make(map[string]interface{})
-		c["metadata"] = k8s.FlattenMetadata(v.ObjectMeta, resourceData)
+		c["metadata"] = k8s.FlattenMetadataDataVolume(v.ObjectMeta)
 		c["spec"] = datavolume.FlattenDataVolumeSpec(v.Spec)
 		att[i] = c
 	}

@@ -92,7 +92,6 @@ func VirtualMachineFields() map[string]*schema.Schema {
 		"run_on_launch": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Default:     true,
 			Description: "If set to `true`, the virtual machine will be started when the cluster is launched. Default value is `true`.",
 		},
 		"vm_action": {
@@ -103,9 +102,10 @@ func VirtualMachineFields() map[string]*schema.Schema {
 		},
 		"data_volume_templates": dataVolumeTemplatesSchema(),
 		"run_strategy": {
-			Type:        schema.TypeString,
-			Description: "Running state indicates the requested running state of the VirtualMachineInstance, mutually exclusive with Running.",
-			Optional:    true,
+			Type:         schema.TypeString,
+			Description:  "Running state indicates the requested running state of the VirtualMachineInstance, mutually exclusive with Running.",
+			ExactlyOneOf: []string{"run_strategy", "run_on_launch"},
+			Optional:     true,
 			ValidateFunc: validation.StringInSlice([]string{
 				"",
 				"Always",

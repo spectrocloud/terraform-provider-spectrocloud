@@ -285,17 +285,7 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 			getBaseOutputForDataVolumeTemplateSpec(),
 		},
 		Template: &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{
-			ObjectMeta: v1.ObjectMeta{
-				Annotations: map[string]string{
-					"annotation_key": "annotation_value",
-				},
-				Labels: map[string]string{
-					"kubevirt.io/vm": "test-vm",
-				},
-				GenerateName: "generate_name",
-				Name:         "name",
-				Namespace:    "namespace",
-			},
+			ObjectMeta: v1.ObjectMeta{},
 			Spec: kubevirtapiv1.VirtualMachineInstanceSpec{
 				PriorityClassName: "priority_class_name",
 				Domain: kubevirtapiv1.DomainSpec{
