@@ -1,15 +1,16 @@
 data "spectrocloud_cluster_profile" "vmware_profile" {
-  name    = "vmware-public-repo"
+  name    = "vsphere-picard-2"
   version = "1.0.0"
   context = "tenant"
 }
 data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
-  name = "gmgateway1"
+  name = var.shared_vmware_cloud_account_name
 }
 
 
 resource "spectrocloud_cluster_vsphere" "cluster" {
-  name             = "vsphere-picard-2"
+  name             = "vsphere-picard-1"
+  skip_completion = true
   cloud_account_id = data.spectrocloud_cloudaccount_vsphere.vmware_account.id
   cluster_profile {
     id = data.spectrocloud_cluster_profile.vmware_profile.id
@@ -48,7 +49,7 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
   machine_pool {
     name  = "worker-basic"
     count = 1
-
+    node_repave_interval = 3
     placement {
       cluster       = var.vsphere_cluster
       resource_pool = var.vsphere_resource_pool

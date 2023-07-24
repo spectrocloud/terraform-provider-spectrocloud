@@ -194,6 +194,11 @@ func resourceClusterVsphere() *schema.Resource {
 							//ForceNew: true,
 							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of seconds a node should be Ready, before the next node is selected for repave (Applicable only for worker pools)",
+						},
 						"count": {
 							Type:        schema.TypeInt,
 							Required:    true,
@@ -423,7 +428,9 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
-
+		if *machinePool.IsControlPlane == false {
+			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
+		}
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
 			s["disk_size_gb"] = int(*machinePool.InstanceType.DiskGiB)
@@ -743,6 +750,13 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolC
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+	if controlPlane == false {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	}
 	return mp
 }

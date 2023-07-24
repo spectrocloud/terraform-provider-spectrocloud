@@ -104,6 +104,9 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	if m["max"] != nil {
 		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
 	}
+	if m["node_repave_interval"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["node_repave_interval"].(int)))
+	}
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
@@ -249,6 +252,9 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
+	if m["node_repave_interval"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["node_repave_interval"].(int)))
+	}
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
 
 	if v, found := m["instance_type"]; found {
