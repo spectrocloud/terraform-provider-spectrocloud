@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -97,7 +98,11 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 
 	resourceCloudClusterRead(ctx, d, m)
 
-	if profiles := toCloudClusterProfiles(c, d); profiles != nil {
+	profiles, err := toCloudClusterProfiles(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if profiles != nil {
 		if err := c.UpdateClusterProfileValues(uid, profiles); err != nil {
 			return diag.FromErr(err)
 		}
@@ -189,20 +194,28 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
-	err := c.UpdateClusterProfileValues(d.Id(), toCloudClusterProfiles(c, d))
+	profiles, err := toCloudClusterProfiles(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = c.UpdateClusterProfileValues(d.Id(), profiles)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	return diags
 }
 
-func toCloudClusterProfiles(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroClusterProfiles {
+func toCloudClusterProfiles(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroClusterProfiles, error) {
 	if profiles := d.Get("cluster_profile").([]interface{}); len(profiles) > 0 {
-		return &models.V1SpectroClusterProfiles{
-			Profiles: toProfiles(c, d),
+		profiles, err := toProfiles(c, d)
+		if err != nil {
+			return nil, err
 		}
+		return &models.V1SpectroClusterProfiles{
+			Profiles: profiles,
+		}, nil
 	}
-	return nil
+	return nil, errors.New("failed to convert cluster profiles")
 }
 
 func validateCloudType(data interface{}, path cty.Path) diag.Diagnostics {

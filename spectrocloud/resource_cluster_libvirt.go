@@ -573,6 +573,11 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 	if err != nil {
 		return nil, err
 	}
+
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroLibvirtClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -580,7 +585,7 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroLibvirtClusterEntitySpec{
-			Profiles: toProfiles(c, d),
+			Profiles: profiles,
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1LibvirtClusterConfig{
 				NtpServers: toNtpServers(cloudConfig),

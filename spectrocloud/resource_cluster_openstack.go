@@ -220,7 +220,10 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toOpenStackCluster(c, d)
+	cluster, err := toOpenStackCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterOpenStack(cluster, ClusterContext)
@@ -238,10 +241,14 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	return diags
 }
 
-func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroOpenStackClusterEntity {
+func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroOpenStackClusterEntity, error) {
 
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroOpenStackClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -250,7 +257,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Sp
 		},
 		Spec: &models.V1SpectroOpenStackClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1OpenStackClusterConfig{
 				Region:     cloudConfig["region"].(string),
@@ -297,7 +304,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Sp
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 //goland:noinspection GoUnhandledErrorResult

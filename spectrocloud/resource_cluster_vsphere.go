@@ -292,7 +292,10 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toVsphereCluster(c, d)
+	cluster, err := toVsphereCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterVsphere(cluster, ClusterContext)
@@ -631,10 +634,14 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroVsphereClusterEntity {
+func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroVsphereClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -643,7 +650,7 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 		},
 		Spec: &models.V1SpectroVsphereClusterEntitySpec{
 			CloudAccountUID: d.Get("cloud_account_id").(string),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig:     toCloudConfigCreate(cloudConfig),
 		},
@@ -662,7 +669,7 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
