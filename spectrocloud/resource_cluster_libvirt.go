@@ -184,6 +184,12 @@ func resourceClusterLibvirt() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds a node should be Ready, before the next node is selected for repave (Applicable only for worker pools)",
+						},
 						"update_strategy": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -412,6 +418,10 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
+		if machinePool.IsControlPlane == false {
+			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
+		}
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
@@ -696,6 +706,13 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+	if controlPlane == false {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	}
 	return mp, nil
 }

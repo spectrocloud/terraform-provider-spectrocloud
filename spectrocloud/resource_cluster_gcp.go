@@ -151,6 +151,12 @@ func resourceClusterGcp() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds a node should be Ready, before the next node is selected for repave (Applicable only for worker pools)",
+						},
 						"instance_type": {
 							Type:     schema.TypeString,
 							Required: true,
@@ -283,7 +289,9 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 
 		oi["azs"] = machinePool.Azs
-
+		if *machinePool.IsControlPlane == false {
+			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
+		}
 		ois[i] = oi
 	}
 
@@ -432,6 +440,13 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEnt
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+	if controlPlane == false {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	}
 	return mp
 }

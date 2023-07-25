@@ -197,6 +197,7 @@ func resourceClusterVsphere() *schema.Resource {
 						"node_repave_interval": {
 							Type:        schema.TypeInt,
 							Optional:    true,
+							Default:     0,
 							Description: "Minimum number of seconds a node should be Ready, before the next node is selected for repave (Applicable only for worker pools)",
 						},
 						"count": {

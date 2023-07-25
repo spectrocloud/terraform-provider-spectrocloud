@@ -197,6 +197,12 @@ func resourceClusterCoxEdge() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds a node should be Ready, before the next node is selected for repave (Applicable only for worker pools)",
+						},
 						"cox_config": {
 							Type:        schema.TypeList,
 							ForceNew:    true,
@@ -457,7 +463,9 @@ func flattenMachinePoolConfigsCoxEdge(machinePools []*models.V1CoxEdgeMachinePoo
 		coxConfig["security_group_rules"] = flattenCoxEdgeSecurityGroupRules(machinePool.SecurityGroupRules)
 
 		oi["cox_config"] = []interface{}{coxConfig}
-
+		if *machinePool.IsControlPlane == false {
+			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
+		}
 		ois[i] = oi
 	}
 
@@ -726,7 +734,13 @@ func toMachinePoolCoxEdge(machinePool interface{}) (*models.V1CoxEdgeMachinePool
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-
+	if controlPlane == false {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	}
 	return mp, nil
 }
 

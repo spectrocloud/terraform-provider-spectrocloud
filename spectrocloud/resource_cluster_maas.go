@@ -143,6 +143,12 @@ func resourceClusterMaas() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds a node should be Ready, before the next node is selected for repave (Applicable only for worker pools)",
+						},
 						"min": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -304,6 +310,10 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
+		if machinePool.IsControlPlane == false {
+			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
+		}
 
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
@@ -486,6 +496,13 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 			MinSize:                 min,
 			MaxSize:                 max,
 		},
+	}
+	if controlPlane == false {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	}
 	return mp
 }

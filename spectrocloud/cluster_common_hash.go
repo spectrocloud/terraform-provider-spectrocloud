@@ -27,7 +27,9 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["is_system_node_pool"].(bool)))
 
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
-
+	if m["node_repave_interval"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["node_repave_interval"].(int)))
+	}
 	if m["os_type"] != "" {
 		buf.WriteString(fmt.Sprintf("%s-", m["os_type"].(string)))
 	}
@@ -82,6 +84,9 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 
 	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+	if m["node_repave_interval"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["node_repave_interval"].(int)))
+	}
 
 	return int(hash(buf.String()))
 }
@@ -328,7 +333,9 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
-
+	if m["node_repave_interval"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["node_repave_interval"].(int)))
+	}
 	if m["min"] != nil {
 		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
 	}
@@ -361,7 +368,9 @@ func resourceMachinePoolLibvirtHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%d-", m["count"].(int)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
-
+	if m["node_repave_interval"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["node_repave_interval"].(int)))
+	}
 	if v, found := m["xsl_template"]; found {
 		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
 	}
@@ -414,6 +423,9 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%t-", m["control_plane_as_worker"].(bool)))
 	buf.WriteString(fmt.Sprintf("%s-", m["name"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+	if m["node_repave_interval"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["node_repave_interval"].(int)))
+	}
 
 	if _, found := m["host_uids"]; found {
 		for _, host := range m["host_uids"].([]interface{}) {

@@ -171,6 +171,12 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds a node should be Ready, before the next node is selected for repave (Applicable only for worker pools)",
+						},
 						"host_uids": {
 							Type:       schema.TypeList,
 							Optional:   true,
@@ -309,6 +315,9 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 			})
 		}
 		oi["edge_host"] = hosts
+		if machinePool.IsControlPlane == false {
+			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
+		}
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
 		ois = append(ois, oi)
@@ -460,6 +469,13 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+	if controlPlane == false {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	}
 	return mp
 }

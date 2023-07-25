@@ -163,6 +163,12 @@ func resourceClusterAzure() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds a node should be Ready, before the next node is selected for repave (Applicable only for worker pools)",
+						},
 						"instance_type": {
 							Type:        schema.TypeString,
 							Required:    true,
@@ -349,6 +355,9 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 
 			oi["disk"] = []interface{}{d}
 		}
+		if *machinePool.IsControlPlane == false {
+			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
+		}
 
 		ois[i] = oi
 	}
@@ -532,6 +541,13 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+	if controlPlane == false {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	}
 	return mp
 }

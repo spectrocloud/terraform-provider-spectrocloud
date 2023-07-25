@@ -147,7 +147,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Type:     schema.TypeList,
 				Required: true,
 				// disable hash to preserve machine pool order PE-255
-				//Set:      resourceMachinePoolVsphereHash,
+				// Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -179,6 +179,12 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 							Type:        schema.TypeInt,
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds a node should be Ready, before the next node is selected for repave (Applicable only for worker pools)",
 						},
 						"update_strategy": {
 							Type:         schema.TypeString,
@@ -339,7 +345,9 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
-
+		if *machinePool.IsControlPlane == false {
+			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
+		}
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
 			s["disk_size_gb"] = int(*machinePool.InstanceType.DiskGiB)
@@ -587,6 +595,13 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachineP
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+	if controlPlane == false {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	}
 	return mp
 }
