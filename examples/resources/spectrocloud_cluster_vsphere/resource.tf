@@ -9,7 +9,7 @@ data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
 
 
 resource "spectrocloud_cluster_vsphere" "cluster" {
-  name             = "vsphere-picard-1"
+  name             = "vsphere-picard-2"
   cloud_account_id = data.spectrocloud_cloudaccount_vsphere.vmware_account.id
   cluster_profile {
     id = data.spectrocloud_cluster_profile.vmware_profile.id
