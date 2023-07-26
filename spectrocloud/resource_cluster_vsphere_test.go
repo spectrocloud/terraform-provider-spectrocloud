@@ -463,7 +463,6 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 					RegionCode: "12",
 					RegionName: "Asia",
 				},
-				Nested:        nil,
 				Packs:         nil,
 				ProfileStatus: nil,
 				Services:      nil,

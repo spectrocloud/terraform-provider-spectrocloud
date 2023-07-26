@@ -10,7 +10,64 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
+	var buf bytes.Buffer
+
+	if val, ok := nodePool["additional_labels"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["taints"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["control_plane"]; ok {
+		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+	}
+	if val, ok := nodePool["control_plane_as_worker"]; ok {
+		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+	}
+	if val, ok := nodePool["name"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["count"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+	if val, ok := nodePool["update_strategy"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["node_repave_interval"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["azs"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["min"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+	if val, ok := nodePool["max"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+
+	return &buf
+}
+
 func resourceMachinePoolAzureHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	if val, ok := m["is_system_node_pool"]; ok {
+		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+	}
+	if val, ok := m["os_type"]; ok && val != "" {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	return int(hash(buf.String()))
+}
+
+/*func resourceMachinePoolAzureHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 
@@ -42,7 +99,7 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	//d := d2[0].(map[string]interface{})
 
 	return int(hash(buf.String()))
-}
+}*/
 
 func resourceMachinePoolAksHash(v interface{}) int {
 	var buf bytes.Buffer
