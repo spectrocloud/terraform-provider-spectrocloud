@@ -233,7 +233,10 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toMaasCluster(c, d)
+	cluster, err := toMaasCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterMaas(cluster, ClusterContext)
@@ -406,11 +409,15 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-func toMaasCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
+func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroMaasClusterEntity, error) {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	DomainVal := cloudConfig["domain"].(string)
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroMaasClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -419,7 +426,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectro
 		},
 		Spec: &models.V1SpectroMaasClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
 				Domain: &DomainVal,
@@ -437,7 +444,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectro
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigEntity {

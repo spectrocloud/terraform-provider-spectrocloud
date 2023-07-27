@@ -179,7 +179,10 @@ func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toVirtualCluster(c, d)
+	cluster, err := toVirtualCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	uid, err := c.CreateClusterVirtual(cluster)
 	if err != nil {
@@ -330,7 +333,7 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroVirtualClusterEntity {
+func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroVirtualClusterEntity, error) {
 	// parse host cluster / cluster group uid
 	hostClusterUid := d.Get("host_cluster_uid").(string)
 	clusterGroupUid := d.Get("cluster_group_uid").(string)
@@ -347,7 +350,10 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 		kubernetesVersion = cloudConfig["k8s_version"].(string)
 	}
 
-	// init cluster
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroVirtualClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -377,7 +383,7 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 				},
 			},
 			Machinepoolconfig: nil,
-			Profiles:          toProfiles(c, d),
+			Profiles:          profiles,
 			Policies:          toPolicies(d),
 		},
 	}
@@ -392,7 +398,7 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
-	return cluster
+	return cluster, nil
 }
 
 func toMachinePoolVirtual(resources map[string]interface{}) *models.V1VirtualMachinePoolConfigEntity {

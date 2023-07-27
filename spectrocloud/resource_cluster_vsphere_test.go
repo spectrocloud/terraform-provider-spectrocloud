@@ -130,7 +130,8 @@ func TestToVsphereCluster(t *testing.T) {
 		},
 	}
 
-	vSphereSchema := toVsphereCluster(m, d)
+	vSphereSchema, err := toVsphereCluster(m, d)
+	assert.Nil(err)
 
 	// Check the output against the expected values
 	// Verifying cluster name attribute

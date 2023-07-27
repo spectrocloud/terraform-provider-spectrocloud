@@ -223,7 +223,10 @@ func resourceClusterTkeCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	var diags diag.Diagnostics
 
-	cluster := toTkeCluster(c, d)
+	cluster, err := toTkeCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterTke(cluster, ClusterContext)
@@ -384,7 +387,7 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toTkeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroTencentClusterEntity {
+func toTkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroTencentClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	sshKeyIds := make([]string, 0)
 
@@ -392,6 +395,10 @@ func toTkeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroT
 		sshKeyIds = append(sshKeyIds, cloudConfig["ssh_key_name"].(string))
 	}
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroTencentClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -400,7 +407,7 @@ func toTkeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroT
 		},
 		Spec: &models.V1SpectroTencentClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1TencentClusterConfig{
 				VpcID:     cloudConfig["vpc_id"].(string),
@@ -451,7 +458,7 @@ func toTkeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroT
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfigEntity {

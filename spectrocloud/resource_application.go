@@ -199,7 +199,10 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 		}
 
-		addonDeployment := toAddonDeployment(c, d)
+		addonDeployment, err := toAddonDeployment(c, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
 		newProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
 		if err != nil {
