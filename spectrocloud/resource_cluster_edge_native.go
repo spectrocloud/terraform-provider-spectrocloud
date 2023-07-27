@@ -175,7 +175,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     0,
-							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`",
+							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`",
 						},
 						"host_uids": {
 							Type:       schema.TypeList,
