@@ -13,11 +13,11 @@ import (
 func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
 	var buf bytes.Buffer
 
-	if val, ok := nodePool["additional_labels"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	if _, ok := nodePool["additional_labels"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_labels"]))
 	}
-	if val, ok := nodePool["taints"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	if _, ok := nodePool["taints"]; ok {
+		buf.WriteString(HashStringMapList(nodePool["taints"]))
 	}
 	if val, ok := nodePool["control_plane"]; ok {
 		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
@@ -35,14 +35,14 @@ func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 	if val, ok := nodePool["node_repave_interval"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
-	if val, ok := nodePool["instance_type"]; ok {
+	/*if val, ok := nodePool["instance_type"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 	if val, ok := nodePool["azs"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
-	}
+	}*/
 	if val, ok := nodePool["min"]; ok {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
@@ -57,11 +57,273 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
 
+	if val, ok := m["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
 	if val, ok := m["is_system_node_pool"]; ok {
 		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
 	}
 	if val, ok := m["os_type"]; ok && val != "" {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolAksHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	if val, ok := m["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := m["disk_size_gb"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+	if val, ok := m["is_system_node_pool"]; ok {
+		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+	}
+	if val, ok := m["storage_account_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolGcpHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolAwsHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	if m["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
+	}
+	if m["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
+	}
+	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
+	if m["azs"] != nil {
+		azsSet := m["azs"].(*schema.Set)
+		azsList := azsSet.List()
+		azsListStr := make([]string, len(azsList))
+		for i, v := range azsList {
+			azsListStr[i] = v.(string)
+		}
+		sort.Strings(azsListStr)
+		azsStr := strings.Join(azsListStr, "-")
+		buf.WriteString(fmt.Sprintf("%s-", azsStr))
+	}
+	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+	buf.WriteString(HashStringMap(m["az_subnets"]))
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolEksHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
+	if m["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
+	}
+	if m["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
+	}
+	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
+
+	for i, j := range m["az_subnets"].(map[string]interface{}) {
+		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
+	}
+
+	if m["eks_launch_template"] != nil {
+		buf.WriteString(eksLaunchTemplate(m["eks_launch_template"]))
+	}
+
+	return int(hash(buf.String()))
+}
+
+func eksLaunchTemplate(v interface{}) string {
+	var buf bytes.Buffer
+	if len(v.([]interface{})) > 0 {
+		m := v.([]interface{})[0].(map[string]interface{})
+
+		if m["ami_id"] != nil {
+			buf.WriteString(fmt.Sprintf("%s-", m["ami_id"].(string)))
+		}
+		if m["root_volume_type"] != nil {
+			buf.WriteString(fmt.Sprintf("%s-", m["root_volume_type"].(string)))
+		}
+		if m["root_volume_iops"] != nil {
+			buf.WriteString(fmt.Sprintf("%d-", m["root_volume_iops"].(int)))
+		}
+		if m["root_volume_throughput"] != nil {
+			buf.WriteString(fmt.Sprintf("%d-", m["root_volume_throughput"].(int)))
+		}
+		if m["additional_security_groups"] != nil {
+			for _, sg := range m["additional_security_groups"].(*schema.Set).List() {
+				buf.WriteString(fmt.Sprintf("%s-", sg.(string)))
+			}
+		}
+	}
+
+	return buf.String()
+}
+
+func resourceMachinePoolCoxEdgeHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolTkeHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	for i, j := range m["az_subnets"].(map[string]interface{}) {
+		buf.WriteString(fmt.Sprintf("%s-%s", i, j.(string)))
+	}
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolVsphereHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	if v, found := m["instance_type"]; found {
+		if len(v.([]interface{})) > 0 {
+			ins := v.([]interface{})[0].(map[string]interface{})
+			buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
+			buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
+			buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
+		}
+	}
+
+	if placements, found := m["placement"]; found {
+		for _, p := range placements.([]interface{}) {
+			place := p.(map[string]interface{})
+			buf.WriteString(fmt.Sprintf("%s-", place["cluster"].(string)))
+			buf.WriteString(fmt.Sprintf("%s-", place["resource_pool"].(string)))
+			buf.WriteString(fmt.Sprintf("%s-", place["datastore"].(string)))
+			buf.WriteString(fmt.Sprintf("%s-", place["network"].(string)))
+			buf.WriteString(fmt.Sprintf("%s-", place["static_ip_pool_id"].(string)))
+		}
+	}
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolOpenStackHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["subnet_id"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolVirtualHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolMaasHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	if v, found := m["instance_type"]; found {
+		if len(v.([]interface{})) > 0 {
+			ins := v.([]interface{})[0].(map[string]interface{})
+			buf.WriteString(fmt.Sprintf("%d-", ins["min_cpu"].(int)))
+			buf.WriteString(fmt.Sprintf("%d-", ins["min_memory_mb"].(int)))
+		}
+	}
+	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
+
+	return int(hash(buf.String()))
+}
+
+func resourceMachinePoolLibvirtHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	if v, found := m["xsl_template"]; found {
+		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
+	}
+
+	if v, found := m["instance_type"]; found {
+		if len(v.([]interface{})) > 0 {
+			ins := v.([]interface{})[0].(map[string]interface{})
+			buf.WriteString(InstanceTypeHash(ins))
+		}
+	}
+
+	return int(hash(buf.String()))
+}
+
+func InstanceTypeHash(ins map[string]interface{}) string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("%d-", ins["cpu"].(int)))
+	buf.WriteString(fmt.Sprintf("%d-", ins["disk_size_gb"].(int)))
+	buf.WriteString(fmt.Sprintf("%d-", ins["memory_mb"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", ins["cpus_sets"].(string)))
+	if ins["cache_passthrough"] != nil {
+		buf.WriteString(fmt.Sprintf("%s-%t", "cache_passthrough", ins["cache_passthrough"].(bool)))
+	}
+	if ins["gpu_config"] != nil {
+		config, _ := ins["gpu_config"].(map[string]interface{})
+		if config != nil {
+			buf.WriteString(GpuConfigHash(config))
+		}
+	}
+
+	if ins["attached_disks"] != nil {
+		for _, disk := range ins["attached_disks"].([]interface{}) {
+			diskMap := disk.(map[string]interface{})
+			if diskMap["managed"] != nil {
+				buf.WriteString(fmt.Sprintf("%s-%t", "managed", diskMap["managed"].(bool)))
+			}
+			if diskMap["size_in_gb"] != nil {
+				buf.WriteString(fmt.Sprintf("%s-%d", "size_in_gb", diskMap["size_in_gb"].(int)))
+			}
+		}
+	}
+	return buf.String()
+}
+
+func GpuConfigHash(config map[string]interface{}) string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("%d-", config["num_gpus"].(int)))
+	buf.WriteString(fmt.Sprintf("%s-", config["device_model"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", config["vendor"].(string)))
+	buf.WriteString(HashStringMap(config["addresses"]))
+	return buf.String()
+}
+
+func resourceMachinePoolEdgeNativeHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+
+	if _, found := m["host_uids"]; found {
+		for _, host := range m["host_uids"].([]interface{}) {
+			buf.WriteString(fmt.Sprintf("%s-", host.(string)))
+		}
 	}
 
 	return int(hash(buf.String()))
@@ -99,7 +361,7 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	//d := d2[0].(map[string]interface{})
 
 	return int(hash(buf.String()))
-}*/
+}
 
 func resourceMachinePoolAksHash(v interface{}) int {
 	var buf bytes.Buffer
@@ -491,7 +753,7 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	}
 
 	return int(hash(buf.String()))
-}
+}*/
 
 func resourceClusterHash(v interface{}) int {
 	var buf bytes.Buffer

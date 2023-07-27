@@ -318,14 +318,9 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi)
 
-		if machinePool.IsControlPlane != nil {
-			oi["control_plane"] = *machinePool.IsControlPlane
-		}
-		if *machinePool.IsControlPlane == false {
-			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
-		}
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
@@ -377,6 +372,15 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 	})
 
 	return ois
+}
+
+func FlattenControlPlaneAndRepaveInterval(isControlPlane *bool, oi map[string]interface{}) {
+	if isControlPlane != nil {
+		oi["control_plane"] = *isControlPlane
+		if !*isControlPlane {
+			oi["node_repave_interval"] = isControlPlane
+		}
+	}
 }
 
 func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -566,7 +570,8 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	if controlPlane == false {
+
+	if !controlPlane {
 		nodeRepaveInterval := 0
 		if m["node_repave_interval"] != nil {
 			nodeRepaveInterval = m["node_repave_interval"].(int)

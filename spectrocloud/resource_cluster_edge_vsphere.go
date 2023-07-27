@@ -338,16 +338,14 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
-		if *machinePool.IsControlPlane == false {
-			oi["node_repave_interval"] = machinePool.NodeRepaveInterval
-		}
+
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
 			s["disk_size_gb"] = int(*machinePool.InstanceType.DiskGiB)
@@ -596,12 +594,14 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachineP
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	if controlPlane == false {
+
+	if !controlPlane {
 		nodeRepaveInterval := 0
 		if m["node_repave_interval"] != nil {
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	}
+
 	return mp
 }
