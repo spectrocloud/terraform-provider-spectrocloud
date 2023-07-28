@@ -18,8 +18,9 @@ func resourceCloudAccountMaas() *schema.Resource {
 		DeleteContext: resourceCloudAccountMaasDelete,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the MAAS cloud account.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -29,17 +30,20 @@ func resourceCloudAccountMaas() *schema.Resource {
 				Description:  "The context of the MAAS configuration. Can be `project` or `tenant`.",
 			},
 			"private_cloud_gateway_id": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "ID of the private cloud gateway that is used to connect to the MAAS cloud.",
 			},
 			"maas_api_endpoint": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Endpoint of the MAAS API that is used to connect to the MAAS cloud. I.e. http://maas:5240/MAAS",
 			},
 			"maas_api_key": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Sensitive:   true,
+				Description: "API key that is used to connect to the MAAS cloud.",
 			},
 		},
 	}
@@ -130,8 +134,9 @@ func toMaasAccount(d *schema.ResourceData) *models.V1MaasAccount {
 	KeyVal := d.Get("maas_api_key").(string)
 	account := &models.V1MaasAccount{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Name:        d.Get("name").(string),
+			Annotations: map[string]string{OverlordUID: d.Get("private_cloud_gateway_id").(string)},
+			UID:         d.Id(),
 		},
 		Spec: &models.V1MaasCloudAccount{
 			APIEndpoint: &EndpointVal,

@@ -20,8 +20,9 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 		DeleteContext: resourceCloudAccountOpenStackDelete,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the OpenStack cloud account.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -31,41 +32,51 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 				Description:  "The context of the OpenStack configuration. Can be `project` or `tenant`.",
 			},
 			"private_cloud_gateway_id": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "ID of the private cloud gateway that is used to connect to the OpenStack cloud.",
 			},
 			"openstack_username": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The username of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"openstack_password": {
-				Type:      schema.TypeString,
-				Required:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Sensitive:   true,
+				Description: "The password of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"identity_endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The identity endpoint of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"openstack_allow_insecure": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to allow insecure connections to the OpenStack cloud. Default is `false`.",
 			},
 			"ca_certificate": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The CA certificate of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"parent_region": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The parent region of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"default_domain": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The default domain of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"default_project": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The default project of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 		},
 	}
@@ -175,8 +186,9 @@ func toOpenStackAccount(d *schema.ResourceData) *models.V1OpenStackAccount {
 
 	account := &models.V1OpenStackAccount{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Name:        d.Get("name").(string),
+			Annotations: map[string]string{OverlordUID: d.Get("private_cloud_gateway_id").(string)},
+			UID:         d.Id(),
 		},
 
 		Spec: &models.V1OpenStackCloudAccount{
