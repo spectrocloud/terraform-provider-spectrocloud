@@ -46,8 +46,8 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
   }
 
   machine_pool {
-    name  = "worker-basic"
-    count = 1
+    name                 = "worker-basic"
+    count                = 1
     node_repave_interval = 30
     placement {
       cluster       = var.vsphere_cluster
