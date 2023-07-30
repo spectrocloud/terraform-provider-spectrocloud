@@ -25,14 +25,14 @@ resource "spectrocloud_cloudaccount_maas" "maas-1" {
 
 ### Required
 
-- `name` (String)
+- `maas_api_endpoint` (String) Endpoint of the MAAS API that is used to connect to the MAAS cloud. I.e. http://maas:5240/MAAS
+- `maas_api_key` (String, Sensitive) API key that is used to connect to the MAAS cloud.
+- `name` (String) Name of the MAAS cloud account.
+- `private_cloud_gateway_id` (String) ID of the private cloud gateway that is used to connect to the MAAS cloud.
 
 ### Optional
 
 - `context` (String) The context of the MAAS configuration. Can be `project` or `tenant`.
-- `maas_api_endpoint` (String)
-- `maas_api_key` (String, Sensitive)
-- `private_cloud_gateway_id` (String)
 
 ### Read-Only
 
