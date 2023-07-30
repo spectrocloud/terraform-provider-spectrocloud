@@ -362,7 +362,7 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachin
 		oi := make(map[string]interface{})
 
 		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
-		FlattenControlPlaneAndRepaveInterval(&machinePool.IsControlPlane, oi)
+		FlattenControlPlaneAndRepaveInterval(&machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name

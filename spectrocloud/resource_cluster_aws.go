@@ -322,7 +322,7 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		oi := make(map[string]interface{})
 
 		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
-		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
@@ -377,11 +377,11 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 	return ois
 }
 
-func FlattenControlPlaneAndRepaveInterval(isControlPlane *bool, oi map[string]interface{}) {
-	if isControlPlane != nil {
+func FlattenControlPlaneAndRepaveInterval(isControlPlane *bool, oi map[string]interface{}, nodeRepaveInterval int32) {
+	if *isControlPlane != true {
 		oi["control_plane"] = *isControlPlane
 		if !*isControlPlane {
-			oi["node_repave_interval"] = isControlPlane
+			oi["node_repave_interval"] = int32(nodeRepaveInterval)
 		}
 	}
 }
