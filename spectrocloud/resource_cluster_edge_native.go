@@ -146,15 +146,14 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key": {
-							Type:         schema.TypeString,
-							Optional:     true,
-							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Type:     schema.TypeString,
+							Optional: true,
 						},
 						"ssh_keys": {
-							Type:         schema.TypeSet,
-							Optional:     true,
-							Set:          schema.HashString,
-							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Type:          schema.TypeSet,
+							Optional:      true,
+							Set:           schema.HashString,
+							ConflictsWith: []string{"cloud_config.0.ssh_key"},
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -574,10 +573,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroEdgeNativeClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	sshKeys, err := toSSHKeys(cloudConfig)
-	if err != nil {
-		return nil, err
-	}
+	sshKeys, _ := toSSHKeys(cloudConfig)
 	controlPlaneEndpoint := &models.V1EdgeNativeControlPlaneEndPoint{}
 	if cloudConfig["vip"] != nil {
 		vip := cloudConfig["vip"].(string)
