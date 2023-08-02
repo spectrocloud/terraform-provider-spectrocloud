@@ -600,10 +600,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 					err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
 				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					oldMachinePool, err := toMachinePoolVsphere(oldMachinePool)
-					if err != nil {
-						return diag.FromErr(err)
-					}
+					oldMachinePool, _ := toMachinePoolVsphere(oldMachinePool)
 					oldPlacements := oldMachinePool.CloudConfig.Placements
 
 					// set the placement ids
@@ -614,9 +611,6 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 					}
 
 					err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
-					if err != nil {
-						return diag.FromErr(err)
-					}
 				}
 
 				if err != nil {
