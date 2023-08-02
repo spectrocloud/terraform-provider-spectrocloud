@@ -78,7 +78,7 @@ func FlattenControlPlaneAndRepaveInterval(isControlPlane *bool, oi map[string]in
 
 func ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval int) error {
 	if nodeRepaveInterval != 0 {
-		errMsg := fmt.Sprintf("validation Error`node_repave_interval` attribute is not applicable for Control plane, Trying to set `node_repave_interval` - %d ", nodeRepaveInterval)
+		errMsg := fmt.Sprintf("Validation error: The `node_repave_interval` attribute is not applicable for the control plane. Attempted value: %d.", nodeRepaveInterval)
 		return errors.New(errMsg)
 	}
 	return nil
