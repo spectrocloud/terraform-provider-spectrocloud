@@ -65,3 +65,12 @@ func toSSHKeys(cloudConfig map[string]interface{}) ([]string, error) {
 	}
 	return nil, errors.New("validation ssh_key: Kindly specify any one attribute ssh_key or ssh_keys")
 }
+
+func FlattenControlPlaneAndRepaveInterval(isControlPlane *bool, oi map[string]interface{}, nodeRepaveInterval int32) {
+	if isControlPlane != nil {
+		oi["control_plane"] = *isControlPlane
+		if !*isControlPlane {
+			oi["node_repave_interval"] = int32(nodeRepaveInterval)
+		}
+	}
+}

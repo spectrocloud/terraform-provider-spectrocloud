@@ -377,15 +377,6 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 	return ois
 }
 
-func FlattenControlPlaneAndRepaveInterval(isControlPlane *bool, oi map[string]interface{}, nodeRepaveInterval int32) {
-	if isControlPlane != nil {
-		oi["control_plane"] = *isControlPlane
-		if !*isControlPlane {
-			oi["node_repave_interval"] = int32(nodeRepaveInterval)
-		}
-	}
-}
-
 func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
