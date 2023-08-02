@@ -147,7 +147,7 @@ func resourceClusterMaas() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     0,
-							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`",
+							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"min": {
 							Type:        schema.TypeInt,
@@ -367,9 +367,12 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 				name := machinePoolResource["name"].(string)
 				hash := resourceMachinePoolMaasHash(machinePoolResource)
 
-				machinePool := toMachinePoolMaas(machinePoolResource)
-
 				var err error
+				machinePool, err := toMachinePoolMaas(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
 					err = c.CreateMachinePoolMaas(cloudConfigId, ClusterContext, machinePool)
@@ -437,7 +440,10 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1MaasMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolMaas(machinePool)
+		mp, err := toMachinePoolMaas(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -447,7 +453,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 	return cluster, nil
 }
 
-func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigEntity {
+func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -507,7 +513,10 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		return mp, err
 	}
 
-	return mp
+	return mp, nil
 }

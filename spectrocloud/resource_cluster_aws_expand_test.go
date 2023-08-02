@@ -70,7 +70,7 @@ func TestToMachinePoolAws(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := toMachinePoolAws(tc.input, tc.vpcId)
+			result, _ := toMachinePoolAws(tc.input, tc.vpcId)
 			if !reflect.DeepEqual(result, tc.expected) {
 				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
 			}

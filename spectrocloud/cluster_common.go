@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -73,4 +74,12 @@ func FlattenControlPlaneAndRepaveInterval(isControlPlane *bool, oi map[string]in
 			oi["node_repave_interval"] = int32(nodeRepaveInterval)
 		}
 	}
+}
+
+func ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval int) error {
+	if nodeRepaveInterval != 0 {
+		errMsg := fmt.Sprintf("validation Error`node_repave_interval` attribute is not applicable for Control plane, Trying to set `node_repave_interval` - %d ", nodeRepaveInterval)
+		return errors.New(errMsg)
+	}
+	return nil
 }

@@ -167,7 +167,7 @@ func resourceClusterAzure() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     0,
-							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`",
+							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"instance_type": {
 							Type:        schema.TypeString,
@@ -405,10 +405,12 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
 				hash := resourceMachinePoolAzureHash(machinePoolResource)
-
-				machinePool := toMachinePoolAzure(machinePoolResource)
-
 				var err error
+				machinePool, err := toMachinePoolAzure(machinePoolResource)
+				if err != nil {
+					diag.FromErr(err)
+				}
+
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
 					err = c.CreateMachinePoolAzure(cloudConfigId, ClusterContext, machinePool)
@@ -478,7 +480,10 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolAzure(machinePool)
+		mp, err := toMachinePoolAzure(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -488,7 +493,7 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 	return cluster, nil
 }
 
-func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfigEntity {
+func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -556,9 +561,12 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		return mp, err
 	}
 
-	return mp
+	return mp, nil
 }
 
 func validateMasterPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {

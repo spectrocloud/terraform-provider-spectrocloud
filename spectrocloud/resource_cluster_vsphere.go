@@ -198,7 +198,7 @@ func resourceClusterVsphere() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     0,
-							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`",
+							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"count": {
 							Type:        schema.TypeInt,
@@ -589,15 +589,21 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 				name := machinePoolResource["name"].(string)
 				hash := resourceMachinePoolVsphereHash(machinePoolResource)
 
-				machinePool := toMachinePoolVsphere(machinePoolResource)
-
 				var err error
+				machinePool, err := toMachinePoolVsphere(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
 					err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
 				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					oldMachinePool := toMachinePoolVsphere(oldMachinePool)
+					oldMachinePool, err := toMachinePoolVsphere(oldMachinePool)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 					oldPlacements := oldMachinePool.CloudConfig.Placements
 
 					// set the placement ids
@@ -664,7 +670,10 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolVsphere(machinePool)
+		mp, err := toMachinePoolVsphere(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -699,7 +708,7 @@ func toCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1VsphereCl
 	}
 }
 
-func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolConfigEntity {
+func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -764,7 +773,10 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolC
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		return mp, err
 	}
 
-	return mp
+	return mp, nil
 }

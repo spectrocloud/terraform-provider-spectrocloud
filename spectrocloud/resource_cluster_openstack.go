@@ -177,7 +177,7 @@ func resourceClusterOpenStack() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     0,
-							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`",
+							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"update_strategy": {
 							Type:         schema.TypeString,
@@ -298,7 +298,10 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1S
 	machinePoolConfigs := make([]*models.V1OpenStackMachinePoolConfigEntity, 0)
 
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolOpenStack(machinePool)
+		mp, err := toMachinePoolOpenStack(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -412,9 +415,12 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 				name := machinePoolResource["name"].(string)
 				hash := resourceMachinePoolOpenStackHash(machinePoolResource)
 
-				machinePool := toMachinePoolOpenStack(machinePoolResource)
-
 				var err error
+				machinePool, err := toMachinePoolOpenStack(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
 					err = c.CreateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
@@ -453,7 +459,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 	return diags
 }
 
-func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachinePoolConfigEntity {
+func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -498,7 +504,10 @@ func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachineP
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		return mp, err
 	}
 
-	return mp
+	return mp, nil
 }

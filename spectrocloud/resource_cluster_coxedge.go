@@ -201,7 +201,7 @@ func resourceClusterCoxEdge() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     0,
-							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`",
+							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"cox_config": {
 							Type:        schema.TypeList,
@@ -742,6 +742,9 @@ func toMachinePoolCoxEdge(machinePool interface{}) (*models.V1CoxEdgeMachinePool
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		return mp, err
 	}
 
 	return mp, nil

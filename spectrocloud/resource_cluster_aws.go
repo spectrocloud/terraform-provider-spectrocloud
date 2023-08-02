@@ -171,7 +171,7 @@ func resourceClusterAws() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     0,
-							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`",
+							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"capacity_type": {
 							Type:         schema.TypeString,
@@ -411,9 +411,13 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 				if name != "" {
 					hash := resourceMachinePoolAwsHash(machinePoolResource)
 					vpcId := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})["vpc_id"]
-					machinePool := toMachinePoolAws(machinePoolResource, vpcId.(string))
 
 					var err error
+					machinePool, err := toMachinePoolAws(machinePoolResource, vpcId.(string))
+					if err != nil {
+						return diag.FromErr(err)
+					}
+
 					if oldMachinePool, ok := osMap[name]; !ok {
 						log.Printf("Create machine pool %s", name)
 						err = c.CreateMachinePoolAws(cloudConfigId, machinePool, ClusterContext)
@@ -481,7 +485,10 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 
 	machinePoolConfigs := make([]*models.V1AwsMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolAws(machinePool, cluster.Spec.CloudConfig.VpcID)
+		mp, err := toMachinePoolAws(machinePool, cluster.Spec.CloudConfig.VpcID)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -504,7 +511,7 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	return cluster, nil
 }
 
-func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachinePoolConfigEntity {
+func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -575,6 +582,9 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		return mp, err
 	}
 
 	if capacityType == "spot" {
@@ -592,5 +602,5 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 		mp.CloudConfig.AdditionalSecurityGroups = setAdditionalSecurityGroups(m)
 	}
 
-	return mp
+	return mp, nil
 }

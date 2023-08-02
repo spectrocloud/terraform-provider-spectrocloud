@@ -155,7 +155,7 @@ func resourceClusterGcp() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     0,
-							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`",
+							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -330,10 +330,12 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
 				hash := resourceMachinePoolGcpHash(machinePoolResource)
-
-				machinePool := toMachinePoolGcp(machinePoolResource)
-
 				var err error
+				machinePool, err := toMachinePoolGcp(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
 					err = c.CreateMachinePoolGcp(cloudConfigId, ClusterContext, machinePool)
@@ -401,7 +403,10 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 
 	machinePoolConfigs := make([]*models.V1GcpMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolGcp(machinePool)
+		mp, err := toMachinePoolGcp(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -411,7 +416,7 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	return cluster, nil
 }
 
-func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEntity {
+func toMachinePoolGcp(machinePool interface{}) (*models.V1GcpMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -452,7 +457,10 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEnt
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		return mp, err
 	}
 
-	return mp
+	return mp, nil
 }

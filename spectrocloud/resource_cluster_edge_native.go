@@ -175,7 +175,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     0,
-							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`",
+							Description: "Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"host_uids": {
 							Type:       schema.TypeList,
@@ -358,10 +358,12 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 					continue
 				}
 				hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
-
-				machinePool := toMachinePoolEdgeNative(machinePoolResource)
-
 				var err error
+				machinePool, err := toMachinePoolEdgeNative(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
 					err = c.CreateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
@@ -440,7 +442,10 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 
 	machinePoolConfigs := make([]*models.V1EdgeNativeMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolEdgeNative(machinePool)
+		mp, err := toMachinePoolEdgeNative(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
@@ -449,7 +454,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 	return cluster, nil
 }
 
-func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachinePoolConfigEntity {
+func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -479,9 +484,12 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		return mp, err
 	}
 
-	return mp
+	return mp, nil
 }
 
 func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudConfigEntity {
