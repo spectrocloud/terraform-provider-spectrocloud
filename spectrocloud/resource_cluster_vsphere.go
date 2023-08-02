@@ -614,6 +614,9 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 					}
 
 					err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				if err != nil {
