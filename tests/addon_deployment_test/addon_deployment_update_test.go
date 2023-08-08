@@ -7,6 +7,7 @@ import (
 
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 )
 
@@ -19,7 +20,8 @@ func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
 	// Create mock cluster
 	cluster := &models.V1SpectroCluster{
 		Metadata: &models.V1ObjectMeta{
-			UID: "test-cluster",
+			UID:         "test-cluster",
+			Annotations: map[string]string{"scope": "project"},
 		},
 		Spec: &models.V1SpectroClusterSpec{
 			ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
@@ -61,7 +63,8 @@ func TestUpdateAddonDeploymentIsAttached(t *testing.T) {
 	// Create mock cluster
 	cluster := &models.V1SpectroCluster{
 		Metadata: &models.V1ObjectMeta{
-			UID: "test-cluster",
+			UID:         "test-cluster",
+			Annotations: map[string]string{"scope": "tenant"},
 		},
 		Spec: &models.V1SpectroClusterSpec{
 			ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{

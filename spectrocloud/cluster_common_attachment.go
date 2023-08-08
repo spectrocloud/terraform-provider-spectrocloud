@@ -109,9 +109,9 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	var diags diag.Diagnostics
-	cluster_uid := d.Get("cluster_uid").(string)
-	cluster_context := d.Get("cluster_context").(string)
-	cluster, err := c.GetCluster(cluster_context, cluster_uid)
+	clusterUid := d.Get("cluster_uid").(string)
+	clusterContext := d.Get("cluster_context").(string)
+	cluster, err := c.GetCluster(clusterContext, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -126,7 +126,7 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 	profile_uids = append(profile_uids, profileId)
 
 	if len(profile_uids) > 0 {
-		err = c.DeleteAddonDeployment(clusterC, cluster_uid, &models.V1SpectroClusterProfilesDeleteEntity{
+		err = c.DeleteAddonDeployment(clusterC, clusterUid, clusterContext, &models.V1SpectroClusterProfilesDeleteEntity{
 			ProfileUids: profile_uids,
 		})
 		if err != nil {
