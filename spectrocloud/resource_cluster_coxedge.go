@@ -744,7 +744,9 @@ func toMachinePoolCoxEdge(machinePool interface{}) (*models.V1CoxEdgeMachinePool
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	} else {
 		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
-		return mp, err
+		if err != nil {
+			return mp, err
+		}
 	}
 
 	return mp, nil

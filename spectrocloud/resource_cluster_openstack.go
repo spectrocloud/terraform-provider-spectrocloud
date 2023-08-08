@@ -506,7 +506,9 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	} else {
 		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
-		return mp, err
+		if err != nil {
+			return mp, err
+		}
 	}
 
 	return mp, nil
