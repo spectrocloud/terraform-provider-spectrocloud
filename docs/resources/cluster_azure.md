@@ -145,7 +145,7 @@ Optional:
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `disk` (Block List, Max: 1) Disk configuration for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--disk))
 - `is_system_node_pool` (Boolean) Whether this machine pool is a system node pool. Default value is `false'.
-- `node_repave_interval` (Number) Minimum number of minutes node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `os_type` (String) Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
