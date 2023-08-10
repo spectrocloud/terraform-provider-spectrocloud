@@ -2,8 +2,8 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"errors"
+	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -11,8 +11,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
+	"github.com/spectrocloud/palette-sdk-go/client"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func resourceClusterVsphere() *schema.Resource {
@@ -21,6 +25,7 @@ func resourceClusterVsphere() *schema.Resource {
 		ReadContext:   resourceClusterVsphereRead,
 		UpdateContext: resourceClusterVsphereUpdate,
 		DeleteContext: resourceClusterDelete,
+		Description:   "A resource to manage a vSphere cluster in Pallette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
@@ -30,9 +35,16 @@ func resourceClusterVsphere() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the cluster.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -41,104 +53,52 @@ func resourceClusterVsphere() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
-			"cluster_profile_id": {
-				Type:       schema.TypeString,
-				Optional:   true,
-				Deprecated: "Switch to cluster_profile",
-			},
-			"cluster_profile": {
-				Type:          schema.TypeList,
-				Optional:      true,
-				ConflictsWith: []string{"cluster_profile_id", "pack"},
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"pack": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"type": {
-										Type:     schema.TypeString,
-										Optional: true,
-										Default:  "spectro",
-									},
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"registry_uid": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"tag": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-									"values": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"manifest": {
-										Type:     schema.TypeList,
-										Optional: true,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"name": {
-													Type:     schema.TypeString,
-													Required: true,
-												},
-												"content": {
-													Type:     schema.TypeString,
-													Required: true,
-													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-														// UI strips the trailing newline on save
-														return strings.TrimSpace(old) == strings.TrimSpace(new)
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "ID of the cloud account to be used for the cluster. This cloud account must be of type `vsphere`.",
 			},
 			"cloud_config_id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"os_patch_on_boot": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to apply OS patch on boot. Default is `false`.",
 			},
 			"os_patch_schedule": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchSchedule,
+				Description:      "The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.",
 			},
 			"os_patch_after": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
 			"kubeconfig": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -148,61 +108,54 @@ func resourceClusterVsphere() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"datacenter": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of the datacenter in vSphere. This is the name of the datacenter as it appears in vSphere.",
 						},
 						"folder": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of the folder in vSphere. This is the name of the folder as it appears in vSphere.",
 						},
 						"image_template_folder": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The name of the image template folder in vSphere. This is the name of the folder as it appears in vSphere.",
 						},
 
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The SSH key to be used for the cluster. This is the public key that will be used to access the cluster.",
 						},
 
 						"static_ip": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
+							Description: "Whether to use static IP addresses for the cluster. If `true`, the cluster will use static IP addresses. " +
+								"If `false`, the cluster will use DDNS. Default is `false`.",
 						},
 
 						// DHCP Properties
 						"network_type": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The type of network to use for the cluster. This can be `VIP` or `DDNS`.",
 						},
 						"network_search_domain": {
-							Type:     schema.TypeString,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The search domain to use for the cluster in case of DHCP.",
+						},
+						"ntp_servers": {
+							Type:     schema.TypeSet,
 							Optional: true,
-						},
-					},
-				},
-			},
-			"pack": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"registry_uid": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"tag": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"values": {
-							Type:     schema.TypeString,
-							Required: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "A list of NTP servers to be used by the cluster.",
 						},
 					},
 				},
@@ -217,6 +170,7 @@ func resourceClusterVsphere() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "The name of the machine pool. This is used to identify the machine pool in the cluster.",
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -225,47 +179,38 @@ func resourceClusterVsphere() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"taints": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"key": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"value": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"effect": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
-						},
+						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
+							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-
 							//ForceNew: true,
+							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"count": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Number of nodes in the machine pool.",
 						},
 						"update_strategy": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "RollingUpdateScaleOut",
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"instance_type": {
 							Type:     schema.TypeList,
@@ -274,16 +219,19 @@ func resourceClusterVsphere() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"disk_size_gb": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "The size of the disk in GB.",
 									},
 									"memory_mb": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "The amount of memory in MB.",
 									},
 									"cpu": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "The number of CPUs.",
 									},
 								},
 							},
@@ -298,24 +246,29 @@ func resourceClusterVsphere() *schema.Resource {
 										Computed: true,
 									},
 									"cluster": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the cluster to use for the machine pool. As it appears in the vSphere.",
 									},
 									"resource_pool": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the resource pool to use for the machine pool. As it appears in the vSphere.",
 									},
 									"datastore": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the datastore to use for the machine pool. As it appears in the vSphere.",
 									},
 									"network": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the network to use for the machine pool. As it appears in the vSphere.",
 									},
 									"static_ip_pool_id": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The ID of the static IP pool to use for the machine pool in case of static cluster placement.",
 									},
 								},
 							},
@@ -323,137 +276,17 @@ func resourceClusterVsphere() *schema.Resource {
 					},
 				},
 			},
-			"backup_policy": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"prefix": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"backup_location_id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"schedule": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"expiry_in_hour": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"include_disks": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  true,
-						},
-						"include_cluster_resources": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  true,
-						},
-						"namespaces": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Set:      schema.HashString,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-					},
-				},
-			},
-			"scan_policy": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"configuration_scan_schedule": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"penetration_scan_schedule": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"conformance_scan_schedule": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
-			},
-			"cluster_rbac_binding": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"type": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"namespace": {
-							Type:     schema.TypeString,
-							Optional: true,
-						},
-						"role": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"subjects": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"type": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"namespace": {
-										Type:     schema.TypeString,
-										Optional: true,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			"namespaces": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"resource_allocation": {
-							Type:     schema.TypeMap,
-							Required: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-					},
-				},
-			},
-			"host_config":     schemas.ClusterHostConfigSchema(),
-			"location_config": schemas.ClusterLocationSchema(),
+			"backup_policy":        schemas.BackupPolicySchema(),
+			"scan_policy":          schemas.ScanPolicySchema(),
+			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
+			"namespaces":           schemas.ClusterNamespacesSchema(),
+			"host_config":          schemas.ClusterHostConfigSchema(),
+			"location_config":      schemas.ClusterLocationSchema(),
 			"skip_completion": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
 		},
 	}
@@ -465,14 +298,18 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toVsphereCluster(c, d)
-
-	uid, err := c.CreateClusterVsphere(cluster)
+	cluster, err := toVsphereCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterVsphere(cluster, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -488,9 +325,7 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -503,7 +338,8 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
@@ -521,13 +357,14 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 }
 
 func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
+	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfig, err := c.GetVsphereClouldConfigValues(configUID)
+		cloudConfig, err := c.GetCloudConfigVsphereValues(configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -568,6 +405,10 @@ func flattenClusterConfigsVsphere(cloudConfig *models.V1VsphereCloudConfig) inte
 		ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
 	}
 
+	if cloudConfig.Spec.ClusterConfig.NtpServers != nil {
+		ret["ntp_servers"] = cloudConfig.Spec.ClusterConfig.NtpServers
+	}
+
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
 	return cloudConfigFlatten
@@ -584,9 +425,9 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
@@ -626,6 +467,80 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	return ois
 }
 
+func sortPlacementStructs(structs []interface{}) {
+	sort.Slice(structs, func(i, j int) bool {
+		clusterI := structs[i].(map[string]interface{})["cluster"]
+		clusterJ := structs[j].(map[string]interface{})["cluster"]
+		if clusterI != clusterJ {
+			return clusterI.(string) < clusterJ.(string)
+		}
+		datastoreI := structs[i].(map[string]interface{})["datastore"]
+		datastoreJ := structs[j].(map[string]interface{})["datastore"]
+		if datastoreI != datastoreJ {
+			return datastoreI.(string) < datastoreJ.(string)
+		}
+		resourcePoolI := structs[i].(map[string]interface{})["resource_pool"]
+		resourcePoolJ := structs[j].(map[string]interface{})["resource_pool"]
+		if resourcePoolI != resourcePoolJ {
+			return resourcePoolI.(string) < resourcePoolJ.(string)
+		}
+		networkI := structs[i].(map[string]interface{})["network"]
+		networkJ := structs[j].(map[string]interface{})["network"]
+		return networkI.(string) < networkJ.(string)
+	})
+}
+
+func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, error) {
+	var oPlacements []interface{}
+	var nPlacements []interface{}
+	// Identifying control plane placements from machine pool interface before change
+	for i, oMachinePool := range oMPool.(*schema.Set).List() {
+		if oMachinePool.(map[string]interface{})["control_plane"] == true {
+			oPlacements = oMPool.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})
+		}
+	}
+	// Identifying control plane placements from machine pool interface after change
+	for _, nMachinePool := range nMPool.(*schema.Set).List() {
+		if nMachinePool.(map[string]interface{})["control_plane"] == true {
+			nPlacements = nMachinePool.(map[string]interface{})["placement"].([]interface{})
+		}
+	}
+	// Validating any New or old placements got added/removed.
+	if len(nPlacements) != len(oPlacements) {
+		errMsg := `Placement validation error - Adding/Removing placement component in control plane is not allowed. 
+To update the placement configuration in the control plane, kindly recreate the cluster.`
+		return true, errors.New(errMsg)
+	}
+
+	// Need to add sort with all fields
+	// oPlacements and nPlacements for correct comparison in case order was changed
+	sortPlacementStructs(oPlacements)
+	sortPlacementStructs(nPlacements)
+
+	// Validating any New or old placements got changed.
+	for pIndex, nP := range nPlacements {
+		oPlacement := oPlacements[pIndex].(map[string]interface{})
+		nPlacement := nP.(map[string]interface{})
+		if oPlacement["cluster"] != nPlacement["cluster"] {
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `ComputeCluster` value. Old value - %s, New value - %s ", oPlacement["cluster"], nPlacement["cluster"])
+			return true, errors.New(errMsg)
+		}
+		if oPlacement["datastore"] != nPlacement["datastore"] {
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `DataStore` value. Old value - %s, New value - %s ", oPlacement["datastore"], nPlacement["datastore"])
+			return true, errors.New(errMsg)
+		}
+		if oPlacement["resource_pool"] != nPlacement["resource_pool"] {
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `resource_pool` value. Old value - %s, New value - %s ", oPlacement["resource_pool"], nPlacement["resource_pool"])
+			return true, errors.New(errMsg)
+		}
+		if oPlacement["network"] != nPlacement["network"] {
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `Network` value. Old value - %s, New value - %s ", oPlacement["network"], nPlacement["network"])
+			return true, errors.New(errMsg)
+		}
+	}
+	return false, nil
+}
+
 func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -633,14 +548,25 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("cloud_config") {
+		occ, ncc := d.GetChange("cloud_config")
+		if occ.([]interface{})[0].(map[string]interface{})["datacenter"] != ncc.([]interface{})[0].(map[string]interface{})["datacenter"] {
+			return diag.Errorf("Validation error: %s", "Datacenter value cannot be updated after cluster provisioning. Kindly destroy and recreate with updated Datacenter attribute.")
+		}
 		cloudConfig := toCloudConfigUpdate(d.Get("cloud_config").([]interface{})[0].(map[string]interface{}))
-		c.UpdateVsphereCloudConfigValues(cloudConfigId, cloudConfig)
+		if err := c.UpdateCloudConfigVsphereValues(cloudConfigId, ClusterContext, cloudConfig); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
+		if oraw != nil && nraw != nil {
+			if ok, err := ValidateMachinePoolChange(oraw, nraw); ok {
+				return diag.Errorf(err.Error())
+			}
+		}
 		if oraw == nil {
 			oraw = new(schema.Set)
 		}
@@ -659,36 +585,41 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolVsphereHash(machinePoolResource)
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolVsphereHash(machinePoolResource)
 
-			machinePool := toMachinePoolVsphere(machinePoolResource)
-
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				oldMachinePool := toMachinePoolVsphere(oldMachinePool)
-				oldPlacements := oldMachinePool.CloudConfig.Placements
-
-				// set the placement ids
-				for i, p := range machinePool.CloudConfig.Placements {
-					if len(oldPlacements) > i {
-						p.UID = oldPlacements[i].UID
-					}
+				var err error
+				machinePool, err := toMachinePoolVsphere(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
 				}
 
-				err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
-			}
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					oldMachinePool, _ := toMachinePoolVsphere(oldMachinePool)
+					oldPlacements := oldMachinePool.CloudConfig.Placements
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
+					// set the placement ids
+					for i, p := range machinePool.CloudConfig.Placements {
+						if len(oldPlacements) > i {
+							p.UID = oldPlacements[i].UID
+						}
+					}
 
-			// Processed (if exists)
-			delete(osMap, name)
+					err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
+			}
 		}
 
 		// Deleted old machine pools
@@ -696,15 +627,11 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
@@ -716,11 +643,14 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroVsphereClusterEntity {
-	// gnarly, I know! =/
+func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroVsphereClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -729,7 +659,7 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 		},
 		Spec: &models.V1SpectroVsphereClusterEntitySpec{
 			CloudAccountUID: d.Get("cloud_account_id").(string),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig:     toCloudConfigCreate(cloudConfig),
 		},
@@ -737,11 +667,13 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolVsphere(machinePool)
+		mp, err := toMachinePoolVsphere(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
-	// sort
 	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
 		return machinePoolConfigs[i].PoolConfig.IsControlPlane
 	})
@@ -749,7 +681,7 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
@@ -769,11 +701,11 @@ func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereCl
 
 func toCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1VsphereCloudClusterConfigEntity {
 	return &models.V1VsphereCloudClusterConfigEntity{
-		toCloudConfigCreate(cloudConfig),
+		ClusterConfig: toCloudConfigCreate(cloudConfig),
 	}
 }
 
-func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolConfigEntity {
+func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -831,5 +763,19 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolC
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }

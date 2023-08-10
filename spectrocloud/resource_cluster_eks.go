@@ -643,7 +643,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
 		if *machinePool.IsControlPlane {
 			continue
