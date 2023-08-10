@@ -147,7 +147,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Type:     schema.TypeList,
 				Required: true,
 				// disable hash to preserve machine pool order PE-255
-				//Set:      resourceMachinePoolVsphereHash,
+				// Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -335,9 +335,8 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
@@ -408,16 +407,18 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
 				hash := resourceMachinePoolVsphereHash(machinePoolResource)
-
-				machinePool := toMachinePoolEdgeVsphere(machinePoolResource)
-
 				var err error
+				machinePool, err := toMachinePoolEdgeVsphere(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
 					err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
 				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					oldMachinePool := toMachinePoolEdgeVsphere(oldMachinePool)
+					oldMachinePool, _ := toMachinePoolEdgeVsphere(oldMachinePool)
 					oldPlacements := oldMachinePool.CloudConfig.Placements
 
 					for i, p := range machinePool.CloudConfig.Placements {
@@ -489,7 +490,10 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolEdgeVsphere(machinePool)
+		mp, err := toMachinePoolEdgeVsphere(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -536,7 +540,7 @@ func getClusterConfigEntity(cloudConfig map[string]interface{}) *models.V1Vspher
 	return clusterConfigEntity
 }
 
-func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachinePoolConfigEntity {
+func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -594,5 +598,6 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachineP
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	return mp, nil
 }

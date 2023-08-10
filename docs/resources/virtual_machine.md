@@ -23,6 +23,7 @@ locals {
 
 
 // Create a VM with default cloud init disk, container disk , interface and network
+#/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
   cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
@@ -99,9 +100,10 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
     }
   }
 }
+#*/
 
 // Cloning VM with base_vm_name "tf-test-vm-basic-type"
-#/*
+/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
   cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
@@ -179,14 +181,15 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-clone-default" {
     }
   }
 }
-#*/
+*/
 
 // Creating VM with data volume template
-#/*
+/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
   cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
-  run_on_launch   = true
+#  run_on_launch   = true
+  run_strategy = "Manual"
   name            = "tf-test-vm-data-volume-template"
   namespace       = "default"
   labels = {
@@ -281,15 +284,16 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-data-volume-template" {
     }
   }
 }
-#*/
+*/
 
 # Create a VM with default cloud init disk, container disk , multus network interface with interface binding method as sr-iov and network model
-#/*
+/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-multi-networks" {
   cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
   name            = "tf-test-vm-multi-network-interface"
   namespace       = "default"
+  run_on_launch = true
   labels = {
     "key1" = "value1"
   }
@@ -361,15 +365,16 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-multi-networks" {
     }
   }
 }
-#*/
+*/
 
 # Create a VM with default with all available day2 attributes
-#/*
+/*
 resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
   cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
   name            = "tf-test-vm-all-option-spec-day2"
   namespace       = "default"
+  run_on_launch = true
   labels = {
     "key1" = "value1"
   }
@@ -493,7 +498,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
 
 
 }
-#*/
+*/
 ```
 
 

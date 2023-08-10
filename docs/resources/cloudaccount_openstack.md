@@ -30,20 +30,20 @@ resource "spectrocloud_cloudaccount_openstack" "account" {
 
 ### Required
 
-- `default_domain` (String)
-- `default_project` (String)
-- `identity_endpoint` (String)
-- `name` (String)
-- `openstack_password` (String, Sensitive)
-- `openstack_username` (String)
-- `parent_region` (String)
-- `private_cloud_gateway_id` (String)
+- `default_domain` (String) The default domain of the OpenStack cloud that is used to connect to the OpenStack cloud.
+- `default_project` (String) The default project of the OpenStack cloud that is used to connect to the OpenStack cloud.
+- `identity_endpoint` (String) The identity endpoint of the OpenStack cloud that is used to connect to the OpenStack cloud.
+- `name` (String) Name of the OpenStack cloud account.
+- `openstack_password` (String, Sensitive) The password of the OpenStack cloud that is used to connect to the OpenStack cloud.
+- `openstack_username` (String) The username of the OpenStack cloud that is used to connect to the OpenStack cloud.
+- `parent_region` (String) The parent region of the OpenStack cloud that is used to connect to the OpenStack cloud.
+- `private_cloud_gateway_id` (String) ID of the private cloud gateway that is used to connect to the OpenStack cloud.
 
 ### Optional
 
-- `ca_certificate` (String)
+- `ca_certificate` (String) The CA certificate of the OpenStack cloud that is used to connect to the OpenStack cloud.
 - `context` (String) The context of the OpenStack configuration. Can be `project` or `tenant`.
-- `openstack_allow_insecure` (Boolean)
+- `openstack_allow_insecure` (Boolean) Whether to allow insecure connections to the OpenStack cloud. Default is `false`.
 
 ### Read-Only
 

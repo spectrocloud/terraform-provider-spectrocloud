@@ -24,6 +24,7 @@ func New(_ string) func() *schema.Provider {
 				"username": {
 					Type:        schema.TypeString,
 					Optional:    true,
+					Deprecated:  "Deprecated since 0.15.0 use `api_key` instead.",
 					Description: "The Spectro Cloud username. Can also be set with the `SPECTROCLOUD_USERNAME` environment variable.",
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_USERNAME", nil),
 				},
@@ -31,6 +32,7 @@ func New(_ string) func() *schema.Provider {
 					Type:        schema.TypeString,
 					Optional:    true,
 					Sensitive:   true,
+					Deprecated:  "Deprecated since 0.15.0 use `api_key` instead.",
 					Description: "The Spectro Cloud user password. Can also be set with the `SPECTROCLOUD_PASSWORD` environment variable.",
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_PASSWORD", nil),
 				},
