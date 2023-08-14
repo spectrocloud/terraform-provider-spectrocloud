@@ -18,23 +18,39 @@ func (h *V1Client) CreateMacros(uid string, macros *models.V1Macros) error {
 	}
 	if uid != "" {
 		params := userC.NewV1ProjectsUIDMacrosCreateParams().WithContext(h.Ctx).WithUID(uid).WithBody(macros)
-		_, err = client.V1ProjectsUIDMacrosCreate(params)
+		err = retryMethod(client, 5, nil, 4*time.Second, func() (bool, error) {
+			_, err = client.V1ProjectsUIDMacrosCreate(params)
+			if err != nil {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		})
 	} else {
 		var tenantUID string
 		tenantUID, err = h.GetTenantUID()
 		if err != nil {
 			return err
 		}
-		params := userC.NewV1TenantsUIDMacrosCreateParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(macros)
+		params := userC.NewV1TenantsUIDMacrosCreateParams().WithTenantUID(tenantUID).WithBody(macros)
 		_, err = client.V1TenantsUIDMacrosCreate(params)
 	}
-	if err != nil {
-		err = h.handleMacroDuplicateForbiddenError(macros, uid, err)
-		if err != nil {
-			return err
-		}
-	}
+	//if err != nil {
+	//	err = h.handleMacroDuplicateForbiddenError(macros, uid, err)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 
+	return nil
+}
+
+func (h *V1Client) handleMacroNotFoundError(err error) error {
+	if strings.Contains(err.Error(), "Code:MacrosNotFound") || strings.Contains(err.Error(), "Code:ResourceNotFound") {
+		return nil
+	} else {
+		return err
+	}
 	return nil
 }
 
@@ -74,15 +90,6 @@ func (h *V1Client) retryGetMacro(attempts int, sleep time.Duration, macroName st
 	return nil, fmt.Errorf("after %d attempts, last error: %s", attempts, errors.New("macro get error"))
 }
 
-func (h *V1Client) handleMacroNotFoundError(err error) error {
-	if strings.Contains(err.Error(), "Code:MacrosNotFound") || strings.Contains(err.Error(), "Code:ResourceNotFound") {
-		return nil
-	} else {
-		return err
-	}
-	return nil
-}
-
 func (h *V1Client) GetMacro(name string, projectUID string) (*models.V1Macro, error) {
 	macros, err := h.GetMacros(projectUID)
 	if err != nil {
@@ -109,7 +116,16 @@ func (h *V1Client) GetMacros(projectUID string) ([]*models.V1Macro, error) {
 
 	if projectUID != "" {
 		params := userC.NewV1ProjectsUIDMacrosListParams().WithContext(h.Ctx).WithUID(projectUID)
-		macrosListOk, err := client.V1ProjectsUIDMacrosList(params)
+		//macrosListOk, err := client.V1ProjectsUIDMacrosList(params)
+		var macrosListOk *userC.V1ProjectsUIDMacrosListOK
+		err = retryMethod(client, 5, nil, 4*time.Second, func() (bool, error) {
+			macrosListOk, err = client.V1ProjectsUIDMacrosList(params)
+			if err != nil {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +159,15 @@ func (h *V1Client) UpdateMacros(uid string, macros *models.V1Macros) error {
 	}
 	if uid != "" {
 		params := userC.NewV1ProjectsUIDMacrosUpdateByMacroNameParams().WithContext(h.Ctx).WithUID(uid).WithBody(macros)
-		_, err := client.V1ProjectsUIDMacrosUpdateByMacroName(params)
+		//_, err := client.V1ProjectsUIDMacrosUpdateByMacroName(params)
+		err = retryMethod(client, 5, nil, 4*time.Second, func() (bool, error) {
+			_, err = client.V1ProjectsUIDMacrosUpdateByMacroName(params)
+			if err != nil {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		})
 		return err
 
 	} else {
@@ -151,7 +175,7 @@ func (h *V1Client) UpdateMacros(uid string, macros *models.V1Macros) error {
 		if err != nil || tenantUID == "" {
 			return err
 		}
-		params := userC.NewV1TenantsUIDMacrosUpdateByMacroNameParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(macros)
+		params := userC.NewV1TenantsUIDMacrosUpdateByMacroNameParams().WithTenantUID(tenantUID).WithBody(macros)
 		_, err = client.V1TenantsUIDMacrosUpdateByMacroName(params)
 		return err
 	}
@@ -166,21 +190,26 @@ func (h *V1Client) DeleteMacros(uid string, body *models.V1Macros) error {
 
 	if uid != "" {
 		params := userC.NewV1ProjectsUIDMacrosDeleteByMacroNameParams().WithContext(h.Ctx).WithUID(uid).WithBody(body)
-		_, err = client.V1ProjectsUIDMacrosDeleteByMacroName(params)
-		if err != nil {
-			err = h.handleMacroNotFoundError(err)
-		}
+		//_, err = client.V1ProjectsUIDMacrosDeleteByMacroName(params)
+		err = retryMethod(client, 5, nil, 4*time.Second, func() (bool, error) {
+			_, err = client.V1ProjectsUIDMacrosDeleteByMacroName(params)
+			if err != nil {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		})
 	} else {
 		var tenantUID string
 		tenantUID, err = h.GetTenantUID()
 		if err != nil {
 			return err
 		}
-		params := userC.NewV1TenantsUIDMacrosDeleteByMacroNameParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(body)
+		params := userC.NewV1TenantsUIDMacrosDeleteByMacroNameParams().WithTenantUID(tenantUID).WithBody(body)
 		_, err = client.V1TenantsUIDMacrosDeleteByMacroName(params)
-		if err != nil {
-			err = h.handleMacroNotFoundError(err)
-		}
+	}
+	if err != nil {
+		err = h.handleMacroNotFoundError(err)
 	}
 	if err != nil {
 		return err
