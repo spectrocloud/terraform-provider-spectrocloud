@@ -24,7 +24,7 @@ func (h *V1Client) CreateMacros(uid string, macros *models.V1Macros) error {
 		if err != nil {
 			return err
 		}
-		params := userC.NewV1TenantsUIDMacrosCreateParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(macros)
+		params := userC.NewV1TenantsUIDMacrosCreateParams().WithTenantUID(tenantUID).WithBody(macros)
 		_, err = client.V1TenantsUIDMacrosCreate(params)
 		if err != nil {
 			return err
@@ -102,7 +102,7 @@ func (h *V1Client) UpdateMacros(uid string, macros *models.V1Macros) error {
 		if err != nil || tenantUID == "" {
 			return err
 		}
-		params := userC.NewV1TenantsUIDMacrosUpdateByMacroNameParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(macros)
+		params := userC.NewV1TenantsUIDMacrosUpdateByMacroNameParams().WithTenantUID(tenantUID).WithBody(macros)
 		_, err = client.V1TenantsUIDMacrosUpdateByMacroName(params)
 		return err
 	}
@@ -126,7 +126,7 @@ func (h *V1Client) DeleteMacros(uid string, body *models.V1Macros) error {
 		if err != nil {
 			return err
 		}
-		params := userC.NewV1TenantsUIDMacrosDeleteByMacroNameParams().WithContext(h.Ctx).WithTenantUID(tenantUID).WithBody(body)
+		params := userC.NewV1TenantsUIDMacrosDeleteByMacroNameParams().WithTenantUID(tenantUID).WithBody(body)
 		_, err = client.V1TenantsUIDMacrosDeleteByMacroName(params)
 		if err != nil {
 			return err
