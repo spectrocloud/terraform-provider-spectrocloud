@@ -386,6 +386,29 @@ func resourceClusterLibvirt() *schema.Resource {
 										Type:     schema.TypeString,
 										Optional: true,
 									},
+									"gpu_device": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"device_model": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"vendor": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"addresses": {
+													Type:     schema.TypeMap,
+													Optional: true,
+													Elem: &schema.Schema{
+														Type: schema.TypeString,
+													},
+												},
+											},
+										},
+									},
 								},
 							},
 						},
@@ -685,6 +708,20 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 			pj["image_storage_pool"] = p.SourceStoragePool
 			pj["target_storage_pool"] = p.TargetStoragePool
 			pj["data_storage_pool"] = p.DataStoragePool
+			dConfig := make([]interface{}, 0)
+			if p.GpuDevices != nil {
+				gpuDevices := p.GpuDevices
+				for _, d := range gpuDevices {
+					if !(d.Model == "" || d.Vendor == "") {
+						dElem := make(map[string]interface{})
+						dElem["device_model"] = d.Model
+						dElem["vendor"] = d.Vendor
+						dElem["addresses"] = d.Addresses
+						dConfig = append(dConfig, dElem)
+					}
+				}
+			}
+			pj["gpu_device"] = dConfig
 			placements[j] = pj
 		}
 		oi["placements"] = placements
@@ -837,13 +874,14 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 		imageStoragePool := p["image_storage_pool"].(string)
 		targetStoragePool := p["target_storage_pool"].(string)
 		dataStoragePool := p["data_storage_pool"].(string)
-
+		gpuDevices := p["gpu_device"]
 		placements = append(placements, &models.V1LibvirtPlacementEntity{
 			Networks:          networks,
 			SourceStoragePool: imageStoragePool,
 			TargetStoragePool: targetStoragePool,
 			DataStoragePool:   dataStoragePool,
 			HostUID:           types.Ptr(p["appliance_id"].(string)),
+			GpuDevices:        getGPUDevices(gpuDevices),
 		})
 
 	}
@@ -928,6 +966,28 @@ func getGPUConfig(ins map[string]interface{}) *models.V1GPUConfig {
 				}
 			}
 		}
+	}
+	return nil
+}
+
+func getGPUDevices(gpuDevice interface{}) []*models.V1GPUDeviceSpec {
+	if gpuDevice != nil {
+		gpuDevices := make([]*models.V1GPUDeviceSpec, 0)
+		for _, t := range gpuDevice.([]interface{}) {
+			config := t.(map[string]interface{})
+			mapAddresses := make(map[string]string)
+			if config["addresses"] != nil && len(config["addresses"].(map[string]interface{})) > 0 {
+				mapAddresses = expandStringMap(config["addresses"].(map[string]interface{}))
+			}
+			if config != nil {
+				gpuDevices = append(gpuDevices, &models.V1GPUDeviceSpec{
+					Model:     config["device_model"].(string),
+					Vendor:    config["vendor"].(string),
+					Addresses: mapAddresses,
+				})
+			}
+		}
+		return gpuDevices
 	}
 	return nil
 }
