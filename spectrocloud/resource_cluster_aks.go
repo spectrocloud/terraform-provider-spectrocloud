@@ -33,15 +33,17 @@ func resourceClusterAks() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "",
 			},
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the AKS cluster. Can be `project` or `tenant`. Default is `project`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -113,6 +115,12 @@ func resourceClusterAks() *schema.Resource {
 						"ssh_key": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"private_cluster": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether to create a private cluster(API endpoint). Default is `false`.",
 						},
 
 						// fields for static placement are having flat structure as backend currently doesn't support multiple subnets.
@@ -426,9 +434,12 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
-				Location:           types.Ptr(cloudConfigMap["region"].(string)),
-				ResourceGroup:      cloudConfigMap["resource_group"].(string),
-				SSHKey:             types.Ptr(cloudConfigMap["ssh_key"].(string)),
+				Location:      types.Ptr(cloudConfigMap["region"].(string)),
+				ResourceGroup: cloudConfigMap["resource_group"].(string),
+				SSHKey:        types.Ptr(cloudConfigMap["ssh_key"].(string)),
+				APIServerAccessProfile: &models.V1APIServerAccessProfile{
+					EnablePrivateCluster: cloudConfigMap["private_cluster"].(bool),
+				},
 				SubscriptionID:     types.Ptr(cloudConfigMap["subscription_id"].(string)),
 				VnetName:           vnetname,
 				VnetResourceGroup:  vnetResourceGroup,

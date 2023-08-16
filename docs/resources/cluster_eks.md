@@ -103,7 +103,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `context` (String)
+- `context` (String) The context of the EKS cluster. Can be `project` or `tenant`. Default is `project`.
 - `fargate_profile` (Block List) (see [below for nested schema](#nestedblock--fargate_profile))
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
