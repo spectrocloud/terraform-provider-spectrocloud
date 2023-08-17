@@ -24,6 +24,7 @@ func (h *V1Client) CreateMacros(uid string, macros *models.V1Macros) error {
 		if err != nil {
 			return err
 		}
+		// As discussed with hubble team, we should not set context for tenant macros.
 		params := userC.NewV1TenantsUIDMacrosCreateParams().WithTenantUID(tenantUID).WithBody(macros)
 		_, err = client.V1TenantsUIDMacrosCreate(params)
 		if err != nil {
@@ -71,7 +72,7 @@ func (h *V1Client) GetMacros(projectUID string) ([]*models.V1Macro, error) {
 		if err != nil || tenantUID == "" {
 			return nil, err
 		}
-
+		// As discussed with hubble team, we should not set context for tenant macros.
 		params := userC.NewV1TenantsUIDMacrosListParams().WithTenantUID(tenantUID)
 		macrosListOk, err := client.V1TenantsUIDMacrosList(params)
 		if err != nil {
@@ -102,6 +103,7 @@ func (h *V1Client) UpdateMacros(uid string, macros *models.V1Macros) error {
 		if err != nil || tenantUID == "" {
 			return err
 		}
+		// As discussed with hubble team, we should not set context for tenant macros.
 		params := userC.NewV1TenantsUIDMacrosUpdateByMacroNameParams().WithTenantUID(tenantUID).WithBody(macros)
 		_, err = client.V1TenantsUIDMacrosUpdateByMacroName(params)
 		return err
@@ -126,6 +128,7 @@ func (h *V1Client) DeleteMacros(uid string, body *models.V1Macros) error {
 		if err != nil {
 			return err
 		}
+		// As discussed with hubble team, we should not set context for tenant macros.
 		params := userC.NewV1TenantsUIDMacrosDeleteByMacroNameParams().WithTenantUID(tenantUID).WithBody(body)
 		_, err = client.V1TenantsUIDMacrosDeleteByMacroName(params)
 		if err != nil {
