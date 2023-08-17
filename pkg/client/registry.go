@@ -163,6 +163,21 @@ func (h *V1Client) GetOciRegistry(uid string) (*models.V1EcrRegistry, error) {
 	return response.Payload, nil
 }
 
+func (h *V1Client) GetOciBasicRegistry(uid string) (*models.V1BasicOciRegistry, error) {
+	client, err := h.GetClusterClient()
+	if err != nil {
+		return nil, err
+	}
+
+	params := clusterC.NewV1BasicOciRegistriesUIDGetParams().WithUID(uid)
+	response, err := client.V1BasicOciRegistriesUIDGet(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Payload, nil
+}
+
 func (h *V1Client) CreateOciEcrRegistry(registry *models.V1EcrRegistry) (string, error) {
 	client, err := h.GetClusterClient()
 	if err != nil {

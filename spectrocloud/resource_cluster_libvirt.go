@@ -3,17 +3,19 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -150,8 +152,18 @@ func resourceClusterLibvirt() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:         schema.TypeString,
+							Optional:     true,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+						},
+						"ssh_keys": {
+							Type:         schema.TypeSet,
+							Optional:     true,
+							Set:          schema.HashString,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
 						},
 						"vip": {
 							Type:     schema.TypeString,
@@ -374,8 +386,36 @@ func resourceClusterLibvirt() *schema.Resource {
 										Type:     schema.TypeString,
 										Optional: true,
 									},
+									"gpu_device": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"device_model": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"vendor": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"addresses": {
+													Type:     schema.TypeMap,
+													Optional: true,
+													Elem: &schema.Schema{
+														Type: schema.TypeString,
+													},
+												},
+											},
+										},
+									},
 								},
 							},
+						},
+						"xsl_template": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "XSL template to use.",
 						},
 					},
 				},
@@ -668,14 +708,33 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 			pj["image_storage_pool"] = p.SourceStoragePool
 			pj["target_storage_pool"] = p.TargetStoragePool
 			pj["data_storage_pool"] = p.DataStoragePool
+			pj["gpu_device"] = flattenGpuDevice(p.GpuDevices)
 			placements[j] = pj
 		}
 		oi["placements"] = placements
+		oi["xsl_template"] = machinePool.XslTemplate
 
 		ois = append(ois, oi)
 	}
 
 	return ois
+}
+
+func flattenGpuDevice(gpus []*models.V1GPUDeviceSpec) []interface{} {
+	if gpus != nil {
+		dConfig := make([]interface{}, 0)
+		for _, d := range gpus {
+			if !(d.Model == "" || d.Vendor == "") {
+				dElem := make(map[string]interface{})
+				dElem["device_model"] = d.Model
+				dElem["vendor"] = d.Vendor
+				dElem["addresses"] = d.Addresses
+				dConfig = append(dConfig, dElem)
+			}
+		}
+		return dConfig
+	}
+	return make([]interface{}, 0)
 }
 
 func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -756,7 +815,10 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroLibvirtClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-
+	sshKeys, err := toSSHKeys(cloudConfig)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroLibvirtClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -768,7 +830,7 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1LibvirtClusterConfig{
 				NtpServers: toNtpServers(cloudConfig),
-				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
+				SSHKeys:    sshKeys,
 				ControlPlaneEndpoint: &models.V1LibvirtControlPlaneEndPoint{
 					Host:             cloudConfig["vip"].(string),
 					Type:             cloudConfig["network_type"].(string),
@@ -816,13 +878,14 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 		imageStoragePool := p["image_storage_pool"].(string)
 		targetStoragePool := p["target_storage_pool"].(string)
 		dataStoragePool := p["data_storage_pool"].(string)
-
+		gpuDevices := p["gpu_device"]
 		placements = append(placements, &models.V1LibvirtPlacementEntity{
 			Networks:          networks,
 			SourceStoragePool: imageStoragePool,
 			TargetStoragePool: targetStoragePool,
 			DataStoragePool:   dataStoragePool,
 			HostUID:           types.Ptr(p["appliance_id"].(string)),
+			GpuDevices:        getGPUDevices(gpuDevices),
 		})
 
 	}
@@ -860,12 +923,18 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 		return nil, fmt.Errorf("Update strategy RollingUpdateScaleIn is not allowed for the 'master-pool' machine pool")
 	}
 
+	var xlstemplate string
+	if m["xsl_template"] != nil {
+		xlstemplate = m["xsl_template"].(string)
+	}
+
 	mp := &models.V1LibvirtMachinePoolConfigEntity{
 		CloudConfig: &models.V1LibvirtMachinePoolCloudConfigEntity{
 			Placements:       placements,
 			RootDiskInGB:     types.Ptr(int32(ins["disk_size_gb"].(int))),
 			NonRootDisksInGB: addDisks,
 			InstanceType:     &instanceType,
+			XslTemplate:      xlstemplate,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
@@ -901,6 +970,28 @@ func getGPUConfig(ins map[string]interface{}) *models.V1GPUConfig {
 				}
 			}
 		}
+	}
+	return nil
+}
+
+func getGPUDevices(gpuDevice interface{}) []*models.V1GPUDeviceSpec {
+	if gpuDevice != nil {
+		gpuDevices := make([]*models.V1GPUDeviceSpec, 0)
+		for _, t := range gpuDevice.([]interface{}) {
+			config := t.(map[string]interface{})
+			mapAddresses := make(map[string]string)
+			if config["addresses"] != nil && len(config["addresses"].(map[string]interface{})) > 0 {
+				mapAddresses = expandStringMap(config["addresses"].(map[string]interface{}))
+			}
+			if config != nil {
+				gpuDevices = append(gpuDevices, &models.V1GPUDeviceSpec{
+					Model:     config["device_model"].(string),
+					Vendor:    config["vendor"].(string),
+					Addresses: mapAddresses,
+				})
+			}
+		}
+		return gpuDevices
 	}
 	return nil
 }

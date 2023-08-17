@@ -85,8 +85,15 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 				}
 			}
 		}
+		if v.(string) == "oci" {
+			if _, ok := d.GetOk("registry_uid"); ok {
+				// we don't have provision to get all helm chart/packs from oci basic type registry, hence skipping validation
+				// we will move registry validation in profile creation (TBU)
+				return diags
+			}
+		}
 	}
-
+	// Validation is only for spectro packs
 	filters := make([]string, 0)
 	registryUID := ""
 	if v, ok := d.GetOk("filters"); ok {
