@@ -18,7 +18,7 @@ func (h *V1Client) CreateMacros(uid string, macros *models.V1Macros) error {
 	}
 	if uid != "" {
 		params := userC.NewV1ProjectsUIDMacrosCreateParams().WithContext(h.Ctx).WithUID(uid).WithBody(macros)
-		err = retryMethod(client, 5, nil, 4*time.Second, func() (bool, error) {
+		err = retryMethod(client, 5, nil, 3, func() (bool, error) {
 			_, err = client.V1ProjectsUIDMacrosCreate(params)
 			if err != nil {
 				return false, nil
@@ -34,7 +34,15 @@ func (h *V1Client) CreateMacros(uid string, macros *models.V1Macros) error {
 		}
 		// As discussed with hubble team, we should not set context for tenant macros.
 		params := userC.NewV1TenantsUIDMacrosCreateParams().WithTenantUID(tenantUID).WithBody(macros)
-		_, err = client.V1TenantsUIDMacrosCreate(params)
+		err = retryMethod(client, 5, nil, 3, func() (bool, error) {
+			_, err = client.V1TenantsUIDMacrosCreate(params)
+			if err != nil {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		})
+
 	}
 	//if err != nil {
 	//	err = h.handleMacroDuplicateForbiddenError(macros, uid, err)
@@ -119,7 +127,7 @@ func (h *V1Client) GetMacros(projectUID string) ([]*models.V1Macro, error) {
 		params := userC.NewV1ProjectsUIDMacrosListParams().WithContext(h.Ctx).WithUID(projectUID)
 		//macrosListOk, err := client.V1ProjectsUIDMacrosList(params)
 		var macrosListOk *userC.V1ProjectsUIDMacrosListOK
-		err = retryMethod(client, 5, nil, 4*time.Second, func() (bool, error) {
+		err = retryMethod(client, 5, nil, 3, func() (bool, error) {
 			macrosListOk, err = client.V1ProjectsUIDMacrosList(params)
 			if err != nil {
 				return false, nil
@@ -139,7 +147,16 @@ func (h *V1Client) GetMacros(projectUID string) ([]*models.V1Macro, error) {
 		}
 		// As discussed with hubble team, we should not set context for tenant macros.
 		params := userC.NewV1TenantsUIDMacrosListParams().WithTenantUID(tenantUID)
-		macrosListOk, err := client.V1TenantsUIDMacrosList(params)
+		var macrosListOk *userC.V1TenantsUIDMacrosListOK
+
+		err = retryMethod(client, 5, nil, 3, func() (bool, error) {
+			macrosListOk, err = client.V1TenantsUIDMacrosList(params)
+			if err != nil {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +178,7 @@ func (h *V1Client) UpdateMacros(uid string, macros *models.V1Macros) error {
 	if uid != "" {
 		params := userC.NewV1ProjectsUIDMacrosUpdateByMacroNameParams().WithContext(h.Ctx).WithUID(uid).WithBody(macros)
 		//_, err := client.V1ProjectsUIDMacrosUpdateByMacroName(params)
-		err = retryMethod(client, 5, nil, 4*time.Second, func() (bool, error) {
+		err = retryMethod(client, 5, nil, 3, func() (bool, error) {
 			_, err = client.V1ProjectsUIDMacrosUpdateByMacroName(params)
 			if err != nil {
 				return false, nil
@@ -178,7 +195,14 @@ func (h *V1Client) UpdateMacros(uid string, macros *models.V1Macros) error {
 		}
 		// As discussed with hubble team, we should not set context for tenant macros.
 		params := userC.NewV1TenantsUIDMacrosUpdateByMacroNameParams().WithTenantUID(tenantUID).WithBody(macros)
-		_, err = client.V1TenantsUIDMacrosUpdateByMacroName(params)
+		err = retryMethod(client, 5, nil, 3, func() (bool, error) {
+			_, err = client.V1TenantsUIDMacrosUpdateByMacroName(params)
+			if err != nil {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		})
 		return err
 	}
 }
@@ -193,7 +217,7 @@ func (h *V1Client) DeleteMacros(uid string, body *models.V1Macros) error {
 	if uid != "" {
 		params := userC.NewV1ProjectsUIDMacrosDeleteByMacroNameParams().WithContext(h.Ctx).WithUID(uid).WithBody(body)
 		//_, err = client.V1ProjectsUIDMacrosDeleteByMacroName(params)
-		err = retryMethod(client, 5, nil, 4*time.Second, func() (bool, error) {
+		err = retryMethod(client, 5, nil, 3, func() (bool, error) {
 			_, err = client.V1ProjectsUIDMacrosDeleteByMacroName(params)
 			if err != nil {
 				return false, nil
@@ -209,7 +233,14 @@ func (h *V1Client) DeleteMacros(uid string, body *models.V1Macros) error {
 		}
 		// As discussed with hubble team, we should not set context for tenant macros.
 		params := userC.NewV1TenantsUIDMacrosDeleteByMacroNameParams().WithTenantUID(tenantUID).WithBody(body)
-		_, err = client.V1TenantsUIDMacrosDeleteByMacroName(params)
+		err = retryMethod(client, 5, nil, 3, func() (bool, error) {
+			_, err = client.V1TenantsUIDMacrosDeleteByMacroName(params)
+			if err != nil {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		})
 	}
 	if err != nil {
 		err = h.handleMacroNotFoundError(err)
