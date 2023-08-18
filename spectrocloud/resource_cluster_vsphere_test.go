@@ -559,7 +559,9 @@ func getMPools() []*models.V1VsphereMachinePoolConfig {
 			"type":  "unittest",
 			"owner": "siva",
 		},
-		AdditionalTags: nil,
+		AdditionalTags:       nil,
+		InfraProfileRef:      nil,
+		InfraProfileTemplate: nil,
 		InstanceType: &models.V1VsphereInstanceType{
 			DiskGiB:   diskGb,
 			MemoryMiB: memMb,
