@@ -40,6 +40,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the Edge cluster. Can be `project` or `tenant`. Default is `project`.",
 			},
 			"edge_host_uid": {
 				Type:     schema.TypeString,

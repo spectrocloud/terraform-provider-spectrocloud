@@ -105,7 +105,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
 - `cloud_account_id` (String)
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `context` (String)
+- `context` (String) The context of the MAAS cluster. Can be `project` or `tenant`. Default is `project`.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))

@@ -105,7 +105,7 @@ resource "spectrocloud_cluster_aks" "cluster" {
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `context` (String)
+- `context` (String) The context of the AKS cluster. Can be `project` or `tenant`. Default is `project`.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - `os_patch_after` (String) The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`
@@ -135,6 +135,7 @@ Required:
 
 Optional:
 
+- `private_cluster` (Boolean) Whether to create a private cluster(API endpoint). Default is `false`.
 - `vnet_cidr_block` (String)
 - `vnet_name` (String)
 - `vnet_resource_group` (String)
