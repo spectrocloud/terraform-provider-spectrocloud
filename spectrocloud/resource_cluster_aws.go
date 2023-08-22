@@ -224,6 +224,7 @@ func resourceClusterAws() *schema.Resource {
 							Optional:    true,
 							Description: "Additional security groups to attach to the instance.",
 						},
+						"node": schemas.NodeSchema(),
 					},
 				},
 			},
@@ -302,6 +303,10 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
+		mp, err := updateNodeMaintenanceStatus(c, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -352,7 +357,6 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 			}
 			oi["additional_security_groups"] = additionalSecuritygroup
 		}
-
 		ois[i] = oi
 	}
 
@@ -403,6 +407,12 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
+		nsMap := make(map[string]interface{})
+		for _, mp := range ns.List() {
+			machinePool := mp.(map[string]interface{})
+			nsMap[machinePool["name"].(string)] = machinePool
+		}
+
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
@@ -424,6 +434,8 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 					} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
 						log.Printf("Change in machine pool %s", name)
 						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool, ClusterContext)
+						// Need to add node maintenance here
+						resourceNodeAction(c, ctx, nsMap[name], "aws", ClusterContext, cloudConfigId, name)
 					}
 
 					if err != nil {
@@ -445,13 +457,13 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 				return diag.FromErr(err)
 			}
 		}
+
 	}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
 		return diagnostics
 	}
-
 	resourceClusterAwsRead(ctx, d, m)
 
 	return diags
@@ -606,4 +618,28 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 	}
 
 	return mp, nil
+}
+
+func updateNodeMaintenanceStatus(c *client.V1Client, mPools []interface{}, cloudConfigId string, ClusterContext string) ([]interface{}, error) {
+	for i, mp := range mPools {
+		m := mp.(map[string]interface{})
+		var nodes []interface{}
+		machineItems, err := c.GetMachineListAws(cloudConfigId, m["name"].(string), ClusterContext)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range machineItems {
+			if node.Status.MaintenanceStatus.Action != "" {
+				nodes = append(nodes, map[string]interface{}{
+					"node_id": node.Metadata.UID,
+					"action":  node.Status.MaintenanceStatus.Action,
+					"state":   node.Status.MaintenanceStatus.State,
+				})
+			}
+		}
+		if nodes != nil {
+			mPools[i].(map[string]interface{})["node"] = nodes
+		}
+	}
+	return mPools, nil
 }
