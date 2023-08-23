@@ -347,13 +347,10 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		}
 
 		nsMap := make(map[string]interface{})
-		for _, mp := range ns {
-			machinePool := mp.(map[string]interface{})
-			nsMap[machinePool["name"].(string)] = machinePool
-		}
-
+		
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)

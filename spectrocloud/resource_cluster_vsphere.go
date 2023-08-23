@@ -593,13 +593,10 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 
 		nsMap := make(map[string]interface{})
-		for _, mp := range ns.List() {
-			machinePool := mp.(map[string]interface{})
-			nsMap[machinePool["name"].(string)] = machinePool
-		}
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
 				hash := resourceMachinePoolVsphereHash(machinePoolResource)
