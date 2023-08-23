@@ -151,6 +151,7 @@ func resourceClusterOpenStack() *schema.Resource {
 							},
 						},
 						"taints": schemas.ClusterTaintsSchema(),
+						"node":   schemas.NodeSchema(),
 						"control_plane": {
 							Type:        schema.TypeBool,
 							Optional:    true,
@@ -340,6 +341,10 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsOpenStack(config.Spec.MachinePoolConfig)
+		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsOpenStack, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -390,6 +395,10 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigOpenStack(cloudConfigId, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -407,9 +416,10 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
-
+		nsMap := make(map[string]interface{})
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
@@ -427,6 +437,11 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 				} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusOpenStack, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				if err != nil {
