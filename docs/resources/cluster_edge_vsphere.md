@@ -60,6 +60,7 @@ Optional:
 - `network_search_domain` (String)
 - `network_type` (String)
 - `ssh_key` (String)
+- `ssh_keys` (Set of String)
 - `static_ip` (Boolean)
 
 

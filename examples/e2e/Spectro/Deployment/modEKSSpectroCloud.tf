@@ -10,7 +10,7 @@ variable "SpectroCloudClusterProfiles" { type = map(any) }
 
 module "EKSSpectroCloud" {
   source        = "../EKSSpectroCloud"
-  ComponentName = "EHSCluster"
+  ComponentName = "EKSCluster"
 
   # Core Deployment Information
   env                    = var.env

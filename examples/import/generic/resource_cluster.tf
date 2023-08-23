@@ -1,6 +1,6 @@
 
 data "spectrocloud_cluster_profile" "profile1" {
-  name = "ehl-core"
+  name = "org-core"
 }
 
 data "spectrocloud_cluster_profile" "profile2" {

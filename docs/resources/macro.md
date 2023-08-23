@@ -3,12 +3,12 @@
 page_title: "spectrocloud_macro Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  A resource for creating and managing service output variables and macros.
 ---
 
 # spectrocloud_macro (Resource)
 
-
+A resource for creating and managing service output variables and macros.
 
 ## Example Usage
 
@@ -30,13 +30,13 @@ resource "spectrocloud_macro" "tenant_macro" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) The name of the macro or service variable output.
+- `value` (String) The value that the macro or service output variable will contain.
 
 ### Optional
 
-- `project` (String)
+- `project` (String) The Spectro Cloud project name.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `value` (String)
 
 ### Read-Only
 

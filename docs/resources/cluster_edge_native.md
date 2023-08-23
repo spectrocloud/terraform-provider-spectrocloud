@@ -49,13 +49,11 @@ description: |-
 <a id="nestedblock--cloud_config"></a>
 ### Nested Schema for `cloud_config`
 
-Required:
-
-- `ssh_key` (String)
-
 Optional:
 
 - `ntp_servers` (Set of String)
+- `ssh_key` (String)
+- `ssh_keys` (Set of String)
 - `vip` (String)
 
 
