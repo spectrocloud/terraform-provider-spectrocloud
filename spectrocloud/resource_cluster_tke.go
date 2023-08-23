@@ -145,6 +145,7 @@ func resourceClusterTke() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"disk_size_gb": {
 							Type:     schema.TypeInt,
@@ -267,6 +268,10 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
+		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsTke, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -340,8 +345,10 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
+		nsMap := make(map[string]interface{})
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
@@ -356,6 +363,11 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 				} else if hash != resourceMachinePoolTkeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusTke, "tke", ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				if err != nil {
