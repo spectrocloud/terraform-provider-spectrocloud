@@ -148,6 +148,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
 							Type:     schema.TypeBool,
@@ -276,6 +277,10 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
+		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsEdgeNative, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -341,6 +346,12 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
+		nsMap := make(map[string]interface{})
+		for _, mp := range ns.List() {
+			machinePool := mp.(map[string]interface{})
+			nsMap[machinePool["name"].(string)] = machinePool
+		}
+
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
@@ -362,6 +373,10 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				if err != nil {
