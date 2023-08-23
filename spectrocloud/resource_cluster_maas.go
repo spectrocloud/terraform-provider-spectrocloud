@@ -118,6 +118,7 @@ func resourceClusterMaas() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
 							Type:     schema.TypeBool,
@@ -287,6 +288,10 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig)
+		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsMaas, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -342,6 +347,10 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigMaas(cloudConfigId, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -358,6 +367,12 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 		for _, mp := range os.List() {
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
+		}
+
+		nsMap := make(map[string]interface{})
+		for _, mp := range ns.List() {
+			machinePool := mp.(map[string]interface{})
+			nsMap[machinePool["name"].(string)] = machinePool
 		}
 
 		for _, mp := range ns.List() {
@@ -379,6 +394,11 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 				} else if hash != resourceMachinePoolMaasHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolMaas(cloudConfigId, ClusterContext, machinePool)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusMaas, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				if err != nil {
