@@ -180,6 +180,7 @@ func resourceClusterEks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"disk_size_gb": {
 							Type:     schema.TypeInt,
@@ -363,6 +364,11 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
+	mp, err = flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsEks, mp, configUID, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	fp := flattenFargateProfilesEks(config.Spec.FargateProfiles)
 	if err := d.Set("fargate_profile", fp); err != nil {
 		return diag.FromErr(err)
@@ -529,6 +535,10 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigEks(cloudConfigId, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("fargate_profile") {
 		fargateProfiles := make([]*models.V1FargateProfile, 0)
 		for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
@@ -567,8 +577,10 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
+		nsMap := make(map[string]interface{})
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
@@ -584,6 +596,11 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 					// TODO
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolEks(cloudConfigId, ClusterContext, machinePool)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEks, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				if err != nil {
