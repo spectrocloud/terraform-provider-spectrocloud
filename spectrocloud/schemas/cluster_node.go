@@ -22,10 +22,6 @@ func NodeSchema() *schema.Schema {
 					Description:  "The action to perform on the node",
 					ValidateFunc: validation.StringInSlice([]string{"cordon", "uncordon"}, false),
 				},
-				"state": {
-					Type:     schema.TypeString,
-					Computed: true,
-				},
 			},
 		},
 	}

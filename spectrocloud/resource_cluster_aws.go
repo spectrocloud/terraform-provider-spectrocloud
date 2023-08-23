@@ -303,7 +303,7 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
-		mp, err := updateNodeMaintenanceStatus(c, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsAws, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -389,6 +389,10 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigAws(cloudConfigId, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -434,8 +438,11 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 					} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
 						log.Printf("Change in machine pool %s", name)
 						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool, ClusterContext)
-						// Need to add node maintenance here
-						resourceNodeAction(c, ctx, nsMap[name], "aws", ClusterContext, cloudConfigId, name)
+						// Node Maintenance Actions
+						err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusAws, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+						if err != nil {
+							return diag.FromErr(err)
+						}
 					}
 
 					if err != nil {
@@ -618,28 +625,4 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 	}
 
 	return mp, nil
-}
-
-func updateNodeMaintenanceStatus(c *client.V1Client, mPools []interface{}, cloudConfigId string, ClusterContext string) ([]interface{}, error) {
-	for i, mp := range mPools {
-		m := mp.(map[string]interface{})
-		var nodes []interface{}
-		machineItems, err := c.GetMachineListAws(cloudConfigId, m["name"].(string), ClusterContext)
-		if err != nil {
-			return nil, err
-		}
-		for _, node := range machineItems {
-			if node.Status.MaintenanceStatus.Action != "" {
-				nodes = append(nodes, map[string]interface{}{
-					"node_id": node.Metadata.UID,
-					"action":  node.Status.MaintenanceStatus.Action,
-					"state":   node.Status.MaintenanceStatus.State,
-				})
-			}
-		}
-		if nodes != nil {
-			mPools[i].(map[string]interface{})["node"] = nodes
-		}
-	}
-	return mPools, nil
 }

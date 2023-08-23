@@ -16,13 +16,16 @@ var NodeMaintenanceLifecycleStates = []string{
 	"Failed",
 }
 
-func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, CloudType string, ClusterContext string, ConfigUID string, MachineName string, NodeId string) (error, bool) {
+type GetMaintenanceStatus func(string, string, string, string) (*models.V1MachineMaintenanceStatus, error)
+type GetMachinesItemsActions func(string, string, string) (map[string]string, error)
+
+func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn GetMaintenanceStatus, ClusterContext string, ConfigUID string, MachineName string, NodeId string) (error, bool) {
 
 	stateConf := &retry.StateChangeConf{
 		Delay:      30 * time.Second,
 		Pending:    NodeMaintenanceLifecycleStates,
 		Target:     []string{"Completed"},
-		Refresh:    resourceClusterNodeMaintenanceRefreshFunc(c, CloudType, ClusterContext, ConfigUID, MachineName, NodeId),
+		Refresh:    resourceClusterNodeMaintenanceRefreshFunc(c, fn, ClusterContext, ConfigUID, MachineName, NodeId),
 		Timeout:    30 * time.Minute,
 		MinTimeout: 10 * time.Second,
 	}
@@ -35,9 +38,9 @@ func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, Cl
 	return nil, false
 }
 
-func resourceClusterNodeMaintenanceRefreshFunc(c *client.V1Client, CloudType string, ClusterContext string, ConfigUID string, MachineName string, NodeId string) retry.StateRefreshFunc {
+func resourceClusterNodeMaintenanceRefreshFunc(c *client.V1Client, fn GetMaintenanceStatus, ClusterContext string, ConfigUID string, MachineName string, NodeId string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		nmStatus, err := c.GetNodeMaintenanceStatus(CloudType, ClusterContext, ConfigUID, MachineName, NodeId)
+		nmStatus, err := c.GetNodeMaintenanceStatus(client.GetMaintenanceStatus(fn), ClusterContext, ConfigUID, MachineName, NodeId)
 		if err != nil {
 			return nil, "", err
 		}
@@ -49,13 +52,12 @@ func resourceClusterNodeMaintenanceRefreshFunc(c *client.V1Client, CloudType str
 	}
 }
 
-func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool interface{}, cloudType string, ClusterContext string, ConfigUID string, MachineName string) error {
-
+func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool interface{}, fn GetMaintenanceStatus, CloudType string, ClusterContext string, ConfigUID string, MachineName string) error {
 	newNodes := newMachinePool.(map[string]interface{})["node"]
 	if newNodes != nil {
 		for _, n := range newNodes.([]interface{}) {
 			node := n.(map[string]interface{})
-			nodeMaintenanceStatus, err := c.GetNodeMaintenanceStatus(cloudType, ClusterContext, ConfigUID, MachineName, node["node_id"].(string))
+			nodeMaintenanceStatus, err := c.GetNodeMaintenanceStatus(client.GetMaintenanceStatus(fn), ClusterContext, ConfigUID, MachineName, node["node_id"].(string))
 			if err != nil {
 				return err
 			}
@@ -63,11 +65,11 @@ func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool 
 				nm := &models.V1MachineMaintenance{
 					Action: node["action"].(string),
 				}
-				err := c.ToggleMaintenanceOnNode(nm, cloudType, ClusterContext, ConfigUID, MachineName, node["node_id"].(string))
+				err := c.ToggleMaintenanceOnNode(nm, CloudType, ClusterContext, ConfigUID, MachineName, node["node_id"].(string))
 				if err != nil {
 					return err
 				}
-				err, isError := waitForNodeMaintenanceCompleted(c, ctx, cloudType, ClusterContext, ConfigUID, MachineName, node["node_id"].(string))
+				err, isError := waitForNodeMaintenanceCompleted(c, ctx, fn, ClusterContext, ConfigUID, MachineName, node["node_id"].(string))
 				if isError {
 					return err
 				}
@@ -75,4 +77,22 @@ func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool 
 		}
 	}
 	return nil
+}
+
+func flattenNodeMaintenanceStatus(c *client.V1Client, fn GetMachinesItemsActions, mPools []interface{}, cloudConfigId string, ClusterContext string) ([]interface{}, error) {
+	for i, mp := range mPools {
+		m := mp.(map[string]interface{})
+		var nodes []interface{}
+		machineItems, err := fn(cloudConfigId, m["name"].(string), ClusterContext)
+		if err != nil {
+			return nil, err
+		}
+		for key, value := range machineItems {
+			nodes = append(nodes, c.GetNodeValue(key, value))
+		}
+		if nodes != nil {
+			mPools[i].(map[string]interface{})["node"] = nodes
+		}
+	}
+	return mPools, nil
 }
