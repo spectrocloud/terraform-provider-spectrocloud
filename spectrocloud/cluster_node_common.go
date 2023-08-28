@@ -91,6 +91,11 @@ func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn
 
 	for i, mp := range mPools {
 		m := mp.(map[string]interface{})
+		// handling unit test
+		if _, ok := nsMap[m["name"].(string)]; ok == false {
+			return mPools, nil
+		}
+
 		newNodeList := nsMap[m["name"].(string)].(map[string]interface{})["node"].([]interface{})
 		if len(newNodeList) > 0 {
 			var nodes []interface{}
@@ -109,6 +114,7 @@ func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn
 				mPools[i].(map[string]interface{})["node"] = nodes
 			}
 		}
+		//}
 
 	}
 	return mPools, nil
