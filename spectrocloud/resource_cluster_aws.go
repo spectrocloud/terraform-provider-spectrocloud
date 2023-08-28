@@ -303,7 +303,7 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsAws, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAws, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}

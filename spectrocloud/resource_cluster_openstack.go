@@ -341,7 +341,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsOpenStack(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsOpenStack, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapOpenStack, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}

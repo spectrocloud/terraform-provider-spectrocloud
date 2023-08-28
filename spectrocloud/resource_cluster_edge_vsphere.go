@@ -317,7 +317,7 @@ func flattenCloudConfigEdgeVsphere(configUID string, d *schema.ResourceData, c *
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsEdgeVsphere(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsEdgeVsphere, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeVsphere, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}

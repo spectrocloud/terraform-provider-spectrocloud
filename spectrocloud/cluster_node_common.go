@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"log"
@@ -17,7 +18,8 @@ var NodeMaintenanceLifecycleStates = []string{
 }
 
 type GetMaintenanceStatus func(string, string, string, string) (*models.V1MachineMaintenanceStatus, error)
-type GetMachinesItemsActions func(string, string, string) (map[string]string, error)
+
+type GetNodeStatusMap func(string, string, string) (map[string]models.V1CloudMachineStatus, error)
 
 func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn GetMaintenanceStatus, ClusterContext string, ConfigUID string, MachineName string, NodeId string) (error, bool) {
 
@@ -79,20 +81,35 @@ func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool 
 	return nil
 }
 
-func flattenNodeMaintenanceStatus(c *client.V1Client, fn GetMachinesItemsActions, mPools []interface{}, cloudConfigId string, ClusterContext string) ([]interface{}, error) {
+func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn GetNodeStatusMap, mPools []interface{}, cloudConfigId string, ClusterContext string) ([]interface{}, error) {
+	_, n := d.GetChange("machine_pool")
+	nsMap := make(map[string]interface{})
+	for _, mp := range n.(*schema.Set).List() {
+		machinePool := mp.(map[string]interface{})
+		nsMap[machinePool["name"].(string)] = machinePool
+	}
+
 	for i, mp := range mPools {
 		m := mp.(map[string]interface{})
-		var nodes []interface{}
-		machineItems, err := fn(cloudConfigId, m["name"].(string), ClusterContext)
-		if err != nil {
-			return nil, err
+		newNodeList := nsMap[m["name"].(string)].(map[string]interface{})["node"].([]interface{})
+		if len(newNodeList) > 0 {
+			var nodes []interface{}
+			nodesStatus, err := fn(cloudConfigId, m["name"].(string), ClusterContext)
+			if err != nil {
+				return nil, err
+			}
+			for key, value := range nodesStatus {
+				for _, newNode := range newNodeList {
+					if newNode.(map[string]interface{})["node_id"] == key {
+						nodes = append(nodes, c.GetNodeValue(key, value.MaintenanceStatus.Action))
+					}
+				}
+			}
+			if nodes != nil {
+				mPools[i].(map[string]interface{})["node"] = nodes
+			}
 		}
-		for key, value := range machineItems {
-			nodes = append(nodes, c.GetNodeValue(key, value))
-		}
-		if nodes != nil {
-			mPools[i].(map[string]interface{})["node"] = nodes
-		}
+
 	}
 	return mPools, nil
 }

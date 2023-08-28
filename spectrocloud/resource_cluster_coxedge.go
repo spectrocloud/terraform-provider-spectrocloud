@@ -379,7 +379,7 @@ func resourceCoxEdgeClusterRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	mp := flattenMachinePoolConfigsCoxEdge(config.Spec.MachinePoolConfig)
-	mp, err = flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsCoxEdge, mp, configUID, ClusterContext)
+	mp, err = flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapCoxEdge, mp, configUID, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}

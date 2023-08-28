@@ -268,7 +268,7 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsTke, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapTke, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}

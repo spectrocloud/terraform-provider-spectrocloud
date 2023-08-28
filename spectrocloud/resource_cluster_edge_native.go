@@ -277,7 +277,7 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsEdgeNative, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeNative, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}

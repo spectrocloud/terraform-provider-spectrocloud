@@ -271,7 +271,7 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsAks, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAks, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -347,7 +347,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		}
 
 		nsMap := make(map[string]interface{})
-		
+
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
 			nsMap[machinePoolResource["name"].(string)] = machinePoolResource

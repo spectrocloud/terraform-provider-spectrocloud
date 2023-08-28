@@ -288,7 +288,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsMaas, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapMaas, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}

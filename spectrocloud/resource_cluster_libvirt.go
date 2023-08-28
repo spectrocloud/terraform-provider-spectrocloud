@@ -387,7 +387,7 @@ func flattenCloudConfigLibvirt(configUID string, d *schema.ResourceData, c *clie
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsLibvirt(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsLibvirt, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapLibvirt, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}

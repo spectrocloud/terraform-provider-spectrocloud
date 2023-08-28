@@ -344,7 +344,7 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, c.GetMachinesItemsActionsVsphere, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapVsphere, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}
