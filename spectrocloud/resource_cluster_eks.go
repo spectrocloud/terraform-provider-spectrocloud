@@ -360,12 +360,12 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	mp := flattenMachinePoolConfigsEks(config.Spec.MachinePoolConfig)
-	if err := d.Set("machine_pool", mp); err != nil {
-		return diag.FromErr(err)
-	}
 
 	mp, err = flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEks, mp, configUID, ClusterContext)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("machine_pool", mp); err != nil {
 		return diag.FromErr(err)
 	}
 

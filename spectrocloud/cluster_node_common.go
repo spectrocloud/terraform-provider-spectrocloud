@@ -92,7 +92,7 @@ func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn
 	for i, mp := range mPools {
 		m := mp.(map[string]interface{})
 		// For handling unit test
-		if _, ok := nsMap[m["name"].(string)]; ok == false {
+		if _, ok := nsMap[m["name"].(string)]; !ok {
 			return mPools, nil
 		}
 
