@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -18,6 +19,7 @@ func prepareDataVolumeTestData() *schema.ResourceData {
 	rd := resourceKubevirtDataVolume().TestResourceData()
 
 	rd.Set("cluster_uid", "cluster-123")
+	rd.Set("cluster_context", "tenant")
 	rd.Set("vm_name", "vm-test")
 	rd.Set("vm_namespace", "default")
 	rd.Set("metadata", []interface{}{
@@ -25,6 +27,9 @@ func prepareDataVolumeTestData() *schema.ResourceData {
 			"name":      "vol-test",
 			"namespace": "default",
 			"labels": map[string]interface{}{
+				"key1": "value1",
+			},
+			"annotations": map[string]interface{}{
 				"key1": "value1",
 			},
 		},
@@ -78,6 +83,12 @@ func prepareDataVolumeTestData() *schema.ResourceData {
 			},
 		},
 	})
+	buildUID := utils.BuildIdDV(rd.Get("cluster_context").(string), rd.Get("cluster_uid").(string), rd.Get("vm_namespace").(string), rd.Get("vm_name").(string), &models.V1VMObjectMeta{
+		Name:      "vol-test",
+		Namespace: "default",
+	})
+
+	rd.SetId(buildUID)
 
 	return rd
 }
@@ -88,7 +99,7 @@ func TestCreateDataVolumePositive(t *testing.T) {
 
 	// Mock the V1Client
 	m := &client.V1Client{
-		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			isHost := new(bool)
 			*isHost = true
 			cluster := &models.V1SpectroCluster{
@@ -122,7 +133,6 @@ func TestCreateDataVolumePositive(t *testing.T) {
 						ClusterRbac:                    nil,
 						ClusterResources:               nil,
 						ControlPlaneHealthCheckTimeout: "",
-						Fips:                           nil,
 						HostClusterConfig: &models.V1HostClusterConfig{
 							ClusterEndpoint: &models.V1HostClusterEndpoint{
 								Config: nil,
@@ -146,7 +156,7 @@ func TestCreateDataVolumePositive(t *testing.T) {
 			}
 			return cluster, nil
 		},
-		CreateDataVolumeFn: func(uid string, name string, body *models.V1VMAddVolumeEntity) (string, error) {
+		CreateDataVolumeFn: func(uid, name string, body *models.V1VMAddVolumeEntity) (string, error) {
 			// Check if input parameters match the expected values
 			assert.Equal(uid, "cluster-123")
 			assert.Equal(name, "vm-test")
@@ -165,7 +175,7 @@ func TestCreateDataVolumePositive(t *testing.T) {
 	}
 
 	// Check if resourceData ID was set correctly
-	expectedID := utils.BuildIdDV("cluster-123", "default", "vm-test", &models.V1VMObjectMeta{
+	expectedID := utils.BuildIdDV("tenant", "cluster-123", "default", "vm-test", &models.V1VMObjectMeta{
 		Name:      "vol-test",
 		Namespace: "default",
 	})
@@ -176,7 +186,7 @@ func TestCreateDataVolume(t *testing.T) {
 	rd := prepareDataVolumeTestData()
 
 	m := &client.V1Client{
-		CreateDataVolumeFn: func(uid string, name string, body *models.V1VMAddVolumeEntity) (string, error) {
+		CreateDataVolumeFn: func(uid, name string, body *models.V1VMAddVolumeEntity) (string, error) {
 			if uid != "cluster-123" {
 				return "", errors.New("unexpected cluster_uid")
 			}
@@ -188,7 +198,7 @@ func TestCreateDataVolume(t *testing.T) {
 			}
 			return "data-volume-id", nil
 		},
-		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			isHost := new(bool)
 			*isHost = true
 			cluster := &models.V1SpectroCluster{
@@ -222,7 +232,6 @@ func TestCreateDataVolume(t *testing.T) {
 						ClusterRbac:                    nil,
 						ClusterResources:               nil,
 						ControlPlaneHealthCheckTimeout: "",
-						Fips:                           nil,
 						HostClusterConfig: &models.V1HostClusterConfig{
 							ClusterEndpoint: &models.V1HostClusterEndpoint{
 								Config: nil,
@@ -253,11 +262,12 @@ func TestCreateDataVolume(t *testing.T) {
 }
 
 func TestDeleteDataVolume(t *testing.T) {
+	var diags diag.Diagnostics
 	assert := assert.New(t)
 	rd := prepareDataVolumeTestData()
 
 	m := &client.V1Client{
-		DeleteDataVolumeFn: func(uid string, namespace string, name string, body *models.V1VMRemoveVolumeEntity) error {
+		DeleteDataVolumeFn: func(uid, namespace, name string, body *models.V1VMRemoveVolumeEntity) error {
 			if uid != "cluster-123" {
 				return errors.New("unexpected cluster_uid")
 			}
@@ -272,10 +282,22 @@ func TestDeleteDataVolume(t *testing.T) {
 			}
 			return nil
 		},
+		GetClusterWithoutStatusFn: func(uid string) (*models.V1SpectroCluster, error) {
+			if uid != "cluster-123" {
+				return nil, errors.New("unexpected cluster_uid")
+			}
+			return &models.V1SpectroCluster{
+				Metadata: nil,
+				Spec:     nil,
+				Status: &models.V1SpectroClusterStatus{
+					State: "Deleted",
+				},
+			}, nil
+		},
 	}
 
 	ctx := context.Background()
-	diags := resourceKubevirtDataVolumeDelete(ctx, rd, m)
+	diags = resourceKubevirtDataVolumeDelete(ctx, rd, m)
 	if diags.HasError() {
 		assert.Error(errors.New("delete operation failed"))
 	} else {
@@ -286,7 +308,7 @@ func TestDeleteDataVolume(t *testing.T) {
 func TestReadDataVolumeWithoutStatus(t *testing.T) {
 	assert := assert.New(t)
 	rd := prepareDataVolumeTestData()
-	rd.SetId("cluster-123/default/vm-test/vol-test")
+	rd.SetId("project/cluster-123/default/vm-test/vol-test")
 	m := &client.V1Client{
 		GetVirtualMachineWithoutStatusFn: func(uid string) (*models.V1ClusterVirtualMachine, error) {
 			if uid != "cluster-123" {

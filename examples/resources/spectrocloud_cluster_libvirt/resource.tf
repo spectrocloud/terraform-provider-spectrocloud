@@ -23,7 +23,7 @@ resource "spectrocloud_cluster_libvirt" "libvirt_cluster" {
   apply_setting   = "test-setting"
   skip_completion = true
   cloud_config {
-     ssh_key               = "sss2022"
+    ssh_key = "sss2022"
     # For multiple ssh_keys
     # ssh_keys = ["ssh tesertt", "ssh treter"]
     vip                   = "12.23.12.21"

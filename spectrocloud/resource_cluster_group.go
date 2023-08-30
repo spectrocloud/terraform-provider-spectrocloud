@@ -37,7 +37,7 @@ func resourceClusterGroup() *schema.Resource {
 				Optional:     true,
 				Default:      "tenant",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description:  "The context of the Cluster group. Allowed values are 'project' or 'tenant'. Defaults to 'tenant'.",
+				Description:  "The context of the Cluster group. Allowed values are `project` or `tenant`. Defaults to `tenant`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -299,7 +299,7 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 	return ret
 }
 
-func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig, hostClusterConfig []*models.V1ClusterGroupHostClusterConfig, endpointType string, values string) *models.V1ClusterGroupClustersConfig {
+func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig, hostClusterConfig []*models.V1ClusterGroupHostClusterConfig, endpointType, values string) *models.V1ClusterGroupClustersConfig {
 	if values != "" {
 		return &models.V1ClusterGroupClustersConfig{
 			EndpointType:       endpointType,

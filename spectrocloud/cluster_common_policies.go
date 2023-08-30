@@ -115,7 +115,8 @@ func flattenScanPolicy(driverSpec map[string]models.V1ComplianceScanDriverSpec) 
 
 func updateScanPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	if policy := toScanPolicy(d); policy != nil {
-		return c.ApplyClusterScanConfig(d.Id(), policy)
+		ClusterContext := d.Get("context").(string)
+		return c.ApplyClusterScanConfig(d.Id(), policy, ClusterContext)
 	}
 	return nil
 }

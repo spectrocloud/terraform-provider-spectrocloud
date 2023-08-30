@@ -29,6 +29,7 @@ description: |-
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `context` (String) The context of the Edge cluster. Can be `project` or `tenant`. Default is `project`.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
@@ -60,7 +61,8 @@ Optional:
 - `image_template_folder` (String)
 - `network_search_domain` (String)
 - `network_type` (String)
-- `ssh_key` (String)
+- `ssh_key` (String) SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
+- `ssh_keys` (Set of String) List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 - `static_ip` (Boolean)
 
 

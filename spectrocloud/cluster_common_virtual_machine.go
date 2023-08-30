@@ -34,8 +34,8 @@ var resourceVirtualMachineCreatePendingStates = []string{
 	"Deleted",
 }
 
-func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceData, clusterUid string, vmName string, namespace string, diags diag.Diagnostics, c *client.V1Client, state string, targetState string) (diag.Diagnostics, bool) {
-	vm, err := c.GetVirtualMachine(clusterUid, namespace, vmName)
+func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceData, scope, clusterUid, vmName, namespace string, diags diag.Diagnostics, c *client.V1Client, state, targetState string) (diag.Diagnostics, bool) {
+	vm, err := c.GetVirtualMachine(scope, clusterUid, namespace, vmName)
 	if err != nil {
 		return diags, true
 	}
@@ -50,7 +50,7 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 	stateConf := &retry.StateChangeConf{
 		Pending:    resourceVirtualMachineCreatePendingStates,
 		Target:     []string{targetState},
-		Refresh:    resourceVirtualMachineStateRefreshFunc(c, clusterUid, vmName, namespace),
+		Refresh:    resourceVirtualMachineStateRefreshFunc(c, scope, clusterUid, vmName, namespace),
 		Timeout:    d.Timeout(state) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
@@ -64,9 +64,9 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 	return nil, false
 }
 
-func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid string, vmName string, vmNamespace string) retry.StateRefreshFunc {
+func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, scope, clusterUid, vmName, vmNamespace string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		vm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
+		vm, err := c.GetVirtualMachine(scope, clusterUid, vmNamespace, vmName)
 		if err != nil {
 			if err.(*transport.TransportError).HttpCode == 500 && strings.Contains(err.(*transport.TransportError).Payload.Message, fmt.Sprintf("Failed to get virtual machine '%s'", vmName)) {
 				emptyVM := &models.V1ClusterVirtualMachine{}

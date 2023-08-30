@@ -1,5 +1,5 @@
 data "spectrocloud_cluster_profile" "vmware_profile" {
-  name    = "VSPHERE_INFRA"
+  name    = "vsphere-picard-2"
   version = "1.0.0"
   context = "project"
 }
@@ -9,8 +9,7 @@ data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
 
 
 resource "spectrocloud_cluster_vsphere" "cluster" {
-  name             = "vsphere-picard-2"
-  skip_completion = true
+  name             = "vsphere-picard-3"
   # For Force Delete enforcement
   # force_delete = true
   # force_delete_delay = 25
@@ -35,7 +34,6 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
     control_plane_as_worker = true
     name                    = "master-pool"
     count                   = 1
-
     placement {
       cluster       = var.vsphere_cluster
       resource_pool = var.vsphere_resource_pool
@@ -50,9 +48,9 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
   }
 
   machine_pool {
-    name  = "worker-basic"
-    count = 1
-
+    name                 = "worker-basic"
+    count                = 1
+    node_repave_interval = 30
     placement {
       cluster       = var.vsphere_cluster
       resource_pool = var.vsphere_resource_pool

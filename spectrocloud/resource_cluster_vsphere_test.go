@@ -130,7 +130,8 @@ func TestToVsphereCluster(t *testing.T) {
 		},
 	}
 
-	vSphereSchema := toVsphereCluster(m, d)
+	vSphereSchema, err := toVsphereCluster(m, d)
+	assert.Nil(err)
 
 	// Check the output against the expected values
 	// Verifying cluster name attribute
@@ -252,7 +253,7 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 		GetCloudConfigVsphereFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
 			return getCloudConfig(), nil
 		},
-		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			isHost := new(bool)
 			*isHost = true
 			cluster := &models.V1SpectroCluster{
@@ -286,7 +287,6 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 						ClusterRbac:                    nil,
 						ClusterResources:               nil,
 						ControlPlaneHealthCheckTimeout: "",
-						Fips:                           nil,
 						HostClusterConfig: &models.V1HostClusterConfig{
 							ClusterEndpoint: &models.V1HostClusterEndpoint{
 								Config: nil,
@@ -464,7 +464,6 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 					RegionCode: "12",
 					RegionName: "Asia",
 				},
-				Nested:        nil,
 				Packs:         nil,
 				ProfileStatus: nil,
 				Services:      nil,
@@ -487,7 +486,7 @@ func TestResourceClusterVsphereReadNilCluster(t *testing.T) {
 	// Create a mock ResourceData object
 	d := prepareClusterVsphereTestData()
 	m := &client.V1Client{
-		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			return nil, nil
 		},
 	}
@@ -503,7 +502,7 @@ func TestResourceClusterVsphereReadError(t *testing.T) {
 	// Create a mock ResourceData object
 	d := prepareClusterVsphereTestData()
 	m := &client.V1Client{
-		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			return nil, errors.New("unexpected Error")
 		},
 	}
@@ -560,9 +559,7 @@ func getMPools() []*models.V1VsphereMachinePoolConfig {
 			"type":  "unittest",
 			"owner": "siva",
 		},
-		AdditionalTags:       nil,
-		InfraProfileRef:      nil,
-		InfraProfileTemplate: nil,
+		AdditionalTags: nil,
 		InstanceType: &models.V1VsphereInstanceType{
 			DiskGiB:   diskGb,
 			MemoryMiB: memMb,
@@ -712,7 +709,7 @@ func TestFlattenMachinePoolConfigsVsphereNil(t *testing.T) {
 func TestResourceClusterVsphereUpdate(t *testing.T) {
 	d := prepareClusterVsphereTestData()
 	m := &client.V1Client{
-		GetClusterFn: func(uid string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
 			return nil, nil
 		},
 	}

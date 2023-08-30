@@ -6,8 +6,10 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -21,6 +23,13 @@ func resourceCloudAccountAzure() *schema.Resource {
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the Azure configuration. Can be `project` or `tenant`.",
 			},
 			"azure_tenant_id": {
 				Type:     schema.TypeString,
@@ -53,7 +62,8 @@ func resourceCloudAccountAzureCreate(ctx context.Context, d *schema.ResourceData
 
 	account := toAzureAccount(d)
 
-	uid, err := c.CreateCloudAccountAzure(account)
+	AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountAzure(account, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -72,7 +82,8 @@ func resourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m 
 
 	uid := d.Id()
 
-	account, err := c.GetCloudAccountAzure(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountAzure(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -118,8 +129,8 @@ func resourceCloudAccountAzureDelete(_ context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-
-	err := c.DeleteCloudAccountAzure(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountAzure(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -60,7 +60,7 @@ resource "spectrocloud_cluster_edge_vsphere" "cluster" {
   }
 
   cloud_config {
-    ssh_key      = var.cluster_ssh_public_key
+    ssh_key = var.cluster_ssh_public_key
     # For Multiple ssh_keys
     # ssh_keys = ["ssh key1", "ssh key2"]
     static_ip    = false

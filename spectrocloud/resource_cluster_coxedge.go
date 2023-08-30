@@ -41,6 +41,7 @@ func resourceClusterCoxEdge() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the CoxEdge cluster. Can be `project` or `tenant`. Default is `project`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -337,7 +338,7 @@ func resourceCoxEdgeClusterCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -352,9 +353,7 @@ func resourceCoxEdgeClusterRead(_ context.Context, d *schema.ResourceData, m int
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -369,7 +368,8 @@ func resourceCoxEdgeClusterRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	var config *models.V1CoxEdgeCloudConfig
-	if config, err = c.GetCloudConfigCoxEdge(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err = c.GetCloudConfigCoxEdge(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -443,9 +443,8 @@ func flattenMachinePoolConfigsCoxEdge(machinePools []*models.V1CoxEdgeMachinePoo
 
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
@@ -458,7 +457,6 @@ func flattenMachinePoolConfigsCoxEdge(machinePools []*models.V1CoxEdgeMachinePoo
 		coxConfig["security_group_rules"] = flattenCoxEdgeSecurityGroupRules(machinePool.SecurityGroupRules)
 
 		oi["cox_config"] = []interface{}{coxConfig}
-
 		ois[i] = oi
 	}
 
@@ -542,9 +540,7 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
-	_ = d.Get("machine_pool")
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -565,29 +561,32 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolCoxEdgeHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolCoxEdgeHash(machinePoolResource)
 
-			machinePool, err := toMachinePoolCoxEdge(machinePoolResource)
-			if err != nil {
-				return diag.FromErr(err)
+				machinePool, err := toMachinePoolCoxEdge(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolCoxEdge(cloudConfigId, machinePool, ClusterContext)
+				} else if hash != resourceMachinePoolCoxEdgeHash(oldMachinePool) {
+					// TODO
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolCoxEdge(cloudConfigId, machinePool, ClusterContext)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolCoxEdge(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolCoxEdgeHash(oldMachinePool) {
-				// TODO
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolCoxEdge(cloudConfigId, machinePool)
-			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -595,7 +594,7 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolCoxEdge(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolCoxEdge(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -640,6 +639,10 @@ func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 		}
 	}
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroCoxEdgeClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -649,7 +652,7 @@ func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 		Spec: &models.V1SpectroCoxEdgeClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			CloudType:       types.Ptr("coxedge"),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1CoxEdgeClusterConfig{
 				CoxEdgeLoadBalancerConfig:       LoadBalancer,

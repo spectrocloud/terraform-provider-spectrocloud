@@ -37,6 +37,13 @@ func resourceClusterGcp() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the GCP cluster. Can be `project` or `tenant`. Default is `project`.",
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -145,6 +152,12 @@ func resourceClusterGcp() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
+						},
 						"instance_type": {
 							Type:     schema.TypeString,
 							Required: true,
@@ -195,14 +208,18 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toGcpCluster(c, d)
-
-	uid, err := c.CreateClusterGcp(cluster)
+	cluster, err := toGcpCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterGcp(cluster, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -218,9 +235,7 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -238,10 +253,11 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 }
 
 func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigGcp(configUID); err != nil {
+	if config, err := c.GetCloudConfigGcp(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsGcp(config.Spec.MachinePoolConfig)
@@ -264,9 +280,9 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
@@ -277,7 +293,6 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 
 		oi["azs"] = machinePool.Azs
-
 		ois[i] = oi
 	}
 
@@ -291,7 +306,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -312,26 +327,31 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolGcpHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolGcpHash(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolGcp(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			machinePool := toMachinePoolGcp(machinePoolResource)
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolGcp(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolGcpHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolGcp(cloudConfigId, ClusterContext, machinePool)
+				}
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolGcp(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolGcpHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolGcp(cloudConfigId, machinePool)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -339,15 +359,11 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolGcp(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolGcp(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
@@ -359,11 +375,15 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toGcpCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroGcpClusterEntity {
+func toGcpCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroGcpClusterEntity, error) {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("gcp_client_secret").(string))
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroGcpClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -372,7 +392,7 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroG
 		},
 		Spec: &models.V1SpectroGcpClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1GcpClusterConfig{
 				Network: cloudConfig["network"].(string),
@@ -384,17 +404,20 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroG
 
 	machinePoolConfigs := make([]*models.V1GcpMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolGcp(machinePool)
+		mp, err := toMachinePoolGcp(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
-func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEntity {
+func toMachinePoolGcp(machinePool interface{}) (*models.V1GcpMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -428,5 +451,19 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEnt
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }

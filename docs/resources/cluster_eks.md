@@ -103,7 +103,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `context` (String)
+- `context` (String) The context of the EKS cluster. Can be `project` or `tenant`. Default is `project`.
 - `fargate_profile` (Block List) (see [below for nested schema](#nestedblock--fargate_profile))
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
@@ -157,9 +157,9 @@ Optional:
 - `azs` (List of String)
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
 - `eks_launch_template` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--eks_launch_template))
-- `max` (Number)
+- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `max_price` (String)
-- `min` (Number)
+- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
@@ -168,6 +168,7 @@ Optional:
 
 Optional:
 
+- `additional_security_groups` (Set of String) Additional security groups to attach to the instance.
 - `ami_id` (String) The ID of the custom Amazon Machine Image (AMI).
 - `root_volume_iops` (Number) The number of input/output operations per second (IOPS) for the root volume.
 - `root_volume_throughput` (Number) The throughput of the root volume in MiB/s.

@@ -37,6 +37,13 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the Edge cluster. Can be `project` or `tenant`. Default is `project`.",
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -94,16 +101,15 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key": {
-							Type:         schema.TypeString,
-							Optional:     true,
-							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
-							Description:  "SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
 						},
 						"ssh_keys": {
-							Type:         schema.TypeSet,
-							Optional:     true,
-							Set:          schema.HashString,
-							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Type:          schema.TypeSet,
+							Optional:      true,
+							Set:           schema.HashString,
+							ConflictsWith: []string{"cloud_config.0.ssh_key"},
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -221,12 +227,13 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	uid, err := c.CreateClusterEdgeNative(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterEdgeNative(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -241,10 +248,8 @@ func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m 
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	//
-	uid := d.Id()
-	//
-	cluster, err := c.GetCluster(uid)
+
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -264,10 +269,11 @@ func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m 
 }
 
 func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
+	if config, err := c.GetCloudConfigEdgeNative(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
@@ -290,9 +296,8 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		var hosts []map[string]string
@@ -318,7 +323,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -339,29 +344,34 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			if name == "" {
-				continue
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				if name == "" {
+					continue
+				}
+				hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolEdgeNative(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-			hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
-
-			machinePool := toMachinePoolEdgeNative(machinePoolResource)
-
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
-			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -369,7 +379,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -387,10 +397,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroEdgeNativeClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-	sshKeys, err := toSSHKeys(cloudConfig)
-	if err != nil {
-		return nil, err
-	}
+	sshKeys, _ := toSSHKeys(cloudConfig)
 	controlPlaneEndpoint := &models.V1EdgeNativeControlPlaneEndPoint{}
 	if cloudConfig["vip"] != nil {
 		vip := cloudConfig["vip"].(string)
@@ -401,6 +408,11 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 				Type: "IP", // only IP type for now no DDNS
 			}
 	}
+
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroEdgeNativeClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -408,7 +420,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroEdgeNativeClusterEntitySpec{
-			Profiles: toProfiles(c, d),
+			Profiles: profiles,
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1EdgeNativeClusterConfig{
 				NtpServers:           toNtpServers(cloudConfig),
@@ -420,7 +432,10 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 
 	machinePoolConfigs := make([]*models.V1EdgeNativeMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolEdgeNative(machinePool)
+		mp, err := toMachinePoolEdgeNative(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
@@ -429,7 +444,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 	return cluster, nil
 }
 
-func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachinePoolConfigEntity {
+func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -452,7 +467,8 @@ func toMachinePoolEdgeNative(machinePool interface{}) *models.V1EdgeNativeMachin
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	return mp, nil
 }
 
 func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudConfigEntity {

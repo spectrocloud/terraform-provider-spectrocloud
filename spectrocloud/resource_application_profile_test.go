@@ -271,7 +271,7 @@ func TestFlattenAppPacks(t *testing.T) {
 			}
 			return reg, nil
 		},
-		GetApplicationProfileTierManifestContentFn: func(appProfileUID string, tierUID string, manifestUID string) (string, error) {
+		GetApplicationProfileTierManifestContentFn: func(appProfileUID, tierUID, manifestUID string) (string, error) {
 			return "test: \n content", nil
 		},
 	}
@@ -346,7 +346,7 @@ func TestToPropertiesTier(t *testing.T) {
 	}
 	p := toPropertiesTier(props)
 
-	assertProperties := func(name string, value string) bool {
+	assertProperties := func(name, value string) bool {
 		for _, prop := range p {
 			if prop.Name == name && prop.Value == value {
 				return true

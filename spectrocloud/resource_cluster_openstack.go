@@ -37,6 +37,13 @@ func resourceClusterOpenStack() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the OpenStack cluster. Can be `project` or `tenant`. Default is `project`.",
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -167,6 +174,12 @@ func resourceClusterOpenStack() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
+						},
 						"update_strategy": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -214,14 +227,18 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toOpenStackCluster(c, d)
-
-	uid, err := c.CreateClusterOpenStack(cluster)
+	cluster, err := toOpenStackCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterOpenStack(cluster, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -231,10 +248,14 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	return diags
 }
 
-func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroOpenStackClusterEntity {
+func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroOpenStackClusterEntity, error) {
 
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroOpenStackClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -243,7 +264,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Sp
 		},
 		Spec: &models.V1SpectroOpenStackClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1OpenStackClusterConfig{
 				Region:     cloudConfig["region"].(string),
@@ -278,7 +299,10 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Sp
 	machinePoolConfigs := make([]*models.V1OpenStackMachinePoolConfigEntity, 0)
 
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolOpenStack(machinePool)
+		mp, err := toMachinePoolOpenStack(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -290,7 +314,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Sp
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 //goland:noinspection GoUnhandledErrorResult
@@ -299,9 +323,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -314,7 +336,8 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigOpenStack(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigOpenStack(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsOpenStack(config.Spec.MachinePoolConfig)
@@ -342,9 +365,9 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachin
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(&machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
@@ -367,7 +390,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -388,26 +411,32 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolOpenStackHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolOpenStackHash(machinePoolResource)
 
-			machinePool := toMachinePoolOpenStack(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolOpenStack(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolOpenStack(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool)
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -415,7 +444,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -431,7 +460,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 	return diags
 }
 
-func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachinePoolConfigEntity {
+func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -469,5 +498,19 @@ func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachineP
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }

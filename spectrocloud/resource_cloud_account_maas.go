@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -17,21 +18,32 @@ func resourceCloudAccountMaas() *schema.Resource {
 		DeleteContext: resourceCloudAccountMaasDelete,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the MAAS cloud account.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the MAAS configuration. Can be `project` or `tenant`.",
 			},
 			"private_cloud_gateway_id": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "ID of the private cloud gateway that is used to connect to the MAAS cloud.",
 			},
 			"maas_api_endpoint": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Endpoint of the MAAS API that is used to connect to the MAAS cloud. I.e. http://maas:5240/MAAS",
 			},
 			"maas_api_key": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Sensitive:   true,
+				Description: "API key that is used to connect to the MAAS cloud.",
 			},
 		},
 	}
@@ -44,8 +56,8 @@ func resourceCloudAccountMaasCreate(ctx context.Context, d *schema.ResourceData,
 	var diags diag.Diagnostics
 
 	account := toMaasAccount(d)
-
-	uid, err := c.CreateCloudAccountMaas(account)
+	AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountMaas(account, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -63,8 +75,8 @@ func resourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-
-	account, err := c.GetCloudAccountMaas(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountMaas(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -90,7 +102,6 @@ func resourceCloudAccountMaasUpdate(ctx context.Context, d *schema.ResourceData,
 	var diags diag.Diagnostics
 
 	account := toMaasAccount(d)
-
 	err := c.UpdateCloudAccountMaas(account)
 	if err != nil {
 		return diag.FromErr(err)
@@ -107,8 +118,8 @@ func resourceCloudAccountMaasDelete(_ context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-
-	err := c.DeleteCloudAccountMaas(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountMaas(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -123,8 +134,9 @@ func toMaasAccount(d *schema.ResourceData) *models.V1MaasAccount {
 	KeyVal := d.Get("maas_api_key").(string)
 	account := &models.V1MaasAccount{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Name:        d.Get("name").(string),
+			Annotations: map[string]string{OverlordUID: d.Get("private_cloud_gateway_id").(string)},
+			UID:         d.Id(),
 		},
 		Spec: &models.V1MaasCloudAccount{
 			APIEndpoint: &EndpointVal,

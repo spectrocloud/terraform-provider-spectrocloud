@@ -30,6 +30,7 @@ description: |-
 - `cloud_account_id` (String)
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `context` (String) The context of the Libvirt cluster. Can be `project` or `tenant`. Default is `project`.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
@@ -52,7 +53,6 @@ description: |-
 
 Required:
 
-- `ssh_key` (String)
 - `vip` (String)
 
 Optional:
@@ -60,6 +60,8 @@ Optional:
 - `network_search_domain` (String) The search domain to use for the cluster in case of DHCP.
 - `network_type` (String) The type of network to use for the cluster. This can be `VIP` or `DDNS`.
 - `ntp_servers` (Set of String)
+- `ssh_key` (String) SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
+- `ssh_keys` (Set of String) List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 
 
 <a id="nestedblock--machine_pool"></a>

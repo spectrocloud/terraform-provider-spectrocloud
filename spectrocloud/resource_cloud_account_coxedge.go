@@ -29,8 +29,8 @@ func resourceCloudAccountCoxEdge() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
-				Description:  "The context of the CoxEdge configuration.",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the CoxEdge configuration. Can be `project` or `tenant`.",
 			},
 			"api_key": {
 				Type:        schema.TypeString,
@@ -89,7 +89,8 @@ func resourceCloudAccountCoxEdgeRead(_ context.Context, d *schema.ResourceData, 
 
 	uid := d.Id()
 
-	account, err := c.GetCloudAccountCoxEdge(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountCoxEdge(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -141,8 +142,8 @@ func resourceCloudAccountCoxEdgeDelete(_ context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-
-	err := c.DeleteCloudAccountCoxEdge(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountCoxEdge(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}

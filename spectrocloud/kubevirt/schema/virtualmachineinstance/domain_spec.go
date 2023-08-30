@@ -202,38 +202,30 @@ func domainSpecSchema() *schema.Schema {
 
 }
 
-func expandDomainSpec(domainSpec []interface{}) (kubevirtapiv1.DomainSpec, error) {
+func ExpandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) {
 	result := kubevirtapiv1.DomainSpec{}
 
-	if len(domainSpec) == 0 || domainSpec[0] == nil {
-		return result, nil
-	}
-
-	in := domainSpec[0].(map[string]interface{})
-
-	if v, ok := in["resources"].([]interface{}); ok {
-		resources, err := expandResources(v)
+	if v, ok := d.GetOk("resources"); ok {
+		resources, err := expandResources(v.([]interface{}))
 		if err != nil {
 			return result, err
 		}
 		result.Resources = resources
 	}
-	if v, ok := in["devices"].([]interface{}); ok {
-		devices, err := expandDevices(v)
-		if err != nil {
-			return result, err
-		}
+	if devices, err := expandDevices(d); err == nil {
 		result.Devices = devices
+	} else {
+		return result, err
 	}
-	if v, ok := in["cpu"].(map[string]interface{}); ok {
-		cpu, err := expandCPU(v)
+	if v, ok := d.GetOk("cpu"); ok {
+		cpu, err := expandCPU(v.([]interface{})[0].(map[string]interface{}))
 		if err != nil {
 			return result, err
 		}
 		result.CPU = &cpu
 	}
-	if v, ok := in["memory"].([]interface{}); ok {
-		memory, err := expandMemory(v)
+	if v, ok := d.GetOk("memory"); ok {
+		memory, err := expandMemory(v.([]interface{}))
 		if err != nil {
 			return result, err
 		}
@@ -273,24 +265,19 @@ func expandResources(resources []interface{}) (kubevirtapiv1.ResourceRequirement
 	return result, nil
 }
 
-func expandDevices(devices []interface{}) (kubevirtapiv1.Devices, error) {
+func expandDevices(d *schema.ResourceData) (kubevirtapiv1.Devices, error) {
 	result := kubevirtapiv1.Devices{}
 
-	if len(devices) == 0 || devices[0] == nil {
-		return result, nil
+	if v, ok := d.GetOk("disk"); ok {
+		result.Disks = ExpandDisks(v.([]interface{}))
 	}
-
-	in := devices[0].(map[string]interface{})
-
-	if v, ok := in["disk"].([]interface{}); ok {
-		result.Disks = expandDisks(v)
-	}
-	if v, ok := in["interface"].([]interface{}); ok {
-		result.Interfaces = expandInterfaces(v)
+	if v, ok := d.GetOk("interface"); ok {
+		result.Interfaces = ExpandInterfaces(v.([]interface{}))
 	}
 
 	return result, nil
 }
+
 func expandCPU(cpu map[string]interface{}) (kubevirtapiv1.CPU, error) {
 	result := kubevirtapiv1.CPU{}
 
@@ -329,15 +316,17 @@ func expandMemory(memory []interface{}) (kubevirtapiv1.Memory, error) {
 	}
 
 	if v, ok := in["hugepages"].(string); ok {
-		result.Hugepages = &kubevirtapiv1.Hugepages{
-			PageSize: v,
+		if in["hugepages"].(string) != "" {
+			result.Hugepages = &kubevirtapiv1.Hugepages{
+				PageSize: v,
+			}
 		}
 	}
 
 	return result, nil
 }
 
-func expandDisks(disks []interface{}) []kubevirtapiv1.Disk {
+func ExpandDisks(disks []interface{}) []kubevirtapiv1.Disk {
 	result := make([]kubevirtapiv1.Disk, len(disks))
 
 	if len(disks) == 0 || disks[0] == nil {
@@ -399,7 +388,7 @@ func expandDiskTarget(disk []interface{}) *kubevirtapiv1.DiskTarget {
 	return result
 }
 
-func expandInterfaces(interfaces []interface{}) []kubevirtapiv1.Interface {
+func ExpandInterfaces(interfaces []interface{}) []kubevirtapiv1.Interface {
 	result := make([]kubevirtapiv1.Interface, len(interfaces))
 
 	if len(interfaces) == 0 || interfaces[0] == nil {
@@ -440,7 +429,7 @@ func expandInterfaceBindingMethod(interfaceBindingMethod string) kubevirtapiv1.I
 	return result
 }
 
-func flattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
+func FlattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
 	att := make(map[string]interface{})
 
 	att["resources"] = flattenResources(in.Resources)

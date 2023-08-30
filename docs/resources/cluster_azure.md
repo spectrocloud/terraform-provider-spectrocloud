@@ -99,6 +99,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `context` (String) The context of the Azure cluster. Can be `project` or `tenant`. Default is `project`.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - `os_patch_after` (String) Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`
@@ -144,6 +145,7 @@ Optional:
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `disk` (Block List, Max: 1) Disk configuration for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--disk))
 - `is_system_node_pool` (Boolean) Whether this machine pool is a system node pool. Default value is `false'.
+- `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `os_type` (String) Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.

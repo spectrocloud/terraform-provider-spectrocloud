@@ -5,8 +5,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -18,45 +20,63 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 		DeleteContext: resourceCloudAccountOpenStackDelete,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the OpenStack cloud account.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the OpenStack configuration. Can be `project` or `tenant`.",
 			},
 			"private_cloud_gateway_id": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "ID of the private cloud gateway that is used to connect to the OpenStack cloud.",
 			},
 			"openstack_username": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The username of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"openstack_password": {
-				Type:      schema.TypeString,
-				Required:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Sensitive:   true,
+				Description: "The password of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"identity_endpoint": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The identity endpoint of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"openstack_allow_insecure": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to allow insecure connections to the OpenStack cloud. Default is `false`.",
 			},
 			"ca_certificate": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The CA certificate of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"parent_region": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The parent region of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"default_domain": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The default domain of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 			"default_project": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The default project of the OpenStack cloud that is used to connect to the OpenStack cloud.",
 			},
 		},
 	}
@@ -69,8 +89,8 @@ func resourceCloudAccountOpenStackCreate(ctx context.Context, d *schema.Resource
 	var diags diag.Diagnostics
 
 	account := toOpenStackAccount(d)
-
-	uid, err := c.CreateCloudAccountOpenStack(account)
+	AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountOpenStack(account, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -88,8 +108,8 @@ func resourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-
-	account, err := c.GetCloudAccountOpenStack(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountOpenStack(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -153,8 +173,8 @@ func resourceCloudAccountOpenStackDelete(_ context.Context, d *schema.ResourceDa
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-
-	err := c.DeleteCloudAccountOpenStack(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountOpenStack(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -166,8 +186,9 @@ func toOpenStackAccount(d *schema.ResourceData) *models.V1OpenStackAccount {
 
 	account := &models.V1OpenStackAccount{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Name:        d.Get("name").(string),
+			Annotations: map[string]string{OverlordUID: d.Get("private_cloud_gateway_id").(string)},
+			UID:         d.Id(),
 		},
 
 		Spec: &models.V1OpenStackCloudAccount{

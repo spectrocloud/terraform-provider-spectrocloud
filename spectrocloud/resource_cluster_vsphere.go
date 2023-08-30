@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -37,6 +39,13 @@ func resourceClusterVsphere() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 				Description: "The name of the cluster.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the VMware cluster. Can be `project` or `tenant`. Default is `project`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -186,6 +195,12 @@ func resourceClusterVsphere() *schema.Resource {
 							//ForceNew: true,
 							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
+						},
 						"count": {
 							Type:        schema.TypeInt,
 							Required:    true,
@@ -297,14 +312,18 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toVsphereCluster(c, d)
-
-	uid, err := c.CreateClusterVsphere(cluster)
+	cluster, err := toVsphereCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterVsphere(cluster, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -320,9 +339,7 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -335,7 +352,8 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
@@ -353,13 +371,14 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 }
 
 func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
+	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfig, err := c.GetCloudConfigVsphereValues(configUID)
+		cloudConfig, err := c.GetCloudConfigVsphereValues(configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -420,9 +439,9 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
@@ -462,17 +481,78 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 	return ois
 }
 
-func ValidateMachinePoolChange(oraw interface{}, nraw interface{}) bool {
-	hasChange := false
-	for i, nm := range nraw.(*schema.Set).List() {
-		oldPlacement := oraw.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
-		newPlacement := nm.(map[string]interface{})["placement"].([]interface{})[0].(map[string]interface{})
-		if (oldPlacement["cluster"] != newPlacement["cluster"]) || (oldPlacement["datastore"] != newPlacement["datastore"]) || (oldPlacement["network"] != newPlacement["network"]) {
-			hasChange = true
-			return hasChange
+func sortPlacementStructs(structs []interface{}) {
+	sort.Slice(structs, func(i, j int) bool {
+		clusterI := structs[i].(map[string]interface{})["cluster"]
+		clusterJ := structs[j].(map[string]interface{})["cluster"]
+		if clusterI != clusterJ {
+			return clusterI.(string) < clusterJ.(string)
+		}
+		datastoreI := structs[i].(map[string]interface{})["datastore"]
+		datastoreJ := structs[j].(map[string]interface{})["datastore"]
+		if datastoreI != datastoreJ {
+			return datastoreI.(string) < datastoreJ.(string)
+		}
+		resourcePoolI := structs[i].(map[string]interface{})["resource_pool"]
+		resourcePoolJ := structs[j].(map[string]interface{})["resource_pool"]
+		if resourcePoolI != resourcePoolJ {
+			return resourcePoolI.(string) < resourcePoolJ.(string)
+		}
+		networkI := structs[i].(map[string]interface{})["network"]
+		networkJ := structs[j].(map[string]interface{})["network"]
+		return networkI.(string) < networkJ.(string)
+	})
+}
+
+func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, error) {
+	var oPlacements []interface{}
+	var nPlacements []interface{}
+	// Identifying control plane placements from machine pool interface before change
+	for i, oMachinePool := range oMPool.(*schema.Set).List() {
+		if oMachinePool.(map[string]interface{})["control_plane"] == true {
+			oPlacements = oMPool.(*schema.Set).List()[i].(map[string]interface{})["placement"].([]interface{})
 		}
 	}
-	return hasChange
+	// Identifying control plane placements from machine pool interface after change
+	for _, nMachinePool := range nMPool.(*schema.Set).List() {
+		if nMachinePool.(map[string]interface{})["control_plane"] == true {
+			nPlacements = nMachinePool.(map[string]interface{})["placement"].([]interface{})
+		}
+	}
+	// Validating any New or old placements got added/removed.
+	if len(nPlacements) != len(oPlacements) {
+		errMsg := `Placement validation error - Adding/Removing placement component in control plane is not allowed. 
+To update the placement configuration in the control plane, kindly recreate the cluster.`
+		return true, errors.New(errMsg)
+	}
+
+	// Need to add sort with all fields
+	// oPlacements and nPlacements for correct comparison in case order was changed
+	sortPlacementStructs(oPlacements)
+	sortPlacementStructs(nPlacements)
+
+	// Validating any New or old placements got changed.
+	for pIndex, nP := range nPlacements {
+		oPlacement := oPlacements[pIndex].(map[string]interface{})
+		nPlacement := nP.(map[string]interface{})
+		if oPlacement["cluster"] != nPlacement["cluster"] {
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `ComputeCluster` value. Old value - %s, New value - %s ", oPlacement["cluster"], nPlacement["cluster"])
+			return true, errors.New(errMsg)
+		}
+		if oPlacement["datastore"] != nPlacement["datastore"] {
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `DataStore` value. Old value - %s, New value - %s ", oPlacement["datastore"], nPlacement["datastore"])
+			return true, errors.New(errMsg)
+		}
+		if oPlacement["resource_pool"] != nPlacement["resource_pool"] {
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `resource_pool` value. Old value - %s, New value - %s ", oPlacement["resource_pool"], nPlacement["resource_pool"])
+			return true, errors.New(errMsg)
+		}
+		if oPlacement["network"] != nPlacement["network"] {
+			errMsg := fmt.Sprintf("Placement attributes for control_plane cannot be updated, validation error: Trying to update `Network` value. Old value - %s, New value - %s ", oPlacement["network"], nPlacement["network"])
+			return true, errors.New(errMsg)
+		}
+	}
+	return false, nil
 }
 
 func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -482,14 +562,14 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("cloud_config") {
 		occ, ncc := d.GetChange("cloud_config")
 		if occ.([]interface{})[0].(map[string]interface{})["datacenter"] != ncc.([]interface{})[0].(map[string]interface{})["datacenter"] {
 			return diag.Errorf("Validation error: %s", "Datacenter value cannot be updated after cluster provisioning. Kindly destroy and recreate with updated Datacenter attribute.")
 		}
 		cloudConfig := toCloudConfigUpdate(d.Get("cloud_config").([]interface{})[0].(map[string]interface{}))
-		if err := c.UpdateCloudConfigVsphereValues(cloudConfigId, cloudConfig); err != nil {
+		if err := c.UpdateCloudConfigVsphereValues(cloudConfigId, ClusterContext, cloudConfig); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -497,8 +577,8 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw != nil && nraw != nil {
-			if ValidateMachinePoolChange(oraw, nraw) {
-				return diag.Errorf("Validation error: %s", "Datastore, Network, and ComputeCluster values cannot be updated after cluster provisioning. Kindly destroy and recreate with updated placement attributes")
+			if ok, err := ValidateMachinePoolChange(oraw, nraw); ok {
+				return diag.Errorf(err.Error())
 			}
 		}
 		if oraw == nil {
@@ -519,36 +599,41 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolVsphereHash(machinePoolResource)
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolVsphereHash(machinePoolResource)
 
-			machinePool := toMachinePoolVsphere(machinePoolResource)
-
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				oldMachinePool := toMachinePoolVsphere(oldMachinePool)
-				oldPlacements := oldMachinePool.CloudConfig.Placements
-
-				// set the placement ids
-				for i, p := range machinePool.CloudConfig.Placements {
-					if len(oldPlacements) > i {
-						p.UID = oldPlacements[i].UID
-					}
+				var err error
+				machinePool, err := toMachinePoolVsphere(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
 				}
 
-				err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
-			}
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					oldMachinePool, _ := toMachinePoolVsphere(oldMachinePool)
+					oldPlacements := oldMachinePool.CloudConfig.Placements
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
+					// set the placement ids
+					for i, p := range machinePool.CloudConfig.Placements {
+						if len(oldPlacements) > i {
+							p.UID = oldPlacements[i].UID
+						}
+					}
 
-			// Processed (if exists)
-			delete(osMap, name)
+					err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
+			}
 		}
 
 		// Deleted old machine pools
@@ -556,15 +641,11 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
@@ -576,10 +657,14 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroVsphereClusterEntity {
+func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroVsphereClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -588,7 +673,7 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 		},
 		Spec: &models.V1SpectroVsphereClusterEntitySpec{
 			CloudAccountUID: d.Get("cloud_account_id").(string),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig:     toCloudConfigCreate(cloudConfig),
 		},
@@ -596,7 +681,10 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolVsphere(machinePool)
+		mp, err := toMachinePoolVsphere(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -607,7 +695,7 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
@@ -631,7 +719,7 @@ func toCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1VsphereCl
 	}
 }
 
-func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolConfigEntity {
+func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -689,5 +777,19 @@ func toMachinePoolVsphere(machinePool interface{}) *models.V1VsphereMachinePoolC
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }

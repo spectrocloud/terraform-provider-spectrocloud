@@ -299,7 +299,7 @@ func TestResourceAlertCreate(t *testing.T) {
 		GetProjectUIDFn: func(projectName string) (string, error) {
 			return "test-project-uid", nil
 		},
-		CreateAlertFn: func(body *models.V1Channel, projectUID string, component string) (string, error) {
+		CreateAlertFn: func(body *models.V1Channel, projectUID, component string) (string, error) {
 			return "test-alert-ui", nil
 		},
 	}
@@ -318,7 +318,7 @@ func TestResourceAlertCreateProjectUIDError(t *testing.T) {
 			return "", errors.New("unable to read project uid")
 
 		},
-		CreateAlertFn: func(body *models.V1Channel, projectUID string, component string) (string, error) {
+		CreateAlertFn: func(body *models.V1Channel, projectUID, component string) (string, error) {
 			return "test-alert-uid", nil
 		},
 	}
@@ -334,7 +334,7 @@ func TestResourceAlertCreateAlertUIDError(t *testing.T) {
 		GetProjectUIDFn: func(projectName string) (string, error) {
 			return "test-project-uid", nil
 		},
-		CreateAlertFn: func(body *models.V1Channel, projectUID string, component string) (string, error) {
+		CreateAlertFn: func(body *models.V1Channel, projectUID, component string) (string, error) {
 			return "", errors.New("alert creation failed")
 		},
 	}
@@ -350,7 +350,7 @@ func TestResourceAlertUpdate(t *testing.T) {
 		GetProjectUIDFn: func(projectName string) (string, error) {
 			return "test-project-uid", nil
 		},
-		UpdateAlertFn: func(body *models.V1Channel, projectUID string, component string, alertUID string) (string, error) {
+		UpdateAlertFn: func(body *models.V1Channel, projectUID, component, alertUID string) (string, error) {
 			return "success", nil
 		},
 	}
@@ -368,7 +368,7 @@ func TestResourceAlertUpdateError(t *testing.T) {
 		GetProjectUIDFn: func(projectName string) (string, error) {
 			return "test-project-uid", nil
 		},
-		UpdateAlertFn: func(body *models.V1Channel, projectUID string, component string, alertUID string) (string, error) {
+		UpdateAlertFn: func(body *models.V1Channel, projectUID, component, alertUID string) (string, error) {
 			return "", errors.New("alert update failed")
 		},
 	}
@@ -384,7 +384,7 @@ func TestResourceAlertDelete(t *testing.T) {
 		GetProjectUIDFn: func(projectName string) (string, error) {
 			return "test-project-uid", nil
 		},
-		DeleteAlertsFn: func(projectUID string, component string, alertUID string) error {
+		DeleteAlertsFn: func(projectUID, component, alertUID string) error {
 			return nil
 		},
 	}
@@ -402,7 +402,7 @@ func TestResourceAlertDeleteProjectUIDError(t *testing.T) {
 		GetProjectUIDFn: func(projectName string) (string, error) {
 			return "", errors.New("unable to read project uid")
 		},
-		DeleteAlertsFn: func(projectUID string, component string, alertUID string) error {
+		DeleteAlertsFn: func(projectUID, component, alertUID string) error {
 			return nil
 		},
 	}
@@ -419,7 +419,7 @@ func TestResourceAlertDeleteError(t *testing.T) {
 			return "test-project-uid", nil
 
 		},
-		DeleteAlertsFn: func(projectUID string, component string, alertUID string) error {
+		DeleteAlertsFn: func(projectUID, component, alertUID string) error {
 			return errors.New("unable to delete alert")
 		},
 	}
@@ -435,7 +435,7 @@ func TestResourceAlertReadAlertNil(t *testing.T) {
 			return "test-project-uid", nil
 
 		},
-		ReadAlertFn: func(projectUID string, component string, alertUID string) (*models.V1Channel, error) {
+		ReadAlertFn: func(projectUID, component, alertUID string) (*models.V1Channel, error) {
 			return nil, nil
 		},
 	}
@@ -460,7 +460,7 @@ func TestResourceAlertReadAlertEmail(t *testing.T) {
 			return "test-project-uid", nil
 
 		},
-		ReadAlertFn: func(projectUID string, component string, alertUID string) (*models.V1Channel, error) {
+		ReadAlertFn: func(projectUID, component, alertUID string) (*models.V1Channel, error) {
 			rd.Set("UID", "alert-test-uid")
 			return toAlert(rd), nil
 		},
@@ -497,7 +497,7 @@ func TestResourceAlertReadAlertHttp(t *testing.T) {
 			return "test-project-uid", nil
 
 		},
-		ReadAlertFn: func(projectUID string, component string, alertUID string) (*models.V1Channel, error) {
+		ReadAlertFn: func(projectUID, component, alertUID string) (*models.V1Channel, error) {
 			rd.Set("UID", "alert-test-uid")
 			return toAlert(rd), nil
 		},
@@ -516,7 +516,7 @@ func TestResourceAlertReadNegative(t *testing.T) {
 			return "test-project-uid", nil
 
 		},
-		ReadAlertFn: func(projectUID string, component string, alertUID string) (*models.V1Channel, error) {
+		ReadAlertFn: func(projectUID, component, alertUID string) (*models.V1Channel, error) {
 			rd.Set("UID", "alert-test-uid")
 			return toAlert(rd), nil
 		},

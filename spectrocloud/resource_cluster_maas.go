@@ -37,6 +37,13 @@ func resourceClusterMaas() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the MAAS cluster. Can be `project` or `tenant`. Default is `project`.",
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -137,6 +144,22 @@ func resourceClusterMaas() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
+						},
+						"min": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
+						"max": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
 						"instance_type": {
 							Type:     schema.TypeList,
 							Required: true,
@@ -211,14 +234,18 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toMaasCluster(c, d)
-
-	uid, err := c.CreateClusterMaas(cluster)
+	cluster, err := toMaasCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterMaas(cluster, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -233,10 +260,8 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	//
-	uid := d.Id()
-	//
-	cluster, err := c.GetCluster(uid)
+
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -254,11 +279,12 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 }
 
 func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	err := d.Set("cloud_config_id", configUID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigMaas(configUID); err != nil {
+	if config, err := c.GetCloudConfigMaas(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig)
@@ -281,14 +307,16 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(&machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
+		oi["min"] = int(machinePool.MinSize)
+		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
 
 		if machinePool.InstanceType != nil {
@@ -314,7 +342,7 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -335,26 +363,33 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolMaasHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolMaasHash(machinePoolResource)
 
-			machinePool := toMachinePoolMaas(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolMaas(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolMaas(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolMaasHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolMaas(cloudConfigId, machinePool)
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolMaas(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolMaasHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolMaas(cloudConfigId, ClusterContext, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -362,15 +397,11 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolMaas(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolMaas(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
@@ -382,11 +413,15 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-func toMaasCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroMaasClusterEntity {
+func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroMaasClusterEntity, error) {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	DomainVal := cloudConfig["domain"].(string)
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroMaasClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -395,7 +430,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectro
 		},
 		Spec: &models.V1SpectroMaasClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
 				Domain: &DomainVal,
@@ -406,17 +441,20 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectro
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1MaasMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolMaas(machinePool)
+		mp, err := toMachinePoolMaas(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
-func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigEntity {
+func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -434,6 +472,17 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 	InstanceType := m["instance_type"].([]interface{})[0].(map[string]interface{})
 	Placement := m["placement"].([]interface{})[0].(map[string]interface{})
 	log.Printf("Create machine pool %s", InstanceType)
+
+	min := int32(m["count"].(int))
+	max := int32(m["count"].(int))
+
+	if m["min"] != nil {
+		min = int32(m["min"].(int))
+	}
+
+	if m["max"] != nil {
+		max = int32(m["max"].(int))
+	}
 	mp := &models.V1MaasMachinePoolConfigEntity{
 		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
 			Azs: azs,
@@ -454,7 +503,23 @@ func toMachinePoolMaas(machinePool interface{}) *models.V1MaasMachinePoolConfigE
 				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
+			MinSize:                 min,
+			MaxSize:                 max,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }
