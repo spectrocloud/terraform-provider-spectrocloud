@@ -14,7 +14,7 @@ func NodeSchema() *schema.Schema {
 				"node_id": {
 					Type:        schema.TypeString,
 					Required:    true,
-					Description: "The node_id of the node.",
+					Description: "The node_id of the node, For example `i-07f899a33dee624f7`",
 				},
 				"action": {
 					Type:         schema.TypeString,
