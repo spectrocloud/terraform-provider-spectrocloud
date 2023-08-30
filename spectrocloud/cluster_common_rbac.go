@@ -134,8 +134,9 @@ func flattenClusterRBAC(items []*models.V1ClusterRbac) []interface{} {
 }
 
 func updateClusterRBAC(c *client.V1Client, d *schema.ResourceData) error {
+	ClusterContext := d.Get("cluster").(string)
 	if rbacs := toClusterRBACsInputEntities(d); rbacs != nil {
-		return c.ApplyClusterRbacConfig(d.Id(), rbacs)
+		return c.ApplyClusterRbacConfig(d.Id(), rbacs, ClusterContext)
 	}
 	return nil
 }

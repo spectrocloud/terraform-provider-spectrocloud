@@ -3,7 +3,6 @@ package spectrocloud
 import (
 	"context"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -35,6 +34,13 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the Edge cluster. Can be `project` or `tenant`. Default is `project`.",
 			},
 			"edge_host_uid": {
 				Type:     schema.TypeString,
@@ -101,10 +107,21 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						},
 
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:         schema.TypeString,
+							Optional:     true,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Description:  "SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
 						},
-
+						"ssh_keys": {
+							Type:         schema.TypeSet,
+							Optional:     true,
+							Set:          schema.HashString,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
+						},
 						"vip": {
 							Type:     schema.TypeString,
 							Required: true,
@@ -131,7 +148,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Type:     schema.TypeList,
 				Required: true,
 				// disable hash to preserve machine pool order PE-255
-				//Set:      resourceMachinePoolVsphereHash,
+				// Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -248,14 +265,18 @@ func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceDat
 
 	var diags diag.Diagnostics
 
-	cluster := toEdgeVsphereCluster(c, d)
-
-	uid, err := c.CreateClusterEdgeVsphere(cluster)
+	cluster, err := toEdgeVsphereCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterEdgeVsphere(cluster, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -270,12 +291,11 @@ func resourceClusterEdgeVsphereRead(_ context.Context, d *schema.ResourceData, m
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
+		// Deleted - Terraform will recreate it
 		d.SetId("")
 		return diags
 	}
@@ -292,7 +312,8 @@ func flattenCloudConfigEdgeVsphere(configUID string, d *schema.ResourceData, c *
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsEdgeVsphere(config.Spec.MachinePoolConfig)
@@ -315,9 +336,8 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
@@ -363,7 +383,7 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -384,41 +404,46 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolVsphereHash(machinePoolResource)
-
-			machinePool := toMachinePoolEdgeVsphere(machinePoolResource)
-
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				oldMachinePool := toMachinePoolEdgeVsphere(oldMachinePool)
-				oldPlacements := oldMachinePool.CloudConfig.Placements
-
-				for i, p := range machinePool.CloudConfig.Placements {
-					if len(oldPlacements) > i {
-						p.UID = oldPlacements[i].UID
-					}
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolVsphereHash(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolEdgeVsphere(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
 				}
 
-				err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
-			}
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					oldMachinePool, _ := toMachinePoolEdgeVsphere(oldMachinePool)
+					oldPlacements := oldMachinePool.CloudConfig.Placements
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
+					for i, p := range machinePool.CloudConfig.Placements {
+						if len(oldPlacements) > i {
+							p.UID = oldPlacements[i].UID
+						}
+					}
 
-			delete(osMap, name)
+					err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				delete(osMap, name)
+			}
 		}
 
 		for _, mp := range osMap {
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -434,11 +459,15 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 	return diags
 }
 
-func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroVsphereClusterEntity {
+func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroVsphereClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	vip := cloudConfig["vip"].(string)
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroVsphereClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -448,8 +477,7 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 
 		Spec: &models.V1SpectroVsphereClusterEntitySpec{
 			EdgeHostUID: d.Get("edge_host_uid").(string),
-
-			Profiles:    toProfiles(c, d),
+			Profiles:    profiles,
 			Policies:    toPolicies(d),
 			CloudConfig: getClusterConfigEntity(cloudConfig),
 		},
@@ -463,7 +491,10 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolEdgeVsphere(machinePool)
+		mp, err := toMachinePoolEdgeVsphere(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -474,15 +505,13 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
-func getSSHKey(cloudConfig map[string]interface{}) string {
-	sshKey := ""
-	if cloudConfig["ssh_key"] != nil {
-		sshKey = strings.TrimSpace(cloudConfig["ssh_key"].(string))
-	}
-	return sshKey
+func getSSHKey(cloudConfig map[string]interface{}) []string {
+
+	sshKeys, _ := toSSHKeys(cloudConfig)
+	return sshKeys
 }
 
 func getStaticIP(cloudConfig map[string]interface{}) bool {
@@ -506,13 +535,13 @@ func getClusterConfigEntity(cloudConfig map[string]interface{}) *models.V1Vspher
 			Folder:              cloudConfig["folder"].(string),
 			ImageTemplateFolder: getImageTemplateFolder(cloudConfig),
 		},
-		SSHKeys:  []string{getSSHKey(cloudConfig)},
+		SSHKeys:  getSSHKey(cloudConfig),
 		StaticIP: getStaticIP(cloudConfig),
 	}
 	return clusterConfigEntity
 }
 
-func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachinePoolConfigEntity {
+func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -570,5 +599,6 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachineP
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	return mp, nil
 }

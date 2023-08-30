@@ -14,6 +14,10 @@ func DataVolumeFields() map[string]*schema.Schema {
 			Optional:    true,
 			Description: "The cluster UID to which the virtual machine belongs to.",
 		},
+		"cluster_context": {
+			Type:     schema.TypeString,
+			Required: true,
+		},
 		"vm_name": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -31,48 +35,6 @@ func DataVolumeFields() map[string]*schema.Schema {
 	}
 }
 
-func ExpandDataVolumeTemplates(dataVolumes []interface{}) ([]cdiv1.DataVolume, error) {
-	result := make([]cdiv1.DataVolume, len(dataVolumes))
-
-	if len(dataVolumes) == 0 || dataVolumes[0] == nil {
-		return result, nil
-	}
-
-	for i, dataVolume := range dataVolumes {
-		in := dataVolume.(map[string]interface{})
-
-		if v, ok := in["metadata"].([]interface{}); ok {
-			result[i].ObjectMeta = k8s.ExpandMetadata(v)
-		}
-		if v, ok := in["spec"].([]interface{}); ok {
-			spec, err := ExpandDataVolumeSpec(v)
-			if err != nil {
-				return result, err
-			}
-			result[i].Spec = spec
-		}
-		if v, ok := in["status"].([]interface{}); ok {
-			result[i].Status = expandDataVolumeStatus(v)
-		}
-	}
-
-	return result, nil
-}
-
-func FlattenDataVolumeTemplates(in []cdiv1.DataVolume) []interface{} {
-	att := make([]interface{}, len(in))
-
-	for i, v := range in {
-		c := make(map[string]interface{})
-		c["metadata"] = k8s.FlattenMetadata(v.ObjectMeta)
-		c["spec"] = FlattenDataVolumeSpec(v.Spec)
-		c["status"] = flattenDataVolumeStatus(v.Status)
-		att[i] = c
-	}
-
-	return att
-}
-
 func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, error) {
 	result := &cdiv1.DataVolume{}
 
@@ -88,7 +50,8 @@ func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, err
 }
 
 func ToResourceData(dv cdiv1.DataVolume, resourceData *schema.ResourceData) error {
-	if err := resourceData.Set("metadata", k8s.FlattenMetadata(dv.ObjectMeta)); err != nil {
+
+	if err := resourceData.Set("metadata", k8s.FlattenMetadataDataVolume(dv.ObjectMeta)); err != nil {
 		return err
 	}
 	if err := resourceData.Set("spec", FlattenDataVolumeSpec(dv.Spec)); err != nil {

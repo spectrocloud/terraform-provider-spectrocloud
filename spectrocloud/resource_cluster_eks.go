@@ -43,6 +43,7 @@ func resourceClusterEks() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the EKS cluster. Can be `project` or `tenant`. Default is `project`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -197,12 +198,14 @@ func resourceClusterEks() *schema.Resource {
 							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 						},
 						"min": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"max": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -233,7 +236,7 @@ func resourceClusterEks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"eks_launch_template": schemas.EksLaunchTemplate(),
+						"eks_launch_template": schemas.AwsLaunchTemplate(),
 					},
 				},
 			},
@@ -305,7 +308,10 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toEksCluster(c, d)
+	cluster, err := toEksCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterEks(cluster, ClusterContext)
@@ -313,7 +319,7 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -328,9 +334,7 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -345,7 +349,8 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	var config *models.V1EksCloudConfig
-	if config, err = c.GetCloudConfigEks(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err = c.GetCloudConfigEks(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -427,7 +432,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
 		if machinePool.IsControlPlane != nil && *machinePool.IsControlPlane {
 			continue
@@ -476,6 +481,13 @@ func flattenEksLaunchTemplate(launchTemplate *models.V1AwsLaunchTemplate) []inte
 		lt["root_volume_iops"] = launchTemplate.RootVolume.Iops
 		lt["root_volume_throughput"] = launchTemplate.RootVolume.Throughput
 	}
+	if launchTemplate.AdditionalSecurityGroups != nil && len(launchTemplate.AdditionalSecurityGroups) > 0 {
+		var additionalSecurityGroups []string
+		for _, sg := range launchTemplate.AdditionalSecurityGroups {
+			additionalSecurityGroups = append(additionalSecurityGroups, sg.ID)
+		}
+		lt["additional_security_groups"] = additionalSecurityGroups
+	}
 
 	return []interface{}{lt}
 }
@@ -517,7 +529,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("fargate_profile") {
 		fargateProfiles := make([]*models.V1FargateProfile, 0)
 		for _, fargateProfile := range d.Get("fargate_profile").([]interface{}) {
@@ -530,7 +542,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			FargateProfiles: fargateProfiles,
 		}
 
-		err := c.UpdateFargateProfilesEks(cloudConfigId, fargateProfilesList)
+		err := c.UpdateFargateProfilesEks(cloudConfigId, ClusterContext, fargateProfilesList)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -558,27 +570,30 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolEksHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolEksHash(machinePoolResource)
 
-			machinePool := toMachinePoolEks(machinePoolResource)
+				machinePool := toMachinePoolEks(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolEks(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
-				// TODO
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolEks(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
+					// TODO
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolEks(cloudConfigId, ClusterContext, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -586,71 +601,11 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEks(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolEks(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-
-	//if d.HasChange("fargate_profile") {
-	//	oraw, nraw := d.GetChange("fargate_profile")
-	//	if oraw == nil {
-	//		oraw = new(schema.Set)
-	//	}
-	//	if nraw == nil {
-	//		nraw = new(schema.Set)
-	//	}
-	//
-	//	os := oraw.([]interface{})
-	//	ns := nraw.([]interface{})
-	//
-	//	osMap := make(map[string]interface{})
-	//	for _, mp := range os {
-	//		fargateProfile := mp.(map[string]interface{})
-	//		osMap[fargateProfile["name"].(string)] = fargateProfile
-	//	}
-	//
-	//	for _, mp := range ns {
-	//		fargateProfileResource := mp.(map[string]interface{})
-	//		name := fargateProfileResource["name"].(string)
-	//		hash := resourceFargateProfileEksHash(fargateProfileResource)
-	//
-	//		fargateProfile := toFargateProfileEks(fargateProfileResource)
-	//
-	//		var err error
-	//		if oldMachinePool, ok := osMap[name]; !ok {
-	//			log.Printf("Create fargate profile %s", name)
-	//			err = c.CreateFargateProfileEks(cloudConfigId, fargateProfile)
-	//		} else if hash != resourceFargateProfileEksHash(oldMachinePool) {
-	//			// TODO
-	//			log.Printf("Change in fargate profile %s", name)
-	//			err = c.UpdateFargateProfileEks(cloudConfigId, fargateProfile)
-	//		}
-	//
-	//		if err != nil {
-	//			return diag.FromErr(err)
-	//		}
-	//
-	//		// Processed (if exists)
-	//		delete(osMap, name)
-	//	}
-	//
-	//	// Deleted old fargate profiles
-	//	for _, mp := range osMap {
-	//		fargateProfile := mp.(map[string]interface{})
-	//		name := fargateProfile["name"].(string)
-	//		log.Printf("Deleted fargate profile %s", name)
-	//		if err := c.DeleteFargateProfileEks(cloudConfigId, name); err != nil {
-	//			return diag.FromErr(err)
-	//		}
-	//	}
-	//}
-	//
-
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
@@ -663,7 +618,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 // to create
-func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroEksClusterEntity {
+func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroEksClusterEntity, error) {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("Eks_client_secret").(string))
@@ -676,6 +631,10 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroE
 		}
 	}
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroEksClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -684,7 +643,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroE
 		},
 		Spec: &models.V1SpectroEksClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
 				BastionDisabled:  true,
@@ -745,7 +704,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroE
 
 	cluster.Spec.FargateProfiles = fargateProfiles
 
-	return cluster
+	return cluster, nil
 }
 
 func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEntity {
@@ -819,12 +778,12 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		}
 	}
 
-	mp.CloudConfig.AwsLaunchTemplate = setAwsLaunchTemplate(m)
+	mp.CloudConfig.AwsLaunchTemplate = setEksLaunchTemplate(m)
 
 	return mp
 }
 
-func setAwsLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunchTemplate {
+func setEksLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunchTemplate {
 	var launchTemplate *models.V1AwsLaunchTemplate
 
 	if machinePool["eks_launch_template"] != nil {
@@ -835,32 +794,63 @@ func setAwsLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunc
 
 		eksLaunchTemplate := eksLaunchTemplateList[0].(map[string]interface{})
 
-		if eksLaunchTemplate["ami_id"] != nil || eksLaunchTemplate["root_volume_type"] != nil || eksLaunchTemplate["root_volume_iops"] != nil || eksLaunchTemplate["root_volume_throughput"] != nil {
-			launchTemplate = &models.V1AwsLaunchTemplate{
-				RootVolume: &models.V1AwsRootVolume{},
-			}
+		keys := []string{"ami_id", "root_volume_type", "root_volume_iops", "root_volume_throughput", "additional_security_groups"}
 
-			if eksLaunchTemplate["ami_id"] != nil {
-				launchTemplate.Ami = &models.V1AwsAmiReference{
-					ID: eksLaunchTemplate["ami_id"].(string),
-				}
-			}
+		// if at least one key is present continue function body, otherwise return launchTemplate
+		if hasNoneOfKeys(eksLaunchTemplate, keys) {
+			return launchTemplate
+		}
 
-			if eksLaunchTemplate["root_volume_type"] != nil {
-				launchTemplate.RootVolume.Type = eksLaunchTemplate["root_volume_type"].(string)
-			}
+		launchTemplate = &models.V1AwsLaunchTemplate{
+			RootVolume: &models.V1AwsRootVolume{},
+		}
 
-			if eksLaunchTemplate["root_volume_iops"] != nil {
-				launchTemplate.RootVolume.Iops = int64(eksLaunchTemplate["root_volume_iops"].(int))
-			}
-
-			if eksLaunchTemplate["root_volume_throughput"] != nil {
-				launchTemplate.RootVolume.Throughput = int64(eksLaunchTemplate["root_volume_throughput"].(int))
+		if eksLaunchTemplate["ami_id"] != nil {
+			launchTemplate.Ami = &models.V1AwsAmiReference{
+				ID: eksLaunchTemplate["ami_id"].(string),
 			}
 		}
+
+		if eksLaunchTemplate["root_volume_type"] != nil {
+			launchTemplate.RootVolume.Type = eksLaunchTemplate["root_volume_type"].(string)
+		}
+
+		if eksLaunchTemplate["root_volume_iops"] != nil {
+			launchTemplate.RootVolume.Iops = int64(eksLaunchTemplate["root_volume_iops"].(int))
+		}
+
+		if eksLaunchTemplate["root_volume_throughput"] != nil {
+			launchTemplate.RootVolume.Throughput = int64(eksLaunchTemplate["root_volume_throughput"].(int))
+		}
+
+		launchTemplate.AdditionalSecurityGroups = setAdditionalSecurityGroups(eksLaunchTemplate)
 	}
 
 	return launchTemplate
+}
+
+func setAdditionalSecurityGroups(eksLaunchTemplate map[string]interface{}) []*models.V1AwsResourceReference {
+	if eksLaunchTemplate["additional_security_groups"] != nil {
+		securityGroups := expandStringList(eksLaunchTemplate["additional_security_groups"].(*schema.Set).List())
+		additionalSecurityGroups := make([]*models.V1AwsResourceReference, 0)
+		for _, securityGroup := range securityGroups {
+			additionalSecurityGroups = append(additionalSecurityGroups, &models.V1AwsResourceReference{
+				ID: securityGroup,
+			})
+		}
+		return additionalSecurityGroups
+	}
+
+	return nil
+}
+
+func hasNoneOfKeys(m map[string]interface{}, keys []string) bool {
+	for _, key := range keys {
+		if m[key] != nil {
+			return false
+		}
+	}
+	return true
 }
 
 func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {

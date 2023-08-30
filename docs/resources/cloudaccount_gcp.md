@@ -27,6 +27,10 @@ resource "spectrocloud_cloudaccount_gcp" "gcp-1" {
 - `gcp_json_credentials` (String, Sensitive)
 - `name` (String)
 
+### Optional
+
+- `context` (String) The context of the GCP configuration. Can be `project` or `tenant`.
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.

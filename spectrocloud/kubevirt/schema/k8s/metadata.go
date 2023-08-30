@@ -2,12 +2,9 @@ package k8s
 
 import (
 	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
-
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils/patch"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -100,8 +97,31 @@ func namespacedMetadataSchemaIsTemplate(objectName string, generatableName, isTe
 	}
 }
 
-func BuildId(meta metav1.ObjectMeta) string {
-	return meta.Namespace + "/" + meta.Name
+func ConvertToBasicMetadata(d *schema.ResourceData) metav1.ObjectMeta {
+	var meta []interface{}
+	metaValues := make(map[string]interface{})
+	if v, ok := d.GetOk("annotations"); ok && len(v.(map[string]interface{})) > 0 {
+		metaValues["annotations"] = utils.ExpandStringMap(v.(map[string]interface{}))
+	}
+
+	if v, ok := d.GetOk("labels"); ok && len(v.(map[string]interface{})) > 0 {
+		metaValues["labels"] = utils.ExpandStringMap(v.(map[string]interface{}))
+	}
+
+	if v, ok := d.GetOk("generate_name"); ok {
+		metaValues["generate_name"] = v.(string)
+	}
+	if v, ok := d.GetOk("name"); ok {
+		metaValues["name"] = v.(string)
+	}
+	if v, ok := d.GetOk("namespace"); ok {
+		metaValues["namespace"] = v.(string)
+	}
+	if v, ok := d.GetOk("resource_version"); ok {
+		metaValues["resource_version"] = v.(string)
+	}
+	meta = append(meta, metaValues)
+	return ExpandMetadata(meta)
 }
 
 func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
@@ -111,12 +131,12 @@ func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
 	}
 	m := in[0].(map[string]interface{})
 
-	if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 {
-		meta.Annotations = utils.ExpandStringMap(m["annotations"].(map[string]interface{}))
+	if v, ok := m["annotations"].(map[string]string); ok && len(v) > 0 {
+		meta.Annotations = m["annotations"].(map[string]string) //utils.ExpandStringMap(m["annotations"].(map[string]interface{}))
 	}
 
-	if v, ok := m["labels"].(map[string]interface{}); ok && len(v) > 0 {
-		meta.Labels = utils.ExpandStringMap(m["labels"].(map[string]interface{}))
+	if v, ok := m["labels"].(map[string]string); ok && len(v) > 0 {
+		meta.Labels = m["labels"].(map[string]string) //utils.ExpandStringMap(m["labels"])
 	}
 
 	if v, ok := m["generate_name"]; ok {
@@ -135,7 +155,7 @@ func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
 	return meta
 }
 
-func FlattenMetadata(meta metav1.ObjectMeta) []interface{} {
+func FlattenMetadataDataVolume(meta metav1.ObjectMeta) []interface{} {
 	m := make(map[string]interface{})
 	m["annotations"] = utils.FlattenStringMap(meta.Annotations)
 	if meta.GenerateName != "" {
@@ -155,16 +175,35 @@ func FlattenMetadata(meta metav1.ObjectMeta) []interface{} {
 	return []interface{}{m}
 }
 
-func AppendPatchOps(keyPrefix, pathPrefix string, resourceData *schema.ResourceData, ops []patch.PatchOperation) patch.PatchOperations {
-	if resourceData.HasChange(keyPrefix + "annotations") {
-		oldV, newV := resourceData.GetChange(keyPrefix + "annotations")
-		diffOps := patch.DiffStringMap(pathPrefix+"annotations", oldV.(map[string]interface{}), newV.(map[string]interface{}))
-		ops = append(ops, diffOps...)
+func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) error {
+	var err error
+	if resourceData == nil {
+		return err
 	}
-	if resourceData.HasChange(keyPrefix + "labels") {
-		oldV, newV := resourceData.GetChange(keyPrefix + "labels")
-		diffOps := patch.DiffStringMap(pathPrefix+"labels", oldV.(map[string]interface{}), newV.(map[string]interface{}))
-		ops = append(ops, diffOps...)
+	if err = resourceData.Set("annotations", utils.FlattenStringMap(meta.Annotations)); err != nil {
+		return err
 	}
-	return ops
+	if err = resourceData.Set("labels", utils.FlattenStringMap(meta.Labels)); err != nil {
+		return err
+	}
+	if err = resourceData.Set("name", meta.Name); err != nil {
+		return err
+	}
+	if err = resourceData.Set("resource_version", meta.ResourceVersion); err != nil {
+		return err
+	}
+	if err = resourceData.Set("self_link", meta.SelfLink); err != nil {
+		return err
+	}
+	if err = resourceData.Set("uid", fmt.Sprintf("%v", meta.UID)); err != nil {
+		return err
+	}
+	if err = resourceData.Set("generation", int(meta.Generation)); err != nil { //fmt.Sprintf("%v", meta.Generation)
+		return err
+	}
+	if err = resourceData.Set("namespace", fmt.Sprintf("%v", meta.Namespace)); err != nil {
+		return err
+	}
+
+	return err
 }

@@ -5,8 +5,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -20,6 +22,13 @@ func resourceCloudAccountTencent() *schema.Resource {
 			"name": {
 				Type:     schema.TypeString,
 				Required: true,
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the Tencent configuration. Can be `project` or `tenant`.",
 			},
 			"tencent_secret_id": {
 				Type:     schema.TypeString,
@@ -40,8 +49,8 @@ func resourceCloudAccountTencentCreate(ctx context.Context, d *schema.ResourceDa
 	var diags diag.Diagnostics
 
 	account := toTencentAccount(d)
-
-	uid, err := c.CreateCloudAccountTke(account)
+	AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountTke(account, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -59,8 +68,8 @@ func resourceCloudAccountTencentRead(_ context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-
-	account, err := c.GetCloudAccountTke(uid)
+	AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountTke(uid, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -103,8 +112,8 @@ func resourceCloudAccountTencentDelete(_ context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-
-	err := c.DeleteCloudAccountTke(cloudAccountID)
+	AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountTke(cloudAccountID, AccountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}

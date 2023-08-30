@@ -45,9 +45,9 @@ func virtualMachineInstanceSpecFields() map[string]*schema.Schema {
 			Description: "Grace period observed after signalling a VirtualMachineInstance to stop after which the VirtualMachineInstance is force terminated.",
 			Optional:    true,
 		},
-		"volume":          volumesSchema(),
-		"liveness_probe":  probeSchema(),
-		"readiness_probe": probeSchema(),
+		"volume":          VolumesSchema(),
+		"liveness_probe":  ProbeSchema(),
+		"readiness_probe": ProbeSchema(),
 		"hostname": {
 			Type:        schema.TypeString,
 			Description: "Specifies the hostname of the vmi.",
@@ -58,7 +58,7 @@ func virtualMachineInstanceSpecFields() map[string]*schema.Schema {
 			Description: "If specified, the fully qualified vmi hostname will be \"<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>\".",
 			Optional:    true,
 		},
-		"network": networksSchema(),
+		"network": NetworksSchema(),
 		"dns_policy": {
 			Type:        schema.TypeString,
 			Description: "DNSPolicy defines how a pod's DNS will be configured.",
@@ -90,74 +90,67 @@ func virtualMachineInstanceSpecSchema() *schema.Schema {
 
 }
 
-func expandVirtualMachineInstanceSpec(virtualMachineInstanceSpec []interface{}) (kubevirtapiv1.VirtualMachineInstanceSpec, error) {
+func expandVirtualMachineInstanceSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineInstanceSpec, error) {
 	result := kubevirtapiv1.VirtualMachineInstanceSpec{}
 
-	if len(virtualMachineInstanceSpec) == 0 || virtualMachineInstanceSpec[0] == nil {
-		return result, nil
+	if v, ok := d.GetOk("priority_class_name"); ok {
+		result.PriorityClassName = v.(string)
 	}
 
-	in := virtualMachineInstanceSpec[0].(map[string]interface{})
-
-	if v, ok := in["priority_class_name"].(string); ok {
-		result.PriorityClassName = v
-	}
-	if v, ok := in["domain"].([]interface{}); ok {
-		domain, err := expandDomainSpec(v)
-		if err != nil {
-			return result, err
-		}
+	if domain, err := ExpandDomainSpec(d); err == nil {
 		result.Domain = domain
+	} else {
+		return result, err
 	}
-	if v, ok := in["node_selector"].(map[string]interface{}); ok && len(v) > 0 {
-		result.NodeSelector = utils.ExpandStringMap(v)
+	if v, ok := d.GetOk("node_selector"); ok && len(v.(map[string]interface{})) > 0 {
+		result.NodeSelector = utils.ExpandStringMap(v.(map[string]interface{}))
 	}
-	if v, ok := in["affinity"].([]interface{}); ok {
-		result.Affinity = k8s.ExpandAffinity(v)
+	if v, ok := d.GetOk("affinity"); ok {
+		result.Affinity = k8s.ExpandAffinity(v.([]interface{}))
 	}
-	if v, ok := in["scheduler_name"].(string); ok {
-		result.SchedulerName = v
+	if v, ok := d.GetOk("scheduler_name"); ok {
+		result.SchedulerName = v.(string)
 	}
-	if v, ok := in["tolerations"].([]interface{}); ok {
-		tolerations, err := k8s.ExpandTolerations(v)
+	if v, ok := d.GetOk("tolerations"); ok {
+		tolerations, err := k8s.ExpandTolerations(v.([]interface{}))
 		if err != nil {
 			return result, err
 		}
 		result.Tolerations = tolerations
 	}
-	if v, ok := in["eviction_strategy"].(string); ok {
-		if v != "" {
-			evictionStrategy := kubevirtapiv1.EvictionStrategy(v)
+	if v, ok := d.GetOk("eviction_strategy"); ok {
+		if v.(string) != "" {
+			evictionStrategy := kubevirtapiv1.EvictionStrategy(v.(string))
 			result.EvictionStrategy = &evictionStrategy
 		}
 	}
-	if v, ok := in["termination_grace_period_seconds"].(int); ok {
-		seconds := int64(v)
+	if v, ok := d.GetOk("termination_grace_period_seconds"); ok {
+		seconds := int64(v.(int))
 		result.TerminationGracePeriodSeconds = &seconds
 	}
-	if v, ok := in["volume"].([]interface{}); ok {
-		result.Volumes = expandVolumes(v)
+	if v, ok := d.GetOk("volume"); ok {
+		result.Volumes = expandVolumes(v.([]interface{}))
 	}
-	if v, ok := in["liveness_probe"].([]interface{}); ok {
-		result.LivenessProbe = expandProbe(v)
+	if v, ok := d.GetOk("liveness_probe"); ok {
+		result.LivenessProbe = expandProbe(v.([]interface{}))
 	}
-	if v, ok := in["readiness_probe"].([]interface{}); ok {
-		result.ReadinessProbe = expandProbe(v)
+	if v, ok := d.GetOk("readiness_probe"); ok {
+		result.ReadinessProbe = expandProbe(v.([]interface{}))
 	}
-	if v, ok := in["hostname"].(string); ok {
-		result.Hostname = v
+	if v, ok := d.GetOk("hostname"); ok {
+		result.Hostname = v.(string)
 	}
-	if v, ok := in["subdomain"].(string); ok {
-		result.Subdomain = v
+	if v, ok := d.GetOk("subdomain"); ok {
+		result.Subdomain = v.(string)
 	}
-	if v, ok := in["network"].([]interface{}); ok {
-		result.Networks = expandNetworks(v)
+	if v, ok := d.GetOk("network"); ok {
+		result.Networks = expandNetworks(v.([]interface{}))
 	}
-	if v, ok := in["dns_policy"].(string); ok {
-		result.DNSPolicy = k8sv1.DNSPolicy(v)
+	if v, ok := d.GetOk("dns_policy"); ok {
+		result.DNSPolicy = k8sv1.DNSPolicy(v.(string))
 	}
-	if v, ok := in["pod_dns_config"].([]interface{}); ok {
-		dnsConfig, err := k8s.ExpandPodDNSConfig(v)
+	if v, ok := d.GetOk("pod_dns_config"); ok {
+		dnsConfig, err := k8s.ExpandPodDNSConfig(v.([]interface{}))
 		if err != nil {
 			return result, err
 		}
@@ -167,11 +160,12 @@ func expandVirtualMachineInstanceSpec(virtualMachineInstanceSpec []interface{}) 
 	return result, nil
 }
 
-func flattenVirtualMachineInstanceSpec(in kubevirtapiv1.VirtualMachineInstanceSpec) []interface{} {
+func flattenVirtualMachineInstanceSpec(in kubevirtapiv1.VirtualMachineInstanceSpec, resourceData *schema.ResourceData) []interface{} {
 	att := make(map[string]interface{})
 
 	att["priority_class_name"] = in.PriorityClassName
-	att["domain"] = flattenDomainSpec(in.Domain)
+	att["domain"] = FlattenDomainSpec(in.Domain)
+
 	att["node_selector"] = utils.FlattenStringMap(in.NodeSelector)
 	att["affinity"] = k8s.FlattenAffinity(in.Affinity)
 	att["scheduler_name"] = in.SchedulerName

@@ -38,6 +38,13 @@ func resourceClusterAzure() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the cluster. This name will be used to create the cluster in Azure.",
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the Azure cluster. Can be `project` or `tenant`. Default is `project`.",
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -157,6 +164,12 @@ func resourceClusterAzure() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
+						},
 						"instance_type": {
 							Type:        schema.TypeString,
 							Required:    true,
@@ -250,18 +263,22 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toAzureCluster(c, d)
+	cluster, err := toAzureCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
 	if diags != nil {
 		return diags
 	}
 
-	uid, err := c.CreateClusterAzure(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterAzure(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -277,9 +294,7 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -297,10 +312,11 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 }
 
 func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigAzure(configUID); err != nil {
+	if config, err := c.GetCloudConfigAzure(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAzure(config.Spec.MachinePoolConfig)
@@ -323,9 +339,9 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
@@ -357,9 +373,12 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
-		cluster := toAzureCluster(c, d)
+		cluster, err := toAzureCluster(c, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
 		if diags != nil {
 			return diags
@@ -383,26 +402,31 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolAzureHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolAzureHash(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolAzure(machinePoolResource)
+				if err != nil {
+					diag.FromErr(err)
+				}
 
-			machinePool := toMachinePoolAzure(machinePoolResource)
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolAzure(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolAzureHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolAzure(cloudConfigId, ClusterContext, machinePool)
+				}
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolAzure(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolAzureHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolAzure(cloudConfigId, machinePool)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -410,15 +434,11 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAzure(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolAzure(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-	//TODO(saamalik) update for cluster as well
-	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
-	//	return diag.FromErr(err)
-	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
@@ -430,11 +450,15 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
+func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroAzureClusterEntity, error) {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -443,7 +467,7 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectr
 		},
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
 				Location:       types.Ptr(cloudConfig["region"].(string)),
@@ -457,17 +481,20 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectr
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolAzure(machinePool)
+		mp, err := toMachinePoolAzure(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
-func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfigEntity {
+func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -528,7 +555,21 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }
 
 func validateMasterPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {

@@ -39,6 +39,13 @@ func resourceClusterLibvirt() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the Libvirt cluster. Can be `project` or `tenant`. Default is `project`.",
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -95,8 +102,20 @@ func resourceClusterLibvirt() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:         schema.TypeString,
+							Optional:     true,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Description:  "SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
+						},
+						"ssh_keys": {
+							Type:         schema.TypeSet,
+							Optional:     true,
+							Set:          schema.HashString,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
 						},
 						"vip": {
 							Type:     schema.TypeString,
@@ -318,12 +337,13 @@ func resourceClusterVirtCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	uid, err := c.CreateClusterLibvirt(cluster)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterLibvirt(cluster, ClusterContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -338,10 +358,8 @@ func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	//
-	uid := d.Id()
-	//
-	cluster, err := c.GetCluster(uid)
+
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -361,10 +379,11 @@ func resourceClusterLibvirtRead(_ context.Context, d *schema.ResourceData, m int
 }
 
 func flattenCloudConfigLibvirt(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigLibvirt(configUID); err != nil {
+	if config, err := c.GetCloudConfigLibvirt(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsLibvirt(config.Spec.MachinePoolConfig)
@@ -387,9 +406,8 @@ func flattenMachinePoolConfigsLibvirt(machinePools []*models.V1LibvirtMachinePoo
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
@@ -476,7 +494,7 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -497,31 +515,34 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			if name == "" {
-				continue
-			}
-			hash := resourceMachinePoolLibvirtHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				if name == "" {
+					continue
+				}
+				hash := resourceMachinePoolLibvirtHash(machinePoolResource)
 
-			machinePool, err := toMachinePoolLibvirt(machinePoolResource)
-			if err != nil {
-				return diag.FromErr(err)
-			}
+				machinePool, err := toMachinePoolLibvirt(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolLibvirt(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolLibvirtHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolLibvirt(cloudConfigId, machinePool)
-			}
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolLibvirt(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolLibvirtHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolLibvirt(cloudConfigId, ClusterContext, machinePool)
+				}
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			// Processed (if exists)
-			delete(osMap, name)
+				// Processed (if exists)
+				delete(osMap, name)
+			}
 		}
 
 		// Deleted old machine pools
@@ -529,7 +550,7 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolLibvirt(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolLibvirt(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -548,6 +569,15 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroLibvirtClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
+	sshKeys, err := toSSHKeys(cloudConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroLibvirtClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -555,11 +585,11 @@ func toLibvirtCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpectroLibvirtClusterEntitySpec{
-			Profiles: toProfiles(c, d),
+			Profiles: profiles,
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1LibvirtClusterConfig{
 				NtpServers: toNtpServers(cloudConfig),
-				SSHKeys:    []string{cloudConfig["ssh_key"].(string)},
+				SSHKeys:    sshKeys,
 				ControlPlaneEndpoint: &models.V1LibvirtControlPlaneEndPoint{
 					Host:             cloudConfig["vip"].(string),
 					Type:             cloudConfig["network_type"].(string),
@@ -672,6 +702,7 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
+
 	return mp, nil
 }
 

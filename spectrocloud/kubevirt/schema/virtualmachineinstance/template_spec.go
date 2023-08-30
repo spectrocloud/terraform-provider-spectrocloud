@@ -2,6 +2,7 @@ package virtualmachineinstance
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
@@ -30,34 +31,26 @@ func VirtualMachineInstanceTemplateSpecSchema() *schema.Schema {
 
 }
 
-func ExpandVirtualMachineInstanceTemplateSpec(virtualMachine []interface{}) (*kubevirtapiv1.VirtualMachineInstanceTemplateSpec, error) {
-	if len(virtualMachine) == 0 || virtualMachine[0] == nil {
-		return nil, nil
-	}
-
+func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*kubevirtapiv1.VirtualMachineInstanceTemplateSpec, error) {
 	result := &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{}
 
-	in := virtualMachine[0].(map[string]interface{})
+	// we have removed metadata for template hence set empty metadata object (TBD)***
+	result.ObjectMeta = metav1.ObjectMeta{}
 
-	if v, ok := in["metadata"].([]interface{}); ok {
-		result.ObjectMeta = k8s.ExpandMetadata(v)
-	}
-	if v, ok := in["spec"].([]interface{}); ok {
-		spec, err := expandVirtualMachineInstanceSpec(v)
-		if err != nil {
-			return result, err
-		}
+	if spec, err := expandVirtualMachineInstanceSpec(d); err == nil {
 		result.Spec = spec
+	} else {
+		return result, err
 	}
 
 	return result, nil
 }
 
-func FlattenVirtualMachineInstanceTemplateSpec(in kubevirtapiv1.VirtualMachineInstanceTemplateSpec) []interface{} {
+func FlattenVirtualMachineInstanceTemplateSpec(in kubevirtapiv1.VirtualMachineInstanceTemplateSpec, resourceData *schema.ResourceData) []interface{} {
 	att := make(map[string]interface{})
 
-	att["metadata"] = k8s.FlattenMetadata(in.ObjectMeta)
-	att["spec"] = flattenVirtualMachineInstanceSpec(in.Spec)
+	// Since we removed metadata support in VM instance Spec metadata is not set.
+	att["spec"] = flattenVirtualMachineInstanceSpec(in.Spec, resourceData)
 
 	return []interface{}{att}
 }

@@ -18,6 +18,7 @@ description: |-
 ### Required
 
 - `add_volume_options` (Block List, Min: 1, Max: 1) DataVolumeSpec defines our specification for a DataVolume type (see [below for nested schema](#nestedblock--add_volume_options))
+- `cluster_context` (String)
 - `metadata` (Block List, Min: 1, Max: 1) Standard DataVolume's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
 - `spec` (Block List, Min: 1, Max: 1) DataVolumeSpec defines our specification for a DataVolume type (see [below for nested schema](#nestedblock--spec))
 

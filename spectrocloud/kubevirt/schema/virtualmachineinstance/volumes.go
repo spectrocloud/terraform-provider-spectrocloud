@@ -233,7 +233,7 @@ func volumesFields() map[string]*schema.Schema {
 	}
 }
 
-func volumesSchema() *schema.Schema {
+func VolumesSchema() *schema.Schema {
 	fields := volumesFields()
 
 	return &schema.Schema{

@@ -24,6 +24,7 @@ func New(_ string) func() *schema.Provider {
 				"username": {
 					Type:        schema.TypeString,
 					Optional:    true,
+					Deprecated:  "Deprecated since 0.15.0 use `api_key` instead.",
 					Description: "The Spectro Cloud username. Can also be set with the `SPECTROCLOUD_USERNAME` environment variable.",
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_USERNAME", nil),
 				},
@@ -31,6 +32,7 @@ func New(_ string) func() *schema.Provider {
 					Type:        schema.TypeString,
 					Optional:    true,
 					Sensitive:   true,
+					Deprecated:  "Deprecated since 0.15.0 use `api_key` instead.",
 					Description: "The Spectro Cloud user password. Can also be set with the `SPECTROCLOUD_PASSWORD` environment variable.",
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_PASSWORD", nil),
 				},
@@ -70,6 +72,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_project": resourceProject(),
 
 				"spectrocloud_macro": resourceMacro(),
+
+				"spectrocloud_filter": resourceFilter(),
 
 				"spectrocloud_application_profile":    resourceApplicationProfile(),
 				"spectrocloud_cluster_profile":        resourceClusterProfile(),
@@ -139,7 +143,10 @@ func New(_ string) func() *schema.Provider {
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_user":    dataSourceUser(),
 				"spectrocloud_project": dataSourceProject(),
-				"spectrocloud_role":    dataSourceRole(),
+
+				"spectrocloud_filter": dataSourceFilter(),
+
+				"spectrocloud_role": dataSourceRole(),
 
 				"spectrocloud_pack":        dataSourcePack(),
 				"spectrocloud_pack_simple": dataSourcePackSimple(),

@@ -11,7 +11,7 @@ func probeFields() map[string]*schema.Schema {
 	}
 }
 
-func probeSchema() *schema.Schema {
+func ProbeSchema() *schema.Schema {
 	fields := probeFields()
 
 	return &schema.Schema{

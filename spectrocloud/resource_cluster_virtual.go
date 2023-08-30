@@ -179,14 +179,18 @@ func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toVirtualCluster(c, d)
+	cluster, err := toVirtualCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	uid, err := c.CreateClusterVirtual(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -201,10 +205,8 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	//
-	uid := d.Id()
-	//
-	cluster, err := c.GetCluster(uid)
+
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -237,7 +239,6 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -258,25 +259,29 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolVirtualHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolVirtualHash(machinePoolResource)
 
-			machinePool := toMachinePoolVirtual(machinePoolResource)
+				machinePool := toMachinePoolVirtual(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolVirtual(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolVirtualHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolVirtual(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolVirtual(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolVirtualHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolVirtual(cloudConfigId, machinePool)
+				}
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-			if err != nil {
-				return diag.FromErr(err)
-			}
 
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -328,7 +333,7 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroVirtualClusterEntity {
+func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroVirtualClusterEntity, error) {
 	// parse host cluster / cluster group uid
 	hostClusterUid := d.Get("host_cluster_uid").(string)
 	clusterGroupUid := d.Get("cluster_group_uid").(string)
@@ -345,7 +350,10 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 		kubernetesVersion = cloudConfig["k8s_version"].(string)
 	}
 
-	// init cluster
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroVirtualClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -375,7 +383,7 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 				},
 			},
 			Machinepoolconfig: nil,
-			Profiles:          toProfiles(c, d),
+			Profiles:          profiles,
 			Policies:          toPolicies(d),
 		},
 	}
@@ -390,7 +398,7 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spec
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 
-	return cluster
+	return cluster, nil
 }
 
 func toMachinePoolVirtual(resources map[string]interface{}) *models.V1VirtualMachinePoolConfigEntity {

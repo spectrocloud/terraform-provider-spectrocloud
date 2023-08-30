@@ -84,8 +84,10 @@ func flattenLocationConfig(location *models.V1ClusterLocation) []interface{} {
 }
 
 func updateLocationConfig(c *client.V1Client, d *schema.ResourceData) error {
+	clusterContext := d.Get("context").(string)
+
 	if locationConfigs := toClusterLocationConfigs(d); locationConfigs != nil {
-		return c.ApplyClusterLocationConfig(d.Id(), &models.V1SpectroClusterLocationInputEntity{
+		return c.ApplyClusterLocationConfig(clusterContext, d.Id(), &models.V1SpectroClusterLocationInputEntity{
 			Location: locationConfigs,
 		})
 	}

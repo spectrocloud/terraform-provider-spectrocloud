@@ -30,6 +30,7 @@ description: |-
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `context` (String) The context of the TKE cluster. Can be `project` or `tenant`. Default is `project`.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - `scan_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
@@ -77,9 +78,9 @@ Optional:
 - `az_subnets` (Map of String)
 - `azs` (List of String)
 - `capacity_type` (String)
-- `max` (Number)
+- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `max_price` (String)
-- `min` (Number)
+- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 

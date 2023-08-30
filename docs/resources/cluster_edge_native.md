@@ -30,6 +30,7 @@ description: |-
 - `cloud_account_id` (String)
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `context` (String) The context of the Edge cluster. Can be `project` or `tenant`. Default is `project`.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
@@ -50,13 +51,11 @@ description: |-
 <a id="nestedblock--cloud_config"></a>
 ### Nested Schema for `cloud_config`
 
-Required:
-
-- `ssh_key` (String)
-
 Optional:
 
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
+- `ssh_key` (String) SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
+- `ssh_keys` (Set of String) List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 - `vip` (String)
 
 

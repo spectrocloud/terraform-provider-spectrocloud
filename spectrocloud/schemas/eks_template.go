@@ -2,7 +2,7 @@ package schemas
 
 import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-func EksLaunchTemplate() *schema.Schema {
+func AwsLaunchTemplate() *schema.Schema {
 	return &schema.Schema{
 		Type:     schema.TypeList,
 		Optional: true,
@@ -28,6 +28,15 @@ func EksLaunchTemplate() *schema.Schema {
 					Type:        schema.TypeInt,
 					Optional:    true,
 					Description: "The throughput of the root volume in MiB/s.",
+				},
+				"additional_security_groups": {
+					Type: schema.TypeSet,
+					Set:  schema.HashString,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+					Optional:    true,
+					Description: "Additional security groups to attach to the instance.",
 				},
 			},
 		},

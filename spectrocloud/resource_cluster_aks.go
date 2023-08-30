@@ -33,9 +33,17 @@ func resourceClusterAks() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the AKS cluster. Can be `project` or `tenant`. Default is `project`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -108,6 +116,12 @@ func resourceClusterAks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"private_cluster": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether to create a private cluster(API endpoint). Default is `false`.",
+						},
 
 						// fields for static placement are having flat structure as backend currently doesn't support multiple subnets.
 						"vnet_name": {
@@ -172,12 +186,14 @@ func resourceClusterAks() *schema.Resource {
 							Required: true,
 						},
 						"min": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"max": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"disk_size_gb": {
 							Type:     schema.TypeInt,
@@ -217,14 +233,18 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toAksCluster(c, d)
-
-	uid, err := c.CreateClusterAks(cluster)
+	cluster, err := toAksCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterAks(cluster, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -240,9 +260,7 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 
 	var diags diag.Diagnostics
 
-	uid := d.Id()
-
-	cluster, err := c.GetCluster(uid)
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -255,7 +273,8 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigAks(configUID); err != nil {
+	ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigAks(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
@@ -281,7 +300,7 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
 		if machinePool.IsControlPlane != nil && *machinePool.IsControlPlane {
 			continue
@@ -307,7 +326,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	_ = d.Get("machine_pool")
+	ClusterContext := d.Get("context").(string)
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -328,23 +347,26 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolAksHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolAksHash(machinePoolResource)
 
-			machinePool := toMachinePoolAks(machinePoolResource)
+				machinePool := toMachinePoolAks(machinePoolResource)
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolAks(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolAksHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolAks(cloudConfigId, machinePool)
+				var err error
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolAks(cloudConfigId, machinePool, ClusterContext)
+				} else if hash != resourceMachinePoolAksHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolAks(cloudConfigId, machinePool, ClusterContext)
+				}
+				if err != nil {
+					return diag.FromErr(err)
+				}
+				delete(osMap, name)
 			}
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -352,7 +374,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAks(cloudConfigId, name); err != nil {
+			if err := c.DeleteMachinePoolAks(cloudConfigId, name, ClusterContext); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -368,7 +390,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
+func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroAzureClusterEntity, error) {
 	config := d.Get("cloud_config").([]interface{})
 	cloudConfig := config[0]
 	cloudConfigMap := cloudConfig.(map[string]interface{})
@@ -397,6 +419,10 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 		}
 	}
 
+	profiles, err := toProfiles(c, d)
+	if err != nil {
+		return nil, err
+	}
 	cluster := &models.V1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -405,12 +431,15 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 		},
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        toProfiles(c, d),
+			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
-				Location:           types.Ptr(cloudConfigMap["region"].(string)),
-				ResourceGroup:      cloudConfigMap["resource_group"].(string),
-				SSHKey:             types.Ptr(cloudConfigMap["ssh_key"].(string)),
+				Location:      types.Ptr(cloudConfigMap["region"].(string)),
+				ResourceGroup: cloudConfigMap["resource_group"].(string),
+				SSHKey:        types.Ptr(cloudConfigMap["ssh_key"].(string)),
+				APIServerAccessProfile: &models.V1APIServerAccessProfile{
+					EnablePrivateCluster: cloudConfigMap["private_cluster"].(bool),
+				},
 				SubscriptionID:     types.Ptr(cloudConfigMap["subscription_id"].(string)),
 				VnetName:           vnetname,
 				VnetResourceGroup:  vnetResourceGroup,
@@ -429,7 +458,7 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
 func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigEntity {
