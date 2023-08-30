@@ -140,7 +140,21 @@ Required:
 
 Optional:
 
+- `gpu_device` (Block List) (see [below for nested schema](#nestedblock--machine_pool--placements--gpu_device))
 - `network` (String)
+
+<a id="nestedblock--machine_pool--placements--gpu_device"></a>
+### Nested Schema for `machine_pool.placements.gpu_device`
+
+Required:
+
+- `device_model` (String) DeviceModel `device_model` is the model of GPU, for a given vendor, for eg., TU104GL [Tesla T4]
+- `vendor` (String) Vendor `vendor` is the GPU vendor, for eg., NVIDIA or AMD
+
+Optional:
+
+- `addresses` (Map of String) Addresses is a map of PCI device entry name to its addresses.
+
 
 
 <a id="nestedblock--machine_pool--taints"></a>
