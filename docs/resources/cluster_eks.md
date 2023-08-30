@@ -160,6 +160,7 @@ Optional:
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `max_price` (String)
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
+- `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
@@ -173,6 +174,15 @@ Optional:
 - `root_volume_iops` (Number) The number of input/output operations per second (IOPS) for the root volume.
 - `root_volume_throughput` (Number) The throughput of the root volume in MiB/s.
 - `root_volume_type` (String) The type of the root volume.
+
+
+<a id="nestedblock--machine_pool--node"></a>
+### Nested Schema for `machine_pool.node`
+
+Required:
+
+- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
+- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
 
 
 <a id="nestedblock--machine_pool--taints"></a>
