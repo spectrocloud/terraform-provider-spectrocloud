@@ -9,7 +9,7 @@ data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
 
 
 resource "spectrocloud_cluster_vsphere" "cluster" {
-  name             = "vsphere-picard-3"
+  name = "vsphere-picard-3"
   # For Force Delete enforcement
   # force_delete = true
   # force_delete_delay = 25

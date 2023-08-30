@@ -62,6 +62,8 @@ resource "spectrocloud_virtual_cluster" "cluster" {
 - `cluster_group_uid` (String)
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
+- `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
 - `host_cluster_uid` (String)
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - `os_patch_after` (String) The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`

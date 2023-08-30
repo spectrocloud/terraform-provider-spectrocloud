@@ -31,6 +31,8 @@ description: |-
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `context` (String) The context of the TKE cluster. Can be `project` or `tenant`. Default is `project`.
+- `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
+- `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - `scan_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--scan_policy))
