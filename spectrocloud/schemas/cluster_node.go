@@ -19,7 +19,7 @@ func NodeSchema() *schema.Schema {
 				"action": {
 					Type:         schema.TypeString,
 					Required:     true,
-					Description:  "The action to perform on the node",
+					Description:  "The action to perform on the node. Valid values are: `cordon`, `uncordon`.",
 					ValidateFunc: validation.StringInSlice([]string{"cordon", "uncordon"}, false),
 				},
 			},
