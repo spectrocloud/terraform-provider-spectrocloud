@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cluster_vsphere Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  A resource to manage a vSphere cluster in Pallette.
+  A resource to manage a vSphere cluster in Palette.
 ---
 
 # spectrocloud_cluster_vsphere (Resource)
 
-  A resource to manage a vSphere cluster in Pallette.
+  A resource to manage a vSphere cluster in Palette.
 
 ## Example Usage
 
@@ -31,6 +31,8 @@ description: |-
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `context` (String) The context of the VMware cluster. Can be `project` or `tenant`. Default is `project`.
+- `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
+- `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))

@@ -256,6 +256,19 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Default:     false,
 				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
+			},
 		},
 	}
 }
