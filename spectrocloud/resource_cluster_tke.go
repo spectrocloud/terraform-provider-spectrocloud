@@ -146,6 +146,7 @@ func resourceClusterTke() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"disk_size_gb": {
 							Type:     schema.TypeInt,
@@ -215,6 +216,19 @@ func resourceClusterTke() *schema.Resource {
 				Default:     false,
 				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
+			},
 		},
 	}
 }
@@ -268,6 +282,10 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapTke, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -341,8 +359,10 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
+		nsMap := make(map[string]interface{})
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
@@ -357,6 +377,11 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 				} else if hash != resourceMachinePoolTkeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusTke, "tke", ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				if err != nil {

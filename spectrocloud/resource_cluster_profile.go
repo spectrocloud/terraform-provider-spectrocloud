@@ -38,15 +38,17 @@ func resourceClusterProfile() *schema.Resource {
 				Required: true,
 			},
 			"version": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "1.0.0", // default as in UI
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "1.0.0", // default as in UI
+				Description: "Version of the cluster profile. Defaults to '1.0.0'.",
 			},
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
+				Description:  "Cluster context can be 'project' or 'tenant' or `system`. Defaults to 'project'.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,

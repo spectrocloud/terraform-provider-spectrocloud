@@ -153,13 +153,13 @@ resource "spectrocloud_cluster_profile" "profile" {
 ### Optional
 
 - `cloud` (String)
-- `context` (String)
+- `context` (String) Cluster context can be 'project' or 'tenant' or `system`. Defaults to 'project'.
 - `description` (String)
 - `pack` (Block List) (see [below for nested schema](#nestedblock--pack))
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `type` (String)
-- `version` (String)
+- `version` (String) Version of the cluster profile. Defaults to '1.0.0'.
 
 ### Read-Only
 

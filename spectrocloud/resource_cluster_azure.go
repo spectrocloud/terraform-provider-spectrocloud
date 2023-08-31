@@ -138,6 +138,7 @@ func resourceClusterAzure() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
 							Type:     schema.TypeBool,
@@ -253,6 +254,19 @@ func resourceClusterAzure() *schema.Resource {
 				Default:     false,
 				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
 			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
+			},
 		},
 	}
 }
@@ -320,6 +334,10 @@ func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAzure(config.Spec.MachinePoolConfig)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAzure, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -374,6 +392,10 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigAzure(cloudConfigId, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("machine_pool") {
 		cluster, err := toAzureCluster(c, d)
 		if err != nil {
@@ -400,8 +422,11 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
+		nsMap := make(map[string]interface{})
+
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
@@ -418,6 +443,11 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 				} else if hash != resourceMachinePoolAzureHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolAzure(cloudConfigId, ClusterContext, machinePool)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusAzure, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				if err != nil {

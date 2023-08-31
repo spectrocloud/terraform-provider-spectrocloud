@@ -1,7 +1,7 @@
 data "spectrocloud_cluster_profile" "vmware_profile" {
   name    = "vsphere-picard-2"
   version = "1.0.0"
-  context = "tenant"
+  context = "project"
 }
 data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
   name = var.shared_vmware_cloud_account_name
@@ -9,7 +9,10 @@ data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
 
 
 resource "spectrocloud_cluster_vsphere" "cluster" {
-  name             = "vsphere-picard-3"
+  name = "vsphere-picard-3"
+  # For Force Delete enforcement
+  # force_delete = true
+  # force_delete_delay = 25
   cloud_account_id = data.spectrocloud_cloudaccount_vsphere.vmware_account.id
   cluster_profile {
     id = data.spectrocloud_cluster_profile.vmware_profile.id

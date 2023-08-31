@@ -100,6 +100,8 @@ resource "spectrocloud_cluster_azure" "cluster" {
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `context` (String) The context of the Azure cluster. Can be `project` or `tenant`. Default is `project`.
+- `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
+- `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
 - `os_patch_after` (String) Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`
@@ -145,6 +147,7 @@ Optional:
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `disk` (Block List, Max: 1) Disk configuration for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--disk))
 - `is_system_node_pool` (Boolean) Whether this machine pool is a system node pool. Default value is `false'.
+- `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `os_type` (String) Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
@@ -157,6 +160,15 @@ Required:
 
 - `size_gb` (Number) Size of the disk in GB.
 - `type` (String) Type of the disk. Valid values are `Standard_LRS`, `StandardSSD_LRS`, `Premium_LRS`.
+
+
+<a id="nestedblock--machine_pool--node"></a>
+### Nested Schema for `machine_pool.node`
+
+Required:
+
+- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
+- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
 
 
 <a id="nestedblock--machine_pool--taints"></a>

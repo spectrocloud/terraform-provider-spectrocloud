@@ -23,6 +23,8 @@ description: |-
 
 - `azure_client_id` (String)
 - `azure_tenant_id` (String)
+- `disable_properties_request` (Boolean)
 - `id` (String) The ID of this resource.
+- `tenant_name` (String)
 
 

@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
 
@@ -149,9 +150,7 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 
 	if d.HasChange("backup_policy") {
 		if len(d.Get("backup_policy").([]interface{})) == 0 {
-			if err := c.WorkspaceBackupDelete(); err != nil {
-				return diag.FromErr(err)
-			}
+			return diag.FromErr(c.WorkspaceBackupDelete())
 		}
 		if err := updateWorkspaceBackupPolicy(c, d); err != nil {
 			return diag.FromErr(err)

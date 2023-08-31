@@ -99,23 +99,31 @@ func resourceCloudAccountCoxEdgeRead(_ context.Context, d *schema.ResourceData, 
 		return diags
 	}
 
-	if err := d.Set("name", account.Metadata.Name); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("api_base_url", account.Spec.APIBaseURL); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("environment", account.Spec.Environment); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("organization_id", account.Spec.OrganizationID); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("service", account.Spec.Service); err != nil {
-		return diag.FromErr(err)
+	diagnostics, done := flattenCoxEdgeCloudAccount(d, account)
+	if done {
+		return diagnostics
 	}
 
 	return diags
+}
+
+func flattenCoxEdgeCloudAccount(d *schema.ResourceData, account *models.V1CoxEdgeAccount) (diag.Diagnostics, bool) {
+	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("api_base_url", account.Spec.APIBaseURL); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("environment", account.Spec.Environment); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("organization_id", account.Spec.OrganizationID); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("service", account.Spec.Service); err != nil {
+		return diag.FromErr(err), true
+	}
+	return nil, false
 }
 
 func resourceCloudAccountCoxEdgeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
