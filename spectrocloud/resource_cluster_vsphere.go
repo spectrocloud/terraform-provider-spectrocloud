@@ -181,6 +181,7 @@ func resourceClusterVsphere() *schema.Resource {
 							},
 						},
 						"taints": schemas.ClusterTaintsSchema(),
+						"node":   schemas.NodeSchema(),
 						"control_plane": {
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -357,6 +358,10 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapVsphere, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -563,6 +568,10 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigVsphere(cloudConfigId, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("cloud_config") {
 		occ, ncc := d.GetChange("cloud_config")
 		if occ.([]interface{})[0].(map[string]interface{})["datacenter"] != ncc.([]interface{})[0].(map[string]interface{})["datacenter"] {
@@ -597,8 +606,11 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
+		nsMap := make(map[string]interface{})
+
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
 				hash := resourceMachinePoolVsphereHash(machinePoolResource)
@@ -625,6 +637,11 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 					}
 
 					err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusVsphere, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				if err != nil {

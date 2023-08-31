@@ -49,6 +49,9 @@ func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
 	if val, ok := nodePool["max"]; ok {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
+	if _, ok := nodePool["node"]; ok {
+		buf.WriteString(HashStringMapList(nodePool["node"]))
+	}
 
 	return &buf
 }
