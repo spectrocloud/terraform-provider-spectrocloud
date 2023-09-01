@@ -16,12 +16,14 @@ func PackSchema() *schema.Schema {
 					Type:     schema.TypeString,
 					Computed: true,
 					Optional: true,
+					Description: "The unique identifier of the pack. Could be looked up using the `spectrocloud_pack` data source. " +
+						"Must be specified if the pack `type` is `spectro`.",
 				},
 				"type": {
 					Type:        schema.TypeString,
 					Optional:    true,
 					Default:     "spectro",
-					Description: "The type of the pack. The default value is `spectro`.",
+					Description: "The type of the pack. Allowed values are `spectro`, `manifest` or `helm`. The default value is `spectro`.",
 				},
 				"name": {
 					Type:        schema.TypeString,
@@ -29,14 +31,15 @@ func PackSchema() *schema.Schema {
 					Description: "The name of the pack. The name must be unique within the cluster profile. ",
 				},
 				"registry_uid": {
-					Type:        schema.TypeString,
-					Optional:    true,
-					Description: "The registry UID of the pack. The registry UID is the unique identifier of the registry. ",
+					Type:     schema.TypeString,
+					Optional: true,
+					Description: "The registry UID of the pack. The registry UID is the unique identifier of the registry. " +
+						"Attribute is required if there is more than registry with a given pack name present. ",
 				},
 				"tag": {
 					Type:        schema.TypeString,
 					Optional:    true,
-					Description: "The tag of the pack. The tag is the version of the pack.",
+					Description: "The tag of the pack. The tag is the version of the pack. Must be if the pack `type` is `spectro` or `helm`. ",
 				},
 				"values": {
 					Type:        schema.TypeString,
