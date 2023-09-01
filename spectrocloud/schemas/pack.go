@@ -33,7 +33,7 @@ func PackSchema() *schema.Schema {
 					Type:     schema.TypeString,
 					Optional: true,
 					Description: "The registry UID of the pack. The registry UID is the unique identifier of the registry. " +
-						"Attribute is required if there is more than registry with a given pack name present. ",
+						"This attribute is required if there is more than one registry that contains a pack with the same name. ",
 				},
 				"tag": {
 					Type:        schema.TypeString,
