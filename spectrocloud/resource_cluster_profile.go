@@ -68,15 +68,17 @@ func resourceClusterProfile() *schema.Resource {
 				Optional:     true,
 				ValidateFunc: validation.StringInSlice([]string{"all", "aws", "azure", "gcp", "vsphere", "openstack", "maas", "nested", "baremetal", "eks", "aks", "edge", "edge-native", "libvirt", "tencent", "tke", "coxedge", "generic", "gke"}, false),
 				ForceNew:     true,
-				Description:  "A cloud provider type supported in Palette, Supported cloud types - `all, aws, azure, gcp, vsphere, openstack, maas, nested, baremetal, eks, aks, edge, edge-native, libvirt, tencent, tke, coxedge, generic and gke`",
+				Description: "A cloud provider type supported in Palette, Supported cloud types are - `all, aws, azure, gcp, vsphere, openstack, maas, nested, baremetal, eks, aks, edge, edge-native, libvirt, tencent, tke, coxedge, generic and gke`," +
+					"If a cloud value is `all` then type must be `add-on`. Otherwise it should be a corresponding cloud type.",
 			},
 			"type": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "add-on",
 				ValidateFunc: validation.StringInSlice([]string{"add-on", "cluster", "infra", "system"}, false),
-				Description:  "Dictates the layers that can be configured in the cluster profile. Valid types - `cluster, infra, add-on and system`",
-				ForceNew:     true,
+				Description: "Dictates the layers that can be configured in the cluster profile. Valid types - `cluster` - Corresponding value in UI is Full, " +
+					"`infra` - Corresponding value in UI is Infrastructure, `add-on` and `system` - For system profile refer UI documentation.",
+				ForceNew: true,
 			},
 			"pack": schemas.PackSchema(),
 		},
