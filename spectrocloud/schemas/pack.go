@@ -38,7 +38,7 @@ func PackSchema() *schema.Schema {
 				"tag": {
 					Type:        schema.TypeString,
 					Optional:    true,
-					Description: "The tag of the pack. The tag is the version of the pack. Must be if the pack `type` is `spectro` or `helm`. ",
+					Description: "The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`. ",
 				},
 				"values": {
 					Type:        schema.TypeString,
