@@ -38,9 +38,10 @@ func resourceClusterProfile() *schema.Resource {
 				Required: true,
 			},
 			"version": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "1.0.0", // default as in UI
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "1.0.0", // default as in UI
+				Description: "Version of the cluster profile. Defaults to '1.0.0'.",
 			},
 			"context": {
 				Type:         schema.TypeString,
