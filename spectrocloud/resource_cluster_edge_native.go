@@ -185,6 +185,12 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"host_name": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Default:     "",
+										Description: "Edge host name",
+									},
 									"host_uid": {
 										Type:        schema.TypeString,
 										Description: "Edge host id",
@@ -321,6 +327,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		var hosts []map[string]string
 		for _, host := range machinePool.Hosts {
 			hosts = append(hosts, map[string]string{
+				"host_name": host.HostName,
 				"host_uid":  *host.HostUID,
 				"static_ip": host.StaticIP,
 			})
@@ -503,8 +510,14 @@ func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudC
 		return nil
 	}
 	for _, host := range m["edge_host"].([]interface{}) {
+		hostName := ""
+		if v, ok := host.(map[string]interface{})["host_name"].(string); ok {
+			hostName = v
+		}
+		hostName = host.(map[string]interface{})["host_name"].(string)
 		hostId := host.(map[string]interface{})["host_uid"].(string)
 		edgeHosts = append(edgeHosts, &models.V1EdgeNativeMachinePoolHostEntity{
+			HostName: hostName,
 			HostUID:  &hostId,
 			StaticIP: host.(map[string]interface{})["static_ip"].(string),
 		})

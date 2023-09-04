@@ -717,6 +717,8 @@ github.com/spectrocloud/gomi v1.14.1-0.20230412095143-b0595c6c6f08 h1:AnOC0U+Exl
 github.com/spectrocloud/gomi v1.14.1-0.20230412095143-b0595c6c6f08/go.mod h1:UnhUDpFEvtYh6m384r3xzj8/+Z6/hMp2O8whEMYVHec=
 github.com/spectrocloud/hapi v1.14.1-0.20230814141242-394093e7fedb h1:Y/TDXfEZ6GJbYi4bKxFS0HFvmOL6Xs653BoxuZjuKEQ=
 github.com/spectrocloud/hapi v1.14.1-0.20230814141242-394093e7fedb/go.mod h1:O/Bkbw92QPSGPNQPqKt7Qlkn+9BKK/a22KTUlk76KHI=
+github.com/spectrocloud/hapi v1.14.1-0.20230904045215-e74ab706b811 h1:Ngfc9yyOZ28OpCmE23TuoG9w9VrnhizOKNQ5TOMprNY=
+github.com/spectrocloud/hapi v1.14.1-0.20230904045215-e74ab706b811/go.mod h1:O/Bkbw92QPSGPNQPqKt7Qlkn+9BKK/a22KTUlk76KHI=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20230829045040-bf4cc9aa60e1 h1:gqnua/jMzX8fx9yt+niCxQ99XkzKiA+HF+LRbFbWYC8=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20230829045040-bf4cc9aa60e1/go.mod h1:xrvueWGPSRdonQkTQvJgDSPe5FRbuqpPJj7Ko0/yxrQ=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
