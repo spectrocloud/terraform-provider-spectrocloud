@@ -56,8 +56,13 @@ func resourceClusterAws() *schema.Resource {
 			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
