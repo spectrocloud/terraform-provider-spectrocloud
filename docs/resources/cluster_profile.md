@@ -152,13 +152,13 @@ resource "spectrocloud_cluster_profile" "profile" {
 
 ### Optional
 
-- `cloud` (String)
-- `context` (String) Cluster context can be 'project' or 'tenant' or `system`. Defaults to 'project'.
+- `cloud` (String) Specify the infrastructure provider the cluster profile is for. Only Palette supported infrastructure providers can be used. The  supported cloud types are - `all, aws, azure, gcp, vsphere, openstack, maas, nested, baremetal, eks, aks, edge, edge-native, libvirt, tencent, tke, coxedge, generic, and gke`,If the value is set to `all`, then the type must be set to `add-on`. Otherwise, the cluster profile may be incompatible with other providers. Default value is `all`.
+- `context` (String) The context of the cluster profile. Allowed values are `project` or `tenant`. Default value is `project`.
 - `description` (String)
 - `pack` (Block List) (see [below for nested schema](#nestedblock--pack))
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `type` (String)
+- `type` (String) Specify the cluster profile type to use. Allowed values are `cluster`, infra`, `add-on`, and `system`. These values map to the following User Interface (UI) labels. Use the value ' cluster ' for a **Full** cluster profile.For an Infrastructure cluster profile, use the value `infra`; for an Add-on cluster profile, use the value `add-on`.System cluster profiles can be specified using the value `system`. To learn more about cluster profiles, refer to the [Cluster Profile](https://docs.spectrocloud.com/cluster-profiles) documentation. Default value is `add-on`.
 - `version` (String) Version of the cluster profile. Defaults to '1.0.0'.
 
 ### Read-Only
@@ -175,10 +175,10 @@ Required:
 Optional:
 
 - `manifest` (Block List) (see [below for nested schema](#nestedblock--pack--manifest))
-- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
-- `tag` (String) The tag of the pack. The tag is the version of the pack.
-- `type` (String) The type of the pack. The default value is `spectro`.
-- `uid` (String)
+- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name.
+- `tag` (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`.
+- `type` (String) The type of the pack. Allowed values are `spectro`, `manifest` or `helm`. The default value is `spectro`.
+- `uid` (String) The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro`.
 - `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
 <a id="nestedblock--pack--manifest"></a>
