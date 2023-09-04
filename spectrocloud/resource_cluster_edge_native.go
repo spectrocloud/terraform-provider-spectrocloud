@@ -514,7 +514,6 @@ func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudC
 		if v, ok := host.(map[string]interface{})["host_name"].(string); ok {
 			hostName = v
 		}
-		hostName = host.(map[string]interface{})["host_name"].(string)
 		hostId := host.(map[string]interface{})["host_uid"].(string)
 		edgeHosts = append(edgeHosts, &models.V1EdgeNativeMachinePoolHostEntity{
 			HostName: hostName,
