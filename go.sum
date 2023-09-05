@@ -397,6 +397,8 @@ github.com/spectrocloud/hapi v1.14.1-0.20230521133257-d73b9e4aea65 h1:mz46BzwOQg
 github.com/spectrocloud/hapi v1.14.1-0.20230521133257-d73b9e4aea65/go.mod h1:9lX5c6bShSkAg24223A7XBCyJj4/Kr9w0YFv6Mf5ZlE=
 github.com/spectrocloud/hapi v1.14.1-0.20230814141242-394093e7fedb h1:Y/TDXfEZ6GJbYi4bKxFS0HFvmOL6Xs653BoxuZjuKEQ=
 github.com/spectrocloud/hapi v1.14.1-0.20230814141242-394093e7fedb/go.mod h1:O/Bkbw92QPSGPNQPqKt7Qlkn+9BKK/a22KTUlk76KHI=
+github.com/spectrocloud/hapi v1.14.1-0.20230904110035-ed2b1df599dc h1:3dC4+8RimiF6hlVPdA6fgMeEUIYEbE1Z08ad4f9153Q=
+github.com/spectrocloud/hapi v1.14.1-0.20230904110035-ed2b1df599dc/go.mod h1:O/Bkbw92QPSGPNQPqKt7Qlkn+9BKK/a22KTUlk76KHI=
 github.com/spf13/cast v1.3.1/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
 github.com/spf13/cast v1.5.0/go.mod h1:SpXXQ5YoyJw6s3/6cMTQuxvgRl3PCJiyaX9p6b155UU=
