@@ -168,9 +168,12 @@ func resourceCloudAccountVsphereDelete(_ context.Context, d *schema.ResourceData
 func toVsphereAccount(d *schema.ResourceData) *models.V1VsphereAccount {
 	account := &models.V1VsphereAccount{
 		Metadata: &models.V1ObjectMeta{
-			Name:        d.Get("name").(string),
-			Annotations: map[string]string{OverlordUID: d.Get("private_cloud_gateway_id").(string)},
-			UID:         d.Id(),
+			Name: d.Get("name").(string),
+			Annotations: map[string]string{
+				"scope":     d.Get("context").(string),
+				OverlordUID: d.Get("private_cloud_gateway_id").(string),
+			},
+			UID: d.Id(),
 		},
 		Spec: &models.V1VsphereCloudAccount{
 			VcenterServer: types.Ptr(d.Get("vsphere_vcenter").(string)),

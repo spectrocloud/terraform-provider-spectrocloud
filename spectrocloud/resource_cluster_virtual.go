@@ -96,8 +96,13 @@ func resourceClusterVirtual() *schema.Resource {
 			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -168,6 +173,19 @@ func resourceClusterVirtual() *schema.Resource {
 				Optional:    true,
 				Default:     false,
 				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
+			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
 			},
 		},
 	}

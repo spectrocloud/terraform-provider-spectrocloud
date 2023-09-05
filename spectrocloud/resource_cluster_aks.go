@@ -56,8 +56,13 @@ func resourceClusterAks() *schema.Resource {
 			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
 				Type:     schema.TypeString,
@@ -168,6 +173,7 @@ func resourceClusterAks() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"count": {
 							Type:        schema.TypeInt,
@@ -222,6 +228,19 @@ func resourceClusterAks() *schema.Resource {
 				Optional:    true,
 				Default:     false,
 				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
+			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
 			},
 		},
 	}
@@ -278,6 +297,10 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAks, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("machine_pool", mp); err != nil {
 			return diag.FromErr(err)
 		}
@@ -327,6 +350,10 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigAks(cloudConfigId, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -345,8 +372,11 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
+		nsMap := make(map[string]interface{})
+
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
@@ -361,6 +391,11 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 				} else if hash != resourceMachinePoolAksHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolAks(cloudConfigId, machinePool, ClusterContext)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusAks, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 				}
 				if err != nil {
 					return diag.FromErr(err)

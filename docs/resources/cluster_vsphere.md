@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cluster_vsphere Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  A resource to manage a vSphere cluster in Pallette.
+  A resource to manage a vSphere cluster in Palette.
 ---
 
 # spectrocloud_cluster_vsphere (Resource)
 
-  A resource to manage a vSphere cluster in Pallette.
+  A resource to manage a vSphere cluster in Palette.
 
 ## Example Usage
 
@@ -31,6 +31,8 @@ description: |-
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `context` (String) The context of the VMware cluster. Can be `project` or `tenant`. Default is `project`.
+- `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
+- `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
@@ -81,6 +83,7 @@ Optional:
 - `additional_labels` (Map of String)
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
+- `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
@@ -112,6 +115,15 @@ Optional:
 Read-Only:
 
 - `id` (String) The ID of this resource.
+
+
+<a id="nestedblock--machine_pool--node"></a>
+### Nested Schema for `machine_pool.node`
+
+Required:
+
+- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
+- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
 
 
 <a id="nestedblock--machine_pool--taints"></a>
@@ -165,10 +177,10 @@ Required:
 Optional:
 
 - `manifest` (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack--manifest))
-- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
-- `tag` (String) The tag of the pack. The tag is the version of the pack.
-- `type` (String) The type of the pack. The default value is `spectro`.
-- `uid` (String)
+- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name.
+- `tag` (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`.
+- `type` (String) The type of the pack. Allowed values are `spectro`, `manifest` or `helm`. The default value is `spectro`.
+- `uid` (String) The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro`.
 - `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
 <a id="nestedblock--cluster_profile--pack--manifest"></a>

@@ -1,10 +1,12 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/spectrocloud/hapi/models"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func TestToVsphereAccount(t *testing.T) {
@@ -29,6 +31,7 @@ func TestToVsphereAccount(t *testing.T) {
 func TestToVsphereAccountIgnoreInsecureError(t *testing.T) {
 	rd := resourceCloudAccountVsphere().TestResourceData()
 	rd.Set("name", "vsphere_unit_test_acc")
+	rd.Set("context", "tenant")
 	rd.Set("vsphere_vcenter", "vcenter.example.com")
 	rd.Set("vsphere_username", "testuser")
 	rd.Set("vsphere_password", "testpass")
@@ -37,6 +40,7 @@ func TestToVsphereAccountIgnoreInsecureError(t *testing.T) {
 	acc := toVsphereAccount(rd)
 
 	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
+	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
 	assert.Equal(t, rd.Get("vsphere_vcenter"), *acc.Spec.VcenterServer)
 	assert.Equal(t, rd.Get("vsphere_username"), *acc.Spec.Username)
 	assert.Equal(t, rd.Get("vsphere_password"), *acc.Spec.Password)

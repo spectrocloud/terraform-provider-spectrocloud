@@ -35,6 +35,14 @@ func dataSourceCloudAccountAzure() *schema.Resource {
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
+			"tenant_name": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"disable_properties_request": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
 		},
 	}
 }

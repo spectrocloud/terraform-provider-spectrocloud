@@ -84,6 +84,7 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 		"count":                   1,
 		"placement":               masterPlacement,
 		"instance_type":           masterInstance,
+		"node":                    []interface{}{},
 	})
 
 	// Adding Worker pool
@@ -111,6 +112,7 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 		"count":                   1,
 		"placement":               workerPlacement,
 		"instance_type":           workerInstance,
+		"node":                    []interface{}{},
 	})
 	d.Set("machine_pool", mPools)
 	return d
@@ -710,6 +712,9 @@ func TestResourceClusterVsphereUpdate(t *testing.T) {
 	d := prepareClusterVsphereTestData()
 	m := &client.V1Client{
 		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
+			return nil, nil
+		},
+		GetCloudConfigVsphereFn: func(cloudConfigUid string) (*models.V1VsphereCloudConfig, error) {
 			return nil, nil
 		},
 	}

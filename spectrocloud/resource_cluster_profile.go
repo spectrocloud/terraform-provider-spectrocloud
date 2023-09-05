@@ -38,15 +38,17 @@ func resourceClusterProfile() *schema.Resource {
 				Required: true,
 			},
 			"version": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "1.0.0", // default as in UI
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "1.0.0", // default as in UI
+				Description: "Version of the cluster profile. Defaults to '1.0.0'.",
 			},
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
+				Description:  "The context of the cluster profile. Allowed values are `project` or `tenant`. Default value is `project`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -62,16 +64,20 @@ func resourceClusterProfile() *schema.Resource {
 				Optional: true,
 			},
 			"cloud": {
-				Type:     schema.TypeString,
-				Default:  "all",
-				Optional: true,
-				ForceNew: true,
+				Type:         schema.TypeString,
+				Default:      "all",
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"all", "aws", "azure", "gcp", "vsphere", "openstack", "maas", "nested", "baremetal", "eks", "aks", "edge", "edge-native", "libvirt", "tencent", "tke", "coxedge", "generic", "gke"}, false),
+				ForceNew:     true,
+				Description: "Specify the infrastructure provider the cluster profile is for. Only Palette supported infrastructure providers can be used. The  supported cloud types are - `all, aws, azure, gcp, vsphere, openstack, maas, nested, baremetal, eks, aks, edge, edge-native, libvirt, tencent, tke, coxedge, generic, and gke`," +
+					"If the value is set to `all`, then the type must be set to `add-on`. Otherwise, the cluster profile may be incompatible with other providers. Default value is `all`.",
 			},
 			"type": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "add-on",
 				ValidateFunc: validation.StringInSlice([]string{"add-on", "cluster", "infra", "system"}, false),
+				Description:  "Specify the cluster profile type to use. Allowed values are `cluster`, infra`, `add-on`, and `system`. These values map to the following User Interface (UI) labels. Use the value ' cluster ' for a **Full** cluster profile." + "For an Infrastructure cluster profile, use the value `infra`; for an Add-on cluster profile, use the value `add-on`." + "System cluster profiles can be specified using the value `system`. To learn more about cluster profiles, refer to the [Cluster Profile](https://docs.spectrocloud.com/cluster-profiles) documentation. Default value is `add-on`.",
 				ForceNew:     true,
 			},
 			"pack": schemas.PackSchema(),

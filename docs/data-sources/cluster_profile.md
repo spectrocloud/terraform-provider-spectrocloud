@@ -46,10 +46,10 @@ Required:
 Optional:
 
 - `manifest` (Block List) (see [below for nested schema](#nestedblock--pack--manifest))
-- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
-- `tag` (String) The tag of the pack. The tag is the version of the pack.
-- `type` (String) The type of the pack. The default value is `spectro`.
-- `uid` (String)
+- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name.
+- `tag` (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`.
+- `type` (String) The type of the pack. Allowed values are `spectro`, `manifest` or `helm`. The default value is `spectro`.
+- `uid` (String) The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro`.
 - `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
 <a id="nestedblock--pack--manifest"></a>

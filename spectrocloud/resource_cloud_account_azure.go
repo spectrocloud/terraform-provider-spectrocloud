@@ -31,6 +31,11 @@ func resourceCloudAccountAzure() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description:  "The context of the Azure configuration. Can be `project` or `tenant`.",
 			},
+			"private_cloud_gateway_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.",
+			},
 			"azure_tenant_id": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -49,6 +54,17 @@ func resourceCloudAccountAzure() *schema.Resource {
 				//StateFunc: func(val interface{}) string {
 				//	return strings.ToLower(val.(string))
 				//},
+			},
+			"tenant_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The name of the tenant. This is the name of the tenant that is used to connect to the Azure cloud. ",
+			},
+			"disable_properties_request": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Disable properties request. This is a boolean value that indicates whether to disable properties request or not. If not specified, the default value is `false`.",
 			},
 		},
 	}
@@ -92,17 +108,37 @@ func resourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m 
 		return diags
 	}
 
-	if err := d.Set("name", account.Metadata.Name); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("azure_tenant_id", *account.Spec.TenantID); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("azure_client_id", *account.Spec.ClientID); err != nil {
-		return diag.FromErr(err)
+	diagnostics, done := flattenCloudAccountAzure(d, account)
+	if done {
+		return diagnostics
 	}
 
 	return diags
+}
+
+func flattenCloudAccountAzure(d *schema.ResourceData, account *models.V1AzureAccount) (diag.Diagnostics, bool) {
+	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("context", account.Metadata.Annotations["scope"]); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("azure_tenant_id", *account.Spec.TenantID); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("azure_client_id", *account.Spec.ClientID); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("tenant_name", account.Spec.TenantName); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("disable_properties_request", account.Spec.Settings.DisablePropertiesRequest); err != nil {
+		return diag.FromErr(err), true
+	}
+	return nil, false
 }
 
 func resourceCloudAccountAzureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -145,12 +181,20 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 	account := &models.V1AzureAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
-			UID:  d.Id(),
+			Annotations: map[string]string{
+				"scope":     d.Get("context").(string),
+				OverlordUID: d.Get("private_cloud_gateway_id").(string),
+			},
+			UID: d.Id(),
 		},
 		Spec: &models.V1AzureCloudAccount{
 			ClientID:     types.Ptr(d.Get("azure_client_id").(string)),
 			ClientSecret: &clientSecret,
 			TenantID:     types.Ptr(d.Get("azure_tenant_id").(string)),
+			TenantName:   d.Get("tenant_name").(string),
+			Settings: &models.V1CloudAccountSettings{
+				DisablePropertiesRequest: d.Get("disable_properties_request").(bool),
+			},
 		},
 	}
 	return account
