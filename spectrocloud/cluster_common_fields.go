@@ -57,6 +57,11 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	clusterAdditionalMeta := cluster.Spec.ClusterConfig.ClusterMetaAttribute
+	if clusterAdditionalMeta != "" {
+		d.Set("cluster_meta_attribute", clusterAdditionalMeta)
+	}
+
 	hostConfig := cluster.Spec.ClusterConfig.HostClusterConfig
 	if hostConfig != nil && *hostConfig.IsHostCluster {
 		flattenHostConfig := flattenHostConfig(hostConfig)
@@ -126,6 +131,12 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 
 	if d.HasChange("host_config") {
 		if err := updateHostConfig(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if d.HasChange("cluster_meta_attribute") {
+		if err := updateClusterAdditionalMetadata(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
 	}
