@@ -45,6 +45,7 @@ func resourceCloudAccountAws() *schema.Resource {
 				Optional:     true,
 				ValidateFunc: validation.StringInSlice([]string{"secret", "sts"}, false),
 				Default:      "secret",
+				Description:  "The type of AWS credentials to use. Can be `secret` or `sts`. ",
 			},
 			"arn": {
 				Type:     schema.TypeString,
