@@ -48,6 +48,11 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"cluster_meta_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
+			},
 			"cluster_profile": {
 				Type:          schema.TypeList,
 				Optional:      true,
