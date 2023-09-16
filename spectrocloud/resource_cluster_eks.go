@@ -2,16 +2,18 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -1044,4 +1046,19 @@ func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {
 	}
 
 	return f
+}
+
+func setAdditionalSecurityGroups(eksLaunchTemplate map[string]interface{}) []*models.V1AwsResourceReference {
+	if eksLaunchTemplate["additional_security_groups"] != nil {
+		securityGroups := expandStringList(eksLaunchTemplate["additional_security_groups"].(*schema.Set).List())
+		additionalSecurityGroups := make([]*models.V1AwsResourceReference, 0)
+		for _, securityGroup := range securityGroups {
+			additionalSecurityGroups = append(additionalSecurityGroups, &models.V1AwsResourceReference{
+				ID: securityGroup,
+			})
+		}
+		return additionalSecurityGroups
+	}
+
+	return nil
 }

@@ -4,9 +4,8 @@ import (
 	"context"
 	"log"
 	"sort"
+	"strings"
 	"time"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -14,7 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
 func resourceClusterOpenStack() *schema.Resource {
@@ -23,7 +23,6 @@ func resourceClusterOpenStack() *schema.Resource {
 		ReadContext:   resourceClusterOpenStackRead,
 		UpdateContext: resourceClusterOpenStackUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing Openstack clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
@@ -37,12 +36,6 @@ func resourceClusterOpenStack() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"context": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "project",
-				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -50,9 +43,69 @@ func resourceClusterOpenStack() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"pack"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"pack": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "spectro",
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"tag": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"values": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"manifest": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"content": {
+													Type:     schema.TypeString,
+													Required: true,
+													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+														// UI strips the trailing newline on save
+														return strings.TrimSpace(old) == strings.TrimSpace(new)
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 			"apply_setting": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -63,33 +116,26 @@ func resourceClusterOpenStack() *schema.Resource {
 				ForceNew: true,
 			},
 			"cloud_config_id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
-				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"os_patch_on_boot": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "Whether to apply OS patch on boot. Default is `false`.",
+				Type:     schema.TypeBool,
+				Optional: true,
 			},
 			"os_patch_schedule": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchSchedule,
-				Description:      "Cron schedule for OS patching. This must be in the form of `0 0 * * *`.",
 			},
 			"os_patch_after": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
-				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
 			"kubeconfig": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -138,6 +184,30 @@ func resourceClusterOpenStack() *schema.Resource {
 					},
 				},
 			},
+			"pack": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 			"machine_pool": {
 				Type:     schema.TypeList,
 				Required: true,
@@ -150,28 +220,43 @@ func resourceClusterOpenStack() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"taints": schemas.ClusterTaintsSchema(),
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"control_plane": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     false,
-							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-							//ForceNew: true,
-							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 						"count": {
-							Type:        schema.TypeInt,
-							Required:    true,
-							Description: "Number of nodes in the machine pool.",
+							Type:     schema.TypeInt,
+							Required: true,
 						},
 						"node_repave_interval": {
 							Type:        schema.TypeInt,
@@ -180,11 +265,9 @@ func resourceClusterOpenStack() *schema.Resource {
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"update_strategy": {
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "RollingUpdateScaleOut",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -204,17 +287,137 @@ func resourceClusterOpenStack() *schema.Resource {
 					},
 				},
 			},
-			"backup_policy":        schemas.BackupPolicySchema(),
-			"scan_policy":          schemas.ScanPolicySchema(),
-			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
-			"namespaces":           schemas.ClusterNamespacesSchema(),
-			"host_config":          schemas.ClusterHostConfigSchema(),
-			"location_config":      schemas.ClusterLocationSchema(),
+			"backup_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"prefix": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"backup_location_id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"expiry_in_hour": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"include_disks": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"include_cluster_resources": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"namespaces": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
+			"scan_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"configuration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"penetration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"conformance_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
+			"host_config":     schemas.ClusterHostConfigSchema(),
+			"location_config": schemas.ClusterLocationSchema(),
 			"skip_completion": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
+				Type:     schema.TypeBool,
+				Optional: true,
 			},
 		},
 	}
@@ -226,18 +429,14 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster, err := toOpenStackCluster(c, d)
+	cluster := toOpenStackCluster(c, d)
+
+	uid, err := c.CreateClusterOpenStack(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterOpenStack(cluster, ClusterContext)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -247,14 +446,10 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	return diags
 }
 
-func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroOpenStackClusterEntity, error) {
+func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroOpenStackClusterEntity {
 
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
-	profiles, err := toProfiles(c, d)
-	if err != nil {
-		return nil, err
-	}
 	cluster := &models.V1SpectroOpenStackClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -263,7 +458,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1S
 		},
 		Spec: &models.V1SpectroOpenStackClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        profiles,
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1OpenStackClusterConfig{
 				Region:     cloudConfig["region"].(string),
@@ -300,7 +495,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1S
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp, err := toMachinePoolOpenStack(machinePool)
 		if err != nil {
-			return nil, err
+			return nil
 		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
@@ -313,7 +508,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1S
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster, nil
+	return cluster
 }
 
 //goland:noinspection GoUnhandledErrorResult
@@ -322,7 +517,9 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 
 	var diags diag.Diagnostics
 
-	cluster, err := resourceClusterRead(d, c, diags)
+	uid := d.Id()
+
+	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -335,8 +532,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	ClusterContext := d.Get("context").(string)
-	if config, err := c.GetCloudConfigOpenStack(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigOpenStack(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsOpenStack(config.Spec.MachinePoolConfig)
@@ -389,7 +585,10 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
+	_, err := c.GetCloudConfigOpenStack(cloudConfigId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -407,9 +606,10 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
-
+		nsMap := make(map[string]interface{})
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
 			if machinePoolResource["name"].(string) != "" {
 				name := machinePoolResource["name"].(string)
@@ -423,10 +623,10 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolOpenStack(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool)
 				}
 
 				if err != nil {
@@ -443,7 +643,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

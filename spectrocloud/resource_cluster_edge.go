@@ -2,16 +2,18 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -176,7 +178,7 @@ func resourceClusterEdge() *schema.Resource {
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Set:      resourceMachinePoolEdgeHash,
+				Set:      resourceMachinePoolEdgeNativeHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -457,7 +459,7 @@ func flattenMachinePoolConfigsEdge(machinePools []*models.V1EdgeMachinePoolConfi
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
@@ -511,7 +513,7 @@ func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m in
 			if name == "" {
 				continue
 			}
-			hash := resourceMachinePoolEdgeHash(machinePoolResource)
+			hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
 
 			machinePool := toMachinePoolEdge(machinePoolResource)
 
@@ -519,7 +521,7 @@ func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m in
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
 				err = c.CreateMachinePoolEdge(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolEdgeHash(oldMachinePool) {
+			} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
 				err = c.UpdateMachinePoolEdge(cloudConfigId, machinePool)
 			}

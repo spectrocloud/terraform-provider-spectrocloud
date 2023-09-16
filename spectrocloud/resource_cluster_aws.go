@@ -3,7 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"log"
-	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -14,7 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
 func resourceClusterAws() *schema.Resource {
@@ -23,7 +24,6 @@ func resourceClusterAws() *schema.Resource {
 		ReadContext:   resourceClusterAwsRead,
 		UpdateContext: resourceClusterAwsUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing AWS clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -38,12 +38,6 @@ func resourceClusterAws() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"context": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "project",
-				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -51,9 +45,74 @@ func resourceClusterAws() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile_id": {
+				Type:       schema.TypeString,
+				Optional:   true,
+				Deprecated: "Switch to cluster_profile",
+			},
+			"cluster_profile": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"cluster_profile_id", "pack"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"pack": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "spectro",
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"tag": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"values": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"manifest": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"content": {
+													Type:     schema.TypeString,
+													Required: true,
+													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+														// UI strips the trailing newline on save
+														return strings.TrimSpace(old) == strings.TrimSpace(new)
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 			"apply_setting": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -64,33 +123,26 @@ func resourceClusterAws() *schema.Resource {
 				ForceNew: true,
 			},
 			"cloud_config_id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
-				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"os_patch_on_boot": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "Whether to apply OS patch on boot. Default is `false`.",
+				Type:     schema.TypeBool,
+				Optional: true,
 			},
 			"os_patch_schedule": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchSchedule,
-				Description:      "The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.",
 			},
 			"os_patch_after": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
-				Description:      "Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
 			"kubeconfig": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -117,6 +169,30 @@ func resourceClusterAws() *schema.Resource {
 					},
 				},
 			},
+			"pack": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
@@ -130,28 +206,43 @@ func resourceClusterAws() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"taints": schemas.ClusterTaintsSchema(),
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"control_plane": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     false,
-							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
-							//ForceNew: true,
-							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
 						"count": {
-							Type:        schema.TypeInt,
-							Required:    true,
-							Description: "Number of nodes in the machine pool.",
+							Type:     schema.TypeInt,
+							Required: true,
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -185,11 +276,9 @@ func resourceClusterAws() *schema.Resource {
 							Optional: true,
 						},
 						"update_strategy": {
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "RollingUpdateScaleOut",
 						},
 						"disk_size_gb": {
 							Type:     schema.TypeInt,
@@ -215,29 +304,140 @@ func resourceClusterAws() *schema.Resource {
 								Required: true,
 							},
 						},
-						"additional_security_groups": {
-							Type: schema.TypeSet,
-							Set:  schema.HashString,
+					},
+				},
+			},
+			"backup_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"prefix": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"backup_location_id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"expiry_in_hour": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"include_disks": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"include_cluster_resources": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"namespaces": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Optional:    true,
-							Description: "Additional security groups to attach to the instance.",
 						},
 					},
 				},
 			},
-			"backup_policy":        schemas.BackupPolicySchema(),
-			"scan_policy":          schemas.ScanPolicySchema(),
-			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
-			"namespaces":           schemas.ClusterNamespacesSchema(),
-			"host_config":          schemas.ClusterHostConfigSchema(),
-			"location_config":      schemas.ClusterLocationSchemaComputed(),
+			"scan_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"configuration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"penetration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"conformance_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
+			"host_config":     schemas.ClusterHostConfigSchema(),
+			"location_config": schemas.ClusterLocationSchemaComputed(),
 			"skip_completion": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
+				Type:     schema.TypeBool,
+				Optional: true,
 			},
 		},
 	}
@@ -249,18 +449,14 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster, err := toAwsCluster(c, d)
+	cluster := toAwsCluster(c, d)
+
+	uid, err := c.CreateClusterAws(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterAws(cluster, ClusterContext)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -275,8 +471,10 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-
-	cluster, err := resourceClusterRead(d, c, diags)
+	//
+	uid := d.Id()
+	//
+	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -294,11 +492,10 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 }
 
 func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigAws(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigAws(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
@@ -324,13 +521,12 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
+		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
-		oi["min"] = int(machinePool.MinSize)
-		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
 		if machinePool.CapacityType != nil {
 			oi["capacity_type"] = machinePool.CapacityType
@@ -344,35 +540,8 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		} else {
 			oi["azs"] = machinePool.Azs
 		}
-
-		if machinePool.AdditionalSecurityGroups != nil && len(machinePool.AdditionalSecurityGroups) > 0 {
-			additionalSecuritygroup := make([]string, 0)
-			for _, sg := range machinePool.AdditionalSecurityGroups {
-				additionalSecuritygroup = append(additionalSecuritygroup, sg.ID)
-			}
-			oi["additional_security_groups"] = additionalSecuritygroup
-		}
-
 		ois[i] = oi
 	}
-
-	sort.SliceStable(ois, func(i, j int) bool {
-		var controlPlaneI, controlPlaneJ bool
-		if ois[i].(map[string]interface{})["control_plane"] != nil {
-			controlPlaneI = ois[i].(map[string]interface{})["control_plane"].(bool)
-		}
-		if ois[j].(map[string]interface{})["control_plane"] != nil {
-			controlPlaneJ = ois[j].(map[string]interface{})["control_plane"].(bool)
-		}
-
-		// If both are control planes or both are not, sort by name
-		if controlPlaneI == controlPlaneJ {
-			return ois[i].(map[string]interface{})["name"].(string) < ois[j].(map[string]interface{})["name"].(string)
-		}
-
-		// Otherwise, control planes come first
-		return controlPlaneI && !controlPlaneJ
-	})
 
 	return ois
 }
@@ -384,7 +553,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
+
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -420,10 +589,10 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 					if oldMachinePool, ok := osMap[name]; !ok {
 						log.Printf("Create machine pool %s", name)
-						err = c.CreateMachinePoolAws(cloudConfigId, machinePool, ClusterContext)
+						err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
 					} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
 						log.Printf("Change in machine pool %s", name)
-						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool, ClusterContext)
+						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
 					}
 
 					if err != nil {
@@ -433,6 +602,9 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 					// Processed (if exists)
 					delete(osMap, name)
 				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
 		}
 
@@ -441,11 +613,15 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAws(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolAws(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
+	//TODO(saamalik) update for cluster as well
+	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
+	//	return diag.FromErr(err)
+	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
@@ -457,14 +633,10 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroAwsClusterEntity, error) {
+func toAwsCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroAwsClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
-	profiles, err := toProfiles(c, d)
-	if err != nil {
-		return nil, err
-	}
 	cluster := &models.V1SpectroAwsClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -473,7 +645,7 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		},
 		Spec: &models.V1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        profiles,
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AwsClusterConfig{
 				SSHKeyName: cloudConfig["ssh_key_name"].(string),
@@ -483,32 +655,20 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		},
 	}
 
+	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AwsMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp, err := toMachinePoolAws(machinePool, cluster.Spec.CloudConfig.VpcID)
 		if err != nil {
-			return nil, err
+			return nil
 		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
-	sort.SliceStable(machinePoolConfigs, func(i, j int) bool {
-		controlPlaneI := machinePoolConfigs[i].PoolConfig.IsControlPlane
-		controlPlaneJ := machinePoolConfigs[j].PoolConfig.IsControlPlane
-
-		// If both are control planes or both are not, sort by name
-		if controlPlaneI == controlPlaneJ {
-			return *machinePoolConfigs[i].PoolConfig.Name < *machinePoolConfigs[j].PoolConfig.Name
-		}
-
-		// Otherwise, control planes come first
-		return controlPlaneI && !controlPlaneJ
-	})
-
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster, nil
+	return cluster
 }
 
 func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachinePoolConfigEntity, error) {

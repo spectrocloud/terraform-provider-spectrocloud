@@ -2,11 +2,9 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"strings"
 	"time"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -14,7 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
 func resourceClusterAzure() *schema.Resource {
@@ -23,7 +22,6 @@ func resourceClusterAzure() *schema.Resource {
 		ReadContext:   resourceClusterAzureRead,
 		UpdateContext: resourceClusterAzureUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing Azure clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -33,16 +31,9 @@ func resourceClusterAzure() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "Name of the cluster. This name will be used to create the cluster in Azure.",
-			},
-			"context": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "project",
-				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -51,48 +42,100 @@ func resourceClusterAzure() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile": {
+				Type:          schema.TypeList,
+				Optional:      true,
+				ConflictsWith: []string{"pack"},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:     schema.TypeString,
+							Required: true,
+							//ForceNew: true,
+						},
+						"pack": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Default:  "spectro",
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"registry_uid": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"tag": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"values": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"manifest": {
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"name": {
+													Type:     schema.TypeString,
+													Required: true,
+												},
+												"content": {
+													Type:     schema.TypeString,
+													Required: true,
+													DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+														// UI strips the trailing newline on save
+														return strings.TrimSpace(old) == strings.TrimSpace(new)
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 			"apply_setting": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Apply setting for the cluster. This can be set to `on_create` or `on_update`.",
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 			"cloud_account_id": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "ID of the cloud account to be used for the cluster. This cloud account must be of type `azure`.",
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
 			},
 			"cloud_config_id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
-				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"os_patch_on_boot": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "Whether to apply OS patch on boot. Default is `false`.",
+				Type:     schema.TypeBool,
+				Optional: true,
 			},
 			"os_patch_schedule": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchSchedule,
-				Description:      "Cron schedule for OS patching. This must be in the form of `0 0 * * *`.",
 			},
 			"os_patch_after": {
 				Type:             schema.TypeString,
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
-				Description:      "Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
 			"kubeconfig": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -102,24 +145,44 @@ func resourceClusterAzure() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"subscription_id": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Azure subscription ID. This can be found in the Azure portal under `Subscriptions`.",
+							Type:     schema.TypeString,
+							Required: true,
 						},
 						"resource_group": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Azure resource group. This can be found in the Azure portal under `Resource groups`.",
+							Type:     schema.TypeString,
+							Required: true,
 						},
 						"region": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Azure region. This can be found in the Azure portal under `Resource groups`.",
+							Type:     schema.TypeString,
+							Required: true,
 						},
 						"ssh_key": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "SSH key to be used for the cluster nodes.",
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"pack": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Required: true,
 						},
 					},
 				},
@@ -137,31 +200,47 @@ func resourceClusterAzure() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
-						"taints": schemas.ClusterTaintsSchema(),
+						"taints": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"key": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"value": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"effect": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"control_plane": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
 							//ForceNew: true,
-							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
 						},
 						"control_plane_as_worker": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
+
 							//ForceNew: true,
-							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
-							Description: "Name of the machine pool. This must be unique within the cluster.",
 						},
 						"count": {
-							Type:        schema.TypeInt,
-							Required:    true,
-							Description: "Number of nodes in the machine pool.",
+							Type:     schema.TypeInt,
+							Required: true,
 						},
 						"node_repave_interval": {
 							Type:        schema.TypeInt,
@@ -170,16 +249,13 @@ func resourceClusterAzure() *schema.Resource {
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"instance_type": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Azure instance type from the Azure portal.",
+							Type:     schema.TypeString,
+							Required: true,
 						},
 						"update_strategy": {
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "RollingUpdateScaleOut",
 						},
 						"disk": {
 							Type:     schema.TypeList,
@@ -199,18 +275,15 @@ func resourceClusterAzure() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"size_gb": {
-										Type:        schema.TypeInt,
-										Required:    true,
-										Description: "Size of the disk in GB.",
+										Type:     schema.TypeInt,
+										Required: true,
 									},
 									"type": {
-										Type:        schema.TypeString,
-										Required:    true,
-										Description: "Type of the disk. Valid values are `Standard_LRS`, `StandardSSD_LRS`, `Premium_LRS`.",
+										Type:     schema.TypeString,
+										Required: true,
 									},
 								},
 							},
-							Description: "Disk configuration for the machine pool.",
 						},
 						"azs": {
 							Type:     schema.TypeSet,
@@ -219,13 +292,10 @@ func resourceClusterAzure() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "Availability zones for the machine pool.",
 						},
 						"is_system_node_pool": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     false,
-							Description: "Whether this machine pool is a system node pool. Default value is `false'.",
+							Type:     schema.TypeBool,
+							Required: true,
 						},
 						"os_type": {
 							Type:     schema.TypeString,
@@ -233,25 +303,152 @@ func resourceClusterAzure() *schema.Resource {
 							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 								return false
 							},
-							Default:      "Linux",
-							ValidateFunc: validation.StringInSlice([]string{"Linux", "Windows"}, false),
-							Description:  "Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.",
 						},
 					},
 				},
 			},
-			"backup_policy":        schemas.BackupPolicySchema(),
-			"scan_policy":          schemas.ScanPolicySchema(),
-			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
-			"namespaces":           schemas.ClusterNamespacesSchema(),
-			"host_config":          schemas.ClusterHostConfigSchema(),
-			"location_config":      schemas.ClusterLocationSchemaComputed(),
-			"skip_completion": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
+			"backup_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"prefix": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"backup_location_id": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"expiry_in_hour": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"include_disks": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"include_cluster_resources": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  true,
+						},
+						"namespaces": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
 			},
+			"scan_policy": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"configuration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"penetration_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"conformance_scan_schedule": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"cluster_rbac_binding": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"namespace": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"role": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subjects": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"namespace": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"namespaces": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
+			"host_config":     schemas.ClusterHostConfigSchema(),
+			"location_config": schemas.ClusterLocationSchemaComputed(),
+			"skip_completion": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			//"cloud_config": {
+			//	Type:     schema.TypeString,
+			//	Required: true,
+			//	//DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+			//	//	return false
+			//	//},
+			//	//StateFunc: func(val interface{}) string {
+			//	//	return strings.ToLower(val.(string))
+			//	//},
+			//},
 		},
 	}
 }
@@ -262,22 +459,14 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster, err := toAzureCluster(c, d)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
-	if diags != nil {
-		return diags
-	}
+	cluster := toAzureCluster(c, d)
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterAzure(cluster, ClusterContext)
+	uid, err := c.CreateClusterAzure(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -293,7 +482,9 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 
 	var diags diag.Diagnostics
 
-	cluster, err := resourceClusterRead(d, c, diags)
+	uid := d.Id()
+
+	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -311,11 +502,10 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 }
 
 func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigAzure(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigAzure(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsAzure(config.Spec.MachinePoolConfig)
@@ -350,7 +540,7 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 
 		oi["azs"] = machinePool.Azs
-		oi["os_type"] = machinePool.OsType
+
 		if machinePool.OsDisk != nil {
 			d := make(map[string]interface{})
 			d["size_gb"] = machinePool.OsDisk.DiskSizeGB
@@ -372,16 +562,8 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
+
 	if d.HasChange("machine_pool") {
-		cluster, err := toAzureCluster(c, d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
-		if diags != nil {
-			return diags
-		}
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
 			oraw = new(schema.Set)
@@ -413,10 +595,10 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolAzure(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolAzure(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolAzureHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolAzure(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolAzure(cloudConfigId, machinePool)
 				}
 
 				if err != nil {
@@ -426,6 +608,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 				// Processed (if exists)
 				delete(osMap, name)
 			}
+
 		}
 
 		// Deleted old machine pools
@@ -433,11 +616,15 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAzure(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolAzure(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
+	//TODO(saamalik) update for cluster as well
+	//if err := waitForClusterU(ctx, c, d.Id(), d.Timeout(schema.TimeoutDelete)); err != nil {
+	//	return diag.FromErr(err)
+	//}
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
@@ -449,15 +636,11 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroAzureClusterEntity, error) {
+func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroAzureClusterEntity {
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
 
-	profiles, err := toProfiles(c, d)
-	if err != nil {
-		return nil, err
-	}
 	cluster := &models.V1SpectroAzureClusterEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name:   d.Get("name").(string),
@@ -466,7 +649,7 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 		},
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        profiles,
+			Profiles:        toProfiles(c, d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
 				Location:       types.Ptr(cloudConfig["region"].(string)),
@@ -482,7 +665,7 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp, err := toMachinePoolAzure(machinePool)
 		if err != nil {
-			return nil, err
+			return nil
 		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
@@ -490,7 +673,7 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster, nil
+	return cluster
 }
 
 func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConfigEntity, error) {
@@ -569,15 +752,4 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 	}
 
 	return mp, nil
-}
-
-func validateMasterPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {
-	for _, machineConfig := range machinePool {
-		if machineConfig.PoolConfig.IsControlPlane {
-			if *machineConfig.PoolConfig.Size%2 == 0 {
-				return diag.FromErr(fmt.Errorf("The master node pool size should be in an odd number. But it set to an even number '%d' in node name '%s' ", *machineConfig.PoolConfig.Size, *machineConfig.PoolConfig.Name))
-			}
-		}
-	}
-	return nil
 }
