@@ -32,12 +32,12 @@ func dataSourceRegistryPackRead(_ context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if v, ok := d.GetOk("name"); ok {
-		registry, err := c.GetPackRegistryByName(v.(string))
+		registry, err := c.GetPackRegistryCommonByName(v.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		d.SetId(registry.Metadata.UID)
-		if err := d.Set("name", registry.Metadata.Name); err != nil {
+		d.SetId(registry.UID)
+		if err := d.Set("name", registry.Name); err != nil {
 			return diag.FromErr(err)
 		}
 	}

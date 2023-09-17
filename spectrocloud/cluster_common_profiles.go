@@ -13,8 +13,7 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
-func toProfiles(c *client.V1Client, d *schema.ResourceData) ([]*models.V1SpectroClusterProfileEntity, error) {
-	clusterContext := d.Get("context").(string)
+func toProfiles(c *client.V1Client, d *schema.ResourceData, clusterContext string) ([]*models.V1SpectroClusterProfileEntity, error) {
 	return toProfilesCommon(c, d, d.Id(), clusterContext)
 }
 
