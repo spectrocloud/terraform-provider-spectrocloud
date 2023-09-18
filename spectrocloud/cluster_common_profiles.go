@@ -18,8 +18,21 @@ func toProfiles(c *client.V1Client, d *schema.ResourceData, clusterContext strin
 }
 
 func toAddonDeplProfiles(c *client.V1Client, d *schema.ResourceData) ([]*models.V1SpectroClusterProfileEntity, error) {
-	clusterUid := d.Get("cluster_uid").(string)
-	clusterContext := d.Get("cluster_context").(string)
+	clusterUid := ""
+	clusterContext := ""
+	// handling cluster attachment flow for cluster created outside terraform and attaching addon profile to it
+	if uid, ok := d.GetOk("cluster_uid"); ok && uid != nil {
+		clusterUid = uid.(string) //d.Get("cluster_uid").(string)
+	}
+	if ct, ok := d.GetOk("cluster_context"); ok && c != nil {
+		clusterUid = ct.(string) //d.Get("cluster_context").(string)
+	}
+	// handling cluster day 2 addon profile operation flow
+	if clusterUid == "" && clusterContext == "" {
+		clusterUid = d.Id()
+		clusterContext = d.Get("context").(string)
+	}
+
 	return toProfilesCommon(c, d, clusterUid, clusterContext)
 }
 
