@@ -25,11 +25,13 @@ func toAddonDeplProfiles(c *client.V1Client, d *schema.ResourceData) ([]*models.
 		clusterUid = uid.(string) //d.Get("cluster_uid").(string)
 	}
 	if ct, ok := d.GetOk("cluster_context"); ok && c != nil {
-		clusterUid = ct.(string) //d.Get("cluster_context").(string)
+		clusterContext = ct.(string) //d.Get("cluster_context").(string)
 	}
 	// handling cluster day 2 addon profile operation flow
-	if clusterUid == "" && clusterContext == "" {
+	if clusterUid == "" {
 		clusterUid = d.Id()
+	}
+	if clusterContext == "" {
 		clusterContext = d.Get("context").(string)
 	}
 
