@@ -2,16 +2,19 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -244,6 +247,22 @@ func resourceClusterAws() *schema.Resource {
 						"instance_type": {
 							Type:     schema.TypeString,
 							Required: true,
+						},
+						"min": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
+						"max": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"capacity_type": {
 							Type:         schema.TypeString,
@@ -499,7 +518,8 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
@@ -554,23 +574,33 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			if name != "" {
-				hash := resourceMachinePoolAwsHash(machinePoolResource)
-				vpcId := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})["vpc_id"]
-				machinePool := toMachinePoolAws(machinePoolResource, vpcId.(string))
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				if name != "" {
+					hash := resourceMachinePoolAwsHash(machinePoolResource)
+					vpcId := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})["vpc_id"]
 
-				var err error
-				if oldMachinePool, ok := osMap[name]; !ok {
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
-				} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
-					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
-				}
+					var err error
+					machinePool, err := toMachinePoolAws(machinePoolResource, vpcId.(string))
+					if err != nil {
+						return diag.FromErr(err)
+					}
 
-				if err != nil {
-					return diag.FromErr(err)
+					if oldMachinePool, ok := osMap[name]; !ok {
+						log.Printf("Create machine pool %s", name)
+						err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
+					} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
+						log.Printf("Change in machine pool %s", name)
+						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
+					}
+
+					if err != nil {
+						return diag.FromErr(err)
+					}
+
+					// Processed (if exists)
+					delete(osMap, name)
 				}
 
 				// Processed (if exists)
@@ -628,7 +658,10 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AwsMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolAws(machinePool, cluster.Spec.CloudConfig.VpcID)
+		mp, err := toMachinePoolAws(machinePool, cluster.Spec.CloudConfig.VpcID)
+		if err != nil {
+			return nil
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -638,7 +671,7 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroA
 	return cluster
 }
 
-func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachinePoolConfigEntity {
+func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -668,6 +701,17 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 			azs = append(azs, az.(string))
 		}
 	}
+	min := int32(m["count"].(int))
+	max := int32(m["count"].(int))
+
+	if m["min"] != nil {
+		min = int32(m["min"].(int))
+	}
+
+	if m["max"] != nil {
+		max = int32(m["max"].(int))
+	}
+
 	mp := &models.V1AwsMachinePoolConfigEntity{
 		CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
 			Azs:            azs,
@@ -686,8 +730,24 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
+			MinSize:                 min,
+			MaxSize:                 max,
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+
 	}
 
 	if capacityType == "spot" {
@@ -700,5 +760,10 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) *models.V1AwsMachin
 			MaxPrice: maxPrice,
 		}
 	}
-	return mp
+
+	if m["additional_security_groups"] != nil {
+		mp.CloudConfig.AdditionalSecurityGroups = setAdditionalSecurityGroups(m)
+	}
+
+	return mp, nil
 }

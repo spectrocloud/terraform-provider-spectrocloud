@@ -2,15 +2,17 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -235,6 +237,12 @@ func resourceClusterGcp() *schema.Resource {
 						"count": {
 							Type:     schema.TypeInt,
 							Required: true,
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -473,9 +481,9 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
@@ -486,7 +494,6 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 
 		oi["azs"] = machinePool.Azs
-
 		ois[i] = oi
 	}
 
@@ -521,26 +528,32 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolGcpHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolGcpHash(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolGcp(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			machinePool := toMachinePoolGcp(machinePoolResource)
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolGcp(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolGcpHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolGcp(cloudConfigId, machinePool)
+				}
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolGcp(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolGcpHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolGcp(cloudConfigId, machinePool)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -593,7 +606,10 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroG
 
 	machinePoolConfigs := make([]*models.V1GcpMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolGcp(machinePool)
+		mp, err := toMachinePoolGcp(machinePool)
+		if err != nil {
+			return nil
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -603,7 +619,7 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroG
 	return cluster
 }
 
-func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEntity {
+func toMachinePoolGcp(machinePool interface{}) (*models.V1GcpMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -637,5 +653,19 @@ func toMachinePoolGcp(machinePool interface{}) *models.V1GcpMachinePoolConfigEnt
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }

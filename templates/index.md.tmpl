@@ -33,7 +33,7 @@ Copy `terraform.template.tfvars` file to a `terraform.tfvars` file and modify it
 {{tffile "examples/provider/terraform.template.tfvars"}}
 
 ->
-Be sure to populate the `username`, `password`, and other terraform vars.
+Be sure to populate the `sc_host`, `sc_api_key`, and other terraform vars.
 
 Copy one of the resource configuration files (e.g: spectrocloud_cluster_profile) from the _Resources_ documentation. Be sure to specify
 all required parameters.
@@ -51,28 +51,14 @@ For an end-to-end example of provisioning Spectro Cloud resources, visit:
 
 Credentials and other configurations can be provided through environment variables. The following environment variables are availabe.
 
-- `SPECTROCLOUD_HOST` 
-- `SPECTROCLOUD_USERNAME`
-- `SPECTROCLOUD_PASSWORD`
+- `SPECTROCLOUD_HOST`
 - `SPECTROCLOUD_APIKEY`
 - `SPECTROCLOUD_TRACE`
 - `SPECTROCLOUD_RETRY_ATTEMPTS`
 
 
 ## Authentication
-You can use the environment variables to authenticate with Spectro Cloud with your username and password.
-
--> **Note:** The API key takes precendence over the username and password authentication flow.
-
-```shell
-export SPECTROCLOUD_USERNAME=myUserName
-export SPECTROCLOUD_PASSWORD=myPassword
-```
-```hcl
-provider "spectrocloud" {}
-```
-
-Alternatively, you may use an API key to authenticate with Spectro Cloud. Visit the User Management API Key [documentation](https://docs.spectrocloud.com/user-management/user-authentication/#usingapikey) to learn more about Spectro Cloud API keys.
+You can use an API key to authenticate with Spectro Cloud. Visit the User Management API Key [documentation](https://docs.spectrocloud.com/user-management/user-authentication/#usingapikey) to learn more about Spectro Cloud API keys.
 ```shell
 export SPECTROCLOUD_APIKEY=5b7aad.........
 ```

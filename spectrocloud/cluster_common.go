@@ -2,9 +2,11 @@ package spectrocloud
 
 import (
 	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"strings"
 )
 
 var (
@@ -25,11 +27,20 @@ func toNtpServers(in map[string]interface{}) []string {
 
 func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfigEntity {
 	return &models.V1ClusterConfigEntity{
+		ClusterMetaAttribute:    toClusterMetaAttribute(d),
 		MachineManagementConfig: toMachineManagementConfig(d),
 		Resources:               toClusterResourceConfig(d),
 		HostClusterConfig:       toClusterHostConfigs(d),
 		Location:                toClusterLocationConfigs(d),
 	}
+}
+
+func toClusterMetaAttribute(d *schema.ResourceData) string {
+	clusterMetadataAttribute := ""
+	if v, ok := d.GetOk("cluster_meta_attribute"); ok {
+		clusterMetadataAttribute = v.(string)
+	}
+	return clusterMetadataAttribute
 }
 
 func toMachineManagementConfig(d *schema.ResourceData) *models.V1MachineManagementConfig {
@@ -57,4 +68,21 @@ func toSSHKeys(cloudConfig map[string]interface{}) ([]string, error) {
 		return nil, errors.New("ssh_key: Kindly specify any one attribute ssh_key or ssh_keys")
 	}
 	return sshKeys, nil
+}
+
+func FlattenControlPlaneAndRepaveInterval(isControlPlane *bool, oi map[string]interface{}, nodeRepaveInterval int32) {
+	if isControlPlane != nil {
+		oi["control_plane"] = *isControlPlane
+		if !*isControlPlane {
+			oi["node_repave_interval"] = int32(nodeRepaveInterval)
+		}
+	}
+}
+
+func ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval int) error {
+	if nodeRepaveInterval != 0 {
+		errMsg := fmt.Sprintf("Validation error: The `node_repave_interval` attribute is not applicable for the control plane. Attempted value: %d.", nodeRepaveInterval)
+		return errors.New(errMsg)
+	}
+	return nil
 }

@@ -25,6 +25,7 @@ description: |-
 ### Optional
 
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
+- `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `host_config` (Block List) (see [below for nested schema](#nestedblock--host_config))
@@ -79,6 +80,7 @@ Optional:
 - `additional_labels` (Map of String)
 - `control_plane` (Boolean)
 - `control_plane_as_worker` (Boolean)
+- `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String)
 

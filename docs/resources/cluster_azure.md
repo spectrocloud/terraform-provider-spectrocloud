@@ -144,6 +144,7 @@ Optional:
 - `control_plane` (Boolean)
 - `control_plane_as_worker` (Boolean)
 - `disk` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--disk))
+- `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `os_type` (String)
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String)

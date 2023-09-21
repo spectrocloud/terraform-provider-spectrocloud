@@ -137,7 +137,7 @@ Required:
 Required:
 
 - `azs` (Set of String)
-- `count` (Number)
+- `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String)
 - `placement` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
@@ -147,6 +147,9 @@ Optional:
 - `additional_labels` (Map of String)
 - `control_plane` (Boolean)
 - `control_plane_as_worker` (Boolean)
+- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
+- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
+- `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String)
 
