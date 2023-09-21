@@ -2,9 +2,11 @@ package spectrocloud
 
 import (
 	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
-	"strings"
 )
 
 var (
@@ -66,4 +68,21 @@ func toSSHKeys(cloudConfig map[string]interface{}) ([]string, error) {
 		return nil, errors.New("ssh_key: Kindly specify any one attribute ssh_key or ssh_keys")
 	}
 	return sshKeys, nil
+}
+
+func FlattenControlPlaneAndRepaveInterval(isControlPlane *bool, oi map[string]interface{}, nodeRepaveInterval int32) {
+	if isControlPlane != nil {
+		oi["control_plane"] = *isControlPlane
+		if !*isControlPlane {
+			oi["node_repave_interval"] = int32(nodeRepaveInterval)
+		}
+	}
+}
+
+func ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval int) error {
+	if nodeRepaveInterval != 0 {
+		errMsg := fmt.Sprintf("Validation error: The `node_repave_interval` attribute is not applicable for the control plane. Attempted value: %d.", nodeRepaveInterval)
+		return errors.New(errMsg)
+	}
+	return nil
 }

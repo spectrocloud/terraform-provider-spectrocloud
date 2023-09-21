@@ -2,15 +2,17 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -239,6 +241,12 @@ func resourceClusterAzure() *schema.Resource {
 						"count": {
 							Type:     schema.TypeInt,
 							Required: true,
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -520,9 +528,9 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
@@ -575,26 +583,32 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolAzureHash(machinePoolResource)
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolAzureHash(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolAzure(machinePoolResource)
+				if err != nil {
+					diag.FromErr(err)
+				}
 
-			machinePool := toMachinePoolAzure(machinePoolResource)
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolAzure(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolAzureHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolAzure(cloudConfigId, machinePool)
+				}
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolAzure(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolAzureHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolAzure(cloudConfigId, machinePool)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -649,7 +663,10 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectr
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolAzure(machinePool)
+		mp, err := toMachinePoolAzure(machinePool)
+		if err != nil {
+			return nil
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -659,7 +676,7 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectr
 	return cluster
 }
 
-func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfigEntity {
+func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -720,5 +737,19 @@ func toMachinePoolAzure(machinePool interface{}) *models.V1AzureMachinePoolConfi
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }

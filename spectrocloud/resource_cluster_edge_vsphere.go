@@ -2,15 +2,17 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -224,7 +226,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Type:     schema.TypeList,
 				Required: true,
 				// disable hash to preserve machine pool order PE-255
-				//Set:      resourceMachinePoolVsphereHash,
+				// Set:      resourceMachinePoolVsphereHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -271,6 +273,12 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						"count": {
 							Type:     schema.TypeInt,
 							Required: true,
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"update_strategy": {
 							Type:     schema.TypeString,
@@ -541,9 +549,9 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
@@ -589,7 +597,10 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	_, err := c.GetCloudConfigEdgeVsphere(cloudConfigId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -608,36 +619,44 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
+		nsMap := make(map[string]interface{})
+
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolVsphereHash(machinePoolResource)
-
-			machinePool := toMachinePoolEdgeVsphere(machinePoolResource)
-
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				oldMachinePool := toMachinePoolEdgeVsphere(oldMachinePool)
-				oldPlacements := oldMachinePool.CloudConfig.Placements
-
-				for i, p := range machinePool.CloudConfig.Placements {
-					if len(oldPlacements) > i {
-						p.UID = oldPlacements[i].UID
-					}
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolVsphereHash(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolEdgeVsphere(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
 				}
 
-				err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
-			}
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					oldMachinePool, _ := toMachinePoolEdgeVsphere(oldMachinePool)
+					oldPlacements := oldMachinePool.CloudConfig.Placements
 
-			if err != nil {
-				return diag.FromErr(err)
-			}
+					for i, p := range machinePool.CloudConfig.Placements {
+						if len(oldPlacements) > i {
+							p.UID = oldPlacements[i].UID
+						}
+					}
 
-			delete(osMap, name)
+					err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				delete(osMap, name)
+			}
 		}
 
 		for _, mp := range osMap {
@@ -689,7 +708,10 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) *models.V1
 
 	machinePoolConfigs := make([]*models.V1VsphereMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolEdgeVsphere(machinePool)
+		mp, err := toMachinePoolEdgeVsphere(machinePool)
+		if err != nil {
+			return nil
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -736,7 +758,7 @@ func getClusterConfigEntity(cloudConfig map[string]interface{}) *models.V1Vspher
 	return clusterConfigEntity
 }
 
-func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachinePoolConfigEntity {
+func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -794,5 +816,20 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) *models.V1VsphereMachineP
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+
+	}
+
+	return mp, nil
 }

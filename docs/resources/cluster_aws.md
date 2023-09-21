@@ -185,7 +185,10 @@ Optional:
 - `control_plane` (Boolean)
 - `control_plane_as_worker` (Boolean)
 - `disk_size_gb` (Number)
+- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `max_price` (String)
+- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
+- `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String)
 

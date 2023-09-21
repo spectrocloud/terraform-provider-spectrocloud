@@ -2,16 +2,18 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -176,7 +178,7 @@ func resourceClusterEdge() *schema.Resource {
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Set:      resourceMachinePoolEdgeHash,
+				Set:      resourceMachinePoolEdgeNativeHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -210,6 +212,12 @@ func resourceClusterEdge() *schema.Resource {
 									},
 								},
 							},
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"control_plane": {
 							Type:     schema.TypeBool,
@@ -391,7 +399,10 @@ func resourceClusterEdgeCreate(ctx context.Context, d *schema.ResourceData, m in
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	cluster := toEdgeCluster(c, d)
+	cluster, err := toEdgeCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	uid, err := c.CreateClusterEdge(cluster)
 	if err != nil {
@@ -457,8 +468,8 @@ func flattenMachinePoolConfigsEdge(machinePools []*models.V1EdgeMachinePoolConfi
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
-
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(&machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
@@ -511,15 +522,19 @@ func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m in
 			if name == "" {
 				continue
 			}
-			hash := resourceMachinePoolEdgeHash(machinePoolResource)
-
-			machinePool := toMachinePoolEdge(machinePoolResource)
+			hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
 
 			var err error
+
+			machinePool, err := toMachinePoolEdge(machinePoolResource)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+
 			if oldMachinePool, ok := osMap[name]; !ok {
 				log.Printf("Create machine pool %s", name)
 				err = c.CreateMachinePoolEdge(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolEdgeHash(oldMachinePool) {
+			} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
 				log.Printf("Change in machine pool %s", name)
 				err = c.UpdateMachinePoolEdge(cloudConfigId, machinePool)
 			}
@@ -553,7 +568,7 @@ func resourceClusterEdgeUpdate(ctx context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-func toEdgeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1SpectroEdgeClusterEntity {
+func toEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroEdgeClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	cluster := &models.V1SpectroEdgeClusterEntity{
@@ -573,7 +588,10 @@ func toEdgeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectro
 
 	machinePoolConfigs := make([]*models.V1EdgeMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolEdge(machinePool)
+		mp, err := toMachinePoolEdge(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -585,10 +603,10 @@ func toEdgeCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Spectro
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
-	return cluster
+	return cluster, nil
 }
 
-func toMachinePoolEdge(machinePool interface{}) *models.V1EdgeMachinePoolConfigEntity {
+func toMachinePoolEdge(machinePool interface{}) (*models.V1EdgeMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -625,5 +643,18 @@ func toMachinePoolEdge(machinePool interface{}) *models.V1EdgeMachinePoolConfigE
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }

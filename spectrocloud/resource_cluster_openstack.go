@@ -2,16 +2,18 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/pkg/client"
 )
 
@@ -256,6 +258,12 @@ func resourceClusterOpenStack() *schema.Resource {
 							Type:     schema.TypeInt,
 							Required: true,
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
+						},
 						"update_strategy": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -485,7 +493,10 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) *models.V1Sp
 	machinePoolConfigs := make([]*models.V1OpenStackMachinePoolConfigEntity, 0)
 
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
-		mp := toMachinePoolOpenStack(machinePool)
+		mp, err := toMachinePoolOpenStack(machinePool)
+		if err != nil {
+			return nil
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -549,9 +560,9 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachin
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		SetAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(&machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
-		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
@@ -574,7 +585,10 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-
+	_, err := c.GetCloudConfigOpenStack(cloudConfigId)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -592,29 +606,36 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
-
+		nsMap := make(map[string]interface{})
 		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			name := machinePoolResource["name"].(string)
-			hash := resourceMachinePoolOpenStackHash(machinePoolResource)
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolOpenStackHash(machinePoolResource)
 
-			machinePool := toMachinePoolOpenStack(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolOpenStack(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
 
-			var err error
-			if oldMachinePool, ok := osMap[name]; !ok {
-				log.Printf("Create machine pool %s", name)
-				err = c.CreateMachinePoolOpenStack(cloudConfigId, machinePool)
-			} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
-				log.Printf("Change in machine pool %s", name)
-				err = c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool)
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolOpenStack(cloudConfigId, machinePool)
+				} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool)
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
 			}
-
-			if err != nil {
-				return diag.FromErr(err)
-			}
-
-			// Processed (if exists)
-			delete(osMap, name)
 		}
 
 		// Deleted old machine pools
@@ -638,7 +659,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 	return diags
 }
 
-func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachinePoolConfigEntity {
+func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachinePoolConfigEntity, error) {
 	m := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -676,5 +697,19 @@ func toMachinePoolOpenStack(machinePool interface{}) *models.V1OpenStackMachineP
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
 	}
-	return mp
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+	}
+
+	return mp, nil
 }
