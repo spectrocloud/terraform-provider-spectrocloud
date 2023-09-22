@@ -338,6 +338,9 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 		GetClusterKubeConfigFn: func(uid string) (string, error) {
 			return "testKubeConfig", nil
 		},
+		GetClusterAdminConfigFn: func(uid string) (string, error) {
+			return "testAdminKubeConfig", nil
+		},
 		GetClusterScanConfigFn: func(uid string) (*models.V1ClusterComplianceScan, error) {
 			clusterCom := &models.V1ClusterComplianceScan{
 				Metadata: &models.V1ObjectMeta{
