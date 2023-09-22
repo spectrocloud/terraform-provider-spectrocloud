@@ -125,6 +125,14 @@ func resourceClusterAws() *schema.Resource {
 							ForceNew: true,
 							Optional: true,
 						},
+						"control_plane_lb": {
+							Type:         schema.TypeString,
+							ForceNew:     true,
+							Default:      "",
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"", "Internet-facing", "internal"}, false),
+							Description:  "Control plane load balancer type. Valid values are `Internet-facing` and `internal`. Defaults to `` (empty string).",
+						},
 					},
 				},
 			},
@@ -501,7 +509,8 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
-	profiles, err := toProfiles(c, d)
+	clusterContext := d.Get("context").(string)
+	profiles, err := toProfiles(c, d, clusterContext)
 	if err != nil {
 		return nil, err
 	}
@@ -516,9 +525,10 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AwsClusterConfig{
-				SSHKeyName: cloudConfig["ssh_key_name"].(string),
-				Region:     types.Ptr(cloudConfig["region"].(string)),
-				VpcID:      cloudConfig["vpc_id"].(string),
+				SSHKeyName:               cloudConfig["ssh_key_name"].(string),
+				Region:                   types.Ptr(cloudConfig["region"].(string)),
+				VpcID:                    cloudConfig["vpc_id"].(string),
+				ControlPlaneLoadBalancer: cloudConfig["control_plane_lb"].(string),
 			},
 		},
 	}

@@ -2,12 +2,14 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"log"
-	"time"
 )
 
 var NodeMaintenanceLifecycleStates = []string{
@@ -84,7 +86,12 @@ func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool 
 func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn GetNodeStatusMap, mPools []interface{}, cloudConfigId string, ClusterContext string) ([]interface{}, error) {
 	_, n := d.GetChange("machine_pool")
 	nsMap := make(map[string]interface{})
-	for _, mp := range n.(*schema.Set).List() {
+	machinePoolsList, i, err := getMachinePoolList(n)
+	if err != nil {
+		return i, err
+	}
+
+	for _, mp := range machinePoolsList {
 		machinePool := mp.(map[string]interface{})
 		nsMap[machinePool["name"].(string)] = machinePool
 	}
@@ -116,4 +123,20 @@ func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn
 		}
 	}
 	return mPools, nil
+}
+
+func getMachinePoolList(n interface{}) ([]interface{}, []interface{}, error) {
+	var machinePoolsList []interface{}
+
+	// Check if n is of type *schema.Set
+	if set, ok := n.(*schema.Set); ok {
+		machinePoolsList = set.List()
+	} else if list, ok := n.([]interface{}); ok {
+		// If n is already a slice of interfaces
+		machinePoolsList = list
+	} else {
+		// Handle error: n is neither *schema.Set nor []interface{}
+		return nil, nil, fmt.Errorf("unexpected type for n: %T", n)
+	}
+	return machinePoolsList, nil, nil
 }

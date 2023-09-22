@@ -166,6 +166,7 @@ Required:
 
 Optional:
 
+- `control_plane_lb` (String) Control plane load balancer type. Valid values are `Internet-facing` and `internal`. Defaults to `` (empty string).
 - `vpc_id` (String)
 
 
