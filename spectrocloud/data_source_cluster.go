@@ -20,6 +20,10 @@ func dataSourceCluster() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"admin_kube_config": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 			"kube_config": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -49,6 +53,12 @@ func dataSourceClusterRead(_ context.Context, d *schema.ResourceData, m interfac
 			kubeConfig, _ := c.GetClusterKubeConfig(cluster.Metadata.UID, ClusterContext)
 			if err := d.Set("kube_config", kubeConfig); err != nil {
 				return diag.FromErr(err)
+			}
+			adminKubeConfig, _ := c.GetClusterAdminKubeConfig(cluster.Metadata.UID, ClusterContext)
+			if adminKubeConfig != "" {
+				if err := d.Set("admin_kube_config", adminKubeConfig); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 			d.SetId(cluster.Metadata.UID)
 			if err := d.Set("name", cluster.Metadata.Name); err != nil {
