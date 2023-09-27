@@ -21,6 +21,14 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		return diag.FromErr(err), true
 	}
 
+	adminKubeConfig, err := c.GetClusterAdminKubeConfig(d.Id(), ClusterContext)
+	if err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("admin_kube_config", adminKubeConfig); err != nil {
+		return diag.FromErr(err), true
+	}
+
 	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
 		return diag.FromErr(err), true
 	}

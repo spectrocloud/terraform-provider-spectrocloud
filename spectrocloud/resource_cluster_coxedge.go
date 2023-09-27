@@ -102,6 +102,11 @@ func resourceClusterCoxEdge() *schema.Resource {
 				Computed:    true,
 				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
 			},
+			"admin_kube_config": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+			},
 			"cloud_config": {
 				Type:        schema.TypeList,
 				ForceNew:    true,
@@ -679,7 +684,8 @@ func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 		}
 	}
 
-	profiles, err := toProfiles(c, d)
+	clusterContext := d.Get("context").(string)
+	profiles, err := toProfiles(c, d, clusterContext)
 	if err != nil {
 		return nil, err
 	}
