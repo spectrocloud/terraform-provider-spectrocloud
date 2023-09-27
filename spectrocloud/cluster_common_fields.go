@@ -67,7 +67,10 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 
 	clusterAdditionalMeta := cluster.Spec.ClusterConfig.ClusterMetaAttribute
 	if clusterAdditionalMeta != "" {
-		d.Set("cluster_meta_attribute", clusterAdditionalMeta)
+		err := d.Set("cluster_meta_attribute", clusterAdditionalMeta)
+		if err != nil {
+			return diag.FromErr(err), true
+		}
 	}
 
 	hostConfig := cluster.Spec.ClusterConfig.HostClusterConfig

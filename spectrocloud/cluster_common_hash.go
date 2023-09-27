@@ -367,23 +367,26 @@ func HashStringMapList(v interface{}) string {
 }
 
 func HashStringMap(v interface{}) string {
-	if v == nil || len(v.(map[string]interface{})) == 0 {
+	if v == nil {
+		return ""
+	}
+
+	m, ok := v.(map[string]interface{})
+	if !ok || len(m) == 0 {
 		return ""
 	}
 
 	var b bytes.Buffer
-	m := v.(map[string]interface{})
 
-	keys := make([]string, 0)
+	// Create and sort the keys
+	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 
-	sortedKeys := make([]string, len(keys))
-	copy(sortedKeys, keys)
-	sort.Strings(sortedKeys)
-
-	for _, k := range sortedKeys {
+	// Construct the string based on sorted keys
+	for _, k := range keys {
 		b.WriteString(fmt.Sprintf("%s-%s", k, m[k].(string)))
 	}
 
