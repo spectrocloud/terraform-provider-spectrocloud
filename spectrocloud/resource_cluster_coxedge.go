@@ -52,6 +52,11 @@ func resourceClusterCoxEdge() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"cluster_meta_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
+			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
@@ -703,6 +708,7 @@ func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 				Environment:                     cloudConfig["environment"].(string),
 			},
 			Machinepoolconfig: machinePoolConfigs,
+			ClusterConfig:     toClusterConfig(d),
 		},
 	}
 
