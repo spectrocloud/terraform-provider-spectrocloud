@@ -52,10 +52,20 @@ func resourceClusterCoxEdge() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"cluster_meta_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
+			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
 				Type:        schema.TypeString,
@@ -91,6 +101,11 @@ func resourceClusterCoxEdge() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+			},
+			"admin_kube_config": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
 			},
 			"cloud_config": {
 				Type:        schema.TypeList,
@@ -669,7 +684,8 @@ func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 		}
 	}
 
-	profiles, err := toProfiles(c, d)
+	clusterContext := d.Get("context").(string)
+	profiles, err := toProfiles(c, d, clusterContext)
 	if err != nil {
 		return nil, err
 	}
@@ -692,6 +708,7 @@ func toCoxEdgeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 				Environment:                     cloudConfig["environment"].(string),
 			},
 			Machinepoolconfig: machinePoolConfigs,
+			ClusterConfig:     toClusterConfig(d),
 		},
 	}
 

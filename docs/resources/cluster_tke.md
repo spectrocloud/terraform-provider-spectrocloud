@@ -26,7 +26,7 @@ description: |-
 
 ### Optional
 
-- `apply_setting` (String)
+- `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
@@ -42,6 +42,7 @@ description: |-
 
 ### Read-Only
 
+- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
@@ -147,10 +148,10 @@ Required:
 Optional:
 
 - `manifest` (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack--manifest))
-- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry.
-- `tag` (String) The tag of the pack. The tag is the version of the pack.
-- `type` (String) The type of the pack. The default value is `spectro`.
-- `uid` (String)
+- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name.
+- `tag` (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`.
+- `type` (String) The type of the pack. Allowed values are `spectro`, `manifest` or `helm`. The default value is `spectro`.
+- `uid` (String) The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro`.
 - `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
 <a id="nestedblock--cluster_profile--pack--manifest"></a>

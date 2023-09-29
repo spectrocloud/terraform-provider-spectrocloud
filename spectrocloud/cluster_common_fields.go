@@ -21,6 +21,14 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		return diag.FromErr(err), true
 	}
 
+	adminKubeConfig, err := c.GetClusterAdminKubeConfig(d.Id(), ClusterContext)
+	if err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("admin_kube_config", adminKubeConfig); err != nil {
+		return diag.FromErr(err), true
+	}
+
 	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
 		return diag.FromErr(err), true
 	}
@@ -53,6 +61,14 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		return diag.FromErr(err), true
 	} else if namespace != nil && namespace.Items != nil {
 		if err := d.Set("namespaces", flattenClusterNamespaces(namespace.Items)); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	clusterAdditionalMeta := cluster.Spec.ClusterConfig.ClusterMetaAttribute
+	if clusterAdditionalMeta != "" {
+		err := d.Set("cluster_meta_attribute", clusterAdditionalMeta)
+		if err != nil {
 			return diag.FromErr(err), true
 		}
 	}
@@ -126,6 +142,12 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 
 	if d.HasChange("host_config") {
 		if err := updateHostConfig(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if d.HasChange("cluster_meta_attribute") {
+		if err := updateClusterAdditionalMetadata(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
 	}
