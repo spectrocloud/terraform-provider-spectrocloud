@@ -27,11 +27,20 @@ func toNtpServers(in map[string]interface{}) []string {
 
 func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfigEntity {
 	return &models.V1ClusterConfigEntity{
+		ClusterMetaAttribute:    toClusterMetaAttribute(d),
 		MachineManagementConfig: toMachineManagementConfig(d),
 		Resources:               toClusterResourceConfig(d),
 		HostClusterConfig:       toClusterHostConfigs(d),
 		Location:                toClusterLocationConfigs(d),
 	}
+}
+
+func toClusterMetaAttribute(d *schema.ResourceData) string {
+	clusterMetadataAttribute := ""
+	if v, ok := d.GetOk("cluster_meta_attribute"); ok {
+		clusterMetadataAttribute = v.(string)
+	}
+	return clusterMetadataAttribute
 }
 
 func toMachineManagementConfig(d *schema.ResourceData) *models.V1MachineManagementConfig {

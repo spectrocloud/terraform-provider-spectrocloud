@@ -53,6 +53,11 @@ func resourceClusterMaas() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"cluster_meta_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
+			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
@@ -96,6 +101,11 @@ func resourceClusterMaas() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+			},
+			"admin_kube_config": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -453,7 +463,8 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	DomainVal := cloudConfig["domain"].(string)
 
-	profiles, err := toProfiles(c, d)
+	clusterContext := d.Get("context").(string)
+	profiles, err := toProfiles(c, d, clusterContext)
 	if err != nil {
 		return nil, err
 	}

@@ -23,6 +23,7 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 	cConfig = append(cConfig, map[string]interface{}{
 		"id": "vmware-basic-infra-profile-id",
 	})
+	d.Set("cluster_meta_attribute", "{'nic_name': 'test', 'env': 'stage'}")
 	d.Set("cluster_profile", cConfig)
 	d.Set("cloud_account_id", "vmware-basic-account-id")
 
@@ -141,6 +142,9 @@ func TestToVsphereCluster(t *testing.T) {
 
 	// Verifying cluster name attribute
 	assert.Equal("vmware-basic-infra-profile-id", vSphereSchema.Spec.Profiles[0].UID)
+
+	// Verifying cluster_meta_attribute attribute
+	assert.Equal("{'nic_name': 'test', 'env': 'stage'}", vSphereSchema.Spec.ClusterConfig.ClusterMetaAttribute)
 
 	// Verifying account id attribute
 	assert.Equal("vmware-basic-account-id", vSphereSchema.Spec.CloudAccountUID)
@@ -337,6 +341,9 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 		},
 		GetClusterKubeConfigFn: func(uid string) (string, error) {
 			return "testKubeConfig", nil
+		},
+		GetClusterAdminConfigFn: func(uid string) (string, error) {
+			return "testAdminKubeConfig", nil
 		},
 		GetClusterScanConfigFn: func(uid string) (*models.V1ClusterComplianceScan, error) {
 			clusterCom := &models.V1ClusterComplianceScan{

@@ -207,7 +207,8 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 
 func toCloudClusterProfiles(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroClusterProfiles, error) {
 	if profiles := d.Get("cluster_profile").([]interface{}); len(profiles) > 0 {
-		profiles, err := toProfiles(c, d)
+		clusterContext := d.Get("context").(string)
+		profiles, err := toProfiles(c, d, clusterContext)
 		if err != nil {
 			return nil, err
 		}

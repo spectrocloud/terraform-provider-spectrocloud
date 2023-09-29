@@ -56,6 +56,11 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"cluster_meta_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
+			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -85,6 +90,11 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+			},
+			"admin_kube_config": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -181,6 +191,12 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 							Type:        schema.TypeInt,
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"update_strategy": {
 							Type:         schema.TypeString,
@@ -355,6 +371,7 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 		oi := make(map[string]interface{})
 
 		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
@@ -494,7 +511,8 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 
 	vip := cloudConfig["vip"].(string)
 
-	profiles, err := toProfiles(c, d)
+	clusterContext := d.Get("context").(string)
+	profiles, err := toProfiles(c, d, clusterContext)
 	if err != nil {
 		return nil, err
 	}
@@ -628,6 +646,20 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachine
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if m["node_repave_interval"] != nil {
+			nodeRepaveInterval = m["node_repave_interval"].(int)
+		}
+		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		if err != nil {
+			return mp, err
+		}
+
 	}
 
 	return mp, nil
