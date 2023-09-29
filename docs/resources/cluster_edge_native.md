@@ -88,6 +88,7 @@ Required:
 
 Optional:
 
+- `host_name` (String) Edge host name
 - `static_ip` (String) Edge host static IP
 
 
