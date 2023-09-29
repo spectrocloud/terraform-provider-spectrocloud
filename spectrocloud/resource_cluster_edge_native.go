@@ -523,14 +523,14 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 		},
 	}
 
+	nodeRepaveInterval := 0
+	if m["node_repave_interval"] != nil {
+		nodeRepaveInterval = m["node_repave_interval"].(int)
+	}
 	if !controlPlane {
-		nodeRepaveInterval := 0
-		if m["node_repave_interval"] != nil {
-			nodeRepaveInterval = m["node_repave_interval"].(int)
-		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	} else {
-		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		err := ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval)
 		if err != nil {
 			return mp, err
 		}

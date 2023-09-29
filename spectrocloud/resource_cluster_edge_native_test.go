@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/spectrocloud/hapi/models"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -233,6 +234,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 				map[string]interface{}{
 					"additional_labels":       map[string]string{"label1": "value1"},
 					"control_plane_as_worker": false,
+					"control_plane":           false,
+					"node_repave_interval":    int32(0),
 					"name":                    "pool1",
 					"edge_host": []map[string]string{
 						{
@@ -251,6 +254,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 				map[string]interface{}{
 					"additional_labels":       map[string]string{"label2": "value2"},
 					"control_plane_as_worker": true,
+					"control_plane":           false,
+					"node_repave_interval":    int32(0),
 					"name":                    "pool2",
 					"edge_host": []map[string]string{
 						{
@@ -268,14 +273,49 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := flattenMachinePoolConfigsEdgeNative(tt.input)
+
 			if len(result) != len(tt.expected) {
 				t.Errorf("Expected length %v, got %v", len(tt.expected), len(result))
+				return
 			}
+
 			for i, expectedMap := range tt.expected {
-				if !reflect.DeepEqual(result[i], expectedMap) {
-					t.Logf("Expected: %#v\n", expectedMap)
-					t.Logf("Actual: %#v\n", result[i])
-					t.Errorf("Test %s failed. Expected %v, got %v", tt.name, expectedMap, result[i])
+				if diff := cmp.Diff(expectedMap, result[i]); diff != "" {
+					t.Errorf("Test %s failed for item %d. Mismatch (-expected +actual):\n%s", tt.name, i, diff)
+				}
+			}
+		})
+	}
+}
+
+func TestValidationNodeRepaveIntervalForControlPlane(t *testing.T) {
+	tests := []struct {
+		name            string
+		nodeRepaveValue int
+		hasError        bool
+	}{
+		{
+			name:            "Zero node repave interval for control plane",
+			nodeRepaveValue: 0,
+			hasError:        false,
+		},
+		{
+			name:            "Non-zero node repave interval for control plane",
+			nodeRepaveValue: 10,
+			hasError:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidationNodeRepaveIntervalForControlPlane(tt.nodeRepaveValue)
+			if tt.hasError {
+				if err == nil {
+					t.Errorf("Expected an error but got none.")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, but got an error: %v", err)
 				}
 			}
 		})
