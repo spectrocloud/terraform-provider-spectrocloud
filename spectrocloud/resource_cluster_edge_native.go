@@ -53,6 +53,11 @@ func resourceClusterEdgeNative() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"cluster_meta_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
+			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
@@ -201,6 +206,12 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"host_name": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Default:     "",
+										Description: "Edge host name",
+									},
 									"host_uid": {
 										Type:        schema.TypeString,
 										Description: "Edge host id",
@@ -332,12 +343,13 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 
 		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
 		FlattenControlPlaneAndRepaveInterval(&machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
-    oi["control_plane"] = machinePool.IsControlPlane
+		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		var hosts []map[string]string
 		for _, host := range machinePool.Hosts {
 			hosts = append(hosts, map[string]string{
+				"host_name": host.HostName,
 				"host_uid":  *host.HostUID,
 				"static_ip": host.StaticIP,
 			})
@@ -511,14 +523,14 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 		},
 	}
 
+	nodeRepaveInterval := 0
+	if m["node_repave_interval"] != nil {
+		nodeRepaveInterval = m["node_repave_interval"].(int)
+	}
 	if !controlPlane {
-		nodeRepaveInterval := 0
-		if m["node_repave_interval"] != nil {
-			nodeRepaveInterval = m["node_repave_interval"].(int)
-		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	} else {
-		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		err := ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval)
 		if err != nil {
 			return mp, err
 		}
@@ -534,8 +546,13 @@ func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudC
 		return nil
 	}
 	for _, host := range m["edge_host"].([]interface{}) {
+		hostName := ""
+		if v, ok := host.(map[string]interface{})["host_name"].(string); ok {
+			hostName = v
+		}
 		hostId := host.(map[string]interface{})["host_uid"].(string)
 		edgeHosts = append(edgeHosts, &models.V1EdgeNativeMachinePoolHostEntity{
+			HostName: hostName,
 			HostUID:  &hostId,
 			StaticIP: host.(map[string]interface{})["static_ip"].(string),
 		})

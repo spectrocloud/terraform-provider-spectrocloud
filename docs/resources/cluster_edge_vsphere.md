@@ -27,6 +27,7 @@ description: |-
 ### Optional
 
 - `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
+- `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `context` (String) The context of the Edge cluster. Can be `project` or `tenant`. Default is `project`.
