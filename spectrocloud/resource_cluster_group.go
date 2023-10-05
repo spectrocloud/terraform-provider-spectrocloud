@@ -289,7 +289,7 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 			UID:    d.Id(),
 			Labels: toTags(d),
 		},
-		Spec: &models.V1ClusterGroupSpec{
+		Spec: &models.V1ClusterGroupSpecEntity{
 			Type:           "hostCluster",
 			ClusterRefs:    clusterRefs,
 			ClustersConfig: GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, values),

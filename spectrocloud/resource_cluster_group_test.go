@@ -214,7 +214,7 @@ func TestToClusterGroupUpdate(t *testing.T) {
 		Values:             "my_values",
 	}
 	clusterGroupEntity := &models.V1ClusterGroupEntity{
-		Spec: &models.V1ClusterGroupSpec{
+		Spec: &models.V1ClusterGroupSpecEntity{
 			ClusterRefs:    clusterRefs,
 			ClustersConfig: clustersConfig,
 		},
