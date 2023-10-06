@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -38,6 +39,13 @@ func resourceClusterImport() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the cluster. Can be `project` or `tenant`. Default is `project`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -103,7 +111,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	if profiles != nil {
-		if err := c.UpdateClusterProfileValues(uid, profiles); err != nil {
+		if err := c.UpdateClusterProfileValues(uid, ClusterContext, profiles); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -198,7 +206,8 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = c.UpdateClusterProfileValues(d.Id(), profiles)
+	ClusterContext := d.Get("context").(string)
+	err = c.UpdateClusterProfileValues(d.Id(), ClusterContext, profiles)
 	if err != nil {
 		return diag.FromErr(err)
 	}
