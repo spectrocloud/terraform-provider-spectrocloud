@@ -258,3 +258,14 @@ func TestFlattenAdditionalLabelsAndTaints(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateClusterRBAC(t *testing.T) {
+	d := resourceClusterVsphere().TestResourceData()
+
+	// Case 1: rbacs context is invalid
+	d.Set("context", "invalid")
+	err := updateClusterRBAC(nil, d)
+	if err == nil || err.Error() != "invalid Context set - invalid" {
+		t.Errorf("Expected 'invalid Context set - invalid', got %v", err)
+	}
+}
