@@ -181,7 +181,7 @@ func prepareAddonDeploymentTestData(id string) *schema.ResourceData {
 
 	// Set the cluster_uid, cluster_context, and apply_setting fields
 	d.Set("cluster_uid", "cluster-123")
-	d.Set("cluster_context", "tenant")
+	d.Set("context", "tenant")
 	d.Set("apply_setting", "test-setting")
 
 	// Set up the cluster_profile field

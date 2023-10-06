@@ -24,17 +24,17 @@ func toAddonDeplProfiles(c *client.V1Client, d *schema.ResourceData) ([]*models.
 	if uid, ok := d.GetOk("cluster_uid"); ok && uid != nil {
 		clusterUid = uid.(string) //d.Get("cluster_uid").(string)
 	}
-	if ct, ok := d.GetOk("cluster_context"); ok && c != nil {
-		clusterContext = ct.(string) //d.Get("cluster_context").(string)
-	}
 	// handling cluster day 2 addon profile operation flow
 	if clusterUid == "" {
 		clusterUid = d.Id()
 	}
-	if clusterContext == "" {
-		clusterContext = d.Get("context").(string)
+	if ct, ok := d.GetOk("context"); ok && c != nil {
+		clusterContext = ct.(string)
 	}
-
+	err := ValidateContext(clusterContext)
+	if err != nil {
+		return nil, err
+	}
 	return toProfilesCommon(c, d, clusterUid, clusterContext)
 }
 
