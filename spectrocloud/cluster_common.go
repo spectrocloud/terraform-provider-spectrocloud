@@ -92,3 +92,10 @@ func ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval int) error {
 	}
 	return nil
 }
+
+func ValidateContext(context string) error {
+	if context != "project" && context != "tenant" {
+		return fmt.Errorf("invalid Context set - %s", context)
+	}
+	return nil
+}
