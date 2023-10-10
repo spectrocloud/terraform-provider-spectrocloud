@@ -154,7 +154,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		SpcApplySettings: settings,
 	}
 	clusterContext := d.Get("context").(string)
-	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
+	if err := c.UpdateClusterProfileValues(d.Id(), clusterContext, body); err != nil {
 		return err
 	}
 
