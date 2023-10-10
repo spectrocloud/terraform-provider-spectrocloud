@@ -141,10 +141,6 @@ func setPackManifests(pack *models.V1PackValuesEntity, p map[string]interface{},
 
 func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	log.Printf("Updating profiles")
-	var clusterContext string
-	if ct, ok := d.GetOk("context"); ok && c != nil {
-		clusterContext = ct.(string)
-	}
 	profiles, err := toAddonDeplProfiles(c, d)
 	if err != nil {
 		return err
@@ -157,8 +153,8 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		Profiles:         profiles,
 		SpcApplySettings: settings,
 	}
-	clusterContext = d.Get("context").(string)
-	if err := c.UpdateClusterProfileValues(d.Id(), clusterContext, body); err != nil {
+	clusterContext := d.Get("context").(string)
+	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
 		return err
 	}
 

@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
@@ -111,7 +112,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	if profiles != nil {
-		if err := c.UpdateClusterProfileValues(uid, ClusterContext, profiles); err != nil {
+		if err := c.UpdateClusterProfileValues(uid, profiles); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -206,8 +207,7 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	ClusterContext := d.Get("context").(string)
-	err = c.UpdateClusterProfileValues(d.Id(), ClusterContext, profiles)
+	err = c.UpdateClusterProfileValues(d.Id(), profiles)
 	if err != nil {
 		return diag.FromErr(err)
 	}
