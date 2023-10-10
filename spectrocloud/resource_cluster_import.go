@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
@@ -38,6 +40,13 @@ func resourceClusterImport() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the cluster. Can be `project` or `tenant`. Default is `project`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,

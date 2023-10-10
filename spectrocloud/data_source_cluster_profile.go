@@ -3,14 +3,13 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceClusterProfile() *schema.Resource {
@@ -41,7 +40,67 @@ func dataSourceClusterProfile() *schema.Resource {
 				Computed:     true,
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
 			},
-			"pack": schemas.PackSchema(),
+			"pack": {
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "spectro",
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"uid": {
+							Type:     schema.TypeString,
+							Computed: true,
+							Optional: true,
+						},
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"manifest": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"uid": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"content": {
+										Type:     schema.TypeString,
+										Required: true,
+										DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+											return strings.TrimSpace(old) == strings.TrimSpace(new)
+										},
+									},
+								},
+							},
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Optional: true,
+							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+								// UI strips the trailing newline on save
+								return strings.TrimSpace(old) == strings.TrimSpace(new)
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }

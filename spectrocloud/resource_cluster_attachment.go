@@ -36,7 +36,7 @@ func resourceAddonDeployment() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"cluster_context": {
+			"context": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -65,7 +65,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	clusterUid := d.Get("cluster_uid").(string)
-	clusterScope := d.Get("cluster_context").(string)
+	clusterScope := d.Get("context").(string)
 
 	cluster, err := c.GetCluster(clusterScope, clusterUid)
 	if err != nil && cluster == nil {
@@ -141,7 +141,7 @@ func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	clusterUid := d.Get("cluster_uid").(string)
-	clusterScope := d.Get("cluster_context").(string)
+	clusterScope := d.Get("context").(string)
 	cluster, err := c.GetCluster(clusterScope, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -163,7 +163,7 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 		c := m.(*client.V1Client)
 
 		clusterUid := d.Get("cluster_uid").(string)
-		clusterScope := d.Get("cluster_context").(string)
+		clusterScope := d.Get("context").(string)
 
 		cluster, err := c.GetCluster(clusterScope, clusterUid)
 		if err != nil && cluster == nil {
