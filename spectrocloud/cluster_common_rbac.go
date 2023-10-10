@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/hapi/models"
@@ -134,7 +135,10 @@ func flattenClusterRBAC(items []*models.V1ClusterRbac) []interface{} {
 }
 
 func updateClusterRBAC(c *client.V1Client, d *schema.ResourceData) error {
-	ClusterContext := d.Get("cluster").(string)
+	ClusterContext := d.Get("context").(string)
+	if ClusterContext != "project" && ClusterContext != "tenant" {
+		return fmt.Errorf("invalid Context set - %s", ClusterContext)
+	}
 	if rbacs := toClusterRBACsInputEntities(d); rbacs != nil {
 		return c.ApplyClusterRbacConfig(d.Id(), rbacs, ClusterContext)
 	}
