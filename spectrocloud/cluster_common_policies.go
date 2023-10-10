@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"errors"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -68,7 +69,6 @@ func updateBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	} else {
 		return errors.New("backup policy validation: The backup policy cannot be destroyed. To disable it, set the schedule to an empty string")
 	}
-	return nil
 }
 
 func toScanPolicy(d *schema.ResourceData) *models.V1ClusterComplianceScheduleConfig {
