@@ -162,10 +162,21 @@ func resourceClusterEks() *schema.Resource {
 							Default:      "public",
 						},
 						"public_access_cidrs": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							ForceNew: true,
-							Set:      schema.HashString,
+							Type:        schema.TypeSet,
+							Optional:    true,
+							ForceNew:    true,
+							Set:         schema.HashString,
+							Description: "List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.",
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"private_access_cidrs": {
+							Type:        schema.TypeSet,
+							Optional:    true,
+							ForceNew:    true,
+							Set:         schema.HashString,
+							Description: "List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -425,6 +436,11 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	ret["public_access_cidrs"] = make([]string, 0)
 	if cloudConfig.Spec.ClusterConfig.EndpointAccess.PublicCIDRs != nil {
 		ret["public_access_cidrs"] = cloudConfig.Spec.ClusterConfig.EndpointAccess.PublicCIDRs
+	}
+
+	ret["private_access_cidrs"] = make([]string, 0)
+	if cloudConfig.Spec.ClusterConfig.EndpointAccess.PrivateCIDRs != nil {
+		ret["private_access_cidrs"] = cloudConfig.Spec.ClusterConfig.EndpointAccess.PrivateCIDRs
 	}
 
 	for _, pool := range cloudConfig.Spec.MachinePoolConfig {
@@ -720,6 +736,14 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 			cidrs = append(cidrs, cidr.(string))
 		}
 		access.PublicCIDRs = cidrs
+	}
+
+	if cloudConfig["private_access_cidrs"] != nil {
+		cidrs := make([]string, 0, 1)
+		for _, cidr := range cloudConfig["private_access_cidrs"].(*schema.Set).List() {
+			cidrs = append(cidrs, cidr.(string))
+		}
+		access.PrivateCIDRs = cidrs
 	}
 
 	cluster.Spec.CloudConfig.EndpointAccess = access

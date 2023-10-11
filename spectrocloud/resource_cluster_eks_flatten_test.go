@@ -178,3 +178,65 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 		})
 	}
 }
+
+func TestFlattenClusterConfigsEKSPrivateCIDRS(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    *models.V1EksCloudConfig
+		expected []interface{}
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: []interface{}{},
+		},
+		{
+			name: "non-empty input",
+			input: &models.V1EksCloudConfig{
+				Spec: &models.V1EksCloudConfigSpec{
+					ClusterConfig: &models.V1EksClusterConfig{
+						Region: types.Ptr("us-west-2"),
+						EndpointAccess: &models.V1EksClusterConfigEndpointAccess{
+							PrivateCIDRs: []string{"172.23.12.12/0"},
+							Private:      true,
+							Public:       false,
+						},
+						EncryptionConfig: &models.V1EncryptionConfig{
+							IsEnabled: true,
+							Provider:  "arn:aws:kms:us-west-2:123456789012:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+						},
+						VpcID:      "vpc-0abcd1234ef56789",
+						SSHKeyName: "my-key-pair",
+					},
+					MachinePoolConfig: []*models.V1EksMachinePoolConfig{
+						{
+							Name:      "master-pool",
+							SubnetIds: map[string]string{"subnet-12345678": "subnet-87654321"},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"region":                "us-west-2",
+					"public_access_cidrs":   []string{},
+					"private_access_cidrs":  []string{"172.23.12.12/0"},
+					"az_subnets":            map[string]string{"subnet-12345678": "subnet-87654321"},
+					"encryption_config_arn": "arn:aws:kms:us-west-2:123456789012:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
+					"endpoint_access":       "private",
+					"vpc_id":                "vpc-0abcd1234ef56789",
+					"ssh_key_name":          "my-key-pair",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := flattenClusterConfigsEKS(tc.input)
+			if !cmp.Equal(result, tc.expected) {
+				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
+			}
+		})
+	}
+}
