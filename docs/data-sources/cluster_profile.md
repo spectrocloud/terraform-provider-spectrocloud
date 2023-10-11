@@ -29,39 +29,33 @@ output "same" {
 
 - `context` (String)
 - `name` (String)
-- `pack` (Block List) (see [below for nested schema](#nestedblock--pack))
 - `version` (String)
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `pack` (List of Object) (see [below for nested schema](#nestedatt--pack))
 
-<a id="nestedblock--pack"></a>
+<a id="nestedatt--pack"></a>
 ### Nested Schema for `pack`
-
-Required:
-
-- `name` (String) The name of the pack. The name must be unique within the cluster profile.
-
-Optional:
-
-- `manifest` (Block List) (see [below for nested schema](#nestedblock--pack--manifest))
-- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name.
-- `tag` (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`.
-- `type` (String) The type of the pack. Allowed values are `spectro`, `manifest` or `helm`. The default value is `spectro`.
-- `uid` (String) The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro`.
-- `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
-
-<a id="nestedblock--pack--manifest"></a>
-### Nested Schema for `pack.manifest`
-
-Required:
-
-- `content` (String) The content of the manifest. The content is the YAML content of the manifest.
-- `name` (String) The name of the manifest. The name must be unique within the pack.
 
 Read-Only:
 
+- `manifest` (List of Object) (see [below for nested schema](#nestedobjatt--pack--manifest))
+- `name` (String)
+- `registry_uid` (String)
+- `tag` (String)
+- `type` (String)
+- `uid` (String)
+- `values` (String)
+
+<a id="nestedobjatt--pack--manifest"></a>
+### Nested Schema for `pack.manifest`
+
+Read-Only:
+
+- `content` (String)
+- `name` (String)
 - `uid` (String)
 
 

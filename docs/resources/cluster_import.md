@@ -60,6 +60,7 @@ resource "spectrocloud_cluster_import" "cluster" {
 ### Optional
 
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
+- `context` (String) The context of the cluster. Can be `project` or `tenant`. Default is `project`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 

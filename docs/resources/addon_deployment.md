@@ -18,8 +18,8 @@ description: |-
 
 ### Required
 
-- `cluster_context` (String)
 - `cluster_uid` (String)
+- `context` (String)
 
 ### Optional
 
