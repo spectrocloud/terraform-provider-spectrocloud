@@ -80,7 +80,7 @@ Required:
 
 Optional:
 
-- `pack` (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack))
+- `pack` (Block List) For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified. (see [below for nested schema](#nestedblock--cluster_profile--pack))
 
 <a id="nestedblock--cluster_profile--pack"></a>
 ### Nested Schema for `cluster_profile.pack`
