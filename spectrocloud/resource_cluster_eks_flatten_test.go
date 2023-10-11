@@ -158,6 +158,7 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 			expected: []interface{}{
 				map[string]interface{}{
 					"region":                "us-west-2",
+					"private_access_cidrs":  []string{},
 					"public_access_cidrs":   []string{"0.0.0.0/0"},
 					"az_subnets":            map[string]string{"subnet-12345678": "subnet-87654321"},
 					"encryption_config_arn": "arn:aws:kms:us-west-2:123456789012:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
