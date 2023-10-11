@@ -8,8 +8,9 @@ import (
 
 func PackSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:     schema.TypeList,
-		Optional: true,
+		Type:        schema.TypeList,
+		Optional:    true,
+		Description: "For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified.",
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"uid": {
