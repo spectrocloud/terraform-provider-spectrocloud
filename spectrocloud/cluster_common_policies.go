@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"errors"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -62,9 +64,11 @@ func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
 
 func updateBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	if policy := toBackupPolicy(d); policy != nil {
-		return c.UpdateClusterBackupConfig(d.Id(), policy)
+		clusterContext := d.Get("context").(string)
+		return c.ApplyClusterBackupConfig(d.Id(), policy, clusterContext)
+	} else {
+		return errors.New("backup policy validation: The backup policy cannot be destroyed. To disable it, set the schedule to an empty string")
 	}
-	return nil
 }
 
 func toScanPolicy(d *schema.ResourceData) *models.V1ClusterComplianceScheduleConfig {
@@ -100,6 +104,7 @@ func toScanPolicy(d *schema.ResourceData) *models.V1ClusterComplianceScheduleCon
 func flattenScanPolicy(driverSpec map[string]models.V1ComplianceScanDriverSpec) []interface{} {
 	result := make([]interface{}, 0, 1)
 	data := make(map[string]interface{})
+
 	if v, found := driverSpec["kube-bench"]; found {
 		data["configuration_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
 	}
@@ -109,14 +114,30 @@ func flattenScanPolicy(driverSpec map[string]models.V1ComplianceScanDriverSpec) 
 	if v, found := driverSpec["sonobuoy"]; found {
 		data["conformance_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
 	}
-	result = append(result, data)
+	if data["configuration_scan_schedule"] == "" && data["penetration_scan_schedule"] == "" && data["conformance_scan_schedule"] == "" {
+		return result
+	} else {
+		result = append(result, data)
+	}
 	return result
 }
 
 func updateScanPolicy(c *client.V1Client, d *schema.ResourceData) error {
-	if policy := toScanPolicy(d); policy != nil {
+	if policy := toScanPolicy(d); policy != nil || d.HasChange("scan_policy") {
 		ClusterContext := d.Get("context").(string)
+		if policy == nil {
+			policy = getEmptyScanPolicy()
+		}
 		return c.ApplyClusterScanConfig(d.Id(), policy, ClusterContext)
 	}
 	return nil
+}
+
+func getEmptyScanPolicy() *models.V1ClusterComplianceScheduleConfig {
+	scanPolicy := &models.V1ClusterComplianceScheduleConfig{
+		KubeBench:  &models.V1ClusterComplianceScanKubeBenchScheduleConfig{Schedule: &models.V1ClusterFeatureSchedule{ScheduledRunTime: ""}},
+		KubeHunter: &models.V1ClusterComplianceScanKubeHunterScheduleConfig{Schedule: &models.V1ClusterFeatureSchedule{ScheduledRunTime: ""}},
+		Sonobuoy:   &models.V1ClusterComplianceScanSonobuoyScheduleConfig{Schedule: &models.V1ClusterFeatureSchedule{ScheduledRunTime: ""}},
+	}
+	return scanPolicy
 }

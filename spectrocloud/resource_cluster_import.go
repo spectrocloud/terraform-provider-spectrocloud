@@ -112,7 +112,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	if profiles != nil {
-		if err := c.UpdateClusterProfileValues(uid, profiles); err != nil {
+		if err := c.UpdateClusterProfileValues(uid, ClusterContext, profiles); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -207,7 +207,8 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = c.UpdateClusterProfileValues(d.Id(), profiles)
+	clusterContext := d.Get("context").(string)
+	err = c.UpdateClusterProfileValues(d.Id(), clusterContext, profiles)
 	if err != nil {
 		return diag.FromErr(err)
 	}
