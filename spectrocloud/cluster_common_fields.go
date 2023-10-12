@@ -41,7 +41,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
+	if policy, err := c.GetClusterScanConfig(d.Id(), ClusterContext); err != nil {
 		return diag.FromErr(err), true
 	} else if policy != nil && policy.Spec.DriverSpec != nil {
 		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
@@ -57,7 +57,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	if namespace, err := c.GetClusterNamespaceConfig(d.Id()); err != nil {
+	if namespace, err := c.GetClusterNamespaceConfig(d.Id(), ClusterContext); err != nil {
 		return diag.FromErr(err), true
 	} else if namespace != nil && namespace.Items != nil {
 		if err := d.Set("namespaces", flattenClusterNamespaces(namespace.Items)); err != nil {

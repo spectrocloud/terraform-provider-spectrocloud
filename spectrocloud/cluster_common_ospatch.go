@@ -14,10 +14,26 @@ import (
 
 func updateClusterOsPatchConfig(c *client.V1Client, d *schema.ResourceData) error {
 	machineConfig := toMachineManagementConfig(d)
-	if machineConfig != nil {
-		return c.UpdateClusterOsPatchConfig(d.Id(), toUpdateOsPatchEntityClusterRbac(machineConfig.OsPatchConfig))
+	clusterContext := d.Get("context").(string)
+	err := ValidateContext(clusterContext)
+	if err != nil {
+		return err
+	}
+	if machineConfig.OsPatchConfig != nil {
+		return c.UpdateClusterOsPatchConfig(d.Id(), clusterContext, toUpdateOsPatchEntityClusterRbac(machineConfig.OsPatchConfig))
+	} else {
+		return c.UpdateClusterOsPatchConfig(d.Id(), clusterContext, toUpdateOsPatchEntityClusterRbac(getDefaultOsPatchConfig().OsPatchConfig))
 	}
 	return nil
+}
+
+func getDefaultOsPatchConfig() *models.V1MachineManagementConfig {
+	return &models.V1MachineManagementConfig{
+		OsPatchConfig: &models.V1OsPatchConfig{
+			PatchOnBoot:      false,
+			RebootIfRequired: false,
+		},
+	}
 }
 
 func toUpdateOsPatchEntityClusterRbac(config *models.V1OsPatchConfig) *models.V1OsPatchEntity {

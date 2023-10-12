@@ -60,9 +60,9 @@ func BackupPolicySchema() *schema.Schema {
 					Description: "The list of cluster UIDs to include in the backup. If `include_all_clusters` is set to `true`, then all clusters will be included.",
 				},
 				"include_all_clusters": {
-					Type:        schema.TypeBool,
-					Optional:    true,
-					Default:     true,
+					Type:     schema.TypeBool,
+					Optional: true,
+					//Default:     true,
 					Description: "Whether to include all clusters in the backup. If set to false, only the clusters specified in `cluster_uids` will be included.",
 				},
 			},

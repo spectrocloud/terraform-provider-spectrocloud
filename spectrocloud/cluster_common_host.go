@@ -106,7 +106,12 @@ func flattenSourceRanges(hostConfig *models.V1HostClusterConfig) string {
 
 func updateHostConfig(c *client.V1Client, d *schema.ResourceData) error {
 	if hostConfigs := toClusterHostConfigs(d); hostConfigs != nil {
-		return c.ApplyClusterHostConfig(d.Id(), &models.V1HostClusterConfigEntity{
+		clusterContext := d.Get("context").(string)
+		err := ValidateContext(clusterContext)
+		if err != nil {
+			return err
+		}
+		return c.ApplyClusterHostConfig(d.Id(), clusterContext, &models.V1HostClusterConfigEntity{
 			HostClusterConfig: hostConfigs,
 		})
 	}
