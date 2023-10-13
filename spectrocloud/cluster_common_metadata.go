@@ -7,7 +7,12 @@ import (
 )
 
 func updateClusterMetadata(c *client.V1Client, d *schema.ResourceData) error {
-	return c.UpdateClusterMetadata(d.Id(), toUpdateClusterMetadata(d))
+	clusterContext := d.Get("context").(string)
+	err := ValidateContext(clusterContext)
+	if err != nil {
+		return err
+	}
+	return c.UpdateClusterMetadata(d.Id(), clusterContext, toUpdateClusterMetadata(d))
 }
 
 func toUpdateClusterMetadata(d *schema.ResourceData) *models.V1ObjectMetaInputEntitySchema {
@@ -17,7 +22,12 @@ func toUpdateClusterMetadata(d *schema.ResourceData) *models.V1ObjectMetaInputEn
 }
 
 func updateClusterAdditionalMetadata(c *client.V1Client, d *schema.ResourceData) error {
-	return c.UpdateAdditionalClusterMetadata(d.Id(), toUpdateClusterAdditionalMetadata(d))
+	clusterContext := d.Get("context").(string)
+	err := ValidateContext(clusterContext)
+	if err != nil {
+		return err
+	}
+	return c.UpdateAdditionalClusterMetadata(d.Id(), clusterContext, toUpdateClusterAdditionalMetadata(d))
 }
 
 func toUpdateClusterAdditionalMetadata(d *schema.ResourceData) *models.V1ClusterMetaAttributeEntity {

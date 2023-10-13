@@ -4,8 +4,9 @@ import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 func ClusterNamespacesSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:     schema.TypeList,
-		Optional: true,
+		Type:        schema.TypeList,
+		Optional:    true,
+		Description: "The namespaces for the cluster.",
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"name": {

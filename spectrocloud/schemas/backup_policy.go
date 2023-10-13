@@ -4,9 +4,10 @@ import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 func BackupPolicySchema() *schema.Schema {
 	return &schema.Schema{
-		Type:     schema.TypeList,
-		Optional: true,
-		MaxItems: 1,
+		Type:        schema.TypeList,
+		Optional:    true,
+		MaxItems:    1,
+		Description: "The backup policy for the cluster. If not specified, no backups will be taken.",
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"prefix": {
@@ -62,7 +63,6 @@ func BackupPolicySchema() *schema.Schema {
 				"include_all_clusters": {
 					Type:        schema.TypeBool,
 					Optional:    true,
-					Default:     true,
 					Description: "Whether to include all clusters in the backup. If set to false, only the clusters specified in `cluster_uids` will be included.",
 				},
 			},

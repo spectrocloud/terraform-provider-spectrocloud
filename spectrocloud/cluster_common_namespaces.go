@@ -74,7 +74,12 @@ func flattenClusterNamespaces(items []*models.V1ClusterNamespaceResource) []inte
 
 func updateClusterNamespaces(c *client.V1Client, d *schema.ResourceData) error {
 	if namespaces := toClusterNamespaces(d); namespaces != nil {
-		return c.ApplyClusterNamespaceConfig(d.Id(), namespaces)
+		clusterContext := d.Get("context").(string)
+		err := ValidateContext(clusterContext)
+		if err != nil {
+			return err
+		}
+		return c.ApplyClusterNamespaceConfig(d.Id(), clusterContext, namespaces)
 	}
 	return nil
 }
