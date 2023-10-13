@@ -24,7 +24,6 @@ func updateClusterOsPatchConfig(c *client.V1Client, d *schema.ResourceData) erro
 	} else {
 		return c.UpdateClusterOsPatchConfig(d.Id(), clusterContext, toUpdateOsPatchEntityClusterRbac(getDefaultOsPatchConfig().OsPatchConfig))
 	}
-	return nil
 }
 
 func getDefaultOsPatchConfig() *models.V1MachineManagementConfig {
