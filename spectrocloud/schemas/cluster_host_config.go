@@ -7,8 +7,9 @@ import (
 
 func ClusterHostConfigSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:     schema.TypeList,
-		Optional: true,
+		Type:        schema.TypeList,
+		Optional:    true,
+		Description: "The host configuration for the cluster.",
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"host_endpoint_type": {

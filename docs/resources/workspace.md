@@ -108,10 +108,10 @@ data "spectrocloud_backup_storage_location" "bsl" {
 
 ### Optional
 
-- `backup_policy` (Block List, Max: 1) (see [below for nested schema](#nestedblock--backup_policy))
-- `cluster_rbac_binding` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
+- `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `description` (String)
-- `namespaces` (Block List) (see [below for nested schema](#nestedblock--namespaces))
+- `namespaces` (Block List) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
 - `tags` (Set of String)
 
 ### Read-Only

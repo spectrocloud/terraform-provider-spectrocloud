@@ -7,8 +7,9 @@ import (
 
 func ClusterRbacBindingSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:     schema.TypeList,
-		Optional: true,
+		Type:        schema.TypeList,
+		Optional:    true,
+		Description: "The RBAC binding for the cluster.",
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"type": {
