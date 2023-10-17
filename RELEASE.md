@@ -36,3 +36,4 @@ This guide outlines the steps to release the custom Terraform provider, ensuring
 - Implement the provider in a Terraform configuration and initialize it using `terraform init`.
 - Ensure that the provider is fetched from the Terraform Registry and works as expected in a sanity test scenario.
 
+### Publish the Release notification on slack channel.
