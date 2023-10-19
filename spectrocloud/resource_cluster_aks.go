@@ -305,6 +305,9 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := ReadCommonAttributes(d); err != nil {
+		return diag.FromErr(err)
+	}
 	ClusterContext := d.Get("context").(string)
 	if config, err := c.GetCloudConfigAks(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
@@ -312,8 +315,7 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
 			return diag.FromErr(err)
 		}
-		cloudConfigFlatten := flattenClusterConfigsAks(config)
-		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
+		if err := d.Set("cloud_config", flattenClusterConfigsAks(config)); err != nil {
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
@@ -332,6 +334,41 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	return diags
+}
+
+func ReadCommonAttributes(d *schema.ResourceData) error {
+	ForceDelete := d.Get("force_delete").(bool)
+	if err := d.Set("force_delete", ForceDelete); err != nil {
+		return err
+	}
+
+	ForceDeleteDelay := d.Get("force_delete_delay").(int)
+	if ForceDeleteDelay == 0 {
+		ForceDeleteDelay = 20 // set default value
+	}
+	if err := d.Set("force_delete_delay", ForceDeleteDelay); err != nil {
+		return err
+	}
+
+	OsPatchOnBoot := d.Get("os_patch_on_boot").(bool)
+	if err := d.Set("os_patch_on_boot", OsPatchOnBoot); err != nil {
+		return err
+	}
+
+	SkipCompletion := d.Get("skip_completion").(bool)
+	if err := d.Set("skip_completion", SkipCompletion); err != nil {
+		return err
+	}
+
+	ApplySetting := d.Get("apply_setting").(string)
+	if ApplySetting == "" {
+		ApplySetting = "DownloadAndInstall" // set default value
+	}
+	if err := d.Set("apply_setting", ApplySetting); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func flattenClusterConfigsAks(config *models.V1AzureCloudConfig) []interface{} {

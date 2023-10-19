@@ -317,12 +317,14 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := ReadCommonAttributes(d); err != nil {
+		return diag.FromErr(err)
+	}
 
 	if config, err := c.GetCloudConfigEdgeNative(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfigFlatten := flattenClusterConfigsEdgeNative(config)
-		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
+		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(config)); err != nil {
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
