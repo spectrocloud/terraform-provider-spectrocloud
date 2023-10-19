@@ -22,7 +22,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 		ReadContext:   resourceClusterEdgeNativeRead,
 		UpdateContext: resourceClusterEdgeNativeUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing Edge Native clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterEdgeNativeImport,
+		},
+		Description: "Resource for managing Edge Native clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -314,9 +317,16 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := ReadCommonAttributes(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	if config, err := c.GetCloudConfigEdgeNative(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(config)); err != nil {
+			return diag.FromErr(err)
+		}
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeNative, mp, configUID, ClusterContext)
 		if err != nil {
@@ -328,6 +338,26 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	}
 
 	return diag.Diagnostics{}
+}
+
+func flattenClusterConfigsEdgeNative(config *models.V1EdgeNativeCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+
+	m := make(map[string]interface{})
+
+	if config.Spec.ClusterConfig.SSHKeys != nil {
+		m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
+	}
+	if config.Spec.ClusterConfig.ControlPlaneEndpoint.Host != "" {
+		m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
+	}
+	if config.Spec.ClusterConfig.NtpServers != nil {
+		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
+	}
+
+	return []interface{}{m}
 }
 
 func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMachinePoolConfig) []interface{} {

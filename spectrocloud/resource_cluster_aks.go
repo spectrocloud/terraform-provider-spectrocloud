@@ -22,7 +22,10 @@ func resourceClusterAks() *schema.Resource {
 		ReadContext:   resourceClusterAksRead,
 		UpdateContext: resourceClusterAksUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing AKS clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterAksImport,
+		},
+		Description: "Resource for managing AKS clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -302,10 +305,19 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := ReadCommonAttributes(d); err != nil {
+		return diag.FromErr(err)
+	}
 	ClusterContext := d.Get("context").(string)
 	if config, err := c.GetCloudConfigAks(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("cloud_config", flattenClusterConfigsAks(config)); err != nil {
+			return diag.FromErr(err)
+		}
 		mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAks, mp, configUID, ClusterContext)
 		if err != nil {
@@ -322,6 +334,80 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	return diags
+}
+
+func ReadCommonAttributes(d *schema.ResourceData) error {
+	ForceDelete := d.Get("force_delete").(bool)
+	if err := d.Set("force_delete", ForceDelete); err != nil {
+		return err
+	}
+
+	ForceDeleteDelay := d.Get("force_delete_delay").(int)
+	if ForceDeleteDelay == 0 {
+		ForceDeleteDelay = 20 // set default value
+	}
+	if err := d.Set("force_delete_delay", ForceDeleteDelay); err != nil {
+		return err
+	}
+
+	OsPatchOnBoot := d.Get("os_patch_on_boot").(bool)
+	if err := d.Set("os_patch_on_boot", OsPatchOnBoot); err != nil {
+		return err
+	}
+
+	SkipCompletion := d.Get("skip_completion").(bool)
+	if err := d.Set("skip_completion", SkipCompletion); err != nil {
+		return err
+	}
+
+	ApplySetting := d.Get("apply_setting").(string)
+	if ApplySetting == "" {
+		ApplySetting = "DownloadAndInstall" // set default value
+	}
+	if err := d.Set("apply_setting", ApplySetting); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func flattenClusterConfigsAks(config *models.V1AzureCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+
+	m := make(map[string]interface{})
+
+	if config.Spec.ClusterConfig.SubscriptionID != nil {
+		m["subscription_id"] = config.Spec.ClusterConfig.SubscriptionID
+	}
+	if config.Spec.ClusterConfig.ResourceGroup != "" {
+		m["resource_group"] = config.Spec.ClusterConfig.ResourceGroup
+	}
+	if config.Spec.ClusterConfig.Location != nil {
+		m["region"] = *config.Spec.ClusterConfig.Location
+	}
+	if config.Spec.ClusterConfig.SSHKey != nil {
+		m["ssh_key"] = *config.Spec.ClusterConfig.SSHKey
+	}
+	m["private_cluster"] = config.Spec.ClusterConfig.APIServerAccessProfile.EnablePrivateCluster
+	if config.Spec.ClusterConfig.VnetName != "" {
+		m["vnet_name"] = config.Spec.ClusterConfig.VnetName
+	}
+	if config.Spec.ClusterConfig.VnetResourceGroup != "" {
+		m["vnet_resource_group"] = config.Spec.ClusterConfig.VnetResourceGroup
+	}
+	if config.Spec.ClusterConfig.VnetCidrBlock != "" {
+		m["vnet_cidr_block"] = config.Spec.ClusterConfig.VnetCidrBlock
+	}
+	if config.Spec.ClusterConfig.WorkerSubnet != nil {
+		m["worker_subnet_name"] = config.Spec.ClusterConfig.WorkerSubnet.Name
+	}
+	if config.Spec.ClusterConfig.WorkerSubnet != nil {
+		m["worker_cidr"] = config.Spec.ClusterConfig.WorkerSubnet.CidrBlock
+	}
+
+	return []interface{}{m}
 }
 
 func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfig) []interface{} {
@@ -341,6 +427,8 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
+		oi["min"] = int(machinePool.MinSize)
+		oi["max"] = int(machinePool.MaxSize)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
 		oi["instance_type"] = machinePool.InstanceType
