@@ -347,6 +347,8 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 		oi["storage_account_type"] = machinePool.OsDisk.ManagedDisk.StorageAccountType
+		oi["min"] = int(machinePool.MinSize)
+		oi["max"] = int(machinePool.MaxSize)
 		ois = append(ois, oi)
 	}
 	return ois
