@@ -328,6 +328,18 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 	if done {
 		return diagnostics
 	}
+	if d.HasChange("resources") {
+		resourcesObj, ok := d.GetOk("resources")
+		if ok {
+			resources := resourcesObj.([]interface{})[0].(map[string]interface{})
+			VCResizeConfig := toVirtualClusterResize(resources)
+			if err := c.ResizeClusterVirtual(cloudConfigId, VCResizeConfig); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+	}
+
 	if d.HasChange("pause_cluster") {
 		var body *models.V1LifecycleConfigEntity
 		pause := new(bool)
@@ -453,4 +465,24 @@ func toMachinePoolVirtual(resources map[string]interface{}) *models.V1VirtualMac
 	}
 
 	return mp
+}
+
+func toVirtualClusterResize(resources map[string]interface{}) *models.V1VirtualClusterResize {
+	maxCpu := resources["max_cpu"].(int)
+	maxMemInMb := resources["max_mem_in_mb"].(int)
+	maxStorageInGb := resources["max_storage_in_gb"].(int)
+	minCpu := resources["min_cpu"].(int)
+	minMemInMb := resources["min_mem_in_mb"].(int)
+	minStorageInGb := resources["min_storage_in_gb"].(int)
+	VCResize := &models.V1VirtualClusterResize{
+		InstanceType: &models.V1VirtualInstanceType{
+			MaxCPU:        int32(maxCpu),
+			MaxMemInMiB:   int32(maxMemInMb),
+			MaxStorageGiB: int32(maxStorageInGb),
+			MinCPU:        int32(minCpu),
+			MinMemInMiB:   int32(minMemInMb),
+			MinStorageGiB: int32(minStorageInGb),
+		},
+	}
+	return VCResize
 }

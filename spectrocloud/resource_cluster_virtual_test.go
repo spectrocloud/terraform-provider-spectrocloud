@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"github.com/spectrocloud/hapi/models"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -67,4 +69,32 @@ func TestToVirtualCluster(t *testing.T) {
 	assert.Equal(cloudConfig["chart_version"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Version)
 	assert.Equal(cloudConfig["chart_values"].(string), vCluster.Spec.CloudConfig.HelmRelease.Values)
 	assert.Equal(cloudConfig["k8s_version"].(string), vCluster.Spec.CloudConfig.KubernetesVersion)
+}
+
+func TestToVirtualClusterResize(t *testing.T) {
+	resources := map[string]interface{}{
+		"max_cpu":           4,
+		"max_mem_in_mb":     8192,
+		"max_storage_in_gb": 100,
+		"min_cpu":           2,
+		"min_mem_in_mb":     4096,
+		"min_storage_in_gb": 50,
+	}
+
+	expected := &models.V1VirtualClusterResize{
+		InstanceType: &models.V1VirtualInstanceType{
+			MaxCPU:        4,
+			MaxMemInMiB:   8192,
+			MaxStorageGiB: 100,
+			MinCPU:        2,
+			MinMemInMiB:   4096,
+			MinStorageGiB: 50,
+		},
+	}
+
+	result := toVirtualClusterResize(resources)
+
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Expected %v, but got %v", expected, result)
+	}
 }
