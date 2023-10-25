@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
@@ -48,8 +49,9 @@ func resourceApplicationProfile() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
-				Description:  "Context of the profile. Allowed values are `project`, `cluster`, or `namespace`. Default value is `project`.",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
+				Description: "Context of the profile. Allowed values are `project`, `cluster`, or `namespace`. " +
+					"Default value is `project`." + PROJECT_NAME_NUANCE,
 			},
 			"tags": {
 				Type:        schema.TypeSet,

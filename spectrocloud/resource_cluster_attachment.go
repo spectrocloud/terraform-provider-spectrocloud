@@ -37,8 +37,12 @@ func resourceAddonDeployment() *schema.Resource {
 				Required: true,
 			},
 			"context": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Default:      "project",
+				Description: "Specifies cluster context where addon profile is attached. " +
+					"Can be `project` or `tenant`. Defaults to `project`." + PROJECT_NAME_NUANCE,
 			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
