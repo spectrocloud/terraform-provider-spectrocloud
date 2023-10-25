@@ -44,7 +44,7 @@ output "same" {
 
 ### Optional
 
-- `context` (String) Context of the cloud account. This can be either project or tenant. If not specified, the default value is project.
+- `context` (String) Context of the cloud account. This can be either `project` or `tenant`. If not specified, the default value is `project`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
 - `vsphere_ignore_insecure_error` (Boolean) Ignore insecure error. This is a boolean value that indicates whether to ignore the insecure error or not. If not specified, the default value is false.
 
 ### Read-Only

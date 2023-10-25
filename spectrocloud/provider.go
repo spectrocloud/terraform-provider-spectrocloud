@@ -14,7 +14,7 @@ import (
 // make a constant string describing which project will be specified.
 const (
 	PROJECT_NAME_NUANCE = "If `project` context is specified, `project_name` will be taken from provider configuration. " +
-		"Default value for `project_name` is `defaullt`."
+		"Default value for `project_name` is `Default`."
 )
 
 func New(_ string) func() *schema.Provider {

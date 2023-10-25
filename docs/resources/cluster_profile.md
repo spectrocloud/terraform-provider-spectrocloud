@@ -153,7 +153,7 @@ resource "spectrocloud_cluster_profile" "profile" {
 ### Optional
 
 - `cloud` (String) Specify the infrastructure provider the cluster profile is for. Only Palette supported infrastructure providers can be used. The  supported cloud types are - `all, aws, azure, gcp, vsphere, openstack, maas, virtual, baremetal, eks, aks, edge, edge-native, libvirt, tencent, tke, coxedge, generic, and gke`,If the value is set to `all`, then the type must be set to `add-on`. Otherwise, the cluster profile may be incompatible with other providers. Default value is `all`.
-- `context` (String) The context of the cluster profile. Allowed values are `project` or `tenant`. Default value is `project`.
+- `context` (String) The context of the cluster profile. Allowed values are `project` or `tenant`. Default value is `project`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
 - `description` (String)
 - `pack` (Block List) For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified. (see [below for nested schema](#nestedblock--pack))
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.

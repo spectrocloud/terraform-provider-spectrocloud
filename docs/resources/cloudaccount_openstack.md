@@ -42,7 +42,7 @@ resource "spectrocloud_cloudaccount_openstack" "account" {
 ### Optional
 
 - `ca_certificate` (String) The CA certificate of the OpenStack cloud that is used to connect to the OpenStack cloud.
-- `context` (String) The context of the OpenStack configuration. Can be `project` or `tenant`.
+- `context` (String) The context of the OpenStack configuration. Can be `project` or `tenant`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
 - `openstack_allow_insecure` (Boolean) Whether to allow insecure connections to the OpenStack cloud. Default is `false`.
 
 ### Read-Only
