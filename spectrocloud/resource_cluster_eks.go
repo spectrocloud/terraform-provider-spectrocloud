@@ -749,15 +749,6 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
-	cpPool := map[string]interface{}{
-		"control_plane": true,
-		"name":          "master-pool",
-		"az_subnets":    cloudConfig["az_subnets"],
-		"instance_type": "t3.large",
-		"disk_size_gb":  60,
-		"count":         0,
-	}
-	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
