@@ -136,6 +136,32 @@ func resourceClusterAzure() *schema.Resource {
 							Required:    true,
 							Description: "SSH key to be used for the cluster nodes.",
 						},
+						"static_placement": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"network_resource_group": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Azure network resource group in which the cluster is to be provisioned..",
+									},
+									"virtual_network_name": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Azure virtual network in which the cluster is to be provisioned.",
+									},
+									"virtual_network_cidr_block": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Azure virtual network cidr block in which the cluster is to be provisioned.",
+									},
+									"control_plane_subnet": schemas.SubnetSchema(),
+									"worker_node_subnet":   schemas.SubnetSchema(),
+								},
+							},
+						},
 					},
 				},
 			},
@@ -522,7 +548,8 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 			},
 		},
 	}
-
+	// setting static placements
+	toStaticPlacement(cluster, cloudConfig)
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
@@ -537,6 +564,27 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster, nil
+}
+func toStaticPlacement(c *models.V1SpectroAzureClusterEntity, cloudConfig map[string]interface{}) {
+	placement := cloudConfig["static_placement"]
+	if len(placement.([]interface{})) > 0 {
+		staticPlacement := placement.([]interface{})[0].(map[string]interface{})
+		c.Spec.CloudConfig.VnetResourceGroup = staticPlacement["network_resource_group"].(string)
+		c.Spec.CloudConfig.VnetName = staticPlacement["virtual_network_name"].(string)
+		c.Spec.CloudConfig.VnetCidrBlock = staticPlacement["virtual_network_cidr_block"].(string)
+		cpSubnet := staticPlacement["control_plane_subnet"].([]interface{})[0].(map[string]interface{})
+		c.Spec.CloudConfig.ControlPlaneSubnet = &models.V1Subnet{
+			CidrBlock:         cpSubnet["cidr_block"].(string),
+			Name:              cpSubnet["name"].(string),
+			SecurityGroupName: cpSubnet["security_group_name"].(string),
+		}
+		workerSubnet := staticPlacement["worker_node_subnet"].([]interface{})[0].(map[string]interface{})
+		c.Spec.CloudConfig.WorkerSubnet = &models.V1Subnet{
+			CidrBlock:         workerSubnet["cidr_block"].(string),
+			Name:              workerSubnet["name"].(string),
+			SecurityGroupName: workerSubnet["security_group_name"].(string),
+		}
+	}
 }
 
 func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConfigEntity, error) {
