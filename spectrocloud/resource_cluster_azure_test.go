@@ -3,9 +3,52 @@ package spectrocloud
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
+
+func prepareAzureTestData() *schema.ResourceData {
+	d := resourceClusterAzure().TestResourceData()
+	cloudConfig := []interface{}{
+		map[string]interface{}{
+			"region":          "us-west-2",
+			"ssh_key":         "dummy_ssh_key",
+			"subscription_id": "dummy_subscription_id",
+			"resource_group":  "dummy_resource_group",
+		},
+	}
+	azsList := []string{"us-east-1a", "us-east-1b"}
+	azsSet := schema.NewSet(schema.HashString, nil)
+	for _, az := range azsList {
+		azsSet.Add(az)
+	}
+	var mpools []interface{}
+	mpool := map[string]interface{}{
+		"name":                    "pool1",
+		"count":                   3,
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"instance_type":           "Standard_DS2_v2",
+		"os_type":                 "Windows",
+		"azs":                     azsSet,
+		"disk": []interface{}{
+			map[string]interface{}{
+				"size_gb": 50,
+				"type":    "Standard_LRS",
+			},
+		},
+		"is_system_node_pool":  false,
+		"node_repave_interval": 10,
+	}
+	mpools = append(mpools, mpool)
+	d.Set("cloud_config", cloudConfig)
+	d.Set("context", "Tenant")
+	d.Set("name", "dummy_name")
+	d.Set("cloud_account_id", "dummy_account_id")
+	d.Set("machine_pool", mpools)
+	return d
+}
 
 func TestToStaticPlacement(t *testing.T) {
 	// Created a mock of models.V1SpectroAzureClusterEntity and cloudConfig
@@ -133,6 +176,10 @@ func int32Ptr(i int32) *int32 {
 	return &i
 }
 
+func boolPtr(i bool) *bool {
+	return &i
+}
+
 func stringPtr(s string) *string {
 	return &s
 }
@@ -150,7 +197,7 @@ func TestToMachinePoolAzure(t *testing.T) {
 		"control_plane":           true,
 		"control_plane_as_worker": false,
 		"instance_type":           "Standard_DS2_v2",
-		"os_type":                 "Linux",
+		"os_type":                 "Windows",
 		"azs":                     azsSet,
 		"disk": []interface{}{
 			map[string]interface{}{
@@ -170,9 +217,72 @@ func TestToMachinePoolAzure(t *testing.T) {
 	// Check for nil error
 	assert.NoError(t, err)
 	assert.Equal(t, machinePool["name"], *result.PoolConfig.Name)
-	//assert.Equal(t, machinePool["count"].(int32), &result.PoolConfig.Size)
 	assert.Equal(t, machinePool["control_plane"], result.PoolConfig.IsControlPlane)
 	assert.Equal(t, machinePool["control_plane_as_worker"], result.PoolConfig.UseControlPlaneAsWorker)
 	assert.Equal(t, machinePool["instance_type"], result.CloudConfig.InstanceType)
+	assert.Equal(t, machinePool["os_type"], string(result.CloudConfig.OsDisk.OsType))
+	assert.Equal(t, machinePool["is_system_node_pool"], result.CloudConfig.IsSystemNodePool)
+	assert.Equal(t, machinePool["node_repave_interval"], int(result.PoolConfig.NodeRepaveInterval))
+	assert.Equal(t, machinePool["count"], int(*result.PoolConfig.Size))
 
+}
+
+func TestToAzureCluster(t *testing.T) {
+	// Mock data for schema.ResourceData
+	d := prepareAzureTestData()
+
+	m := &client.V1Client{}
+	result, err := toAzureCluster(m, d)
+
+	// Assertions
+	assert.NoError(t, err, "Expected no error")
+	assert.NotNil(t, result, "Expected non-nil result")
+
+}
+
+func TestFlattenMachinePoolConfigsAzure(t *testing.T) {
+	// Sample V1AzureMachinePoolConfig data
+	azsList := []string{"us-east-1a", "us-east-1b"}
+	azsSet := schema.NewSet(schema.HashString, nil)
+	for _, az := range azsList {
+		azsSet.Add(az)
+	}
+	machinePools := []*models.V1AzureMachinePoolConfig{
+		{
+			AdditionalLabels:      nil,
+			AdditionalTags:        nil,
+			Azs:                   azsList,
+			InstanceConfig:        nil,
+			InstanceType:          "Standard_DS2_v2",
+			IsControlPlane:        boolPtr(false),
+			IsSystemNodePool:      false,
+			Labels:                nil,
+			MachinePoolProperties: nil,
+			MaxSize:               2,
+			MinSize:               5,
+			Name:                  "worker_pool",
+			NodeRepaveInterval:    2,
+			OsDisk: &models.V1AzureOSDisk{
+				DiskSizeGB:  50,
+				ManagedDisk: &models.V1ManagedDisk{StorageAccountType: "test"},
+				OsType:      "Linux",
+			},
+			OsType:                  "Linux",
+			Size:                    5,
+			SpotVMOptions:           nil,
+			Taints:                  nil,
+			UpdateStrategy:          nil,
+			UseControlPlaneAsWorker: false,
+		},
+	}
+
+	result := flattenMachinePoolConfigsAzure(machinePools)
+	actual := result[0].(map[string]interface{})
+	// Assert the flattened result
+	assert.Len(t, result, len(machinePools), "Expected length of result to match number of machine pools")
+	assert.Equal(t, machinePools[0].InstanceType, actual["instance_type"])
+	assert.Equal(t, machinePools[0].OsType, actual["os_type"])
+	assert.Equal(t, machinePools[0].Name, actual["name"])
+	assert.Equal(t, machinePools[0].NodeRepaveInterval, actual["node_repave_interval"])
+	assert.Equal(t, machinePools[0].Size, actual["count"])
 }

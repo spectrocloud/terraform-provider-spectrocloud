@@ -565,6 +565,7 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 
 	return cluster, nil
 }
+
 func toStaticPlacement(c *models.V1SpectroAzureClusterEntity, cloudConfig map[string]interface{}) {
 	placement := cloudConfig["static_placement"]
 	if len(placement.([]interface{})) > 0 {
