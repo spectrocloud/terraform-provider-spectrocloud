@@ -42,7 +42,7 @@ resource "local_file" "adminkubeconfig" {
 
 ### Optional
 
-- `context` (String) Cluster context can be 'project' or 'tenant'. Defaults to 'project'.
+- `context` (String) Cluster context can be `project` or `tenant`. Defaults to `project`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
 
 ### Read-Only
 

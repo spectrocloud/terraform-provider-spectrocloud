@@ -35,7 +35,7 @@ data "spectrocloud_pack_simple" "pack" {
 
 ### Optional
 
-- `context` (String)
+- `context` (String) Indicates in which context registry should be searched for the pack values. Allowed values are `system`, `project` or `tenant`. Defaults to `project`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
 - `registry_uid` (String) The unique identifier of the registry the pack belongs to.
 - `version` (String) The version of the pack.
 

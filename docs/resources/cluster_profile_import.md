@@ -28,7 +28,7 @@ resource "spectrocloud_cluster_profile_import" "import" {
 
 ### Optional
 
-- `context` (String)
+- `context` (String) Cluster profile context can be `project` or `tenant`. Defaults to `project`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
 
 ### Read-Only
 

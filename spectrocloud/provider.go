@@ -11,6 +11,12 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
+// make a constant string describing which project will be specified.
+const (
+	PROJECT_NAME_NUANCE = "If `project` context is specified, `project_name` will be taken from provider configuration. " +
+		"Default value for `project_name` is `Default`."
+)
+
 func New(_ string) func() *schema.Provider {
 	return func() *schema.Provider {
 		p := &schema.Provider{
@@ -58,7 +64,8 @@ func New(_ string) func() *schema.Provider {
 				"project_name": {
 					Type:        schema.TypeString,
 					Optional:    true,
-					Description: "The Spectro Cloud project name.",
+					Default:     "Default",
+					Description: "The Spectro Cloud project name. If value is not provided or is an empty string it will be set to `Default`",
 				},
 				"ignore_insecure_tls_error": {
 					Type:        schema.TypeBool,

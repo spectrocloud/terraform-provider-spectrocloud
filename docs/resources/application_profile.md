@@ -390,7 +390,7 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
 ### Optional
 
 - `cloud` (String) The cloud provider the profile is eligible for. Default value is `all`.
-- `context` (String) Context of the profile. Allowed values are `project`, `cluster`, or `namespace`. Default value is `project`.
+- `context` (String) Context of the profile. Allowed values are `project`, `cluster`, or `namespace`. Default value is `project`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
 - `description` (String) Description of the profile.
 - `tags` (Set of String) A list of tags to be applied to the application profile. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))

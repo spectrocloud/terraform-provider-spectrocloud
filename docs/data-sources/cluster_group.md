@@ -50,7 +50,7 @@ output "out_project_sc" {
 
 ### Optional
 
-- `context` (String) The context of where the cluster group is located. Allowed values  are `system` or `tenant`. Defaults to 'tenant'.
+- `context` (String) The context of where the cluster group is located. Allowed values  are `system` or `tenant`. Defaults to `tenant`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
 
 ### Read-Only
 

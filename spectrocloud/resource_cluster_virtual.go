@@ -41,6 +41,8 @@ func resourceClusterVirtual() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"project", "cluster"}, false),
+				Description: "The context of the virtual cluster. Can be `project` or `tenant`. " +
+					"Default is `project`." + PROJECT_NAME_NUANCE,
 			},
 			"tags": {
 				Type:     schema.TypeSet,
