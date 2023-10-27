@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -62,10 +63,12 @@ func New(_ string) func() *schema.Provider {
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_RETRY_ATTEMPTS", 10),
 				},
 				"project_name": {
-					Type:        schema.TypeString,
-					Optional:    true,
-					Default:     "Default",
-					Description: "The Spectro Cloud project name. If value is not provided or is an empty string it will be set to `Default`",
+					Type:     schema.TypeString,
+					Optional: true,
+					Default:  "Default",
+					// cannot be empty
+					ValidateFunc: validation.StringIsNotEmpty,
+					Description:  "The Spectro Cloud project name. If value is not provided it will be set to `Default`",
 				},
 				"ignore_insecure_tls_error": {
 					Type:        schema.TypeBool,
@@ -237,14 +240,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 	c := client.New(host, username, password, "", apiKey, transportDebug, retryAttempts)
 
-	if projectName != "" {
-		uid, err := c.GetProjectUID(projectName)
-		if err != nil {
-			return nil, diag.FromErr(err)
-		}
-
-		c = client.New(host, username, password, uid, apiKey, transportDebug, retryAttempts)
+	uid, err := c.GetProjectUID(projectName)
+	if err != nil {
+		return nil, diag.FromErr(err)
 	}
+
+	c = client.New(host, username, password, uid, apiKey, transportDebug, retryAttempts)
 
 	return c, diags
 

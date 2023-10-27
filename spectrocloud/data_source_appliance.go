@@ -9,22 +9,38 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+const APPLIANCE_STATUS_DESC = "The status of the appliance. Possible values are: 'ready', 'in-use', 'unpaired'. "
+const APPLIANCE_HEALTH_DESC = "The health of the appliance. Possible values are: 'healthy', 'unhealthy'. "
+
 func dataSourceAppliance() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceApplianceRead,
 
+		Description: "Provides details about a single appliance.",
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the appliance. ",
 			},
 			"tags": {
 				Type:     schema.TypeMap,
-				Optional: true,
+				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "The tags of the appliance.",
+			},
+			"status": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: APPLIANCE_STATUS_DESC,
+			},
+			"health": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: APPLIANCE_HEALTH_DESC,
 			},
 		},
 	}
@@ -46,6 +62,20 @@ func dataSourceApplianceRead(_ context.Context, d *schema.ResourceData, m interf
 		err = d.Set("tags", appliance.Metadata.Labels)
 		if err != nil {
 			return diag.FromErr(err)
+		}
+
+		if appliance.Status != nil {
+			err = d.Set("status", appliance.Status.State)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+		if appliance.Status != nil && appliance.Status.Health != nil {
+			err = d.Set("health", appliance.Status.Health.State)
+			if err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 	return diags

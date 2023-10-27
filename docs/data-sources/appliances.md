@@ -17,6 +17,9 @@ data "spectrocloud_appliances" "appliances" {
   tags = {
     "env" = "dev"
   }
+  status = "in-use"
+  #status = "unpaired"
+  health = "healthy"
 }
 
 output "same" {
@@ -30,6 +33,8 @@ output "same" {
 
 ### Optional
 
+- `health` (String) The health of the appliance. Possible values are: 'healthy', 'unhealthy'.  If not specified, all appliances are returned.
+- `status` (String) The status of the appliance. Possible values are: 'ready', 'in-use', 'unpaired'.  If not specified, all appliances are returned.
 - `tags` (Map of String) A list of tags to filter the appliances.
 
 ### Read-Only

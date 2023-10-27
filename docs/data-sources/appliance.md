@@ -3,12 +3,12 @@
 page_title: "spectrocloud_appliance Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Provides details about a single appliance.
 ---
 
 # spectrocloud_appliance (Data Source)
 
-
+Provides details about a single appliance.
 
 ## Example Usage
 
@@ -27,14 +27,13 @@ output "same" {
 
 ### Required
 
-- `name` (String)
-
-### Optional
-
-- `tags` (Map of String)
+- `name` (String) The name of the appliance.
 
 ### Read-Only
 
+- `health` (String) The health of the appliance. Possible values are: 'healthy', 'unhealthy'.
 - `id` (String) The ID of this resource.
+- `status` (String) The status of the appliance. Possible values are: 'ready', 'in-use', 'unpaired'.
+- `tags` (Map of String) The tags of the appliance.
 
 

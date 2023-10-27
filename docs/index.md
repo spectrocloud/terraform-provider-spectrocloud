@@ -102,7 +102,7 @@ provider GitHub [discussion board](https://github.com/spectrocloud/terraform-pro
 - `host` (String) The Spectro Cloud API host url. Can also be set with the `SPECTROCLOUD_HOST` environment variable. Defaults to https://api.spectrocloud.com
 - `ignore_insecure_tls_error` (Boolean) Ignore insecure TLS errors for Spectro Cloud API endpoints. Defaults to false.
 - `password` (String, Sensitive, Deprecated) The Spectro Cloud user password. Can also be set with the `SPECTROCLOUD_PASSWORD` environment variable.
-- `project_name` (String) The Spectro Cloud project name. If value is not provided or is an empty string it will be set to `Default`
+- `project_name` (String) The Spectro Cloud project name. If value is not provided it will be set to `Default`
 - `retry_attempts` (Number) Number of retry attempts. Can also be set with the `SPECTROCLOUD_RETRY_ATTEMPTS` environment variable. Defaults to 10.
 - `trace` (Boolean) Enable HTTP request tracing. Can also be set with the `SPECTROCLOUD_TRACE` environment variable. To enable Terraform debug logging, set `TF_LOG=DEBUG`. Visit the Terraform documentation to learn more about Terraform [debugging](https://developer.hashicorp.com/terraform/plugin/log/managing).
 - `username` (String, Deprecated) The Spectro Cloud username. Can also be set with the `SPECTROCLOUD_USERNAME` environment variable.
