@@ -6,9 +6,10 @@ import (
 
 func SubnetSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:     schema.TypeList,
-		Required: true,
-		MaxItems: 1,
+		Type:         schema.TypeList,
+		Optional:     true,
+		MaxItems:     1,
+		RequiredWith: []string{"virtual_network_name"},
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"name": {

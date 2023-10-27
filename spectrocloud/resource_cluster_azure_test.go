@@ -80,25 +80,21 @@ func TestToStaticPlacement(t *testing.T) {
 		},
 	}
 	cloudConfig := map[string]interface{}{
-		"static_placement": []interface{}{
+		"network_resource_group":     "rg",
+		"virtual_network_name":       "vnet",
+		"virtual_network_cidr_block": "10.0.0.0/16",
+		"control_plane_subnet": []interface{}{
 			map[string]interface{}{
-				"network_resource_group":     "rg",
-				"virtual_network_name":       "vnet",
-				"virtual_network_cidr_block": "10.0.0.0/16",
-				"control_plane_subnet": []interface{}{
-					map[string]interface{}{
-						"cidr_block":          "10.0.0.0/24",
-						"name":                "cp_subnet",
-						"security_group_name": "cp_sg",
-					},
-				},
-				"worker_node_subnet": []interface{}{
-					map[string]interface{}{
-						"cidr_block":          "10.0.1.0/24",
-						"name":                "worker_subnet",
-						"security_group_name": "worker_sg",
-					},
-				},
+				"cidr_block":          "10.0.0.0/24",
+				"name":                "cp_subnet",
+				"security_group_name": "cp_sg",
+			},
+		},
+		"worker_node_subnet": []interface{}{
+			map[string]interface{}{
+				"cidr_block":          "10.0.1.0/24",
+				"name":                "worker_subnet",
+				"security_group_name": "worker_sg",
 			},
 		},
 	}
