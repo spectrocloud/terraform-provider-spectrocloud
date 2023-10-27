@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-const APPLIANCE_STATUS_DESC = "The status of the appliance. Allowed values are: 'ready', 'in-use', and 'unpaired'. "
-const APPLIANCE_HEALTH_DESC = "The health of the appliance. Allowed values are: 'healthy', and 'unhealthy'. "
-const ARCH_DESC = "The architecture of the appliance. Allowed values are: 'amd64', and  'arm64'. "
+const APPLIANCE_STATUS_DESC = "The status of the appliance. Supported values are: 'ready', 'in-use', and 'unpaired'. "
+const APPLIANCE_HEALTH_DESC = "The health of the appliance. Supported values are: 'healthy', and 'unhealthy'. "
+const ARCH_DESC = "The architecture of the appliance. Supported values are: 'amd64', and  'arm64'. "
 
 func dataSourceAppliance() *schema.Resource {
 	return &schema.Resource{

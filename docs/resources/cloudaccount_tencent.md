@@ -28,7 +28,7 @@ resource "spectrocloud_cloudaccount_tencent" "tencent-1" {
 
 ### Optional
 
-- `context` (String) The context of the Tencent configuration. Can be `project` or `tenant`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
+- `context` (String) The context of the Tencent account. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `tencent_secret_id` (String)
 - `tencent_secret_key` (String, Sensitive)
 

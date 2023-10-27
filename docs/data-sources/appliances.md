@@ -34,9 +34,9 @@ output "same" {
 
 ### Optional
 
-- `architecture` (String) The architecture of the appliance. Possible values are: 'amd64', 'arm64'.  If not specified, all appliances are returned.
-- `health` (String) The health of the appliance. Possible values are: 'healthy', 'unhealthy'.  If not specified, all appliances are returned.
-- `status` (String) The status of the appliance. Possible values are: 'ready', 'in-use', 'unpaired'.  If not specified, all appliances are returned.
+- `architecture` (String) The architecture of the appliance. Supported values are: 'amd64', and  'arm64'.  If not specified, all appliances are returned.
+- `health` (String) The health of the appliance. Supported values are: 'healthy', and 'unhealthy'.  If not specified, all appliances are returned.
+- `status` (String) The status of the appliance. Supported values are: 'ready', 'in-use', and 'unpaired'.  If not specified, all appliances are returned.
 - `tags` (Map of String) A list of tags to filter the appliances.
 
 ### Read-Only

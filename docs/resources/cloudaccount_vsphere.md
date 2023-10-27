@@ -44,7 +44,7 @@ output "same" {
 
 ### Optional
 
-- `context` (String) Context of the cloud account. This can be either `project` or `tenant`. If not specified, the default value is `project`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
+- `context` (String) Context of the cloud account. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `vsphere_ignore_insecure_error` (Boolean) Ignore insecure error. This is a boolean value that indicates whether to ignore the insecure error or not. If not specified, the default value is false.
 
 ### Read-Only

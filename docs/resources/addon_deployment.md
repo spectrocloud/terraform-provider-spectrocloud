@@ -24,7 +24,7 @@ description: |-
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
-- `context` (String) Specifies cluster context where addon profile is attached. Can be `project` or `tenant`. Defaults to `project`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
+- `context` (String) Specifies cluster context where addon profile is attached. Allowed values are `project` or `tenant`. Defaults to `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only

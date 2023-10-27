@@ -28,8 +28,8 @@ func resourceCloudAccountTencent() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description: "The context of the Tencent configuration. " +
-					"Can be `project` or `tenant`." + PROJECT_NAME_NUANCE,
+				Description: "The context of the Tencent account. Allowed values are `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"tencent_secret_id": {
 				Type:     schema.TypeString,

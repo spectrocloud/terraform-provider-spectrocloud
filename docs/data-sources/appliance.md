@@ -31,10 +31,10 @@ output "same" {
 
 ### Read-Only
 
-- `architecture` (String) The architecture of the appliance. Possible values are: 'amd64', 'arm64'.
-- `health` (String) The health of the appliance. Possible values are: 'healthy', 'unhealthy'.
+- `architecture` (String) The architecture of the appliance. Supported values are: 'amd64', and  'arm64'.
+- `health` (String) The health of the appliance. Supported values are: 'healthy', and 'unhealthy'.
 - `id` (String) The ID of this resource.
-- `status` (String) The status of the appliance. Possible values are: 'ready', 'in-use', 'unpaired'.
+- `status` (String) The status of the appliance. Supported values are: 'ready', 'in-use', and 'unpaired'.
 - `tags` (Map of String) The tags of the appliance.
 
 

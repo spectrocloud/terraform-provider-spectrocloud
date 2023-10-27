@@ -60,7 +60,7 @@ resource "spectrocloud_cluster_import" "cluster" {
 ### Optional
 
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
-- `context` (String) The context of the cluster. Can be `project` or `tenant`. Default is `project`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
+- `context` (String) The context of the cluster. Can be `project` or `tenant`. Default is `project`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 

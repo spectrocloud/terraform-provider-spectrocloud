@@ -32,8 +32,8 @@ func resourceCloudAccountVsphere() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description: "Context of the cloud account. This can be either `project` or `tenant`. " +
-					"If not specified, the default value is `project`." + PROJECT_NAME_NUANCE,
+				Description: "Context of the cloud account. Allowed values are `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"private_cloud_gateway_id": {
 				Type:        schema.TypeString,
