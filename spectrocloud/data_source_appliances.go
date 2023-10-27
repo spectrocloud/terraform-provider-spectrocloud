@@ -30,6 +30,21 @@ func dataSourceAppliances() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"status": {
+				Type:        schema.TypeString,
+				Description: APPLIANCE_STATUS_DESC + " If not specified, all appliances are returned.",
+				Optional:    true,
+			},
+			"health": {
+				Type:        schema.TypeString,
+				Description: APPLIANCE_HEALTH_DESC + " If not specified, all appliances are returned.",
+				Optional:    true,
+			},
+			"architecture": {
+				Type:        schema.TypeString,
+				Description: ARCH_DESC + " If not specified, all appliances are returned.",
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -50,7 +65,30 @@ func dataSourcesApplianceRead(_ context.Context, d *schema.ResourceData, m inter
 
 	// prepare filter
 	check := func(edgeHostDevice *models.V1EdgeHostDevice) bool {
-		return IsMapSubset(edgeHostDevice.Metadata.Labels, tags)
+		is := false
+
+		is = is || IsMapSubset(edgeHostDevice.Metadata.Labels, tags)
+
+		if d.Get("status") != nil && d.Get("status").(string) != "" && edgeHostDevice.Status != nil {
+			is = is && edgeHostDevice.Status.State == d.Get("status").(string)
+		}
+
+		if d.Get("health") != nil && d.Get("health").(string) != "" && edgeHostDevice.Status != nil {
+			if edgeHostDevice.Status.Health == nil || edgeHostDevice.Status.Health.State == "" {
+				return false // if health is not set, it's not a match
+			} else {
+				is = is && edgeHostDevice.Status.Health.State == d.Get("health").(string)
+			}
+		}
+
+		if d.Get("architecture") != nil && d.Get("architecture").(string) != "" {
+			if edgeHostDevice.Spec == nil || edgeHostDevice.Spec.Device == nil || edgeHostDevice.Spec.Device.ArchType == nil {
+				return false
+			} else {
+				is = is && *edgeHostDevice.Spec.Device.ArchType == d.Get("architecture").(string)
+			}
+		}
+		return is
 	}
 
 	// apply filter

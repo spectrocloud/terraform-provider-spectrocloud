@@ -7,14 +7,15 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 // make a constant string describing which project will be specified.
 const (
-	PROJECT_NAME_NUANCE = "If `project` context is specified, `project_name` will be taken from provider configuration. " +
-		"Default value for `project_name` is `Default`."
+	PROJECT_NAME_NUANCE = "If  the `project` context is specified, the project name will sourced from the provider configuration parameter " +
+		"[`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema)."
 )
 
 func New(_ string) func() *schema.Provider {
@@ -62,10 +63,12 @@ func New(_ string) func() *schema.Provider {
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_RETRY_ATTEMPTS", 10),
 				},
 				"project_name": {
-					Type:        schema.TypeString,
-					Optional:    true,
-					Default:     "Default",
-					Description: "The Spectro Cloud project name. If value is not provided or is an empty string it will be set to `Default`",
+					Type:     schema.TypeString,
+					Optional: true,
+					Default:  "Default",
+					// cannot be empty
+					ValidateFunc: validation.StringIsNotEmpty,
+					Description:  "The Palette project the provider will target. If no value is provided, the `Default` Palette project is used. The default value is `Default`.",
 				},
 				"ignore_insecure_tls_error": {
 					Type:        schema.TypeBool,
@@ -237,14 +240,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 	c := client.New(host, username, password, "", apiKey, transportDebug, retryAttempts)
 
-	if projectName != "" {
-		uid, err := c.GetProjectUID(projectName)
-		if err != nil {
-			return nil, diag.FromErr(err)
-		}
-
-		c = client.New(host, username, password, uid, apiKey, transportDebug, retryAttempts)
+	uid, err := c.GetProjectUID(projectName)
+	if err != nil {
+		return nil, diag.FromErr(err)
 	}
+
+	c = client.New(host, username, password, uid, apiKey, transportDebug, retryAttempts)
 
 	return c, diags
 

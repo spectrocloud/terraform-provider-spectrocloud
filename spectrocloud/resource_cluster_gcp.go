@@ -42,8 +42,8 @@ func resourceClusterGcp() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description: "The context of the GCP cluster. Can be `project` or `tenant`. " +
-					"Default is `project`." + PROJECT_NAME_NUANCE,
+				Description: "The context of the GCP cluster. Allowed values are `project` or `tenant`. " +
+					"Default is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"tags": {
 				Type:     schema.TypeSet,

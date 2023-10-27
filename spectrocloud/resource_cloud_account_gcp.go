@@ -27,7 +27,7 @@ func resourceCloudAccountGcp() *schema.Resource {
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description: "The context of the GCP configuration. " +
-					"Can be `project` or `tenant`." + PROJECT_NAME_NUANCE,
+					"Allowed values are `project` or `tenant`. Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"gcp_json_credentials": {
 				Type:      schema.TypeString,

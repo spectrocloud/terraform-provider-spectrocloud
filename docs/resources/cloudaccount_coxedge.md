@@ -26,7 +26,7 @@ description: |-
 
 ### Optional
 
-- `context` (String) The context of the CoxEdge configuration. Can be `project` or `tenant`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
+- `context` (String) The context of the CoxEdge configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 
 ### Read-Only
 

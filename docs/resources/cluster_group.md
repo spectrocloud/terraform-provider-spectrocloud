@@ -52,7 +52,7 @@ resource "spectrocloud_cluster_group" "cg" {
 ### Optional
 
 - `clusters` (Block List) A list of clusters to include in the cluster group. (see [below for nested schema](#nestedblock--clusters))
-- `context` (String) The context of the Cluster group. Allowed values are `project` or `tenant`. Defaults to `tenant`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
+- `context` (String) The context of the Cluster group. Allowed values are `project` or `tenant`. Defaults to `tenant`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `tags` (Set of String) A list of tags to be applied to the cluster group. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 

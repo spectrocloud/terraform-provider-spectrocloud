@@ -31,7 +31,7 @@ func resourceCloudAccountCoxEdge() *schema.Resource {
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description: "The context of the CoxEdge configuration. " +
-					"Can be `project` or `tenant`." + PROJECT_NAME_NUANCE,
+					"Allowed values are `project` or `tenant`. Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"api_key": {
 				Type:        schema.TypeString,

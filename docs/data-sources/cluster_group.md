@@ -50,7 +50,7 @@ output "out_project_sc" {
 
 ### Optional
 
-- `context` (String) The context of where the cluster group is located. Allowed values  are `system` or `tenant`. Defaults to `tenant`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
+- `context` (String) The context of where the cluster group is located. Allowed values  are `system` or `tenant`. Defaults to `tenant`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 
 ### Read-Only
 

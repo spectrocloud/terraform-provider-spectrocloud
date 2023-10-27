@@ -30,7 +30,7 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description: "The context of the OpenStack configuration. " +
-					"Can be `project` or `tenant`." + PROJECT_NAME_NUANCE,
+					"Allowed values are `project` or `tenant`. Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"private_cloud_gateway_id": {
 				Type:        schema.TypeString,

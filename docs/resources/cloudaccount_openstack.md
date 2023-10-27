@@ -42,7 +42,7 @@ resource "spectrocloud_cloudaccount_openstack" "account" {
 ### Optional
 
 - `ca_certificate` (String) The CA certificate of the OpenStack cloud that is used to connect to the OpenStack cloud.
-- `context` (String) The context of the OpenStack configuration. Can be `project` or `tenant`.If `project` context is specified, `project_name` will be taken from provider configuration. Default value for `project_name` is `Default`.
+- `context` (String) The context of the OpenStack configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `openstack_allow_insecure` (Boolean) Whether to allow insecure connections to the OpenStack cloud. Default is `false`.
 
 ### Read-Only
