@@ -68,7 +68,7 @@ func New(_ string) func() *schema.Provider {
 					Default:  "Default",
 					// cannot be empty
 					ValidateFunc: validation.StringIsNotEmpty,
-					Description:  "The Spectro Cloud project name. If value is not provided it will be set to `Default`",
+					Description:  "The Palette project the provider will target. If no value is provided, the `Default` Palette project is used. The default value is `Default`.,
 				},
 				"ignore_insecure_tls_error": {
 					Type:        schema.TypeBool,
