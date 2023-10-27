@@ -19,7 +19,8 @@ data "spectrocloud_appliances" "appliances" {
   }
   status = "in-use"
   #status = "unpaired"
-  health = "healthy"
+  health       = "healthy"
+  architecture = "amd64"
 }
 
 output "same" {
@@ -33,6 +34,7 @@ output "same" {
 
 ### Optional
 
+- `architecture` (String) The architecture of the appliance. Possible values are: 'amd64', 'arm64'.  If not specified, all appliances are returned.
 - `health` (String) The health of the appliance. Possible values are: 'healthy', 'unhealthy'.  If not specified, all appliances are returned.
 - `status` (String) The status of the appliance. Possible values are: 'ready', 'in-use', 'unpaired'.  If not specified, all appliances are returned.
 - `tags` (Map of String) A list of tags to filter the appliances.

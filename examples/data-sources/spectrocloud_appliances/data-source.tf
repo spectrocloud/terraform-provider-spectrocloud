@@ -4,7 +4,8 @@ data "spectrocloud_appliances" "appliances" {
   }
   status = "in-use"
   #status = "unpaired"
-  health = "healthy"
+  health       = "healthy"
+  architecture = "amd64"
 }
 
 output "same" {

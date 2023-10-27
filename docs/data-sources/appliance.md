@@ -31,6 +31,7 @@ output "same" {
 
 ### Read-Only
 
+- `architecture` (String) The architecture of the appliance. Possible values are: 'amd64', 'arm64'.
 - `health` (String) The health of the appliance. Possible values are: 'healthy', 'unhealthy'.
 - `id` (String) The ID of this resource.
 - `status` (String) The status of the appliance. Possible values are: 'ready', 'in-use', 'unpaired'.
