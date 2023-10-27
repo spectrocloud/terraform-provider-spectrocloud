@@ -32,6 +32,11 @@ func prepareClusterGroupTestData() *schema.ResourceData {
 			"host_dns":    "https://test.dev.spectro.com",
 		},
 	})
+	d.Set("cluster_profile", []map[string]interface{}{
+		{
+			"id": "test-cluster-uid",
+		},
+	})
 	return d
 }
 
@@ -40,9 +45,9 @@ func TestToClusterGroup(t *testing.T) {
 
 	// Create a mock ResourceData object
 	d := prepareClusterGroupTestData()
-
+	m := &client.V1Client{}
 	// Call the function with the mock resource data
-	output := toClusterGroup(d)
+	output := toClusterGroup(m, d)
 
 	// Check the output against the expected values
 	assert.Equal("test-name", output.Metadata.Name)
@@ -57,6 +62,7 @@ func TestToClusterGroup(t *testing.T) {
 	assert.Equal(int32(200), output.Spec.ClustersConfig.LimitConfig.OverSubscription)
 	assert.Equal("namespace: test-namespace", output.Spec.ClustersConfig.Values)
 	assert.Equal("LoadBalancer", output.Spec.ClustersConfig.EndpointType)
+	assert.Equal("test-cluster-uid", output.Spec.Profiles[0].UID)
 }
 
 func TestDefaultValuesSet(t *testing.T) {
