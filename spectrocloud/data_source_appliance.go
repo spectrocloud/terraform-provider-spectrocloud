@@ -17,7 +17,7 @@ func dataSourceAppliance() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceApplianceRead,
 
-		Description: "Provides details about a single appliance.",
+		Description: "Provides details about a single appliance used for Edge Native cluster provisioning.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

@@ -13,7 +13,9 @@ import (
 func dataSourceAppliances() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcesApplianceRead,
-		Description: "Provides details about for a set of appliances.",
+
+		Description: "Provides details about a set of appliances used for Edge Native cluster provisioning. " +
+			"Various attributes could be used to search for appliances like `tags`, `status`, `health`, and `architecture`.",
 
 		Schema: map[string]*schema.Schema{
 			"ids": {
@@ -58,19 +60,20 @@ func dataSourcesApplianceRead(_ context.Context, d *schema.ResourceData, m inter
 	}
 
 	// read all appliances
-	appliances, err := c.GetAppliances()
+	appliances, err := c.GetAppliances(nil)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	// prepare filter
-	check := func(edgeHostDevice *models.V1EdgeHostDevice) bool {
+	check := func(edgeHostDevice *models.V1EdgeHostsMetadata) bool {
 		is := false
 
 		is = is || IsMapSubset(edgeHostDevice.Metadata.Labels, tags)
 
 		if d.Get("status") != nil && d.Get("status").(string) != "" && edgeHostDevice.Status != nil {
-			is = is && edgeHostDevice.Status.State == d.Get("status").(string)
+			state := string(edgeHostDevice.Status.State)
+			is = is && state == d.Get("status").(string)
 		}
 
 		if d.Get("health") != nil && d.Get("health").(string) != "" && edgeHostDevice.Status != nil {
