@@ -2,12 +2,12 @@
 page_title: "spectrocloud_appliance Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  A resource for creating and managing appliances for Edge Native cluster provisioning.
 ---
 
 # spectrocloud_appliance (Resource)
 
-  
+  A resource for creating and managing appliances for Edge Native cluster provisioning.
 
 ## Example Usage
 
