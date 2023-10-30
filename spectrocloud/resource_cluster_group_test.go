@@ -11,12 +11,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func prepareClusterGroupTestData() *schema.ResourceData {
+func prepareClusterGroupTestData() (*schema.ResourceData, error) {
 	d := resourceClusterGroup().TestResourceData()
 	d.SetId("")
-	d.Set("name", "test-name")
-	d.Set("tags", []string{"key1:value1", "key2:value2"})
-	d.Set("config", []map[string]interface{}{
+	err := d.Set("name", "test-name")
+	if err != nil {
+		return nil, err
+	}
+	err = d.Set("tags", []string{"key1:value1", "key2:value2"})
+	if err != nil {
+		return nil, err
+	}
+	err = d.Set("config", []map[string]interface{}{
 		{
 			"host_endpoint_type":       "LoadBalancer",
 			"cpu_millicore":            4000,
@@ -26,25 +32,37 @@ func prepareClusterGroupTestData() *schema.ResourceData {
 			"values":                   "namespace: test-namespace",
 		},
 	})
-	d.Set("clusters", []map[string]interface{}{
+	if err != nil {
+		return nil, err
+	}
+	err = d.Set("clusters", []map[string]interface{}{
 		{
 			"cluster_uid": "test-cluster-uid",
 			"host_dns":    "https://test.dev.spectro.com",
 		},
 	})
-	d.Set("cluster_profile", []map[string]interface{}{
+	if err != nil {
+		return nil, err
+	}
+	err = d.Set("cluster_profile", []map[string]interface{}{
 		{
 			"id": "test-cluster-uid",
 		},
 	})
-	return d
+	if err != nil {
+		return nil, err
+	}
+	return d, nil
 }
 
 func TestToClusterGroup(t *testing.T) {
 	assert := assert.New(t)
 
 	// Create a mock ResourceData object
-	d := prepareClusterGroupTestData()
+	d, err := prepareClusterGroupTestData()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	m := &client.V1Client{}
 	// Call the function with the mock resource data
 	output := toClusterGroup(m, d)
@@ -120,7 +138,10 @@ func TestResourceClusterGroupCreate(t *testing.T) {
 		},
 	}
 
-	d := prepareClusterGroupTestData()
+	d, err := prepareClusterGroupTestData()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	ctx := context.Background()
 
 	diags := resourceClusterGroupCreate(ctx, d, m)
@@ -151,7 +172,10 @@ func TestResourceClusterGroupDelete(t *testing.T) {
 }
 
 func TestResourceClusterGroupUpdate(t *testing.T) {
-	d := prepareClusterGroupTestData()
+	d, err := prepareClusterGroupTestData()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	clusterConfig := []map[string]interface{}{
 		{
 			"host_endpoint_type":       "LoadBalancer",
@@ -328,14 +352,20 @@ func TestFlattenClusterGroup(t *testing.T) {
 }
 
 func TestToClusterRef(t *testing.T) {
-	d := prepareClusterGroupTestData()
+	d, err := prepareClusterGroupTestData()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	cluster := d.Get("clusters").([]interface{})[0].(map[string]interface{})
 	ret := toClusterRef(cluster)
 	assert.Equal(t, ret.ClusterUID, cluster["cluster_uid"])
 }
 
 func TestToHostClusterConfigs(t *testing.T) {
-	d := prepareClusterGroupTestData()
+	d, err := prepareClusterGroupTestData()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	hostConfigs := d.Get("clusters").([]interface{})
 	clusterUid := hostConfigs[0].(map[string]interface{})["cluster_uid"]
 	hostDns := hostConfigs[0].(map[string]interface{})["host_dns"]
