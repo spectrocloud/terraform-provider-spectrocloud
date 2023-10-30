@@ -131,6 +131,40 @@ Required:
 - `ssh_key` (String) SSH key to be used for the cluster nodes.
 - `subscription_id` (String) Azure subscription ID. This can be found in the Azure portal under `Subscriptions`.
 
+Optional:
+
+- `control_plane_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--control_plane_subnet))
+- `network_resource_group` (String) Azure network resource group in which the cluster is to be provisioned.
+- `virtual_network_cidr_block` (String) Azure virtual network cidr block in which the cluster is to be provisioned.
+- `virtual_network_name` (String) Azure virtual network in which the cluster is to be provisioned.
+- `worker_node_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--worker_node_subnet))
+
+<a id="nestedblock--cloud_config--control_plane_subnet"></a>
+### Nested Schema for `cloud_config.control_plane_subnet`
+
+Required:
+
+- `cidr_block` (String) CidrBlock is the CIDR block to be used when the provider creates a managed virtual network.
+- `name` (String) Name of the subnet.
+
+Optional:
+
+- `security_group_name` (String) Network Security Group(NSG) to be attached to subnet.
+
+
+<a id="nestedblock--cloud_config--worker_node_subnet"></a>
+### Nested Schema for `cloud_config.worker_node_subnet`
+
+Required:
+
+- `cidr_block` (String) CidrBlock is the CIDR block to be used when the provider creates a managed virtual network.
+- `name` (String) Name of the subnet.
+
+Optional:
+
+- `security_group_name` (String) Network Security Group(NSG) to be attached to subnet.
+
+
 
 <a id="nestedblock--machine_pool"></a>
 ### Nested Schema for `machine_pool`
