@@ -13,7 +13,9 @@ import (
 func dataSourceAppliances() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcesApplianceRead,
-		Description: "Provides details about for a set of appliances.",
+
+		Description: "Provides details about a set of appliances used for Edge Native cluster provisioning. " +
+			"Various attributes could be used to search for appliances like `tags`, `status`, `health`, and `architecture`.",
 
 		Schema: map[string]*schema.Schema{
 			"ids": {

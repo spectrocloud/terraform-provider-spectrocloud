@@ -419,6 +419,52 @@ func TestResourceMachinePoolEdgeNativeHash(t *testing.T) {
 	}
 }
 
+func TestResourceMachinePoolEdgeNativeHashAdv(t *testing.T) {
+	machinePool1 := map[string]interface{}{
+		"host_uids": []interface{}{"host1", "host2"},
+		"edge_host": []interface{}{
+			map[string]interface{}{
+				"host_name": "host1",
+				"host_uid":  "uid1",
+				"static_ip": "192.168.1.1",
+			},
+			map[string]interface{}{
+				"host_name": "host2",
+				"host_uid":  "uid2",
+				"static_ip": "192.168.1.2",
+			},
+		},
+	}
+
+	machinePool2 := map[string]interface{}{
+		"host_uids": []interface{}{"host3", "host4"},
+		"edge_host": []interface{}{
+			map[string]interface{}{
+				"host_name": "host3",
+				"host_uid":  "uid3",
+				"static_ip": "192.168.1.3",
+			},
+			map[string]interface{}{
+				"host_name": "host4",
+				"host_uid":  "uid4",
+				"static_ip": "192.168.1.4",
+			},
+		},
+	}
+
+	hash1 := resourceMachinePoolEdgeNativeHash(machinePool1)
+	hash2 := resourceMachinePoolEdgeNativeHash(machinePool1) // Same input as above
+	hash3 := resourceMachinePoolEdgeNativeHash(machinePool2) // Different input
+
+	if hash1 != hash2 {
+		t.Errorf("Hashes do not match for the same input: got %v want %v", hash2, hash1)
+	}
+
+	if hash1 == hash3 {
+		t.Errorf("Hashes should not match for different inputs: got %v", hash3)
+	}
+}
+
 func TestGpuConfigHash(t *testing.T) {
 
 	testCases := []struct {
