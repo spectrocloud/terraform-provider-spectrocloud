@@ -139,7 +139,7 @@ func resourceClusterAzure() *schema.Resource {
 						"network_resource_group": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "Azure network resource group in which the cluster is to be provisioned..",
+							Description: "Azure network resource group in which the cluster is to be provisioned.",
 						},
 						"virtual_network_name": {
 							Type:         schema.TypeString,
