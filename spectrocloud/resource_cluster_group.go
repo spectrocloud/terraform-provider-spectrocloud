@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -90,6 +91,7 @@ func resourceClusterGroup() *schema.Resource {
 					},
 				},
 			},
+			"cluster_profile": schemas.ClusterProfileSchema(),
 			"clusters": {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -118,9 +120,8 @@ func resourceClusterGroupCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-
-	cluster := toClusterGroup(d)
 	scope := d.Get("context").(string)
+	cluster := toClusterGroup(c, d)
 
 	uid, err := c.CreateClusterGroup(cluster, scope)
 	if err != nil {
@@ -228,22 +229,33 @@ func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 	// Unit test handler
 	if c.UpdateClusterGroupFn != nil {
-		cg := toClusterGroup(d)
+		cg := toClusterGroup(c, d)
 		return diag.FromErr(c.UpdateClusterGroupFn(cg.Metadata.UID, toClusterGroupUpdate(cg)))
 	}
 	scope := d.Get("context").(string)
 	// if there are changes in the name of  cluster group, update it using UpdateClusterGroupMeta()
 	if d.HasChanges("name", "tags") {
-		clusterGroup := toClusterGroup(d)
+		clusterGroup := toClusterGroup(c, d)
 		err := c.UpdateClusterGroupMeta(clusterGroup, scope)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if d.HasChanges("config", "clusters") {
-		clusterGroup := toClusterGroup(d)
+		clusterGroup := toClusterGroup(c, d)
 
 		err := c.UpdateClusterGroup(clusterGroup.Metadata.UID, toClusterGroupUpdate(clusterGroup), scope)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if d.HasChange("cluster_profile") {
+		clusterGroupContext := d.Get("context").(string)
+		profiles, _ := toProfilesCommon(c, d, "", clusterGroupContext)
+		profilesBody := &models.V1SpectroClusterProfiles{
+			Profiles: profiles,
+		}
+		err := c.UpdateClusterProfileInClusterGroup(clusterGroupContext, d.Id(), profilesBody)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -254,9 +266,10 @@ func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
+func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1ClusterGroupEntity {
 	clusterRefs := make([]*models.V1ClusterGroupClusterRef, 0)
 	clusterRefObj, ok := d.GetOk("clusters")
+	clusterGroupContext := d.Get("context").(string)
 	if ok {
 		for i := range clusterRefObj.([]interface{}) {
 			resources := clusterRefObj.([]interface{})[i].(map[string]interface{})
@@ -295,6 +308,10 @@ func toClusterGroup(d *schema.ResourceData) *models.V1ClusterGroupEntity {
 			ClusterRefs:    clusterRefs,
 			ClustersConfig: GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, values),
 		},
+	}
+	profiles, _ := toProfilesCommon(c, d, "", clusterGroupContext)
+	if len(profiles) > 0 {
+		ret.Spec.Profiles = profiles
 	}
 
 	return ret

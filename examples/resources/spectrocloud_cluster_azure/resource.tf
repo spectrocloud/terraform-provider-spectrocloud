@@ -20,19 +20,19 @@ resource "spectrocloud_cluster_azure" "cluster" {
     ssh_key         = var.cluster_ssh_public_key
 
     //Static placement config
-#    network_resource_group = "test-resource-group"
-#    virtual_network_name = "test-network-name"
-#    virtual_network_cidr_block = "10.0.0.9/10"
-#    control_plane_subnet {
-#      name="cp_subnet_name"
-#      cidr_block="10.0.0.9/16"
-#      security_group_name="cp_subnet_security_name"
-#    }
-#    worker_node_subnet {
-#      name="worker_subnet_name"
-#      cidr_block="10.0.0.9/16"
-#      security_group_name="worker_subnet_security_name"
-#    }
+    #    network_resource_group = "test-resource-group"
+    #    virtual_network_name = "test-network-name"
+    #    virtual_network_cidr_block = "10.0.0.9/10"
+    #    control_plane_subnet {
+    #      name="cp_subnet_name"
+    #      cidr_block="10.0.0.9/16"
+    #      security_group_name="cp_subnet_security_name"
+    #    }
+    #    worker_node_subnet {
+    #      name="worker_subnet_name"
+    #      cidr_block="10.0.0.9/16"
+    #      security_group_name="worker_subnet_security_name"
+    #    }
 
   }
 
