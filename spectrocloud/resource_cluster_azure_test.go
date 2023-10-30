@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -130,8 +131,8 @@ func TestValidateMasterPoolCount(t *testing.T) {
 	masterConfig1 := &models.V1AzureMachinePoolConfigEntity{
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: true,
-			Size:           int32Ptr(4),
-			Name:           stringPtr("master1"),
+			Size:           types.Ptr(int32(4)),
+			Name:           types.Ptr("master1"),
 		},
 	}
 
@@ -139,8 +140,8 @@ func TestValidateMasterPoolCount(t *testing.T) {
 	workerConfig := &models.V1AzureMachinePoolConfigEntity{
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: false,
-			Size:           int32Ptr(6),
-			Name:           stringPtr("worker1"),
+			Size:           types.Ptr(int32(6)),
+			Name:           types.Ptr("worker1"),
 		},
 	}
 
@@ -148,8 +149,8 @@ func TestValidateMasterPoolCount(t *testing.T) {
 	nonMasterConfig := &models.V1AzureMachinePoolConfigEntity{
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: false,
-			Size:           int32Ptr(7),
-			Name:           stringPtr("worker2"),
+			Size:           types.Ptr(int32(7)),
+			Name:           types.Ptr("worker2"),
 		},
 	}
 
@@ -165,19 +166,6 @@ func TestValidateMasterPoolCount(t *testing.T) {
 	// Test case 1 should return an error, so diagnostics should not be nil
 	assert.NotNil(t, diagnostics, "Test case 1 failed: Expected diagnostics to be non-nil")
 
-	// Test case 2 and 3 are not control plane pools, so they should pass, so diagnostics should be nil
-}
-
-func int32Ptr(i int32) *int32 {
-	return &i
-}
-
-func boolPtr(i bool) *bool {
-	return &i
-}
-
-func stringPtr(s string) *string {
-	return &s
 }
 
 func TestToMachinePoolAzure(t *testing.T) {
@@ -250,7 +238,7 @@ func TestFlattenMachinePoolConfigsAzure(t *testing.T) {
 			Azs:                   azsList,
 			InstanceConfig:        nil,
 			InstanceType:          "Standard_DS2_v2",
-			IsControlPlane:        boolPtr(false),
+			IsControlPlane:        types.Ptr(false),
 			IsSystemNodePool:      false,
 			Labels:                nil,
 			MachinePoolProperties: nil,
