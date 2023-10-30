@@ -33,6 +33,8 @@ func dataSourcePackSimple() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"system", "project", "tenant"}, false),
+				Description: "Indicates in which context registry should be searched for the pack values. " +
+					"Allowed values are `system`, `project` or `tenant`. Defaults to `project`." + PROJECT_NAME_NUANCE,
 			},
 			"registry_uid": {
 				Type:        schema.TypeString,

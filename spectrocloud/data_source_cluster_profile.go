@@ -37,8 +37,10 @@ func dataSourceClusterProfile() *schema.Resource {
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Computed:     true,
+				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
+				Description: "Cluster profile context. Allowed values are `project` or `tenant`. " +
+					"Defaults to `project`." + PROJECT_NAME_NUANCE,
 			},
 			"pack": {
 				Type:     schema.TypeList,

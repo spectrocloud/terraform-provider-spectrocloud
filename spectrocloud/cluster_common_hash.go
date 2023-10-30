@@ -339,6 +339,24 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 		}
 	}
 
+	if edgeHosts, found := m["edge_host"]; found {
+		for _, host := range edgeHosts.([]interface{}) {
+			hostMap := host.(map[string]interface{})
+
+			if hostName, ok := hostMap["host_name"]; ok {
+				buf.WriteString(fmt.Sprintf("host_name:%s-", hostName.(string)))
+			}
+
+			if hostUID, ok := hostMap["host_uid"]; ok {
+				buf.WriteString(fmt.Sprintf("host_uid:%s-", hostUID.(string)))
+			}
+
+			if staticIP, ok := hostMap["static_ip"]; ok {
+				buf.WriteString(fmt.Sprintf("static_ip:%s-", staticIP.(string)))
+			}
+		}
+	}
+
 	return int(hash(buf.String()))
 }
 

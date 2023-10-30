@@ -29,7 +29,7 @@ resource "spectrocloud_cloudaccount_gcp" "gcp-1" {
 
 ### Optional
 
-- `context` (String) The context of the GCP configuration. Can be `project` or `tenant`.
+- `context` (String) The context of the GCP configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 
 ### Read-Only
 

@@ -33,7 +33,7 @@ resource "spectrocloud_cloudaccount_azure" "azure-1" {
 
 ### Optional
 
-- `context` (String) The context of the Azure configuration. Can be `project` or `tenant`.
+- `context` (String) The context of the Azure configuration. Defaults to `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `disable_properties_request` (Boolean) Disable properties request. This is a boolean value that indicates whether to disable properties request or not. If not specified, the default value is `false`.
 - `private_cloud_gateway_id` (String) ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.
 - `tenant_name` (String) The name of the tenant. This is the name of the tenant that is used to connect to the Azure cloud.

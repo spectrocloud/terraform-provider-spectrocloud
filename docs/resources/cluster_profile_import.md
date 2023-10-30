@@ -28,7 +28,7 @@ resource "spectrocloud_cluster_profile_import" "import" {
 
 ### Optional
 
-- `context` (String)
+- `context` (String) Allowed values are `project`, `tenant` or `system`. Defaults to `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 
 ### Read-Only
 
