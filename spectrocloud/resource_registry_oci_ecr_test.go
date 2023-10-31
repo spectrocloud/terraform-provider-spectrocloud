@@ -327,6 +327,12 @@ func TestResourceRegistryEcrDelete(t *testing.T) {
 
 			h := &client.V1Client{
 				ClusterC: tc.mock,
+				DeleteOciEcrRegistryFn: func(uid string) error {
+					if t.Name() == "TestResourceRegistryEcrDelete/EcrDeleteErr" {
+						return errors.New("covering error case")
+					}
+					return nil
+				},
 			}
 
 			ctx := context.Background()
