@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -100,7 +99,7 @@ func dataSourcesApplianceRead(_ context.Context, d *schema.ResourceData, m inter
 	//read back all ids
 	var applianceIDs []string
 	for _, appliance := range output {
-		applianceIDs = append(applianceIDs, getEdgeHostDeviceUID(appliance))
+		applianceIDs = append(applianceIDs, appliance.Metadata.UID)
 	}
 
 	id := toDatasourcesId("appliance", tags)
@@ -112,8 +111,4 @@ func dataSourcesApplianceRead(_ context.Context, d *schema.ResourceData, m inter
 	}
 
 	return nil
-}
-
-func getEdgeHostDeviceUID[T any](appliance T) string { // T should be *models.V1EdgeHostDevice
-	return reflect.ValueOf(appliance).Interface().(*models.V1EdgeHostDevice).Metadata.UID
 }
