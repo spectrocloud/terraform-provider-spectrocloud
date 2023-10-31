@@ -9,7 +9,7 @@ func SubnetSchema() *schema.Schema {
 		Type:         schema.TypeList,
 		Optional:     true,
 		MaxItems:     1,
-		RequiredWith: []string{"virtual_network_name"},
+		RequiredWith: []string{"cloud_config.0.network_resource_group", "cloud_config.0.virtual_network_name", "cloud_config.0.virtual_network_cidr_block"},
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"name": {
