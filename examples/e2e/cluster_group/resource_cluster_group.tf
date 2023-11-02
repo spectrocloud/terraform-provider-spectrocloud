@@ -17,6 +17,7 @@ resource "spectrocloud_cluster_group" "cg" {
     memory_in_mb             = 8192
     storage_in_gb            = 10
     oversubscription_percent = 120
+    kubernetes_distro = "k3s" // Allowed distro "k3s" & "cncf_k8s"
   }
   cluster_profile {
     id = "6537d5b46ea0c476c9c80750"
