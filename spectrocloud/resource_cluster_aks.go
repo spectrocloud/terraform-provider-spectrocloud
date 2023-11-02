@@ -46,7 +46,8 @@ func resourceClusterAks() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description:  "The context of the AKS cluster. Can be `project` or `tenant`. Default is `project`.",
+				Description: "The context of the AKS cluster. Allowed values are `project` or `tenant`. " +
+					"Default is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -435,6 +436,8 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 		oi["storage_account_type"] = machinePool.OsDisk.ManagedDisk.StorageAccountType
+		oi["min"] = int(machinePool.MinSize)
+		oi["max"] = int(machinePool.MaxSize)
 		ois = append(ois, oi)
 	}
 	return ois

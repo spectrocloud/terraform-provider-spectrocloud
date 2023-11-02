@@ -48,7 +48,8 @@ func resourceClusterProfile() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
-				Description:  "The context of the cluster profile. Allowed values are `project` or `tenant`. Default value is `project`.",
+				Description: "The context of the cluster profile. Allowed values are `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"tags": {
 				Type:     schema.TypeSet,

@@ -163,7 +163,7 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 func resourceRegistryEcrDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	err := c.DeleteOciEcrRegistry(c.ClusterC, d.Id())
+	err := c.DeleteOciEcrRegistry(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

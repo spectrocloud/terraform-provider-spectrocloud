@@ -29,7 +29,8 @@ func resourceCloudAccountAws() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description:  "The context of the AWS configuration. Can be `project` or `tenant`.",
+				Description: "The context of the AWS configuration. Allowed values are `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"aws_access_key": {
 				Type:     schema.TypeString,

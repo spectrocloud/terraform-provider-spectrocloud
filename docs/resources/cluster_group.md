@@ -51,8 +51,9 @@ resource "spectrocloud_cluster_group" "cg" {
 
 ### Optional
 
+- `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `clusters` (Block List) A list of clusters to include in the cluster group. (see [below for nested schema](#nestedblock--clusters))
-- `context` (String) The context of the Cluster group. Allowed values are `project` or `tenant`. Defaults to `tenant`.
+- `context` (String) The context of the Cluster group. Allowed values are `project` or `tenant`. Defaults to `tenant`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `tags` (Set of String) A list of tags to be applied to the cluster group. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
@@ -71,6 +72,48 @@ Optional:
 - `oversubscription_percent` (Number) The allowed oversubscription percentage.
 - `storage_in_gb` (Number) The storage limit in gigabytes (GB).
 - `values` (String)
+
+
+<a id="nestedblock--cluster_profile"></a>
+### Nested Schema for `cluster_profile`
+
+Required:
+
+- `id` (String) The ID of the cluster profile.
+
+Optional:
+
+- `pack` (Block List) For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified. (see [below for nested schema](#nestedblock--cluster_profile--pack))
+
+<a id="nestedblock--cluster_profile--pack"></a>
+### Nested Schema for `cluster_profile.pack`
+
+Required:
+
+- `name` (String) The name of the pack. The name must be unique within the cluster profile.
+
+Optional:
+
+- `manifest` (Block List) (see [below for nested schema](#nestedblock--cluster_profile--pack--manifest))
+- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name.
+- `tag` (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`.
+- `type` (String) The type of the pack. Allowed values are `spectro`, `manifest` or `helm`. The default value is `spectro`.
+- `uid` (String) The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro`.
+- `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
+
+<a id="nestedblock--cluster_profile--pack--manifest"></a>
+### Nested Schema for `cluster_profile.pack.manifest`
+
+Required:
+
+- `content` (String) The content of the manifest. The content is the YAML content of the manifest.
+- `name` (String) The name of the manifest. The name must be unique within the pack.
+
+Read-Only:
+
+- `uid` (String)
+
+
 
 
 <a id="nestedblock--clusters"></a>

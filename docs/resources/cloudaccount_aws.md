@@ -32,7 +32,7 @@ resource "spectrocloud_cloudaccount_aws" "aws-1" {
 - `arn` (String)
 - `aws_access_key` (String)
 - `aws_secret_key` (String, Sensitive)
-- `context` (String) The context of the AWS configuration. Can be `project` or `tenant`.
+- `context` (String) The context of the AWS configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `external_id` (String, Sensitive)
 - `partition` (String) The AWS partition in which the cloud account is located. 
 Can be 'aws' for standard AWS regions or 'aws-us-gov' for AWS GovCloud (US) regions.

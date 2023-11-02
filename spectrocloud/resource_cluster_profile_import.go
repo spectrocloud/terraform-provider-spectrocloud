@@ -29,6 +29,8 @@ func resourceClusterProfileImport() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
+				Description: "Allowed values are `project`, `tenant` or `system`. " +
+					"Defaults to `project`. " + PROJECT_NAME_NUANCE,
 			},
 		},
 	}

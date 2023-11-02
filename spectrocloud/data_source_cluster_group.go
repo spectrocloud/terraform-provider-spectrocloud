@@ -26,7 +26,8 @@ func dataSourceClusterGroup() *schema.Resource {
 				Optional:     true,
 				Default:      "tenant",
 				ValidateFunc: validation.StringInSlice([]string{"", "tenant", "system", "project"}, false),
-				Description:  "The context of where the cluster group is located. Allowed values  are `system` or `tenant`. Defaults to 'tenant'.",
+				Description: "The context of where the cluster group is located. " +
+					"Allowed values  are `system` or `tenant`. Defaults to `tenant`." + PROJECT_NAME_NUANCE,
 			},
 		},
 	}

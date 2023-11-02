@@ -27,7 +27,8 @@ func resourceCloudAccountMaas() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description:  "The context of the MAAS configuration. Can be `project` or `tenant`.",
+				Description: "The context of the MAAS configuration. " +
+					"Allowed values are `project` or `tenant`. Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"private_cloud_gateway_id": {
 				Type:        schema.TypeString,

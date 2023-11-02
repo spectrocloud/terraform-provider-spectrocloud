@@ -28,6 +28,8 @@ func resourceAppliance() *schema.Resource {
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
 
+		Description: "A resource for creating and managing appliances for Edge Native cluster provisioning.",
+
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"uid": {

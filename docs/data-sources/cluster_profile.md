@@ -27,7 +27,7 @@ output "same" {
 
 ### Optional
 
-- `context` (String)
+- `context` (String) Cluster profile context. Allowed values are `project` or `tenant`. Defaults to `project`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `name` (String)
 - `version` (String)
 
