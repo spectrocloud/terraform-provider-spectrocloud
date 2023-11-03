@@ -87,7 +87,7 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_application_profile":    resourceApplicationProfile(),
 				"spectrocloud_cluster_profile":        resourceClusterProfile(),
-				"spectrocloud_cluster_profile_import": resourceClusterProfileImport(),
+				"spectrocloud_cluster_profile_import": resourceClusterProfileImportFeature(),
 
 				"spectrocloud_cloudaccount_aws": resourceCloudAccountAws(),
 				"spectrocloud_cluster_aws":      resourceClusterAws(),

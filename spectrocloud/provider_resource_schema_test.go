@@ -38,7 +38,7 @@ func prepareClusterProfileTestData(id string) *schema.ResourceData {
 }
 
 func prepareClusterProfileImportTestData(id string) *schema.ResourceData {
-	d := resourceClusterProfileImport().TestResourceData()
+	d := resourceClusterProfileImportFeature().TestResourceData()
 	d.SetId(id)
 	return d
 }
