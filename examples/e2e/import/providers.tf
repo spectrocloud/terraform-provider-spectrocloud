@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     spectrocloud = {
-      version = ">= 0.16.0"
+      version = "= 0.15.2"
       source  = "spectrocloud/spectrocloud"
     }
   }
@@ -18,7 +18,7 @@ variable "sc_api_key" {
 
 variable "sc_project_name" {
   description = "Spectro Cloud Project (e.g: Default)"
-  default     = "edge-sites"
+  default     = "sanity testing"
 }
 
 provider "spectrocloud" {

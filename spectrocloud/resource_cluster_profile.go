@@ -25,6 +25,10 @@ func resourceClusterProfile() *schema.Resource {
 		ReadContext:   resourceClusterProfileRead,
 		UpdateContext: resourceClusterProfileUpdate,
 		DeleteContext: resourceClusterProfileDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterProfileImport,
+		},
+		Description: "The Cluster Profile resource allows you to create and manage cluster profiles.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(20 * time.Second),
@@ -135,6 +139,11 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
+	err = flattenClusterProfileCommon(d, cp)
+	if err != nil {
+		diag.FromErr(err)
+	}
+
 	tags := flattenTags(cp.Metadata.Labels)
 	if tags != nil {
 		if err := d.Set("tags", tags); err != nil {
@@ -165,6 +174,22 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	return diags
+}
+
+func flattenClusterProfileCommon(d *schema.ResourceData, cp *models.V1ClusterProfile) error {
+	// set cloud
+	if err := d.Set("cloud", cp.Spec.Published.CloudType); err != nil {
+		return err
+	}
+	// set type
+	if err := d.Set("type", cp.Spec.Published.Type); err != nil {
+		return err
+	}
+	// set version
+	if err := d.Set("version", cp.Spec.Published.ProfileVersion); err != nil {
+		return err
+	}
+	return nil
 }
 
 func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
