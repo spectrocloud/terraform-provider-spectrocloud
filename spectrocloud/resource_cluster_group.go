@@ -94,7 +94,7 @@ func resourceClusterGroup() *schema.Resource {
 							Default:      "k3s",
 							ForceNew:     true,
 							ValidateFunc: validation.StringInSlice([]string{"k3s", "cncf_k8s"}, false),
-							Description:  "The Kubernetes distro, allowed distribution are `k3s` and `cncf_k8s`.",
+							Description:  "The Kubernetes distribution, allowed values are `k3s` and `cncf_k8s`.",
 						},
 					},
 				},
