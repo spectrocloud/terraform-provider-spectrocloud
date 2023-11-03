@@ -88,7 +88,7 @@ func resourceClusterGroup() *schema.Resource {
 							Optional: true,
 							Default:  "",
 						},
-						"kubernetes_distro": {
+						"k8s_distribution": {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "k3s",
@@ -192,7 +192,7 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 						"memory_in_mb":             limitConfig.MemoryMiB,
 						"storage_in_gb":            limitConfig.StorageGiB,
 						"oversubscription_percent": limitConfig.OverSubscription,
-						"kubernetes_distro":        clusterConfig.KubernetesDistroType,
+						"k8s_distribution":         clusterConfig.KubernetesDistroType,
 					},
 				})
 				if err != nil {
@@ -291,7 +291,7 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 	var values string
 	resourcesObj, ok := d.GetOk("config")
 	endpointType := "Ingress" // default endpoint type is ingress
-	k8Distro := "k3s"
+	var k8Distro string
 	if ok {
 		resources := resourcesObj.([]interface{})[0].(map[string]interface{})
 		clusterGroupLimitConfig = toClusterGroupLimitConfig(resources)
@@ -301,8 +301,8 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 		if resources["host_endpoint_type"] != nil {
 			endpointType = resources["host_endpoint_type"].(string)
 		}
-		if resources["kubernetes_distro"] != nil {
-			k8Distro = resources["kubernetes_distro"].(string)
+		if resources["k8s_distribution"] != nil {
+			k8Distro = resources["k8s_distribution"].(string)
 		}
 	}
 	var hostClusterConfig []*models.V1ClusterGroupHostClusterConfig
