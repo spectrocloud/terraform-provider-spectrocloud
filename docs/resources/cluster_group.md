@@ -68,6 +68,7 @@ Optional:
 
 - `cpu_millicore` (Number) The CPU limit in millicores.
 - `host_endpoint_type` (String) The host endpoint type. Allowed values are 'Ingress' or 'LoadBalancer'. Defaults to 'Ingress'.
+- `k8s_distribution` (String) The Kubernetes distribution, allowed values are `k3s` and `cncf_k8s`.
 - `memory_in_mb` (Number) The memory limit in megabytes (MB).
 - `oversubscription_percent` (Number) The allowed oversubscription percentage.
 - `storage_in_gb` (Number) The storage limit in gigabytes (GB).

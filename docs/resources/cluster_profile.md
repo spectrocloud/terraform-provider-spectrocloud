@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cluster_profile Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  The Cluster Profile resource allows you to create and manage cluster profiles.
 ---
 
 # spectrocloud_cluster_profile (Resource)
 
-  
+  The Cluster Profile resource allows you to create and manage cluster profiles.
 
 ## Example Usage
 
