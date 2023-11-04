@@ -88,6 +88,14 @@ func resourceClusterGroup() *schema.Resource {
 							Optional: true,
 							Default:  "",
 						},
+						"k8s_distribution": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "k3s",
+							ForceNew:     true,
+							ValidateFunc: validation.StringInSlice([]string{"k3s", "cncf_k8s"}, false),
+							Description:  "The Kubernetes distribution, allowed values are `k3s` and `cncf_k8s`.",
+						},
 					},
 				},
 			},
@@ -184,6 +192,7 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 						"memory_in_mb":             limitConfig.MemoryMiB,
 						"storage_in_gb":            limitConfig.StorageGiB,
 						"oversubscription_percent": limitConfig.OverSubscription,
+						"k8s_distribution":         clusterConfig.KubernetesDistroType,
 					},
 				})
 				if err != nil {
@@ -282,6 +291,7 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 	var values string
 	resourcesObj, ok := d.GetOk("config")
 	endpointType := "Ingress" // default endpoint type is ingress
+	var k8Distro string
 	if ok {
 		resources := resourcesObj.([]interface{})[0].(map[string]interface{})
 		clusterGroupLimitConfig = toClusterGroupLimitConfig(resources)
@@ -290,6 +300,9 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 		}
 		if resources["host_endpoint_type"] != nil {
 			endpointType = resources["host_endpoint_type"].(string)
+		}
+		if resources["k8s_distribution"] != nil {
+			k8Distro = resources["k8s_distribution"].(string)
 		}
 	}
 	var hostClusterConfig []*models.V1ClusterGroupHostClusterConfig
@@ -306,7 +319,7 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 		Spec: &models.V1ClusterGroupSpecEntity{
 			Type:           "hostCluster",
 			ClusterRefs:    clusterRefs,
-			ClustersConfig: GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, values),
+			ClustersConfig: GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, values, k8Distro),
 		},
 	}
 	profiles, _ := toProfilesCommon(c, d, "", clusterGroupContext)
@@ -317,19 +330,21 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 	return ret
 }
 
-func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig, hostClusterConfig []*models.V1ClusterGroupHostClusterConfig, endpointType, values string) *models.V1ClusterGroupClustersConfig {
+func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig, hostClusterConfig []*models.V1ClusterGroupHostClusterConfig, endpointType, values string, k8Distro string) *models.V1ClusterGroupClustersConfig {
 	if values != "" {
 		return &models.V1ClusterGroupClustersConfig{
-			EndpointType:       endpointType,
-			LimitConfig:        clusterGroupLimitConfig,
-			HostClustersConfig: hostClusterConfig,
-			Values:             values,
+			EndpointType:         endpointType,
+			LimitConfig:          clusterGroupLimitConfig,
+			HostClustersConfig:   hostClusterConfig,
+			Values:               values,
+			KubernetesDistroType: models.V1ClusterKubernetesDistroType(k8Distro),
 		}
 	} else {
 		return &models.V1ClusterGroupClustersConfig{
-			EndpointType:       endpointType,
-			LimitConfig:        clusterGroupLimitConfig,
-			HostClustersConfig: hostClusterConfig,
+			EndpointType:         endpointType,
+			LimitConfig:          clusterGroupLimitConfig,
+			HostClustersConfig:   hostClusterConfig,
+			KubernetesDistroType: models.V1ClusterKubernetesDistroType(k8Distro),
 		}
 	}
 }

@@ -91,7 +91,7 @@ func TestDefaultValuesSet(t *testing.T) {
 	emptyValues := ""
 
 	t.Run("Test with non-empty values", func(t *testing.T) {
-		result := GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, nonEmptyValues)
+		result := GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, nonEmptyValues, "k3s")
 
 		assert.Equal(t, endpointType, result.EndpointType)
 		assert.Equal(t, clusterGroupLimitConfig, result.LimitConfig)
@@ -100,7 +100,7 @@ func TestDefaultValuesSet(t *testing.T) {
 	})
 
 	t.Run("Test with empty values", func(t *testing.T) {
-		result := GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, emptyValues)
+		result := GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, emptyValues, "k3s")
 
 		assert.Equal(t, endpointType, result.EndpointType)
 		assert.Equal(t, clusterGroupLimitConfig, result.LimitConfig)
