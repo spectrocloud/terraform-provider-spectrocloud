@@ -282,7 +282,7 @@ func toClusterProfileBasic(d *schema.ResourceData) *models.V1ClusterProfileEntit
 		},
 		Spec: &models.V1ClusterProfileEntitySpec{
 			Template: &models.V1ClusterProfileTemplateDraft{
-				CloudType: models.V1CloudType(d.Get("cloud").(string)),
+				CloudType: d.Get("cloud").(string),
 				Type:      models.V1ProfileType(d.Get("type").(string)),
 			},
 			Version: d.Get("version").(string),
