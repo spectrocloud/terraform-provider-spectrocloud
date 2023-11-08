@@ -23,7 +23,10 @@ func resourceClusterAws() *schema.Resource {
 		ReadContext:   resourceClusterAwsRead,
 		UpdateContext: resourceClusterAwsUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing AWS clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterAwsImport,
+		},
+		Description: "Resource for managing AWS clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -117,19 +120,22 @@ func resourceClusterAws() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key_name": {
-							Type:     schema.TypeString,
-							ForceNew: true,
-							Required: true,
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Required:    true,
+							Description: "The name of the SSH key to launch the cluster.",
 						},
 						"region": {
-							Type:     schema.TypeString,
-							ForceNew: true,
-							Required: true,
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Required:    true,
+							Description: "The AWS region to deploy the cluster in.",
 						},
 						"vpc_id": {
-							Type:     schema.TypeString,
-							ForceNew: true,
-							Optional: true,
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Optional:    true,
+							Description: "The VPC ID to deploy the cluster in. If not provided, VPC will be provisioned dynamically.",
 						},
 						"control_plane_lb": {
 							Type:         schema.TypeString,
@@ -170,8 +176,9 @@ func resourceClusterAws() *schema.Resource {
 							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
 						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of the machine pool.",
 						},
 						"count": {
 							Type:        schema.TypeInt,
@@ -179,8 +186,9 @@ func resourceClusterAws() *schema.Resource {
 							Description: "Number of nodes in the machine pool.",
 						},
 						"instance_type": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The instance type to use for the machine pool nodes.",
 						},
 						"min": {
 							Type:        schema.TypeInt,
@@ -206,8 +214,9 @@ func resourceClusterAws() *schema.Resource {
 							Description:  "Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.",
 						},
 						"max_price": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Maximum price to bid for spot instances. Only applied when instance type is 'spot'.",
 						},
 						"update_strategy": {
 							Type:         schema.TypeString,
@@ -217,9 +226,10 @@ func resourceClusterAws() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"disk_size_gb": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							Default:  65,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     65,
+							Description: "The disk size in GB for the machine pool nodes.",
 						},
 						"azs": {
 							Type:        schema.TypeSet,
@@ -337,9 +347,21 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := ReadCommonAttributes(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	if config, err := c.GetCloudConfigAws(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
+			if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if err := d.Set("cloud_config", flattenClusterConfigsAws(config)); err != nil {
+			return diag.FromErr(err)
+		}
 		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAws, mp, configUID, ClusterContext)
 		if err != nil {
@@ -351,6 +373,29 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 	}
 
 	return diag.Diagnostics{}
+}
+
+func flattenClusterConfigsAws(config *models.V1AwsCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+
+	m := make(map[string]interface{})
+
+	if config.Spec.ClusterConfig.SSHKeyName != "" {
+		m["ssh_key_name"] = config.Spec.ClusterConfig.SSHKeyName
+	}
+	if config.Spec.ClusterConfig.Region != nil {
+		m["region"] = *config.Spec.ClusterConfig.Region
+	}
+	if config.Spec.ClusterConfig.VpcID != "" {
+		m["vpc_id"] = config.Spec.ClusterConfig.VpcID
+	}
+	if config.Spec.ClusterConfig.ControlPlaneLoadBalancer != "" {
+		m["control_plane_lb"] = config.Spec.ClusterConfig.ControlPlaneLoadBalancer
+	}
+
+	return []interface{}{m}
 }
 
 func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig) []interface{} {
