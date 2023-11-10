@@ -163,13 +163,13 @@ resource "spectrocloud_cluster_aws" "cluster" {
 
 Required:
 
-- `region` (String)
-- `ssh_key_name` (String)
+- `region` (String) The AWS region to deploy the cluster in.
+- `ssh_key_name` (String) The name of the SSH key to launch the cluster.
 
 Optional:
 
 - `control_plane_lb` (String) Control plane load balancer type. Valid values are `Internet-facing` and `internal`. Defaults to `` (empty string).
-- `vpc_id` (String)
+- `vpc_id` (String) The VPC ID to deploy the cluster in. If not provided, VPC will be provisioned dynamically.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -178,8 +178,8 @@ Optional:
 Required:
 
 - `count` (Number) Number of nodes in the machine pool.
-- `instance_type` (String)
-- `name` (String)
+- `instance_type` (String) The instance type to use for the machine pool nodes.
+- `name` (String) The name of the machine pool.
 
 Optional:
 
@@ -190,9 +190,9 @@ Optional:
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
-- `disk_size_gb` (Number)
+- `disk_size_gb` (Number) The disk size in GB for the machine pool nodes.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
-- `max_price` (String)
+- `max_price` (String) Maximum price to bid for spot instances. Only applied when instance type is 'spot'.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.

@@ -122,6 +122,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 						"ssh_key": {
 							Type:        schema.TypeString,
 							Optional:    true,
+							Deprecated:  "This field is deprecated from provider 0.16.0. And will be removed in 0.17.0. Use `ssh_keys` instead.",
 							Description: "SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
 						},
 						"ssh_keys": {
