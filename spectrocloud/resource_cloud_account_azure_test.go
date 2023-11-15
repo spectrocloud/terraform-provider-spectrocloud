@@ -20,6 +20,7 @@ func TestToAzureAccount(t *testing.T) {
 	rd.Set("tenant_name", "test_tenant_name")
 	rd.Set("disable_properties_request", true)
 	rd.Set("private_cloud_gateway_id", "12345")
+	rd.Set("partition", "AzureUSGovernmentCloud")
 	acc := toAzureAccount(rd)
 
 	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
@@ -30,6 +31,7 @@ func TestToAzureAccount(t *testing.T) {
 	assert.Equal(t, rd.Get("tenant_name"), acc.Spec.TenantName)
 	assert.Equal(t, rd.Get("disable_properties_request"), acc.Spec.Settings.DisablePropertiesRequest)
 	assert.Equal(t, rd.Get("private_cloud_gateway_id"), acc.Metadata.Annotations[OverlordUID])
+	assert.Equal(t, rd.Get("partition"), *acc.Spec.AzureEnvironment)
 	assert.Equal(t, rd.Id(), acc.Metadata.UID)
 }
 
@@ -50,6 +52,7 @@ func TestFlattenCloudAccountAzure(t *testing.T) {
 			Settings: &models.V1CloudAccountSettings{
 				DisablePropertiesRequest: true,
 			},
+			AzureEnvironment: types.Ptr("AzureUSGovernmentCloud"),
 		},
 	}
 
@@ -63,4 +66,5 @@ func TestFlattenCloudAccountAzure(t *testing.T) {
 	assert.Equal(t, "test_tenant_id", rd.Get("azure_tenant_id"))
 	assert.Equal(t, "test_tenant_name", rd.Get("tenant_name"))
 	assert.Equal(t, true, rd.Get("disable_properties_request"))
+	assert.Equal(t, "AzureUSGovernmentCloud", rd.Get("partition"))
 }

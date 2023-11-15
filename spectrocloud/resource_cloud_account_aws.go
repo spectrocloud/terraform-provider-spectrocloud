@@ -106,7 +106,6 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-
 	AccountContext := d.Get("context").(string)
 	account, err := c.GetCloudAccountAws(uid, AccountContext)
 	if err != nil {
@@ -117,33 +116,9 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 		return diags
 	}
 
-	if err := d.Set("name", account.Metadata.Name); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("type", string(account.Spec.CredentialType)); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("context", account.Metadata.Annotations["scope"]); err != nil {
-		return diag.FromErr(err)
-	}
-	if account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
-		if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
-			return diag.FromErr(err)
-		}
-	} else {
-		if err := d.Set("arn", account.Spec.Sts.Arn); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	if account.Spec.Partition != nil {
-		if err := d.Set("partition", account.Spec.Partition); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	if account.Spec.PolicyARNs != nil {
-		if err := d.Set("policy_arns", account.Spec.PolicyARNs); err != nil {
-			return diag.FromErr(err)
-		}
+	diagnostics, done := flattenCloudAccountAws(d, account)
+	if done {
+		return diagnostics
 	}
 
 	return diags
@@ -233,4 +208,34 @@ func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 	}
 
 	return account, nil
+}
+
+func flattenCloudAccountAws(d *schema.ResourceData, account *models.V1AwsAccount) (diag.Diagnostics, bool) {
+	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("context", account.Metadata.Annotations["scope"]); err != nil {
+		return diag.FromErr(err), true
+	}
+	if account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
+		if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
+			return diag.FromErr(err), true
+		}
+	} else {
+		if err := d.Set("arn", account.Spec.Sts.Arn); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+	if account.Spec.Partition != nil {
+		if err := d.Set("partition", account.Spec.Partition); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+	if account.Spec.PolicyARNs != nil {
+		if err := d.Set("policy_arns", account.Spec.PolicyARNs); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	return nil, false
 }
