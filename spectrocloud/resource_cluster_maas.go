@@ -210,6 +210,15 @@ func resourceClusterMaas() *schema.Resource {
 								Type: schema.TypeString,
 							},
 						},
+						"node_tags": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Tags to dynamically place nodes in a pool by using MAAS automatic tags. Specify the tag values that you want to apply to all nodes in the node pool.",
+						},
 						"placement": {
 							Type:     schema.TypeList,
 							Required: true,
@@ -362,7 +371,7 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 
 		oi["azs"] = machinePool.Azs
 		//oi["resource_pool"] = machinePool.ResourcePool
-
+		oi["node_tags"] = machinePool.Tags
 		ois[i] = oi
 	}
 
@@ -530,6 +539,10 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 	if m["max"] != nil {
 		max = int32(m["max"].(int))
 	}
+	var nodePoolTags []string
+	if len(m["node_tags"].([]string)) > 0 {
+		nodePoolTags = m["node_tags"].([]string)
+	}
 	mp := &models.V1MaasMachinePoolConfigEntity{
 		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
 			Azs: azs,
@@ -538,6 +551,7 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 				MinMemInMB: int32(InstanceType["min_memory_mb"].(int)),
 			},
 			ResourcePool: types.Ptr(Placement["resource_pool"].(string)),
+			Tags:         nodePoolTags,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),

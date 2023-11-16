@@ -268,7 +268,7 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 		}
 	}
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
-
+	buf.WriteString(fmt.Sprintf("%s-", m["node_tags"].(*schema.Set).GoString()))
 	return int(hash(buf.String()))
 }
 
