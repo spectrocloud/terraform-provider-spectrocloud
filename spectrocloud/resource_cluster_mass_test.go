@@ -63,7 +63,7 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 				"additional_labels": map[string]string{
 					"TF": "test_label",
 				},
-				"node_repave_interval":    30,
+				"node_repave_interval":    int32(30),
 				"control_plane_as_worker": true,
 				"min":                     2,
 				"instance_type": []interface{}{
