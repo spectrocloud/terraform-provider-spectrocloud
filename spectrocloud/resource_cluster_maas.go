@@ -540,9 +540,10 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 		max = int32(m["max"].(int))
 	}
 	var nodePoolTags []string
-	if len(m["node_tags"].([]string)) > 0 {
-		nodePoolTags = m["node_tags"].([]string)
+	for _, nt := range m["node_tags"].(*schema.Set).List() {
+		nodePoolTags = append(nodePoolTags, nt.(string))
 	}
+
 	mp := &models.V1MaasMachinePoolConfigEntity{
 		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
 			Azs: azs,
