@@ -96,13 +96,13 @@ resource "spectrocloud_cluster_maas" "cluster" {
 
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - `machine_pool` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String)
+- `name` (String) The name of the cluster.
 
 ### Optional
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
-- `cloud_account_id` (String)
+- `cloud_account_id` (String) ID of the Maas cloud account used for the cluster. This cloud account must be of type `maas`.
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
@@ -123,7 +123,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
 ### Read-Only
 
 - `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
-- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
+- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `maas`.
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
 
@@ -132,7 +132,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
 
 Required:
 
-- `domain` (String)
+- `domain` (String) Domain name in which the cluster to be provisioned.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -140,15 +140,15 @@ Required:
 
 Required:
 
-- `azs` (Set of String)
+- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
-- `name` (String)
+- `name` (String) Name of the machine pool.
 - `placement` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
 
-- `additional_labels` (Map of String)
+- `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
@@ -163,8 +163,8 @@ Optional:
 
 Required:
 
-- `min_cpu` (Number)
-- `min_memory_mb` (Number)
+- `min_cpu` (Number) Minimum number of CPU required for the machine pool node.
+- `min_memory_mb` (Number) Minimum memory in MB required for the machine pool node.
 
 
 <a id="nestedblock--machine_pool--placement"></a>
@@ -172,11 +172,11 @@ Required:
 
 Required:
 
-- `resource_pool` (String)
+- `resource_pool` (String) The name of the resource pool in the Maas cloud.
 
 Read-Only:
 
-- `id` (String) The ID of this resource.
+- `id` (String) This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.
 
 
 <a id="nestedblock--machine_pool--node"></a>
