@@ -22,7 +22,10 @@ func resourceClusterMaas() *schema.Resource {
 		ReadContext:   resourceClusterMaasRead,
 		UpdateContext: resourceClusterMaasUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing MAAS clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterMaasImport,
+		},
+		Description: "Resource for managing MAAS clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -33,9 +36,10 @@ func resourceClusterMaas() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the cluster.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -70,14 +74,15 @@ func resourceClusterMaas() *schema.Resource {
 					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "ID of the Maas cloud account used for the cluster. This cloud account must be of type `maas`.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `maas`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"os_patch_on_boot": {
@@ -116,8 +121,9 @@ func resourceClusterMaas() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"domain": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Domain name in which the cluster to be provisioned.",
 						},
 					},
 				},
@@ -134,6 +140,7 @@ func resourceClusterMaas() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
 						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
@@ -155,6 +162,7 @@ func resourceClusterMaas() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "Name of the machine pool.",
 						},
 						"count": {
 							Type:        schema.TypeInt,
@@ -184,12 +192,14 @@ func resourceClusterMaas() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"min_memory_mb": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "Minimum memory in MB required for the machine pool node.",
 									},
 									"min_cpu": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "Minimum number of CPU required for the machine pool node.",
 									},
 								},
 							},
@@ -209,6 +219,7 @@ func resourceClusterMaas() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Availability zones in which the machine pool nodes to be provisioned.",
 						},
 						"placement": {
 							Type:     schema.TypeList,
@@ -216,12 +227,14 @@ func resourceClusterMaas() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"id": {
-										Type:     schema.TypeString,
-										Computed: true,
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.",
 									},
 									"resource_pool": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the resource pool in the Maas cloud.",
 									},
 								},
 							},
@@ -285,7 +298,6 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 	return diags
 }
 
-//goland:noinspection GoUnhandledErrorResult
 func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
@@ -314,10 +326,22 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	if err := ReadCommonAttributes(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	if config, err := c.GetCloudConfigMaas(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
-		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig)
+		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
+			if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if err := d.Set("cloud_config", flattenClusterConfigsMaas(config)); err != nil {
+			return diag.FromErr(err)
+		}
+		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig, config.Spec.ClusterConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapMaas, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
@@ -330,7 +354,21 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 	return diag.Diagnostics{}
 }
 
-func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfig) []interface{} {
+func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+
+	m := make(map[string]interface{})
+
+	if config.Spec.ClusterConfig.Domain != nil {
+		m["domain"] = *config.Spec.ClusterConfig.Domain
+	}
+
+	return []interface{}{m}
+}
+
+func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfig, config *models.V1MaasClusterConfig) []interface{} {
 
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -361,6 +399,13 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		}
 
 		oi["azs"] = machinePool.Azs
+		if config != nil {
+			placement := make(map[string]interface{})
+			if config.Domain != nil {
+				placement["resource_pool"] = *config.Domain
+				oi["placement"] = []interface{}{placement}
+			}
+		}
 		//oi["resource_pool"] = machinePool.ResourcePool
 
 		ois[i] = oi
