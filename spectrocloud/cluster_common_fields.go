@@ -182,7 +182,7 @@ func repaveApprovalCheck(d *schema.ResourceData, c *client.V1Client) (bool, erro
 			if err != nil {
 				return false, err
 			}
-			if cluster.Status.Repave.State == "aaproved" {
+			if cluster.Status.Repave.State == "approved" {
 				return true, nil
 			} else {
 				err = errors.New("repave cluster is not approved - cluster repave state is still pending. Please set `approve_cluster_repave` to `true` to approve the repave operation on the cluster")
