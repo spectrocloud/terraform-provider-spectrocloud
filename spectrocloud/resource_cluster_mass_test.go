@@ -1,18 +1,21 @@
 package spectrocloud
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"reflect"
-	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 	t.Run("Nil Input", func(t *testing.T) {
 		expected := make([]interface{}, 0)
-		result := flattenMachinePoolConfigsMaas(nil)
+		result := flattenMachinePoolConfigsMaas(nil, nil)
 
 		if !reflect.DeepEqual(expected, result) {
 			t.Errorf("Expected empty array for nil input, got: %v", result)
@@ -52,6 +55,9 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 			UseControlPlaneAsWorker: true,
 		}
 		mockMachinePools = append(mockMachinePools, mp)
+		config := &models.V1MaasClusterConfig{
+			Domain: types.Ptr("maas_resource_pool"),
+		}
 
 		expected := []interface{}{
 			map[string]interface{}{
@@ -74,10 +80,15 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 				},
 				"azs":       []string{"zone1", "zone2"},
 				"node_tags": []string{"test"},
+				"placement": []interface{}{
+					map[string]interface{}{
+						"resource_pool": "maas_resource_pool",
+					},
+				},
 			},
 		}
 
-		result := flattenMachinePoolConfigsMaas(mockMachinePools)
+		result := flattenMachinePoolConfigsMaas(mockMachinePools, config)
 
 		if diff := cmp.Diff(expected, result); diff != "" {
 			t.Errorf("Unexpected result (-want +got):\n%s", diff)
