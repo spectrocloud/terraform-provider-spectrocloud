@@ -110,6 +110,7 @@ func TestFlattenCloudAccountAwsSTS(t *testing.T) {
 	assert.Equal(t, "aws_scope_test", rd.Get("context"))
 	assert.Equal(t, "test_arn", rd.Get("arn"))
 	assert.Equal(t, "test_partition", rd.Get("partition"))
+	assert.Equal(t, string(models.V1AwsCloudAccountCredentialTypeSts), rd.Get("type"))
 
 	// Handle policy_arns as a *schema.Set
 	policyARNs, ok := rd.Get("policy_arns").(*schema.Set)
