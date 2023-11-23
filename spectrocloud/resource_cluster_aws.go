@@ -84,7 +84,7 @@ func resourceClusterAws() *schema.Resource {
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
-			"approve_cluster_repave": {
+			"approve_repave": {
 				Type:        schema.TypeBool,
 				Default:     false,
 				Optional:    true,

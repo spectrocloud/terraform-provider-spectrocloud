@@ -170,8 +170,8 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 }
 
 func repaveApprovalCheck(d *schema.ResourceData, c *client.V1Client) (bool, error) {
-	approveClusterRepave := d.Get("approve_cluster_repave").(bool)
-	if d.Get("repave_state") == "pending" {
+	approveClusterRepave := d.Get("approve_repave").(bool)
+	if d.Get("repave_state") == "Pending" {
 		if approveClusterRepave {
 			context := d.Get("context").(string)
 			err := c.ApproveClusterRepave(d.Id(), context)
@@ -182,15 +182,15 @@ func repaveApprovalCheck(d *schema.ResourceData, c *client.V1Client) (bool, erro
 			if err != nil {
 				return false, err
 			}
-			if cluster.Status.Repave.State == "approved" {
+			if cluster.Status.Repave.State == "Approved" {
 				return true, nil
 			} else {
-				err = errors.New("repave cluster is not approved - cluster repave state is still pending. Please set `approve_cluster_repave` to `true` to approve the repave operation on the cluster")
+				err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `approve_repave` to `true` to approve the repave operation on the cluster")
 				return false, err
 			}
 
 		} else {
-			err := errors.New("repave cluster approval validation - cluster repave state is still pending. Please set `approve_cluster_repave` to `true` to approve the repave operation on the cluster")
+			err := errors.New("repave cluster approval validation - cluster repave state is still pending. Please set `approve_repave` to `true` to approve the repave operation on the cluster")
 			return false, err
 		}
 	}
