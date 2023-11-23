@@ -93,7 +93,7 @@ func resourceClusterAws() *schema.Resource {
 			"repave_state": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Current repave state. values `pending` and `approved`",
+				Description: "Current repave state. values `Pending` and `Approved`",
 			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
