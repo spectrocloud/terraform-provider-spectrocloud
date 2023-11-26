@@ -58,6 +58,12 @@ func resourceClusterImport() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
 			"cluster_profile": schemas.ClusterProfileSchema(),
 			"cloud": {
 				Type:             schema.TypeString,
@@ -184,7 +190,7 @@ func resourceCloudClusterImportManoifests(cluster *models.V1SpectroCluster, d *s
 }
 
 func cloudClusterImportFunc(c *client.V1Client, d *schema.ResourceData) (string, error) {
-	meta := toClusterMeta(d)
+	meta := toClusterMetadataUpdate(d)
 	cloudType := d.Get("cloud").(string)
 	switch cloudType {
 	case "aws":
@@ -247,11 +253,4 @@ func flattenCloudConfigGeneric(configUID string, d *schema.ResourceData, c *clie
 		return diag.FromErr(err)
 	}
 	return diag.Diagnostics{}
-}
-
-func toClusterMeta(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
-	return &models.V1ObjectMetaInputEntity{
-		Name:   d.Get("name").(string),
-		Labels: toTags(d),
-	}
 }

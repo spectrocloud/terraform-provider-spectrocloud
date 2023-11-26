@@ -2,8 +2,9 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"time"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -49,6 +50,12 @@ func resourceClusterGroup() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Description: "A list of tags to be applied to the cluster group. Tags must be in the form of `key:value`.",
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
 			},
 			"config": {
 				Type:     schema.TypeList,
@@ -311,11 +318,7 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 	}
 
 	ret := &models.V1ClusterGroupEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
-			Labels: toTags(d),
-		},
+		Metadata: getClusterMetadata(d),
 		Spec: &models.V1ClusterGroupSpecEntity{
 			Type:           "hostCluster",
 			ClusterRefs:    clusterRefs,
