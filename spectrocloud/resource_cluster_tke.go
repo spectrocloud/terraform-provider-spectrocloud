@@ -220,6 +220,17 @@ func resourceClusterTke() *schema.Resource {
 					},
 				},
 			},
+			"approve_repave": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. By default, it is set to true.",
+			},
+			"repave_state": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Current repave state. values `Pending` and `Approved`",
+			},
 			"backup_policy":        schemas.BackupPolicySchema(),
 			"scan_policy":          schemas.ScanPolicySchema(),
 			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
@@ -352,80 +363,84 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
+	isRepaveApproved, err := repaveApprovalCheck(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if isRepaveApproved {
+		cloudConfigId := d.Get("cloud_config_id").(string)
+		ClusterContext := d.Get("context").(string)
+		_ = d.Get("machine_pool")
 
-	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
-	_ = d.Get("machine_pool")
+		if d.HasChange("machine_pool") {
+			oraw, nraw := d.GetChange("machine_pool")
+			if oraw == nil {
+				oraw = new(schema.Set)
+			}
+			if nraw == nil {
+				nraw = new(schema.Set)
+			}
 
-	if d.HasChange("machine_pool") {
-		oraw, nraw := d.GetChange("machine_pool")
-		if oraw == nil {
-			oraw = new(schema.Set)
-		}
-		if nraw == nil {
-			nraw = new(schema.Set)
-		}
+			os := oraw.([]interface{})
+			ns := nraw.([]interface{})
 
-		os := oraw.([]interface{})
-		ns := nraw.([]interface{})
+			osMap := make(map[string]interface{})
+			for _, mp := range os {
+				machinePool := mp.(map[string]interface{})
+				osMap[machinePool["name"].(string)] = machinePool
+			}
 
-		osMap := make(map[string]interface{})
-		for _, mp := range os {
-			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
-		}
+			nsMap := make(map[string]interface{})
+			for _, mp := range ns {
+				machinePoolResource := mp.(map[string]interface{})
+				nsMap[machinePoolResource["name"].(string)] = machinePoolResource
+				// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+				if machinePoolResource["name"].(string) != "" {
+					name := machinePoolResource["name"].(string)
+					hash := resourceMachinePoolTkeHash(machinePoolResource)
 
-		nsMap := make(map[string]interface{})
-		for _, mp := range ns {
-			machinePoolResource := mp.(map[string]interface{})
-			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
-			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
-			if machinePoolResource["name"].(string) != "" {
-				name := machinePoolResource["name"].(string)
-				hash := resourceMachinePoolTkeHash(machinePoolResource)
+					machinePool := toMachinePoolTke(machinePoolResource)
 
-				machinePool := toMachinePoolTke(machinePoolResource)
+					var err error
+					if oldMachinePool, ok := osMap[name]; !ok {
+						log.Printf("Create machine pool %s", name)
+						err = c.CreateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
+					} else if hash != resourceMachinePoolTkeHash(oldMachinePool) {
+						log.Printf("Change in machine pool %s", name)
+						err = c.UpdateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
+						// Node Maintenance Actions
+						err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusTke, "tke", ClusterContext, cloudConfigId, name)
+						if err != nil {
+							return diag.FromErr(err)
+						}
+					}
 
-				var err error
-				if oldMachinePool, ok := osMap[name]; !ok {
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
-				} else if hash != resourceMachinePoolTkeHash(oldMachinePool) {
-					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
-					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusTke, "tke", ClusterContext, cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
+
+					delete(osMap, name)
 				}
 
-				if err != nil {
+			}
+
+			for _, mp := range osMap {
+				machinePool := mp.(map[string]interface{})
+				name := machinePool["name"].(string)
+				log.Printf("Deleted machine pool %s", name)
+				if err := c.DeleteMachinePoolTke(cloudConfigId, name, ClusterContext); err != nil {
 					return diag.FromErr(err)
 				}
-
-				delete(osMap, name)
-			}
-
-		}
-
-		for _, mp := range osMap {
-			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
-			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolTke(cloudConfigId, name, ClusterContext); err != nil {
-				return diag.FromErr(err)
 			}
 		}
+
+		diagnostics, done := updateCommonFields(d, c)
+		if done {
+			return diagnostics
+		}
+
+		resourceClusterTkeRead(ctx, d, m)
 	}
-
-	diagnostics, done := updateCommonFields(d, c)
-	if done {
-		return diagnostics
-	}
-
-	resourceClusterTkeRead(ctx, d, m)
-
 	return diags
 }
 

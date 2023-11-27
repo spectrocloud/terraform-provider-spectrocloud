@@ -83,6 +83,17 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
+			"approve_repave": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. By default, it is set to true.",
+			},
+			"repave_state": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Current repave state. values `Pending` and `Approved`",
+			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -400,84 +411,88 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	isRepaveApproved, err := repaveApprovalCheck(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if isRepaveApproved {
+		cloudConfigId := d.Get("cloud_config_id").(string)
+		ClusterContext := d.Get("context").(string)
+		if d.HasChange("machine_pool") {
+			oraw, nraw := d.GetChange("machine_pool")
+			if oraw == nil {
+				oraw = new(schema.Set)
+			}
+			if nraw == nil {
+				nraw = new(schema.Set)
+			}
 
-	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
-	if d.HasChange("machine_pool") {
-		oraw, nraw := d.GetChange("machine_pool")
-		if oraw == nil {
-			oraw = new(schema.Set)
-		}
-		if nraw == nil {
-			nraw = new(schema.Set)
-		}
+			os := oraw.(*schema.Set)
+			ns := nraw.(*schema.Set)
 
-		os := oraw.(*schema.Set)
-		ns := nraw.(*schema.Set)
+			osMap := make(map[string]interface{})
+			for _, mp := range os.List() {
+				machinePool := mp.(map[string]interface{})
+				osMap[machinePool["name"].(string)] = machinePool
+			}
 
-		osMap := make(map[string]interface{})
-		for _, mp := range os.List() {
-			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
-		}
+			nsMap := make(map[string]interface{})
 
-		nsMap := make(map[string]interface{})
-
-		for _, mp := range ns.List() {
-			machinePoolResource := mp.(map[string]interface{})
-			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
-			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
-			if machinePoolResource["name"].(string) != "" {
-				name := machinePoolResource["name"].(string)
-				if name == "" {
-					continue
-				}
-				hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
-				var err error
-				machinePool, err := toMachinePoolEdgeNative(machinePoolResource)
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				if oldMachinePool, ok := osMap[name]; !ok {
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
-				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
-					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", ClusterContext, cloudConfigId, name)
+			for _, mp := range ns.List() {
+				machinePoolResource := mp.(map[string]interface{})
+				nsMap[machinePoolResource["name"].(string)] = machinePoolResource
+				// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+				if machinePoolResource["name"].(string) != "" {
+					name := machinePoolResource["name"].(string)
+					if name == "" {
+						continue
+					}
+					hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
+					var err error
+					machinePool, err := toMachinePoolEdgeNative(machinePoolResource)
 					if err != nil {
 						return diag.FromErr(err)
 					}
-				}
 
-				if err != nil {
+					if oldMachinePool, ok := osMap[name]; !ok {
+						log.Printf("Create machine pool %s", name)
+						err = c.CreateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
+					} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
+						log.Printf("Change in machine pool %s", name)
+						err = c.UpdateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
+						err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", ClusterContext, cloudConfigId, name)
+						if err != nil {
+							return diag.FromErr(err)
+						}
+					}
+
+					if err != nil {
+						return diag.FromErr(err)
+					}
+
+					// Processed (if exists)
+					delete(osMap, name)
+				}
+			}
+
+			// Deleted old machine pools
+			for _, mp := range osMap {
+				machinePool := mp.(map[string]interface{})
+				name := machinePool["name"].(string)
+				log.Printf("Deleted machine pool %s", name)
+				if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name, ClusterContext); err != nil {
 					return diag.FromErr(err)
 				}
-
-				// Processed (if exists)
-				delete(osMap, name)
 			}
 		}
 
-		// Deleted old machine pools
-		for _, mp := range osMap {
-			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
-			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name, ClusterContext); err != nil {
-				return diag.FromErr(err)
-			}
+		diagnostics, errorSet := updateCommonFields(d, c)
+		if errorSet {
+			return diagnostics
 		}
+
+		diags = resourceClusterEdgeNativeRead(ctx, d, m)
 	}
-
-	diagnostics, errorSet := updateCommonFields(d, c)
-	if errorSet {
-		return diagnostics
-	}
-
-	diags = resourceClusterEdgeNativeRead(ctx, d, m)
-
 	return diags
 }
 

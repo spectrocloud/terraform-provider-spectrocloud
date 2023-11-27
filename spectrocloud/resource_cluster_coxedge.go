@@ -80,6 +80,17 @@ func resourceClusterCoxEdge() *schema.Resource {
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
+			"approve_repave": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. By default, it is set to true.",
+			},
+			"repave_state": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Current repave state. values `Pending` and `Approved`",
+			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -572,87 +583,91 @@ func resourceCoxEdgeClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-
-	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigCoxEdge(cloudConfigId, ClusterContext)
+	isRepaveApproved, err := repaveApprovalCheck(d, c)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if d.HasChange("machine_pool") {
-		oraw, nraw := d.GetChange("machine_pool")
-		if oraw == nil {
-			oraw = new(schema.Set)
+	if isRepaveApproved {
+		cloudConfigId := d.Get("cloud_config_id").(string)
+		ClusterContext := d.Get("context").(string)
+		CloudConfig, err := c.GetCloudConfigCoxEdge(cloudConfigId, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
 		}
-		if nraw == nil {
-			nraw = new(schema.Set)
-		}
+		if d.HasChange("machine_pool") {
+			oraw, nraw := d.GetChange("machine_pool")
+			if oraw == nil {
+				oraw = new(schema.Set)
+			}
+			if nraw == nil {
+				nraw = new(schema.Set)
+			}
 
-		os := oraw.([]interface{})
-		ns := nraw.([]interface{})
+			os := oraw.([]interface{})
+			ns := nraw.([]interface{})
 
-		osMap := make(map[string]interface{})
-		for _, mp := range os {
-			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
-		}
+			osMap := make(map[string]interface{})
+			for _, mp := range os {
+				machinePool := mp.(map[string]interface{})
+				osMap[machinePool["name"].(string)] = machinePool
+			}
 
-		nsMap := make(map[string]interface{})
+			nsMap := make(map[string]interface{})
 
-		for _, mp := range ns {
-			machinePoolResource := mp.(map[string]interface{})
-			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
-			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
-			if machinePoolResource["name"].(string) != "" {
-				name := machinePoolResource["name"].(string)
-				hash := resourceMachinePoolCoxEdgeHash(machinePoolResource)
+			for _, mp := range ns {
+				machinePoolResource := mp.(map[string]interface{})
+				nsMap[machinePoolResource["name"].(string)] = machinePoolResource
+				// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+				if machinePoolResource["name"].(string) != "" {
+					name := machinePoolResource["name"].(string)
+					hash := resourceMachinePoolCoxEdgeHash(machinePoolResource)
 
-				machinePool, err := toMachinePoolCoxEdge(machinePoolResource)
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				if oldMachinePool, ok := osMap[name]; !ok {
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolCoxEdge(cloudConfigId, machinePool, ClusterContext)
-				} else if hash != resourceMachinePoolCoxEdgeHash(oldMachinePool) {
-					// TODO
-					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolCoxEdge(cloudConfigId, machinePool, ClusterContext)
-					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusCoxEdge, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					machinePool, err := toMachinePoolCoxEdge(machinePoolResource)
 					if err != nil {
 						return diag.FromErr(err)
 					}
-				}
 
-				if err != nil {
+					if oldMachinePool, ok := osMap[name]; !ok {
+						log.Printf("Create machine pool %s", name)
+						err = c.CreateMachinePoolCoxEdge(cloudConfigId, machinePool, ClusterContext)
+					} else if hash != resourceMachinePoolCoxEdgeHash(oldMachinePool) {
+						// TODO
+						log.Printf("Change in machine pool %s", name)
+						err = c.UpdateMachinePoolCoxEdge(cloudConfigId, machinePool, ClusterContext)
+						// Node Maintenance Actions
+						err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusCoxEdge, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+						if err != nil {
+							return diag.FromErr(err)
+						}
+					}
+
+					if err != nil {
+						return diag.FromErr(err)
+					}
+
+					// Processed (if exists)
+					delete(osMap, name)
+				}
+			}
+
+			// Deleted old machine pools
+			for _, mp := range osMap {
+				machinePool := mp.(map[string]interface{})
+				name := machinePool["name"].(string)
+				log.Printf("Deleted machine pool %s", name)
+				if err := c.DeleteMachinePoolCoxEdge(cloudConfigId, name, ClusterContext); err != nil {
 					return diag.FromErr(err)
 				}
-
-				// Processed (if exists)
-				delete(osMap, name)
 			}
 		}
 
-		// Deleted old machine pools
-		for _, mp := range osMap {
-			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
-			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolCoxEdge(cloudConfigId, name, ClusterContext); err != nil {
-				return diag.FromErr(err)
-			}
+		diagnostics, done := updateCommonFields(d, c)
+		if done {
+			return diagnostics
 		}
+
+		resourceCoxEdgeClusterRead(ctx, d, m)
 	}
-
-	diagnostics, done := updateCommonFields(d, c)
-	if done {
-		return diagnostics
-	}
-
-	resourceCoxEdgeClusterRead(ctx, d, m)
-
 	return diags
 }
 
