@@ -728,6 +728,8 @@ github.com/spectrocloud/palette-sdk-go v0.0.0-20231109163311-4c5cb4f433f0 h1:tLG
 github.com/spectrocloud/palette-sdk-go v0.0.0-20231109163311-4c5cb4f433f0/go.mod h1:FW1lTIjiia2VWxPt6NjUTDmFwOyFJ2r7L5aQc8dEBg0=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20231123052332-98d2d740cf2e h1:tZMrLHLjb7FWtV2q5ceNnFpDFl/HnBdfBwTseWly/0Q=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20231123052332-98d2d740cf2e/go.mod h1:oT5AOjUGVjbTTI9+1plLX6Cs4SBQyXhdqglzGpzLQrY=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20231127211447-dcecb84caea3 h1:Yi0TxMrkzFbCWdCvkhcz705Rn5alWoi4Ra+3/UNOJMQ=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20231127211447-dcecb84caea3/go.mod h1:oT5AOjUGVjbTTI9+1plLX6Cs4SBQyXhdqglzGpzLQrY=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
 github.com/spf13/afero v1.6.0/go.mod h1:Ai8FlHk4v/PARR026UzYexafAt9roJ7LcLMAmO6Z93I=
