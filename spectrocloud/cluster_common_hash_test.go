@@ -615,9 +615,10 @@ func TestResourceMachinePoolMaasHash(t *testing.T) {
 						"min_memory_mb": 4096,
 					},
 				},
-				"azs": schema.NewSet(schema.HashString, []interface{}{"az1", "az2"}),
+				"azs":       schema.NewSet(schema.HashString, []interface{}{"az1", "az2"}),
+				"node_tags": schema.NewSet(schema.HashString, []interface{}{"test", "tf"}),
 			},
-			expectedHash: 3363048657,
+			expectedHash: 876064649,
 		},
 	}
 
