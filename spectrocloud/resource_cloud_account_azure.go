@@ -67,7 +67,7 @@ func resourceCloudAccountAzure() *schema.Resource {
 				Default:     false,
 				Description: "Disable properties request. This is a boolean value that indicates whether to disable properties request or not. If not specified, the default value is `false`.",
 			},
-			"partition": {
+			"cloud": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "AzurePublicCloud",
@@ -149,7 +149,7 @@ func flattenCloudAccountAzure(d *schema.ResourceData, account *models.V1AzureAcc
 		return diag.FromErr(err), true
 	}
 	if account.Spec.AzureEnvironment != nil {
-		if err := d.Set("partition", account.Spec.AzureEnvironment); err != nil {
+		if err := d.Set("cloud", account.Spec.AzureEnvironment); err != nil {
 			return diag.FromErr(err), true
 		}
 	}
@@ -214,8 +214,8 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 	}
 
 	// add partition to account
-	if d.Get("partition") != nil {
-		account.Spec.AzureEnvironment = types.Ptr(d.Get("partition").(string))
+	if d.Get("cloud") != nil {
+		account.Spec.AzureEnvironment = types.Ptr(d.Get("cloud").(string))
 	}
 	return account
 }
