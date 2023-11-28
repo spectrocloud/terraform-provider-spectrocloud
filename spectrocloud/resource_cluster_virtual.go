@@ -53,6 +53,12 @@ func resourceClusterVirtual() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
 			"host_cluster_uid": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -399,11 +405,7 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 		return nil, err
 	}
 	cluster := &models.V1SpectroVirtualClusterEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
-			Labels: toTags(d),
-		},
+		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroVirtualClusterEntitySpec{
 			CloudConfig: &models.V1VirtualClusterConfig{
 				HelmRelease: &models.V1VirtualClusterHelmRelease{
