@@ -74,13 +74,6 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 			return diag.FromErr(err), true
 		}
 	}
-	repaveState := cluster.Status.Repave.State
-	if repaveState != "" {
-		err := d.Set("repave_state", repaveState)
-		if err != nil {
-			return diag.FromErr(err), true
-		}
-	}
 
 	hostConfig := cluster.Spec.ClusterConfig.HostClusterConfig
 	if hostConfig != nil && *hostConfig.IsHostCluster {
