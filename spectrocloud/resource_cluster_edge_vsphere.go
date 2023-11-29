@@ -75,16 +75,11 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
-			"approve_repave": {
+			"approve_system_repave": {
 				Type:        schema.TypeBool,
 				Default:     false,
 				Optional:    true,
-				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. By default, it is set to true.",
-			},
-			"repave_state": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "Current repave state. values `Pending` and `Approved`",
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
 			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
@@ -434,97 +429,96 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	isRepaveApproved, err := repaveApprovalCheck(d, c)
+	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if isRepaveApproved {
-		cloudConfigId := d.Get("cloud_config_id").(string)
-		ClusterContext := d.Get("context").(string)
-		CloudConfig, err := c.GetCloudConfigEdgeVsphere(cloudConfigId, ClusterContext)
-		if err != nil {
-			return diag.FromErr(err)
+	cloudConfigId := d.Get("cloud_config_id").(string)
+	ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigEdgeVsphere(cloudConfigId, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if d.HasChange("machine_pool") {
+		oraw, nraw := d.GetChange("machine_pool")
+		if oraw == nil {
+			oraw = new(schema.Set)
 		}
-		if d.HasChange("machine_pool") {
-			oraw, nraw := d.GetChange("machine_pool")
-			if oraw == nil {
-				oraw = new(schema.Set)
-			}
-			if nraw == nil {
-				nraw = new(schema.Set)
-			}
+		if nraw == nil {
+			nraw = new(schema.Set)
+		}
 
-			os := oraw.([]interface{})
-			ns := nraw.([]interface{})
+		os := oraw.([]interface{})
+		ns := nraw.([]interface{})
 
-			osMap := make(map[string]interface{})
-			for _, mp := range os {
-				machinePool := mp.(map[string]interface{})
-				osMap[machinePool["name"].(string)] = machinePool
-			}
+		osMap := make(map[string]interface{})
+		for _, mp := range os {
+			machinePool := mp.(map[string]interface{})
+			osMap[machinePool["name"].(string)] = machinePool
+		}
 
-			nsMap := make(map[string]interface{})
+		nsMap := make(map[string]interface{})
 
-			for _, mp := range ns {
-				machinePoolResource := mp.(map[string]interface{})
-				nsMap[machinePoolResource["name"].(string)] = machinePoolResource
-				// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
-				if machinePoolResource["name"].(string) != "" {
-					name := machinePoolResource["name"].(string)
-					hash := resourceMachinePoolVsphereHash(machinePoolResource)
-					var err error
-					machinePool, err := toMachinePoolEdgeVsphere(machinePoolResource)
-					if err != nil {
-						return diag.FromErr(err)
-					}
-
-					if oldMachinePool, ok := osMap[name]; !ok {
-						log.Printf("Create machine pool %s", name)
-						err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
-					} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
-						log.Printf("Change in machine pool %s", name)
-						oldMachinePool, _ := toMachinePoolEdgeVsphere(oldMachinePool)
-						oldPlacements := oldMachinePool.CloudConfig.Placements
-
-						for i, p := range machinePool.CloudConfig.Placements {
-							if len(oldPlacements) > i {
-								p.UID = oldPlacements[i].UID
-							}
-						}
-
-						err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
-						// Node Maintenance Actions
-						err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeVsphere, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
-						if err != nil {
-							return diag.FromErr(err)
-						}
-					}
-
-					if err != nil {
-						return diag.FromErr(err)
-					}
-
-					delete(osMap, name)
-				}
-			}
-
-			for _, mp := range osMap {
-				machinePool := mp.(map[string]interface{})
-				name := machinePool["name"].(string)
-				log.Printf("Deleted machine pool %s", name)
-				if err := c.DeleteMachinePoolVsphere(cloudConfigId, name, ClusterContext); err != nil {
+		for _, mp := range ns {
+			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolVsphereHash(machinePoolResource)
+				var err error
+				machinePool, err := toMachinePoolEdgeVsphere(machinePoolResource)
+				if err != nil {
 					return diag.FromErr(err)
 				}
+
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
+					log.Printf("Change in machine pool %s", name)
+					oldMachinePool, _ := toMachinePoolEdgeVsphere(oldMachinePool)
+					oldPlacements := oldMachinePool.CloudConfig.Placements
+
+					for i, p := range machinePool.CloudConfig.Placements {
+						if len(oldPlacements) > i {
+							p.UID = oldPlacements[i].UID
+						}
+					}
+
+					err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeVsphere, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				delete(osMap, name)
 			}
 		}
 
-		diagnostics, done := updateCommonFields(d, c)
-		if done {
-			return diagnostics
+		for _, mp := range osMap {
+			machinePool := mp.(map[string]interface{})
+			name := machinePool["name"].(string)
+			log.Printf("Deleted machine pool %s", name)
+			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name, ClusterContext); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-
-		resourceClusterEdgeVsphereRead(ctx, d, m)
 	}
+
+	diagnostics, done := updateCommonFields(d, c)
+	if done {
+		return diagnostics
+	}
+
+	resourceClusterEdgeVsphereRead(ctx, d, m)
+
 	return diags
 }
 

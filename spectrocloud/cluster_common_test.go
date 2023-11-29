@@ -274,13 +274,12 @@ func TestUpdateClusterRBAC(t *testing.T) {
 func TestRepaveApprovalCheck(t *testing.T) {
 
 	d := resourceClusterAws().TestResourceData()
-	d.Set("approve_repave", true)
-	d.Set("repave_state", "Pending")
+	d.Set("approve_system_repave", true)
 	d.Set("context", "tenant")
 	d.SetId("TestclusterUID")
 
 	m := &client.V1Client{
-		ApproveClusterRepaveFn: func(clusterUID string, context string) error {
+		ApproveClusterRepaveFn: func(context string, clusterUID string) error {
 			return nil
 		},
 		GetClusterFn: func(context string, clusterUID string) (*models.V1SpectroCluster, error) {
@@ -296,26 +295,49 @@ func TestRepaveApprovalCheck(t *testing.T) {
 				},
 			}, nil
 		},
+		GetRepaveReasonsFn: func(context string, clusterUID string) ([]string, error) {
+			var reason []string
+			reason = append(reason, "PackValuesUpdated")
+			return reason, nil
+		},
 	}
 
-	// Test case where repave state is pending and approve_repave is true
-	approved, err := repaveApprovalCheck(d, m)
+	// Test case where repave state is pending and approve_system_repave is true
+	err := validateSystemRepaveApproval(d, m)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	if !approved {
-		t.Error("Expected repave approval check to succeed, but it failed")
+
+	// Test case where repave state is pending and approve_system_repave is false
+	m = &client.V1Client{
+		ApproveClusterRepaveFn: func(context string, clusterUID string) error {
+			return nil
+		},
+		GetClusterFn: func(context string, clusterUID string) (*models.V1SpectroCluster, error) {
+			return &models.V1SpectroCluster{
+				APIVersion: "",
+				Kind:       "",
+				Metadata:   nil,
+				Spec:       nil,
+				Status: &models.V1SpectroClusterStatus{
+					Repave: &models.V1ClusterRepaveStatus{
+						State: "Pending",
+					},
+				},
+			}, nil
+		},
+		GetRepaveReasonsFn: func(context string, clusterUID string) ([]string, error) {
+			var reason []string
+			reason = append(reason, "PackValuesUpdated")
+			return reason, nil
+		},
 	}
 
-	// Test case where repave state is pending and approve_repave is false
-	d.Set("approve_repave", false)
-	approved, err = repaveApprovalCheck(d, m)
-	expectedErrMsg := "repave cluster approval validation - cluster repave state is still pending. Please set `approve_repave` to `true` to approve the repave operation on the cluster"
+	d.Set("approve_system_repave", false)
+	err = validateSystemRepaveApproval(d, m)
+	expectedErrMsg := "cluster repave state is pending. \nDue to the following reasons -  \nPackValuesUpdated\nKindly verify the cluster and set `approve_system_repave` to `true` to continue the repave operation and day 2 operation on the cluster."
 	if err == nil || err.Error() != expectedErrMsg {
 		t.Errorf("Expected error message '%s', got '%s'", expectedErrMsg, err)
-	}
-	if approved {
-		t.Error("Expected repave approval check to fail, but it succeeded")
 	}
 
 }
