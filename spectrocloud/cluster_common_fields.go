@@ -106,7 +106,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
 func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
-	if d.HasChanges("name", "tags") {
+	if d.HasChanges("name", "tags", "description") {
 		if err := updateClusterMetadata(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
