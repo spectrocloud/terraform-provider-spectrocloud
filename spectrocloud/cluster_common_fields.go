@@ -170,6 +170,9 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 	if err != nil {
 		return err
 	}
+	if cluster == nil {
+		return nil
+	}
 	if cluster.Status.Repave.State == "Pending" {
 		if approveClusterRepave {
 			err := c.ApproveClusterRepave(context, d.Id())
