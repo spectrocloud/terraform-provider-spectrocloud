@@ -335,7 +335,9 @@ func TestRepaveApprovalCheck(t *testing.T) {
 
 	d.Set("approve_system_repave", false)
 	err = validateSystemRepaveApproval(d, m)
-	expectedErrMsg := "cluster repave state is pending. \nDue to the following reasons -  \nPackValuesUpdated\nKindly verify the cluster and set `approve_system_repave` to `true` to continue the repave operation and day 2 operation on the cluster."
+	expectedErrMsg := `cluster repave state is pending 
+	due to the following reasons: PackValuesUpdated
+	Kindly verify the cluster and set `approve_system_repave` to `true` to continue the repave operation and apply changes to the cluster."
 	if err == nil || err.Error() != expectedErrMsg {
 		t.Errorf("Expected error message '%s', got '%s'", expectedErrMsg, err)
 	}
