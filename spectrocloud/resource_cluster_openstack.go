@@ -86,6 +86,12 @@ func resourceClusterOpenStack() *schema.Resource {
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
+			"approve_system_repave": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
+			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -425,7 +431,10 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-
+	err := validateSystemRepaveApproval(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigOpenStack(cloudConfigId, ClusterContext)

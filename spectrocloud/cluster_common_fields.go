@@ -1,10 +1,12 @@
 package spectrocloud
 
 import (
+	"errors"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"strings"
 )
 
 // read common fields like kubeconfig, tags, backup policy, scan policy, cluster_rbac_binding, namespaces
@@ -159,4 +161,43 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 	}
 
 	return diag.Diagnostics{}, false
+}
+
+func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) error {
+	approveClusterRepave := d.Get("approve_system_repave").(bool)
+	context := d.Get("context").(string)
+	cluster, err := c.GetCluster(context, d.Id())
+	if err != nil {
+		return err
+	}
+	if cluster == nil {
+		return nil
+	}
+	if cluster.Status.Repave.State == "Pending" {
+		if approveClusterRepave {
+			err := c.ApproveClusterRepave(context, d.Id())
+			if err != nil {
+				return err
+			}
+			cluster, err := c.GetCluster(context, d.Id())
+			if err != nil {
+				return err
+			}
+			if cluster.Status.Repave.State == "Approved" {
+				return nil
+			} else {
+				err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `approve_system_repave` to `true` to approve the repave operation on the cluster")
+				return err
+			}
+
+		} else {
+			reasons, err := c.GetRepaveReasons(context, d.Id())
+			if err != nil {
+				return err
+			}
+			err = errors.New("cluster repave state is pending. \nDue to the following reasons -  \n" + strings.Join(reasons, "\n") + "\nKindly verify the cluster and set `approve_system_repave` to `true` to continue the repave operation and day 2 operation on the cluster.")
+			return err
+		}
+	}
+	return nil
 }
