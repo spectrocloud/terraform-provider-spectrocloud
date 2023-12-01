@@ -43,6 +43,7 @@ resource "local_file" "adminkubeconfig" {
 ### Optional
 
 - `context` (String) The context of the cluster. Allowed values are `project` or `tenant`. Defaults to `project`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+- `virtual` (Boolean) If set to true, the cluster will treated as a virtual cluster. Defaults to `false`.
 
 ### Read-Only
 
