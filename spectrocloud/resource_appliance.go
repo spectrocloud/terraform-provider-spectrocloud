@@ -68,7 +68,7 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
-	appliance := ToApplianceEntity(d)
+	appliance := toApplianceEntity(d)
 	uid, err := c.CreateAppliance(appliance)
 	if err != nil {
 		return diag.FromErr(err)
@@ -136,7 +136,7 @@ func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 	var diags diag.Diagnostics
 	// Currently, we only support updating tags during day 2 operations in the appliance, which will be handled via UpdateApplianceMeta (above code snippet).
 	if d.HasChange("tags") {
-		applianceMeta := ToApplianceMeta(d)
+		applianceMeta := toApplianceMeta(d)
 		err := c.UpdateApplianceMeta(d.Id(), applianceMeta)
 		if err != nil {
 			return diag.FromErr(err)
@@ -157,7 +157,7 @@ func resourceApplianceDelete(ctx context.Context, d *schema.ResourceData, m inte
 	return diags
 }
 
-func ToApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
+func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 	id := d.Get("uid").(string)
 	tags := map[string]string{}
 	if d.Get("tags") != nil {
@@ -182,7 +182,7 @@ func ToApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 	}
 }
 
-func ToApplianceMeta(d *schema.ResourceData) *models.V1EdgeHostDeviceMetaUpdateEntity {
+func toApplianceMeta(d *schema.ResourceData) *models.V1EdgeHostDeviceMetaUpdateEntity {
 	if d.Get("tags") != nil {
 		return &models.V1EdgeHostDeviceMetaUpdateEntity{
 			Metadata: &models.V1ObjectTagsEntity{
@@ -195,12 +195,12 @@ func ToApplianceMeta(d *schema.ResourceData) *models.V1EdgeHostDeviceMetaUpdateE
 	return &models.V1EdgeHostDeviceMetaUpdateEntity{}
 }
 
-func ToAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
+func toAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
 
 	if d.Get("tags") != nil {
 		tags := d.Get("tags").(map[string]interface{})
 
-		appliance := SetFields(d, tags)
+		appliance := setFields(d, tags)
 
 		return &appliance
 	}
@@ -209,7 +209,7 @@ func ToAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
 
 }
 
-func SetFields(d *schema.ResourceData, tags map[string]interface{}) models.V1EdgeHostDevice {
+func setFields(d *schema.ResourceData, tags map[string]interface{}) models.V1EdgeHostDevice {
 	appliance := models.V1EdgeHostDevice{}
 	appliance.Metadata = &models.V1ObjectMeta{}
 	appliance.Metadata.UID = d.Id()

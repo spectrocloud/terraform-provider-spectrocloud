@@ -26,7 +26,7 @@ func TestToApplianceEntity(t *testing.T) {
 		},
 	}
 
-	result := ToApplianceEntity(d)
+	result := toApplianceEntity(d)
 	assert.Equal(t, expectedEntity, result)
 }
 
@@ -44,7 +44,7 @@ func TestToApplianceMeta_WithTags(t *testing.T) {
 		},
 	}
 
-	resultWithTags := ToApplianceMeta(d)
+	resultWithTags := toApplianceMeta(d)
 	assert.Equal(t, expectedEntityWithTags, resultWithTags)
 }
 
@@ -61,7 +61,7 @@ func TestToApplianceMeta_WithoutTags(t *testing.T) {
 		},
 	}
 
-	resultWithoutTags := ToApplianceMeta(d)
+	resultWithoutTags := toApplianceMeta(d)
 	assert.Equal(t, expectedEntityWithoutTags, resultWithoutTags)
 }
 
@@ -71,9 +71,9 @@ func TestToAppliance(t *testing.T) {
 	d.SetId("testID")
 	d.Set("tags", map[string]interface{}{"tag1": "value1", "tag2": "value2"})
 
-	expectedApplianceWithTags := SetFields(d, d.Get("tags").(map[string]interface{}))
+	expectedApplianceWithTags := setFields(d, d.Get("tags").(map[string]interface{}))
 
-	resultWithTags := ToAppliance(d)
+	resultWithTags := toAppliance(d)
 	assert.Equal(t, &expectedApplianceWithTags, resultWithTags)
 }
 
@@ -94,7 +94,7 @@ func TestSetFields_WithNameTag(t *testing.T) {
 		},
 	}
 
-	resultWithNameTag := SetFields(d, mockTags)
+	resultWithNameTag := setFields(d, mockTags)
 	assert.Equal(t, expectedApplianceWithNameTag, resultWithNameTag)
 }
 
@@ -113,6 +113,6 @@ func TestSetFields_WithoutNameTag(t *testing.T) {
 		},
 	}
 
-	resultWithoutNameTag := SetFields(d, mockTagsWithoutName)
+	resultWithoutNameTag := setFields(d, mockTagsWithoutName)
 	assert.Equal(t, expectedApplianceWithoutNameTag, resultWithoutNameTag)
 }
