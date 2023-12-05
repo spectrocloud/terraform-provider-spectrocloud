@@ -135,11 +135,21 @@ func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
-	appliance := toAppliance(d)
-	err := c.UpdateAppliance(d.Id(), appliance)
-	if err != nil {
-		return diag.FromErr(err)
+	if d.HasChange("tags") {
+		applianceMeta := toApplianceMeta(d)
+		err := c.UpdateApplianceMeta(d.Id(), applianceMeta)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
+
+	// Currently, we only support updating tags during day 2 operations in the appliance, which will be handled via UpdateApplianceMeta (above code snippet). Hence, commenting on the code snippet below
+
+	//appliance := toAppliance(d)
+	//err := c.UpdateAppliance(d.Id(), appliance)
+	//if err != nil {
+	//	return diag.FromErr(err)
+	//}
 
 	return diags
 }
@@ -178,6 +188,19 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 			HostPairingKey: strfmt.Password(key),
 		},
 	}
+}
+
+func toApplianceMeta(d *schema.ResourceData) *models.V1EdgeHostDeviceMetaUpdateEntity {
+	if d.Get("tags") != nil {
+		return &models.V1EdgeHostDeviceMetaUpdateEntity{
+			Metadata: &models.V1ObjectTagsEntity{
+				Labels: expandStringMap(d.Get("tags").(map[string]interface{})),
+				Name:   d.Id(),
+				UID:    d.Id(),
+			},
+		}
+	}
+	return &models.V1EdgeHostDeviceMetaUpdateEntity{}
 }
 
 func toAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
