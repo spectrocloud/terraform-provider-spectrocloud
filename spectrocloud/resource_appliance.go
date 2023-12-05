@@ -134,7 +134,7 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-	// Currently, we only support updating tags during day 2 operations in the appliance, which will be handled via UpdateApplianceMeta (above code snippet). Hence, commenting on the code snippet below
+	// Currently, we only support updating tags during day 2 operations in the appliance, which will be handled via UpdateApplianceMeta (above code snippet).
 	if d.HasChange("tags") {
 		applianceMeta := ToApplianceMeta(d)
 		err := c.UpdateApplianceMeta(d.Id(), applianceMeta)
