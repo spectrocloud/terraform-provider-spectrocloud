@@ -173,7 +173,7 @@ Optional:
 
 Required:
 
-- `azs` (Set of String) Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support).
+- `azs` (Set of String) Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `""`.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (String) Azure instance type from the Azure portal.
 - `name` (String) Name of the machine pool. This must be unique within the cluster.
