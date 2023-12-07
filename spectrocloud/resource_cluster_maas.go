@@ -608,7 +608,6 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 				MinCPU:     int32(InstanceType["min_cpu"].(int)),
 				MinMemInMB: int32(InstanceType["min_memory_mb"].(int)),
 			},
-			//ResourcePool: types.Ptr(Placement["resource_pool"].(string)),
 			Tags: nodePoolTags,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
