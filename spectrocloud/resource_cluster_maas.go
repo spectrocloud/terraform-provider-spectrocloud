@@ -225,7 +225,7 @@ func resourceClusterMaas() *schema.Resource {
 						},
 						"azs": {
 							Type:     schema.TypeSet,
-							Required: true,
+							Optional: true,
 							MinItems: 1,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
@@ -244,7 +244,8 @@ func resourceClusterMaas() *schema.Resource {
 						},
 						"placement": {
 							Type:     schema.TypeList,
-							Required: true,
+							Optional: true,
+							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"id": {
@@ -427,7 +428,7 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 				oi["placement"] = []interface{}{placement}
 			}
 		}
-		//oi["resource_pool"] = machinePool.ResourcePool
+
 		oi["node_tags"] = machinePool.Tags
 		ois[i] = oi
 	}
@@ -583,7 +584,7 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 	}
 
 	InstanceType := m["instance_type"].([]interface{})[0].(map[string]interface{})
-	Placement := m["placement"].([]interface{})[0].(map[string]interface{})
+
 	log.Printf("Create machine pool %s", InstanceType)
 
 	min := int32(m["count"].(int))
@@ -608,8 +609,8 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 				MinCPU:     int32(InstanceType["min_cpu"].(int)),
 				MinMemInMB: int32(InstanceType["min_memory_mb"].(int)),
 			},
-			ResourcePool: types.Ptr(Placement["resource_pool"].(string)),
-			Tags:         nodePoolTags,
+			//ResourcePool: types.Ptr(Placement["resource_pool"].(string)),
+			Tags: nodePoolTags,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
@@ -625,6 +626,10 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 			MinSize:                 min,
 			MaxSize:                 max,
 		},
+	}
+	if len(m["placement"].([]interface{})) > 0 {
+		Placement := m["placement"].([]interface{})[0].(map[string]interface{})
+		mp.CloudConfig.ResourcePool = types.Ptr(Placement["resource_pool"].(string))
 	}
 
 	if !controlPlane {
