@@ -427,7 +427,6 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 				oi["placement"] = []interface{}{placement}
 			}
 		}
-
 		oi["node_tags"] = machinePool.Tags
 		ois[i] = oi
 	}
@@ -583,7 +582,6 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 	}
 
 	InstanceType := m["instance_type"].([]interface{})[0].(map[string]interface{})
-
 	log.Printf("Create machine pool %s", InstanceType)
 
 	min := int32(m["count"].(int))
