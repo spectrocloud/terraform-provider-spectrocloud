@@ -333,12 +333,6 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
 
-	if _, found := m["host_uids"]; found {
-		for _, host := range m["host_uids"].([]interface{}) {
-			buf.WriteString(fmt.Sprintf("%s-", host.(string)))
-		}
-	}
-
 	if edgeHosts, found := m["edge_host"]; found {
 		for _, host := range edgeHosts.([]interface{}) {
 			hostMap := host.(map[string]interface{})

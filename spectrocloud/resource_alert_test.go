@@ -3,12 +3,13 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"reflect"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
-	"reflect"
-	"testing"
 )
 
 /*
@@ -117,7 +118,7 @@ func TestAlertCRUDEmail(t *testing.T) {
 	if !IsIntegrationTestEnvSet(baseConfig) {
 		t.Skip("Skipping integration test env variable not set")
 	}
-	conn := client.New(baseConfig.hubbleHost, baseConfig.email, baseConfig.pwd, baseConfig.project, baseConfig.apikey, false, 3)
+	conn := client.New(baseConfig.hubbleHost, baseConfig.project, baseConfig.apikey, false, 3)
 	var err error
 	channelEmail := &models.V1Channel{
 		IsActive:      true,
@@ -177,7 +178,7 @@ func TestAlertCRUDHttp(t *testing.T) {
 	if !IsIntegrationTestEnvSet(baseConfig) {
 		t.Skip("Skipping integration test env variable not set")
 	}
-	conn := client.New(baseConfig.hubbleHost, baseConfig.email, baseConfig.pwd, baseConfig.project, baseConfig.apikey, false, 3)
+	conn := client.New(baseConfig.hubbleHost, baseConfig.project, baseConfig.apikey, false, 3)
 	var err error
 	header := map[string]string{
 		"type": "CH-Notification",

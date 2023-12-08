@@ -131,12 +131,6 @@ func resourceClusterEdgeNative() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"ssh_key": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Deprecated:  "This field is deprecated from provider 0.16.0. And will be removed in 0.17.0. Use `ssh_keys` instead.",
-							Description: "SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
-						},
 						"ssh_keys": {
 							Type:          schema.TypeSet,
 							Optional:      true,
@@ -209,14 +203,6 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Default:      "RollingUpdateScaleOut",
 							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
-						},
-						"host_uids": {
-							Type:       schema.TypeList,
-							Optional:   true,
-							Deprecated: "This field is deprecated from provider 0.13.0. Use `edge_host` instead.",
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
 						},
 						"edge_host": {
 							Type:     schema.TypeList,

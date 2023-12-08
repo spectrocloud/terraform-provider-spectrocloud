@@ -333,7 +333,7 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 	return ret
 }
 
-func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig, hostClusterConfig []*models.V1ClusterGroupHostClusterConfig, endpointType, values string, k8Distro string) *models.V1ClusterGroupClustersConfig {
+func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig, hostClusterConfig []*models.V1ClusterGroupHostClusterConfig, endpointType, values, k8Distro string) *models.V1ClusterGroupClustersConfig {
 	if values != "" {
 		return &models.V1ClusterGroupClustersConfig{
 			EndpointType:         endpointType,
