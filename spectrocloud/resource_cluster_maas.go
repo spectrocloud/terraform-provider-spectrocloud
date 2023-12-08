@@ -626,6 +626,9 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 	if len(m["placement"].([]interface{})) > 0 {
 		Placement := m["placement"].([]interface{})[0].(map[string]interface{})
 		mp.CloudConfig.ResourcePool = types.Ptr(Placement["resource_pool"].(string))
+	} else {
+		rp := ""
+		mp.CloudConfig.ResourcePool = &rp
 	}
 
 	if !controlPlane {
