@@ -135,8 +135,10 @@ Required:
 
 Optional:
 
+- `container_name` (String) Container name within your azure storage account.
 - `control_plane_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--control_plane_subnet))
 - `network_resource_group` (String) Azure network resource group in which the cluster is to be provisioned.
+- `storage_account_name` (String) Azure storage account name.
 - `virtual_network_cidr_block` (String) Azure virtual network cidr block in which the cluster is to be provisioned.
 - `virtual_network_name` (String) Azure virtual network in which the cluster is to be provisioned.
 - `worker_node_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--worker_node_subnet))

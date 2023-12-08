@@ -142,15 +142,14 @@ Required:
 
 Required:
 
-- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String) Name of the machine pool.
-- `placement` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
 
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
+- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
@@ -158,6 +157,7 @@ Optional:
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `node_tags` (Set of String) Node tags to dynamically place nodes in a pool by using MAAS automatic tags. Specify the tag values that you want to apply to all nodes in the node pool.
+- `placement` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
@@ -170,6 +170,15 @@ Required:
 - `min_memory_mb` (Number) Minimum memory in MB required for the machine pool node.
 
 
+<a id="nestedblock--machine_pool--node"></a>
+### Nested Schema for `machine_pool.node`
+
+Required:
+
+- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
+- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
+
+
 <a id="nestedblock--machine_pool--placement"></a>
 ### Nested Schema for `machine_pool.placement`
 
@@ -180,15 +189,6 @@ Required:
 Read-Only:
 
 - `id` (String) This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.
-
-
-<a id="nestedblock--machine_pool--node"></a>
-### Nested Schema for `machine_pool.node`
-
-Required:
-
-- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
-- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
 
 
 <a id="nestedblock--machine_pool--taints"></a>
