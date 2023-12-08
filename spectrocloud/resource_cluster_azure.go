@@ -149,6 +149,18 @@ func resourceClusterAzure() *schema.Resource {
 							Required:    true,
 							Description: "SSH key to be used for the cluster nodes.",
 						},
+						"storage_account_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "",
+							Description: "Azure storage account name.",
+						},
+						"container_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "",
+							Description: "Container name within your azure storage account.",
+						},
 						"network_resource_group": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -268,8 +280,8 @@ func resourceClusterAzure() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `\"\"`.",
-							Default: "",
+							Description: "Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `[\"\"]`.",
+							Default:     []string{""},
 						},
 						"is_system_node_pool": {
 							Type:        schema.TypeBool,
@@ -536,7 +548,6 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
-
 	clusterContext := d.Get("context").(string)
 	profiles, err := toProfiles(c, d, clusterContext)
 	if err != nil {
@@ -549,10 +560,12 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
-				Location:       types.Ptr(cloudConfig["region"].(string)),
-				SSHKey:         types.Ptr(cloudConfig["ssh_key"].(string)),
-				SubscriptionID: types.Ptr(cloudConfig["subscription_id"].(string)),
-				ResourceGroup:  cloudConfig["resource_group"].(string),
+				Location:           types.Ptr(cloudConfig["region"].(string)),
+				SSHKey:             types.Ptr(cloudConfig["ssh_key"].(string)),
+				SubscriptionID:     types.Ptr(cloudConfig["subscription_id"].(string)),
+				ResourceGroup:      cloudConfig["resource_group"].(string),
+				StorageAccountName: cloudConfig["storage_account_name"].(string),
+				ContainerName:      cloudConfig["container_name"].(string),
 			},
 		},
 	}

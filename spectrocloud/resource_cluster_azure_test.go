@@ -13,10 +13,12 @@ func prepareAzureTestData() *schema.ResourceData {
 	d := resourceClusterAzure().TestResourceData()
 	cloudConfig := []interface{}{
 		map[string]interface{}{
-			"region":          "us-west-2",
-			"ssh_key":         "dummy_ssh_key",
-			"subscription_id": "dummy_subscription_id",
-			"resource_group":  "dummy_resource_group",
+			"region":               "us-west-2",
+			"ssh_key":              "dummy_ssh_key",
+			"subscription_id":      "dummy_subscription_id",
+			"resource_group":       "dummy_resource_group",
+			"storage_account_name": "dummy_storage_account_name",
+			"container_name":       "dummy_container_name",
 		},
 	}
 	azsList := []string{"us-east-1a", "us-east-1b"}
