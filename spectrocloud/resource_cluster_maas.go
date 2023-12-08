@@ -628,7 +628,7 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 		mp.CloudConfig.ResourcePool = types.Ptr(Placement["resource_pool"].(string))
 	} else {
 		rp := ""
-		mp.CloudConfig.ResourcePool = &rp
+		mp.CloudConfig.ResourcePool = &rp // backend is not accepting nil, rather pointer to empty string.
 	}
 
 	if !controlPlane {
