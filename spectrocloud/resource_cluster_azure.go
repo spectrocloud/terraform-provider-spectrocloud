@@ -275,7 +275,7 @@ func resourceClusterAzure() *schema.Resource {
 						},
 						"azs": {
 							Type:     schema.TypeSet,
-							Required: true,
+							Optional: true,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
