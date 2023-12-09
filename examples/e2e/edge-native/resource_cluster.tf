@@ -7,10 +7,8 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
   }
 
   cloud_config {
-    ssh_key = "spectro2022"
-    # For Multiple ssh_keys
-    # ssh_keys = ["spectro2022","spectro2023"]
-    vip = "192.168.100.15"
+    ssh_keys = ["spectro2022", "spectro2023"]
+    vip      = "192.168.100.15"
   }
 
   machine_pool {
