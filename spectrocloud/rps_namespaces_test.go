@@ -17,12 +17,12 @@ func TestNameSpacesRPSScenario(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		h := client.New("api.dev.spectrocloud.com", "nikolay@spectrocloud.com", "", "", "mB9NKY0bBRlYy4eP1wteirbxHQ0b5ypL", false, c.retries)
+		h := client.New("api.dev.spectrocloud.com", "", "mB9NKY0bBRlYy4eP1wteirbxHQ0b5ypL", false, c.retries)
 		uid, err := h.GetProjectUID("Default")
 		if err != nil {
 			t.Fail()
 		}
-		projectH := client.New("api.dev.spectrocloud.com", "nikolay@spectrocloud.com", "", uid, "mB9NKY0bBRlYy4eP1wteirbxHQ0b5ypL", false, c.retries)
+		projectH := client.New("api.dev.spectrocloud.com", uid, "mB9NKY0bBRlYy4eP1wteirbxHQ0b5ypL", false, c.retries)
 		GetNamespaces1Test(t, projectH, c)
 	}
 }

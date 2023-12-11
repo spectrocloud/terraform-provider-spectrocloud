@@ -279,10 +279,10 @@ func TestRepaveApprovalCheck(t *testing.T) {
 	d.SetId("TestclusterUID")
 
 	m := &client.V1Client{
-		ApproveClusterRepaveFn: func(context string, clusterUID string) error {
+		ApproveClusterRepaveFn: func(context, clusterUID string) error {
 			return nil
 		},
-		GetClusterFn: func(context string, clusterUID string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(context, clusterUID string) (*models.V1SpectroCluster, error) {
 			return &models.V1SpectroCluster{
 				APIVersion: "",
 				Kind:       "",
@@ -295,7 +295,7 @@ func TestRepaveApprovalCheck(t *testing.T) {
 				},
 			}, nil
 		},
-		GetRepaveReasonsFn: func(context string, clusterUID string) ([]string, error) {
+		GetRepaveReasonsFn: func(context, clusterUID string) ([]string, error) {
 			var reason []string
 			reason = append(reason, "PackValuesUpdated")
 			return reason, nil
@@ -310,10 +310,10 @@ func TestRepaveApprovalCheck(t *testing.T) {
 
 	// Test case where repave state is pending and approve_system_repave is false
 	m = &client.V1Client{
-		ApproveClusterRepaveFn: func(context string, clusterUID string) error {
+		ApproveClusterRepaveFn: func(context, clusterUID string) error {
 			return nil
 		},
-		GetClusterFn: func(context string, clusterUID string) (*models.V1SpectroCluster, error) {
+		GetClusterFn: func(context, clusterUID string) (*models.V1SpectroCluster, error) {
 			return &models.V1SpectroCluster{
 				APIVersion: "",
 				Kind:       "",
@@ -326,7 +326,7 @@ func TestRepaveApprovalCheck(t *testing.T) {
 				},
 			}, nil
 		},
-		GetRepaveReasonsFn: func(context string, clusterUID string) ([]string, error) {
+		GetRepaveReasonsFn: func(context, clusterUID string) ([]string, error) {
 			var reason []string
 			reason = append(reason, "PackValuesUpdated")
 			return reason, nil

@@ -23,7 +23,7 @@ type GetMaintenanceStatus func(string, string, string, string) (*models.V1Machin
 
 type GetNodeStatusMap func(string, string, string) (map[string]models.V1CloudMachineStatus, error)
 
-func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn GetMaintenanceStatus, ClusterContext string, ConfigUID string, MachineName string, NodeId string) (error, bool) {
+func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn GetMaintenanceStatus, ClusterContext, ConfigUID, MachineName, NodeId string) (error, bool) {
 
 	stateConf := &retry.StateChangeConf{
 		Delay:      30 * time.Second,
@@ -42,7 +42,7 @@ func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn
 	return nil, false
 }
 
-func resourceClusterNodeMaintenanceRefreshFunc(c *client.V1Client, fn GetMaintenanceStatus, ClusterContext string, ConfigUID string, MachineName string, NodeId string) retry.StateRefreshFunc {
+func resourceClusterNodeMaintenanceRefreshFunc(c *client.V1Client, fn GetMaintenanceStatus, ClusterContext, ConfigUID, MachineName, NodeId string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		nmStatus, err := c.GetNodeMaintenanceStatus(client.GetMaintenanceStatus(fn), ClusterContext, ConfigUID, MachineName, NodeId)
 		if err != nil {
@@ -56,7 +56,7 @@ func resourceClusterNodeMaintenanceRefreshFunc(c *client.V1Client, fn GetMainten
 	}
 }
 
-func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool interface{}, fn GetMaintenanceStatus, CloudType string, ClusterContext string, ConfigUID string, MachineName string) error {
+func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool interface{}, fn GetMaintenanceStatus, CloudType, ClusterContext, ConfigUID, MachineName string) error {
 	newNodes := newMachinePool.(map[string]interface{})["node"]
 	if newNodes != nil {
 		for _, n := range newNodes.([]interface{}) {
@@ -83,7 +83,7 @@ func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool 
 	return nil
 }
 
-func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn GetNodeStatusMap, mPools []interface{}, cloudConfigId string, ClusterContext string) ([]interface{}, error) {
+func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn GetNodeStatusMap, mPools []interface{}, cloudConfigId, ClusterContext string) ([]interface{}, error) {
 	_, n := d.GetChange("machine_pool")
 	nsMap := make(map[string]interface{})
 	machinePoolsList, i, err := getMachinePoolList(n)

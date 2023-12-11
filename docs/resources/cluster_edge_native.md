@@ -60,7 +60,6 @@ description: |-
 Optional:
 
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
-- `ssh_key` (String, Deprecated) SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 - `ssh_keys` (Set of String) List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 - `vip` (String)
 
@@ -78,7 +77,6 @@ Optional:
 - `additional_labels` (Map of String)
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
-- `host_uids` (List of String, Deprecated)
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))

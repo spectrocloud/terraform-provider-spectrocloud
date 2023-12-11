@@ -8,10 +8,8 @@ import (
 
 type Cred struct {
 	hubbleHost string
-	email      string
 	project    string
 	apikey     string
-	pwd        string
 	component  string
 	AlertUid   string
 }
@@ -28,8 +26,6 @@ func TestMain(m *testing.M) {
 func setup() {
 	// Setting up test credentials & base config from env variables
 	baseConfig.hubbleHost = getEnvWithFallBack("TEST_HOST")
-	baseConfig.email = getEnvWithFallBack("TEST_EMAIL")
-	baseConfig.pwd = getEnvWithFallBack("TEST_PWD")
 	baseConfig.project = getEnvWithFallBack("TEST_PROJECT")
 	baseConfig.apikey = getEnvWithFallBack("TEST_API_KEY")
 	baseConfig.component = "ClusterHealth"
@@ -38,8 +34,6 @@ func setup() {
 		fmt.Printf("\033[1;36m%s\033[0m", "> Credentials & Base config setup completed\n")
 		fmt.Printf("\033[1;36m%s\033[0m", "-- Test Runnig with below crdentials & base config\n")
 		fmt.Printf("* Test host - %s \n", baseConfig.hubbleHost)
-		fmt.Printf("* Test email - %s \n", baseConfig.email)
-		fmt.Printf("* Test pwd - %s \n", "***********************")
 		fmt.Printf("* Test project - %s \n", baseConfig.project)
 		fmt.Printf("* Test key - %s \n", "***********************")
 		fmt.Printf("\033[1;36m%s\033[0m", "-------------------------------\n")
@@ -49,7 +43,7 @@ func setup() {
 	fmt.Printf("\033[1;36m%s\033[0m", "> Setup completed \n")
 }
 func IsIntegrationTestEnvSet(config Cred) (envSet bool) {
-	if config.hubbleHost != "" && config.project != "" && config.email != "" && config.pwd != "" && config.apikey != "" {
+	if config.hubbleHost != "" && config.project != "" && config.apikey != "" {
 		return true
 	} else {
 		return false

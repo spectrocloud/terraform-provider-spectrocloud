@@ -23,6 +23,6 @@ variable "sc_project_name" {
 
 provider "spectrocloud" {
   host         = var.sc_host
-  username     = var.sc_api_key
+  api_key      = var.sc_api_key
   project_name = var.sc_project_name
 }

@@ -28,21 +28,6 @@ func New(_ string) func() *schema.Provider {
 					Description: "The Spectro Cloud API host url. Can also be set with the `SPECTROCLOUD_HOST` environment variable. Defaults to https://api.spectrocloud.com",
 					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_HOST", "api.spectrocloud.com"),
 				},
-				"username": {
-					Type:        schema.TypeString,
-					Optional:    true,
-					Deprecated:  "Deprecated since 0.15.0 use `api_key` instead.",
-					Description: "The Spectro Cloud username. Can also be set with the `SPECTROCLOUD_USERNAME` environment variable.",
-					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_USERNAME", nil),
-				},
-				"password": {
-					Type:        schema.TypeString,
-					Optional:    true,
-					Sensitive:   true,
-					Deprecated:  "Deprecated since 0.15.0 use `api_key` instead.",
-					Description: "The Spectro Cloud user password. Can also be set with the `SPECTROCLOUD_PASSWORD` environment variable.",
-					DefaultFunc: schema.EnvDefaultFunc("SPECTROCLOUD_PASSWORD", nil),
-				},
 				"api_key": {
 					Type:        schema.TypeString,
 					Optional:    true,
@@ -197,8 +182,6 @@ func New(_ string) func() *schema.Provider {
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	host := d.Get("host").(string)
-	username := ""
-	password := ""
 	apiKey := ""
 	transportDebug := false
 	retryAttempts := 10
@@ -211,10 +194,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		retryAttempts = d.Get("retry_attempts").(int)
 	}
 
-	if d.Get("username") != nil && d.Get("password") != nil {
-		username = d.Get("username").(string)
-		password = d.Get("password").(string)
-	}
 	if d.Get("api_key") != nil {
 		apiKey = d.Get("api_key").(string)
 	}
@@ -224,13 +203,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if (apiKey == "") && ((username == "") || (password == "")) {
+	if apiKey == "" {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  "Unable to create Spectro Cloud client",
 			Detail:   "Unable to authenticate user for authenticated Spectro Cloud client",
 		})
-		// TODO(saamalik) verify this block "can" happen (e.g: does required guard this?)
 		return nil, diags
 	}
 
@@ -238,14 +216,14 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	c := client.New(host, username, password, "", apiKey, transportDebug, retryAttempts)
+	c := client.New(host, "", apiKey, transportDebug, retryAttempts)
 
 	uid, err := c.GetProjectUID(projectName)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
-	c = client.New(host, username, password, uid, apiKey, transportDebug, retryAttempts)
+	c = client.New(host, uid, apiKey, transportDebug, retryAttempts)
 
 	return c, diags
 
