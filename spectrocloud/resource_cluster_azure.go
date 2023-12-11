@@ -281,7 +281,9 @@ func resourceClusterAzure() *schema.Resource {
 								Type: schema.TypeString,
 							},
 							Description: "Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `[\"\"]`.",
-							Default:     []string{""},
+							DefaultFunc: func() (any, error) {
+								return []string{""}, nil
+							},
 						},
 						"is_system_node_pool": {
 							Type:        schema.TypeBool,
