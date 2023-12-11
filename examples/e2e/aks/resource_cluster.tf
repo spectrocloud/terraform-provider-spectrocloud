@@ -51,6 +51,13 @@ resource "spectrocloud_cluster_aks" "aks" {
     storage_account_type = "Premium_LRS"
   }
 
+  # Custom timeouts for each CRUD operation
+  #timeouts {
+  #  create = "120m"
+  #  update = "120m"
+  #  delete = "120m"
+  #}
+
 }
 
 resource "spectrocloud_cluster_aks" "aks2" {
@@ -105,5 +112,12 @@ resource "spectrocloud_cluster_aks" "aks2" {
     is_system_node_pool  = false
     storage_account_type = "Premium_LRS"
   }
+
+  # Custom timeouts for each CRUD operation
+  #timeouts {
+  #  create = "120m"
+  #  update = "120m"
+  #  delete = "120m"
+  #}
 
 }
