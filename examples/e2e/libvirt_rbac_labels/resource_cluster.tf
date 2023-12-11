@@ -123,4 +123,11 @@ resource "spectrocloud_cluster_libvirt" "cluster" {
     }
   }
 
+  # Custom timeouts for each CRUD operation
+  #timeouts {
+  #  create = "120m"
+  #  update = "120m"
+  #  delete = "120m"
+  #}
+
 }

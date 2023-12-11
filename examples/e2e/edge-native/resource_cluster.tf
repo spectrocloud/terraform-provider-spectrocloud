@@ -32,4 +32,11 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     }
   }
 
+  # Custom timeouts for each CRUD operation
+  #timeouts {
+  #  create = "120m"
+  #  update = "120m"
+  #  delete = "120m"
+  #}
+
 }
