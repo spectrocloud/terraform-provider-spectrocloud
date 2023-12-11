@@ -17,7 +17,7 @@ func Test1Scenario(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		h := client.New("api.dev.spectrocloud.com", "nikolay@spectrocloud.com", "", "Default", "QR5aRhZe0XZjP2bvLDEcToC0xBBqgmjS", false, c.retries)
+		h := client.New("api.dev.spectrocloud.com", "Default", "QR5aRhZe0XZjP2bvLDEcToC0xBBqgmjS", false, c.retries)
 		GetProjects1Test(t, h, c)
 	}
 }

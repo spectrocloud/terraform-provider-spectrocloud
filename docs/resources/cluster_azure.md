@@ -64,7 +64,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
     name                    = "master-pool"
     count                   = 1
     instance_type           = "Standard_D2_v3"
-    azs                     = []
+    azs                     = [""]
     disk {
       size_gb = 65
       type    = "Standard_LRS"
@@ -75,7 +75,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
     name          = "worker-basic"
     count         = 1
     instance_type = "Standard_D2_v3"
-    azs           = []
+    azs           = [""]
   }
 
 }
@@ -135,8 +135,10 @@ Required:
 
 Optional:
 
+- `container_name` (String) Container name within your azure storage account.
 - `control_plane_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--control_plane_subnet))
 - `network_resource_group` (String) Azure network resource group in which the cluster is to be provisioned.
+- `storage_account_name` (String) Azure storage account name.
 - `virtual_network_cidr_block` (String) Azure virtual network cidr block in which the cluster is to be provisioned.
 - `virtual_network_name` (String) Azure virtual network in which the cluster is to be provisioned.
 - `worker_node_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--worker_node_subnet))
@@ -173,7 +175,7 @@ Optional:
 
 Required:
 
-- `azs` (Set of String) Availability zones for the machine pool.
+- `azs` (Set of String) Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `[""]`.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (String) Azure instance type from the Azure portal.
 - `name` (String) Name of the machine pool. This must be unique within the cluster.
