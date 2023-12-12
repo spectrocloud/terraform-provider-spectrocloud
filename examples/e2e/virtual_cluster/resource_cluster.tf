@@ -26,11 +26,4 @@ resource "spectrocloud_virtual_cluster" "cluster" {
   #   k8s_version = var.k8s_version
   # }
 
-  # Custom timeouts for each CRUD operation
-  #timeouts {
-  #  create = "120m"
-  #  update = "120m"
-  #  delete = "120m"
-  #}
-
 }

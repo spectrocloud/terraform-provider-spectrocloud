@@ -29,12 +29,4 @@ resource "spectrocloud_cluster_eks" "cluster" {
       az_subnets    = var.aws_subnets
     }
   }
-
-  # Custom timeouts for each CRUD operation
-  #timeouts {
-  #  create = "120m"
-  #  update = "120m"
-  #  delete = "120m"
-  #}
-
 }
