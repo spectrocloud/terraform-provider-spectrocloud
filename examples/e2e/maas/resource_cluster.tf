@@ -41,11 +41,4 @@ resource "spectrocloud_cluster_maas" "cluster" {
     azs = ["az2"]
   }
 
-  # Custom timeouts for each CRUD operation
-  #timeouts {
-  #  create = "120m"
-  #  update = "120m"
-  #  delete = "120m"
-  #}
-
 }

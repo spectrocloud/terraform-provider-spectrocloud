@@ -317,11 +317,10 @@ Required:
 
 Optional:
 
-The timeout to wait for the CRUD function to finish beyond which the provider will return a `context: deadline exceeded` error. Check [Operation Timeouts syntax](https://developer.hashicorp.com/terraform/language/resources/syntax#operation-timeouts) for the accepted values.
-
-- `create` (String)  
+- `create` (String)
 - `delete` (String)
 - `update` (String)
+
 
 <a id="nestedatt--location_config"></a>
 ### Nested Schema for `location_config`

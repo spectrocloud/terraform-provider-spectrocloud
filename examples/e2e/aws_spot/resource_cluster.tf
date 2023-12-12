@@ -48,11 +48,4 @@ resource "spectrocloud_cluster_aws" "cluster" {
     azs           = [var.aws_region_az]
   }
 
-  # Custom timeouts for each CRUD operation
-  #timeouts {
-  #  create = "120m"
-  #  update = "120m"
-  #  delete = "120m"
-  #}
-
 }
