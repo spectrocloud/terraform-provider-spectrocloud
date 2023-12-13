@@ -1,16 +1,14 @@
 resource "spectrocloud_cluster_edge_native" "cluster" {
-  name            = "edge-native-example"
-  skip_completion = true
+  name            = "edge-native-tf-1"
+  skip_completion = false
 
   cluster_profile {
-    id = data.spectrocloud_cluster_profile.profile.id
+    id =  spectrocloud_cluster_profile.profile.id
   }
 
   cloud_config {
-    ssh_key = "spectro2022"
-    # For Multiple ssh_keys
-    # ssh_keys = ["spectro2022","spectro2023"]
-    vip = "192.168.100.15"
+    ssh_keys = ["spectro2023","spectro2024"]
+    vip = var.vip
   }
 
   machine_pool {
@@ -19,19 +17,9 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     name                    = "master-pool"
 
     edge_host {
-      host_uid  = spectrocloud_appliance.appliance0.uid
-      static_ip = "126.10.10.23"
+      host_uid  = var.edge_id
+      #static_ip = "123.45.67.89"
     }
 
   }
-
-  machine_pool {
-    name = "worker-pool"
-
-    edge_host {
-      host_uid  = spectrocloud_appliance.appliance1.uid
-      static_ip = "136.10.10.24"
-    }
-  }
-
 }

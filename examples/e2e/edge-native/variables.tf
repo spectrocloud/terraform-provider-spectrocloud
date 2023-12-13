@@ -1,7 +1,10 @@
 # Cluster
 variable "cluster_ssh_key_name" {
-  default = "spectro2020"
+  default = "spectro2024"
 }
+
+variable "vip" {}
+variable "edge_id" {}
 
 #variable "master_appliance_name" {}
 
