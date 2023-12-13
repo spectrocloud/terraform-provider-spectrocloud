@@ -21,8 +21,9 @@ func resourceCloudAccountAzure() *schema.Resource {
 		DeleteContext: resourceCloudAccountAzureDelete,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The name of the Azure cloud account.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -38,12 +39,14 @@ func resourceCloudAccountAzure() *schema.Resource {
 				Description: "ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.",
 			},
 			"azure_tenant_id": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Unique tenant Id from Azure console.",
 			},
 			"azure_client_id": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Unique client Id from Azure console.",
 			},
 			"azure_client_secret": {
 				Type:      schema.TypeString,
@@ -55,11 +58,12 @@ func resourceCloudAccountAzure() *schema.Resource {
 				//StateFunc: func(val interface{}) string {
 				//	return strings.ToLower(val.(string))
 				//},
+				Description: "Azure secret for authentication.",
 			},
 			"tenant_name": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The name of the tenant. This is the name of the tenant that is used to connect to the Azure cloud. ",
+				Description: "The name of the tenant. This is the name of the tenant that is used to connect to the Azure cloud.",
 			},
 			"disable_properties_request": {
 				Type:        schema.TypeBool,

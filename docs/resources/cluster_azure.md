@@ -175,7 +175,6 @@ Optional:
 
 Required:
 
-- `azs` (Set of String) Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `[""]`.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (String) Azure instance type from the Azure portal.
 - `name` (String) Name of the machine pool. This must be unique within the cluster.
@@ -183,6 +182,7 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
+- `azs` (Set of String) Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `[""]`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `disk` (Block List, Max: 1) Disk configuration for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--disk))

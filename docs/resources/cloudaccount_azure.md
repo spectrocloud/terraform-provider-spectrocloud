@@ -26,10 +26,10 @@ resource "spectrocloud_cloudaccount_azure" "azure-1" {
 
 ### Required
 
-- `azure_client_id` (String)
-- `azure_client_secret` (String, Sensitive)
-- `azure_tenant_id` (String)
-- `name` (String)
+- `azure_client_id` (String) Unique client Id from Azure console.
+- `azure_client_secret` (String, Sensitive) Azure secret for authentication.
+- `azure_tenant_id` (String) Unique tenant Id from Azure console.
+- `name` (String) The name of the Azure cloud account.
 
 ### Optional
 
