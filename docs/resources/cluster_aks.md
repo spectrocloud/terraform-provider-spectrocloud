@@ -136,7 +136,7 @@ Required:
 
 - `region` (String)
 - `resource_group` (String)
-- `ssh_key` (String)
+- `ssh_key` (String) Public SSH key to be used for the cluster nodes.
 - `subscription_id` (String)
 
 Optional:

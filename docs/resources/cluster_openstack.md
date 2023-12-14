@@ -129,7 +129,7 @@ Required:
 - `domain` (String)
 - `project` (String)
 - `region` (String)
-- `ssh_key` (String)
+- `ssh_key` (String) Public SSH key to be used for the cluster nodes.
 - `subnet_cidr` (String)
 
 Optional:

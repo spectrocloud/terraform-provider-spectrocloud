@@ -36,5 +36,3 @@ output "same" {
 - `id` (String) The ID of this resource.
 - `status` (String) The status of the appliance. Supported values are: 'ready', 'in-use', and 'unpaired'.
 - `tags` (Map of String) The tags of the appliance.
-
-

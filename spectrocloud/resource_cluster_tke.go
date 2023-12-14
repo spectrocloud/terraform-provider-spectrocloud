@@ -103,9 +103,10 @@ func resourceClusterTke() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key_name": {
-							Type:     schema.TypeString,
-							ForceNew: true,
-							Optional: true,
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Optional:    true,
+							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"region": {
 							Type:     schema.TypeString,
