@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"time"
 
 	"github.com/spectrocloud/hapi/models"
@@ -12,12 +13,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceMacro() *schema.Resource {
+func resourceMacros() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceMacroCreate,
-		ReadContext:   resourceMacroRead,
-		UpdateContext: resourceMacroUpdate,
-		DeleteContext: resourceMacroDelete,
+		CreateContext: resourceMacrosCreate,
+		ReadContext:   resourceMacrosRead,
+		UpdateContext: resourceMacrosUpdate,
+		DeleteContext: resourceMacrosDelete,
 		Description:   "A resource for creating and managing service output variables and macros.",
 
 		Timeouts: &schema.ResourceTimeout{
@@ -28,38 +29,46 @@ func resourceMacro() *schema.Resource {
 
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "The name of the macro or service variable output.",
+			"macros": {
+				Type:     schema.TypeMap,
+				Required: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A list of macros to be created. macros must be in the form of `macro_name:value`.",
 			},
-			"value": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The value that the macro or service output variable will contain.",
-			},
-			"project": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The Spectro Cloud project name.",
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description: "The context of the macro. Allowed values are `\"\"`, `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE + ". If context is `\"\"` then context set to `tenant` ",
 			},
 		},
 	}
 }
 
-func resourceMacroCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	uid := ""
 	var err error
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-		uid, err = c.GetProjectUID(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
+	var macroContext string
+	//projectUID := ""
+	if v, ok := d.GetOk("context"); ok { //if project name is set it's a project scope
+		if v == "" {
+			macroContext = "tenant"
+		} else {
+			macroContext = "project"
+			//projectUID, err = c.GetProjectUID(v.(string))
+			if err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
-	err = c.CreateMacros(uid, toMacro(d))
+	err = c.CreateMacrosNew(macroContext, toMacros(d))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -68,7 +77,7 @@ func resourceMacroCreate(ctx context.Context, d *schema.ResourceData, m interfac
 	return diags
 }
 
-func resourceMacroRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	var macro *models.V1Macro
@@ -102,7 +111,7 @@ func resourceMacroRead(ctx context.Context, d *schema.ResourceData, m interface{
 	return diags
 }
 
-func resourceMacroUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	var err error
@@ -114,7 +123,7 @@ func resourceMacroUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 		}
 	}
 	if d.HasChange("value") && !d.HasChange("name") {
-		err = c.UpdateMacros(uid, toMacro(d))
+		err = c.UpdateMacros(uid, toMacros(d))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -123,7 +132,7 @@ func resourceMacroUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 	return diags
 }
 
-func resourceMacroDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceMacrosDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	var err error
@@ -135,20 +144,24 @@ func resourceMacroDelete(ctx context.Context, d *schema.ResourceData, m interfac
 			return diag.FromErr(err)
 		}
 	}
-	err = c.DeleteMacros(uid, toMacro(d))
+	err = c.DeleteMacros(uid, toMacros(d))
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	return diags
 }
 
-func toMacro(d *schema.ResourceData) *models.V1Macros {
+func toMacros(d *schema.ResourceData) *models.V1Macros {
 
 	var macro []*models.V1Macro
-	macro = append(macro, &models.V1Macro{
-		Name:  d.Get("name").(string),
-		Value: d.Get("value").(string),
-	})
+	macroRD := d.Get("macros").(map[string]interface{})
+	for i, j := range macroRD {
+		macro = append(macro, &models.V1Macro{
+			Name:  macroRD[i].(string),
+			Value: j.(string),
+		})
+	}
+
 	retMacros := &models.V1Macros{
 		Macros: macro,
 	}
