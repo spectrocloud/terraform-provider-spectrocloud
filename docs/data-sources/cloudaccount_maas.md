@@ -24,5 +24,3 @@ description: |-
 - `id` (String) The ID of this resource.
 - `maas_api_endpoint` (String)
 - `maas_api_key` (String)
-
-

@@ -166,7 +166,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
 Required:
 
 - `region` (String) The AWS region to deploy the cluster in.
-- `ssh_key_name` (String) The name of the SSH key to launch the cluster.
+- `ssh_key_name` (String) Public SSH key to be used for the cluster nodes.
 
 Optional:
 

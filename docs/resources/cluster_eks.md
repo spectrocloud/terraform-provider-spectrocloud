@@ -143,7 +143,7 @@ Optional:
 - `endpoint_access` (String)
 - `private_access_cidrs` (Set of String) List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.
 - `public_access_cidrs` (Set of String) List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.
-- `ssh_key_name` (String)
+- `ssh_key_name` (String) Public SSH key to be used for the cluster nodes.
 - `vpc_id` (String)
 
 

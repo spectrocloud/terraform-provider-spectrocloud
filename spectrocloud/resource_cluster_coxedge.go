@@ -135,6 +135,7 @@ func resourceClusterCoxEdge() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters.",
 						},
 						"lb_config": {
 							Type:     schema.TypeList,

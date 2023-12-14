@@ -57,5 +57,3 @@ Read-Only:
 - `content` (String)
 - `name` (String)
 - `uid` (String)
-
-

@@ -138,7 +138,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters.",
+							Description: "List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.",
 						},
 						"vip": {
 							Type:     schema.TypeString,
