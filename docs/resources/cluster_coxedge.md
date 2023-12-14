@@ -60,7 +60,7 @@ Optional:
 - `environment` (String)
 - `lb_config` (Block List) (see [below for nested schema](#nestedblock--cloud_config--lb_config))
 - `organization_id` (String)
-- `ssh_keys` (List of String)
+- `ssh_keys` (List of String) List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters.
 - `worker_lb` (Block List) (see [below for nested schema](#nestedblock--cloud_config--worker_lb))
 
 <a id="nestedblock--cloud_config--lb_config"></a>
@@ -307,5 +307,3 @@ Read-Only:
 - `longitude` (Number)
 - `region_code` (String)
 - `region_name` (String)
-
-

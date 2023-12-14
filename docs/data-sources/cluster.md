@@ -50,5 +50,3 @@ resource "local_file" "adminkubeconfig" {
 - `admin_kube_config` (String)
 - `id` (String) The ID of this resource.
 - `kube_config` (String)
-
-
