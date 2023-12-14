@@ -4,8 +4,7 @@
 provider "spectrocloud" {
   project_name = var.SpectroCloudProject # Project name (e.g: Default)
   host         = var.SpectroCloudURI
-  username     = var.SpectroCloudUsername
-  password     = var.SpectroCloudPassword
+  api_key      = var.SpectroCloudUsername
 }
 
 

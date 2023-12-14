@@ -55,6 +55,12 @@ func resourceClusterAzure() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
 			"cluster_meta_attribute": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -81,6 +87,12 @@ func resourceClusterAzure() *schema.Resource {
 				Computed:    true,
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+			},
+			"approve_system_repave": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
 			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
@@ -136,6 +148,18 @@ func resourceClusterAzure() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "SSH key to be used for the cluster nodes.",
+						},
+						"storage_account_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "",
+							Description: "Azure storage account name.",
+						},
+						"container_name": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "",
+							Description: "Container name within your azure storage account.",
 						},
 						"network_resource_group": {
 							Type:         schema.TypeString,
@@ -251,12 +275,15 @@ func resourceClusterAzure() *schema.Resource {
 						},
 						"azs": {
 							Type:     schema.TypeSet,
-							Required: true,
+							Optional: true,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "Availability zones for the machine pool.",
+							Description: "Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `[\"\"]`.",
+							DefaultFunc: func() (any, error) {
+								return []string{""}, nil
+							},
 						},
 						"is_system_node_pool": {
 							Type:        schema.TypeBool,
@@ -424,6 +451,10 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	err := validateSystemRepaveApproval(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
@@ -519,27 +550,24 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("azure_client_secret").(string))
-
 	clusterContext := d.Get("context").(string)
 	profiles, err := toProfiles(c, d, clusterContext)
 	if err != nil {
 		return nil, err
 	}
 	cluster := &models.V1SpectroAzureClusterEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
-			Labels: toTags(d),
-		},
+		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
-				Location:       types.Ptr(cloudConfig["region"].(string)),
-				SSHKey:         types.Ptr(cloudConfig["ssh_key"].(string)),
-				SubscriptionID: types.Ptr(cloudConfig["subscription_id"].(string)),
-				ResourceGroup:  cloudConfig["resource_group"].(string),
+				Location:           types.Ptr(cloudConfig["region"].(string)),
+				SSHKey:             types.Ptr(cloudConfig["ssh_key"].(string)),
+				SubscriptionID:     types.Ptr(cloudConfig["subscription_id"].(string)),
+				ResourceGroup:      cloudConfig["resource_group"].(string),
+				StorageAccountName: cloudConfig["storage_account_name"].(string),
+				ContainerName:      cloudConfig["container_name"].(string),
 			},
 		},
 	}

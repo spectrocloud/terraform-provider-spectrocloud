@@ -134,11 +134,13 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
-
-	appliance := toAppliance(d)
-	err := c.UpdateAppliance(d.Id(), appliance)
-	if err != nil {
-		return diag.FromErr(err)
+	// Currently, we only support updating tags during day 2 operations in the appliance, which will be handled via UpdateApplianceMeta (above code snippet).
+	if d.HasChange("tags") {
+		applianceMeta := toApplianceMeta(d)
+		err := c.UpdateApplianceMeta(d.Id(), applianceMeta)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return diags
@@ -180,12 +182,25 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 	}
 }
 
+func toApplianceMeta(d *schema.ResourceData) *models.V1EdgeHostDeviceMetaUpdateEntity {
+	if d.Get("tags") != nil {
+		return &models.V1EdgeHostDeviceMetaUpdateEntity{
+			Metadata: &models.V1ObjectTagsEntity{
+				Labels: expandStringMap(d.Get("tags").(map[string]interface{})),
+				Name:   d.Id(),
+				UID:    d.Id(),
+			},
+		}
+	}
+	return &models.V1EdgeHostDeviceMetaUpdateEntity{}
+}
+
 func toAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
 
 	if d.Get("tags") != nil {
 		tags := d.Get("tags").(map[string]interface{})
 
-		appliance := SetFields(d, tags)
+		appliance := setFields(d, tags)
 
 		return &appliance
 	}
@@ -194,7 +209,7 @@ func toAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
 
 }
 
-func SetFields(d *schema.ResourceData, tags map[string]interface{}) models.V1EdgeHostDevice {
+func setFields(d *schema.ResourceData, tags map[string]interface{}) models.V1EdgeHostDevice {
 	appliance := models.V1EdgeHostDevice{}
 	appliance.Metadata = &models.V1ObjectMeta{}
 	appliance.Metadata.UID = d.Id()

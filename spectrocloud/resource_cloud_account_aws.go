@@ -19,6 +19,9 @@ func resourceCloudAccountAws() *schema.Resource {
 		ReadContext:   resourceCloudAccountAwsRead,
 		UpdateContext: resourceCloudAccountAwsUpdate,
 		DeleteContext: resourceCloudAccountAwsDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceAccountAwsImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -31,6 +34,11 @@ func resourceCloudAccountAws() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description: "The context of the AWS configuration. Allowed values are `project` or `tenant`. " +
 					"Default value is `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"private_cloud_gateway_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.",
 			},
 			"aws_access_key": {
 				Type:     schema.TypeString,
@@ -176,7 +184,8 @@ func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 	}
 	if d.Get("context") != nil {
 		ctxAnnotation := map[string]string{
-			"scope": d.Get("context").(string),
+			"scope":     d.Get("context").(string),
+			OverlordUID: d.Get("private_cloud_gateway_id").(string),
 		}
 		account.Metadata.Annotations = ctxAnnotation
 	}
@@ -215,6 +224,12 @@ func flattenCloudAccountAws(d *schema.ResourceData, account *models.V1AwsAccount
 		return diag.FromErr(err), true
 	}
 	if err := d.Set("context", account.Metadata.Annotations["scope"]); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := d.Set("type", account.Spec.CredentialType); err != nil {
 		return diag.FromErr(err), true
 	}
 	if account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {

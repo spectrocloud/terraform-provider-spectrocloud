@@ -57,6 +57,12 @@ func resourceClusterEdgeNative() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
 			"cluster_meta_attribute": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -82,6 +88,12 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Computed:    true,
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+			},
+			"approve_system_repave": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
 			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
@@ -119,21 +131,14 @@ func resourceClusterEdgeNative() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"ssh_key": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Deprecated:  "This field is deprecated from provider 0.16.0. And will be removed in 0.17.0. Use `ssh_keys` instead.",
-							Description: "SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
-						},
 						"ssh_keys": {
-							Type:          schema.TypeSet,
-							Optional:      true,
-							Set:           schema.HashString,
-							ConflictsWith: []string{"cloud_config.0.ssh_key"},
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
+							Description: "List of SSH (Secure Shell) to establish, administer, and communicate with remote clusters.",
 						},
 						"vip": {
 							Type:     schema.TypeString,
@@ -197,14 +202,6 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Default:      "RollingUpdateScaleOut",
 							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
-						},
-						"host_uids": {
-							Type:       schema.TypeList,
-							Optional:   true,
-							Deprecated: "This field is deprecated from provider 0.13.0. Use `edge_host` instead.",
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
 						},
 						"edge_host": {
 							Type:     schema.TypeList,
@@ -400,6 +397,10 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	err := validateSystemRepaveApproval(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
@@ -501,11 +502,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 		return nil, err
 	}
 	cluster := &models.V1SpectroEdgeNativeClusterEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
-			Labels: toTags(d),
-		},
+		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroEdgeNativeClusterEntitySpec{
 			Profiles: profiles,
 			Policies: toPolicies(d),

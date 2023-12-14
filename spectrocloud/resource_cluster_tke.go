@@ -53,6 +53,12 @@ func resourceClusterTke() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
 			"cluster_meta_attribute": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -220,6 +226,12 @@ func resourceClusterTke() *schema.Resource {
 					},
 				},
 			},
+			"approve_system_repave": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
+			},
 			"backup_policy":        schemas.BackupPolicySchema(),
 			"scan_policy":          schemas.ScanPolicySchema(),
 			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
@@ -352,6 +364,10 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
+	err := validateSystemRepaveApproval(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
@@ -443,11 +459,7 @@ func toTkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		return nil, err
 	}
 	cluster := &models.V1SpectroTencentClusterEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
-			Labels: toTags(d),
-		},
+		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroTencentClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,

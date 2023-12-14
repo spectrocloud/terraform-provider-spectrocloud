@@ -57,6 +57,12 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
 			"cluster_meta_attribute": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -68,6 +74,12 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Computed:    true,
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+			},
+			"approve_system_repave": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
 			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
@@ -417,7 +429,10 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-
+	err := validateSystemRepaveApproval(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigEdgeVsphere(cloudConfigId, ClusterContext)
@@ -518,12 +533,7 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 		return nil, err
 	}
 	cluster := &models.V1SpectroVsphereClusterEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
-			Labels: toTags(d),
-		},
-
+		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroVsphereClusterEntitySpec{
 			EdgeHostUID: d.Get("edge_host_uid").(string),
 			Profiles:    profiles,

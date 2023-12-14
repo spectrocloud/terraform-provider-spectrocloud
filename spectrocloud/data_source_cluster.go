@@ -36,6 +36,12 @@ func dataSourceCluster() *schema.Resource {
 				Description: "The context of the cluster. Allowed values are `project` or `tenant`. " +
 					"Defaults to `project`." + PROJECT_NAME_NUANCE,
 			},
+			"virtual": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to true, the cluster will treated as a virtual cluster. Defaults to `false`.",
+			},
 		},
 	}
 }
@@ -45,7 +51,7 @@ func dataSourceClusterRead(_ context.Context, d *schema.ResourceData, m interfac
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
 		ClusterContext := d.Get("context").(string)
-		cluster, err := c.GetClusterByName(name.(string), ClusterContext)
+		cluster, err := c.GetClusterByName(name.(string), ClusterContext, d.Get("virtual").(bool))
 		if err != nil {
 			return diag.FromErr(err)
 		}

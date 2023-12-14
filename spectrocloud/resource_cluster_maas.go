@@ -58,6 +58,12 @@ func resourceClusterMaas() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
 			"cluster_meta_attribute": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -84,6 +90,12 @@ func resourceClusterMaas() *schema.Resource {
 				Computed:    true,
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `maas`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+			},
+			"approve_system_repave": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
 			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
@@ -213,17 +225,26 @@ func resourceClusterMaas() *schema.Resource {
 						},
 						"azs": {
 							Type:     schema.TypeSet,
-							Required: true,
-							MinItems: 1,
+							Optional: true,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 							Description: "Availability zones in which the machine pool nodes to be provisioned.",
 						},
+						"node_tags": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Node tags to dynamically place nodes in a pool by using MAAS automatic tags. Specify the tag values that you want to apply to all nodes in the node pool.",
+						},
 						"placement": {
 							Type:     schema.TypeList,
-							Required: true,
+							Optional: true,
+							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"id": {
@@ -406,8 +427,7 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 				oi["placement"] = []interface{}{placement}
 			}
 		}
-		//oi["resource_pool"] = machinePool.ResourcePool
-
+		oi["node_tags"] = machinePool.Tags
 		ois[i] = oi
 	}
 
@@ -419,6 +439,10 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	err := validateSystemRepaveApproval(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
@@ -515,11 +539,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 		return nil, err
 	}
 	cluster := &models.V1SpectroMaasClusterEntity{
-		Metadata: &models.V1ObjectMeta{
-			Name:   d.Get("name").(string),
-			UID:    d.Id(),
-			Labels: toTags(d),
-		},
+		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroMaasClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
@@ -562,7 +582,6 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 	}
 
 	InstanceType := m["instance_type"].([]interface{})[0].(map[string]interface{})
-	Placement := m["placement"].([]interface{})[0].(map[string]interface{})
 	log.Printf("Create machine pool %s", InstanceType)
 
 	min := int32(m["count"].(int))
@@ -575,6 +594,11 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 	if m["max"] != nil {
 		max = int32(m["max"].(int))
 	}
+	var nodePoolTags []string
+	for _, nt := range m["node_tags"].(*schema.Set).List() {
+		nodePoolTags = append(nodePoolTags, nt.(string))
+	}
+
 	mp := &models.V1MaasMachinePoolConfigEntity{
 		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
 			Azs: azs,
@@ -582,7 +606,7 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 				MinCPU:     int32(InstanceType["min_cpu"].(int)),
 				MinMemInMB: int32(InstanceType["min_memory_mb"].(int)),
 			},
-			ResourcePool: types.Ptr(Placement["resource_pool"].(string)),
+			Tags: nodePoolTags,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
@@ -598,6 +622,13 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 			MinSize:                 min,
 			MaxSize:                 max,
 		},
+	}
+	if len(m["placement"].([]interface{})) > 0 {
+		Placement := m["placement"].([]interface{})[0].(map[string]interface{})
+		mp.CloudConfig.ResourcePool = types.Ptr(Placement["resource_pool"].(string))
+	} else {
+		rp := ""
+		mp.CloudConfig.ResourcePool = &rp // backend is not accepting nil, rather pointer to empty string.
 	}
 
 	if !controlPlane {
