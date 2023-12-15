@@ -1,8 +1,8 @@
 resource "spectrocloud_cluster_vsphere" "cluster" {
-  name               = "tf-vmware-cluster01"
-  cloud_account_id   = data.spectrocloud_cloudaccount_vsphere.account.id
+  name             = "tf-vmware-cluster01"
+  cloud_account_id = data.spectrocloud_cloudaccount_vsphere.account.id
 
-cluster_profile {
+  cluster_profile {
     id = spectrocloud_cluster_profile.profile.id
   }
   cluster_rbac_binding {

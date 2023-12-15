@@ -136,7 +136,7 @@ func resourceClusterAws() *schema.Resource {
 							Type:        schema.TypeString,
 							ForceNew:    true,
 							Required:    true,
-							Description: "The name of the SSH key to launch the cluster.",
+							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"region": {
 							Type:        schema.TypeString,

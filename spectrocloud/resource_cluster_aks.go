@@ -145,8 +145,9 @@ func resourceClusterAks() *schema.Resource {
 							Required: true,
 						},
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"private_cluster": {
 							Type:        schema.TypeBool,

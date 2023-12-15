@@ -93,5 +93,3 @@ Read-Only:
 - `negation` (Boolean)
 - `operator` (String)
 - `values` (List of String)
-
-

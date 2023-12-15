@@ -148,7 +148,7 @@ func resourceClusterAzure() *schema.Resource {
 						"ssh_key": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "SSH key to be used for the cluster nodes.",
+							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"storage_account_name": {
 							Type:        schema.TypeString,

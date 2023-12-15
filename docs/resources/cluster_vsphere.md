@@ -61,7 +61,7 @@ Required:
 
 - `datacenter` (String) The name of the datacenter in vSphere. This is the name of the datacenter as it appears in vSphere.
 - `folder` (String) The name of the folder in vSphere. This is the name of the folder as it appears in vSphere.
-- `ssh_key` (String) The SSH key to be used for the cluster. This is the public key that will be used to access the cluster.
+- `ssh_key` (String) The SSH key to be used for the cluster. This is the public key that will be used to access the cluster nodes.
 
 Optional:
 

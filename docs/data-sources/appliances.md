@@ -43,5 +43,3 @@ output "same" {
 
 - `id` (String) The ID of this resource.
 - `ids` (List of String) The unique ids of the appliances. This is a computed field and is not required to be set.
-
-

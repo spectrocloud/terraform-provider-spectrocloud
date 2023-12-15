@@ -19,5 +19,3 @@ description: |-
 
 - `id` (String) The ID of Private Cloud Gateway.
 - `name` (String) The Name of Private Cloud Gateway.
-
-

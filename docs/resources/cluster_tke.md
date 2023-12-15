@@ -64,7 +64,7 @@ Optional:
 - `azs` (List of String)
 - `endpoint_access` (String)
 - `public_access_cidrs` (Set of String)
-- `ssh_key_name` (String)
+- `ssh_key_name` (String) Public SSH key to be used for the cluster nodes.
 - `vpc_id` (String)
 
 

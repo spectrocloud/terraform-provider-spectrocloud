@@ -141,8 +141,9 @@ func resourceClusterOpenStack() *schema.Resource {
 							Required: true,
 						},
 						"ssh_key": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"network_id": {
 							Type:     schema.TypeString,

@@ -151,7 +151,7 @@ func resourceClusterVsphere() *schema.Resource {
 						"ssh_key": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "The SSH key to be used for the cluster. This is the public key that will be used to access the cluster.",
+							Description: "The SSH key to be used for the cluster. This is the public key that will be used to access the cluster nodes.",
 						},
 
 						"static_ip": {
