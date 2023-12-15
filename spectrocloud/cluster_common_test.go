@@ -274,7 +274,7 @@ func TestUpdateClusterRBAC(t *testing.T) {
 func TestRepaveApprovalCheck(t *testing.T) {
 
 	d := resourceClusterAws().TestResourceData()
-	d.Set("approve_system_repave", true)
+	d.Set("review_repave_state", "Approved")
 	d.Set("context", "tenant")
 	d.SetId("TestclusterUID")
 
@@ -333,7 +333,7 @@ func TestRepaveApprovalCheck(t *testing.T) {
 		},
 	}
 
-	d.Set("approve_system_repave", false)
+	d.Set("review_repave_state", "")
 	err = validateSystemRepaveApproval(d, m)
 	expectedErrMsg := "cluster repave state is pending. \nDue to the following reasons -  \nPackValuesUpdated\nKindly verify the cluster and set `approve_system_repave` to `true` to continue the repave operation and day 2 operation on the cluster."
 	if err == nil || err.Error() != expectedErrMsg {

@@ -22,6 +22,10 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 	if err := d.Set("kubeconfig", kubecfg); err != nil {
 		return diag.FromErr(err), true
 	}
+	// When the current repave state is pending, we set the flag to false, For indicate the system change.
+	if err := d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
+		return diag.FromErr(err), true
+	}
 
 	adminKubeConfig, err := c.GetClusterAdminKubeConfig(d.Id(), ClusterContext)
 	if err != nil {
@@ -164,7 +168,7 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 }
 
 func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) error {
-	approveClusterRepave := d.Get("approve_system_repave").(bool)
+	approveClusterRepave := d.Get("review_repave_state")
 	context := d.Get("context").(string)
 	cluster, err := c.GetCluster(context, d.Id())
 	if err != nil {
@@ -174,7 +178,7 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 		return nil
 	}
 	if cluster.Status.Repave.State == "Pending" {
-		if approveClusterRepave {
+		if approveClusterRepave == "Approved" {
 			err := c.ApproveClusterRepave(context, d.Id())
 			if err != nil {
 				return err
