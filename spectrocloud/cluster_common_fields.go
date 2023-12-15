@@ -22,7 +22,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 	if err := d.Set("kubeconfig", kubecfg); err != nil {
 		return diag.FromErr(err), true
 	}
-	// When the current repave state is pending, we set the flag to false, For indicate the system change.
+	// When the current repave state is pending, we set the review_repave_state to Pending, For indicate the system change.
 	if err := d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
 		return diag.FromErr(err), true
 	}
