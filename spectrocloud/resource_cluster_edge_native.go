@@ -301,6 +301,12 @@ func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m 
 		return diags
 	}
 
+	// verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_edge_native", cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	// Update the kubeconfig
 	diagnostics, errorSet := readCommonFields(c, d, cluster)
 	if errorSet {
