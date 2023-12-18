@@ -101,12 +101,14 @@ resource "spectrocloud_cluster_maas" "cluster" {
 ### Optional
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
+- `approve_system_repave` (Boolean) To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
 - `cloud_account_id` (String) ID of the Maas cloud account used for the cluster. This cloud account must be of type `maas`.
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `context` (String) The context of the MAAS configuration. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+- `description` (String) The description of the cluster. Default value is empty string.
 - `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
 - `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
 - `host_config` (Block List) The host configuration for the cluster. (see [below for nested schema](#nestedblock--host_config))
@@ -140,21 +142,22 @@ Required:
 
 Required:
 
-- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String) Name of the machine pool.
-- `placement` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
 
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
+- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `node_tags` (Set of String) Node tags to dynamically place nodes in a pool by using MAAS automatic tags. Specify the tag values that you want to apply to all nodes in the node pool.
+- `placement` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
@@ -167,6 +170,15 @@ Required:
 - `min_memory_mb` (Number) Minimum memory in MB required for the machine pool node.
 
 
+<a id="nestedblock--machine_pool--node"></a>
+### Nested Schema for `machine_pool.node`
+
+Required:
+
+- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
+- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
+
+
 <a id="nestedblock--machine_pool--placement"></a>
 ### Nested Schema for `machine_pool.placement`
 
@@ -177,15 +189,6 @@ Required:
 Read-Only:
 
 - `id` (String) This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.
-
-
-<a id="nestedblock--machine_pool--node"></a>
-### Nested Schema for `machine_pool.node`
-
-Required:
-
-- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
-- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
 
 
 <a id="nestedblock--machine_pool--taints"></a>

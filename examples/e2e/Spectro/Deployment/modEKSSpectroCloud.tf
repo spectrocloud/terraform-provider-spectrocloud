@@ -2,8 +2,6 @@
 #SpectroCloud Variables
 variable "SpectroCloudProject" { type = string }
 variable "SpectroCloudAccount" { type = string }
-variable "SpectroCloudUsername" { type = string }
-variable "SpectroCloudPassword" { type = string }
 variable "SpectroCloudURI" { type = string }
 variable "SpectroConfig" { type = map(any) }
 variable "SpectroCloudClusterProfiles" { type = map(any) }

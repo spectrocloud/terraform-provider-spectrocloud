@@ -16,6 +16,9 @@ func resourceCloudAccountGcp() *schema.Resource {
 		ReadContext:   resourceCloudAccountGcpRead,
 		UpdateContext: resourceCloudAccountGcpUpdate,
 		DeleteContext: resourceCloudAccountGcpDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceAccountGcpImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -75,6 +78,9 @@ func resourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m in
 	}
 
 	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("context", account.Metadata.Annotations["scope"]); err != nil {
 		return diag.FromErr(err)
 	}
 

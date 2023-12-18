@@ -64,7 +64,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
     name                    = "master-pool"
     count                   = 1
     instance_type           = "Standard_D2_v3"
-    azs                     = []
+    azs                     = [""]
     disk {
       size_gb = 65
       type    = "Standard_LRS"
@@ -75,7 +75,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
     name          = "worker-basic"
     count         = 1
     instance_type = "Standard_D2_v3"
-    azs           = []
+    azs           = [""]
   }
 
 }
@@ -96,11 +96,13 @@ resource "spectrocloud_cluster_azure" "cluster" {
 ### Optional
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
+- `approve_system_repave` (Boolean) To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `context` (String) The context of the Azure cluster. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+- `description` (String) The description of the cluster. Default value is empty string.
 - `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
 - `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
 - `host_config` (Block List) The host configuration for the cluster. (see [below for nested schema](#nestedblock--host_config))
@@ -133,8 +135,10 @@ Required:
 
 Optional:
 
+- `container_name` (String) Container name within your azure storage account.
 - `control_plane_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--control_plane_subnet))
 - `network_resource_group` (String) Azure network resource group in which the cluster is to be provisioned.
+- `storage_account_name` (String) Azure storage account name.
 - `virtual_network_cidr_block` (String) Azure virtual network cidr block in which the cluster is to be provisioned.
 - `virtual_network_name` (String) Azure virtual network in which the cluster is to be provisioned.
 - `worker_node_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--worker_node_subnet))
@@ -171,7 +175,7 @@ Optional:
 
 Required:
 
-- `azs` (Set of String) Availability zones for the machine pool.
+- `azs` (Set of String) Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `[""]`.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (String) Azure instance type from the Azure portal.
 - `name` (String) Name of the machine pool. This must be unique within the cluster.

@@ -38,6 +38,7 @@ resource "spectrocloud_cloudaccount_aws" "aws-1" {
 Can be 'aws' for standard AWS regions or 'aws-us-gov' for AWS GovCloud (US) regions.
 Default is 'aws'.
 - `policy_arns` (Set of String) A set of ARNs for the IAM policies that should be associated with the cloud account.
+- `private_cloud_gateway_id` (String) ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.
 - `type` (String) The type of AWS credentials to use. Can be `secret` or `sts`.
 
 ### Read-Only

@@ -397,12 +397,6 @@ func TestResourceMachinePoolEdgeNativeHash(t *testing.T) {
 		expected int
 	}{
 		{
-			input: map[string]interface{}{
-				"host_uids": []interface{}{"host1", "host2", "host3"},
-			},
-			expected: 456992116,
-		},
-		{
 			input:    map[string]interface{}{},
 			expected: 2166136261,
 		},
@@ -421,7 +415,6 @@ func TestResourceMachinePoolEdgeNativeHash(t *testing.T) {
 
 func TestResourceMachinePoolEdgeNativeHashAdv(t *testing.T) {
 	machinePool1 := map[string]interface{}{
-		"host_uids": []interface{}{"host1", "host2"},
 		"edge_host": []interface{}{
 			map[string]interface{}{
 				"host_name": "host1",
@@ -437,7 +430,6 @@ func TestResourceMachinePoolEdgeNativeHashAdv(t *testing.T) {
 	}
 
 	machinePool2 := map[string]interface{}{
-		"host_uids": []interface{}{"host3", "host4"},
 		"edge_host": []interface{}{
 			map[string]interface{}{
 				"host_name": "host3",
@@ -615,9 +607,10 @@ func TestResourceMachinePoolMaasHash(t *testing.T) {
 						"min_memory_mb": 4096,
 					},
 				},
-				"azs": schema.NewSet(schema.HashString, []interface{}{"az1", "az2"}),
+				"azs":       schema.NewSet(schema.HashString, []interface{}{"az1", "az2"}),
+				"node_tags": schema.NewSet(schema.HashString, []interface{}{"test", "tf"}),
 			},
-			expectedHash: 3363048657,
+			expectedHash: 876064649,
 		},
 	}
 

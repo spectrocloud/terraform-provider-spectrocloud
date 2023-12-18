@@ -312,6 +312,9 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 				},
 				Status: &models.V1SpectroClusterStatus{
 					State: "running",
+					Repave: &models.V1ClusterRepaveStatus{
+						State: "",
+					},
 				},
 			}
 			return cluster, nil

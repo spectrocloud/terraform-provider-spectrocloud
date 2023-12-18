@@ -37,6 +37,9 @@ func GetCommonClusterProfile(d *schema.ResourceData, c *client.V1Client) error {
 	if err != nil {
 		return fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}
+	if profile == nil {
+		return fmt.Errorf("cluster profile id: %s not found", d.Id())
+	}
 
 	err = d.Set("name", profile.Metadata.Name)
 	if err != nil {

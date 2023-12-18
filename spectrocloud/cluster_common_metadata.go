@@ -6,6 +6,23 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
+func getClusterMetadata(d *schema.ResourceData) *models.V1ObjectMeta {
+	return &models.V1ObjectMeta{
+		Name:        d.Get("name").(string),
+		UID:         d.Id(),
+		Labels:      toTags(d),
+		Annotations: map[string]string{"description": d.Get("description").(string)},
+	}
+}
+
+func toClusterMetadataUpdate(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
+	return &models.V1ObjectMetaInputEntity{
+		Name:        d.Get("name").(string),
+		Labels:      toTags(d),
+		Annotations: map[string]string{"description": d.Get("description").(string)},
+	}
+}
+
 func updateClusterMetadata(c *client.V1Client, d *schema.ResourceData) error {
 	clusterContext := d.Get("context").(string)
 	err := ValidateContext(clusterContext)
@@ -17,7 +34,7 @@ func updateClusterMetadata(c *client.V1Client, d *schema.ResourceData) error {
 
 func toUpdateClusterMetadata(d *schema.ResourceData) *models.V1ObjectMetaInputEntitySchema {
 	return &models.V1ObjectMetaInputEntitySchema{
-		Metadata: toClusterMeta(d),
+		Metadata: toClusterMetadataUpdate(d),
 	}
 }
 
