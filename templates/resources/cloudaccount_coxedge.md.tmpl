@@ -1,0 +1,27 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+## Example Usage
+
+```terraform
+resource "spectrocloud_cloudaccount_coxedge" "account" {
+  name            = "coxedge-account"
+  organization_id = var.organization_id
+  environment     = var.environment
+  service         = var.service
+  api_base_url    = var.api_base_url
+  api_key         = var.api_key
+}
+
+```
+
+
+{{ .SchemaMarkdown | trimspace }}
