@@ -9,19 +9,8 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
-## Example Usage
+## Example Usage of creating a Coxedge account
 
-```terraform
-resource "spectrocloud_cloudaccount_coxedge" "account" {
-  name            = "coxedge-account"
-  organization_id = var.organization_id
-  environment     = var.environment
-  service         = var.service
-  api_base_url    = var.api_base_url
-  api_key         = var.api_key
-}
-
-```
-
+{{ tffile "examples/e2e/coxedge/resource_cloudaccount.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}
