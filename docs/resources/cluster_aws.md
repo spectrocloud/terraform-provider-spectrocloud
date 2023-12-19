@@ -133,7 +133,6 @@ resource "spectrocloud_cluster_aws" "cluster" {
 ### Optional
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
-- `approve_system_repave` (Boolean) To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
@@ -147,6 +146,7 @@ resource "spectrocloud_cluster_aws" "cluster" {
 - `os_patch_after` (String) Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`
 - `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
 - `os_patch_schedule` (String) The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.
+- `review_repave_state` (String) To authorize the cluster repave, set the value to `Approved` for approval and `""` to decline. Default value is `""`.
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.

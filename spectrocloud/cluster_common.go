@@ -12,6 +12,19 @@ import (
 var (
 	DefaultDiskType = "Standard_LRS"
 	DefaultDiskSize = 60
+	NameToCloudType = map[string]string{
+		"spectrocloud_cluster_aks":          "aks",
+		"spectrocloud_cluster_aws":          "aws",
+		"spectrocloud_cluster_azure":        "azure",
+		"spectrocloud_cluster_edge_native":  "edge-native",
+		"spectrocloud_cluster_eks":          "eks",
+		"spectrocloud_cluster_edge_vsphere": "edge-vsphere",
+		"spectrocloud_cluster_gcp":          "gcp",
+		"spectrocloud_cluster_maas":         "maas",
+		"spectrocloud_cluster_openstack":    "openstack",
+		"spectrocloud_cluster_tke":          "tke",
+		"spectrocloud_cluster_vsphere":      "vsphere",
+	}
 )
 
 func toNtpServers(in map[string]interface{}) []string {
@@ -96,6 +109,16 @@ func ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval int) error {
 func ValidateContext(context string) error {
 	if context != "project" && context != "tenant" {
 		return fmt.Errorf("invalid Context set - %s", context)
+	}
+	return nil
+}
+
+func ValidateCloudType(resourceName string, cluster *models.V1SpectroCluster) error {
+	if cluster.Spec == nil {
+		return fmt.Errorf("cluster spec is nil in cluster %s", cluster.Metadata.UID)
+	}
+	if cluster.Spec.CloudType != NameToCloudType[resourceName] {
+		return fmt.Errorf("resource with id %s is not of type %s, need to correct resource type", cluster.Metadata.UID, resourceName)
 	}
 	return nil
 }

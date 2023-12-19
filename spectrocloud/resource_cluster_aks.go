@@ -316,6 +316,12 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diags
 	}
 
+	// verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_aks", cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	configUID := cluster.Spec.CloudConfigRef.UID
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
