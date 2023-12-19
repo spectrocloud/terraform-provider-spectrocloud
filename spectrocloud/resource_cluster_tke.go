@@ -227,11 +227,12 @@ func resourceClusterTke() *schema.Resource {
 					},
 				},
 			},
-			"approve_system_repave": {
-				Type:        schema.TypeBool,
-				Default:     false,
-				Optional:    true,
-				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
+			"review_repave_state": {
+				Type:         schema.TypeString,
+				Default:      "",
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"", "Approved", "Pending"}, false),
+				Description:  "To authorize the cluster repave, set the value to `Approved` for approval and `\"\"` to decline. Default value is `\"\"`.",
 			},
 			"backup_policy":        schemas.BackupPolicySchema(),
 			"scan_policy":          schemas.ScanPolicySchema(),

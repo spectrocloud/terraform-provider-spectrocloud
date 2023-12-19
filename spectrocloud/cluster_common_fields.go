@@ -22,6 +22,10 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 	if err := d.Set("kubeconfig", kubecfg); err != nil {
 		return diag.FromErr(err), true
 	}
+	// When the current repave state is pending, we set the review_repave_state to Pending, For indicate the system change.
+	if err := d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
+		return diag.FromErr(err), true
+	}
 
 	adminKubeConfig, err := c.GetClusterAdminKubeConfig(d.Id(), ClusterContext)
 	if err != nil {
@@ -164,7 +168,7 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 }
 
 func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) error {
-	approveClusterRepave := d.Get("approve_system_repave").(bool)
+	approveClusterRepave := d.Get("review_repave_state").(string)
 	context := d.Get("context").(string)
 	cluster, err := c.GetCluster(context, d.Id())
 	if err != nil {
@@ -174,7 +178,7 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 		return nil
 	}
 	if cluster.Status.Repave.State == "Pending" {
-		if approveClusterRepave {
+		if approveClusterRepave == "Approved" {
 			err := c.ApproveClusterRepave(context, d.Id())
 			if err != nil {
 				return err
@@ -186,7 +190,7 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 			if cluster.Status.Repave.State == "Approved" {
 				return nil
 			} else {
-				err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `approve_system_repave` to `true` to approve the repave operation on the cluster")
+				err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `review_repave_state` to `Approved` to approve the repave operation on the cluster")
 				return err
 			}
 
@@ -195,7 +199,7 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 			if err != nil {
 				return err
 			}
-			err = errors.New("cluster repave state is pending. \nDue to the following reasons -  \n" + strings.Join(reasons, "\n") + "\nKindly verify the cluster and set `approve_system_repave` to `true` to continue the repave operation and day 2 operation on the cluster.")
+			err = errors.New("cluster repave state is pending. \nDue to the following reasons -  \n" + strings.Join(reasons, "\n") + "\nKindly verify the cluster and set `review_repave_state` to `Approved` to continue the repave operation and day 2 operation on the cluster.")
 			return err
 		}
 	}
