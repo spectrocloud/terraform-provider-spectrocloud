@@ -11,23 +11,12 @@ description: |-
 
 ## Example Usage
 
-```terraform
-resource "spectrocloud_addon_deployment" "depl" {
-  cluster_uid = spectrocloud_cluster_eks.cluster.id
+## First file creates a simple add-on profile containing Kubernetes dashboard
 
-  cluster_profile {
-    id = spectrocloud_cluster_profile.profile_resource.id
-    pack {
-      name   = "rook-orchestrator"
-      type   = "manifest"
-      values = <<-EOT
-      pack:
-        spectrocloud.com/install-priority: "25"
-    EOT
-    }
-  }
-}
-```
+{{ tffile "examples/e2e/edge-native/resource_clusterprofile_addon.tf" }}
 
+## Second file applies created add-on profile to an existing cluster
+
+{{ tffile "examples/e2e/edge-native/resource_addon_deployment.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}
