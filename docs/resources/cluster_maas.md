@@ -101,7 +101,6 @@ resource "spectrocloud_cluster_maas" "cluster" {
 ### Optional
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
-- `approve_system_repave` (Boolean) To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
 - `cloud_account_id` (String) ID of the Maas cloud account used for the cluster. This cloud account must be of type `maas`.
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
@@ -117,6 +116,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
 - `os_patch_after` (String) The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`
 - `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
 - `os_patch_schedule` (String) Cron schedule for OS patching. This must be in the form of `0 0 * * *`.
+- `review_repave_state` (String) To authorize the cluster repave, set the value to `Approved` for approval and `""` to decline. Default value is `""`.
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
@@ -145,6 +145,7 @@ Required:
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String) Name of the machine pool.
+- `placement` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
 
@@ -157,7 +158,6 @@ Optional:
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `node_tags` (Set of String) Node tags to dynamically place nodes in a pool by using MAAS automatic tags. Specify the tag values that you want to apply to all nodes in the node pool.
-- `placement` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
@@ -170,15 +170,6 @@ Required:
 - `min_memory_mb` (Number) Minimum memory in MB required for the machine pool node.
 
 
-<a id="nestedblock--machine_pool--node"></a>
-### Nested Schema for `machine_pool.node`
-
-Required:
-
-- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
-- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
-
-
 <a id="nestedblock--machine_pool--placement"></a>
 ### Nested Schema for `machine_pool.placement`
 
@@ -189,6 +180,15 @@ Required:
 Read-Only:
 
 - `id` (String) This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.
+
+
+<a id="nestedblock--machine_pool--node"></a>
+### Nested Schema for `machine_pool.node`
+
+Required:
+
+- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
+- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
 
 
 <a id="nestedblock--machine_pool--taints"></a>
