@@ -9,40 +9,8 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
-## Example Usage
+## Example Usage: creating a Coxedge cluster
 
-```terraform
-
-resource "spectrocloud_cluster_coxedge" "cluster" {
-  name             = "tf-coxedge-cluster01"
-  cloud_account_id = data.spectrocloud_cloudaccount_coxedge.account.id
-
-  cluster_profile {
-    id = spectrocloud_cluster_profile.profile.id
-  }
-
-  cloud_config {
-  }
-
-  machine_pool {
-    control_plane           = true
-    control_plane_as_worker = true
-    name                    = "master-pool"
-    count                   = 1
-    cox_config {
-      spec              = "environment-path"
-    }
-  }
-
-  machine_pool {
-    name          = "worker-basic"
-    count         = 1
-    cox_config {
-      spec              = "environment-path"
-    }
-  }
-}
-```
-
+{{ tffile "examples/e2e/coxedge/resource_cluster.tf" }}
 
 {{ .SchemaMarkdown | trimspace }}
