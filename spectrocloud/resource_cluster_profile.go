@@ -130,6 +130,11 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 
 	var diags diag.Diagnostics
 
+	// if id contains colon - it's incorrect as the scope is not supported
+	if strings.Contains(d.Id(), ":") {
+		return diag.FromErr(fmt.Errorf("incorrect cluster profile id: %s, scope is not supported", d.Id()))
+	}
+
 	cp, err := c.GetClusterProfile(clusterC, d.Id())
 	if err != nil {
 		return diag.FromErr(err)

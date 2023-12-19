@@ -373,6 +373,12 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 		return diags
 	}
 
+	// verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_vsphere", cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	configUID := cluster.Spec.CloudConfigRef.UID
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)

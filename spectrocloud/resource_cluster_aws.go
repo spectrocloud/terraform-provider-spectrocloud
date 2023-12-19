@@ -347,6 +347,12 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diags
 	}
 
+	// verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_aws", cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	diagnostics, done := readCommonFields(c, d, cluster)
 	if done {
 		return diagnostics
