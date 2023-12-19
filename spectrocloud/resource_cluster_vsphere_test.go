@@ -288,7 +288,7 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 						ResourceVersion: "",
 						UID:             "test-cloud-config-uid",
 					},
-					CloudType: "",
+					CloudType: "vsphere",
 					ClusterConfig: &models.V1ClusterConfig{
 						ClusterRbac:                    nil,
 						ClusterResources:               nil,
@@ -458,7 +458,6 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 		GetClusterWithoutStatusFn: func(uid string) (*models.V1SpectroCluster, error) {
 			cluster := &models.V1SpectroCluster{
 				Metadata: nil,
-				Spec:     nil,
 			}
 			cluster.Status = &models.V1SpectroClusterStatus{
 				AbortTimestamp: models.V1Time{},
@@ -490,6 +489,60 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 	ctx := context.Background()
 	diags := resourceClusterVsphereRead(ctx, d, m)
 	if len(diags) > 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceClusterVsphereReadValidationErrorSpec(t *testing.T) {
+	d := prepareClusterVsphereTestData()
+	m := &client.V1Client{
+		GetClusterWithoutStatusFn: func(uid string) (*models.V1SpectroCluster, error) {
+			cluster := &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{
+					UID: "mockid123",
+				},
+				Spec: nil,
+			}
+			cluster.Status = &models.V1SpectroClusterStatus{
+				State: "running",
+			}
+			return cluster, nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceClusterVsphereRead(ctx, d, m)
+	if len(diags) == 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+	if diags[0].Summary != "cluster spec is nil in cluster mockid123" {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+}
+
+func TestResourceClusterVsphereReadValidationErrorCloudType(t *testing.T) {
+	d := prepareClusterVsphereTestData()
+	m := &client.V1Client{
+		GetClusterWithoutStatusFn: func(uid string) (*models.V1SpectroCluster, error) {
+			cluster := &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{
+					UID: "mockid123",
+				},
+				Spec: &models.V1SpectroClusterSpec{
+					CloudType: "aws", // wrong cloud type, vsphere expected
+				},
+			}
+			cluster.Status = &models.V1SpectroClusterStatus{
+				State: "running",
+			}
+			return cluster, nil
+		},
+	}
+	ctx := context.Background()
+	diags := resourceClusterVsphereRead(ctx, d, m)
+	if len(diags) == 0 {
+		t.Errorf("Unexpected diagnostics: %#v", diags)
+	}
+	if diags[0].Summary != "resource with id mockid123 is not of type spectrocloud_cluster_vsphere, need to correct resource type" {
 		t.Errorf("Unexpected diagnostics: %#v", diags)
 	}
 }
