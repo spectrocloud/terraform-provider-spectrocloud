@@ -1,44 +1,33 @@
-# If looking up a cluster profile instead of creating a new one
-# data "spectrocloud_cluster_profile" "profile" {
-#   # id = <uid>
-#   name = var.cluster_cluster_profile_name
-# }
-
-/*data "spectrocloud_pack" "byom" {
-  name = "spectro-byo-manifest"
-  # version  = "1.0.x"
-}*/
-
 data "spectrocloud_registry" "registry" {
   name = "Public Repo"
 }
 
 data "spectrocloud_pack" "csi" {
-  name    = "csi-vsphere-csi"
+  name         = "csi-vsphere-csi"
   registry_uid = data.spectrocloud_registry.registry.id
-  version = "3.0.2"
+  version      = "3.0.2"
 }
 
 data "spectrocloud_pack" "cni" {
-  name    = "cni-cilium-oss"
+  name         = "cni-cilium-oss"
   registry_uid = data.spectrocloud_registry.registry.id
-  version = "1.14.1"
+  version      = "1.14.1"
 }
 
 data "spectrocloud_pack" "k8s" {
-  name    = "kubernetes"
+  name         = "kubernetes"
   registry_uid = data.spectrocloud_registry.registry.id
-  version = "1.26.8"
+  version      = "1.27.5"
 }
 
 data "spectrocloud_pack" "ubuntu" {
-  name    = "ubuntu-vsphere"
+  name         = "ubuntu-vsphere"
   registry_uid = data.spectrocloud_registry.registry.id
-  version = "22.04"
+  version      = "22.04"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
-  name        = "vsphere-picard-2"
+  name        = "vsphere-profile-tf"
   description = "basic cp"
   cloud       = "vsphere"
   type        = "cluster"
