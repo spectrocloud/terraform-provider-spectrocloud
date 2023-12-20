@@ -118,7 +118,12 @@ func TestAlertCRUDEmail(t *testing.T) {
 	if !IsIntegrationTestEnvSet(baseConfig) {
 		t.Skip("Skipping integration test env variable not set")
 	}
-	conn := client.New(baseConfig.hubbleHost, baseConfig.project, baseConfig.apikey, false, 3)
+
+	conn := client.New(
+		client.WithHubbleURI(baseConfig.hubbleHost),
+		client.WithAPIKey(baseConfig.apikey),
+		client.WithRetries(3))
+
 	var err error
 	channelEmail := &models.V1Channel{
 		IsActive:      true,
@@ -131,6 +136,7 @@ func TestAlertCRUDEmail(t *testing.T) {
 		t.Fail()
 		t.Logf("\n Unable to read project UID for name - %s", baseConfig.project)
 	}
+	client.WithProjectUID(projectId)(conn)
 	baseConfig.AlertUid, err = conn.CreateAlert(channelEmail, projectId, baseConfig.component)
 	if err != nil {
 		t.Fail()
@@ -178,7 +184,11 @@ func TestAlertCRUDHttp(t *testing.T) {
 	if !IsIntegrationTestEnvSet(baseConfig) {
 		t.Skip("Skipping integration test env variable not set")
 	}
-	conn := client.New(baseConfig.hubbleHost, baseConfig.project, baseConfig.apikey, false, 3)
+	conn := client.New(
+		client.WithHubbleURI(baseConfig.hubbleHost),
+		client.WithAPIKey(baseConfig.apikey),
+		client.WithRetries(3))
+
 	var err error
 	header := map[string]string{
 		"type": "CH-Notification",
@@ -201,6 +211,7 @@ func TestAlertCRUDHttp(t *testing.T) {
 		t.Fail()
 		t.Logf("\n Unable to read project UID for name - %s", baseConfig.project)
 	}
+	client.WithProjectUID(projectId)(conn)
 	baseConfig.AlertUid, err = conn.CreateAlert(channelHttp, projectId, baseConfig.component)
 	if err != nil {
 		t.Fail()

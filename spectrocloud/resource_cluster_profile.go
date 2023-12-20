@@ -92,10 +92,7 @@ func resourceClusterProfile() *schema.Resource {
 
 func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -123,10 +120,7 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	var diags diag.Diagnostics
 
@@ -199,10 +193,7 @@ func flattenClusterProfileCommon(d *schema.ResourceData, cp *models.V1ClusterPro
 
 func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -241,10 +232,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	var diags diag.Diagnostics
 

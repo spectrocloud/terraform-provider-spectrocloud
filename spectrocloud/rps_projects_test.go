@@ -17,18 +17,22 @@ func Test1Scenario(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		h := client.New("api.dev.spectrocloud.com", "Default", "QR5aRhZe0XZjP2bvLDEcToC0xBBqgmjS", false, c.retries)
+		h := client.New(
+			client.WithHubbleURI(baseConfig.hubbleHost),
+			client.WithAPIKey(baseConfig.apikey),
+			client.WithRetries(c.retries))
+		uid, err := h.GetProjectUID(baseConfig.project)
+		if err != nil {
+			t.Fail()
+		}
+		client.WithProjectUID(uid)(h)
 		GetProjects1Test(t, h, c)
 	}
 }
 
 // 1. Normal case where rps is just within the limit. 5 rps or 50 with burst. Expected result: no retries, no errors.
 func GetProjects1Test(t *testing.T, h *client.V1Client, retry Retry) {
-	userClient, err := h.GetUserClient()
-
-	if err != nil {
-		t.Fail()
-	}
+	userClient := h.GetUserClient()
 
 	limit := int64(0)
 	params := userC.NewV1ProjectsListParams().WithLimit(&limit)

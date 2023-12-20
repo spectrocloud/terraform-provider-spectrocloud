@@ -89,10 +89,7 @@ func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.Reso
 
 func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	importFile, err := toClusterProfileImportCreate(d)
 	if err != nil {
@@ -119,10 +116,7 @@ func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.Re
 
 func resourceClusterProfileImportFeatureDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	// Call the API endpoint to delete the cluster profile import resource
 	if err := c.DeleteClusterProfile(clusterC, d.Id()); err != nil {
