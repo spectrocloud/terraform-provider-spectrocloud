@@ -9,19 +9,21 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
-## Generic Example Usage
+## Example Usage
 
 {{ tffile "examples/resources/spectrocloud_cluster_profile/resource.tf" }}
 
-## Example of a vSphere cluster profile that uses data resources to populate the required pack values.
+### vSphere 
+
+This cluster profile uses data resources to populate the required pack values.
 
 {{ tffile "examples/e2e/vsphere/resource_clusterprofile.tf" }}
 
-## Edge Native
+### Edge Native
 
 {{ tffile "examples/e2e/edge-native/resource_clusterprofile.tf" }}
 
-## Coxedge
+### Coxedge
 
 {{ tffile "examples/e2e/coxedge/resource_clusterprofile.tf" }}
 
