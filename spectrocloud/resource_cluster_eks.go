@@ -763,10 +763,13 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
+	// Following same logic as UI for setting up control plane for managed cluster
 	cpPool := map[string]interface{}{
 		"control_plane": true,
 		"name":          "master-pool",
 		"az_subnets":    cloudConfig["az_subnets"],
+		"capacity_type": "spot",
+		// dummy data it not get utilized for managed cluster
 		"instance_type": "t3.large",
 		"disk_size_gb":  60,
 		"count":         0,
