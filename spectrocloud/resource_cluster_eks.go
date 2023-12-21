@@ -769,9 +769,6 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		"name":          "master-pool",
 		"az_subnets":    cloudConfig["az_subnets"],
 		"capacity_type": "spot",
-		// dummy data it not get utilized for managed cluster
-		"instance_type": "t3.large",
-		"disk_size_gb":  60,
 		"count":         0,
 	}
 	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
@@ -830,11 +827,18 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 	if m["max"] != nil {
 		max = int32(m["max"].(int))
 	}
-
+	instanceType := ""
+	if val, ok := m["instance_type"]; ok {
+		instanceType = val.(string)
+	}
+	diskSizeGb := int64(0)
+	if dVal, ok := m["disk_size_gb"]; ok {
+		diskSizeGb = int64(dVal.(int))
+	}
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
-			RootDeviceSize: int64(m["disk_size_gb"].(int)),
-			InstanceType:   m["instance_type"].(string),
+			RootDeviceSize: diskSizeGb,
+			InstanceType:   instanceType,
 			CapacityType:   &capacityType,
 			Azs:            azs,
 			Subnets:        subnets,
