@@ -218,14 +218,22 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	c := client.New(host, "", apiKey, transportDebug, retryAttempts)
+	c := client.New(
+		client.WithHubbleURI(host),
+		client.WithAPIKey(apiKey),
+		client.WithRetries(retryAttempts))
 
+	if transportDebug {
+		client.WithTransportDebug()(c)
+	}
 	uid, err := c.GetProjectUID(projectName)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
-	c = client.New(host, uid, apiKey, transportDebug, retryAttempts)
+	if uid != "" {
+		client.WithProjectUID(uid)(c)
+	}
 
 	return c, diags
 

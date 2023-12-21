@@ -60,10 +60,7 @@ func resourceAddonDeployment() *schema.Resource {
 
 func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -181,10 +178,7 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, cluster *models.V1SpectroCluster, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	addonDeployment, err := toAddonDeployment(c, d)
 	if err != nil {
