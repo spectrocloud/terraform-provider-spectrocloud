@@ -103,10 +103,10 @@ func TestToEksCluster(t *testing.T) {
 	assert.Equal(t, "test-cluster", cluster.Metadata.Name, "Unexpected cluster name")
 
 	assert.NotNil(t, cluster.Spec.Machinepoolconfig, "Expected MachinePools to be non-nil")
-	assert.Equal(t, 1, len(cluster.Spec.Machinepoolconfig), "Expected one machine pool in the cluster")
+	assert.Equal(t, 2, len(cluster.Spec.Machinepoolconfig), "Expected one machine pool in the cluster")
 
-	assert.Equal(t, "test-pool", *cluster.Spec.Machinepoolconfig[0].PoolConfig.Name, "Unexpected machine pool name")
-	assert.Equal(t, int64(10), cluster.Spec.Machinepoolconfig[0].CloudConfig.RootDeviceSize, "Unexpected disk size")
+	assert.Equal(t, "test-pool", *cluster.Spec.Machinepoolconfig[1].PoolConfig.Name, "Unexpected machine pool name")
+	assert.Equal(t, int64(10), cluster.Spec.Machinepoolconfig[1].CloudConfig.RootDeviceSize, "Unexpected disk size")
 }
 
 func TestToMachinePoolEks(t *testing.T) {
