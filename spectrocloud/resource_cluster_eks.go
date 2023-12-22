@@ -763,6 +763,15 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
+	// Following same logic as UI for setting up control plane for managed cluster
+	cpPool := map[string]interface{}{
+		"control_plane": true,
+		"name":          "master-pool",
+		"az_subnets":    cloudConfig["az_subnets"],
+		"capacity_type": "spot",
+		"count":         0,
+	}
+	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -818,11 +827,18 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 	if m["max"] != nil {
 		max = int32(m["max"].(int))
 	}
-
+	instanceType := ""
+	if val, ok := m["instance_type"]; ok {
+		instanceType = val.(string)
+	}
+	diskSizeGb := int64(0)
+	if dVal, ok := m["disk_size_gb"]; ok {
+		diskSizeGb = int64(dVal.(int))
+	}
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
-			RootDeviceSize: int64(m["disk_size_gb"].(int)),
-			InstanceType:   m["instance_type"].(string),
+			RootDeviceSize: diskSizeGb,
+			InstanceType:   instanceType,
 			CapacityType:   &capacityType,
 			Azs:            azs,
 			Subnets:        subnets,
