@@ -174,6 +174,7 @@ func resourceClusterEks() *schema.Resource {
 							Optional:     true,
 							ForceNew:     true,
 							ValidateFunc: validation.StringInSlice([]string{"public", "private", "private_and_public"}, false),
+							Description:  "Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.",
 							Default:      "public",
 						},
 						"public_access_cidrs": {
