@@ -140,7 +140,7 @@ Optional:
 - `az_subnets` (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
 - `azs` (List of String) Mutually exclusive with `az_subnets`. Use for Dynamic provisioning.
 - `encryption_config_arn` (String)
-- `endpoint_access` (String)
+- `endpoint_access` (String) Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.
 - `private_access_cidrs` (Set of String) List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.
 - `public_access_cidrs` (Set of String) List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.
 - `ssh_key_name` (String) Public SSH key to be used for the cluster nodes.
