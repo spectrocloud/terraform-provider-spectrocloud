@@ -75,9 +75,12 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 
 	clusterAdditionalMeta := cluster.Spec.ClusterConfig.ClusterMetaAttribute
 	if clusterAdditionalMeta != "" {
-		err := d.Set("cluster_meta_attribute", clusterAdditionalMeta)
-		if err != nil {
-			return diag.FromErr(err), true
+		// We are adding this check to handle virtual cluster scenario. virtual cluster doesn't have support for `cluster_meta_attribute`
+		if _, ok := d.GetOk("cluster_meta_attribute"); ok {
+			err := d.Set("cluster_meta_attribute", clusterAdditionalMeta)
+			if err != nil {
+				return diag.FromErr(err), true
+			}
 		}
 	}
 

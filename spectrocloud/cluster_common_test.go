@@ -1,11 +1,13 @@
 package spectrocloud
 
 import (
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"reflect"
 	"testing"
 
 	"github.com/spectrocloud/hapi/models"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestToAdditionalNodePoolLabels(t *testing.T) {
@@ -340,4 +342,380 @@ func TestRepaveApprovalCheck(t *testing.T) {
 		t.Errorf("Expected error message '%s', got '%s'", expectedErrMsg, err)
 	}
 
+}
+
+func prepareSpectroClusterModel() *models.V1SpectroCluster {
+
+	scp := &models.V1SpectroCluster{
+		APIVersion: "V1",
+		Kind:       "",
+		Metadata: &models.V1ObjectMeta{
+			Annotations: map[string]string{
+				"test_annotation": "tf",
+				"scope":           "project",
+			},
+			CreationTimestamp: models.V1Time{},
+			DeletionTimestamp: models.V1Time{},
+			Labels: map[string]string{
+				"test_label": "tf",
+			},
+			LastModifiedTimestamp: models.V1Time{},
+			Name:                  "spc-cluster-unit-test",
+			Namespace:             "dns-label",
+			ResourceVersion:       "test-resource-version-01",
+			SelfLink:              "",
+			UID:                   "test-cluster-uid",
+		},
+		Spec: &models.V1SpectroClusterSpec{
+			CloudConfigRef: &models.V1ObjectReference{
+				APIVersion:      "V1",
+				FieldPath:       "",
+				Kind:            "",
+				Name:            "spc-cluster-unit-tes",
+				Namespace:       "test-namespace",
+				ResourceVersion: "test-cloud-config-resource-version-01",
+				UID:             "test-cloud-config-uid",
+			},
+			CloudType: "vsphere",
+			ClusterConfig: &models.V1ClusterConfig{
+				ClusterMetaAttribute: "test-cluster-meta-attributes",
+				ClusterRbac:          nil,
+				ClusterResources: &models.V1ClusterResources{
+					Namespaces: []*models.V1ResourceReference{
+						&models.V1ResourceReference{
+							Kind: "",
+							Name: "",
+							UID:  ptr.StringPtr("test-cluster-resource"),
+						},
+					},
+					Rbacs: []*models.V1ResourceReference{
+						&models.V1ResourceReference{
+							Kind: "",
+							Name: "",
+							UID:  ptr.StringPtr("test-cluster-rbac-resource"),
+						},
+					},
+				},
+				ControlPlaneHealthCheckTimeout: "",
+				HostClusterConfig: &models.V1HostClusterConfig{
+					ClusterEndpoint: &models.V1HostClusterEndpoint{
+						Config: &models.V1HostClusterEndpointConfig{
+							IngressConfig: &models.V1IngressConfig{
+								Host: "121.1.1.0",
+								Port: 9999,
+							},
+							LoadBalancerConfig: nil,
+						},
+						Type: "ingress",
+					},
+					ClusterGroup: &models.V1ObjectReference{
+						APIVersion:      "",
+						FieldPath:       "",
+						Kind:            "",
+						Name:            "",
+						Namespace:       "",
+						ResourceVersion: "",
+						UID:             "test-cluster-group-uid",
+					},
+					HostCluster: &models.V1ObjectReference{
+						APIVersion:      "",
+						FieldPath:       "",
+						Kind:            "",
+						Name:            "",
+						Namespace:       "",
+						ResourceVersion: "",
+						UID:             "test-host-cluster-uid",
+					},
+					IsHostCluster: ptr.BoolPtr(false),
+				},
+				LifecycleConfig: &models.V1LifecycleConfig{
+					Pause: ptr.BoolPtr(false),
+				},
+				MachineHealthConfig: &models.V1MachineHealthCheckConfig{
+					HealthCheckMaxUnhealthy:         "",
+					NetworkReadyHealthCheckDuration: "",
+					NodeReadyHealthCheckDuration:    "",
+				},
+				MachineManagementConfig: &models.V1MachineManagementConfig{
+					OsPatchConfig: &models.V1OsPatchConfig{
+						OnDemandPatchAfter: models.V1Time{},
+						PatchOnBoot:        false,
+						RebootIfRequired:   false,
+						Schedule:           "",
+					},
+				},
+				UpdateWorkerPoolsInParallel: false,
+			},
+			ClusterProfileTemplates: nil,
+			ClusterType:             "full",
+		},
+		Status: &models.V1SpectroClusterStatus{
+			AbortTimestamp: models.V1Time{},
+			AddOnServices:  nil,
+			APIEndpoints:   nil,
+			ClusterImport:  nil,
+			Conditions:     nil,
+			Fips:           nil,
+			Location:       nil,
+			Packs:          nil,
+			ProfileStatus:  nil,
+			Repave:         nil,
+			Services:       nil,
+			SpcApply:       nil,
+			State:          "",
+			Upgrades:       nil,
+			Virtual:        nil,
+		},
+	}
+	return scp
+}
+
+func getClient() *client.V1Client {
+	c := &client.V1Client{
+		GetCloudConfigVsphereFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
+			return getCloudConfig(), nil
+		},
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
+			isHost := new(bool)
+			*isHost = true
+			cluster := &models.V1SpectroCluster{
+				APIVersion: "v1",
+				Metadata: &models.V1ObjectMeta{
+					Annotations:       nil,
+					CreationTimestamp: models.V1Time{},
+					DeletionTimestamp: models.V1Time{},
+					Labels: map[string]string{
+						"owner": "siva",
+					},
+					LastModifiedTimestamp: models.V1Time{},
+					Name:                  "test-vsphere-cluster-unit-test",
+					Namespace:             "",
+					ResourceVersion:       "",
+					SelfLink:              "",
+					UID:                   "vsphere-uid",
+				},
+				Spec: &models.V1SpectroClusterSpec{
+					CloudConfigRef: &models.V1ObjectReference{
+						APIVersion:      "",
+						FieldPath:       "",
+						Kind:            "",
+						Name:            "",
+						Namespace:       "",
+						ResourceVersion: "",
+						UID:             "test-cloud-config-uid",
+					},
+					CloudType: "vsphere",
+					ClusterConfig: &models.V1ClusterConfig{
+						ClusterRbac:                    nil,
+						ClusterResources:               nil,
+						ControlPlaneHealthCheckTimeout: "",
+						HostClusterConfig: &models.V1HostClusterConfig{
+							ClusterEndpoint: &models.V1HostClusterEndpoint{
+								Config: nil,
+								Type:   "LoadBalancer",
+							},
+							ClusterGroup:  nil,
+							HostCluster:   nil,
+							IsHostCluster: isHost,
+						},
+						LifecycleConfig:             nil,
+						MachineHealthConfig:         nil,
+						MachineManagementConfig:     nil,
+						UpdateWorkerPoolsInParallel: false,
+					},
+					ClusterProfileTemplates: nil,
+					ClusterType:             "",
+				},
+				Status: &models.V1SpectroClusterStatus{
+					State: "running",
+					Repave: &models.V1ClusterRepaveStatus{
+						State: "",
+					},
+				},
+			}
+			return cluster, nil
+		},
+		GetClusterBackupConfigFn: func(uid string) (*models.V1ClusterBackup, error) {
+			clusterBackup := &models.V1ClusterBackup{
+				Metadata: nil,
+				Spec: &models.V1ClusterBackupSpec{
+					ClusterUID: "vsphere-cluster-uid",
+					Config: &models.V1ClusterBackupConfig{
+						BackupLocationUID:       "test-back-uid",
+						BackupName:              "unit-back",
+						BackupPrefix:            "vsphere",
+						DurationInHours:         3,
+						IncludeAllDisks:         false,
+						IncludeClusterResources: false,
+						LocationType:            "",
+						Namespaces:              nil,
+						Schedule: &models.V1ClusterFeatureSchedule{
+							ScheduledRunTime: "daily",
+						},
+					},
+				},
+				Status: nil,
+			}
+			return clusterBackup, nil
+		},
+		GetClusterKubeConfigFn: func(uid string) (string, error) {
+			return "testKubeConfig", nil
+		},
+		GetClusterAdminConfigFn: func(uid string) (string, error) {
+			return "testAdminKubeConfig", nil
+		},
+		GetClusterScanConfigFn: func(uid string) (*models.V1ClusterComplianceScan, error) {
+			clusterCom := &models.V1ClusterComplianceScan{
+				Metadata: &models.V1ObjectMeta{
+					Annotations:           nil,
+					CreationTimestamp:     models.V1Time{},
+					DeletionTimestamp:     models.V1Time{},
+					Labels:                nil,
+					LastModifiedTimestamp: models.V1Time{},
+					Name:                  "vsphere-cluster",
+					Namespace:             "",
+					ResourceVersion:       "",
+					SelfLink:              "",
+					UID:                   "conpli-uid",
+				},
+				Spec: &models.V1ClusterComplianceScanSpec{
+					ClusterUID: "vsphere-cluster-uid",
+					DriverSpec: map[string]models.V1ComplianceScanDriverSpec{
+						"kube-bench": {
+							Config: &models.V1ComplianceScanConfig{
+								Schedule: &models.V1ClusterFeatureSchedule{
+									ScheduledRunTime: "daily",
+								},
+							},
+							IsClusterConfig: false,
+						},
+						"kube-hunter": {
+							Config: &models.V1ComplianceScanConfig{
+								Schedule: &models.V1ClusterFeatureSchedule{
+									ScheduledRunTime: "daily",
+								},
+							},
+							IsClusterConfig: false,
+						},
+						"sonobuoy": {
+							Config: &models.V1ComplianceScanConfig{
+								Schedule: &models.V1ClusterFeatureSchedule{
+									ScheduledRunTime: "daily",
+								},
+							},
+							IsClusterConfig: false,
+						},
+					},
+				},
+			}
+			return clusterCom, nil
+		},
+		GetClusterRbacConfigFn: func(uid string) (*models.V1ClusterRbacs, error) {
+			var rbacs []*models.V1ClusterRbac
+			var subject []*models.V1ClusterRbacSubjects
+			var bindings []*models.V1ClusterRbacBinding
+			subject = append(subject, &models.V1ClusterRbacSubjects{
+				Name:      "test-subject",
+				Namespace: "vsphere-test",
+				Type:      "test-subject",
+			})
+			bindings = append(bindings, &models.V1ClusterRbacBinding{
+				Namespace: "vsphere-unittest",
+				Role: &models.V1ClusterRoleRef{
+					Kind: "scan",
+					Name: "test-kind",
+				},
+				Subjects: subject,
+				Type:     "test",
+			})
+			rbacs = append(rbacs, &models.V1ClusterRbac{
+				Metadata: nil,
+				Spec: &models.V1ClusterRbacSpec{
+					Bindings:      bindings,
+					RelatedObject: nil,
+				},
+				Status: nil,
+			})
+			clusterRbac := &models.V1ClusterRbacs{
+				Items: rbacs,
+			}
+			return clusterRbac, nil
+		},
+		GetClusterNamespaceConfigFn: func(uid string) (*models.V1ClusterNamespaceResources, error) {
+			var nResources []*models.V1ClusterNamespaceResource
+			nResources = append(nResources, &models.V1ClusterNamespaceResource{
+				Metadata: &models.V1ObjectMeta{
+					Annotations:           nil,
+					CreationTimestamp:     models.V1Time{},
+					DeletionTimestamp:     models.V1Time{},
+					Labels:                nil,
+					LastModifiedTimestamp: models.V1Time{},
+					Name:                  "test-namespace-unit",
+					Namespace:             "",
+					ResourceVersion:       "",
+					SelfLink:              "",
+					UID:                   "",
+				},
+				Spec: &models.V1ClusterNamespaceSpec{
+					IsRegex:       false,
+					RelatedObject: nil,
+					ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
+						CPUCores:  5,
+						MemoryMiB: 1234,
+					},
+				},
+				Status: nil,
+			})
+			namespaceResource := &models.V1ClusterNamespaceResources{
+				Items: nResources,
+			}
+			return namespaceResource, nil
+		},
+		GetClusterWithoutStatusFn: func(uid string) (*models.V1SpectroCluster, error) {
+			cluster := &models.V1SpectroCluster{
+				Metadata: nil,
+			}
+			cluster.Status = &models.V1SpectroClusterStatus{
+				AbortTimestamp: models.V1Time{},
+				AddOnServices:  nil,
+				APIEndpoints:   nil,
+				ClusterImport:  nil,
+				Conditions:     nil,
+				Location: &models.V1ClusterLocation{
+					CountryCode: "IN",
+					CountryName: "India",
+					GeoLoc: &models.V1GeolocationLatlong{
+						Latitude:  12.4241231,
+						Longitude: 1932.12312,
+					},
+					RegionCode: "12",
+					RegionName: "Asia",
+				},
+				Packs:         nil,
+				ProfileStatus: nil,
+				Services:      nil,
+				SpcApply:      nil,
+				State:         "running",
+				Upgrades:      nil,
+				Virtual:       nil,
+			}
+			return cluster, nil
+		},
+	}
+	return c
+}
+func TestReadCommonFieldsCluster(t *testing.T) {
+	d := prepareClusterVsphereTestData()
+	spc := prepareSpectroClusterModel()
+	c := getClient()
+	_, done := readCommonFields(c, d, spc)
+	assert.Equal(t, false, done)
+}
+
+func TestReadCommonFieldsVirtualCluster(t *testing.T) {
+	d := resourceClusterVirtual().TestResourceData()
+	spc := prepareSpectroClusterModel()
+	c := getClient()
+	_, done := readCommonFields(c, d, spc)
+	assert.Equal(t, false, done)
 }
