@@ -23,10 +23,12 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		return diag.FromErr(err), true
 	}
 	// When the current repave state is pending, we set the review_repave_state to Pending, For indicate the system change.
-	if err := d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
-		return diag.FromErr(err), true
+	if _, ok := d.GetOk("review_repave_state"); ok {
+		// We are adding this check to handle virtual cluster scenario. virtual cluster doesn't have support for `review_repave_state`
+		if err := d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
+			return diag.FromErr(err), true
+		}
 	}
-
 	adminKubeConfig, err := c.GetClusterAdminKubeConfig(d.Id(), ClusterContext)
 	if err != nil {
 		return diag.FromErr(err), true
@@ -73,9 +75,12 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 
 	clusterAdditionalMeta := cluster.Spec.ClusterConfig.ClusterMetaAttribute
 	if clusterAdditionalMeta != "" {
-		err := d.Set("cluster_meta_attribute", clusterAdditionalMeta)
-		if err != nil {
-			return diag.FromErr(err), true
+		// We are adding this check to handle virtual cluster scenario. virtual cluster doesn't have support for `cluster_meta_attribute`
+		if _, ok := d.GetOk("cluster_meta_attribute"); ok {
+			err := d.Set("cluster_meta_attribute", clusterAdditionalMeta)
+			if err != nil {
+				return diag.FromErr(err), true
+			}
 		}
 	}
 
