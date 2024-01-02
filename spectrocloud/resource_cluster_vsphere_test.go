@@ -252,9 +252,7 @@ func TestResourceClusterVsphereCreateError(t *testing.T) {
 	}
 }
 
-func TestResourceClusterVsphereRead(t *testing.T) {
-	// Create a mock ResourceData object
-	d := prepareClusterVsphereTestData()
+func getClientForCluster() *client.V1Client {
 	m := &client.V1Client{
 		GetCloudConfigVsphereFn: func(uid string) (*models.V1VsphereCloudConfig, error) {
 			return getCloudConfig(), nil
@@ -486,6 +484,12 @@ func TestResourceClusterVsphereRead(t *testing.T) {
 			return cluster, nil
 		},
 	}
+	return m
+}
+func TestResourceClusterVsphereRead(t *testing.T) {
+	// Create a mock ResourceData object
+	d := prepareClusterVsphereTestData()
+	m := getClientForCluster()
 	ctx := context.Background()
 	diags := resourceClusterVsphereRead(ctx, d, m)
 	if len(diags) > 0 {

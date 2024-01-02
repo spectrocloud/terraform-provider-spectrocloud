@@ -1,11 +1,13 @@
 package spectrocloud
 
 import (
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"reflect"
 	"testing"
 
 	"github.com/spectrocloud/hapi/models"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestToAdditionalNodePoolLabels(t *testing.T) {
@@ -340,4 +342,146 @@ func TestRepaveApprovalCheck(t *testing.T) {
 		t.Errorf("Expected error message '%s', got '%s'", expectedErrMsg, err)
 	}
 
+}
+
+func prepareSpectroClusterModel() *models.V1SpectroCluster {
+
+	scp := &models.V1SpectroCluster{
+		APIVersion: "V1",
+		Kind:       "",
+		Metadata: &models.V1ObjectMeta{
+			Annotations: map[string]string{
+				"test_annotation": "tf",
+				"scope":           "project",
+			},
+			CreationTimestamp: models.V1Time{},
+			DeletionTimestamp: models.V1Time{},
+			Labels: map[string]string{
+				"test_label": "tf",
+			},
+			LastModifiedTimestamp: models.V1Time{},
+			Name:                  "spc-cluster-unit-test",
+			Namespace:             "dns-label",
+			ResourceVersion:       "test-resource-version-01",
+			SelfLink:              "",
+			UID:                   "test-cluster-uid",
+		},
+		Spec: &models.V1SpectroClusterSpec{
+			CloudConfigRef: &models.V1ObjectReference{
+				APIVersion:      "V1",
+				FieldPath:       "",
+				Kind:            "",
+				Name:            "spc-cluster-unit-tes",
+				Namespace:       "test-namespace",
+				ResourceVersion: "test-cloud-config-resource-version-01",
+				UID:             "test-cloud-config-uid",
+			},
+			CloudType: "vsphere",
+			ClusterConfig: &models.V1ClusterConfig{
+				ClusterMetaAttribute: "test-cluster-meta-attributes",
+				ClusterRbac:          nil,
+				ClusterResources: &models.V1ClusterResources{
+					Namespaces: []*models.V1ResourceReference{
+						&models.V1ResourceReference{
+							Kind: "",
+							Name: "",
+							UID:  ptr.StringPtr("test-cluster-resource"),
+						},
+					},
+					Rbacs: []*models.V1ResourceReference{
+						&models.V1ResourceReference{
+							Kind: "",
+							Name: "",
+							UID:  ptr.StringPtr("test-cluster-rbac-resource"),
+						},
+					},
+				},
+				ControlPlaneHealthCheckTimeout: "",
+				HostClusterConfig: &models.V1HostClusterConfig{
+					ClusterEndpoint: &models.V1HostClusterEndpoint{
+						Config: &models.V1HostClusterEndpointConfig{
+							IngressConfig: &models.V1IngressConfig{
+								Host: "121.1.1.0",
+								Port: 9999,
+							},
+							LoadBalancerConfig: nil,
+						},
+						Type: "ingress",
+					},
+					ClusterGroup: &models.V1ObjectReference{
+						APIVersion:      "",
+						FieldPath:       "",
+						Kind:            "",
+						Name:            "",
+						Namespace:       "",
+						ResourceVersion: "",
+						UID:             "test-cluster-group-uid",
+					},
+					HostCluster: &models.V1ObjectReference{
+						APIVersion:      "",
+						FieldPath:       "",
+						Kind:            "",
+						Name:            "",
+						Namespace:       "",
+						ResourceVersion: "",
+						UID:             "test-host-cluster-uid",
+					},
+					IsHostCluster: ptr.BoolPtr(false),
+				},
+				LifecycleConfig: &models.V1LifecycleConfig{
+					Pause: ptr.BoolPtr(false),
+				},
+				MachineHealthConfig: &models.V1MachineHealthCheckConfig{
+					HealthCheckMaxUnhealthy:         "",
+					NetworkReadyHealthCheckDuration: "",
+					NodeReadyHealthCheckDuration:    "",
+				},
+				MachineManagementConfig: &models.V1MachineManagementConfig{
+					OsPatchConfig: &models.V1OsPatchConfig{
+						OnDemandPatchAfter: models.V1Time{},
+						PatchOnBoot:        false,
+						RebootIfRequired:   false,
+						Schedule:           "",
+					},
+				},
+				UpdateWorkerPoolsInParallel: false,
+			},
+			ClusterProfileTemplates: nil,
+			ClusterType:             "full",
+		},
+		Status: &models.V1SpectroClusterStatus{
+			AbortTimestamp: models.V1Time{},
+			AddOnServices:  nil,
+			APIEndpoints:   nil,
+			ClusterImport:  nil,
+			Conditions:     nil,
+			Fips:           nil,
+			Location:       nil,
+			Packs:          nil,
+			ProfileStatus:  nil,
+			Repave:         nil,
+			Services:       nil,
+			SpcApply:       nil,
+			State:          "",
+			Upgrades:       nil,
+			Virtual:        nil,
+		},
+	}
+	return scp
+}
+
+func TestReadCommonFieldsCluster(t *testing.T) {
+	d := prepareClusterVsphereTestData()
+	spc := prepareSpectroClusterModel()
+	c := getClientForCluster()
+	_, done := readCommonFields(c, d, spc)
+	assert.Equal(t, false, done)
+}
+
+func TestReadCommonFieldsVirtualCluster(t *testing.T) {
+	d := resourceClusterVirtual().TestResourceData()
+	spc := prepareSpectroClusterModel()
+	c := getClientForCluster()
+	_, done := readCommonFields(c, d, spc)
+	assert.Equal(t, false, done)
 }
