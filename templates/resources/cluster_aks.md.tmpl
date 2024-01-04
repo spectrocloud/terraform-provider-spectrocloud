@@ -91,7 +91,7 @@ resource "spectrocloud_cluster_aks" "cluster" {
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
-to import {{ .Name }} using `id` with `context` separated by colon. For example:
+to import the resource {{ .Name }} by using its `id` with the Palette `context` separated by a colon. For example:
 
 ```terraform
 import {
