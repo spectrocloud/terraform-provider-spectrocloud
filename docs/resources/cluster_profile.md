@@ -145,7 +145,7 @@ resource "spectrocloud_cluster_profile" "profile" {
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
-to import spectrocloud_cluster_profile using `id`. For example:
+to import the resource spectrocloud_cluster_profile by using its `id`. For example:
 
 ```terraform
 import {
@@ -154,7 +154,7 @@ import {
 }
 ```
 
-Using `terraform import`, import the cluster using the `id`. For example:
+You can also use the Terraform CLI and the `terraform import`, command to import the cluster using by referencing the resource `id`. For example:
 
 ```console
 % terraform import spectrocloud_cluster_profile.example id
