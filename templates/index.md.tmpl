@@ -67,8 +67,65 @@ provider "spectrocloud" {}
 ```
 
 ## Import
-- [`spectrocloud_cluster_profile` resource (import)](/docs/resources/cluster_profile#import)
-- [`spectrocloud_cluster_aks` resource (import)](/docs/resources/cluster_aks#import)
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+
+Each Spectrocloud resource type has its own specific requirements for the import process. It's essential to refer to the documentation for each resource to understand the exact format of the `id` and any other required parameters.
+The `import` block specifies the resource you want to import and its unique identifier with the following structure:
+
+```terraform
+import {
+  to = <resource>.<name>
+  id = "<unique_identifier>"
+}
+```
+
+- `<resource>`: The type of the resource you are importing.
+- `<name>`: A name you assign to the resource within your Terraform configuration.
+- `<unique_identifier>`: The ID of the resource you are importing. This can include additional context if required.
+
+## Examples
+
+1. **Import with Context**: When importing resources that require additional context, the `id` is followed by a context, separated by a colon. For example, importing a cluster with context looks like this:
+
+   ```terraform
+   import {
+     to = spectrocloud_cluster_aks.example
+     id = "example_id:project"
+   }
+   ```
+   And using the command line:
+   ```console
+   % terraform import spectrocloud_cluster_aks.example example_id:project
+   ```
+
+   or for the tenant context:
+
+  ```terraform
+  import {
+    to = spectrocloud_cluster_aks.example
+    id = "example_id:tenant"
+  }
+  ```
+  And using the command line:
+  ```console
+  % terraform import spectrocloud_cluster_aks.example example_id:tenant
+  ```
+
+
+2. **Import without Context**: For resources that do not require additional context, the `id` is used directly. An example of importing a cluster profile is as follows:
+
+   ```terraform
+   import {
+     to = spectrocloud_cluster_profile.example
+     id = "id"
+   }
+   ```
+   And using the command line:
+   ```console
+   % terraform import spectrocloud_cluster_profile.example id
+   ```
+
+
 
 ## Support
 
