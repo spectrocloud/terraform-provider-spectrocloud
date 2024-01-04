@@ -88,6 +88,10 @@ export SPECTROCLOUD_APIKEY=5b7aad.........
 provider "spectrocloud" {}
 ```
 
+## Import
+- [`spectrocloud_cluster_profile` resource (import)](/docs/resources/cluster_profile#import)
+- [`spectrocloud_cluster_aks` resource (import)](/docs/resources/cluster_aks#import)
+
 ## Support
 
 For questions or issues with the provider, please post your questions on the
