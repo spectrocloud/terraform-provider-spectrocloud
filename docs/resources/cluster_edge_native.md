@@ -28,7 +28,7 @@ import {
 Using `terraform import`, import the cluster using the `id` colon separated with `context`. For example:
 
 ```console
-% terraform import spectrocloud_cluster_edge_native.example example_id:project
+ terraform import spectrocloud_cluster_edge_native.example example_id:project
 ```
 
 Refer to the [Import section](/docs#import) to learn more.

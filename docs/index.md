@@ -105,7 +105,7 @@ import {
 - `<name>`: A name you assign to the resource within your Terraform configuration.
 - `<unique_identifier>`: The ID of the resource you are importing. This can include additional context if required.
 
-## Examples
+### Examples
 The following examples showcase how to import a resource. Some resource requires the context to be specified during the import action. The context refers to the Palette scope. Allowed values are either `project` or `tenant`. 
 
 ####  Import With Context
@@ -119,7 +119,7 @@ When importing resources that require additional context, the `id` is followed b
    ```
      You can also import a resource using the Terraform CLI and the `import` command.
    ```console
-   % terraform import spectrocloud_cluster_aks.example example_id:project
+   terraform import spectrocloud_cluster_aks.example example_id:project
    ```
 
     Specify' tenant' after the colon if you want to import a resource at the tenant scope. 
@@ -132,7 +132,7 @@ When importing resources that require additional context, the `id` is followed b
   ```
    Example of importing a resource with the tenant context through the Terraform CLI.
   ```console
-  % terraform import spectrocloud_cluster_aks.example example_id:tenant
+  terraform import spectrocloud_cluster_aks.example example_id:tenant
   ```
 ~> Ensure you have tenant admin access when importing a resource at the tenant scope.
 
@@ -148,7 +148,7 @@ For resources that do not require additional context, the `id` is the only provi
    ```
    Below is an example of using the Terraform CLI and the `import` command without specifying the context.
    ```console
-   % terraform import spectrocloud_cluster_profile.example id
+   terraform import spectrocloud_cluster_profile.example id
    ```
 
 
