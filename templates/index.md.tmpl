@@ -66,6 +66,71 @@ export SPECTROCLOUD_APIKEY=5b7aad.........
 provider "spectrocloud" {}
 ```
 
+## Import
+Starting with Terraform v1.5.0 and later, you can use an [`import` block](https://developer.hashicorp.com/terraform/language/import) to import resources into your state file.
+
+Each resource type has its own specific requirements for the import process. We recommend you refer to the documentation for each resource to better understand the exact format of the `id` and any other required parameters.
+The `import` block specifies the resource you want to import and its unique identifier with the following structure:
+
+```terraform
+import {
+  to = <resource>.<name>
+  id = "<unique_identifier>"
+}
+```
+
+- `<resource>`: The type of the resource you are importing.
+- `<name>`: A name you assign to the resource within your Terraform configuration.
+- `<unique_identifier>`: The ID of the resource you are importing. This can include additional context if required.
+
+### Examples
+The following examples showcase how to import a resource. Some resource requires the context to be specified during the import action. The context refers to the Palette scope. Allowed values are either `project` or `tenant`. 
+
+####  Import With Context
+
+When importing resources that require additional context, the `id` is followed by a context, separated by a colon.
+   ```terraform
+   import {
+     to = spectrocloud_cluster_aks.example
+     id = "example_id:project"
+   }
+   ```
+     You can also import a resource using the Terraform CLI and the `import` command.
+   ```console
+   terraform import spectrocloud_cluster_aks.example example_id:project
+   ```
+
+    Specify' tenant' after the colon if you want to import a resource at the tenant scope. 
+
+  ```terraform
+  import {
+    to = spectrocloud_cluster_aks.example
+    id = "example_id:tenant"
+  }
+  ```
+   Example of importing a resource with the tenant context through the Terraform CLI.
+  ```console
+  terraform import spectrocloud_cluster_aks.example example_id:tenant
+  ```
+~> Ensure you have tenant admin access when importing a resource at the tenant scope.
+
+#### Import Without Context
+
+For resources that do not require additional context, the `id` is the only provided argument. The following is an example of a resource that does not require the context and only provides the ID.
+
+   ```terraform
+   import {
+     to = spectrocloud_cluster_profile.example
+     id = "id"
+   }
+   ```
+   Below is an example of using the Terraform CLI and the `import` command without specifying the context.
+   ```console
+   terraform import spectrocloud_cluster_profile.example id
+   ```
+
+
+
 ## Support
 
 For questions or issues with the provider, please post your questions on the
