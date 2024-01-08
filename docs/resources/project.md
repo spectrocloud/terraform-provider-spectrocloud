@@ -2,18 +2,30 @@
 page_title: "spectrocloud_project Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Create and manage projects in Palette.
 ---
 
 # spectrocloud_project (Resource)
 
-  
+  Create and manage projects in Palette.
 
 ## Example Usage
+
+Simple example of a project without any additional configuration.
 
 ```terraform
 resource "spectrocloud_project" "project" {
   name = "dev1"
+}
+```
+
+You can also add tags and a description to the project.
+
+```terraform
+resource "spectrocloud_project" "project" {
+  name = "dev2"
+  tags = ["owner:jdoe@emxaple.com", "cost-center:12345"]
+  description = "This is the primary devoplent environment for team Yellow."
 }
 ```
 
@@ -23,12 +35,12 @@ resource "spectrocloud_project" "project" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) The name of the project.
 
 ### Optional
 
-- `description` (String)
-- `tags` (Set of String)
+- `description` (String) The description of the project.
+- `tags` (Set of String) Assign tags to the project.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only

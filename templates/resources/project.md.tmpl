@@ -11,9 +11,21 @@ description: |-
 
 ## Example Usage
 
+Simple example of a project without any additional configuration.
+
 ```terraform
 resource "spectrocloud_project" "project" {
   name = "dev1"
+}
+```
+
+You can also add tags and a description to the project.
+
+```terraform
+resource "spectrocloud_project" "project" {
+  name = "dev2"
+  tags = ["owner:jdoe@emxaple.com", "cost-center:12345"]
+  description = "This is the primary devoplent environment for team Yellow."
 }
 ```
 
