@@ -541,6 +541,9 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 	labels := make([]string, 0)
 	controlPlane := m["control_plane"].(bool)
 	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
+	if controlPlane {
+		labels = append(labels, "master")
+	}
 
 	cloudConfig := toEdgeHosts(m)
 	mp := &models.V1EdgeNativeMachinePoolConfigEntity{
