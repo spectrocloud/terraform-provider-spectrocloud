@@ -3,10 +3,9 @@ package spectrocloud
 import (
 	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+	"strings"
 )
 
 var (
@@ -75,12 +74,11 @@ func toSSHKeys(cloudConfig map[string]interface{}) ([]string, error) {
 	if cloudConfig["ssh_keys"] != nil {
 		sshKeysList = cloudConfig["ssh_keys"].(*schema.Set).List()
 	}
-	sshKey := cloudConfig["ssh_key"].(string)
-	if sshKey != "" && len(sshKeysList) == 0 {
-		sshKeys = []string{strings.TrimSpace(sshKey)}
-		return sshKeys, nil
+	if cloudConfig["ssh_key"] != nil {
+		sshKey := cloudConfig["ssh_key"].(string)
+		sshKeys = append(sshKeys, strings.TrimSpace(sshKey))
 	}
-	if sshKey == "" && len(sshKeysList) > 0 {
+	if len(sshKeysList) > 0 || len(sshKeys) > 0 {
 		for _, sk := range sshKeysList {
 			sshKeys = append(sshKeys, strings.TrimSpace(sk.(string)))
 		}

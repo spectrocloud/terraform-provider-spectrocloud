@@ -1,9 +1,11 @@
 package spectrocloud
 
 import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/spectrocloud/hapi/models"
@@ -484,4 +486,40 @@ func TestReadCommonFieldsVirtualCluster(t *testing.T) {
 	c := getClientForCluster()
 	_, done := readCommonFields(c, d, spc)
 	assert.Equal(t, false, done)
+}
+
+func TestToSSHKeys(t *testing.T) {
+	// Test case 1: When cloudConfig has "ssh_key" attribute
+	cloudConfig1 := map[string]interface{}{
+		"ssh_key": "ssh-key-1",
+	}
+	keys1, err1 := toSSHKeys(cloudConfig1)
+	assert.NoError(t, err1)
+	assert.Equal(t, []string{"ssh-key-1"}, keys1)
+
+	// Test case 2: When cloudConfig has "ssh_keys" attribute
+	cloudConfig2 := map[string]interface{}{
+		"ssh_keys": schema.NewSet(schema.HashString, []interface{}{"ssh-key-2", "ssh-key-3"}),
+	}
+	keys2, err2 := toSSHKeys(cloudConfig2)
+	assert.NoError(t, err2)
+	assert.Equal(t, []string{"ssh-key-2", "ssh-key-3"}, keys2)
+
+	// Test case 3: When cloudConfig has both "ssh_key" and "ssh_keys" attributes
+	cloudConfig3 := map[string]interface{}{
+		"ssh_key":  "ssh-key-4",
+		"ssh_keys": schema.NewSet(schema.HashString, []interface{}{"ssh-key-5", "ssh-key-6"}),
+	}
+
+	keys3, err3 := toSSHKeys(cloudConfig3)
+	sort.Strings(keys3)
+	assert.NoError(t, err3)
+	assert.Equal(t, []string{"ssh-key-4", "ssh-key-5", "ssh-key-6"}, keys3)
+
+	// Test case 4: When cloudConfig has neither "ssh_key" nor "ssh_keys" attributes
+	cloudConfig4 := map[string]interface{}{}
+	keys4, err4 := toSSHKeys(cloudConfig4)
+	assert.Error(t, err4)
+	assert.Nil(t, keys4)
+	assert.Equal(t, "validation ssh_key: Kindly specify any one attribute ssh_key or ssh_keys", err4.Error())
 }
