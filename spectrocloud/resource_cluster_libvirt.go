@@ -130,21 +130,14 @@ func resourceClusterLibvirt() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"ssh_key": {
-							Type:         schema.TypeString,
-							Optional:     true,
-							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
-							Description:  "Public SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
-						},
 						"ssh_keys": {
-							Type:         schema.TypeSet,
-							Optional:     true,
-							Set:          schema.HashString,
-							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
+							Description: "List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.",
 						},
 						"vip": {
 							Type:     schema.TypeString,
