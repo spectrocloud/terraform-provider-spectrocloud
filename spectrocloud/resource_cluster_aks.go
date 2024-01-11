@@ -135,24 +135,29 @@ func resourceClusterAks() *schema.Resource {
 						"subscription_id": {
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 						"resource_group": {
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 						"region": {
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 						"ssh_key": {
 							Type:        schema.TypeString,
 							Required:    true,
+							ForceNew:    true,
 							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"private_cluster": {
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Default:     false,
+							ForceNew:    true,
 							Description: "Whether to create a private cluster(API endpoint). Default is `false`.",
 						},
 
@@ -160,26 +165,31 @@ func resourceClusterAks() *schema.Resource {
 						"vnet_name": {
 							Type:     schema.TypeString,
 							Optional: true,
+							ForceNew: true,
 						},
 
 						"vnet_resource_group": {
 							Type:     schema.TypeString,
 							Optional: true,
+							ForceNew: true,
 						},
 
 						"vnet_cidr_block": {
 							Type:     schema.TypeString,
 							Optional: true,
+							ForceNew: true,
 						},
 
 						"worker_subnet_name": {
 							Type:     schema.TypeString,
 							Optional: true,
+							ForceNew: true,
 						},
 
 						"worker_cidr": {
 							Type:     schema.TypeString,
 							Optional: true,
+							ForceNew: true,
 						},
 					},
 				},
