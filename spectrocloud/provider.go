@@ -68,6 +68,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_macro": resourceMacro(),
 
+				"spectrocloud_macros": resourceMacros(),
+
 				"spectrocloud_filter": resourceFilter(),
 
 				"spectrocloud_application_profile":    resourceApplicationProfile(),
