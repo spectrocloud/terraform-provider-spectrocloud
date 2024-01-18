@@ -36,6 +36,7 @@ func resourceMacros() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
+				Default:     "",
 				Description: "The Spectro Cloud project name.",
 			},
 		},
