@@ -83,8 +83,11 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 		d.SetId("")
 		return diags
 	}
-
-	d.SetId(c.GetMacrosId(uid))
+	macrosId, err := c.GetMacrosId(uid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.SetId(macrosId)
 
 	retMacros := map[string]interface{}{}
 
