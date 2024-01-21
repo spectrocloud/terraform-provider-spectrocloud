@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -22,6 +22,14 @@ func dataSourceAppliances() *schema.Resource {
 				Description: "The unique ids of the appliances. This is a computed field and is not required to be set.",
 				Computed:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Description: "The context of the appliances. Allowed values are `project` or `tenant`. " +
+					"Defaults to `project`." + PROJECT_NAME_NUANCE,
 			},
 			"tags": {
 				Type:        schema.TypeMap,
@@ -50,63 +58,36 @@ func dataSourceAppliances() *schema.Resource {
 	}
 }
 
-func dataSourcesApplianceRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func dataSourcesApplianceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
+	// Initialize tags if present
 	var tags map[string]string
-	if d.Get("tags") != nil {
-		tags = expandStringMap(d.Get("tags").(map[string]interface{}))
+	if v, ok := d.Get("tags").(map[string]interface{}); ok && len(v) > 0 {
+		tags = expandStringMap(v)
 	}
 
-	// read all appliances
-	appliances, err := c.GetAppliances(nil)
+	applianceContext := d.Get("context").(string)
+	status := d.Get("status").(string)
+	health := d.Get("health").(string)
+	architecture := d.Get("architecture").(string)
+
+	// Read appliances using the new GetAppliances method
+	appliances, err := c.GetAppliances(applianceContext, tags, status, health, architecture)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	// prepare filter
-	check := func(edgeHostDevice *models.V1EdgeHostsMetadata) bool {
-		is := false
-
-		is = is || IsMapSubset(edgeHostDevice.Metadata.Labels, tags)
-
-		if d.Get("status") != nil && d.Get("status").(string) != "" && edgeHostDevice.Status != nil {
-			state := string(edgeHostDevice.Status.State)
-			is = is && state == d.Get("status").(string)
-		}
-
-		if d.Get("health") != nil && d.Get("health").(string) != "" && edgeHostDevice.Status != nil {
-			if edgeHostDevice.Status.Health == nil || edgeHostDevice.Status.Health.State == "" {
-				return false // if health is not set, it's not a match
-			} else {
-				is = is && edgeHostDevice.Status.Health.State == d.Get("health").(string)
-			}
-		}
-
-		if d.Get("architecture") != nil && d.Get("architecture").(string) != "" {
-			if edgeHostDevice.Spec == nil || edgeHostDevice.Spec.Device == nil || edgeHostDevice.Spec.Device.ArchType == nil {
-				return false
-			} else {
-				is = is && *edgeHostDevice.Spec.Device.ArchType == d.Get("architecture").(string)
-			}
-		}
-		return is
-	}
-
-	// apply filter
-	output := filter(appliances.Payload.Items, check)
-
-	//read back all ids
+	// Extract appliance IDs
 	var applianceIDs []string
-	for _, appliance := range output {
+	for _, appliance := range appliances {
 		applianceIDs = append(applianceIDs, appliance.Metadata.UID)
 	}
 
+	// Set the resource ID and appliance IDs in the schema
 	id := toDatasourcesId("appliance", tags)
-
 	d.SetId(id) //need to set some id
-	err = d.Set("ids", applianceIDs)
-	if err != nil {
+	if err := d.Set("ids", applianceIDs); err != nil {
 		return diag.FromErr(err)
 	}
 
