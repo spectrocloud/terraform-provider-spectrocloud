@@ -142,8 +142,16 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Description: "List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.",
 						},
 						"vip": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The control plane endpoint can be specified as either an IP address or a fully qualified domain name (FQDN).",
+						},
+						"overlay_cidr_range": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							ForceNew:     true,
+							RequiredWith: []string{"cloud_config.0.vip"},
+							Description:  "The Overlay CIDR Range configures the overlay network. Once the `overlay_cidr_range` is set, it is enable the overlay network. For example, 100.64.192.0/24. If `overlay_cidr_range` is specified, ensure that `vip` falls within the specified overlay CIDR range.",
 						},
 						"ntp_servers": {
 							Type:     schema.TypeSet,
@@ -362,6 +370,9 @@ func flattenClusterConfigsEdgeNative(config *models.V1EdgeNativeCloudConfig) []i
 	if config.Spec.ClusterConfig.NtpServers != nil {
 		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
 	}
+	if config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr != "" {
+		m["overlay_cidr_range"] = config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr
+	}
 
 	return []interface{}{m}
 }
@@ -508,15 +519,26 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 	if err != nil {
 		return nil, err
 	}
+	// Handling overlay configurations
+	overlayConfig := &models.V1EdgeNativeOverlayNetworkConfiguration{}
+	if cloudConfig["overlay_cidr_range"] != "" {
+		overlayConfig.Cidr = cloudConfig["overlay_cidr_range"].(string)
+		overlayConfig.Enable = true
+	} else {
+		overlayConfig.Cidr = ""
+		overlayConfig.Enable = false
+	}
+
 	cluster := &models.V1SpectroEdgeNativeClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroEdgeNativeClusterEntitySpec{
 			Profiles: profiles,
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1EdgeNativeClusterConfig{
-				NtpServers:           toNtpServers(cloudConfig),
-				SSHKeys:              sshKeys,
-				ControlPlaneEndpoint: controlPlaneEndpoint,
+				NtpServers:                  toNtpServers(cloudConfig),
+				SSHKeys:                     sshKeys,
+				ControlPlaneEndpoint:        controlPlaneEndpoint,
+				OverlayNetworkConfiguration: overlayConfig,
 			},
 		},
 	}
