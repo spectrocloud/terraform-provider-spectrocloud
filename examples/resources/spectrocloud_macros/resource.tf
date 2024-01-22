@@ -1,14 +1,14 @@
 resource "spectrocloud_macros" "project_macro" {
   macros = {
-    "macro_project_1" = "val1",
-    "macro_project_2" = "val2",
+    "project_macro_1" = "val1",
+    "project_macro_2" = "val2",
   }
   project = "Default"
 }
 
 resource "spectrocloud_macros" "tenant_macro" {
   macros = {
-    "macro_tenant_1" = "tenant_val1",
-    "macro_tenant_2" = "tenant_val2",
+    "tenant_macro_1" = "tenant_val1",
+    "tenant_macro_1" = "tenant_val2",
   }
 }
