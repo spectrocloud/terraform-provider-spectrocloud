@@ -651,7 +651,7 @@ func toOverlayNetworkConfigAndVip(cloudConfig map[string]interface{}) (*models.V
 				Type: "IP",
 			}
 	} else {
-		if overlayConfig != nil && overlayConfig.Enable {
+		if overlayConfig.Enable {
 			autoGenVip, err := getFirstIPRange(overlayConfig.Cidr)
 			if err != nil {
 				return nil, nil, err
