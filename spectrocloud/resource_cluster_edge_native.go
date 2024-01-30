@@ -225,6 +225,12 @@ func resourceClusterEdgeNative() *schema.Resource {
 										Description: "Edge host static IP",
 										Optional:    true,
 									},
+									"two_node_role": {
+										Type:         schema.TypeString,
+										Description:  "Two node role for edge host. Valid values are `primary` and `secondary`.",
+										Optional:     true,
+										ValidateFunc: validation.StringInSlice([]string{"primary", "secondary"}, false),
+									},
 								},
 							},
 						},
@@ -590,11 +596,15 @@ func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudC
 			hostName = v
 		}
 		hostId := host.(map[string]interface{})["host_uid"].(string)
-		edgeHosts = append(edgeHosts, &models.V1EdgeNativeMachinePoolHostEntity{
+		edgeHost := &models.V1EdgeNativeMachinePoolHostEntity{
 			HostName: hostName,
 			HostUID:  &hostId,
 			StaticIP: host.(map[string]interface{})["static_ip"].(string),
-		})
+		}
+		if v, ok := host.(map[string]interface{})["two_node_role"].(string); ok {
+			edgeHost.TwoNodeCandidatePriority = v
+		}
+		edgeHosts = append(edgeHosts, edgeHost)
 	}
 	return &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 		EdgeHosts: edgeHosts,
