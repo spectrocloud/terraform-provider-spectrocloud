@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -551,7 +552,11 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 		labels = append(labels, "master")
 	}
 
-	cloudConfig := toEdgeHosts(m)
+	cloudConfig, err := toEdgeHosts(m)
+	if err != nil {
+		return nil, err
+	}
+
 	mp := &models.V1EdgeNativeMachinePoolConfigEntity{
 		CloudConfig: cloudConfig,
 		PoolConfig: &models.V1MachinePoolConfigEntity{
@@ -584,12 +589,13 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 	return mp, nil
 }
 
-func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudConfigEntity {
+func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloudConfigEntity, error) {
 	edgeHostIdsLen := len(m["edge_host"].([]interface{}))
 	edgeHosts := make([]*models.V1EdgeNativeMachinePoolHostEntity, 0)
 	if m["edge_host"] == nil || edgeHostIdsLen == 0 {
-		return nil
+		return nil, nil
 	}
+	twoNodeHostRoles := make(map[string]string)
 	for _, host := range m["edge_host"].([]interface{}) {
 		hostName := ""
 		if v, ok := host.(map[string]interface{})["host_name"].(string); ok {
@@ -602,11 +608,22 @@ func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudC
 			StaticIP: host.(map[string]interface{})["static_ip"].(string),
 		}
 		if v, ok := host.(map[string]interface{})["two_node_role"].(string); ok {
+			if _, ok := twoNodeHostRoles[v]; ok {
+				return nil, fmt.Errorf("two node role '%s' already assigned to edge host '%s'; roles must be unique", v, hostId)
+			}
 			edgeHost.TwoNodeCandidatePriority = v
+			twoNodeHostRoles[v] = hostId
 		}
 		edgeHosts = append(edgeHosts, edgeHost)
 	}
+	leaderId, leaderOk := twoNodeHostRoles["primary"]
+	followerId, followerOk := twoNodeHostRoles["secondary"]
+	if leaderOk && !followerOk {
+		return nil, fmt.Errorf("primary edge host '%s' specified, but missing secondary edge host", leaderId)
+	} else if !leaderOk && followerOk {
+		return nil, fmt.Errorf("secondary edge host '%s' specified, but missing primary edge host", followerId)
+	}
 	return &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 		EdgeHosts: edgeHosts,
-	}
+	}, nil
 }
