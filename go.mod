@@ -1,8 +1,8 @@
 module github.com/spectrocloud/terraform-provider-spectrocloud
 
-go 1.21
+go 1.22
 
-toolchain go1.21.1
+toolchain go1.22rc2
 
 require (
 	github.com/go-openapi/strfmt v0.21.5
@@ -11,10 +11,10 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.16.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.30.0
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/gomi v1.14.1-0.20231018185613-210a5f32e20a
-	github.com/spectrocloud/hapi v1.14.1-0.20231204203717-cd5b7889ff97
+	github.com/spectrocloud/gomi v1.14.1-0.20231206064212-951160f8c919
+	github.com/spectrocloud/hapi v1.14.1-0.20240127163812-35944b564715
 	github.com/spectrocloud/palette-sdk-go v0.0.0-20240119173015-2517100040ff
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.4
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
@@ -125,4 +125,4 @@ require (
 )
 
 //replace github.com/spectrocloud/hapi => ../hapi
-//replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
+replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go

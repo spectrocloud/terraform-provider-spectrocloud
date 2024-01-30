@@ -723,8 +723,11 @@ github.com/soheilhy/cmux v0.1.5/go.mod h1:T7TcVDs9LWfQgPlPsdngu6I6QIoyIFZDDC6sNE
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spectrocloud/gomi v1.14.1-0.20231018185613-210a5f32e20a h1:fIRwPG93quk2DHfYhaPNfnzMhynhPbgvnvn1zTW+sKA=
 github.com/spectrocloud/gomi v1.14.1-0.20231018185613-210a5f32e20a/go.mod h1:5T1lnweC0UQVJcswAguAC8o/gLaaumVL7+PvgP9LVLc=
+github.com/spectrocloud/gomi v1.14.1-0.20231206064212-951160f8c919/go.mod h1:LlZ9We4kDaELYi7Is0SVmnySuDhwphJLS6ZT4wXxFIk=
 github.com/spectrocloud/hapi v1.14.1-0.20231204203717-cd5b7889ff97 h1:P2wXczfqTAyDaxdaGx/9tXDqHnrkHkLzHOsx+tD/Kxc=
 github.com/spectrocloud/hapi v1.14.1-0.20231204203717-cd5b7889ff97/go.mod h1:Krk9mzbO1MnUTLvvzztBYpOWCFunIlSDWSGlsLh1vkk=
+github.com/spectrocloud/hapi v1.14.1-0.20240127163812-35944b564715 h1:uDYWYQ6yStrlNT8Tff+HgMBYYNIlFy6xmCv2Ql2wDhw=
+github.com/spectrocloud/hapi v1.14.1-0.20240127163812-35944b564715/go.mod h1:bc6zoqx2Ghl1GZkS9yXmJKjMIJZOI2Gq2ryLGeCFUeI=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20231222045455-ce8ab2656b79/go.mod h1:xqyCtEwuM9iolgZ2RYd+IaSIw9SVvdXjHMVa0kIXd/Q=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20240113035324-becc85563386 h1:VmjM6EHzvyPxHJ78rO+ZzX2MqODMrpleMSCjlEL07tE=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20240113035324-becc85563386/go.mod h1:xqyCtEwuM9iolgZ2RYd+IaSIw9SVvdXjHMVa0kIXd/Q=
@@ -762,6 +765,7 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
+github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/tidwall/pretty v1.0.0 h1:HsD+QiTn7sK6flMKIvNmpqz1qrpP3Ps6jOKIKMooyg4=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
