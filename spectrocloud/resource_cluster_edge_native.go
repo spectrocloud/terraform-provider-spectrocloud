@@ -148,11 +148,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Description: "The control plane endpoint can be specified as either an IP address or a fully qualified domain name (FQDN).",
 						},
 						"overlay_cidr_range": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
-							//RequiredWith: []string{"cloud_config.0.vip"},
-							Description: "The Overlay CIDR Range configures the overlay network. Once the `overlay_cidr_range` is set, it is enable the overlay network. For example, 100.64.192.0/24. If `overlay_cidr_range` is specified, ensure that `vip` is mandatory and falls within the specified overlay CIDR range.",
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "The `overlay_cidr_range` parameter configures the overlay network. When `overlay_cidr_range` is set, it enables the overlay network. For example, `100.64.192.0/24`",
 						},
 						"ntp_servers": {
 							Type:     schema.TypeSet,
@@ -512,27 +511,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 	if err != nil {
 		return nil, err
 	}
-	//// Handling vip configurations
-	//controlPlaneEndpoint := &models.V1EdgeNativeControlPlaneEndPoint{}
-	//if cloudConfig["vip"] != nil {
-	//	vip := cloudConfig["vip"].(string)
-	//	controlPlaneEndpoint =
-	//		&models.V1EdgeNativeControlPlaneEndPoint{
-	//			//DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-	//			Host: vip,
-	//			Type: "IP", // only IP type for now no DDNS
-	//		}
-	//}
-	//
-	//// Handling overlay configurations
-	//overlayConfig := &models.V1EdgeNativeOverlayNetworkConfiguration{}
-	//if cloudConfig["overlay_cidr_range"] != "" {
-	//	overlayConfig.Cidr = cloudConfig["overlay_cidr_range"].(string)
-	//	overlayConfig.Enable = true
-	//} else {
-	//	overlayConfig.Cidr = ""
-	//	overlayConfig.Enable = false
-	//}
+
 	controlPlaneEndpoint, overlayConfig, err := toOverlayNetworkConfigAndVip(cloudConfig)
 	if err != nil {
 		return nil, err

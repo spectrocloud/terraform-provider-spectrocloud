@@ -8,7 +8,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
 
   cloud_config {
     ssh_keys = ["spectro2022", "spectro2023"]
-    vip      = "100.12.22.10"
+    vip      = "100.0.0.1"
     overlay_cidr_range = "100.12.22.11/12"
   }
 
