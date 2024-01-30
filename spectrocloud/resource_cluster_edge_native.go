@@ -389,15 +389,21 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
+
 		var hosts []map[string]string
 		for _, host := range machinePool.Hosts {
-			hosts = append(hosts, map[string]string{
+			rawHost := map[string]string{
 				"host_name": host.HostName,
 				"host_uid":  *host.HostUID,
 				"static_ip": host.StaticIP,
-			})
+			}
+			if host.TwoNodeCandidatePriority != "" {
+				rawHost["two_node_role"] = host.TwoNodeCandidatePriority
+			}
+			hosts = append(hosts, rawHost)
 		}
 		oi["edge_host"] = hosts
+
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
 		ois = append(ois, oi)
@@ -595,6 +601,7 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 	if m["edge_host"] == nil || edgeHostIdsLen == 0 {
 		return nil, nil
 	}
+
 	twoNodeHostRoles := make(map[string]string)
 	for _, host := range m["edge_host"].([]interface{}) {
 		hostName := ""
@@ -616,6 +623,7 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 		}
 		edgeHosts = append(edgeHosts, edgeHost)
 	}
+
 	leaderId, leaderOk := twoNodeHostRoles["primary"]
 	followerId, followerOk := twoNodeHostRoles["secondary"]
 	if leaderOk && !followerOk {
@@ -623,6 +631,7 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 	} else if !leaderOk && followerOk {
 		return nil, fmt.Errorf("secondary edge host '%s' specified, but missing primary edge host", followerId)
 	}
+
 	return &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 		EdgeHosts: edgeHosts,
 	}, nil
