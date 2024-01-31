@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 
@@ -324,4 +325,154 @@ func TestValidationNodeRepaveIntervalForControlPlane(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetFirstIPRange(t *testing.T) {
+	// Test case 1: Valid CIDR
+	cidrValid := "192.168.1.0/24"
+	resultValid, errValid := getFirstIPRange(cidrValid)
+
+	// Assertions for valid CIDR
+	assert.NoError(t, errValid)
+	assert.Equal(t, "192.168.1.1", resultValid)
+
+	// Test case 2: Invalid CIDR
+	cidrInvalid := "invalid_cidr"
+	resultInvalid, errInvalid := getFirstIPRange(cidrInvalid)
+
+	// Assertions for invalid CIDR
+	assert.Error(t, errInvalid)
+	assert.Equal(t, "", resultInvalid)
+}
+
+func TestFlattenClusterConfigsEdgeNative(t *testing.T) {
+	// Test case 1: Valid Cloud Config and Config
+	cloudConfig := map[string]interface{}{"vip": "192.168.1.1"}
+	validConfig := &models.V1EdgeNativeCloudConfig{
+		Spec: &models.V1EdgeNativeCloudConfigSpec{
+			ClusterConfig: &models.V1EdgeNativeClusterConfig{
+				ControlPlaneEndpoint: &models.V1EdgeNativeControlPlaneEndPoint{
+					Host: "192.168.1.1",
+				},
+				NtpServers: []string{"ntp-server-1", "ntp-server-2"},
+				OverlayNetworkConfiguration: &models.V1EdgeNativeOverlayNetworkConfiguration{
+					Cidr: "10.0.0.0/16",
+				},
+				SSHKeys:  []string{"ssh-key-1", "ssh-key-2"},
+				StaticIP: false,
+			},
+		},
+	}
+
+	resultValid := flattenClusterConfigsEdgeNative(cloudConfig, validConfig)
+
+	// Assertions for valid Cloud Config and Config
+	expectedValidResult := []interface{}{
+		map[string]interface{}{
+			"ssh_keys":           []string{"ssh-key-1", "ssh-key-2"},
+			"vip":                "192.168.1.1",
+			"ntp_servers":        []string{"ntp-server-1", "ntp-server-2"},
+			"overlay_cidr_range": "10.0.0.0/16",
+		},
+	}
+	assert.Equal(t, expectedValidResult, resultValid)
+
+	// Test case 2: Missing Control Plane Endpoint Host
+	missingHostConfig := &models.V1EdgeNativeCloudConfig{
+		Spec: &models.V1EdgeNativeCloudConfigSpec{
+			ClusterConfig: &models.V1EdgeNativeClusterConfig{
+				ControlPlaneEndpoint: &models.V1EdgeNativeControlPlaneEndPoint{},
+				OverlayNetworkConfiguration: &models.V1EdgeNativeOverlayNetworkConfiguration{
+					Cidr: "",
+				},
+			},
+		},
+	}
+
+	resultMissingHost := flattenClusterConfigsEdgeNative(cloudConfig, missingHostConfig)
+
+	// Assertions for missing Control Plane Endpoint Host
+	assert.Equal(t, []interface{}{map[string]interface{}{}}, resultMissingHost)
+
+	// Test case 3: Missing Cluster Config
+	missingConfig := &models.V1EdgeNativeCloudConfig{}
+
+	resultMissingConfig := flattenClusterConfigsEdgeNative(cloudConfig, missingConfig)
+
+	// Assertions for missing Cluster Config
+	assert.Equal(t, []interface{}{}, resultMissingConfig)
+}
+
+func TestToOverlayNetworkConfigAndVip(t *testing.T) {
+	// Test case 1: Valid cloudConfig with overlay_cidr_range and vip
+	validCloudConfig := map[string]interface{}{
+		"overlay_cidr_range": "10.0.0.0/16",
+		"vip":                "192.168.1.1",
+	}
+
+	controlPlaneEndpointValid, overlayConfigValid, errValid := toOverlayNetworkConfigAndVip(validCloudConfig)
+
+	// Assertions for valid cloudConfig
+	assert.NoError(t, errValid)
+	assert.Equal(t, &models.V1EdgeNativeControlPlaneEndPoint{
+		Host: "192.168.1.1",
+		Type: "IP",
+	}, controlPlaneEndpointValid)
+	assert.Equal(t, &models.V1EdgeNativeOverlayNetworkConfiguration{
+		Cidr:   "10.0.0.0/16",
+		Enable: true,
+	}, overlayConfigValid)
+
+	// Test case 2: Valid cloudConfig with overlay_cidr_range only
+	overlayConfigOnly := map[string]interface{}{
+		"overlay_cidr_range": "10.0.0.0/16",
+	}
+
+	controlPlaneEndpointOverlayOnly, overlayConfigOverlayOnly, errOverlayOnly := toOverlayNetworkConfigAndVip(overlayConfigOnly)
+
+	// Assertions for valid cloudConfig with overlay_cidr_range only
+	assert.NoError(t, errOverlayOnly)
+	assert.Equal(t, &models.V1EdgeNativeControlPlaneEndPoint{
+		Host: "10.0.0.1", // Automatically generated VIP
+		Type: "IP",
+	}, controlPlaneEndpointOverlayOnly)
+	assert.Equal(t, &models.V1EdgeNativeOverlayNetworkConfiguration{
+		Cidr:   "10.0.0.0/16",
+		Enable: true,
+	}, overlayConfigOverlayOnly)
+
+	// Test case 3: Valid cloudConfig with vip only
+	vipOnly := map[string]interface{}{
+		"vip": "192.168.1.1",
+	}
+
+	controlPlaneEndpointVipOnly, overlayConfigVipOnly, errVipOnly := toOverlayNetworkConfigAndVip(vipOnly)
+
+	// Assertions for valid cloudConfig with vip only
+	assert.NoError(t, errVipOnly)
+	assert.Equal(t, &models.V1EdgeNativeControlPlaneEndPoint{
+		Host: "192.168.1.1",
+		Type: "IP",
+	}, controlPlaneEndpointVipOnly)
+	assert.Equal(t, &models.V1EdgeNativeOverlayNetworkConfiguration{
+		Cidr:   "", // Empty CIDR since overlay_cidr_range is missing
+		Enable: false,
+	}, overlayConfigVipOnly)
+
+	// Test case 4: Missing cloudConfig fields
+	missingFields := map[string]interface{}{}
+
+	controlPlaneEndpointMissingFields, overlayConfigMissingFields, errMissingFields := toOverlayNetworkConfigAndVip(missingFields)
+
+	// Assertions for missing cloudConfig fields
+	assert.NoError(t, errMissingFields)
+	assert.Equal(t, &models.V1EdgeNativeControlPlaneEndPoint{
+		DdnsSearchDomain: "",
+		Host:             "",
+		Type:             "",
+	}, controlPlaneEndpointMissingFields)
+	assert.Equal(t, &models.V1EdgeNativeOverlayNetworkConfiguration{
+		Cidr:   "",
+		Enable: false,
+	}, overlayConfigMissingFields)
 }

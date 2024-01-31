@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"log"
+	"net"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -142,8 +143,15 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Description: "List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.",
 						},
 						"vip": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The control plane endpoint can be specified as either an IP address or a fully qualified domain name (FQDN).",
+						},
+						"overlay_cidr_range": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "The `overlay_cidr_range` parameter configures the overlay network. When `overlay_cidr_range` is set, it enables the overlay network. For example, `100.64.192.0/24`",
 						},
 						"ntp_servers": {
 							Type:     schema.TypeSet,
@@ -330,7 +338,8 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	if config, err := c.GetCloudConfigEdgeNative(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
-		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(config)); err != nil {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(cloudConfig, config)); err != nil {
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
@@ -346,21 +355,25 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	return diag.Diagnostics{}
 }
 
-func flattenClusterConfigsEdgeNative(config *models.V1EdgeNativeCloudConfig) []interface{} {
+func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config *models.V1EdgeNativeCloudConfig) []interface{} {
 	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
 		return make([]interface{}, 0)
 	}
 
 	m := make(map[string]interface{})
-
 	if config.Spec.ClusterConfig.SSHKeys != nil {
 		m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
 	}
 	if config.Spec.ClusterConfig.ControlPlaneEndpoint.Host != "" {
-		m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
+		if v, ok := cloudConfig["vip"]; ok && v.(string) != "" {
+			m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
+		}
 	}
 	if config.Spec.ClusterConfig.NtpServers != nil {
 		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
+	}
+	if config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr != "" {
+		m["overlay_cidr_range"] = config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr
 	}
 
 	return []interface{}{m}
@@ -492,31 +505,28 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroEdgeNativeClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	sshKeys, _ := toSSHKeys(cloudConfig)
-	controlPlaneEndpoint := &models.V1EdgeNativeControlPlaneEndPoint{}
-	if cloudConfig["vip"] != nil {
-		vip := cloudConfig["vip"].(string)
-		controlPlaneEndpoint =
-			&models.V1EdgeNativeControlPlaneEndPoint{
-				//DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-				Host: vip,
-				Type: "IP", // only IP type for now no DDNS
-			}
-	}
 
 	clusterContext := d.Get("context").(string)
 	profiles, err := toProfiles(c, d, clusterContext)
 	if err != nil {
 		return nil, err
 	}
+
+	controlPlaneEndpoint, overlayConfig, err := toOverlayNetworkConfigAndVip(cloudConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	cluster := &models.V1SpectroEdgeNativeClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroEdgeNativeClusterEntitySpec{
 			Profiles: profiles,
 			Policies: toPolicies(d),
 			CloudConfig: &models.V1EdgeNativeClusterConfig{
-				NtpServers:           toNtpServers(cloudConfig),
-				SSHKeys:              sshKeys,
-				ControlPlaneEndpoint: controlPlaneEndpoint,
+				NtpServers:                  toNtpServers(cloudConfig),
+				SSHKeys:                     sshKeys,
+				ControlPlaneEndpoint:        controlPlaneEndpoint,
+				OverlayNetworkConfiguration: overlayConfig,
 			},
 		},
 	}
@@ -599,4 +609,65 @@ func toEdgeHosts(m map[string]interface{}) *models.V1EdgeNativeMachinePoolCloudC
 	return &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 		EdgeHosts: edgeHosts,
 	}
+}
+
+func toOverlayNetworkConfigAndVip(cloudConfig map[string]interface{}) (*models.V1EdgeNativeControlPlaneEndPoint, *models.V1EdgeNativeOverlayNetworkConfiguration, error) {
+	controlPlaneEndpoint := &models.V1EdgeNativeControlPlaneEndPoint{}
+	overlayConfig := &models.V1EdgeNativeOverlayNetworkConfiguration{}
+	if (cloudConfig["overlay_cidr_range"] != nil) && (cloudConfig["overlay_cidr_range"].(string) != "") {
+		overlayConfig.Cidr = cloudConfig["overlay_cidr_range"].(string)
+		overlayConfig.Enable = true
+	} else {
+		overlayConfig.Cidr = ""
+		overlayConfig.Enable = false
+	}
+
+	if (cloudConfig["vip"] != nil) && (cloudConfig["vip"].(string) != "") {
+		vip := cloudConfig["vip"].(string)
+		controlPlaneEndpoint =
+			&models.V1EdgeNativeControlPlaneEndPoint{
+				Host: vip,
+				Type: "IP",
+			}
+	} else {
+		if overlayConfig.Enable {
+			autoGenVip, err := getFirstIPRange(overlayConfig.Cidr)
+			if err != nil {
+				return nil, nil, err
+			}
+			controlPlaneEndpoint =
+				&models.V1EdgeNativeControlPlaneEndPoint{
+					Host: autoGenVip,
+					Type: "IP",
+				}
+		}
+	}
+
+	return controlPlaneEndpoint, overlayConfig, nil
+}
+
+func getFirstIPRange(cidr string) (string, error) {
+	// Parse the CIDR string
+	_, ipNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return "", err
+	}
+
+	// Get the network address from the parsed CIDR
+	networkIP := ipNet.IP
+
+	// Ensure that the subnet mask is applied correctly
+	firstIP := make(net.IP, len(networkIP))
+	copy(firstIP, networkIP)
+	for i := range firstIP {
+		firstIP[i] &= ipNet.Mask[i]
+	}
+
+	// Increment the last octet to get the first usable IP
+	firstIP[len(firstIP)-1]++
+
+	// Convert the IP address to a string
+	firstIPString := firstIP.String()
+
+	return firstIPString, nil
 }
