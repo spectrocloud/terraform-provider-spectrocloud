@@ -145,7 +145,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 						"vip": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The control plane endpoint can be specified as either an IP address or a fully qualified domain name (FQDN).",
+							Description: "The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the vip should fall within the specified `overlay_cidr_range` range.",
 						},
 						"overlay_cidr_range": {
 							Type:        schema.TypeString,

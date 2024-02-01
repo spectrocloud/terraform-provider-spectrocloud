@@ -79,8 +79,9 @@ Refer to the [Import section](/docs#import) to learn more.
 Optional:
 
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
+- `overlay_cidr_range` (String) The `overlay_cidr_range` parameter configures the overlay network. When `overlay_cidr_range` is set, it enables the overlay network. For example, `100.64.192.0/24`
 - `ssh_keys` (Set of String) List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.
-- `vip` (String)
+- `vip` (String) The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the vip should fall within the specified `overlay_cidr_range` range.
 
 
 <a id="nestedblock--machine_pool"></a>
