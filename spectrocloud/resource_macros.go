@@ -2,8 +2,10 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"time"
@@ -118,10 +120,16 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 		existMacros, _ := c.GetExistMacros(oldMacros.(map[string]interface{}), uid)
 		err = c.UpdateMacros(uid, mergeExistingMacros(d, existMacros))
 		if err != nil {
+			var e *transport.TransportError
+			if errors.As(err, &e) && e.HttpCode == 422 {
+				d.Set("macros", oldMacros)
+				e.Payload.Message = e.Payload.Message + "\n Kindly verify if any of the specified macro names already exist in the system."
+				return diag.FromErr(e)
+			}
 			return diag.FromErr(err)
 		}
 	}
-
+	//resourceMacrosRead(ctx, d, m)
 	return diags
 }
 
