@@ -122,7 +122,9 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 		if err != nil {
 			var e *transport.TransportError
 			if errors.As(err, &e) && e.HttpCode == 422 {
-				d.Set("macros", oldMacros)
+				if err := d.Set("macros", oldMacros); err != nil {
+					return diag.FromErr(err)
+				}
 				e.Payload.Message = e.Payload.Message + "\n Kindly verify if any of the specified macro names already exist in the system."
 				return diag.FromErr(e)
 			}
