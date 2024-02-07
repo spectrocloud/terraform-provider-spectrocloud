@@ -23,6 +23,7 @@ func TestToClusterProfileVariables(t *testing.T) {
 				"name":          "variable_name_1",
 				"regex":         "regex_1",
 				"required":      true,
+				"is_sensitive":  false,
 			},
 			map[string]interface{}{
 				"default_value": "default_value_2",
@@ -34,10 +35,12 @@ func TestToClusterProfileVariables(t *testing.T) {
 				"name":          "variable_name_2",
 				"regex":         "regex_2",
 				"required":      false,
+				"is_sensitive":  true,
 			},
 		},
 	}
 	proVar = append(proVar, variables)
+	mockResourceData.Set("cloud", "edge-native")
 	mockResourceData.Set("profile_variables", proVar)
 	result, err := toClusterProfileVariables(mockResourceData)
 
@@ -47,6 +50,7 @@ func TestToClusterProfileVariables(t *testing.T) {
 
 	// Test case 2: Empty profile variables
 	mockResourceDataEmpty := resourceClusterProfile().TestResourceData()
+	mockResourceDataEmpty.Set("cloud", "edge-native")
 	mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
 	resultEmpty, errEmpty := toClusterProfileVariables(mockResourceDataEmpty)
 
@@ -56,9 +60,10 @@ func TestToClusterProfileVariables(t *testing.T) {
 
 	// Test case 3: Invalid profile variables format
 	mockResourceDataInvalid := resourceClusterProfile().TestResourceData()
-	mockResourceDataEmpty.Set("profile_variables", []interface{}{
+	mockResourceDataInvalid.Set("cloud", "edge-native")
+	mockResourceDataInvalid.Set("profile_variables", []interface{}{
 		map[string]interface{}{
-			"variable": "invalid_format", // Invalid format, should be a list
+			"variable": []interface{}{}, // Invalid format, should be a list
 		},
 	})
 	resultInvalid, _ := toClusterProfileVariables(mockResourceDataInvalid)
@@ -98,6 +103,7 @@ func TestFlattenProfileVariables(t *testing.T) {
 		},
 	}
 	proVar = append(proVar, variables)
+	mockResourceData.Set("cloud", "edge-native")
 	mockResourceData.Set("profile_variables", proVar)
 
 	pv := []*models.V1Variable{
@@ -117,23 +123,25 @@ func TestFlattenProfileVariables(t *testing.T) {
 					"name":          ptr.StringPtr("variable_name_1"),
 					"display_name":  "display_name_1",
 					"description":   "description_1",
-					"format":        models.V1Format("string"),
+					"format":        models.V1VariableFormat("string"),
 					"default_value": "default_value_1",
 					"regex":         "regex_1",
 					"required":      true,
 					"immutable":     false,
 					"hidden":        false,
+					"is_sensitive":  false,
 				},
 				map[string]interface{}{
 					"name":          ptr.StringPtr("variable_name_2"),
 					"display_name":  "display_name_2",
 					"description":   "description_2",
-					"format":        models.V1Format("integer"),
+					"format":        models.V1VariableFormat("integer"),
 					"default_value": "default_value_2",
 					"regex":         "regex_2",
 					"required":      false,
 					"immutable":     true,
 					"hidden":        true,
+					"is_sensitive":  false,
 				},
 			},
 		},
@@ -142,6 +150,7 @@ func TestFlattenProfileVariables(t *testing.T) {
 	// Test case 2: Empty profile variables and pv
 	//mockResourceDataEmpty := schema.TestResourceDataRaw(t, resourceClusterProfileVariables().Schema, map[string]interface{}{})
 	mockResourceDataEmpty := resourceClusterProfile().TestResourceData()
+	mockResourceDataEmpty.Set("cloud", "edge-native")
 	mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
 	resultEmpty, errEmpty := flattenProfileVariables(mockResourceDataEmpty, nil)
 
