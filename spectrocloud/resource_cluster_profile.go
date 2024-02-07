@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 
@@ -476,6 +477,11 @@ func getManifestUID(name string, packs []*models.V1PackRef) string {
 func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, error) {
 	var profileVariables []*models.V1Variable
 	if pVariables, ok := d.GetOk("profile_variables"); ok {
+		// Once the profile_Variables feature is extended to all cloud types, the following block should be removed.
+		if cloudType, ok := d.Get("cloud").(string); ok && cloudType != "edge-native" {
+			err := errors.New("currently, `profile_variables` is only supported for the cloud type `edge-native`")
+			return profileVariables, err
+		}
 		if pVariables.([]interface{})[0] != nil {
 			variables := pVariables.([]interface{})[0].(map[string]interface{})["variable"]
 			for _, v := range variables.([]interface{}) {
@@ -484,11 +490,12 @@ func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, er
 					DefaultValue: variable["default_value"].(string),
 					Description:  variable["description"].(string),
 					DisplayName:  variable["display_name"].(string), // revisit
-					Format:       models.V1Format(variable["format"].(string)),
+					Format:       models.V1VariableFormat(models.V1Format(variable["format"].(string))),
 					Hidden:       variable["hidden"].(bool),
 					Immutable:    variable["immutable"].(bool),
 					Name:         ptr.StringPtr(variable["name"].(string)),
 					Regex:        variable["regex"].(string),
+					IsSensitive:  variable["is_sensitive"].(bool),
 					Required:     variable["required"].(bool),
 				}
 				profileVariables = append(profileVariables, pv)
@@ -515,6 +522,7 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 		variable["required"] = v.Required
 		variable["immutable"] = v.Immutable
 		variable["hidden"] = v.Hidden
+		variable["is_sensitive"] = v.IsSensitive
 		variables = append(variables, variable)
 	}
 	// Sorting ordering the list per configuration this reference if we need to change profile_variables to TypeList

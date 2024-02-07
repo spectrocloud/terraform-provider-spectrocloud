@@ -31,7 +31,7 @@ func ProfileVariables() *schema.Schema {
 								Type:         schema.TypeString,
 								Optional:     true,
 								Default:      "string",
-								ValidateFunc: validation.StringInSlice([]string{"string", "number", "boolean", "password", "ipv4", "version"}, false),
+								ValidateFunc: validation.StringInSlice([]string{"string", "number", "boolean", "ipv4", "ipv4cidr", "ipv6", "version"}, false),
 								Description:  "The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Subsequent day 2 operations on this field are blocked.",
 							},
 							"description": {
@@ -47,28 +47,33 @@ func ProfileVariables() *schema.Schema {
 							"regex": {
 								Type:        schema.TypeString,
 								Optional:    true,
-								Description: "Regular expression pattern which the variable value must match. `regex` field can only be set during cluster profile creation. Subsequent day 2 operations on this field are blocked.",
+								Description: "Regular expression pattern which the variable value must match.",
 							},
 							"required": {
 								Type:        schema.TypeBool,
 								Optional:    true,
-								Description: "Indicates whether the variable is required during cluster provisioning. `required` field can only be set during cluster profile creation. Subsequent day 2 operations on this field are blocked.",
+								Description: "The `required` to specify if the variable is optional or mandatory. If it is mandatory then default value must be provided.",
 							},
 							"immutable": {
 								Type:        schema.TypeBool,
 								Optional:    true,
-								Description: "Indicates if the variable is immutable.",
+								Description: "If `immutable` is set to `true`, then variable value can't be editable. By default the `immutable` flag will be set to `false`.",
+							},
+							"is_sensitive": {
+								Type:        schema.TypeBool,
+								Optional:    true,
+								Description: "If `is_sensitive` is set to `true`, then default value will be masked. By default the `is_sensitive` flag will be set to false.",
 							},
 							"hidden": {
 								Type:        schema.TypeBool,
 								Optional:    true,
-								Description: "Indicates if the variable is hidden.",
+								Description: "If `hidden` is set to `true`, then variable will be hidden for overriding the value. By default the `hidden` flag will be set to `false`.",
 							},
 						},
 					},
 				},
 			},
 		},
-		Description: "List of variables for the cluster profile.",
+		Description: "List of variables for the cluster profile. Note: This is a preview feature and is currently only supported for `edge_native`.",
 	}
 }
