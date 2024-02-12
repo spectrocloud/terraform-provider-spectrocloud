@@ -2,7 +2,7 @@ data "spectrocloud_private_cloud_gateway" "nutanix_pcg" {
   name = "test-pcg"
 }
 
-resource "spectrocloud_custom_cloud_account" "cloud_account" {
+resource "spectrocloud_cloudaccount_custom" "cloud_account" {
   name = "test-custom-cloud-account"
   cloud = "nutanix"
   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.nutanix_pcg.id

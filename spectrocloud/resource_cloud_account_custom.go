@@ -9,12 +9,12 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
-func resourceCustomCloudAccount() *schema.Resource {
+func resourceCloudAccountCustom() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceCustomCloudAccountCreate,
-		ReadContext:   resourceCustomCloudAccountRead,
-		UpdateContext: resourceCustomCloudAccountUpdate,
-		DeleteContext: resourceCustomCloudAccountDelete,
+		CreateContext: resourceCloudAccountCustomCreate,
+		ReadContext:   resourceCloudAccountCustomRead,
+		UpdateContext: resourceCloudAccountCustomUpdate,
+		DeleteContext: resourceCloudAccountCustomDelete,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -55,7 +55,7 @@ func resourceCustomCloudAccount() *schema.Resource {
 	}
 }
 
-func resourceCustomCloudAccountCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceCloudAccountCustomCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 
@@ -67,21 +67,21 @@ func resourceCustomCloudAccountCreate(ctx context.Context, d *schema.ResourceDat
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	account, err := toCustomCloudAccount(d)
+	account, err := toCloudAccountCustom(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	uid, err := c.CreateCustomCloudAccount(account, cloudType, accountContext)
+	uid, err := c.CreateAccountCustomCloud(account, cloudType, accountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
-	resourceCustomCloudAccountRead(ctx, d, m)
+	resourceCloudAccountCustomRead(ctx, d, m)
 
 	return diags
 }
 
-func resourceCustomCloudAccountRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	accountContext := d.Get("context").(string)
@@ -95,7 +95,7 @@ func resourceCustomCloudAccountRead(_ context.Context, d *schema.ResourceData, m
 		d.SetId("")
 		return diags
 	}
-	diagnostics, done := flattenCustomCloudAccount(d, account)
+	diagnostics, done := flattenCloudAccountCustom(d, account)
 	if done {
 		return diagnostics
 	}
@@ -103,34 +103,34 @@ func resourceCustomCloudAccountRead(_ context.Context, d *schema.ResourceData, m
 	return diags
 }
 
-func resourceCustomCloudAccountUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceCloudAccountCustomUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 	accountContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
-	account, err := toCustomCloudAccount(d)
+	account, err := toCloudAccountCustom(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = c.UpdateCustomCloudAccount(d.Id(), account, cloudType, accountContext)
+	err = c.UpdateAccountCustomCloud(d.Id(), account, cloudType, accountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	resourceCustomCloudAccountRead(ctx, d, m)
+	resourceCloudAccountCustomRead(ctx, d, m)
 
 	return diags
 }
 
-func resourceCustomCloudAccountDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceCloudAccountCustomDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
 	customAccountID := d.Id()
 	accountContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
-	err := c.DeleteCustomCloudAccount(customAccountID, cloudType, accountContext)
+	err := c.DeleteCloudAccountCustomCloud(customAccountID, cloudType, accountContext)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -138,7 +138,7 @@ func resourceCustomCloudAccountDelete(_ context.Context, d *schema.ResourceData,
 	return diags
 }
 
-func toCustomCloudAccount(d *schema.ResourceData) (*models.V1CustomAccountEntity, error) {
+func toCloudAccountCustom(d *schema.ResourceData) (*models.V1CustomAccountEntity, error) {
 	var overlayID string
 	credentials := make(map[string]string)
 	overlayID = d.Get("private_cloud_gateway_id").(string)
@@ -162,7 +162,7 @@ func toCustomCloudAccount(d *schema.ResourceData) (*models.V1CustomAccountEntity
 	return account, nil
 }
 
-func flattenCustomCloudAccount(d *schema.ResourceData, account *models.V1CustomAccount) (diag.Diagnostics, bool) {
+func flattenCloudAccountCustom(d *schema.ResourceData, account *models.V1CustomAccount) (diag.Diagnostics, bool) {
 	if err := d.Set("name", account.Metadata.Name); err != nil {
 		return diag.FromErr(err), true
 	}

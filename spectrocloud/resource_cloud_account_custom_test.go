@@ -11,7 +11,7 @@ import (
 
 func TestResourceCustomCloudAccount(t *testing.T) {
 	// Create a mock resource
-	r := resourceCustomCloudAccount()
+	r := resourceCloudAccountCustom()
 
 	// Test CreateContext function
 	createCtx := r.CreateContext
@@ -32,7 +32,7 @@ func TestResourceCustomCloudAccount(t *testing.T) {
 
 func TestToCustomCloudAccount(t *testing.T) {
 	// Mock resource data
-	d := resourceCustomCloudAccount().TestResourceData()
+	d := resourceCloudAccountCustom().TestResourceData()
 	d.Set("name", "test-name")
 	d.Set("cloud", "testcloud")
 	d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
@@ -42,7 +42,7 @@ func TestToCustomCloudAccount(t *testing.T) {
 	}
 	d.Set("credentials", cred)
 
-	account, err := toCustomCloudAccount(d)
+	account, err := toCloudAccountCustom(d)
 
 	// Assert that no error occurred during conversion
 	assert.NoError(t, err)
@@ -56,7 +56,7 @@ func TestToCustomCloudAccount(t *testing.T) {
 
 func TestFlattenCustomCloudAccount(t *testing.T) {
 	// Create a mock resource data
-	d := resourceCustomCloudAccount().TestResourceData()
+	d := resourceCloudAccountCustom().TestResourceData()
 	d.Set("name", "test-name")
 	d.Set("cloud", "test-cloud")
 	d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
@@ -75,7 +75,7 @@ func TestFlattenCustomCloudAccount(t *testing.T) {
 		},
 		Kind: "test-cloud",
 	}
-	diags, hasErrors := flattenCustomCloudAccount(d, account)
+	diags, hasErrors := flattenCloudAccountCustom(d, account)
 	assert.False(t, hasErrors)
 	assert.Len(t, diags, 0)
 	assert.Equal(t, "test-name", d.Get("name"))
@@ -87,7 +87,7 @@ func TestFlattenCustomCloudAccount(t *testing.T) {
 func TestResourceCustomCloudAccountCreate(t *testing.T) {
 	// Mock context and resource data
 	ctx := context.Background()
-	d := resourceCustomCloudAccount().TestResourceData()
+	d := resourceCloudAccountCustom().TestResourceData()
 	d.Set("name", "test-name")
 	d.Set("cloud", "test-cloud")
 	d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
@@ -124,7 +124,7 @@ func TestResourceCustomCloudAccountCreate(t *testing.T) {
 	}
 	d.Set("context", "test-context")
 	d.Set("cloud", "test-cloud")
-	diags := resourceCustomCloudAccountCreate(ctx, d, mockClient)
+	diags := resourceCloudAccountCustomCreate(ctx, d, mockClient)
 	assert.Len(t, diags, 0)
 	assert.Equal(t, "mock-uid", d.Id())
 }
@@ -132,7 +132,7 @@ func TestResourceCustomCloudAccountCreate(t *testing.T) {
 func TestResourceCustomCloudAccountCreateError(t *testing.T) {
 	// Mock context and resource data
 	ctx := context.Background()
-	d := resourceCustomCloudAccount().TestResourceData()
+	d := resourceCloudAccountCustom().TestResourceData()
 	d.Set("name", "test-name")
 	d.Set("cloud", "test-cloud")
 	d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
@@ -156,7 +156,7 @@ func TestResourceCustomCloudAccountCreateError(t *testing.T) {
 	}
 	d.Set("context", "test-context")
 	d.Set("cloud", "test-cloud")
-	diags := resourceCustomCloudAccountCreate(ctx, d, mockClient)
+	diags := resourceCloudAccountCustomCreate(ctx, d, mockClient)
 	assert.Error(t, errors.New("unable to find account"))
 	assert.Len(t, diags, 1)
 	assert.Equal(t, "", d.Id())
@@ -164,7 +164,7 @@ func TestResourceCustomCloudAccountCreateError(t *testing.T) {
 
 func TestResourceCustomCloudAccountRead(t *testing.T) {
 	ctx := context.Background()
-	d := resourceCustomCloudAccount().TestResourceData()
+	d := resourceCloudAccountCustom().TestResourceData()
 
 	mockClient := &client.V1Client{
 		GetCustomCloudAccountFn: func(id, cloudType, accountContext string) (*models.V1CustomAccount, error) {
@@ -187,7 +187,7 @@ func TestResourceCustomCloudAccountRead(t *testing.T) {
 	d.SetId("existing-id")
 	d.Set("context", "test-context")
 	d.Set("cloud", "test-cloud")
-	diags := resourceCustomCloudAccountRead(ctx, d, mockClient)
+	diags := resourceCloudAccountCustomRead(ctx, d, mockClient)
 
 	assert.Len(t, diags, 0)
 	assert.Equal(t, "existing-id", d.Id())
@@ -199,7 +199,7 @@ func TestResourceCustomCloudAccountRead(t *testing.T) {
 
 func TestResourceCustomCloudAccountUpdate(t *testing.T) {
 	ctx := context.Background()
-	d := resourceCustomCloudAccount().TestResourceData()
+	d := resourceCloudAccountCustom().TestResourceData()
 	mockClient := &client.V1Client{
 		UpdateCustomCloudAccountFn: func(id string, account *models.V1CustomAccountEntity, cloudType, accountContext string) error {
 			return nil
@@ -221,7 +221,7 @@ func TestResourceCustomCloudAccountUpdate(t *testing.T) {
 	d.SetId("existing-id")
 	d.Set("context", "updated-context")
 	d.Set("cloud", "updated-cloud")
-	diags := resourceCustomCloudAccountUpdate(ctx, d, mockClient)
+	diags := resourceCloudAccountCustomUpdate(ctx, d, mockClient)
 
 	assert.Len(t, diags, 0)
 	assert.Equal(t, "existing-id", d.Id())
@@ -233,7 +233,7 @@ func TestResourceCustomCloudAccountUpdate(t *testing.T) {
 
 func TestResourceCustomCloudAccountDelete(t *testing.T) {
 	ctx := context.Background()
-	d := resourceCustomCloudAccount().TestResourceData()
+	d := resourceCloudAccountCustom().TestResourceData()
 	mockClient := &client.V1Client{
 		DeleteCustomCloudAccountFn: func(id, cloudType, accountContext string) error {
 			return nil
@@ -242,6 +242,6 @@ func TestResourceCustomCloudAccountDelete(t *testing.T) {
 	d.SetId("existing-id")
 	d.Set("context", "test-context")
 	d.Set("cloud", "test-cloud")
-	diags := resourceCustomCloudAccountDelete(ctx, d, mockClient)
+	diags := resourceCloudAccountCustomDelete(ctx, d, mockClient)
 	assert.Len(t, diags, 0)
 }
