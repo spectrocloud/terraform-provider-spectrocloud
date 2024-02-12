@@ -1,8 +1,8 @@
 module github.com/spectrocloud/terraform-provider-spectrocloud
 
-go 1.21
+go 1.22
 
-toolchain go1.21.1
+toolchain go1.22rc2
 
 require (
 	github.com/go-openapi/strfmt v0.22.0
