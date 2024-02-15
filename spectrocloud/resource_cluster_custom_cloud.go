@@ -386,10 +386,6 @@ func toCustomCloudCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	cluster := &models.V1SpectroCustomClusterEntity{
 		Metadata: toClusterMetadataUpdate(d),
 		Spec: &models.V1SpectroCustomClusterEntitySpec{
