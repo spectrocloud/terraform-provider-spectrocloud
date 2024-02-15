@@ -41,6 +41,7 @@ func TestToClusterProfileVariables(t *testing.T) {
 	}
 	proVar = append(proVar, variables)
 	mockResourceData.Set("cloud", "edge-native")
+	mockResourceData.Set("type", "add-on")
 	mockResourceData.Set("profile_variables", proVar)
 	result, err := toClusterProfileVariables(mockResourceData)
 
@@ -51,6 +52,7 @@ func TestToClusterProfileVariables(t *testing.T) {
 	// Test case 2: Empty profile variables
 	mockResourceDataEmpty := resourceClusterProfile().TestResourceData()
 	mockResourceDataEmpty.Set("cloud", "edge-native")
+	mockResourceDataEmpty.Set("type", "add-on")
 	mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
 	resultEmpty, errEmpty := toClusterProfileVariables(mockResourceDataEmpty)
 
@@ -158,4 +160,78 @@ func TestFlattenProfileVariables(t *testing.T) {
 	assert.NoError(t, errEmpty)
 	assert.Len(t, resultEmpty, 0)
 	assert.Equal(t, []interface{}{}, resultEmpty)
+}
+
+func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
+
+	mockResourceData := resourceClusterProfile().TestResourceData()
+	var proVar []interface{}
+	variables := map[string]interface{}{
+		"variable": []interface{}{
+			map[string]interface{}{
+				"default_value": "default_value_1",
+				"description":   "description_1",
+				"display_name":  "display_name_1",
+				"format":        "string",
+				"hidden":        false,
+				"immutable":     true,
+				"name":          "variable_name_1",
+				"regex":         "regex_1",
+				"required":      true,
+				"is_sensitive":  false,
+			},
+			map[string]interface{}{
+				"default_value": "default_value_2",
+				"description":   "description_2",
+				"display_name":  "display_name_2",
+				"format":        "integer",
+				"hidden":        true,
+				"immutable":     false,
+				"name":          "variable_name_2",
+				"regex":         "regex_2",
+				"required":      false,
+				"is_sensitive":  true,
+			},
+		},
+	}
+	proVar = append(proVar, variables)
+	mockResourceData.Set("cloud", "all")
+	mockResourceData.Set("type", "infra")
+	mockResourceData.Set("profile_variables", proVar)
+	result, err := toClusterProfileVariables(mockResourceData)
+
+	// Assertions for valid profile variables
+	assert.Error(t, err)
+	assert.Len(t, result, 0)
+
+	mockResourceData.Set("cloud", "edge-native")
+	mockResourceData.Set("type", "infra")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	mockResourceData.Set("cloud", "aws")
+	mockResourceData.Set("type", "add-on")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	mockResourceData.Set("cloud", "all")
+	mockResourceData.Set("type", "add-on")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	mockResourceData.Set("cloud", "aws")
+	mockResourceData.Set("type", "infra")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.Error(t, err)
+	assert.Len(t, result, 0)
+
+	mockResourceData.Set("cloud", "edge-native")
+	mockResourceData.Set("type", "add-on")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
 }
