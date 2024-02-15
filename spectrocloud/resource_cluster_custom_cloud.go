@@ -294,6 +294,9 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 			ClusterConfig: config,
 		}
 		err = c.UpdateCloudConfigCustomCloud(configEntity, cloudConfigId, cloudType, clusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if d.HasChange("machine_pool") {
@@ -380,9 +383,6 @@ func toCustomCloudCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 	machinePoolConfigs := make([]*models.V1CustomMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolCustomCloud(machinePool)
-		if err != nil {
-			return nil, err
-		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 
@@ -442,7 +442,7 @@ func toMachinePoolCustomCloud(machinePool interface{}) *models.V1CustomMachinePo
 }
 
 func flattenMachinePoolConfigsCustomCloud(machinePools []*models.V1CustomMachinePoolConfig) []interface{} {
-	if machinePools == nil || len(machinePools) == 0 {
+	if len(machinePools) == 0 {
 		return make([]interface{}, 0)
 	}
 	mps := make([]interface{}, len(machinePools))

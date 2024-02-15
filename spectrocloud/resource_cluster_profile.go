@@ -512,7 +512,7 @@ func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, er
 }
 
 func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([]interface{}, error) {
-	if pv == nil || len(pv) == 0 {
+	if len(pv) == 0 {
 		return make([]interface{}, 0), nil
 	}
 	configVariables := d.Get("profile_variables").([]interface{})[0].(map[string]interface{})["variable"].([]interface{}) //([]interface{}) //(*schema.Set).List()

@@ -143,11 +143,11 @@ func toCloudAccountCustom(d *schema.ResourceData) (*models.V1CustomAccountEntity
 	credentials := make(map[string]string)
 	overlayID = d.Get("private_cloud_gateway_id").(string)
 	credInterface := d.Get("credentials").(map[string]interface{})
-	if credInterface != nil {
-		for k, v := range credInterface {
-			credentials[k] = v.(string)
-		}
+
+	for k, v := range credInterface {
+		credentials[k] = v.(string)
 	}
+
 	account := &models.V1CustomAccountEntity{
 		Metadata: &models.V1ObjectMetaInputEntity{
 			Annotations: map[string]string{
