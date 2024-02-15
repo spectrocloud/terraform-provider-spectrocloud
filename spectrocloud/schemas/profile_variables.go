@@ -74,6 +74,6 @@ func ProfileVariables() *schema.Schema {
 				},
 			},
 		},
-		Description: "List of variables for the cluster profile. Note: This is a preview feature and is currently only supported for `edge_native`.",
+		Description: "List of variables for the cluster profile. Note: This is a preview feature and is currently only supported for the `edge_native` cloud type and general `add-on` profiles.",
 	}
 }

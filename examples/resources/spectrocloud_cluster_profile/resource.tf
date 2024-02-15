@@ -126,7 +126,7 @@ resource "spectrocloud_cluster_profile" "profile" {
     values = local.proxy_val
   }
   /*
-  # profile_variables are currently supported only for edge-native cloud type
+  # profile_variables are currently supported only for edge-native cloud type and add-on profile type only
   profile_variables{
     variable {
       name = "default_password"
