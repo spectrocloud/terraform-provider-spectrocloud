@@ -1,11 +1,5 @@
 locals {
-  # Cluster profile
-  nutanix_profile = "65caffb35c2771311d9a2ba1"
-
-  # Cloud account
-  nutanix_account = "65caff565c27712e2843385f"
   nutanix_cluster_name = "test-tf-nutanix-cluster"
-
   # Cloud Configurations
   cloud_config_override_variables = {
     CLUSTER_NAME = local.nutanix_cluster_name
@@ -16,7 +10,6 @@ locals {
     NUTANIX_INSECURE = false
     NUTANIX_PORT = 6443
   }
-
   # Node Pool config variables
   node_pool_config_variables = {
     MASTER_NODE_POOL_NAME = "master-pool"
@@ -42,13 +35,20 @@ locals {
     WORKER_NODE_POOL_NAME = "worker-name"
     WORKER_NODE_SIZE = 2
   }
-
-  worker_pool_2_config_content = templatefile("config_templates/worker_pool_2_config.yaml", local.node_pool_config_variables)
-
   location = {
     latitude  = 0
     longitude = 0
   }
+}
+
+data "spectrocloud_cloudaccount_custom" "nutanix_account" {
+  name = "test-tf-demo"
+  cloud = "nutanix"
+}
+
+data "spectrocloud_cluster_profile" "profile" {
+  name = "test-tf-ntix-profile"
+  context = "tenant"
 }
 
 
@@ -58,10 +58,10 @@ resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
   context     = "tenant"
   tags        = ["dev", "department:tf", "owner:admin"]
   description = "The nutanix cluster with k8 infra profile test"
-  cloud_account_id = local.nutanix_account
+  cloud_account_id = data.spectrocloud_cloudaccount_custom.nutanix_account.id
   apply_setting = "DownloadAndInstall"
   cluster_profile {
-    id = local.nutanix_profile
+    id = data.spectrocloud_cluster_profile.profile.id
   }
 
   cloud_config {
@@ -125,14 +125,13 @@ resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
     }
   }
 
-  location_config {
-    latitude  = local.location["latitude"]
-    longitude = local.location["longitude"]
-  }
-
   os_patch_on_boot = true
   os_patch_schedule = "0 0 * * SUN"
   os_patch_after = "2025-02-14T13:09:21+05:30"
   skip_completion = true
   force_delete = true
+  location_config {
+    latitude  = local.location["latitude"]
+    longitude = local.location["longitude"]
+  }
 }
