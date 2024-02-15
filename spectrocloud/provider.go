@@ -160,6 +160,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cloudaccount_vsphere":   dataSourceCloudAccountVsphere(),
 				"spectrocloud_cloudaccount_openstack": dataSourceCloudAccountOpenStack(),
 				"spectrocloud_cloudaccount_maas":      dataSourceCloudAccountMaas(),
+				"spectrocloud_cloudaccount_custom":    dataSourceCloudAccountCustom(),
 
 				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
 
