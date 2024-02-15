@@ -237,6 +237,25 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceMachinePoolCustomCloudHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	var buf bytes.Buffer
+	if _, ok := m["additional_labels"]; ok {
+		buf.WriteString(HashStringMap(m["additional_labels"]))
+	}
+	if _, ok := m["taints"]; ok {
+		buf.WriteString(HashStringMapList(m["taints"]))
+	}
+	if val, ok := m["control_plane"]; ok {
+		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+	}
+	if val, ok := m["control_plane_as_worker"]; ok {
+		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+	}
+	buf.WriteString(fmt.Sprintf("%s-", m["node_pool_config"].(string)))
+	return int(hash(buf.String()))
+}
+
 func resourceMachinePoolOpenStackHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
