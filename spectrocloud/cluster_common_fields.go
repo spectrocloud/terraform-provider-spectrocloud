@@ -94,6 +94,12 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	if _, ok := d.GetOk("pause_agent_upgrades"); ok {
+		if err := d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster)); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
 	clusterContext := d.Get("context").(string)
 
 	if clusterStatus, err := c.GetClusterWithoutStatus(clusterContext, d.Id()); err != nil {
@@ -105,6 +111,19 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 	}
 
 	return diag.Diagnostics{}, false
+}
+
+func getSpectroComponentsUpgrade(cluster *models.V1SpectroCluster) string {
+	if cluster.Metadata.Annotations != nil {
+		clusterAnnotation := cluster.Metadata.Annotations
+		if v, ok := clusterAnnotation["spectroComponentsUpgradeForbidden"]; ok {
+			if v == "true" {
+				return "lock"
+			}
+			return "unlock"
+		}
+	}
+	return "unlock"
 }
 
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
@@ -153,6 +172,12 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 
 	if d.HasChange("host_config") {
 		if err := updateHostConfig(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if d.HasChange("pause_agent_upgrades") {
+		if err := updateAgentUpgradeSetting(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
 	}

@@ -239,6 +239,13 @@ func resourceClusterEdgeNative() *schema.Resource {
 					},
 				},
 			},
+			"pause_agent_upgrades": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "unlock",
+				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
+				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the clusters",
+			},
 			"backup_policy":        schemas.BackupPolicySchema(),
 			"scan_policy":          schemas.ScanPolicySchema(),
 			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
@@ -424,6 +431,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
+
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {

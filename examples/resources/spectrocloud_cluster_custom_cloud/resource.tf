@@ -124,7 +124,7 @@ resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
       memory_MiB = "2048"
     }
   }
-
+  // pause_agent_upgrades = "lock"
   os_patch_on_boot = true
   os_patch_schedule = "0 0 * * SUN"
   os_patch_after = "2025-02-14T13:09:21+05:30"
