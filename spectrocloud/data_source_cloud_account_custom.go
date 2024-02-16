@@ -40,7 +40,7 @@ func dataSourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData,
 	var diags diag.Diagnostics
 	cloudType := d.Get("cloud").(string)
 
-	accounts, err := c.GetCloudAccountCustom(cloudType)
+	accounts, err := c.GetCustomCloudAccountList(cloudType)
 	if err != nil {
 		return diag.FromErr(err)
 	}
