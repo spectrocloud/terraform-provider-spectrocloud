@@ -32,8 +32,8 @@ locals {
     NUTANIX_MACHINE_VCPU_SOCKET = 2
     NUTANIX_MACHINE_VCPU_PER_SOCKET = 1
 
-    WORKER_NODE_POOL_NAME = "worker-name"
-    WORKER_NODE_SIZE = 2
+    WORKER_NODE_POOL_NAME = "worker-pool"
+    WORKER_NODE_SIZE = 1
   }
   location = {
     latitude  = 0

@@ -240,6 +240,12 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 func resourceMachinePoolCustomCloudHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	var buf bytes.Buffer
+	if _, ok := m["name"]; ok {
+		buf.WriteString(HashStringMap(m["name"]))
+	}
+	if _, ok := m["count"]; ok {
+		buf.WriteString(HashStringMap(m["count"]))
+	}
 	if _, ok := m["additional_labels"]; ok {
 		buf.WriteString(HashStringMap(m["additional_labels"]))
 	}
