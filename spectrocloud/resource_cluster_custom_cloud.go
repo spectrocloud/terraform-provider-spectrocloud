@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"errors"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -109,9 +108,8 @@ func resourceClusterCustomCloud() *schema.Resource {
 			},
 
 			"machine_pool": {
-				Type:        schema.TypeSet,
+				Type:        schema.TypeList,
 				Required:    true,
-				Set:         resourceMachinePoolCustomCloudHash,
 				Description: "The machine pool configuration for the cluster.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -314,17 +312,17 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.(*schema.Set)
-		ns := nraw.(*schema.Set)
+		os := oraw.([]interface{})
+		ns := nraw.([]interface{})
 
 		osMap := make(map[string]interface{})
-		for _, mp := range os.List() {
+		for _, mp := range os {
 			machinePool := mp.(map[string]interface{})
 			osMap[machinePool["name"].(string)] = machinePool
 		}
 
 		nsMap := make(map[string]interface{})
-		for _, mp := range ns.List() {
+		for _, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
 			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
 			if machinePoolResource["name"].(string) != "" {
@@ -339,11 +337,9 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 					}
 				} else if hash != resourceMachinePoolCustomCloudHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					return diag.FromErr(errors.New("validation : day 2 operations are not supported for machine pool. Only addition and deletion of machine pools are supported"))
-					// Once hubble had this support we can uncomment below code snippet
-					//if err = c.UpdateMachinePoolCustomCloud(machinePool, cloudConfigId, cloudType, clusterContext); err != nil {
-					//	return diag.FromErr(err)
-					//}
+					if err = c.UpdateMachinePoolCustomCloud(machinePool, name, cloudConfigId, cloudType, clusterContext); err != nil {
+						return diag.FromErr(err)
+					}
 				}
 				// Processed (if exists)
 				delete(osMap, name)
@@ -387,7 +383,7 @@ func toCustomCloudCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 	customClusterConfig := toCustomClusterConfig(d)
 
 	machinePoolConfigs := make([]*models.V1CustomMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolCustomCloud(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
