@@ -159,7 +159,13 @@ func resourceClusterCustomCloud() *schema.Resource {
 					},
 				},
 			},
-
+			"pause_agent_upgrades": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "unlock",
+				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
+				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.",
+			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
 				Optional:    true,

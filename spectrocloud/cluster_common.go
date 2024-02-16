@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"strings"
 )
 
@@ -117,6 +118,19 @@ func ValidateCloudType(resourceName string, cluster *models.V1SpectroCluster) er
 	}
 	if cluster.Spec.CloudType != NameToCloudType[resourceName] {
 		return fmt.Errorf("resource with id %s is not of type %s, need to correct resource type", cluster.Metadata.UID, resourceName)
+	}
+	return nil
+}
+
+func updateAgentUpgradeSetting(c *client.V1Client, d *schema.ResourceData) error {
+	clusterContext := d.Get("context").(string)
+	if v, ok := d.GetOk("pause_agent_upgrades"); ok {
+		setting := &models.V1ClusterUpgradeSettingsEntity{
+			SpectroComponents: v.(string),
+		}
+		if err := c.UpdatePauseAgentUpgradeSettingCluster(setting, d.Id(), clusterContext); err != nil {
+			return err
+		}
 	}
 	return nil
 }
