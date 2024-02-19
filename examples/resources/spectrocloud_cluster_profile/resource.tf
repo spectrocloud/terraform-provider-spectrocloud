@@ -131,7 +131,8 @@ resource "spectrocloud_cluster_profile" "profile" {
     variable {
       name = "default_password"
       display_name = "Default Password"
-      format = "password"
+      format = "string"
+      hidden = true
     }
     variable {
       name = "default_version"

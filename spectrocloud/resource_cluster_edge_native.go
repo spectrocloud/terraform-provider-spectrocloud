@@ -145,13 +145,13 @@ func resourceClusterEdgeNative() *schema.Resource {
 						"vip": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the vip should fall within the specified `overlay_cidr_range` range.",
+							Description: "The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`.",
 						},
 						"overlay_cidr_range": {
 							Type:        schema.TypeString,
 							Optional:    true,
 							ForceNew:    true,
-							Description: "The `overlay_cidr_range` parameter configures the overlay network. When `overlay_cidr_range` is set, it enables the overlay network. For example, `100.64.192.0/24`",
+							Description: "The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`",
 						},
 						"ntp_servers": {
 							Type:     schema.TypeSet,

@@ -193,7 +193,8 @@ func resourceClusterCustomCloud() *schema.Resource {
 				Computed:    true,
 				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
 			},
-
+			"backup_policy":        schemas.BackupPolicySchema(),
+			"scan_policy":          schemas.ScanPolicySchema(),
 			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
 			"namespaces":           schemas.ClusterNamespacesSchema(),
 			"location_config":      schemas.ClusterLocationSchema(),
