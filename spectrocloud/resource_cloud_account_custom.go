@@ -33,7 +33,7 @@ func resourceCloudAccountCustom() *schema.Resource {
 				Default:      "project",
 				ForceNew:     true,
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description: "The context of the AWS configuration. Allowed values are `project` or `tenant`. " +
+				Description: "The context of the custom cloud configuration. Allowed values are `project` or `tenant`. " +
 					"Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"private_cloud_gateway_id": {

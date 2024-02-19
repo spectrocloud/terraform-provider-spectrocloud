@@ -40,7 +40,7 @@ resource "spectrocloud_cloudaccount_custom" "cloud_account" {
 
 ### Optional
 
-- `context` (String) The context of the AWS configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+- `context` (String) The context of the custom cloud configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 
 ### Read-Only
 
