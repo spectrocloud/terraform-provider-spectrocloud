@@ -4,7 +4,7 @@ locals {
   cloud_config_override_variables = {
     CLUSTER_NAME                    = local.nutanix_cluster_name
     NUTANIX_ADDITIONAL_TRUST_BUNDLE = "test-bundle"
-    CONTROL_PLANE_ENDPOINT_IP       = "123.12.12.12"
+    CONTROL_PLANE_ENDPOINT_IP       = "1.2.3.4"
     CONTROL_PLANE_ENDPOINT_PORT     = 6443
     NUTANIX_ENDPOINT                = "https://test-app.nutanix.com"
     NUTANIX_INSECURE                = false

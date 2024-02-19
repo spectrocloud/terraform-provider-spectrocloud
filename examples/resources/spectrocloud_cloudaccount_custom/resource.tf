@@ -10,7 +10,7 @@ resource "spectrocloud_cloudaccount_custom" "cloud_account" {
   credentials = {
     "NUTANIX_USER"     = "test_user",
     "NUTANIX_PASSWORD" = sensitive("test123"),
-    "NUTANIX_ENDPOINT" = "10.12.11.22",
+    "NUTANIX_ENDPOINT" = "1.2.3.4",
     "NUTANIX_PORT"     = "8998",
     "NUTANIX_INSECURE" = "yes"
   }

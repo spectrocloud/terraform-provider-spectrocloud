@@ -146,7 +146,7 @@ resource "spectrocloud_cluster_profile" "profile" {
       name = "default_password"
       display_name = "Default Password"
       format = "string"
-      hidden = true
+      hidden = true // For sensitive variables like passwords, setting hidden to true will mask the variable value.
     }
     variable {
       name = "default_version"
@@ -157,7 +157,6 @@ resource "spectrocloud_cluster_profile" "profile" {
       regex = "*.*"
       required = true
       immutable = false
-      hidden = false
     }
   }
   */
