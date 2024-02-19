@@ -32,7 +32,7 @@ func ProfileVariables() *schema.Schema {
 								Optional:     true,
 								Default:      "string",
 								ValidateFunc: validation.StringInSlice([]string{"string", "number", "boolean", "ipv4", "ipv4cidr", "ipv6", "version"}, false),
-								Description:  "The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Subsequent day 2 operations on this field are blocked.",
+								Description:  "The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Allowed formats include `string`, `number`, `boolean`, `ipv4`, `ipv4cidr`, `ipv6`, `version`.",
 							},
 							"description": {
 								Type:        schema.TypeString,

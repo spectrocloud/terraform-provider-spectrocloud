@@ -256,7 +256,7 @@ Optional:
 
 - `default_value` (String) The default value of the variable.
 - `description` (String) The description of the variable.
-- `format` (String) The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Subsequent day 2 operations on this field are blocked.
+- `format` (String) The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Allowed formats include `string`, `number`, `boolean`, `ipv4`, `ipv4cidr`, `ipv6`, `version`.
 - `hidden` (Boolean) If `hidden` is set to `true`, then variable will be hidden for overriding the value. By default the `hidden` flag will be set to `false`.
 - `immutable` (Boolean) If `immutable` is set to `true`, then variable value can't be editable. By default the `immutable` flag will be set to `false`.
 - `is_sensitive` (Boolean) If `is_sensitive` is set to `true`, then default value will be masked. By default the `is_sensitive` flag will be set to false.
