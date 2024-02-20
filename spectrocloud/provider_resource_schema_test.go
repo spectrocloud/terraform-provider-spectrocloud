@@ -73,18 +73,6 @@ func prepareClusterEksTestData(id string) *schema.ResourceData {
 	return d
 }
 
-func prepareCloudAccountCoxEdgeTestData(id string) *schema.ResourceData {
-	d := resourceCloudAccountCoxEdge().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
-func prepareClusterCoxEdgeTestData(id string) *schema.ResourceData {
-	d := resourceClusterCoxEdge().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
 func prepareCloudAccountTencentTestData(id string) *schema.ResourceData {
 	d := resourceCloudAccountTencent().TestResourceData()
 	d.SetId(id)
@@ -329,16 +317,6 @@ func TestResourceClusterMaas(t *testing.T) {
 
 func TestResourceClusterEks(t *testing.T) {
 	testData := prepareClusterEksTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceCloudAccountCoxEdge(t *testing.T) {
-	testData := prepareCloudAccountCoxEdgeTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceClusterCoxEdge(t *testing.T) {
-	testData := prepareClusterCoxEdgeTestData("test-id")
 	assert.Equal(t, "test-id", testData.Id())
 }
 

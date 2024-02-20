@@ -234,6 +234,13 @@ func resourceClusterTke() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"", "Approved", "Pending"}, false),
 				Description:  "To authorize the cluster repave, set the value to `Approved` for approval and `\"\"` to decline. Default value is `\"\"`.",
 			},
+			"pause_agent_upgrades": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "unlock",
+				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
+				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.",
+			},
 			"backup_policy":        schemas.BackupPolicySchema(),
 			"scan_policy":          schemas.ScanPolicySchema(),
 			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),

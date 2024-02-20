@@ -1,0 +1,112 @@
+apiVersion: v1
+binaryData:
+  ca.crt: ${NUTANIX_ADDITIONAL_TRUST_BUNDLE}
+kind: ConfigMap
+metadata:
+  name: user-ca-bundle
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${CLUSTER_NAME}
+stringData:
+  credentials: "[
+    \  {
+
+    \    \"type\": \"basic_auth\",\ 
+
+    \    \"data\": {\ 
+
+    \      \"prismCentral\":{
+
+    \        \"username\": \"$${NUTANIX_USER}\",\ 
+
+    \        \"password\": \"$${NUTANIX_PASSWORD}\"
+
+    \      }
+
+    \    }
+
+    \  }
+
+    ]\n"
+
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  name: ${CLUSTER_NAME}
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - 172.20.0.0/16
+    serviceDomain: cluster.local
+    services:
+      cidrBlocks:
+        - 172.19.0.0/16
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: "master-pool"
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: NutanixCluster
+    name: ${CLUSTER_NAME}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: NutanixCluster
+metadata:
+  name: ${CLUSTER_NAME}
+spec:
+  controlPlaneEndpoint:
+    host: ${CONTROL_PLANE_ENDPOINT_IP}
+    port: ${CONTROL_PLANE_ENDPOINT_PORT}
+  prismCentral:
+    additionalTrustBundle:
+      kind: ConfigMap
+      name: user-ca-bundle
+    address: ${NUTANIX_ENDPOINT}
+    credentialRef:
+      kind: Secret
+      name: ${CLUSTER_NAME}
+    insecure: ${NUTANIX_INSECURE}
+    port: ${NUTANIX_PORT}
+
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: ${CLUSTER_NAME}-mhc
+spec:
+  clusterName: ${CLUSTER_NAME}
+  maxUnhealthy: 40%
+  nodeStartupTimeout: 10m0s
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  unhealthyConditions:
+    - status: "False"
+      timeout: 5m0s
+      type: Ready
+    - status: Unknown
+      timeout: 5m0s
+      type: Ready
+    - status: "True"
+      timeout: 5m0s
+      type: MemoryPressure
+    - status: "True"
+      timeout: 5m0s
+      type: DiskPressure
+    - status: "True"
+      timeout: 5m0s
+      type: PIDPressure
+    - status: "True"
+      timeout: 5m0s
+      type: NetworkUnavailable
+
+---
+
