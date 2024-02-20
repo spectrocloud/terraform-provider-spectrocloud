@@ -60,6 +60,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `os_patch_after` (String) Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`
 - `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
 - `os_patch_schedule` (String) The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.
+- `pause_agent_upgrades` (String) The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.
 - `review_repave_state` (String) To authorize the cluster repave, set the value to `Approved` for approval and `""` to decline. Default value is `""`.
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
@@ -79,9 +80,9 @@ Refer to the [Import section](/docs#import) to learn more.
 Optional:
 
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
-- `overlay_cidr_range` (String) The `overlay_cidr_range` parameter configures the overlay network. When `overlay_cidr_range` is set, it enables the overlay network. For example, `100.64.192.0/24`
+- `overlay_cidr_range` (String) The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`
 - `ssh_keys` (Set of String) List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.
-- `vip` (String) The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the vip should fall within the specified `overlay_cidr_range` range.
+- `vip` (String) The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`.
 
 
 <a id="nestedblock--machine_pool"></a>
