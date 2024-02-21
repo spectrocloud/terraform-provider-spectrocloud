@@ -88,11 +88,19 @@ func resourceClusterEks() *schema.Resource {
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
-			"approve_system_repave": {
-				Type:        schema.TypeBool,
-				Default:     false,
-				Optional:    true,
-				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
+			"review_repave_state": {
+				Type:         schema.TypeString,
+				Default:      "",
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"", "Approved", "Pending"}, false),
+				Description:  "To authorize the cluster repave, set the value to `Approved` for approval and `\"\"` to decline. Default value is `\"\"`.",
+			},
+			"pause_agent_upgrades": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "unlock",
+				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
+				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.",
 			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
@@ -131,9 +139,10 @@ func resourceClusterEks() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_key_name": {
-							Type:     schema.TypeString,
-							ForceNew: true,
-							Optional: true,
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Optional:    true,
+							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"region": {
 							Type:     schema.TypeString,
@@ -172,6 +181,7 @@ func resourceClusterEks() *schema.Resource {
 							Optional:     true,
 							ForceNew:     true,
 							ValidateFunc: validation.StringInSlice([]string{"public", "private", "private_and_public"}, false),
+							Description:  "Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.",
 							Default:      "public",
 						},
 						"public_access_cidrs": {
@@ -761,6 +771,15 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
+	// Following same logic as UI for setting up control plane for managed cluster
+	cpPool := map[string]interface{}{
+		"control_plane": true,
+		"name":          "master-pool",
+		"az_subnets":    cloudConfig["az_subnets"],
+		"capacity_type": "spot",
+		"count":         0,
+	}
+	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -816,11 +835,18 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 	if m["max"] != nil {
 		max = int32(m["max"].(int))
 	}
-
+	instanceType := ""
+	if val, ok := m["instance_type"]; ok {
+		instanceType = val.(string)
+	}
+	diskSizeGb := int64(0)
+	if dVal, ok := m["disk_size_gb"]; ok {
+		diskSizeGb = int64(dVal.(int))
+	}
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
-			RootDeviceSize: int64(m["disk_size_gb"].(int)),
-			InstanceType:   m["instance_type"].(string),
+			RootDeviceSize: diskSizeGb,
+			InstanceType:   instanceType,
 			CapacityType:   &capacityType,
 			Azs:            azs,
 			Subnets:        subnets,

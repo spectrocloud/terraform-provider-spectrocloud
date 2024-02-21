@@ -13,5 +13,24 @@ description: |-
 
 {{ tffile "examples/resources/spectrocloud_cluster_profile/resource.tf" }}
 
+## Import
+
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+to import the resource {{ .Name }} by using its `id`. For example:
+
+```terraform
+import {
+  to = {{ .Name }}.example
+  id = "id"
+}
+```
+
+You can also use the Terraform CLI and the `terraform import`, command to import the cluster using by referencing the resource `id`. For example:
+
+```console
+% terraform import {{ .Name }}.example id
+```
+
+Refer to the [Import section](/docs#import) to learn more.
 
 {{ .SchemaMarkdown | trimspace }}

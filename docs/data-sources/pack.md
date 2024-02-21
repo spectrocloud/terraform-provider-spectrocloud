@@ -44,5 +44,3 @@ output "same" {
 
 - `id` (String) The ID of this resource.
 - `values` (String)
-
-

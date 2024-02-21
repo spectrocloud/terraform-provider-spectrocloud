@@ -7,20 +7,20 @@ description: |-
 
 # Spectro Cloud Provider
 
-The Spectro Cloud provider provides resources to interact with the Spectro Cloud management API (whether SaaS or on-prem).
+The Spectro Cloud provider provides resources to interact with Palette and Palette VerteX through Infrastructure as code. The provider supports both SaaS and on-prem deployments of Palette and Palette VerteX.
 
-## What is Spectro Cloud?
+## What is Palette?
 
-The Spectro Cloud management platform brings the managed Kubernetes experience to users' own unique enterprise
-Kubernetes infrastructure stacks running in any public cloud, or private cloud environments, allowing users to
-not have to trade-off between flexibility and manageability. Spectro Cloud provides an as-a-service experience
+Palette brings the managed Kubernetes experience to users' own unique enterprise
+Kubernetes infrastructure stacks deployed in any public cloud, or private cloud environments. Palette allows users to
+not have to trade-off between flexibility and manageability. Palette provides a platform-as-a-service experience
 to users by automating the lifecycle of multiple Kubernetes clusters based on user-defined Kubernetes
 infrastructure stacks.
 
-## Spectro Cloud account
+## Palette Account
 
-This provider requires access to a valid Spectro Cloud account. Sign up for a free trial account [here](https://www.spectrocloud.com/free-trial/).
-You may use your Spectro Cloud account credentials to access the Spectro Cloud management API or a Spectro Cloud API key. For more details on the authentication, navigate to the [authentication](#authentication) section.
+Sign up for a free trial account [here](https://www.spectrocloud.com/free-trial/).
+Use your Palette [API key](https://docs.spectrocloud.com/user-management/authentication/api-key/create-api-key) to authenticate. For more details on the authentication, navigate to the [authentication](#authentication) section.
 
 ## Example Usage
 
@@ -54,7 +54,6 @@ sc_api_key      = "{Enter Spectro Cloud API Key}"
 sc_project_name = "{Enter Spectro Cloud Project Name}" #e.g: Default
 ```
 
-->
 Be sure to populate the `sc_host`, `sc_api_key`, and other terraform vars.
 
 Copy one of the resource configuration files (e.g: spectrocloud_cluster_profile) from the _Resources_ documentation. Be sure to specify
@@ -62,7 +61,9 @@ all required parameters.
 
 Next, run terraform using:
 
-    terraform init && terraform apply
+```console
+terraform init && terraform apply
+```
 
 Detailed schema definitions for each resource are listed in the _Resources_ menu on the left.
 
@@ -84,14 +85,87 @@ You can use an API key to authenticate with Spectro Cloud. Visit the User Manage
 ```shell
 export SPECTROCLOUD_APIKEY=5b7aad.........
 ```
+
 ```hcl
 provider "spectrocloud" {}
 ```
 
+## Import
+Starting with Terraform v1.5.0 and later, you can use an [`import` block](https://developer.hashicorp.com/terraform/language/import) to import resources into your state file.
+
+Each resource type has its own specific requirements for the import process. We recommend you refer to the documentation for each resource to better understand the exact format of the `id` and any other required parameters.
+The `import` block specifies the resource you want to import and its unique identifier with the following structure:
+
+```terraform
+import {
+  to = <resource>.<name>
+  id = "<unique_identifier>"
+}
+```
+
+- `<resource>`: The type of the resource you are importing.
+- `<name>`: A name you assign to the resource within your Terraform configuration.
+- `<unique_identifier>`: The ID of the resource you are importing. This can include additional context if required.
+
+### Examples
+
+The following examples showcase how to import a resource. Some resource requires the context to be specified during the import action. The context refers to the Palette scope. Allowed values are either `project` or `tenant`. 
+
+####  Import With Context
+
+When importing resources that require additional context, the `id` is followed by a context, separated by a colon.
+
+   ```terraform
+   import {
+     to = spectrocloud_cluster_aks.example
+     id = "example_id:project"
+   }
+   ```
+
+  You can also import a resource using the Terraform CLI and the `import` command.
+
+   ```console
+   terraform import spectrocloud_cluster_aks.example example_id:project
+   ```
+
+    Specify' tenant' after the colon if you want to import a resource at the tenant scope. 
+
+  ```terraform
+  import {
+    to = spectrocloud_cluster_aks.example
+    id = "example_id:tenant"
+  }
+  ```
+
+  Example of importing a resource with the tenant context through the Terraform CLI.
+
+  ```console
+  terraform import spectrocloud_cluster_aks.example example_id:tenant
+  ```
+
+~> Ensure you have tenant admin access when importing a resource at the tenant scope.
+
+#### Import Without Context
+
+For resources that do not require additional context, the `id` is the only provided argument. The following is an example of a resource that does not require the context and only provides the ID.
+
+   ```terraform
+   import {
+     to = spectrocloud_cluster_profile.example
+     id = "id"
+   }
+   ```
+
+   Below is an example of using the Terraform CLI and the `import` command without specifying the context.
+
+   ```console
+   terraform import spectrocloud_cluster_profile.example id
+   ```
+
+
 ## Support
 
-For questions or issues with the provider, please post your questions on the
-provider GitHub [discussion board](https://github.com/spectrocloud/terraform-provider-spectrocloud/discussions).
+For questions or issues with the provider, open up an issue in the provider GitHub [discussion board](https://github.com/spectrocloud/terraform-provider-spectrocloud/discussions).
 
 <!-- schema generated by tfplugindocs -->
 ## Schema

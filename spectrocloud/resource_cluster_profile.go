@@ -2,7 +2,9 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/spectrocloud/gomi/pkg/ptr"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -85,17 +87,15 @@ func resourceClusterProfile() *schema.Resource {
 				Description:  "Specify the cluster profile type to use. Allowed values are `cluster`, `infra`, `add-on`, and `system`. These values map to the following User Interface (UI) labels. Use the value ' cluster ' for a **Full** cluster profile." + "For an Infrastructure cluster profile, use the value `infra`; for an Add-on cluster profile, use the value `add-on`." + "System cluster profiles can be specified using the value `system`. To learn more about cluster profiles, refer to the [Cluster Profile](https://docs.spectrocloud.com/cluster-profiles) documentation. Default value is `add-on`.",
 				ForceNew:     true,
 			},
-			"pack": schemas.PackSchema(),
+			"profile_variables": schemas.ProfileVariables(),
+			"pack":              schemas.PackSchema(),
 		},
 	}
 }
 
 func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -123,12 +123,14 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	var diags diag.Diagnostics
+
+	// if id contains colon - it's incorrect as the scope is not supported
+	if strings.Contains(d.Id(), ":") {
+		return diag.FromErr(fmt.Errorf("incorrect cluster profile id: %s, scope is not supported", d.Id()))
+	}
 
 	cp, err := c.GetClusterProfile(clusterC, d.Id())
 	if err != nil {
@@ -157,6 +159,20 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	err = d.Set("name", cp.Metadata.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Profile variables
+	profileVariables, err := c.GetProfileVariables(clusterC, d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	pv, err := flattenProfileVariables(d, profileVariables)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("profile_variables", pv)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -194,10 +210,7 @@ func flattenClusterProfileCommon(d *schema.ResourceData, cp *models.V1ClusterPro
 
 func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -229,6 +242,20 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 	}
 
+	if d.HasChanges("profile_variables") {
+		pvs, err := toClusterProfileVariables(d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		mVars := &models.V1Variables{
+			Variables: pvs,
+		}
+		err = c.UpdateProfileVariables(clusterC, mVars, d.Id())
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	resourceClusterProfileRead(ctx, d, m)
 
 	return diags
@@ -236,10 +263,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	var diags diag.Diagnostics
 
@@ -262,7 +286,11 @@ func toClusterProfileCreate(d *schema.ResourceData) (*models.V1ClusterProfileEnt
 		}
 	}
 	cp.Spec.Template.Packs = packs
-
+	if profileVariable, err := toClusterProfileVariables(d); err == nil {
+		cp.Spec.Variables = profileVariable
+	} else {
+		return cp, err
+	}
 	return cp, nil
 }
 
@@ -444,4 +472,80 @@ func getManifestUID(name string, packs []*models.V1PackRef) string {
 	}
 
 	return ""
+}
+
+func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, error) {
+	var profileVariables []*models.V1Variable
+	if pVariables, ok := d.GetOk("profile_variables"); ok {
+
+		// Once the profile_Variables feature is extended to all cloud types, the following block should be removed.
+		cloudType, _ := d.Get("cloud").(string)
+		profileType, _ := d.Get("type").(string)
+		if cloudType != "edge-native" {
+			if profileType != "add-on" {
+				err := errors.New("currently, `profile_variables` is only supported for the `add-on` profile type and other profile type is supported only for edge-native cloud type")
+				return profileVariables, err
+			}
+		}
+
+		if pVariables.([]interface{})[0] != nil {
+			variables := pVariables.([]interface{})[0].(map[string]interface{})["variable"]
+			for _, v := range variables.([]interface{}) {
+				variable := v.(map[string]interface{})
+				pv := &models.V1Variable{
+					DefaultValue: variable["default_value"].(string),
+					Description:  variable["description"].(string),
+					DisplayName:  variable["display_name"].(string), // revisit
+					Format:       models.V1VariableFormat(variable["format"].(string)),
+					Hidden:       variable["hidden"].(bool),
+					Immutable:    variable["immutable"].(bool),
+					Name:         ptr.StringPtr(variable["name"].(string)),
+					Regex:        variable["regex"].(string),
+					IsSensitive:  variable["is_sensitive"].(bool),
+					Required:     variable["required"].(bool),
+				}
+				profileVariables = append(profileVariables, pv)
+			}
+		}
+	}
+	return profileVariables, nil
+}
+
+func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([]interface{}, error) {
+	if len(pv) == 0 {
+		return make([]interface{}, 0), nil
+	}
+	configVariables := d.Get("profile_variables").([]interface{})[0].(map[string]interface{})["variable"].([]interface{}) //([]interface{}) //(*schema.Set).List()
+	var variables []interface{}
+	for _, v := range pv {
+		variable := make(map[string]interface{})
+		variable["name"] = v.Name
+		variable["display_name"] = v.DisplayName
+		variable["description"] = v.Description
+		variable["format"] = v.Format
+		variable["default_value"] = v.DefaultValue
+		variable["regex"] = v.Regex
+		variable["required"] = v.Required
+		variable["immutable"] = v.Immutable
+		variable["hidden"] = v.Hidden
+		variable["is_sensitive"] = v.IsSensitive
+		variables = append(variables, variable)
+	}
+	// Sorting ordering the list per configuration this reference if we need to change profile_variables to TypeList
+	var sortedVariables []interface{}
+	for _, cv := range configVariables {
+		mapV := cv.(map[string]interface{})
+		for _, va := range variables {
+			vs := va.(map[string]interface{})
+			if mapV["name"].(string) == ptr.String(vs["name"].(*string)) {
+				sortedVariables = append(sortedVariables, va)
+			}
+		}
+	}
+
+	flattenProVariables := make([]interface{}, 1)
+	flattenProVariables[0] = map[string]interface{}{
+		"variable": sortedVariables,
+	}
+	return flattenProVariables, nil
 }

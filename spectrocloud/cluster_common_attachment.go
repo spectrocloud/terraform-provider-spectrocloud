@@ -103,14 +103,11 @@ func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, cluster models.
 
 func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	clusterC := c.GetClusterClient()
 
 	var diags diag.Diagnostics
 	clusterUid := d.Get("cluster_uid").(string)
-	clusterContext := d.Get("cluster_context").(string)
+	clusterContext := d.Get("context").(string)
 	cluster, err := c.GetCluster(clusterContext, clusterUid)
 	if err != nil {
 		return diag.FromErr(err)

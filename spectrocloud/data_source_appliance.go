@@ -56,7 +56,7 @@ func dataSourceApplianceRead(_ context.Context, d *schema.ResourceData, m interf
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
-		appliance, err := c.GetApplianceByName(name.(string))
+		appliance, err := c.GetApplianceByName(name.(string), "project", nil, "", "", "")
 		if err != nil {
 			return diag.FromErr(err)
 		}

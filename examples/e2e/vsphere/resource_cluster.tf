@@ -1,8 +1,10 @@
 resource "spectrocloud_cluster_vsphere" "cluster" {
-  name               = "vsphere-picard-2"
-  cluster_profile_id = spectrocloud_cluster_profile.profile.id
-  cloud_account_id   = data.spectrocloud_cloudaccount_vsphere.account.id
+  name             = "tf-vmware-cluster01"
+  cloud_account_id = data.spectrocloud_cloudaccount_vsphere.account.id
 
+  cluster_profile {
+    id = spectrocloud_cluster_profile.profile.id
+  }
   cluster_rbac_binding {
     type = "ClusterRoleBinding"
 
@@ -100,7 +102,7 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
     instance_type {
       disk_size_gb = 40
       memory_mb    = 4096
-      cpu          = 2
+      cpu          = 4
     }
   }
 

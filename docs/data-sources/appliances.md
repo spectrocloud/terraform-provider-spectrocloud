@@ -35,6 +35,7 @@ output "same" {
 ### Optional
 
 - `architecture` (String) The architecture of the appliance. Supported values are: 'amd64', and  'arm64'.  If not specified, all appliances are returned.
+- `context` (String) The context of the appliances. Allowed values are `project` or `tenant`. Defaults to `project`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `health` (String) The health of the appliance. Supported values are: 'healthy', and 'unhealthy'.  If not specified, all appliances are returned.
 - `status` (String) The status of the appliance. Supported values are: 'ready', 'in-use', and 'unpaired'.  If not specified, all appliances are returned.
 - `tags` (Map of String) A list of tags to filter the appliances.
@@ -43,5 +44,3 @@ output "same" {
 
 - `id` (String) The ID of this resource.
 - `ids` (List of String) The unique ids of the appliances. This is a computed field and is not required to be set.
-
-

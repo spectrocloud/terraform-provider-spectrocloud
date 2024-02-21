@@ -23,5 +23,3 @@ description: |-
 
 - `id` (String) The ID of this resource.
 - `tencent_secret_id` (String)
-
-

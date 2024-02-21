@@ -90,11 +90,19 @@ func resourceClusterAws() *schema.Resource {
 				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
 				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
-			"approve_system_repave": {
-				Type:        schema.TypeBool,
-				Default:     false,
-				Optional:    true,
-				Description: "To authorize the cluster repave, set the value to true for approval and false to decline. Default value is `false`.",
+			"review_repave_state": {
+				Type:         schema.TypeString,
+				Default:      "",
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"", "Approved", "Pending"}, false),
+				Description:  "To authorize the cluster repave, set the value to `Approved` for approval and `\"\"` to decline. Default value is `\"\"`.",
+			},
+			"pause_agent_upgrades": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "unlock",
+				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
+				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.",
 			},
 			"os_patch_on_boot": {
 				Type:        schema.TypeBool,
@@ -135,7 +143,7 @@ func resourceClusterAws() *schema.Resource {
 							Type:        schema.TypeString,
 							ForceNew:    true,
 							Required:    true,
-							Description: "The name of the SSH key to launch the cluster.",
+							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"region": {
 							Type:        schema.TypeString,
@@ -344,6 +352,12 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 		// Deleted - Terraform will recreate it
 		d.SetId("")
 		return diags
+	}
+
+	// verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_aws", cluster)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	diagnostics, done := readCommonFields(c, d, cluster)

@@ -9,24 +9,32 @@
   # version  = "1.0.x"
 }*/
 
+data "spectrocloud_registry" "registry" {
+  name = "Public Repo"
+}
+
 data "spectrocloud_pack" "csi" {
-  name    = "csi-vsphere-csi"
-  version = "2.3.0"
+  name         = "csi-vsphere-csi"
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = "3.0.2"
 }
 
 data "spectrocloud_pack" "cni" {
-  name    = "cni-calico"
-  version = "3.19.0"
+  name         = "cni-cilium-oss"
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = "1.14.1"
 }
 
 data "spectrocloud_pack" "k8s" {
-  name    = "kubernetes"
-  version = "1.21.9"
+  name         = "kubernetes"
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = "1.26.8"
 }
 
 data "spectrocloud_pack" "ubuntu" {
-  name    = "ubuntu-vsphere"
-  version = "18.04"
+  name         = "ubuntu-vsphere"
+  registry_uid = data.spectrocloud_registry.registry.id
+  version      = "22.04"
 }
 
 resource "spectrocloud_cluster_profile" "profile" {
@@ -37,28 +45,28 @@ resource "spectrocloud_cluster_profile" "profile" {
 
   pack {
     name   = "ubuntu-vsphere"
-    tag    = "LTS__18.4.x"
+    tag    = data.spectrocloud_pack.ubuntu.version
     uid    = data.spectrocloud_pack.ubuntu.id
     values = data.spectrocloud_pack.ubuntu.values
   }
 
   pack {
     name   = "kubernetes"
-    tag    = "1.21.9"
+    tag    = data.spectrocloud_pack.k8s.version
     uid    = data.spectrocloud_pack.k8s.id
     values = data.spectrocloud_pack.k8s.values
   }
 
   pack {
-    name   = "cni-calico"
-    tag    = "3.19.x"
+    name   = "cni-cilium-oss"
+    tag    = data.spectrocloud_pack.cni.version
     uid    = data.spectrocloud_pack.cni.id
     values = data.spectrocloud_pack.cni.values
   }
 
   pack {
     name   = "csi-vsphere-csi"
-    tag    = "2.3.x"
+    tag    = data.spectrocloud_pack.csi.version
     uid    = data.spectrocloud_pack.csi.id
     values = data.spectrocloud_pack.csi.values
   }

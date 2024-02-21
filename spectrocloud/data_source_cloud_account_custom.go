@@ -2,17 +2,15 @@ package spectrocloud
 
 import (
 	"context"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func dataSourceCloudAccountCoxedge() *schema.Resource {
+func dataSourceCloudAccountCustom() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceCloudAccountCoxEdgeRead,
+		ReadContext: dataSourceCloudAccountCustomRead,
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -27,30 +25,27 @@ func dataSourceCloudAccountCoxedge() *schema.Resource {
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
-			"depends": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Computed:     true,
-				ExactlyOneOf: []string{"id", "name"},
+			"cloud": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The cloud provider name.",
 			},
 		},
 	}
 }
 
-func dataSourceCloudAccountCoxEdgeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func dataSourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	cloudType := d.Get("cloud").(string)
 
-	accounts, err := c.GetCloudAccountsCoxEdge()
+	accounts, err := c.GetCustomCloudAccountList(cloudType)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	var account *models.V1CoxEdgeAccount
+	var account *models.V1CustomAccount
 	for _, a := range accounts {
-
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break
@@ -63,8 +58,8 @@ func dataSourceCloudAccountCoxEdgeRead(_ context.Context, d *schema.ResourceData
 	if account == nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  "Unable to find CoxEdge cloud account",
-			Detail:   "Unable to find the specified CoxEdge cloud account",
+			Summary:  "Unable to find aws cloud account",
+			Detail:   "Unable to find the specified aws cloud account",
 		})
 		return diags
 	}

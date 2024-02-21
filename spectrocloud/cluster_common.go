@@ -3,15 +3,28 @@ package spectrocloud
 import (
 	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"strings"
 )
 
 var (
 	DefaultDiskType = "Standard_LRS"
 	DefaultDiskSize = 60
+	NameToCloudType = map[string]string{
+		"spectrocloud_cluster_aks":          "aks",
+		"spectrocloud_cluster_aws":          "aws",
+		"spectrocloud_cluster_azure":        "azure",
+		"spectrocloud_cluster_edge_native":  "edge-native",
+		"spectrocloud_cluster_eks":          "eks",
+		"spectrocloud_cluster_edge_vsphere": "edge-vsphere",
+		"spectrocloud_cluster_gcp":          "gcp",
+		"spectrocloud_cluster_maas":         "maas",
+		"spectrocloud_cluster_openstack":    "openstack",
+		"spectrocloud_cluster_tke":          "tke",
+		"spectrocloud_cluster_vsphere":      "vsphere",
+	}
 )
 
 func toNtpServers(in map[string]interface{}) []string {
@@ -62,12 +75,11 @@ func toSSHKeys(cloudConfig map[string]interface{}) ([]string, error) {
 	if cloudConfig["ssh_keys"] != nil {
 		sshKeysList = cloudConfig["ssh_keys"].(*schema.Set).List()
 	}
-	sshKey := cloudConfig["ssh_key"].(string)
-	if sshKey != "" && len(sshKeysList) == 0 {
-		sshKeys = []string{strings.TrimSpace(sshKey)}
-		return sshKeys, nil
+	if cloudConfig["ssh_key"] != nil {
+		sshKey := cloudConfig["ssh_key"].(string)
+		sshKeys = append(sshKeys, strings.TrimSpace(sshKey))
 	}
-	if sshKey == "" && len(sshKeysList) > 0 {
+	if len(sshKeysList) > 0 || len(sshKeys) > 0 {
 		for _, sk := range sshKeysList {
 			sshKeys = append(sshKeys, strings.TrimSpace(sk.(string)))
 		}
@@ -96,6 +108,29 @@ func ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval int) error {
 func ValidateContext(context string) error {
 	if context != "project" && context != "tenant" {
 		return fmt.Errorf("invalid Context set - %s", context)
+	}
+	return nil
+}
+
+func ValidateCloudType(resourceName string, cluster *models.V1SpectroCluster) error {
+	if cluster.Spec == nil {
+		return fmt.Errorf("cluster spec is nil in cluster %s", cluster.Metadata.UID)
+	}
+	if cluster.Spec.CloudType != NameToCloudType[resourceName] {
+		return fmt.Errorf("resource with id %s is not of type %s, need to correct resource type", cluster.Metadata.UID, resourceName)
+	}
+	return nil
+}
+
+func updateAgentUpgradeSetting(c *client.V1Client, d *schema.ResourceData) error {
+	clusterContext := d.Get("context").(string)
+	if v, ok := d.GetOk("pause_agent_upgrades"); ok {
+		setting := &models.V1ClusterUpgradeSettingsEntity{
+			SpectroComponents: v.(string),
+		}
+		if err := c.UpdatePauseAgentUpgradeSettingCluster(setting, d.Id(), clusterContext); err != nil {
+			return err
+		}
 	}
 	return nil
 }

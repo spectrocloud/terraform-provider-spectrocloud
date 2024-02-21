@@ -17,22 +17,22 @@ func TestNameSpacesRPSScenario(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		h := client.New("api.dev.spectrocloud.com", "", "mB9NKY0bBRlYy4eP1wteirbxHQ0b5ypL", false, c.retries)
-		uid, err := h.GetProjectUID("Default")
+		h := client.New(
+			client.WithHubbleURI(baseConfig.hubbleHost),
+			client.WithAPIKey(baseConfig.apikey),
+			client.WithRetries(c.retries))
+		uid, err := h.GetProjectUID(baseConfig.project)
 		if err != nil {
 			t.Fail()
 		}
-		projectH := client.New("api.dev.spectrocloud.com", uid, "mB9NKY0bBRlYy4eP1wteirbxHQ0b5ypL", false, c.retries)
-		GetNamespaces1Test(t, projectH, c)
+		client.WithProjectUID(uid)(h)
+		GetNamespaces1Test(t, h, c)
 	}
 }
 
 // 1. Normal case where rps is just within the limit. 5 rps or 50 with burst. Expected result: no retries, no errors.
 func GetNamespaces1Test(t *testing.T, h *client.V1Client, retry Retry) {
-	client, err := h.GetClusterClient()
-	if err != nil {
-		t.Fail()
-	}
+	client := h.GetClusterClient()
 
 	cluster, err := h.GetClusterByName("eks-dev-nik-4", "project", false)
 	if err != nil && cluster == nil {

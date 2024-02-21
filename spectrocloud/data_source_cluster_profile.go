@@ -109,10 +109,7 @@ func dataSourceClusterProfile() *schema.Resource {
 
 func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	hashboardC, err := c.GetHashboardClient()
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	hashboardC := c.GetHashboardClient()
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -191,10 +188,7 @@ func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEn
 }
 
 func getProfile(profiles []*models.V1ClusterProfileMetadata, d *schema.ResourceData, version, ProfileContext string, c *client.V1Client) (*models.V1ClusterProfile, error) {
-	clusterC, err := c.GetClusterClient()
-	if err != nil {
-		return nil, err
-	}
+	clusterC := c.GetClusterClient()
 
 	for _, p := range profiles {
 		if v, ok := d.GetOk("id"); ok && v.(string) == p.Metadata.UID {

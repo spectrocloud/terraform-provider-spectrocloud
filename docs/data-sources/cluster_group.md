@@ -55,5 +55,3 @@ output "out_project_sc" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

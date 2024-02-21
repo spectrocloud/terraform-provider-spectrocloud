@@ -125,4 +125,25 @@ resource "spectrocloud_cluster_profile" "profile" {
     uid    = "60bd99ce9c10082ed8b314c9"
     values = local.proxy_val
   }
+  /*
+  # profile_variables are currently supported only for edge-native cloud type and add-on profile type only
+  profile_variables{
+    variable {
+      name = "default_password"
+      display_name = "Default Password"
+      format = "string"
+      hidden = true // For sensitive variables like passwords, setting hidden to true will mask the variable value.
+    }
+    variable {
+      name = "default_version"
+      display_name = "Version"
+      format = "version"
+      description = "description hard-version"
+      default_value = "v0.0.1"
+      regex = "*.*"
+      required = true
+      immutable = false
+    }
+  }
+  */
 }

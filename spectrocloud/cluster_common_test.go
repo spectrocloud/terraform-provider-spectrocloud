@@ -1,11 +1,15 @@
 package spectrocloud
 
 import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/spectrocloud/hapi/models"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestToAdditionalNodePoolLabels(t *testing.T) {
@@ -274,7 +278,7 @@ func TestUpdateClusterRBAC(t *testing.T) {
 func TestRepaveApprovalCheck(t *testing.T) {
 
 	d := resourceClusterAws().TestResourceData()
-	d.Set("approve_system_repave", true)
+	d.Set("review_repave_state", "Approved")
 	d.Set("context", "tenant")
 	d.SetId("TestclusterUID")
 
@@ -333,11 +337,189 @@ func TestRepaveApprovalCheck(t *testing.T) {
 		},
 	}
 
-	d.Set("approve_system_repave", false)
+	d.Set("review_repave_state", "")
 	err = validateSystemRepaveApproval(d, m)
-	expectedErrMsg := "cluster repave state is pending. \nDue to the following reasons -  \nPackValuesUpdated\nKindly verify the cluster and set `approve_system_repave` to `true` to continue the repave operation and day 2 operation on the cluster."
+	expectedErrMsg := "cluster repave state is pending. \nDue to the following reasons -  \nPackValuesUpdated\nKindly verify the cluster and set `review_repave_state` to `Approved` to continue the repave operation and day 2 operation on the cluster."
 	if err == nil || err.Error() != expectedErrMsg {
 		t.Errorf("Expected error message '%s', got '%s'", expectedErrMsg, err)
 	}
 
+}
+
+func prepareSpectroClusterModel() *models.V1SpectroCluster {
+
+	scp := &models.V1SpectroCluster{
+		APIVersion: "V1",
+		Kind:       "",
+		Metadata: &models.V1ObjectMeta{
+			Annotations: map[string]string{
+				"test_annotation": "tf",
+				"scope":           "project",
+			},
+			CreationTimestamp: models.V1Time{},
+			DeletionTimestamp: models.V1Time{},
+			Labels: map[string]string{
+				"test_label": "tf",
+			},
+			LastModifiedTimestamp: models.V1Time{},
+			Name:                  "spc-cluster-unit-test",
+			Namespace:             "dns-label",
+			ResourceVersion:       "test-resource-version-01",
+			SelfLink:              "",
+			UID:                   "test-cluster-uid",
+		},
+		Spec: &models.V1SpectroClusterSpec{
+			CloudConfigRef: &models.V1ObjectReference{
+				APIVersion:      "V1",
+				FieldPath:       "",
+				Kind:            "",
+				Name:            "spc-cluster-unit-tes",
+				Namespace:       "test-namespace",
+				ResourceVersion: "test-cloud-config-resource-version-01",
+				UID:             "test-cloud-config-uid",
+			},
+			CloudType: "vsphere",
+			ClusterConfig: &models.V1ClusterConfig{
+				ClusterMetaAttribute: "test-cluster-meta-attributes",
+				ClusterRbac:          nil,
+				ClusterResources: &models.V1ClusterResources{
+					Namespaces: []*models.V1ResourceReference{
+						&models.V1ResourceReference{
+							Kind: "",
+							Name: "",
+							UID:  ptr.StringPtr("test-cluster-resource"),
+						},
+					},
+					Rbacs: []*models.V1ResourceReference{
+						&models.V1ResourceReference{
+							Kind: "",
+							Name: "",
+							UID:  ptr.StringPtr("test-cluster-rbac-resource"),
+						},
+					},
+				},
+				ControlPlaneHealthCheckTimeout: "",
+				HostClusterConfig: &models.V1HostClusterConfig{
+					ClusterEndpoint: &models.V1HostClusterEndpoint{
+						Config: &models.V1HostClusterEndpointConfig{
+							IngressConfig: &models.V1IngressConfig{
+								Host: "121.1.1.0",
+								Port: 9999,
+							},
+							LoadBalancerConfig: nil,
+						},
+						Type: "ingress",
+					},
+					ClusterGroup: &models.V1ObjectReference{
+						APIVersion:      "",
+						FieldPath:       "",
+						Kind:            "",
+						Name:            "",
+						Namespace:       "",
+						ResourceVersion: "",
+						UID:             "test-cluster-group-uid",
+					},
+					HostCluster: &models.V1ObjectReference{
+						APIVersion:      "",
+						FieldPath:       "",
+						Kind:            "",
+						Name:            "",
+						Namespace:       "",
+						ResourceVersion: "",
+						UID:             "test-host-cluster-uid",
+					},
+					IsHostCluster: ptr.BoolPtr(false),
+				},
+				LifecycleConfig: &models.V1LifecycleConfig{
+					Pause: ptr.BoolPtr(false),
+				},
+				MachineHealthConfig: &models.V1MachineHealthCheckConfig{
+					HealthCheckMaxUnhealthy:         "",
+					NetworkReadyHealthCheckDuration: "",
+					NodeReadyHealthCheckDuration:    "",
+				},
+				MachineManagementConfig: &models.V1MachineManagementConfig{
+					OsPatchConfig: &models.V1OsPatchConfig{
+						OnDemandPatchAfter: models.V1Time{},
+						PatchOnBoot:        false,
+						RebootIfRequired:   false,
+						Schedule:           "",
+					},
+				},
+				UpdateWorkerPoolsInParallel: false,
+			},
+			ClusterProfileTemplates: nil,
+			ClusterType:             "full",
+		},
+		Status: &models.V1SpectroClusterStatus{
+			AbortTimestamp: models.V1Time{},
+			AddOnServices:  nil,
+			APIEndpoints:   nil,
+			ClusterImport:  nil,
+			Conditions:     nil,
+			Fips:           nil,
+			Location:       nil,
+			Packs:          nil,
+			ProfileStatus:  nil,
+			Repave:         nil,
+			Services:       nil,
+			SpcApply:       nil,
+			State:          "",
+			Upgrades:       nil,
+			Virtual:        nil,
+		},
+	}
+	return scp
+}
+
+func TestReadCommonFieldsCluster(t *testing.T) {
+	d := prepareClusterVsphereTestData()
+	spc := prepareSpectroClusterModel()
+	c := getClientForCluster()
+	_, done := readCommonFields(c, d, spc)
+	assert.Equal(t, false, done)
+}
+
+func TestReadCommonFieldsVirtualCluster(t *testing.T) {
+	d := resourceClusterVirtual().TestResourceData()
+	spc := prepareSpectroClusterModel()
+	c := getClientForCluster()
+	_, done := readCommonFields(c, d, spc)
+	assert.Equal(t, false, done)
+}
+
+func TestToSSHKeys(t *testing.T) {
+	// Test case 1: When cloudConfig has "ssh_key" attribute
+	cloudConfig1 := map[string]interface{}{
+		"ssh_key": "ssh-key-1",
+	}
+	keys1, err1 := toSSHKeys(cloudConfig1)
+	assert.NoError(t, err1)
+	assert.Equal(t, []string{"ssh-key-1"}, keys1)
+
+	// Test case 2: When cloudConfig has "ssh_keys" attribute
+	cloudConfig2 := map[string]interface{}{
+		"ssh_keys": schema.NewSet(schema.HashString, []interface{}{"ssh-key-2", "ssh-key-3"}),
+	}
+	keys2, err2 := toSSHKeys(cloudConfig2)
+	assert.NoError(t, err2)
+	assert.Equal(t, []string{"ssh-key-2", "ssh-key-3"}, keys2)
+
+	// Test case 3: When cloudConfig has both "ssh_key" and "ssh_keys" attributes
+	cloudConfig3 := map[string]interface{}{
+		"ssh_key":  "ssh-key-4",
+		"ssh_keys": schema.NewSet(schema.HashString, []interface{}{"ssh-key-5", "ssh-key-6"}),
+	}
+
+	keys3, err3 := toSSHKeys(cloudConfig3)
+	sort.Strings(keys3)
+	assert.NoError(t, err3)
+	assert.Equal(t, []string{"ssh-key-4", "ssh-key-5", "ssh-key-6"}, keys3)
+
+	// Test case 4: When cloudConfig has neither "ssh_key" nor "ssh_keys" attributes
+	cloudConfig4 := map[string]interface{}{}
+	keys4, err4 := toSSHKeys(cloudConfig4)
+	assert.Error(t, err4)
+	assert.Nil(t, keys4)
+	assert.Equal(t, "validation ssh_key: Kindly specify any one attribute ssh_key or ssh_keys", err4.Error())
 }

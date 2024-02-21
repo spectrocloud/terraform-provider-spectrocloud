@@ -31,5 +31,3 @@ data "spectrocloud_project" "project1" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

@@ -68,11 +68,16 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_macro": resourceMacro(),
 
+				"spectrocloud_macros": resourceMacros(),
+
 				"spectrocloud_filter": resourceFilter(),
 
 				"spectrocloud_application_profile":    resourceApplicationProfile(),
 				"spectrocloud_cluster_profile":        resourceClusterProfile(),
 				"spectrocloud_cluster_profile_import": resourceClusterProfileImportFeature(),
+
+				"spectrocloud_cloudaccount_custom":  resourceCloudAccountCustom(),
+				"spectrocloud_cluster_custom_cloud": resourceClusterCustomCloud(),
 
 				"spectrocloud_cloudaccount_aws": resourceCloudAccountAws(),
 				"spectrocloud_cluster_aws":      resourceClusterAws(),
@@ -81,9 +86,6 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cluster_maas":      resourceClusterMaas(),
 
 				"spectrocloud_cluster_eks": resourceClusterEks(),
-
-				"spectrocloud_cloudaccount_coxedge": resourceCloudAccountCoxEdge(),
-				"spectrocloud_cluster_coxedge":      resourceClusterCoxEdge(),
 
 				"spectrocloud_cloudaccount_tencent": resourceCloudAccountTencent(),
 				"spectrocloud_cluster_tke":          resourceClusterTke(),
@@ -148,13 +150,13 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cluster_profile": dataSourceClusterProfile(),
 
 				"spectrocloud_cloudaccount_aws":       dataSourceCloudAccountAws(),
-				"spectrocloud_cloudaccount_coxedge":   dataSourceCloudAccountCoxedge(),
 				"spectrocloud_cloudaccount_tencent":   dataSourceCloudAccountTencent(),
 				"spectrocloud_cloudaccount_azure":     dataSourceCloudAccountAzure(),
 				"spectrocloud_cloudaccount_gcp":       dataSourceCloudAccountGcp(),
 				"spectrocloud_cloudaccount_vsphere":   dataSourceCloudAccountVsphere(),
 				"spectrocloud_cloudaccount_openstack": dataSourceCloudAccountOpenStack(),
 				"spectrocloud_cloudaccount_maas":      dataSourceCloudAccountMaas(),
+				"spectrocloud_cloudaccount_custom":    dataSourceCloudAccountCustom(),
 
 				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
 
@@ -216,14 +218,22 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	c := client.New(host, "", apiKey, transportDebug, retryAttempts)
+	c := client.New(
+		client.WithHubbleURI(host),
+		client.WithAPIKey(apiKey),
+		client.WithRetries(retryAttempts))
 
+	if transportDebug {
+		client.WithTransportDebug()(c)
+	}
 	uid, err := c.GetProjectUID(projectName)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
 
-	c = client.New(host, uid, apiKey, transportDebug, retryAttempts)
+	if uid != "" {
+		client.WithProjectUID(uid)(c)
+	}
 
 	return c, diags
 

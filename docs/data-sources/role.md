@@ -31,5 +31,3 @@ data "spectrocloud_role" "role1" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-
