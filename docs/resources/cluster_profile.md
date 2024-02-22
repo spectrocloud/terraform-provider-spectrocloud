@@ -153,7 +153,7 @@ resource "spectrocloud_cluster_profile" "profile" {
       display_name = "Version"
       format = "version"
       description = "description hard-version"
-      default_value = "v0.0.1"
+      default_value = "0.0.1"
       regex = "*.*"
       required = true
       immutable = false

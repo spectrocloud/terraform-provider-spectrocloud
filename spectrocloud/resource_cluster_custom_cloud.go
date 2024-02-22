@@ -123,13 +123,6 @@ func resourceClusterCustomCloud() *schema.Resource {
 							Computed:    true,
 							Description: "Number of nodes in the machine pool. This will be derived from the replica value in the 'node_pool_config'.",
 						},
-						"additional_labels": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
 						"control_plane": {
 							Type:        schema.TypeBool,
 							Optional:    true,
@@ -142,8 +135,6 @@ func resourceClusterCustomCloud() *schema.Resource {
 							Default:     false,
 							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
 						},
-
-						"taints": schemas.ClusterTaintsSchema(),
 						"node_pool_config": {
 							Type:        schema.TypeString,
 							Required:    true,
@@ -432,9 +423,7 @@ func toMachinePoolCustomCloud(machinePool interface{}) *models.V1CustomMachinePo
 		Values: node["node_pool_config"].(string),
 	}
 	mp.PoolConfig = &models.V1CustomMachinePoolBaseConfigEntity{
-		AdditionalLabels:        toAdditionalNodePoolLabels(node),
 		IsControlPlane:          controlPlane,
-		Taints:                  toClusterTaints(node),
 		UseControlPlaneAsWorker: controlPlaneAsWorker,
 	}
 	return mp
@@ -448,7 +437,6 @@ func flattenMachinePoolConfigsCustomCloud(machinePools []*models.V1CustomMachine
 
 	for i, machinePool := range machinePools {
 		mp := make(map[string]interface{})
-		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, mp)
 		mp["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		mp["control_plane"] = machinePool.IsControlPlane
 		mp["node_pool_config"] = machinePool.Values
