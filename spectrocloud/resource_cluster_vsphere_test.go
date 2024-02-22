@@ -111,6 +111,8 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 		"control_plane_as_worker": false,
 		"name":                    "worker-basic",
 		"count":                   1,
+		"min":                     1,
+		"max":                     3,
 		"placement":               workerPlacement,
 		"instance_type":           workerInstance,
 		"node":                    []interface{}{},
