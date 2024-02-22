@@ -88,6 +88,8 @@ Optional:
 - `additional_labels` (Map of String)
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
+- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
+- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
