@@ -49,9 +49,10 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 	// rbac = append(rbac, r)
 
 	// cloud config
+	keys := []string{"SSHKey1", "SSHKey2"}
 	cloudConfig := make([]map[string]interface{}, 0)
 	con := map[string]interface{}{
-		"ssh_key":               "ssh-rsa AAAAB3NzaC1y",
+		"ssh_keys":              keys,
 		"datacenter":            "Datacenter",
 		"folder":                "sc_test/terraform",
 		"network_type":          "DDNS",
@@ -719,7 +720,7 @@ func TestFlattenClusterConfigsVsphere(t *testing.T) {
 	inputCloudConfig := &models.V1VsphereCloudConfig{
 		Spec: &models.V1VsphereCloudConfigSpec{
 			ClusterConfig: &models.V1VsphereClusterConfig{
-				SSHKeys:    []string{"SSHKey1"},
+				SSHKeys:    []string{"SSHKey1", "SSHKey1"},
 				StaticIP:   true,
 				NtpServers: []string{"ntp1", "ntp2"},
 				Placement: &models.V1VspherePlacementConfig{
@@ -733,8 +734,8 @@ func TestFlattenClusterConfigsVsphere(t *testing.T) {
 			},
 		},
 	}
-
-	flattenedConfig := flattenClusterConfigsVsphere(inputCloudConfig)
+	d := prepareClusterVsphereTestData()
+	flattenedConfig := flattenClusterConfigsVsphere(d, inputCloudConfig)
 
 	flattenedConfigMap := flattenedConfig.([]interface{})[0].(map[string]interface{})
 	if flattenedConfigMap["datacenter"].(string) != inputCloudConfig.Spec.ClusterConfig.Placement.Datacenter {
@@ -743,8 +744,8 @@ func TestFlattenClusterConfigsVsphere(t *testing.T) {
 	if flattenedConfigMap["folder"].(string) != inputCloudConfig.Spec.ClusterConfig.Placement.Folder {
 		t.Errorf("Failed to flatten 'folder' field correctly")
 	}
-	if flattenedConfigMap["ssh_key"].(string) != strings.TrimSpace(inputCloudConfig.Spec.ClusterConfig.SSHKeys[0]) {
-		t.Errorf("Failed to flatten 'ssh_key' field correctly")
+	if !reflect.DeepEqual(flattenedConfigMap["ssh_keys"].([]string), inputCloudConfig.Spec.ClusterConfig.SSHKeys) {
+		t.Errorf("Failed to flatten 'ssh_keys' field correctly")
 	}
 	if flattenedConfigMap["static_ip"].(bool) != inputCloudConfig.Spec.ClusterConfig.StaticIP {
 		t.Errorf("Failed to flatten 'static_ip' field correctly")
@@ -762,7 +763,8 @@ func TestFlattenClusterConfigsVsphere(t *testing.T) {
 }
 
 func TestFlattenClusterConfigsVsphereNil(t *testing.T) {
-	flatCloudConfig := flattenClusterConfigsVsphere(nil)
+	d := prepareClusterVsphereTestData()
+	flatCloudConfig := flattenClusterConfigsVsphere(d, nil)
 	if flatCloudConfig == nil {
 		t.Errorf("flattenClusterConfigsVsphere returning value for nill: %#v", flatCloudConfig)
 	}

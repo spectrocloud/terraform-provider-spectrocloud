@@ -434,7 +434,7 @@ func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *clie
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		cloudConfigFlatten := flattenClusterConfigsVsphere(cloudConfig)
+		cloudConfigFlatten := flattenClusterConfigsVsphere(d, cloudConfig)
 		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
 			return diag.FromErr(err)
 		}
@@ -460,10 +460,10 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 	placement := cloudConfig.Spec.ClusterConfig.Placement
 	ret["datacenter"] = placement.Datacenter
 	ret["folder"] = placement.Folder
-	if _, ok := d.GetOk("ssh_key"); ok {
+	if _, ok := d.GetOk("cloud_config.0.ssh_key"); ok {
 		ret["ssh_key"] = strings.TrimSpace(cloudConfig.Spec.ClusterConfig.SSHKeys[0])
 	}
-	if _, ok := d.GetOk("ssh_keys"); ok {
+	if _, ok := d.GetOk("cloud_config.0.ssh_keys"); ok {
 		ret["ssh_keys"] = cloudConfig.Spec.ClusterConfig.SSHKeys
 	}
 	ret["static_ip"] = cloudConfig.Spec.ClusterConfig.StaticIP
