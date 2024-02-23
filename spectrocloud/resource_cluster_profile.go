@@ -252,6 +252,8 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 		err = c.UpdateProfileVariables(clusterC, mVars, d.Id())
 		if err != nil {
+			oldVariables, _ := d.GetChange("profile_variables")
+			d.Set("profile_variables", oldVariables)
 			return diag.FromErr(err)
 		}
 	}
