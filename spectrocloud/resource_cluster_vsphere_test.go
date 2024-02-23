@@ -155,7 +155,7 @@ func TestToVsphereCluster(t *testing.T) {
 	assert.Equal("DDNS", vSphereSchema.Spec.CloudConfig.ControlPlaneEndpoint.Type)
 	assert.Equal("Datacenter", vSphereSchema.Spec.CloudConfig.Placement.Datacenter)
 	assert.Equal("sc_test/terraform", vSphereSchema.Spec.CloudConfig.Placement.Folder)
-	assert.Equal("ssh-rsa AAAAB3NzaC1y", vSphereSchema.Spec.CloudConfig.SSHKeys[0])
+	assert.Equal(2, len(vSphereSchema.Spec.CloudConfig.SSHKeys))
 	assert.Equal(false, vSphereSchema.Spec.CloudConfig.StaticIP)
 
 	// Verifying Master pool attributes
