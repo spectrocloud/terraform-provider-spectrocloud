@@ -48,6 +48,12 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"mode": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "cluster",
+				ValidateFunc: validation.StringInSlice([]string{"app", "cluster"}, false),
+			},
 			"credentials": {
 				Type:     schema.TypeList,
 				Required: true,
@@ -93,7 +99,7 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
-
+	resourceRegistryEcrRead(ctx, d, m)
 	return diags
 }
 
@@ -117,6 +123,9 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		return diag.FromErr(err)
 	}
 	if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("mode", registry.Spec.Scope); err != nil {
 		return diag.FromErr(err)
 	}
 	switch registry.Spec.Credentials.CredentialType {
@@ -175,6 +184,7 @@ func toRegistryEcr(d *schema.ResourceData) *models.V1EcrRegistry {
 	endpoint := d.Get("endpoint").(string)
 	isPrivate := d.Get("is_private").(bool)
 	s3config := d.Get("credentials").([]interface{})[0].(map[string]interface{})
+	mode := d.Get("mode").(string)
 	return &models.V1EcrRegistry{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
@@ -183,6 +193,7 @@ func toRegistryEcr(d *schema.ResourceData) *models.V1EcrRegistry {
 			Credentials: toRegistryAwsAccountCredential(s3config),
 			Endpoint:    &endpoint,
 			IsPrivate:   &isPrivate,
+			Scope:       mode,
 		},
 	}
 }

@@ -43,6 +43,13 @@ func resourceRegistryHelm() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"mode": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "cluster",
+				ForceNew:     true,
+				ValidateFunc: validation.StringInSlice([]string{"app", "cluster"}, false),
+			},
 			"credentials": {
 				Type:     schema.TypeList,
 				Required: true,
@@ -59,12 +66,14 @@ func resourceRegistryHelm() *schema.Resource {
 							Optional: true,
 						},
 						"password": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:      schema.TypeString,
+							Optional:  true,
+							Sensitive: true,
 						},
 						"token": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:      schema.TypeString,
+							Optional:  true,
+							Sensitive: true,
 						},
 					},
 				},
@@ -83,6 +92,7 @@ func resourceRegistryHelmCreate(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
+	resourceRegistryHelmRead(ctx, d, m)
 	return diags
 }
 
@@ -108,7 +118,9 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 	if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
 		return diag.FromErr(err)
 	}
-
+	if err := d.Set("mode", registry.Spec.Scope); err != nil {
+		return diag.FromErr(err)
+	}
 	if registry.Spec.Auth.Type == "noAuth" {
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
@@ -170,6 +182,7 @@ func toRegistryEntityHelm(d *schema.ResourceData) *models.V1HelmRegistryEntity {
 	endpoint := d.Get("endpoint").(string)
 	isPrivate := d.Get("is_private").(bool)
 	config := d.Get("credentials").([]interface{})[0].(map[string]interface{})
+	mode := d.Get("mode").(string)
 	return &models.V1HelmRegistryEntity{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
@@ -179,6 +192,7 @@ func toRegistryEntityHelm(d *schema.ResourceData) *models.V1HelmRegistryEntity {
 			Auth:      toRegistryHelmCredential(config),
 			Endpoint:  &endpoint,
 			IsPrivate: isPrivate,
+			Scope:     mode,
 		},
 	}
 }
@@ -187,6 +201,7 @@ func toRegistryHelm(d *schema.ResourceData) *models.V1HelmRegistry {
 	endpoint := d.Get("endpoint").(string)
 	isPrivate := d.Get("is_private").(bool)
 	config := d.Get("credentials").([]interface{})[0].(map[string]interface{})
+	mode := d.Get("mode").(string)
 	return &models.V1HelmRegistry{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
@@ -196,6 +211,7 @@ func toRegistryHelm(d *schema.ResourceData) *models.V1HelmRegistry {
 			Auth:      toRegistryHelmCredential(config),
 			Endpoint:  &endpoint,
 			IsPrivate: isPrivate,
+			Scope:     mode,
 		},
 	}
 }
