@@ -143,6 +143,9 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	log.Printf("Updating profiles")
 	profiles, err := toAddonDeplProfiles(c, d)
 	if err != nil {
+		oldProfile, _ := d.GetChange("cluster_profile")
+		// When profile modification failed we are setting back un applied version back to tf state
+		d.Set("cluster_profile", oldProfile)
 		return err
 	}
 	settings, err := toSpcApplySettings(d)
