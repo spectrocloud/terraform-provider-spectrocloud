@@ -1,8 +1,9 @@
 resource "spectrocloud_cluster_import" "cluster" {
-  name               = "gke-import-demo"
-  cloud              = "gcp"
-  cluster_profile_id = spectrocloud_cluster_profile.profile.id
-
+  name  = "gke-import-demo"
+  cloud = "gcp"
+  cluster_profile {
+    id = spectrocloud_cluster_profile.profile.id
+  }
   /*  pack {
      name   = "k8s-dashboard"
      tag    = "2.1.x"
