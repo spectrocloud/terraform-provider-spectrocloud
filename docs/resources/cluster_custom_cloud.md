@@ -176,25 +176,13 @@ Required:
 
 Optional:
 
-- `additional_labels` (Map of String)
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
-- `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 
 Read-Only:
 
 - `count` (Number) Number of nodes in the machine pool. This will be derived from the replica value in the 'node_pool_config'.
 - `name` (String) The name of the machine pool. This will be derived from the name value in the `node_pool_config`.
-
-<a id="nestedblock--machine_pool--taints"></a>
-### Nested Schema for `machine_pool.taints`
-
-Required:
-
-- `effect` (String) The effect of the taint. Allowed values are: `NoSchedule`, `PreferNoSchedule` or `NoExecute`.
-- `key` (String) The key of the taint.
-- `value` (String) The value of the taint.
-
 
 
 <a id="nestedblock--backup_policy"></a>

@@ -69,30 +69,15 @@ resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
   }
 
   machine_pool {
-    additional_labels = {
-      "owner"   = "tf"
-      "purpose" = "testing"
-      "type"    = "master"
-    }
     control_plane           = true
     control_plane_as_worker = true
     node_pool_config        = templatefile("config_templates/master_pool_config.yaml", local.node_pool_config_variables)
   }
 
   machine_pool {
-    additional_labels = {
-      "owner"   = "tf"
-      "purpose" = "testing"
-      "type"    = "worker"
-    }
     control_plane           = false
     control_plane_as_worker = false
-    taints {
-      key    = "taintkey2"
-      value  = "taintvalue2"
-      effect = "NoSchedule"
-    }
-    node_pool_config = templatefile("config_templates/worker_pool_config.yaml", local.node_pool_config_variables)
+    node_pool_config        = templatefile("config_templates/worker_pool_config.yaml", local.node_pool_config_variables)
   }
 
   cluster_rbac_binding {

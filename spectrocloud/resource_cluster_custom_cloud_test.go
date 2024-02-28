@@ -97,9 +97,7 @@ func TestToMachinePoolCustomCloud(t *testing.T) {
 			Values: "config123",
 		},
 		PoolConfig: &models.V1CustomMachinePoolBaseConfigEntity{
-			AdditionalLabels:        toAdditionalNodePoolLabels(machinePool),
 			IsControlPlane:          true,
-			Taints:                  toClusterTaints(machinePool),
 			UseControlPlaneAsWorker: true,
 			// Set other fields as expected
 		},
