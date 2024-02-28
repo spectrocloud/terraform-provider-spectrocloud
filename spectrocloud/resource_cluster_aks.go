@@ -192,8 +192,27 @@ func resourceClusterAks() *schema.Resource {
 							Optional: true,
 							ForceNew: true,
 						},
-
 						"worker_cidr": {
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+						"worker_subnet_security_group_name": {
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+						"control_plane_subnet_name": {
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+						"control_plane_cidr": {
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+						"control_plane_subnet_security_group_name": {
 							Type:     schema.TypeString,
 							Optional: true,
 							ForceNew: true,
@@ -440,9 +459,17 @@ func flattenClusterConfigsAks(config *models.V1AzureCloudConfig) []interface{} {
 	}
 	if config.Spec.ClusterConfig.WorkerSubnet != nil {
 		m["worker_subnet_name"] = config.Spec.ClusterConfig.WorkerSubnet.Name
-	}
-	if config.Spec.ClusterConfig.WorkerSubnet != nil {
 		m["worker_cidr"] = config.Spec.ClusterConfig.WorkerSubnet.CidrBlock
+		if config.Spec.ClusterConfig.WorkerSubnet.SecurityGroupName != "" {
+			m["worker_subnet_security_group_name"] = config.Spec.ClusterConfig.WorkerSubnet.SecurityGroupName
+		}
+	}
+	if config.Spec.ClusterConfig.ControlPlaneSubnet != nil {
+		m["control_plane_subnet_name"] = config.Spec.ClusterConfig.ControlPlaneSubnet.Name
+		m["control_plane_cidr"] = config.Spec.ClusterConfig.ControlPlaneSubnet.CidrBlock
+		if config.Spec.ClusterConfig.ControlPlaneSubnet.SecurityGroupName != "" {
+			m["control_plane_subnet_security_group_name"] = config.Spec.ClusterConfig.ControlPlaneSubnet.SecurityGroupName
+		}
 	}
 
 	return []interface{}{m}
@@ -590,8 +617,18 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	var workerSubnet *models.V1Subnet
 	if cloudConfigMap["worker_subnet_name"] != nil && cloudConfigMap["worker_cidr"] != nil {
 		workerSubnet = &models.V1Subnet{
-			Name:      cloudConfigMap["worker_subnet_name"].(string),
-			CidrBlock: cloudConfigMap["worker_cidr"].(string),
+			Name:              cloudConfigMap["worker_subnet_name"].(string),
+			CidrBlock:         cloudConfigMap["worker_cidr"].(string),
+			SecurityGroupName: cloudConfigMap["worker_subnet_security_group_name"].(string),
+		}
+	}
+
+	var controlPlaneSubnet *models.V1Subnet
+	if cloudConfigMap["control_plane_subnet_name"] != "" && cloudConfigMap["control_plane_cidr"] != "" {
+		controlPlaneSubnet = &models.V1Subnet{
+			Name:              cloudConfigMap["control_plane_subnet_name"].(string),
+			CidrBlock:         cloudConfigMap["control_plane_cidr"].(string),
+			SecurityGroupName: cloudConfigMap["control_plane_subnet_security_group_name"].(string),
 		}
 	}
 
@@ -617,7 +654,7 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 				VnetName:           vnetname,
 				VnetResourceGroup:  vnetResourceGroup,
 				VnetCidrBlock:      vnetcidr,
-				ControlPlaneSubnet: workerSubnet,
+				ControlPlaneSubnet: controlPlaneSubnet,
 				WorkerSubnet:       workerSubnet,
 			},
 		},
