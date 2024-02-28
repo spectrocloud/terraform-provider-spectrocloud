@@ -342,6 +342,9 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 			resources := resourcesObj.([]interface{})[0].(map[string]interface{})
 			VCResizeConfig := toVirtualClusterResize(resources)
 			if err := c.ResizeClusterVirtual(cloudConfigId, VCResizeConfig); err != nil {
+				// If resize virtual cluster is errored we need to set old state back to resource
+				oldState, _ := d.GetChange("resources")
+				_ = d.Set("resources", oldState)
 				return diag.FromErr(err)
 			}
 		}
