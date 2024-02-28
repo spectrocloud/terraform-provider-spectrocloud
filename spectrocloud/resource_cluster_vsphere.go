@@ -154,13 +154,23 @@ func resourceClusterVsphere() *schema.Resource {
 							Optional:    true,
 							Description: "The name of the image template folder in vSphere. This is the name of the folder as it appears in vSphere.",
 						},
-
 						"ssh_key": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "The SSH key to be used for the cluster. This is the public key that will be used to access the cluster nodes.",
+							Type:         schema.TypeString,
+							Optional:     true,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Description:  "The SSH key to be used for the cluster. This is the public key that will be used to access the cluster nodes. `ssh_key & ssh_keys` are mutually exclusive.",
+							Deprecated:   "This field is deprecated and will be removed in the future. Use `ssh_keys` instead.",
 						},
-
+						"ssh_keys": {
+							Type:         schema.TypeSet,
+							Optional:     true,
+							Set:          schema.HashString,
+							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of public SSH (Secure Shell) keys to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
+						},
 						"static_ip": {
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -434,7 +444,7 @@ func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *clie
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		cloudConfigFlatten := flattenClusterConfigsVsphere(cloudConfig)
+		cloudConfigFlatten := flattenClusterConfigsVsphere(d, cloudConfig)
 		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
 			return diag.FromErr(err)
 		}
@@ -447,7 +457,7 @@ func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *clie
 	return diag.Diagnostics{}
 }
 
-func flattenClusterConfigsVsphere(cloudConfig *models.V1VsphereCloudConfig) interface{} {
+func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1VsphereCloudConfig) interface{} {
 
 	cloudConfigFlatten := make([]interface{}, 0)
 	if cloudConfig == nil {
@@ -460,7 +470,12 @@ func flattenClusterConfigsVsphere(cloudConfig *models.V1VsphereCloudConfig) inte
 	placement := cloudConfig.Spec.ClusterConfig.Placement
 	ret["datacenter"] = placement.Datacenter
 	ret["folder"] = placement.Folder
-	ret["ssh_key"] = strings.TrimSpace(cloudConfig.Spec.ClusterConfig.SSHKeys[0])
+	if _, ok := d.GetOk("cloud_config.0.ssh_key"); ok {
+		ret["ssh_key"] = strings.TrimSpace(cloudConfig.Spec.ClusterConfig.SSHKeys[0])
+	}
+	if _, ok := d.GetOk("cloud_config.0.ssh_keys"); ok {
+		ret["ssh_keys"] = cloudConfig.Spec.ClusterConfig.SSHKeys
+	}
 	ret["static_ip"] = cloudConfig.Spec.ClusterConfig.StaticIP
 
 	if cpEndpoint.Type != "" {

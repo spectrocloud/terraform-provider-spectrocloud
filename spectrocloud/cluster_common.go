@@ -77,7 +77,9 @@ func toSSHKeys(cloudConfig map[string]interface{}) ([]string, error) {
 	}
 	if cloudConfig["ssh_key"] != nil {
 		sshKey := cloudConfig["ssh_key"].(string)
-		sshKeys = append(sshKeys, strings.TrimSpace(sshKey))
+		if sshKey != "" {
+			sshKeys = append(sshKeys, strings.TrimSpace(sshKey))
+		}
 	}
 	if len(sshKeysList) > 0 || len(sshKeys) > 0 {
 		for _, sk := range sshKeysList {
