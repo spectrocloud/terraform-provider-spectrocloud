@@ -1,8 +1,10 @@
 resource "spectrocloud_cluster_import" "cluster" {
-  name               = "vmware-import-tf-11"
-  cloud              = "vmware"
-  tags               = ["dev", "department:devops", "owner:bob"]
-  cluster_profile_id = spectrocloud_cluster_profile.profile.id
+  name  = "vmware-import-tf-11"
+  cloud = "vmware"
+  tags  = ["dev", "department:devops", "owner:bob"]
+  cluster_profile {
+    id = spectrocloud_cluster_profile.profile.id
+  }
 
   /*  pack {
      name   = "k8s-dashboard"

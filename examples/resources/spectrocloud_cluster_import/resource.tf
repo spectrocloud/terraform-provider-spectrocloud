@@ -5,9 +5,11 @@ data "spectrocloud_cluster_profile" "profile" {
 
 
 resource "spectrocloud_cluster_import" "cluster" {
-  name               = var.cluster_name
-  cloud              = var.cloud_type
-  cluster_profile_id = data.spectrocloud_cluster_profile.profile.id
+  name  = var.cluster_name
+  cloud = var.cloud_type
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+  }
   /*  pack {
        name   = "k8s-dashboard"
        tag    = "2.1.x"
