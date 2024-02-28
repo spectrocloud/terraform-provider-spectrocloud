@@ -238,6 +238,16 @@ func resourceClusterVsphere() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"min": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
+						"max": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
 						"update_strategy": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -487,6 +497,8 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
+		oi["min"] = int(machinePool.MinSize)
+		oi["max"] = int(machinePool.MaxSize)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
 		if machinePool.InstanceType != nil {
@@ -813,6 +825,16 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		MemoryMiB: types.Ptr(int64(ins["memory_mb"].(int))),
 		NumCPUs:   types.Ptr(int32(ins["cpu"].(int))),
 	}
+	min := int32(m["count"].(int))
+	max := int32(m["count"].(int))
+
+	if m["min"] != nil {
+		min = int32(m["min"].(int))
+	}
+
+	if m["max"] != nil {
+		max = int32(m["max"].(int))
+	}
 
 	mp := &models.V1VsphereMachinePoolConfigEntity{
 		CloudConfig: &models.V1VsphereMachinePoolCloudConfigEntity{
@@ -830,6 +852,8 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
+			MinSize:                 min,
+			MaxSize:                 max,
 		},
 	}
 
