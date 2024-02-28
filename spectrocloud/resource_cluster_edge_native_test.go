@@ -16,9 +16,10 @@ func TestToEdgeHosts(t *testing.T) {
 	hostUI2 := "uid2"
 
 	tests := []struct {
-		name     string
-		input    map[string]interface{}
-		expected *models.V1EdgeNativeMachinePoolCloudConfigEntity
+		name        string
+		input       map[string]interface{}
+		expected    *models.V1EdgeNativeMachinePoolCloudConfigEntity
+		expectedErr string
 	}{
 		{
 			name:     "Empty edge_host",
@@ -87,11 +88,110 @@ func TestToEdgeHosts(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Valid two node edge hosts",
+			input: map[string]interface{}{
+				"edge_host": []interface{}{
+					map[string]interface{}{
+						"host_name":     "",
+						"host_uid":      "uid1",
+						"static_ip":     "ip1",
+						"two_node_role": "primary",
+					},
+					map[string]interface{}{
+						"host_name":     "",
+						"host_uid":      "uid2",
+						"static_ip":     "ip2",
+						"two_node_role": "secondary",
+					},
+				},
+			},
+			expected: &models.V1EdgeNativeMachinePoolCloudConfigEntity{
+				EdgeHosts: []*models.V1EdgeNativeMachinePoolHostEntity{
+					{
+						HostName:                 "",
+						HostUID:                  &hostUI1,
+						StaticIP:                 "ip1",
+						TwoNodeCandidatePriority: "primary",
+					},
+					{
+						HostName:                 "",
+						HostUID:                  &hostUI2,
+						StaticIP:                 "ip2",
+						TwoNodeCandidatePriority: "secondary",
+					},
+				},
+			},
+		},
+		{
+			name: "Invalid two node edge hosts: duplicate role",
+			input: map[string]interface{}{
+				"edge_host": []interface{}{
+					map[string]interface{}{
+						"host_name":     "",
+						"host_uid":      hostUI1,
+						"static_ip":     "ip1",
+						"two_node_role": "primary",
+					},
+					map[string]interface{}{
+						"host_name":     "",
+						"host_uid":      hostUI2,
+						"static_ip":     "ip2",
+						"two_node_role": "primary",
+					},
+				},
+			},
+			expected:    nil,
+			expectedErr: "two node role 'primary' already assigned to edge host 'uid2'; roles must be unique",
+		},
+		{
+			name: "Invalid two node edge hosts: missing leader",
+			input: map[string]interface{}{
+				"edge_host": []interface{}{
+					map[string]interface{}{
+						"host_name":     "",
+						"host_uid":      hostUI1,
+						"static_ip":     "ip1",
+						"two_node_role": "primary",
+					},
+					map[string]interface{}{
+						"host_name": "",
+						"host_uid":  hostUI2,
+						"static_ip": "ip2",
+					},
+				},
+			},
+			expected:    nil,
+			expectedErr: "primary edge host 'uid1' specified, but missing secondary edge host",
+		},
+		{
+			name: "Invalid two node edge hosts: missing follower",
+			input: map[string]interface{}{
+				"edge_host": []interface{}{
+					map[string]interface{}{
+						"host_name":     "",
+						"host_uid":      hostUI1,
+						"static_ip":     "ip1",
+						"two_node_role": "secondary",
+					},
+					map[string]interface{}{
+						"host_name": "",
+						"host_uid":  hostUI2,
+						"static_ip": "ip2",
+					},
+				},
+			},
+			expected:    nil,
+			expectedErr: "secondary edge host 'uid1' specified, but missing primary edge host",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := toEdgeHosts(tt.input)
+			result, err := toEdgeHosts(tt.input)
+			if err != nil && !reflect.DeepEqual(err.Error(), tt.expectedErr) {
+				t.Errorf("Expected error %v, got %v", tt.expectedErr, err)
+			}
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
 			}
@@ -148,15 +248,26 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			edgeHosts, err := toEdgeHosts(tt.input)
+			if tt.hasError {
+				if err == nil {
+					t.Errorf("Expected an error but got none.")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Expected no error, but got an error: %v", err)
+			}
+
 			expected := &models.V1EdgeNativeMachinePoolConfigEntity{
-				CloudConfig: toEdgeHosts(tt.input),
+				CloudConfig: edgeHosts,
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					AdditionalLabels:        toAdditionalNodePoolLabels(tt.input),
 					Taints:                  toClusterTaints(tt.input),
 					IsControlPlane:          true,
 					Labels:                  []string{"master"},
 					Name:                    types.Ptr("pool1"),
-					Size:                    types.Ptr(int32(len(toEdgeHosts(tt.input).EdgeHosts))),
+					Size:                    types.Ptr(int32(len(edgeHosts.EdgeHosts))),
 					UpdateStrategy:          &models.V1UpdateStrategy{Type: getUpdateStrategy(tt.input)},
 					UseControlPlaneAsWorker: false,
 				},

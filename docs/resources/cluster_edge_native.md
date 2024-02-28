@@ -114,6 +114,7 @@ Optional:
 
 - `host_name` (String) Edge host name
 - `static_ip` (String) Edge host static IP
+- `two_node_role` (String) Two node role for edge host. Valid values are `primary` and `secondary`.
 
 
 <a id="nestedblock--machine_pool--node"></a>
