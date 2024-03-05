@@ -1,15 +1,22 @@
 package spectrocloud
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"time"
 )
 
 func resourceClusterGke() *schema.Resource {
 	return &schema.Resource{
-		Description: "Resource for managing GKE clusters in Spectro Cloud through Palette.",
+		CreateContext: resourceClusterGkeCreate,
+		ReadContext:   resourceClusterGkeRead,
+		Description:   "Resource for managing GKE clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -119,11 +126,11 @@ func resourceClusterGke() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"root_device_size": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  60,
-						},
+						//"disk_size_gb": {
+						//	Type:     schema.TypeInt,
+						//	Optional: true,
+						//	Default:  60,
+						//},
 						"update_strategy": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -186,6 +193,7 @@ func resourceClusterGke() *schema.Resource {
 			"scan_policy":          schemas.ScanPolicySchema(),
 			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
 			"namespaces":           schemas.ClusterNamespacesSchema(),
+			"host_config":          schemas.ClusterHostConfigSchema(),
 			"location_config":      schemas.ClusterLocationSchemaComputed(),
 			"skip_completion": {
 				Type:        schema.TypeBool,
@@ -208,4 +216,94 @@ func resourceClusterGke() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := m.(*client.V1Client)
+
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
+	cluster, err := toGkeCluster(c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterGke(cluster, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	if isError {
+		return diagnostics
+	}
+
+	resourceClusterGkeRead(ctx, d, m)
+	return diags
+}
+
+func resourceClusterGkeRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := m.(*client.V1Client)
+
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
+
+	return diags
+}
+
+func toGkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroGcpClusterEntity, error) {
+	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+
+	clusterContext := d.Get("context").(string)
+	profiles, err := toProfiles(c, d, clusterContext)
+	if err != nil {
+		return nil, err
+	}
+	cluster := &models.V1SpectroGcpClusterEntity{
+		Metadata: getClusterMetadata(d),
+		Spec: &models.V1SpectroGcpClusterEntitySpec{
+			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
+			Profiles:        profiles,
+			Policies:        toPolicies(d),
+			CloudConfig: &models.V1GcpClusterConfig{
+				Project: types.Ptr(cloudConfig["project"].(string)),
+				Region:  types.Ptr(cloudConfig["region"].(string)),
+				ManagedClusterConfig: &models.V1GcpManagedClusterConfig{
+					Location: cloudConfig["region"].(string),
+				},
+			},
+		},
+	}
+
+	machinePoolConfigs := make([]*models.V1GcpMachinePoolConfigEntity, 0)
+	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+		mp, err := toMachinePoolGke(machinePool)
+		if err != nil {
+			return nil, err
+		}
+		machinePoolConfigs = append(machinePoolConfigs, mp)
+	}
+	return cluster, err
+}
+
+func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEntity, error) {
+	m := machinePool.(map[string]interface{})
+
+	mp := &models.V1GcpMachinePoolConfigEntity{
+		CloudConfig: &models.V1GcpMachinePoolCloudConfigEntity{
+			InstanceType: types.Ptr(m["instance_type"].(string)),
+			//RootDeviceSize: int64(m["disk_size_gb"].(int)),
+		},
+		PoolConfig: &models.V1MachinePoolConfigEntity{
+			AdditionalLabels: toAdditionalNodePoolLabels(m),
+			Taints:           toClusterTaints(m),
+			Name:             types.Ptr(m["name"].(string)),
+			Size:             types.Ptr(int32(m["count"].(int))),
+			UpdateStrategy: &models.V1UpdateStrategy{
+				Type: getUpdateStrategy(m),
+			},
+		},
+	}
+	return mp, nil
 }
