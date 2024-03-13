@@ -9,6 +9,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"log"
 	"time"
 )
 
@@ -16,6 +17,8 @@ func resourceClusterGke() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceClusterGkeCreate,
 		ReadContext:   resourceClusterGkeRead,
+		UpdateContext: resourceClusterGkeUpdate,
+		DeleteContext: resourceClusterDelete,
 		Description:   "Resource for managing GKE clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
@@ -99,7 +102,11 @@ func resourceClusterGke() *schema.Resource {
 					},
 				},
 			},
-
+			"update_worker_pool_in_parallel": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+			},
 			"machine_pool": {
 				Type:        schema.TypeList,
 				Required:    true,
@@ -126,11 +133,6 @@ func resourceClusterGke() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						//"disk_size_gb": {
-						//	Type:     schema.TypeInt,
-						//	Optional: true,
-						//	Default:  60,
-						//},
 						"update_strategy": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -141,11 +143,6 @@ func resourceClusterGke() *schema.Resource {
 						"taints": schemas.ClusterTaintsSchema(),
 					},
 				},
-			},
-			"update_worker_pool_in_parallel": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
 			},
 			"pause_agent_upgrades": {
 				Type:         schema.TypeString,
@@ -246,10 +243,161 @@ func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m int
 func resourceClusterGkeRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
-	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	cluster, err := resourceClusterRead(d, c, diags)
+	if err != nil {
+		return diag.FromErr(err)
+	} else if cluster == nil {
+		// Deleted - Terraform will recreate it
+		d.SetId("")
+		return diags
+	}
+
+	configUID := cluster.Spec.CloudConfigRef.UID
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
+
+	diagnostics, done := readCommonFields(c, d, cluster)
+	if done {
+		return diagnostics
+	}
+
+	return flattenCloudConfigGke(cluster.Spec.CloudConfigRef.UID, d, c)
+}
+
+func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := m.(*client.V1Client)
+
+	var diags diag.Diagnostics
+	err := validateSystemRepaveApproval(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	cloudConfigId := d.Get("cloud_config_id").(string)
+	ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigGke(cloudConfigId, ClusterContext)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if d.HasChange("machine_pool") {
+		oraw, nraw := d.GetChange("machine_pool")
+		if oraw == nil {
+			oraw = new(schema.Set)
+		}
+		if nraw == nil {
+			nraw = new(schema.Set)
+		}
+
+		os := oraw.([]interface{})
+		ns := nraw.([]interface{})
+
+		osMap := make(map[string]interface{})
+		for _, mp := range os {
+			machinePool := mp.(map[string]interface{})
+			osMap[machinePool["name"].(string)] = machinePool
+		}
+		nsMap := make(map[string]interface{})
+		for _, mp := range ns {
+			machinePoolResource := mp.(map[string]interface{})
+			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
+			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+			if machinePoolResource["name"].(string) != "" {
+				name := machinePoolResource["name"].(string)
+				hash := resourceMachinePoolGkeHash(machinePoolResource)
+				var err error
+
+				machinePool, err := toMachinePoolGke(machinePoolResource)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+				if oldMachinePool, ok := osMap[name]; !ok {
+					log.Printf("Create machine pool %s", name)
+					err = c.CreateMachinePoolGke(cloudConfigId, ClusterContext, machinePool)
+				} else if hash != resourceMachinePoolGkeHash(oldMachinePool) {
+					// TODO
+					log.Printf("Change in machine pool %s", name)
+					err = c.UpdateMachinePoolGke(cloudConfigId, ClusterContext, machinePool)
+					// Node Maintenance Actions
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusGke, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
+				}
+
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Processed (if exists)
+				delete(osMap, name)
+			}
+		}
+
+		// Deleted old machine pools
+		for _, mp := range osMap {
+			machinePool := mp.(map[string]interface{})
+			name := machinePool["name"].(string)
+			log.Printf("Deleted machine pool %s", name)
+			if err := c.DeleteMachinePoolGke(cloudConfigId, name, ClusterContext); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+	diagnostics, done := updateCommonFields(d, c)
+	if done {
+		return diagnostics
+	}
+
+	resourceClusterGkeRead(ctx, d, m)
 
 	return diags
+}
+func flattenCloudConfigGke(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	ClusterContext := d.Get("context").(string)
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
+	if config, err := c.GetCloudConfigGke(configUID, ClusterContext); err != nil {
+		return diag.FromErr(err)
+	} else {
+		mp := flattenMachinePoolConfigsGke(config.Spec.MachinePoolConfig)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapGcp, mp, configUID, ClusterContext)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		if err := d.Set("machine_pool", mp); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	return diag.Diagnostics{}
+}
+
+func flattenMachinePoolConfigsGke(machinePools []*models.V1GcpMachinePoolConfig) []interface{} {
+
+	if machinePools == nil {
+		return make([]interface{}, 0)
+	}
+
+	ois := make([]interface{}, len(machinePools))
+
+	for i, machinePool := range machinePools {
+		oi := make(map[string]interface{})
+
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		oi["name"] = machinePool.Name
+		oi["count"] = int(machinePool.Size)
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
+		oi["instance_type"] = *machinePool.InstanceType
+
+		//oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
+		ois[i] = oi
+	}
+
+	return ois
 }
 
 func toGkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroGcpClusterEntity, error) {
@@ -304,6 +452,9 @@ func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEn
 				Type: getUpdateStrategy(m),
 			},
 		},
+	}
+	if !mp.PoolConfig.IsControlPlane {
+		mp.PoolConfig.Labels = []string{"worker"}
 	}
 	return mp, nil
 }
