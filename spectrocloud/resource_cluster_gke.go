@@ -19,7 +19,10 @@ func resourceClusterGke() *schema.Resource {
 		ReadContext:   resourceClusterGkeRead,
 		UpdateContext: resourceClusterGkeUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing GKE clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterGkeImport,
+		},
+		Description: "Resource for managing GKE clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -73,6 +76,11 @@ func resourceClusterGke() *schema.Resource {
 					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
 					"Default value is `DownloadAndInstall`.",
 			},
+			"cloud_account_id": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -121,6 +129,11 @@ func resourceClusterGke() *schema.Resource {
 							Type:        schema.TypeInt,
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
+						},
+						"disk_size_gb": {
+							Type:     schema.TypeInt,
+							Optional: true,
+							Default:  60,
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -353,6 +366,7 @@ func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	return diags
 }
+
 func flattenCloudConfigGke(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
@@ -393,7 +407,7 @@ func flattenMachinePoolConfigsGke(machinePools []*models.V1GcpMachinePoolConfig)
 
 		oi["instance_type"] = *machinePool.InstanceType
 
-		//oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
+		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 		ois[i] = oi
 	}
 
@@ -425,13 +439,15 @@ func toGkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	}
 
 	machinePoolConfigs := make([]*models.V1GcpMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp, err := toMachinePoolGke(machinePool)
 		if err != nil {
 			return nil, err
 		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
+	cluster.Spec.Machinepoolconfig = machinePoolConfigs
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
 	return cluster, err
 }
 
@@ -440,8 +456,8 @@ func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEn
 
 	mp := &models.V1GcpMachinePoolConfigEntity{
 		CloudConfig: &models.V1GcpMachinePoolCloudConfigEntity{
-			InstanceType: types.Ptr(m["instance_type"].(string)),
-			//RootDeviceSize: int64(m["disk_size_gb"].(int)),
+			InstanceType:   types.Ptr(m["instance_type"].(string)),
+			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),

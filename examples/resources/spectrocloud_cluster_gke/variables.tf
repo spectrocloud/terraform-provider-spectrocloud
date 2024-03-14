@@ -12,7 +12,8 @@ variable "sc_project_name" {
   default     = "Default"
 }
 
-variable "cluster_cloud_account_name" {}
-variable "cluster_cluster_profile_name" {}
-
+variable "gcp_cloud_account_name" {}
+variable "gke_cluster_profile_name" {}
+variable "gcp_project" {}
+variable "gcp_region" {}
 variable "cluster_name" {}
