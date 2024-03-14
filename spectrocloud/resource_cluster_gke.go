@@ -376,7 +376,7 @@ func flattenCloudConfigGke(configUID string, d *schema.ResourceData, c *client.V
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsGke(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapGcp, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapGke, mp, configUID, ClusterContext)
 		if err != nil {
 			return diag.FromErr(err)
 		}
