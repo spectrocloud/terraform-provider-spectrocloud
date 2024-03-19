@@ -161,12 +161,16 @@ Required:
 
 Optional:
 
+- `control_plane_cidr` (String)
+- `control_plane_subnet_name` (String)
+- `control_plane_subnet_security_group_name` (String)
 - `private_cluster` (Boolean) Whether to create a private cluster(API endpoint). Default is `false`.
 - `vnet_cidr_block` (String)
 - `vnet_name` (String)
 - `vnet_resource_group` (String)
 - `worker_cidr` (String)
 - `worker_subnet_name` (String)
+- `worker_subnet_security_group_name` (String)
 
 
 <a id="nestedblock--machine_pool"></a>
