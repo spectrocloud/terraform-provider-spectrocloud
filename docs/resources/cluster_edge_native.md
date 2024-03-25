@@ -11,8 +11,48 @@ description: |-
 
 ## Example Usage
 
+```terraform
+data "spectrocloud_cluster_profile" "profile" {
+  name = "edge-native-infra"
+}
 
+resource "spectrocloud_cluster_edge_native" "cluster" {
+  name            = "edge-native-example"
+  skip_completion = true
 
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+  }
+
+  cloud_config {
+    ssh_keys           = ["spectro2022", "spectro2023"]
+    vip                = "100.0.0.1"
+    overlay_cidr_range = "100.0.0.12/12"
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = "master-pool"
+
+    edge_host {
+      host_uid  = spectrocloud_appliance.appliance0.uid
+      static_ip = "4.1.2.3"
+    }
+
+  }
+
+  machine_pool {
+    name = "worker-pool"
+
+    edge_host {
+      host_uid  = spectrocloud_appliance.appliance1.uid
+      static_ip = "1.2.3.4"
+    }
+  }
+
+}
+```
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
