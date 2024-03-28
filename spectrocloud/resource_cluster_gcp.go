@@ -319,7 +319,6 @@ func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V
 			return diag.FromErr(err)
 		}
 	}
-
 	return diag.Diagnostics{}
 }
 
@@ -434,7 +433,15 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
-		return diagnostics
+		if diagnostics.HasError() {
+			return diagnostics
+		} else {
+			for _, d := range diagnostics {
+				if d.Severity == diag.Warning {
+					diags = append(diags, d)
+				}
+			}
+		}
 	}
 
 	resourceClusterGcpRead(ctx, d, m)

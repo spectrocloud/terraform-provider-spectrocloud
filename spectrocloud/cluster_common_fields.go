@@ -100,6 +100,12 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	if _, ok := d.GetOk("review_repave_state"); ok {
+		if err := d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
 	clusterContext := d.Get("context").(string)
 
 	if clusterStatus, err := c.GetClusterWithoutStatus(clusterContext, d.Id()); err != nil {
@@ -194,6 +200,11 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
+	if d.HasChange("review_repave_state") {
+		warnDiags := proactiveRepaveWarning(d)
+		return warnDiags, true
+	}
+
 	return diag.Diagnostics{}, false
 }
 
@@ -234,4 +245,22 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 		}
 	}
 	return nil
+}
+
+func proactiveRepaveWarning(d *schema.ResourceData) diag.Diagnostics {
+	if _, ok := d.GetOk("review_repave_state"); ok {
+		if d.HasChange("review_repave_state") {
+			_, approveClusterRepave := d.GetChange("review_repave_state")
+			if approveClusterRepave.(string) == "Approved" {
+				warning := diag.Diagnostic{
+					Severity: diag.Warning,
+					Summary:  "Review Repave State Warning",
+					Detail:   "Setting `review_repave_state` to `Approved` will allow the system to repave the cluster due to user or system actions.",
+				}
+				return diag.Diagnostics{warning}
+			}
+		}
+	}
+	return diag.Diagnostics{}
+
 }
