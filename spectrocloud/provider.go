@@ -96,7 +96,9 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cluster_aks": resourceClusterAks(),
 
 				"spectrocloud_cloudaccount_gcp": resourceCloudAccountGcp(),
-				"spectrocloud_cluster_gcp":      resourceClusterGcp(),
+
+				"spectrocloud_cluster_gcp": resourceClusterGcp(),
+				"spectrocloud_cluster_gke": resourceClusterGke(),
 
 				"spectrocloud_cloudaccount_openstack": resourceCloudAccountOpenstack(),
 				"spectrocloud_cluster_openstack":      resourceClusterOpenStack(),
