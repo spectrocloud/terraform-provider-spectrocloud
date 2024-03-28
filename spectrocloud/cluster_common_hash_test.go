@@ -140,13 +140,13 @@ func TestResourceMachinePoolGcpHash(t *testing.T) {
 				"max":           3,
 				"capacity_type": "ON_DEMAND",
 				"max_price":     "0.12",
-				"azs":           []string{"us-central1-a", "us-central1-b"},
+				"azs":           schema.NewSet(schema.HashString, []interface{}{"us-central1-a", "us-central1-b"}),
 				"az_subnets": map[string]interface{}{
 					"us-central1-a": "subnet-1",
 					"us-central1-b": "subnet-2",
 				},
 			},
-			expected: 1198721703,
+			expected: 2586515099,
 		},
 	}
 	for _, tc := range testCases {

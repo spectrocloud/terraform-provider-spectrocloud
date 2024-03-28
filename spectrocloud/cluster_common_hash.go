@@ -96,7 +96,24 @@ func resourceMachinePoolAksHash(v interface{}) int {
 func resourceMachinePoolGcpHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
+	if _, ok := m["disk_size_gb"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
+	}
 
+	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	if _, ok := m["azs"]; ok {
+		if m["azs"] != nil {
+			azsSet := m["azs"].(*schema.Set)
+			azsList := azsSet.List()
+			azsListStr := make([]string, len(azsList))
+			for i, v := range azsList {
+				azsListStr[i] = v.(string)
+			}
+			sort.Strings(azsListStr)
+			azsStr := strings.Join(azsListStr, "-")
+			buf.WriteString(fmt.Sprintf("%s-", azsStr))
+		}
+	}
 	return int(hash(buf.String()))
 }
 
