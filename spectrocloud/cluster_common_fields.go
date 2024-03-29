@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"errors"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
@@ -200,11 +201,6 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
-	if d.HasChange("review_repave_state") {
-		warnDiags := proactiveRepaveWarning(d)
-		return warnDiags, true
-	}
-
 	return diag.Diagnostics{}, false
 }
 
@@ -247,20 +243,20 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 	return nil
 }
 
-func proactiveRepaveWarning(d *schema.ResourceData) diag.Diagnostics {
-	if _, ok := d.GetOk("review_repave_state"); ok {
-		if d.HasChange("review_repave_state") {
-			_, approveClusterRepave := d.GetChange("review_repave_state")
-			if approveClusterRepave.(string) == "Approved" {
-				warning := diag.Diagnostic{
-					Severity: diag.Warning,
-					Summary:  "Review Repave State Warning",
-					Detail:   "Setting `review_repave_state` to `Approved` will allow the system to repave the cluster due to user or system actions.",
-				}
-				return diag.Diagnostics{warning}
-			}
-		}
+func validateReviewRepaveValue(val interface{}, key string) (warns []string, errs []error) {
+	repaveValue := val.(string)
+	validStatuses := map[string]bool{
+		"":         true,
+		"Approved": true,
+		"Pending":  true,
 	}
-	return diag.Diagnostics{}
-
+	if repaveValue == "Approved" {
+		warning := []string{"Review Repave Value Warning:",
+			"Setting `review_repave_state` to `Approved` will authorize the palette to repave the cluster if any system repave is in the pending state. Please exercise caution when using `review_repave_state` attribute."}
+		warns = append(warns, strings.Join(warning, "\n"))
+	}
+	if _, ok := validStatuses[repaveValue]; !ok {
+		errs = append(errs, fmt.Errorf("expected review_repave_state to be one of [``, `Pending`, `Approved`], got %s", repaveValue))
+	}
+	return warns, errs
 }

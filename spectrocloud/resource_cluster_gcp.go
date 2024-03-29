@@ -90,7 +90,7 @@ func resourceClusterGcp() *schema.Resource {
 				Type:         schema.TypeString,
 				Default:      "",
 				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"", "Approved", "Pending"}, false),
+				ValidateFunc: validateReviewRepaveValue,
 				Description:  "To authorize the cluster repave, set the value to `Approved` for approval and `\"\"` to decline. Default value is `\"\"`.",
 			},
 			"pause_agent_upgrades": {
@@ -433,15 +433,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	diagnostics, done := updateCommonFields(d, c)
 	if done {
-		if diagnostics.HasError() {
-			return diagnostics
-		} else {
-			for _, d := range diagnostics {
-				if d.Severity == diag.Warning {
-					diags = append(diags, d)
-				}
-			}
-		}
+		return diagnostics
 	}
 
 	resourceClusterGcpRead(ctx, d, m)

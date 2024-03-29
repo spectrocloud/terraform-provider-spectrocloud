@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -522,4 +523,27 @@ func TestToSSHKeys(t *testing.T) {
 	assert.Error(t, err4)
 	assert.Nil(t, keys4)
 	assert.Equal(t, "validation ssh_key: Kindly specify any one attribute ssh_key or ssh_keys", err4.Error())
+}
+
+func TestValidateReviewRepaveValue(t *testing.T) {
+	// Valid repave values
+	validValues := []string{"", "Approved", "Pending"}
+
+	for _, value := range validValues {
+		warns, errs := validateReviewRepaveValue(value, "review_repave_state")
+		assert.Empty(t, errs, "Expected no errors for valid repave value")
+		if value == "Approved" {
+			assert.NotEmpty(t, warns, "Expected warning for 'Approved' repave value")
+		} else {
+			assert.Empty(t, warns, "Expected no warnings for valid repave value")
+		}
+	}
+
+	// Invalid repave value
+	invalidValue := "InvalidStatus"
+	warns, errs := validateReviewRepaveValue(invalidValue, "review_repave_state")
+	assert.NotEmpty(t, errs, "Expected error for invalid repave value")
+	assert.Empty(t, warns, "Expected no warnings for invalid repave value")
+	expectedError := fmt.Sprintf("expected review_repave_state to be one of [``, `Pending`, `Approved`], got %s", invalidValue)
+	assert.Equal(t, expectedError, errs[0].Error(), "Expected specific error message for invalid repave value")
 }
