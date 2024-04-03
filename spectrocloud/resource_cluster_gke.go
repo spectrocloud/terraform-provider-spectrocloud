@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
@@ -375,6 +376,12 @@ func flattenCloudConfigGke(configUID string, d *schema.ResourceData, c *client.V
 	if config, err := c.GetCloudConfigGke(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("cloud_config", flattenClusterConfigsGke(config)); err != nil {
+			return diag.FromErr(err)
+		}
 		mp := flattenMachinePoolConfigsGke(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapGke, mp, configUID, ClusterContext)
 		if err != nil {
@@ -387,6 +394,21 @@ func flattenCloudConfigGke(configUID string, d *schema.ResourceData, c *client.V
 	}
 
 	return diag.Diagnostics{}
+}
+
+func flattenClusterConfigsGke(config *models.V1GcpCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+	m := make(map[string]interface{})
+
+	if config.Spec.ClusterConfig.Project != nil {
+		m["project"] = config.Spec.ClusterConfig.Project
+	}
+	if ptr.String(config.Spec.ClusterConfig.Region) != "" {
+		m["region"] = ptr.String(config.Spec.ClusterConfig.Region)
+	}
+	return []interface{}{m}
 }
 
 func flattenMachinePoolConfigsGke(machinePools []*models.V1GcpMachinePoolConfig) []interface{} {
