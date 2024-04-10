@@ -178,6 +178,16 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
+func resourceMachinePoolGkeHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	buf := CommonHash(m)
+        if _, ok := m["disk_size_gb"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
+	}
+	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	return int(hash(buf.String()))
+}
+
 func eksLaunchTemplate(v interface{}) string {
 	var buf bytes.Buffer
 	if len(v.([]interface{})) > 0 {
