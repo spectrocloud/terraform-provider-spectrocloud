@@ -23,7 +23,7 @@ func resourceClusterGke() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterGkeImport,
 		},
-		Description: "Resource for managing GKE clusters in Spectro Cloud through Palette.",
+		Description: "Resource for managing GKE clusters through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
