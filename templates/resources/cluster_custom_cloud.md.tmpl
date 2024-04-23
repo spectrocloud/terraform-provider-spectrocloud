@@ -44,7 +44,7 @@ description: |-
         additional_labels = {
           "owner"   = "tf"
           "purpose" = "testing"
-          "type"    = "master"
+          "type"    = "cp"
         }
         control_plane           = true
         control_plane_as_worker = true

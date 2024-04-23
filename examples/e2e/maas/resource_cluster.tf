@@ -14,7 +14,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
-    name                    = "master-pool"
+    name                    = "cp-pool"
     count                   = 1
     placement {
       resource_pool = var.maas_resource_pool
