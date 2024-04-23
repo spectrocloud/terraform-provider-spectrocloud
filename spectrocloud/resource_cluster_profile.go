@@ -422,6 +422,7 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 	pName := p["name"].(string)
 	pTag := p["tag"].(string)
 	pUID := p["uid"].(string)
+
 	pRegistryUID := ""
 	if p["registry_uid"] != nil {
 		pRegistryUID = p["registry_uid"].(string)
@@ -434,9 +435,7 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 			return nil, fmt.Errorf("pack %s needs to specify tag", pName)
 		}
 	case models.V1PackTypeManifest:
-		if pUID == "" {
-			pUID = "spectro-manifest-pack"
-		}
+		pUID = "spectro-manifest-pack"
 	}
 
 	pack := &models.V1PackManifestUpdateEntity{
