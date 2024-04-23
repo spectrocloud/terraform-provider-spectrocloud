@@ -90,7 +90,7 @@ func resourceClusterGcp() *schema.Resource {
 				Type:         schema.TypeString,
 				Default:      "",
 				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"", "Approved", "Pending"}, false),
+				ValidateFunc: validateReviewRepaveValue,
 				Description:  "To authorize the cluster repave, set the value to `Approved` for approval and `\"\"` to decline. Default value is `\"\"`.",
 			},
 			"pause_agent_upgrades": {
@@ -319,7 +319,6 @@ func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V
 			return diag.FromErr(err)
 		}
 	}
-
 	return diag.Diagnostics{}
 }
 
