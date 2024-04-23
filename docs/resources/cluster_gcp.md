@@ -62,7 +62,7 @@ resource "spectrocloud_cluster_gcp" "cluster" {
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
-    name                    = "master-pool"
+    name                    = "cp-pool"
     count                   = 1
     instance_type           = "e2-standard-2"
     disk_size_gb            = 62

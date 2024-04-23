@@ -57,7 +57,7 @@ cloud_account_type = "{enter AWS Cloud Account Type}" #eg. "secret" or "sts"
 # Static provisioning requires specifying the exiting VPC-ID and all subnets to target
 aws_vpc_id = "{enter AWS VPC ID}" #e.g: vpc-123456
 
-master_azs_subnets_map = {
+cp_azs_subnets_map = {
   "{enter AWS Availability Zone A}" = "{enter Subnet for AZ A, ...}"
   "{enter AWS Availability Zone B}" = "{enter Subnet for AZ A, ...}"
 }

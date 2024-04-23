@@ -19,11 +19,11 @@ resource "spectrocloud_cluster_gcp" "cluster" {
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
-    name                    = "master-pool"
-    count                   = var.master_nodes.count
-    instance_type           = var.master_nodes.instance_type
-    disk_size_gb            = var.master_nodes.disk_size_gb
-    azs                     = var.master_nodes.availability_zones
+    name                    = "cp-pool"
+    count                   = var.cp_nodes.count
+    instance_type           = var.cp_nodes.instance_type
+    disk_size_gb            = var.cp_nodes.disk_size_gb
+    azs                     = var.cp_nodes.availability_zones
   }
 
   machine_pool {

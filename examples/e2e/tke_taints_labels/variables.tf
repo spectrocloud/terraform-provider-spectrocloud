@@ -13,7 +13,7 @@ variable "tke_vpc_id" {
   default = ""
 }
 
-variable "master_tke_subnets_map" {
+variable "cp_tke_subnets_map" {
   type = map(string)
 }
 
