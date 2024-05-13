@@ -75,7 +75,7 @@ cloud_account_type = "{enter AWS Cloud Account Type}" #eg. "secret" or "sts"
 # (for STATIC, uncomment the following 9 lines)
 #aws_vpc_id = "{enter AWS VPC ID}" #e.g: vpc-123456
 
-#master_azs_subnets_map = {
+#cp_azs_subnets_map = {
 #  "{enter AWS Availability Zone A}" = "{enter Subnet for AZ A, ...}"
 #  "{enter AWS Availability Zone B}" = "{enter Subnet for AZ A, ...}"
 #}
@@ -85,7 +85,7 @@ cloud_account_type = "{enter AWS Cloud Account Type}" #eg. "secret" or "sts"
 #}
 
 ## e.g:
-## master_azs_subnets_map = {
+## cp_azs_subnets_map = {
 ##   "us-west-2a" = "subnet-12345,subnet-4567"
 ##   "us-west-2b" = "subnet-12345,subnet-4567"
 ## }

@@ -32,7 +32,7 @@ variable "azs" {
 }
 
 # Provisioning Option B (Static)
-variable "master_azs_subnets_map" {
+variable "cp_azs_subnets_map" {
   default = {}
   type    = map(string)
 }

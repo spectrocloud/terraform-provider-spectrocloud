@@ -79,9 +79,9 @@ resource "spectrocloud_cluster_openstack" "cluster" {
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
-    name                    = "master-pool"
-    count                   = var.master_inst_count
-    instance_type           = var.master_inst_type
+    name                    = "cp-pool"
+    count                   = var.cp_inst_count
+    instance_type           = var.cp_inst_type
     azs                     = ["nova"]
   }
 

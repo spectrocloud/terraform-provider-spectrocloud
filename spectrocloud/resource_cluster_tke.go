@@ -231,7 +231,7 @@ func resourceClusterTke() *schema.Resource {
 				Type:         schema.TypeString,
 				Default:      "",
 				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"", "Approved", "Pending"}, false),
+				ValidateFunc: validateReviewRepaveValue,
 				Description:  "To authorize the cluster repave, set the value to `Approved` for approval and `\"\"` to decline. Default value is `\"\"`.",
 			},
 			"pause_agent_upgrades": {

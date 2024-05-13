@@ -10,8 +10,8 @@ variable "addon_ver" {}
 variable "addon_name" {}
 variable "cp_name" {}
 variable "cluster_name" {}
-variable "master_inst_count" {}
-variable "master_inst_type" {}
+variable "cp_inst_count" {}
+variable "cp_inst_type" {}
 variable "worker_inst_type" {}
 variable "worker_inst_count" {}
 variable "sshkey" {}

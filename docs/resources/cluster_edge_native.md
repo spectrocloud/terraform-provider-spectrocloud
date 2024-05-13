@@ -33,7 +33,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
-    name                    = "master-pool"
+    name                    = "cp-pool"
 
     edge_host {
       host_uid  = spectrocloud_appliance.appliance0.uid

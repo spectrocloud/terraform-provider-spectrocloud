@@ -65,7 +65,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     region          = var.aws_region
     vpc_id          = var.aws_vpc_id
     azs             = var.azs != [] ? var.azs : null
-    az_subnets      = var.master_azs_subnets_map != {} ? var.master_azs_subnets_map : null
+    az_subnets      = var.cp_azs_subnets_map != {} ? var.cp_azs_subnets_map : null
   }
 
   machine_pool {
@@ -73,7 +73,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     count         = 1
     instance_type = "t3.large"
     azs           = var.azs != [] ? var.azs : null
-    az_subnets    = var.master_azs_subnets_map != {} ? var.master_azs_subnets_map : null
+    az_subnets    = var.cp_azs_subnets_map != {} ? var.cp_azs_subnets_map : null
     disk_size_gb  = 30
 
     additional_labels = {
