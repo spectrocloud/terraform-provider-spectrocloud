@@ -19,18 +19,19 @@ func dataSourcePack() *schema.Resource {
 			"filters": {
 				Type:          schema.TypeString,
 				Optional:      true,
-				ConflictsWith: []string{"id", "cloud", "name", "version", "registry_uid"},
+				ConflictsWith: []string{"id", "cloud", "name", "version"},
 			},
 			"id": {
 				Type:          schema.TypeString,
 				Computed:      true,
 				Optional:      true,
-				ConflictsWith: []string{"filters", "cloud", "name", "version", "registry_uid"},
+				ConflictsWith: []string{"filters", "cloud", "name", "version"},
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Computed: true,
-				Optional: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "The name of the pack.",
 			},
 			"cloud": {
 				Type:     schema.TypeSet,
@@ -42,14 +43,15 @@ func dataSourcePack() *schema.Resource {
 				},
 			},
 			"version": {
-				Type:     schema.TypeString,
-				Computed: true,
-				Optional: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "The version of the pack.",
 			},
 			"registry_uid": {
-				Type:     schema.TypeString,
-				Computed: true,
-				Optional: true,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ExactlyOneOf: []string{"id", "filters", "registry_uid"},
 			},
 			"type": {
 				Type:     schema.TypeString,
@@ -57,8 +59,9 @@ func dataSourcePack() *schema.Resource {
 				Optional: true,
 			},
 			"values": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "This is a stringified YAML object containing the pack configuration details. ",
 			},
 		},
 	}
