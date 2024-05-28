@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	"log"
 	"time"
 
@@ -22,7 +23,10 @@ func resourceClusterGcp() *schema.Resource {
 		ReadContext:   resourceClusterGcpRead,
 		UpdateContext: resourceClusterGcpUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing GCP clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterGcpImport,
+		},
+		Description: "Resource for managing GCP clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -294,6 +298,11 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diags
 	}
 
+	configUID := cluster.Spec.CloudConfigRef.UID
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
+
 	diagnostics, done := readCommonFields(c, d, cluster)
 	if done {
 		return diagnostics
@@ -310,6 +319,12 @@ func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V
 	if config, err := c.GetCloudConfigGcp(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("cloud_config", flattenClusterConfigsGcp(config)); err != nil {
+			return diag.FromErr(err)
+		}
 		mp := flattenMachinePoolConfigsGcp(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapGcp, mp, configUID, ClusterContext)
 		if err != nil {
@@ -320,6 +335,24 @@ func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V
 		}
 	}
 	return diag.Diagnostics{}
+}
+
+func flattenClusterConfigsGcp(config *models.V1GcpCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+	m := make(map[string]interface{})
+
+	if config.Spec.ClusterConfig.Project != nil {
+		m["project"] = config.Spec.ClusterConfig.Project
+	}
+	if config.Spec.ClusterConfig.Network != "" {
+		m["network"] = config.Spec.ClusterConfig.Network
+	}
+	if ptr.String(config.Spec.ClusterConfig.Region) != "" {
+		m["region"] = ptr.String(config.Spec.ClusterConfig.Region)
+	}
+	return []interface{}{m}
 }
 
 func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig) []interface{} {
