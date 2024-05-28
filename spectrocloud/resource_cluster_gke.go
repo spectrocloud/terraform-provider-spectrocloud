@@ -272,6 +272,12 @@ func resourceClusterGkeRead(ctx context.Context, d *schema.ResourceData, m inter
 		return diag.FromErr(err)
 	}
 
+	// verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_gke", cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	diagnostics, done := readCommonFields(c, d, cluster)
 	if done {
 		return diagnostics

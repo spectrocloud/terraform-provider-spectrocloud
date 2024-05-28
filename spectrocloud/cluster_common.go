@@ -24,6 +24,7 @@ var (
 		"spectrocloud_cluster_openstack":    "openstack",
 		"spectrocloud_cluster_tke":          "tke",
 		"spectrocloud_cluster_vsphere":      "vsphere",
+		"spectrocloud_cluster_gke":          "gke",
 	}
 )
 

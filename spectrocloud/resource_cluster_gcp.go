@@ -303,6 +303,12 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
+	// verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_gcp", cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	diagnostics, done := readCommonFields(c, d, cluster)
 	if done {
 		return diagnostics
