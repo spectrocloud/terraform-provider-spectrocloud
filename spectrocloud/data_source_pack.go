@@ -189,6 +189,10 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	err = d.Set("type", pack.Spec.Type)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }
