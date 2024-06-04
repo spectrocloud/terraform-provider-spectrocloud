@@ -172,3 +172,21 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 
 	return nil
 }
+
+func flattenClusterProfileForImport(c *client.V1Client, d *schema.ResourceData) ([]interface{}, error) {
+	clusterContext := "project"
+	if v, ok := d.GetOk("context"); ok {
+		clusterContext = v.(string)
+	}
+	clusterProfiles := make([]interface{}, 0)
+	cluster, err := c.GetCluster(clusterContext, d.Id())
+	if err != nil {
+		return clusterProfiles, err
+	}
+	for _, profileTemplate := range cluster.Spec.ClusterProfileTemplates {
+		profile := make(map[string]interface{})
+		profile["id"] = profileTemplate.UID
+		clusterProfiles = append(clusterProfiles, profile)
+	}
+	return clusterProfiles, nil
+}

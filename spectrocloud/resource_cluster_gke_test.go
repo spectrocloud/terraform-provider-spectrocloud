@@ -1,7 +1,9 @@
 package spectrocloud
 
 import (
+	"errors"
 	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -110,4 +112,86 @@ func TestFlattenMachinePoolConfigsGke(t *testing.T) {
 	assert.Equal(t, 2, pool2["count"])
 	assert.Equal(t, "n1-standard-4", pool2["instance_type"])
 	assert.Equal(t, 200, pool2["disk_size_gb"])
+}
+
+func TestFlattenClusterProfileForImport(t *testing.T) {
+	m := &client.V1Client{
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
+			var profiles []*models.V1ClusterProfileTemplate
+			p1 := &models.V1ClusterProfileTemplate{
+				CloudType:        "",
+				Name:             "",
+				PackServerRefs:   nil,
+				PackServerSecret: "",
+				Packs:            nil,
+				ProfileVersion:   "",
+				RelatedObject:    nil,
+				Type:             "",
+				UID:              "profile-1",
+				Version:          0,
+			}
+			p2 := &models.V1ClusterProfileTemplate{
+				CloudType:        "",
+				Name:             "",
+				PackServerRefs:   nil,
+				PackServerSecret: "",
+				Packs:            nil,
+				ProfileVersion:   "",
+				RelatedObject:    nil,
+				Type:             "",
+				UID:              "profile-2",
+				Version:          0,
+			}
+			profiles = append(profiles, p1)
+			profiles = append(profiles, p2)
+
+			cluster := &models.V1SpectroCluster{
+				APIVersion: "",
+				Kind:       "",
+				Metadata:   nil,
+				Spec: &models.V1SpectroClusterSpec{
+					CloudConfigRef:          nil,
+					CloudType:               "",
+					ClusterConfig:           nil,
+					ClusterProfileTemplates: profiles,
+					ClusterType:             "",
+				},
+				Status: nil,
+			}
+			return cluster, nil
+		},
+	}
+
+	// Test case: Successfully retrieve cluster profiles
+	clusterContext := "project"
+	clusterID := "test-cluster-id"
+	clusterProfiles := []interface{}{
+		map[string]interface{}{"id": "profile-1"},
+		map[string]interface{}{"id": "profile-2"},
+	}
+	mockResourceData := resourceClusterGke().TestResourceData()
+	err := mockResourceData.Set("cluster_profile", clusterProfiles)
+	if err != nil {
+		return
+	}
+	err = mockResourceData.Set("context", clusterContext)
+	if err != nil {
+		return
+	}
+	mockResourceData.SetId(clusterID)
+
+	result, err := flattenClusterProfileForImport(m, mockResourceData)
+	assert.NoError(t, err)
+	assert.Equal(t, clusterProfiles, result)
+
+	//Test case: Error retrieving cluster
+	m = &client.V1Client{
+		GetClusterFn: func(scope, uid string) (*models.V1SpectroCluster, error) {
+
+			return nil, errors.New("error retrieving cluster")
+		},
+	}
+	result, err = flattenClusterProfileForImport(m, mockResourceData)
+	assert.Error(t, err)
+	assert.Empty(t, result)
 }
