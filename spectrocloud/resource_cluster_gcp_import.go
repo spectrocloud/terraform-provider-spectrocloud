@@ -3,20 +3,18 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
-func resourceClusterGkeImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+func resourceClusterGcpImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	c := m.(*client.V1Client)
-
 	err := GetCommonCluster(d, c)
 	if err != nil {
 		return nil, err
 	}
 
-	diags := resourceClusterGkeRead(ctx, d, m)
+	diags := resourceClusterGcpRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
