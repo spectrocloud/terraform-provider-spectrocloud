@@ -475,11 +475,25 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 	}
 
 	ret := make(map[string]interface{})
+	if cloudConfig.Spec.ClusterConfig == nil {
+		return cloudConfigFlatten
+	}
+	if cloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint != nil {
+		cpEndpoint := cloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint
+		if cpEndpoint.Type != "" {
+			ret["network_type"] = cpEndpoint.Type
+		}
 
-	cpEndpoint := cloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint
-	placement := cloudConfig.Spec.ClusterConfig.Placement
-	ret["datacenter"] = placement.Datacenter
-	ret["folder"] = placement.Folder
+		if cpEndpoint.DdnsSearchDomain != "" {
+			ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
+		}
+	}
+	if cloudConfig.Spec.ClusterConfig.Placement != nil {
+		placement := cloudConfig.Spec.ClusterConfig.Placement
+		ret["datacenter"] = placement.Datacenter
+		ret["folder"] = placement.Folder
+	}
+
 	if _, ok := d.GetOk("cloud_config.0.ssh_key"); ok {
 		ret["ssh_key"] = strings.TrimSpace(cloudConfig.Spec.ClusterConfig.SSHKeys[0])
 	}
@@ -491,14 +505,6 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 	}
 
 	ret["static_ip"] = cloudConfig.Spec.ClusterConfig.StaticIP
-
-	if cpEndpoint.Type != "" {
-		ret["network_type"] = cpEndpoint.Type
-	}
-
-	if cpEndpoint.DdnsSearchDomain != "" {
-		ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
-	}
 
 	if cloudConfig.Spec.ClusterConfig.NtpServers != nil {
 		ret["ntp_servers"] = cloudConfig.Spec.ClusterConfig.NtpServers
