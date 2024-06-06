@@ -25,7 +25,10 @@ func resourceClusterVsphere() *schema.Resource {
 		ReadContext:   resourceClusterVsphereRead,
 		UpdateContext: resourceClusterVsphereUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "A resource to manage a vSphere cluster in Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterVsphereImport,
+		},
+		Description: "A resource to manage a vSphere cluster in Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
@@ -414,6 +417,13 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+			return diag.FromErr(err)
+		}
+		cloudConfigFlatten := flattenClusterConfigsVsphere(d, config)
+		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
+			return diag.FromErr(err)
+		}
 		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapVsphere, mp, configUID, ClusterContext)
 		if err != nil {
@@ -476,6 +486,10 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 	if _, ok := d.GetOk("cloud_config.0.ssh_keys"); ok {
 		ret["ssh_keys"] = cloudConfig.Spec.ClusterConfig.SSHKeys
 	}
+	if len(cloudConfig.Spec.ClusterConfig.SSHKeys) != 0 {
+		ret["ssh_keys"] = cloudConfig.Spec.ClusterConfig.SSHKeys
+	}
+
 	ret["static_ip"] = cloudConfig.Spec.ClusterConfig.StaticIP
 
 	if cpEndpoint.Type != "" {
