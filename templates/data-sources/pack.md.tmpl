@@ -45,7 +45,7 @@ data "spectrocloud_registry" "palette_registry_oci" {
 }
 
 
-data "spectrocloud_pack" "hellouniverse" {
+data "spectrocloud_pack" "cni" {
   filters = "spec.cloudTypes=edge-nativeANDspec.layer=cniANDspec.displayName=CalicoANDspec.version>3.26.9ANDspec.registryUid=${data.spectrocloud_registry.palette_registry_oci.id}"
 }
 ```
