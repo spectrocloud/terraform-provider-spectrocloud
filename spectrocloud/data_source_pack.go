@@ -14,21 +14,25 @@ import (
 func dataSourcePack() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcePackRead,
+		Description: "This data resource provides the ability to search for a pack in the Palette registries. It supports more advanced search criteria than the `pack_simple` data source.",
 
 		Schema: map[string]*schema.Schema{
 			"filters": {
 				Type:          schema.TypeString,
 				Optional:      true,
+				Description:  "Filters to apply when searching for a pack. This is a string of the form 'key1=value1' with 'AND', 'OR` operators. Refer to the Palette API [pack search API endpoint documentation](https://docs.spectrocloud.com/api/v1/v-1-packs-search/) for filter examples..",
 				ConflictsWith: []string{"id", "cloud", "name", "version", "registry_uid"},
 			},
 			"id": {
 				Type:          schema.TypeString,
 				Computed:      true,
 				Optional:      true,
+				Description:  "The UID of the pack returned.",
 				ConflictsWith: []string{"filters", "cloud", "name", "version", "registry_uid"},
 			},
 			"name": {
 				Type:     schema.TypeString,
+				Description: "The name of the pack to search for.",
 				Computed: true,
 				Optional: true,
 			},
@@ -36,6 +40,7 @@ func dataSourcePack() *schema.Resource {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Computed: true,
+				Description: "Filter results by cloud type. If not provided, all cloud types are returned.",
 				Set:      schema.HashString,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -43,21 +48,25 @@ func dataSourcePack() *schema.Resource {
 			},
 			"version": {
 				Type:     schema.TypeString,
+				Description: "The version of the pack to search for.",
 				Computed: true,
 				Optional: true,
 			},
 			"registry_uid": {
 				Type:     schema.TypeString,
+				Description: "The UID of the registry to search for the pack in. This is a required parameter starting from version 0.21.0.",
 				Computed: true,
 				Optional: true,
 			},
 			"type": {
 				Type:     schema.TypeString,
+				Description: "The type of pack to search for. Supported values are `helm`, `manifest`, `container`, `operator-instance`.",
 				Computed: true,
 				Optional: true,
 			},
 			"values": {
 				Type:     schema.TypeString,
+				Description: "The YAML values of the pack returned as string.",
 				Computed: true,
 			},
 		},

@@ -16,6 +16,7 @@ import (
 func dataSourcePackSimple() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcePackReadSimple,
+		Description: "This data resource provides a simpler user experience for searching for a pack in Palette registries.",
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -39,7 +40,7 @@ func dataSourcePackSimple() *schema.Resource {
 			"registry_uid": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The unique identifier of the registry the pack belongs to.",
+				Description: "The unique identifier of the registry the pack belongs to. This is a required parameter starting from version 0.21.0",
 			},
 			"type": {
 				Type:         schema.TypeString,
