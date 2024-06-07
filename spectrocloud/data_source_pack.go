@@ -60,6 +60,7 @@ func dataSourcePack() *schema.Resource {
 			},
 			"type": {
 				Type:     schema.TypeString,
+				Description: "The type of pack to search for. Supported values are `helm`, `manifest`, `container`, `operator-instance`.",
 				Computed: true,
 				Optional: true,
 			},
