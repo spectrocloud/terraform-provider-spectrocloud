@@ -92,4 +92,11 @@ resource "spectrocloud_cluster_openstack" "cluster" {
     azs           = ["nova"]
   }
 
+  # Custom timeouts for each CRUD operation
+  #timeouts {
+  #  create = "120m"
+  #  update = "120m"
+  #  delete = "120m"
+  #}
+
 }
