@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"

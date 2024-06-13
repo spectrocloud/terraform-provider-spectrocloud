@@ -3,7 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"errors"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
 	"testing"

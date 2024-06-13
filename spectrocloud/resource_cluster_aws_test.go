@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 )
 
 func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
