@@ -3,12 +3,11 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
-func resourceClusterMaasImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+func resourceClusterOpenstackImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	// m is the client, which can be used to make API requests to the infrastructure
 	c := m.(*client.V1Client)
 
@@ -17,7 +16,7 @@ func resourceClusterMaasImport(ctx context.Context, d *schema.ResourceData, m in
 		return nil, err
 	}
 
-	diags := resourceClusterMaasRead(ctx, d, m)
+	diags := resourceClusterOpenStackRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}

@@ -27,5 +27,10 @@ func resourceClusterAzureImport(ctx context.Context, d *schema.ResourceData, m i
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
 
+	err = setTFDefaultValueForClusterImport(d)
+	if err != nil {
+		return nil, err
+	}
+
 	return []*schema.ResourceData{d}, nil
 }

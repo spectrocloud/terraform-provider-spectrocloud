@@ -21,7 +21,10 @@ func resourceClusterTke() *schema.Resource {
 		ReadContext:   resourceClusterTkeRead,
 		UpdateContext: resourceClusterTkeUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing TKE clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterTkeImport,
+		},
+		Description: "Resource for managing TKE clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -310,6 +313,11 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diags
 	}
 
+	err = ValidateCloudType("spectrocloud_cluster_tke", cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	configUID := cluster.Spec.CloudConfigRef.UID
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
@@ -318,6 +326,15 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 	if config, err := c.GetCloudConfigTke(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
+			if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if err := d.Set("cloud_config", flattenClusterConfigsTke(config)); err != nil {
+			return diag.FromErr(err)
+		}
+
 		mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapTke, mp, configUID, ClusterContext)
 		if err != nil {
@@ -334,6 +351,40 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	return diags
+}
+
+func flattenClusterConfigsTke(config *models.V1TencentCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+
+	m := make(map[string]interface{})
+
+	if config.Spec.ClusterConfig.Region != nil {
+		m["region"] = *config.Spec.ClusterConfig.Region
+	}
+	if config.Spec.ClusterConfig.SSHKeyIDs != nil {
+		m["ssh_key_name"] = config.Spec.ClusterConfig.SSHKeyIDs
+	}
+	if config.Spec.ClusterConfig.VpcID != "" {
+		m["vpc_id"] = config.Spec.ClusterConfig.VpcID
+	}
+	if config.Spec.ClusterConfig.EndpointAccess != nil {
+		if config.Spec.ClusterConfig.EndpointAccess.Private == true {
+			m["endpoint_access"] = "private"
+		}
+		if config.Spec.ClusterConfig.EndpointAccess.Public == true {
+			m["endpoint_access"] = "public"
+		}
+		if config.Spec.ClusterConfig.EndpointAccess.Private == true && config.Spec.ClusterConfig.EndpointAccess.Public == true {
+			m["endpoint_access"] = "private_and_public"
+		}
+		if config.Spec.ClusterConfig.EndpointAccess.PublicCIDRs != nil {
+			m["public_access_cidrs"] = config.Spec.ClusterConfig.EndpointAccess.PublicCIDRs
+		}
+	}
+
+	return []interface{}{m}
 }
 
 func flattenMachinePoolConfigsTke(machinePools []*models.V1TencentMachinePoolConfig) []interface{} {
