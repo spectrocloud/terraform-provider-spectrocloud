@@ -21,14 +21,14 @@ func dataSourcePack() *schema.Resource {
 				Type:          schema.TypeString,
 				Optional:      true,
 				Description:  "Filters to apply when searching for a pack. This is a string of the form 'key1=value1' with 'AND', 'OR` operators. Refer to the Palette API [pack search API endpoint documentation](https://docs.spectrocloud.com/api/v1/v-1-packs-search/) for filter examples..",
-				ConflictsWith: []string{"id", "cloud", "name", "version"},
+				ConflictsWith: []string{"id", "cloud", "name", "version", "registry_uid"},
 			},
 			"id": {
 				Type:          schema.TypeString,
 				Computed:      true,
 				Optional:      true,
 				Description:  "The UID of the pack returned.",
-				ConflictsWith: []string{"filters", "cloud", "name", "version"},
+				ConflictsWith: []string{"filters", "cloud", "name", "version", "registry_uid"},
 			},
 			"name": {
 				Type:     schema.TypeString,
@@ -55,7 +55,6 @@ func dataSourcePack() *schema.Resource {
 			"registry_uid": {
 				Type:     schema.TypeString,
 				Description: "The UID of the registry to search for the pack in. This is a required parameter starting from version 0.21.0.",
-        ExactlyOneOf: []string{"id", "filters", "registry_uid"},
 				Computed: true,
 				Optional: true,
 			},
@@ -193,10 +192,6 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		return diag.FromErr(err)
 	}
 	err = d.Set("values", pack.Spec.Values)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = d.Set("type", pack.Spec.Type)
 	if err != nil {
 		return diag.FromErr(err)
 	}
