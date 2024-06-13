@@ -2,14 +2,16 @@
 page_title: "spectrocloud_pack_simple Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  This data resource provides a simpler user experience for searching for a pack in Palette registries.
 ---
 
 # spectrocloud_pack_simple (Data Source)
 
-  
+  This data resource provides a simpler user experience for searching for a pack in Palette registries.
 
 ## Example Usage
+
+~> Starting with version 0.21.0 the attribute `registry_uid` is required.
 
 ```hcl
 data "spectrocloud_registry" "registry" {
@@ -36,7 +38,7 @@ data "spectrocloud_pack_simple" "pack" {
 ### Optional
 
 - `context` (String) Indicates in which context registry should be searched for the pack values. Allowed values are `system`, `project` or `tenant`. Defaults to `project`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
-- `registry_uid` (String) The unique identifier of the registry the pack belongs to.
+- `registry_uid` (String) The unique identifier of the registry the pack belongs to. This is a required parameter starting from version 0.21.0
 - `version` (String) The version of the pack.
 
 ### Read-Only

@@ -22,6 +22,19 @@ func resourceClusterAksImport(ctx context.Context, d *schema.ResourceData, m int
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
 
+	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
+		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
+	}
+
+	err = setTFDefaultValueForClusterImport(d)
+	if err != nil {
+		return nil, err
+	}
+
 	// Return the resource data. In most cases, this method is only used to
 	// import one resource at a time, so you should return the resource data
 	// in a slice with a single element.
