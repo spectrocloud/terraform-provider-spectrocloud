@@ -22,7 +22,10 @@ func resourceClusterEks() *schema.Resource {
 		ReadContext:   resourceClusterEksRead,
 		UpdateContext: resourceClusterEksUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing EKS clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterEksImport,
+		},
+		Description: "Resource for managing EKS clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -416,7 +419,9 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if config, err = c.GetCloudConfigEks(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	}
-
+	if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+		return diag.FromErr(err)
+	}
 	cloudConfigFlatten := flattenClusterConfigsEKS(config)
 	if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
 		return diag.FromErr(err)
@@ -434,6 +439,12 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 
 	fp := flattenFargateProfilesEks(config.Spec.FargateProfiles)
 	if err := d.Set("fargate_profile", fp); err != nil {
+		return diag.FromErr(err)
+	}
+
+	// verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_eks", cluster)
+	if err != nil {
 		return diag.FromErr(err)
 	}
 
