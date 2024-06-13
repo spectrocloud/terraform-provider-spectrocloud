@@ -26,7 +26,7 @@ func resourceClusterVsphereImport(ctx context.Context, d *schema.ResourceData, m
 	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
-	err = setTerraformDefaultValueForClusterImport(d)
+	err = setTFDefaultValueForClusterImport(d)
 	if err != nil {
 		return nil, err
 	}
