@@ -370,13 +370,13 @@ func flattenClusterConfigsTke(config *models.V1TencentCloudConfig) []interface{}
 		m["vpc_id"] = config.Spec.ClusterConfig.VpcID
 	}
 	if config.Spec.ClusterConfig.EndpointAccess != nil {
-		if config.Spec.ClusterConfig.EndpointAccess.Private == true {
+		if config.Spec.ClusterConfig.EndpointAccess.Private {
 			m["endpoint_access"] = "private"
 		}
-		if config.Spec.ClusterConfig.EndpointAccess.Public == true {
+		if config.Spec.ClusterConfig.EndpointAccess.Public {
 			m["endpoint_access"] = "public"
 		}
-		if config.Spec.ClusterConfig.EndpointAccess.Private == true && config.Spec.ClusterConfig.EndpointAccess.Public == true {
+		if config.Spec.ClusterConfig.EndpointAccess.Private && config.Spec.ClusterConfig.EndpointAccess.Public {
 			m["endpoint_access"] = "private_and_public"
 		}
 		if config.Spec.ClusterConfig.EndpointAccess.PublicCIDRs != nil {
