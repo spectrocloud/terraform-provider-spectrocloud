@@ -56,8 +56,7 @@ func dataSourcePack() *schema.Resource {
 				Type:     schema.TypeString,
 				Description: "The UID of the registry to search for the pack in. This is a required parameter starting from version 0.21.0.",
         ExactlyOneOf: []string{"id", "filters", "registry_uid"},
-				Computed: true,
-				Optional: true,
+				Required: true,
 			},
 			"type": {
 				Type:     schema.TypeString,
