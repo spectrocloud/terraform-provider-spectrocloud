@@ -137,3 +137,32 @@ func updateAgentUpgradeSetting(c *client.V1Client, d *schema.ResourceData) error
 	}
 	return nil
 }
+
+// This function is called during import cluster from palette to set default terraform value
+func setTerraformDefaultValueForClusterImport(d *schema.ResourceData) error {
+	err := d.Set("apply_setting", "DownloadAndInstall")
+	if err != nil {
+		return err
+	}
+	err = d.Set("force_delete", false)
+	if err != nil {
+		return err
+	}
+	err = d.Set("force_delete_delay", 20)
+	if err != nil {
+		return err
+	}
+	err = d.Set("os_patch_on_boot", false)
+	if err != nil {
+		return err
+	}
+	err = d.Set("pause_agent_upgrades", "unlock")
+	if err != nil {
+		return err
+	}
+	err = d.Set("skip_completion", false)
+	if err != nil {
+		return err
+	}
+	return nil
+}

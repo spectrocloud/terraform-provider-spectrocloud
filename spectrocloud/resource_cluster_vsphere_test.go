@@ -659,7 +659,15 @@ func getCloudConfig() *models.V1VsphereCloudConfig {
 		Kind:       "",
 		Metadata:   nil,
 		Spec: &models.V1VsphereCloudConfigSpec{
-			CloudAccountRef:   nil,
+			CloudAccountRef: &models.V1ObjectReference{
+				APIVersion:      "",
+				FieldPath:       "",
+				Kind:            "",
+				Name:            "",
+				Namespace:       "",
+				ResourceVersion: "",
+				UID:             "vmware-basic-account-id",
+			},
 			ClusterConfig:     nil,
 			EdgeHostRef:       nil,
 			MachinePoolConfig: getMPools(),
