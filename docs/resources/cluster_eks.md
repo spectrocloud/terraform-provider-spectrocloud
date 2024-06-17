@@ -82,6 +82,7 @@ resource "spectrocloud_cluster_eks" "cluster" {
     az_subnets = {
       "us-west-2a" = "subnet-0d4978ddbff16c"
     }
+    encryption_config_arn = "arn:aws:kms:us-west-2:123456789012:key/1234abcd-12ab-34cd-56ef-1234567890ab"
   }
 }
 ```
@@ -140,7 +141,7 @@ Optional:
 
 - `az_subnets` (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
 - `azs` (List of String) Mutually exclusive with `az_subnets`. Use for Dynamic provisioning.
-- `encryption_config_arn` (String)
+- `encryption_config_arn` (String) The ARN of the KMS encryption key to use for the cluster. Refer to the [Enable Secrets Encryption for EKS Cluster](https://docs.spectrocloud.com/clusters/public-cloud/aws/enable-secrets-encryption-kms-key/) for additional guidance.
 - `endpoint_access` (String) Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.
 - `private_access_cidrs` (Set of String) List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.
 - `public_access_cidrs` (Set of String) List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.

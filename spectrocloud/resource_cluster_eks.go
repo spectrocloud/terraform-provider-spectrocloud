@@ -206,6 +206,7 @@ func resourceClusterEks() *schema.Resource {
 						},
 						"encryption_config_arn": {
 							Type:     schema.TypeString,
+							Description: "The ARN of the KMS encryption key to use for the cluster. Refer to the [Enable Secrets Encryption for EKS Cluster](https://docs.spectrocloud.com/clusters/public-cloud/aws/enable-secrets-encryption-kms-key/) for additional guidance.",
 							ForceNew: true,
 							Optional: true,
 						},
