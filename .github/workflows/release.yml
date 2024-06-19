@@ -48,7 +48,7 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --rm-dist
+          args: release --clean
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
