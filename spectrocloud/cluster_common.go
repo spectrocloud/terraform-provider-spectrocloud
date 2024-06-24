@@ -139,8 +139,17 @@ func updateAgentUpgradeSetting(c *client.V1Client, d *schema.ResourceData) error
 }
 
 // This function is called during import cluster from palette to set default terraform value
-func setTFDefaultValueForClusterImport(d *schema.ResourceData) error {
-	err := d.Set("apply_setting", "DownloadAndInstall")
+func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.ResourceData) error {
+	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	if err != nil {
+		return err
+	}
+	err = d.Set("cluster_profile", clusterProfiles)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("apply_setting", "DownloadAndInstall")
 	if err != nil {
 		return err
 	}
