@@ -478,6 +478,7 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 	if cloudConfig.Spec.ClusterConfig == nil {
 		return cloudConfigFlatten
 	}
+
 	if cloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint != nil {
 		cpEndpoint := cloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint
 		if cpEndpoint.Type != "" {
@@ -488,18 +489,22 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 			ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
 		}
 	}
+	//Setting up placement attributes if its defined
 	if cloudConfig.Spec.ClusterConfig.Placement != nil {
 		placement := cloudConfig.Spec.ClusterConfig.Placement
 		ret["datacenter"] = placement.Datacenter
 		ret["folder"] = placement.Folder
 	}
-
+	//Currently we do support ssh_key and ssh_keys in vsphere cluster.
+	//Handling flatten for if ssh_key is set
 	if _, ok := d.GetOk("cloud_config.0.ssh_key"); ok {
 		ret["ssh_key"] = strings.TrimSpace(cloudConfig.Spec.ClusterConfig.SSHKeys[0])
 	}
+	//Handling flatten for if ssh_keys is set
 	if _, ok := d.GetOk("cloud_config.0.ssh_keys"); ok {
 		ret["ssh_keys"] = cloudConfig.Spec.ClusterConfig.SSHKeys
 	}
+	//During cluster import by default we are setting up ssh_keys, above 2 conditions will not be true for import case.
 	if len(cloudConfig.Spec.ClusterConfig.SSHKeys) != 0 {
 		ret["ssh_keys"] = cloudConfig.Spec.ClusterConfig.SSHKeys
 	}
