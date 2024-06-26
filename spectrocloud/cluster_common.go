@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -149,23 +150,43 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 		return err
 	}
 
-	err = d.Set("apply_setting", "DownloadAndInstall")
+	var diags diag.Diagnostics
+	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return err
+	}
+
+	if cluster.Status.SpcApply != nil {
+		err = d.Set("apply_setting", cluster.Status.SpcApply.ActionType)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster))
+	if err != nil {
+		return err
+	}
+	if cluster.Spec.ClusterConfig.MachineManagementConfig != nil {
+		err = d.Set("os_patch_on_boot", cluster.Spec.ClusterConfig.MachineManagementConfig.OsPatchConfig.PatchOnBoot)
+		if err != nil {
+			return err
+		}
+		err = d.Set("os_patch_schedule", cluster.Spec.ClusterConfig.MachineManagementConfig.OsPatchConfig.Schedule)
+		if err != nil {
+			return err
+		}
+	}
+	if cluster.Status.Repave != nil {
+		if err = d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
+			return err
+		}
 	}
 	err = d.Set("force_delete", false)
 	if err != nil {
 		return err
 	}
 	err = d.Set("force_delete_delay", 20)
-	if err != nil {
-		return err
-	}
-	err = d.Set("os_patch_on_boot", false)
-	if err != nil {
-		return err
-	}
-	err = d.Set("pause_agent_upgrades", "unlock")
 	if err != nil {
 		return err
 	}
