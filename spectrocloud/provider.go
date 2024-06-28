@@ -234,7 +234,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	}
 
 	if uid != "" {
-		client.WithProjectUID(uid)(c)
+		//client.WithProjectUID(uid)(c)
+		client.SetProjectUID(uid)(c)
 	}
 
 	return c, diags
