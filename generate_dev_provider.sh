@@ -48,16 +48,16 @@ function downloadProviderFromRegistry() {
 
 function generateSpectrocloudProvider() {
   rm -rf dist
-  goreleaser build --skip-validate --rm-dist -f dev/dev-goreleaser.yml
+  goreleaser build --skip validate --clean -f dev/dev-goreleaser.yml
 }
 
 function generateProvidersPlugins() {
   # copy spectrocloud generated provider
-tfdir=$(find dist -type d | grep terraform-provider-spectrocloud_"$OS_VERSION")
+  tfdir=$(find dist -type d | grep terraform-provider-spectrocloud_"$OS_VERSION")
   chmod -R +x $tfdir 
   mkdir -p providers/plugins/registry.terraform.io/spectrocloud/spectrocloud/"$PROVIDER_VERSION"/"$OS_VERSION"
   cp $tfdir/* providers/plugins/registry.terraform.io/spectrocloud/spectrocloud/"$PROVIDER_VERSION"/"$OS_VERSION"/ 
-  # copy other downloded providers
+  # copy other downloaded providers
   cp -R .terraform.d/plugins providers/
   rm -rf .terraform.d
 }
