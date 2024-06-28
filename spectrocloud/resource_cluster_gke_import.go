@@ -21,12 +21,10 @@ func resourceClusterGkeImport(ctx context.Context, d *schema.ResourceData, m int
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
 
-	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	// cluster profile and common default cluster attribute is get set here
+	err = flattenCommonAttributeForClusterImport(c, d)
 	if err != nil {
 		return nil, err
-	}
-	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
-		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
 
 	// Return the resource data. In most cases, this method is only used to

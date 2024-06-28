@@ -23,7 +23,10 @@ func resourceClusterOpenStack() *schema.Resource {
 		ReadContext:   resourceClusterOpenStackRead,
 		UpdateContext: resourceClusterOpenStackUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing Openstack clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterOpenstackImport,
+		},
+		Description: "Resource for managing Openstack clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
@@ -380,6 +383,11 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 		return diags
 	}
 
+	err = ValidateCloudType("spectrocloud_cluster_openstack", cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	configUID := cluster.Spec.CloudConfigRef.UID
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
@@ -388,6 +396,16 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if config, err := c.GetCloudConfigOpenStack(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+
+		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
+			if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		if err := d.Set("cloud_config", flattenClusterConfigsOpenstack(config)); err != nil {
+			return diag.FromErr(err)
+		}
+
 		mp := flattenMachinePoolConfigsOpenStack(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapOpenStack, mp, configUID, ClusterContext)
 		if err != nil {
@@ -404,6 +422,41 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	}
 
 	return diags
+}
+
+func flattenClusterConfigsOpenstack(config *models.V1OpenStackCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+
+	m := make(map[string]interface{})
+
+	if config.Spec.ClusterConfig.Domain != nil {
+		m["domain"] = *config.Spec.ClusterConfig.Domain
+	}
+	if config.Spec.ClusterConfig.Region != "" {
+		m["region"] = config.Spec.ClusterConfig.Region
+	}
+	if config.Spec.ClusterConfig.Project != nil {
+		m["project"] = config.Spec.ClusterConfig.Project
+	}
+	if config.Spec.ClusterConfig.SSHKeyName != "" {
+		m["ssh_key"] = config.Spec.ClusterConfig.SSHKeyName
+	}
+	if config.Spec.ClusterConfig.Network != nil {
+		m["network_id"] = config.Spec.ClusterConfig.Network.ID
+	}
+	if config.Spec.ClusterConfig.Subnet != nil {
+		m["subnet_id"] = config.Spec.ClusterConfig.Subnet.ID
+	}
+	if config.Spec.ClusterConfig.DNSNameservers != nil {
+		m["dns_servers"] = config.Spec.ClusterConfig.DNSNameservers
+	}
+	if config.Spec.ClusterConfig.NodeCidr != "" {
+		m["subnet_cidr"] = config.Spec.ClusterConfig.NodeCidr
+	}
+
+	return []interface{}{m}
 }
 
 func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachinePoolConfig) []interface{} {

@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"github.com/spectrocloud/gomi/pkg/ptr"
+	"sort"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -273,4 +275,99 @@ func TestFlattenMachinePoolConfigsAzure(t *testing.T) {
 	assert.Equal(t, machinePools[0].Name, actual["name"])
 	assert.Equal(t, machinePools[0].NodeRepaveInterval, actual["node_repave_interval"])
 	assert.Equal(t, machinePools[0].Size, actual["count"])
+}
+
+func TestFlattenClusterConfigsAzure(t *testing.T) {
+	t.Run("NilConfig", func(t *testing.T) {
+		result := flattenClusterConfigsAzure(nil)
+		assert.Equal(t, []interface{}{}, result)
+	})
+
+	t.Run("EmptyConfig", func(t *testing.T) {
+		config := &models.V1AzureCloudConfig{}
+		result := flattenClusterConfigsAzure(config)
+		assert.Equal(t, []interface{}{}, result)
+	})
+
+	t.Run("PartialConfig", func(t *testing.T) {
+		config := &models.V1AzureCloudConfig{
+			Spec: &models.V1AzureCloudConfigSpec{
+				ClusterConfig: &models.V1AzureClusterConfig{
+					SubscriptionID:     types.Ptr("test-subscription-id"),
+					ResourceGroup:      "test-resource-group",
+					Location:           types.Ptr("test-location"),
+					SSHKey:             types.Ptr("test-ssh-key"),
+					StorageAccountName: "test-storage-account",
+					ContainerName:      "test-container",
+					VnetResourceGroup:  "test-network-resource-group",
+					VnetName:           "test-vnet",
+					VnetCidrBlock:      "10.0.0.0/16",
+					ControlPlaneSubnet: &models.V1Subnet{Name: "cp-subnet", CidrBlock: "10.0.1.0/24", SecurityGroupName: "cp-sg"},
+					WorkerSubnet:       &models.V1Subnet{Name: "worker-subnet", CidrBlock: "10.0.2.0/24", SecurityGroupName: "worker-sg"},
+				},
+			},
+		}
+
+		expected := []interface{}{
+			map[string]interface{}{
+				"subscription_id":            ptr.StringPtr("test-subscription-id"),
+				"resource_group":             "test-resource-group",
+				"region":                     ptr.StringPtr("test-location"),
+				"ssh_key":                    ptr.StringPtr("test-ssh-key"),
+				"storage_account_name":       "test-storage-account",
+				"container_name":             "test-container",
+				"network_resource_group":     "test-network-resource-group",
+				"virtual_network_name":       "test-vnet",
+				"virtual_network_cidr_block": "10.0.0.0/16",
+				"control_plane_subnet": []interface{}{
+					map[string]interface{}{
+						"name":                "cp-subnet",
+						"cidr_block":          "10.0.1.0/24",
+						"security_group_name": "cp-sg",
+					},
+				},
+				"worker_node_subnet": []interface{}{
+					map[string]interface{}{
+						"name":                "worker-subnet",
+						"cidr_block":          "10.0.2.0/24",
+						"security_group_name": "worker-sg",
+					},
+				},
+			},
+		}
+
+		result := flattenClusterConfigsAzure(config)
+		sortSliceOfMaps(expected)
+		sortSliceOfMaps(result)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("MissingFields", func(t *testing.T) {
+		config := &models.V1AzureCloudConfig{
+			Spec: &models.V1AzureCloudConfigSpec{
+				ClusterConfig: &models.V1AzureClusterConfig{
+					ResourceGroup: "test-resource-group",
+					Location:      types.Ptr("test-location"),
+				},
+			},
+		}
+
+		expected := []interface{}{
+			map[string]interface{}{
+				"resource_group": "test-resource-group",
+				"region":         ptr.StringPtr("test-location"),
+			},
+		}
+
+		result := flattenClusterConfigsAzure(config)
+		assert.Equal(t, expected, result)
+	})
+}
+
+func sortSliceOfMaps(slice []interface{}) {
+	sort.SliceStable(slice, func(i, j int) bool {
+		mapI := slice[i].(map[string]interface{})
+		mapJ := slice[j].(map[string]interface{})
+		return mapI["name"].(string) < mapJ["name"].(string)
+	})
 }

@@ -25,7 +25,10 @@ func resourceClusterVsphere() *schema.Resource {
 		ReadContext:   resourceClusterVsphereRead,
 		UpdateContext: resourceClusterVsphereUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "A resource to manage a vSphere cluster in Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterVsphereImport,
+		},
+		Description: "A resource to manage a vSphere cluster in Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
@@ -414,6 +417,13 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+			return diag.FromErr(err)
+		}
+		cloudConfigFlatten := flattenClusterConfigsVsphere(d, config)
+		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
+			return diag.FromErr(err)
+		}
 		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapVsphere, mp, configUID, ClusterContext)
 		if err != nil {
@@ -465,26 +475,41 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 	}
 
 	ret := make(map[string]interface{})
+	if cloudConfig.Spec.ClusterConfig == nil {
+		return cloudConfigFlatten
+	}
 
-	cpEndpoint := cloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint
-	placement := cloudConfig.Spec.ClusterConfig.Placement
-	ret["datacenter"] = placement.Datacenter
-	ret["folder"] = placement.Folder
+	if cloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint != nil {
+		cpEndpoint := cloudConfig.Spec.ClusterConfig.ControlPlaneEndpoint
+		if cpEndpoint.Type != "" {
+			ret["network_type"] = cpEndpoint.Type
+		}
+
+		if cpEndpoint.DdnsSearchDomain != "" {
+			ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
+		}
+	}
+	//Setting up placement attributes if its defined
+	if cloudConfig.Spec.ClusterConfig.Placement != nil {
+		placement := cloudConfig.Spec.ClusterConfig.Placement
+		ret["datacenter"] = placement.Datacenter
+		ret["folder"] = placement.Folder
+	}
+	//Currently we do support ssh_key and ssh_keys in vsphere cluster.
+	//Handling flatten for if ssh_key is set
 	if _, ok := d.GetOk("cloud_config.0.ssh_key"); ok {
 		ret["ssh_key"] = strings.TrimSpace(cloudConfig.Spec.ClusterConfig.SSHKeys[0])
 	}
+	//Handling flatten for if ssh_keys is set
 	if _, ok := d.GetOk("cloud_config.0.ssh_keys"); ok {
 		ret["ssh_keys"] = cloudConfig.Spec.ClusterConfig.SSHKeys
 	}
+	//During cluster import by default we are setting up ssh_keys, above 2 conditions will not be true for import case.
+	if len(cloudConfig.Spec.ClusterConfig.SSHKeys) != 0 {
+		ret["ssh_keys"] = cloudConfig.Spec.ClusterConfig.SSHKeys
+	}
+
 	ret["static_ip"] = cloudConfig.Spec.ClusterConfig.StaticIP
-
-	if cpEndpoint.Type != "" {
-		ret["network_type"] = cpEndpoint.Type
-	}
-
-	if cpEndpoint.DdnsSearchDomain != "" {
-		ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
-	}
 
 	if cloudConfig.Spec.ClusterConfig.NtpServers != nil {
 		ret["ntp_servers"] = cloudConfig.Spec.ClusterConfig.NtpServers

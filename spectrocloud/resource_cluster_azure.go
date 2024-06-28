@@ -23,7 +23,10 @@ func resourceClusterAzure() *schema.Resource {
 		ReadContext:   resourceClusterAzureRead,
 		UpdateContext: resourceClusterAzureUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing Azure clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterAzureImport,
+		},
+		Description: "Resource for managing Azure clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -386,7 +389,11 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 		d.SetId("")
 		return diags
 	}
-
+	// verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_azure", cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	diagnostics, done := readCommonFields(c, d, cluster)
 	if done {
 		return diagnostics
@@ -394,7 +401,59 @@ func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m inter
 
 	return flattenCloudConfigAzure(cluster.Spec.CloudConfigRef.UID, d, c)
 }
+func flattenClusterConfigsAzure(config *models.V1AzureCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+	m := make(map[string]interface{})
+	if config.Spec.ClusterConfig.SubscriptionID != nil {
+		m["subscription_id"] = config.Spec.ClusterConfig.SubscriptionID
+	}
+	if config.Spec.ClusterConfig.ResourceGroup != "" {
+		m["resource_group"] = config.Spec.ClusterConfig.ResourceGroup
+	}
+	if config.Spec.ClusterConfig.Location != nil {
+		m["region"] = config.Spec.ClusterConfig.Location
+	}
+	if config.Spec.ClusterConfig.SSHKey != nil {
+		m["ssh_key"] = config.Spec.ClusterConfig.SSHKey
+	}
+	if config.Spec.ClusterConfig.StorageAccountName != "" {
+		m["storage_account_name"] = config.Spec.ClusterConfig.StorageAccountName
+	}
+	if config.Spec.ClusterConfig.ContainerName != "" {
+		m["container_name"] = config.Spec.ClusterConfig.ContainerName
+	}
+	if config.Spec.ClusterConfig.VnetResourceGroup != "" {
+		m["network_resource_group"] = config.Spec.ClusterConfig.VnetResourceGroup
+	}
+	if config.Spec.ClusterConfig.VnetName != "" {
+		m["virtual_network_name"] = config.Spec.ClusterConfig.VnetName
+	}
+	if config.Spec.ClusterConfig.VnetCidrBlock != "" {
+		m["virtual_network_cidr_block"] = config.Spec.ClusterConfig.VnetCidrBlock
+	}
+	if config.Spec.ClusterConfig.VnetResourceGroup != "" && config.Spec.ClusterConfig.VnetName != "" && config.Spec.ClusterConfig.VnetCidrBlock != "" {
+		if config.Spec.ClusterConfig.ControlPlaneSubnet != nil {
+			cpSubnet := map[string]interface{}{
+				"name":                config.Spec.ClusterConfig.ControlPlaneSubnet.Name,
+				"cidr_block":          config.Spec.ClusterConfig.ControlPlaneSubnet.CidrBlock,
+				"security_group_name": config.Spec.ClusterConfig.ControlPlaneSubnet.SecurityGroupName,
+			}
+			m["control_plane_subnet"] = []interface{}{cpSubnet}
+		}
+		if config.Spec.ClusterConfig.WorkerSubnet != nil {
+			workerSubnet := map[string]interface{}{
+				"name":                config.Spec.ClusterConfig.WorkerSubnet.Name,
+				"cidr_block":          config.Spec.ClusterConfig.WorkerSubnet.CidrBlock,
+				"security_group_name": config.Spec.ClusterConfig.WorkerSubnet.SecurityGroupName,
+			}
+			m["worker_node_subnet"] = []interface{}{workerSubnet}
+		}
+	}
 
+	return []interface{}{m}
+}
 func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
@@ -403,6 +462,12 @@ func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client
 	if config, err := c.GetCloudConfigAzure(configUID, ClusterContext); err != nil {
 		return diag.FromErr(err)
 	} else {
+		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("cloud_config", flattenClusterConfigsAzure(config)); err != nil {
+			return diag.FromErr(err)
+		}
 		mp := flattenMachinePoolConfigsAzure(config.Spec.MachinePoolConfig)
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAzure, mp, configUID, ClusterContext)
 		if err != nil {
