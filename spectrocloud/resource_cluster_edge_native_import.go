@@ -34,34 +34,6 @@ func resourceClusterEdgeNativeImport(ctx context.Context, d *schema.ResourceData
 	return []*schema.ResourceData{d}, nil
 }
 
-func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
-	// parse resource ID and scope
-	scope, clusterID, err := ParseResourceID(d)
-	if err != nil {
-		return err
-	}
-
-	// Use the IDs to retrieve the cluster data from the API
-	cluster, err := c.GetCluster(scope, clusterID)
-	if err != nil {
-		return fmt.Errorf("unable to retrieve cluster data: %s", err)
-	}
-
-	err = d.Set("name", cluster.Metadata.Name)
-	if err != nil {
-		return err
-	}
-	err = d.Set("context", cluster.Metadata.Annotations["scope"])
-	if err != nil {
-		return err
-	}
-
-	// Set the ID of the resource in the state. This ID is used to track the
-	// resource and must be set in the state during the import.
-	d.SetId(clusterID)
-	return nil
-}
-
 func ParseResourceID(d *schema.ResourceData) (string, string, error) {
 	// d.Id() will contain the ID of the resource to import. This ID is provided by the user
 	// during the import command, and should be parsed to find the existing resource.
