@@ -729,7 +729,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 						}
 					}
 					// PEM-5013 For day 2 operation hubble is expecting datacenter and folder in machine pool even though TF maintain in cloud config
-					if machinePool.PoolConfig.IsControlPlane == true {
+					if machinePool.PoolConfig.IsControlPlane {
 						cConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 						machinePool.CloudConfig.Placements[0].Datacenter = cConfig["datacenter"].(string)
 						machinePool.CloudConfig.Placements[0].Folder = cConfig["folder"].(string)
