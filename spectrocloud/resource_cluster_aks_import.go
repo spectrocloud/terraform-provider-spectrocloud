@@ -5,14 +5,17 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterAksImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	// m is the client, which can be used to make API requests to the infrastructure
-	c := m.(*client.V1Client)
+	scope, _, err := ParseResourceID(d)
+	if err != nil {
+		return nil, err
+	}
+	c := GetResourceLevelV1Client(m, scope)
 
-	err := GetCommonCluster(d, c)
+	err = GetCommonCluster(d, c)
 	if err != nil {
 		return nil, err
 	}

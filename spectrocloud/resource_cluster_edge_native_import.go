@@ -10,9 +10,13 @@ import (
 )
 
 func resourceClusterEdgeNativeImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	c := m.(*client.V1Client)
+	scope, _, err := ParseResourceID(d)
+	if err != nil {
+		return nil, err
+	}
+	c := GetResourceLevelV1Client(m, scope)
 
-	err := GetCommonCluster(d, c)
+	err = GetCommonCluster(d, c)
 	if err != nil {
 		return nil, err
 	}
@@ -36,13 +40,13 @@ func resourceClusterEdgeNativeImport(ctx context.Context, d *schema.ResourceData
 
 func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
 	// parse resource ID and scope
-	scope, clusterID, err := ParseResourceID(d)
+	_, clusterID, err := ParseResourceID(d)
 	if err != nil {
 		return err
 	}
 
 	// Use the IDs to retrieve the cluster data from the API
-	cluster, err := c.GetCluster(scope, clusterID)
+	cluster, err := c.GetCluster(clusterID)
 	if err != nil {
 		return fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}

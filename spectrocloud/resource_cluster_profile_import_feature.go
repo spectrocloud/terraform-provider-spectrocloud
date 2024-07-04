@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterProfileImportFeature() *schema.Resource {
@@ -38,15 +37,15 @@ func resourceClusterProfileImportFeature() *schema.Resource {
 
 // implement the resource functions
 func resourceClusterProfileImportFeatureCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ProfileContext)
 
 	importFile, err := toClusterProfileImportCreate(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	ProfileContext := d.Get("context").(string)
-	uid, err := c.CreateClusterProfileImport(importFile, ProfileContext)
+	uid, err := c.CreateClusterProfileImport(importFile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -73,7 +72,8 @@ func toClusterProfileImportCreate(d *schema.ResourceData) (*os.File, error) {
 }
 
 func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ProfileContext)
 
 	_, err := c.ClusterProfileExport(d.Id())
 	if err != nil {
@@ -88,8 +88,8 @@ func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.Reso
 }
 
 func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
+	ProfileContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ProfileContext)
 
 	importFile, err := toClusterProfileImportCreate(d)
 	if err != nil {
@@ -97,14 +97,13 @@ func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.Re
 	}
 
 	// Call the API endpoint to delete the cluster profile import resource
-	err = c.DeleteClusterProfile(clusterC, d.Id())
+	err = c.DeleteClusterProfile(d.Id())
 	if err != nil {
 		// Return an error if the API call fails
 		return diag.FromErr(err)
 	}
 
-	ProfileContext := d.Get("context").(string)
-	uid, err := c.CreateClusterProfileImport(importFile, ProfileContext)
+	uid, err := c.CreateClusterProfileImport(importFile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -115,11 +114,11 @@ func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.Re
 }
 
 func resourceClusterProfileImportFeatureDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
+	ProfileContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ProfileContext)
 
 	// Call the API endpoint to delete the cluster profile import resource
-	if err := c.DeleteClusterProfile(clusterC, d.Id()); err != nil {
+	if err := c.DeleteClusterProfile(d.Id()); err != nil {
 		// Return an error if the API call fails
 		return diag.FromErr(err)
 	}

@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceCloudAccountCustom() *schema.Resource {
@@ -56,14 +55,14 @@ func resourceCloudAccountCustom() *schema.Resource {
 }
 
 func resourceCloudAccountCustomCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	accountContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, accountContext)
 	var diags diag.Diagnostics
 
-	accountContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 
 	// For custom cloud we need to validate cloud type id isCustom for all actions.
-	err := c.ValidateCustomCloudType(d.Get("cloud").(string), accountContext)
+	err := c.ValidateCustomCloudType(d.Get("cloud").(string))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -71,7 +70,7 @@ func resourceCloudAccountCustomCreate(ctx context.Context, d *schema.ResourceDat
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	uid, err := c.CreateAccountCustomCloud(account, cloudType, accountContext)
+	uid, err := c.CreateAccountCustomCloud(account, cloudType)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -82,12 +81,13 @@ func resourceCloudAccountCustomCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	var diags diag.Diagnostics
 	accountContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, accountContext)
+	var diags diag.Diagnostics
+
 	cloudType := d.Get("cloud").(string)
 
-	account, err := c.GetCustomCloudAccount(d.Id(), cloudType, accountContext)
+	account, err := c.GetCustomCloudAccount(d.Id(), cloudType)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -104,17 +104,17 @@ func resourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData, m
 }
 
 func resourceCloudAccountCustomUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	accountContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, accountContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-	accountContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 	account, err := toCloudAccountCustom(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = c.UpdateAccountCustomCloud(d.Id(), account, cloudType, accountContext)
+	err = c.UpdateAccountCustomCloud(d.Id(), account, cloudType)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -124,13 +124,13 @@ func resourceCloudAccountCustomUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceCloudAccountCustomDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	accountContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, accountContext)
 
 	var diags diag.Diagnostics
 	customAccountID := d.Id()
-	accountContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
-	err := c.DeleteCloudAccountCustomCloud(customAccountID, cloudType, accountContext)
+	err := c.DeleteCloudAccountCustomCloud(customAccountID, cloudType)
 	if err != nil {
 		return diag.FromErr(err)
 	}

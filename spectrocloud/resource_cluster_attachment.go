@@ -59,16 +59,15 @@ func resourceAddonDeployment() *schema.Resource {
 }
 
 func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
+	clusterScope := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, clusterScope)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	clusterUid := d.Get("cluster_uid").(string)
-	clusterScope := d.Get("context").(string)
 
-	cluster, err := c.GetCluster(clusterScope, clusterUid)
+	cluster, err := c.GetCluster(clusterUid)
 	if err != nil && cluster == nil {
 		return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 	}
@@ -78,7 +77,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, clusterScope, clusterUid, diags, c, false)
+	diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c, false)
 	if isError {
 		return diagnostics
 	}
@@ -88,12 +87,12 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 		//return diag.FromErr(errors.New(fmt.Sprintf("Cluster: %s: Profile is already attached: %s", cluster.Metadata.UID, addonDeployment.Profiles[0].UID)))
 	}
 
-	err = c.CreateAddonDeployment(clusterC, cluster, addonDeployment)
+	err = c.CreateAddonDeployment(cluster, addonDeployment)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	clusterProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
+	clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -137,13 +136,14 @@ func isProfileAttached(cluster *models.V1SpectroCluster, uid string) bool {
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	clusterScope := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, clusterScope)
 
 	var diags diag.Diagnostics
 
 	clusterUid := d.Get("cluster_uid").(string)
-	clusterScope := d.Get("context").(string)
-	cluster, err := c.GetCluster(clusterScope, clusterUid)
+
+	cluster, err := c.GetCluster(clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -161,12 +161,12 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	if d.HasChanges("cluster_uid", "cluster_profile") {
-		c := m.(*client.V1Client)
+		clusterScope := d.Get("context").(string)
+		c := GetResourceLevelV1Client(m, clusterScope)
 
 		clusterUid := d.Get("cluster_uid").(string)
-		clusterScope := d.Get("context").(string)
 
-		cluster, err := c.GetCluster(clusterScope, clusterUid)
+		cluster, err := c.GetCluster(clusterUid)
 		if err != nil && cluster == nil {
 			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 		}
@@ -178,7 +178,6 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, cluster *models.V1SpectroCluster, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
-	clusterC := c.GetClusterClient()
 
 	addonDeployment, err := toAddonDeployment(c, d)
 	if err != nil {
@@ -188,16 +187,16 @@ func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interf
 		return diag.FromErr(errors.New("Cannot convert addon deployment: zero profiles found"))
 	}
 
-	newProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
+	newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = c.UpdateAddonDeployment(clusterC, cluster, addonDeployment, newProfile)
+	err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	clusterProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
+	clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

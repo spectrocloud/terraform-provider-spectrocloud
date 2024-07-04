@@ -257,7 +257,8 @@ func resourceClusterGcp() *schema.Resource {
 }
 
 func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ClusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -267,13 +268,12 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterGcp(cluster, ClusterContext)
+	uid, err := c.CreateClusterGcp(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -285,7 +285,8 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ClusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 
 	var diags diag.Diagnostics
 
@@ -318,11 +319,11 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 }
 
 func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	ClusterContext := d.Get("context").(string)
+
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigGcp(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigGcp(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
@@ -332,7 +333,7 @@ func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsGcp(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapGcp, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapGcp, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -392,7 +393,8 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 }
 
 func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ClusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -401,8 +403,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigGcp(cloudConfigId, ClusterContext)
+	CloudConfig, err := c.GetCloudConfigGcp(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -439,12 +440,12 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolGcp(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolGcp(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolGcpHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolGcp(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolGcp(cloudConfigId, machinePool)
 					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusGcp, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusGcp, CloudConfig.Kind, cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -464,7 +465,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolGcp(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolGcp(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

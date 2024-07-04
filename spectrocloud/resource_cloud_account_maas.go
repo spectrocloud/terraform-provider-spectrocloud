@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceCloudAccountMaas() *schema.Resource {
@@ -51,14 +50,15 @@ func resourceCloudAccountMaas() *schema.Resource {
 }
 
 func resourceCloudAccountMaasCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	AccountContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, AccountContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	account := toMaasAccount(d)
-	AccountContext := d.Get("context").(string)
-	uid, err := c.CreateCloudAccountMaas(account, AccountContext)
+
+	uid, err := c.CreateCloudAccountMaas(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -71,13 +71,14 @@ func resourceCloudAccountMaasCreate(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	AccountContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, AccountContext)
 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	AccountContext := d.Get("context").(string)
-	account, err := c.GetCloudAccountMaas(uid, AccountContext)
+
+	account, err := c.GetCloudAccountMaas(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -97,7 +98,8 @@ func resourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m i
 }
 
 func resourceCloudAccountMaasUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	AccountContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, AccountContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -114,13 +116,13 @@ func resourceCloudAccountMaasUpdate(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceCloudAccountMaasDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	AccountContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, AccountContext)
 
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-	AccountContext := d.Get("context").(string)
-	err := c.DeleteCloudAccountMaas(cloudAccountID, AccountContext)
+	err := c.DeleteCloudAccountMaas(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

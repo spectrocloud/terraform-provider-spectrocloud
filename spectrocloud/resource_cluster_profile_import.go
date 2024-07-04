@@ -9,7 +9,8 @@ import (
 )
 
 func resourceClusterProfileImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ProfileContext)
 
 	err := GetCommonClusterProfile(d, c)
 	if err != nil {
@@ -29,8 +30,8 @@ func resourceClusterProfileImport(ctx context.Context, d *schema.ResourceData, m
 
 func GetCommonClusterProfile(d *schema.ResourceData, c *client.V1Client) error {
 	// Use the IDs to retrieve the cluster data from the API
-	clusterC := c.GetClusterClient()
-	profile, err := c.GetClusterProfile(clusterC, d.Id())
+
+	profile, err := c.GetClusterProfile(d.Id())
 	if err != nil {
 		return fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}

@@ -21,7 +21,7 @@ var NodeMaintenanceLifecycleStates = []string{
 
 type GetMaintenanceStatus func(string, string, string) (*models.V1MachineMaintenanceStatus, error)
 
-type GetNodeStatusMap func(string, string, string) (map[string]models.V1CloudMachineStatus, error)
+type GetNodeStatusMap func(string, string) (map[string]models.V1CloudMachineStatus, error)
 
 func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn GetMaintenanceStatus, ConfigUID, MachineName, NodeId string) (error, bool) {
 
@@ -83,7 +83,7 @@ func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool 
 	return nil
 }
 
-func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn GetNodeStatusMap, mPools []interface{}, cloudConfigId, ClusterContext string) ([]interface{}, error) {
+func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn GetNodeStatusMap, mPools []interface{}, cloudConfigId string) ([]interface{}, error) {
 	_, n := d.GetChange("machine_pool")
 	nsMap := make(map[string]interface{})
 	machinePoolsList, i, err := getMachinePoolList(n)
@@ -106,7 +106,7 @@ func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn
 		newNodeList := nsMap[m["name"].(string)].(map[string]interface{})["node"].([]interface{})
 		if len(newNodeList) > 0 {
 			var nodes []interface{}
-			nodesStatus, err := fn(cloudConfigId, m["name"].(string), ClusterContext)
+			nodesStatus, err := fn(cloudConfigId, m["name"].(string))
 			if err != nil {
 				return nil, err
 			}

@@ -301,7 +301,8 @@ func resourceClusterMaas() *schema.Resource {
 }
 
 func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ClusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -311,13 +312,12 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterMaas(cluster, ClusterContext)
+	uid, err := c.CreateClusterMaas(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -328,8 +328,8 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 }
 
 func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-
+	ClusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 	var diags diag.Diagnostics
 
 	cluster, err := resourceClusterRead(d, c, diags)
@@ -356,7 +356,7 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 }
 
 func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	ClusterContext := d.Get("context").(string)
+
 	err := d.Set("cloud_config_id", configUID)
 	if err != nil {
 		return diag.FromErr(err)
@@ -365,7 +365,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 		return diag.FromErr(err)
 	}
 
-	if config, err := c.GetCloudConfigMaas(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigMaas(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
@@ -377,7 +377,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig, config.Spec.ClusterConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapMaas, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapMaas, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -449,7 +449,8 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 }
 
 func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ClusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -459,8 +460,8 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigMaas(cloudConfigId, ClusterContext)
+
+	CloudConfig, err := c.GetCloudConfigMaas(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -500,12 +501,12 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolMaas(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolMaas(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolMaasHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolMaas(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolMaas(cloudConfigId, machinePool)
 					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusMaas, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusMaas, CloudConfig.Kind, cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -526,7 +527,7 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolMaas(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolMaas(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
