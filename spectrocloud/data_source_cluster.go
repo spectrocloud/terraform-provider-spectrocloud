@@ -4,10 +4,8 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func dataSourceCluster() *schema.Resource {
@@ -47,21 +45,24 @@ func dataSourceCluster() *schema.Resource {
 }
 
 func dataSourceClusterRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
-		ClusterContext := d.Get("context").(string)
-		cluster, err := c.GetClusterByName(name.(string), ClusterContext, d.Get("virtual").(bool))
+		// sdk cut over context handling
+		clusterContext := d.Get("context").(string)
+		c := GetResourceLevelV1Client(m, clusterContext)
+
+		cluster, err := c.GetClusterByName(name.(string), d.Get("virtual").(bool))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 		if cluster != nil {
 			d.SetId(cluster.Metadata.UID)
-			kubeConfig, _ := c.GetClusterKubeConfig(cluster.Metadata.UID, ClusterContext)
+			kubeConfig, _ := c.GetClusterKubeConfig(cluster.Metadata.UID)
 			if err := d.Set("kube_config", kubeConfig); err != nil {
 				return diag.FromErr(err)
 			}
-			adminKubeConfig, _ := c.GetClusterAdminKubeConfig(cluster.Metadata.UID, ClusterContext)
+			adminKubeConfig, _ := c.GetClusterAdminKubeConfig(cluster.Metadata.UID)
 			if adminKubeConfig != "" {
 				if err := d.Set("admin_kube_config", adminKubeConfig); err != nil {
 					return diag.FromErr(err)

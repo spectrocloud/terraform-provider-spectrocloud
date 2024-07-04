@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -32,7 +30,7 @@ func dataSourceApplicationProfile() *schema.Resource {
 }
 
 func dataSourceApplicationProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
 		version, okVersion := d.GetOk("version")

@@ -113,7 +113,7 @@ func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn
 			for key, value := range nodesStatus {
 				for _, newNode := range newNodeList {
 					if newNode.(map[string]interface{})["node_id"] == key {
-						nodes = append(nodes, c.GetNodeValue(key, value.MaintenanceStatus.Action))
+						nodes = append(nodes, getNodeValue(key, value.MaintenanceStatus.Action))
 					}
 				}
 			}
@@ -123,6 +123,13 @@ func flattenNodeMaintenanceStatus(c *client.V1Client, d *schema.ResourceData, fn
 		}
 	}
 	return mPools, nil
+}
+
+func getNodeValue(nodeId, action string) map[string]interface{} {
+	return map[string]interface{}{
+		"node_id": nodeId,
+		"action":  action,
+	}
 }
 
 func getMachinePoolList(n interface{}) ([]interface{}, []interface{}, error) {

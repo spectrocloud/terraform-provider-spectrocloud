@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -53,10 +51,10 @@ func dataSourceAppliance() *schema.Resource {
 }
 
 func dataSourceApplianceRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
-		appliance, err := c.GetApplianceByName(name.(string), "project", nil, "", "", "")
+		appliance, err := c.GetApplianceByName(name.(string), nil, "", "", "")
 		if err != nil {
 			return diag.FromErr(err)
 		}

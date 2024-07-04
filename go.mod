@@ -12,6 +12,8 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.30.0
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/gomi v1.14.1-0.20240214074114-c19394812368
+	github.com/spectrocloud/hapi v1.14.0
+	github.com/spectrocloud/palette-api-go v0.2.3
 	github.com/spectrocloud/palette-sdk-go v0.0.0-20240527074823-dea98afcb6fd
 	github.com/stretchr/testify v1.8.4
 	gotest.tools v2.2.0+incompatible
@@ -95,7 +97,6 @@ require (
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/spectrocloud/palette-api-go v0.2.3 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
@@ -128,4 +129,5 @@ require (
 
 //replace github.com/spectrocloud/hapi => ../hapi
 replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
+
 replace github.com/spectrocloud/palette-api-go => ../palette-api-go
