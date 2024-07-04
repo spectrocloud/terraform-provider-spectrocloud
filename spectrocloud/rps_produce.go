@@ -2,9 +2,9 @@ package spectrocloud
 
 import (
 	"fmt"
-	"github.com/spectrocloud/hapi/apiutil/transport"
 	clusterC "github.com/spectrocloud/hapi/spectrocluster/client/v1"
 	userC "github.com/spectrocloud/hapi/user/client/v1"
+	"github.com/spectrocloud/palette-api-go/apiutil/transport"
 	"reflect"
 )
 
