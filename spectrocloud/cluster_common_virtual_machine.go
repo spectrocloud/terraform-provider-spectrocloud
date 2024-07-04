@@ -3,12 +3,10 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
-	"github.com/spectrocloud/hapi/apiutil/transport"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -35,7 +33,7 @@ var resourceVirtualMachineCreatePendingStates = []string{
 }
 
 func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceData, scope, clusterUid, vmName, namespace string, diags diag.Diagnostics, c *client.V1Client, state, targetState string) (diag.Diagnostics, bool) {
-	vm, err := c.GetVirtualMachine(scope, clusterUid, namespace, vmName)
+	vm, err := c.GetVirtualMachine(clusterUid, namespace, vmName)
 	if err != nil {
 		return diags, true
 	}
@@ -66,14 +64,15 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 
 func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, scope, clusterUid, vmName, vmNamespace string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		vm, err := c.GetVirtualMachine(scope, clusterUid, vmNamespace, vmName)
+		vm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 		if err != nil {
-			if err.(*transport.TransportError).HttpCode == 500 && strings.Contains(err.(*transport.TransportError).Payload.Message, fmt.Sprintf("Failed to get virtual machine '%s'", vmName)) {
-				emptyVM := &models.V1ClusterVirtualMachine{}
-				return emptyVM, "Deleted", nil
-			} else {
-				return nil, "", err
-			}
+			//if err.(*transport.TransportError).HttpCode == 500 && strings.Contains(err.(*transport.TransportError).Payload.Message, fmt.Sprintf("Failed to get virtual machine '%s'", vmName)) {
+			emptyVM := &models.V1ClusterVirtualMachine{}
+			//	return emptyVM, "Deleted", nil
+			//} else {
+			//	return nil, "", err
+			//}
+			return emptyVM, "Error", err
 		}
 		if vm == nil {
 			emptyVM := &models.V1ClusterVirtualMachine{}

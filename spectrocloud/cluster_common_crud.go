@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -99,7 +99,7 @@ func waitForVirtualClusterLifecycleResume(ctx context.Context, d *schema.Resourc
 
 func resourceClusterReadyRefreshFunc(c *client.V1Client, scope, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetClusterWithoutStatus(scope, id)
+		cluster, err := c.GetClusterWithoutStatus(id)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil || cluster.Status == nil {
@@ -144,12 +144,6 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, scope, 
 	return nil, false
 }
 
-//	var resourceClusterUpdatePendingStates = []string{
-//		"backing-up",
-//		"modifying",
-//		"resetting-master-credentials",
-//		"upgrading",
-//	}
 func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope, id string, timeout time.Duration) error {
 	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterDeletePendingStates,
@@ -167,7 +161,7 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope, id s
 
 func resourceClusterStateRefreshFunc(c *client.V1Client, scope, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetCluster(scope, id)
+		cluster, err := c.GetCluster(id)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {
@@ -183,7 +177,7 @@ func resourceClusterStateRefreshFunc(c *client.V1Client, scope, id string) retry
 
 func resourceVirtualClusterLifecycleStateRefreshFunc(c *client.V1Client, scope, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetCluster(scope, id)
+		cluster, err := c.GetCluster(id)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {
@@ -200,11 +194,11 @@ func resourceVirtualClusterLifecycleStateRefreshFunc(c *client.V1Client, scope, 
 func resourceClusterRead(d *schema.ResourceData, c *client.V1Client, diags diag.Diagnostics) (*models.V1SpectroCluster, error) {
 	uid := d.Id()
 
-	clusterContext := "project"
-	if v, ok := d.GetOk("context"); ok {
-		clusterContext = v.(string)
-	}
-	cluster, err := c.GetCluster(clusterContext, uid)
+	////clusterContext := "project"
+	//if v, ok := d.GetOk("context"); ok {
+	//	clusterContext = v.(string)
+	//}
+	cluster, err := c.GetCluster(uid)
 	if err != nil {
 		return nil, err
 	}
@@ -212,21 +206,22 @@ func resourceClusterRead(d *schema.ResourceData, c *client.V1Client, diags diag.
 }
 
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	// sdk cut over context handling
+	clusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, clusterContext)
 	var diags diag.Diagnostics
 	var err error
-	clusterContext := d.Get("context").(string)
 	if forceDelete, ok := d.GetOk("force_delete"); ok && forceDelete == true {
 		forceDeleteDelay := d.Get("force_delete_delay").(int)
 		forceDeleteDelaDuration := time.Duration(forceDeleteDelay) * time.Minute
 		if forceDeleteDelaDuration <= d.Timeout(schema.TimeoutDelete) {
-			err = c.DeleteCluster(clusterContext, d.Id())
+			err = c.DeleteCluster(d.Id())
 			if err != nil {
 				return diag.FromErr(err)
 			}
 			err = waitForClusterDeletion(ctx, c, clusterContext, d.Id(), forceDeleteDelaDuration) // It will wait for 20 minutes by default and try force_delete
 			if err != nil {
-				err = c.ForceDeleteCluster(clusterContext, d.Id(), true)
+				err = c.ForceDeleteCluster(d.Id(), true)
 				if err != nil {
 					return diag.FromErr(err)
 				}

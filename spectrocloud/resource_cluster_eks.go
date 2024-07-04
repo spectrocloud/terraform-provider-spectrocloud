@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -208,10 +208,10 @@ func resourceClusterEks() *schema.Resource {
 							},
 						},
 						"encryption_config_arn": {
-							Type:     schema.TypeString,
+							Type:        schema.TypeString,
 							Description: "The ARN of the KMS encryption key to use for the cluster. Refer to the [Enable Secrets Encryption for EKS Cluster](https://docs.spectrocloud.com/clusters/public-cloud/aws/enable-secrets-encryption-kms-key/) for additional guidance.",
-							ForceNew: true,
-							Optional: true,
+							ForceNew:    true,
+							Optional:    true,
 						},
 					},
 				},

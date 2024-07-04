@@ -233,10 +233,24 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		return nil, diag.FromErr(err)
 	}
 
+	//if uid != "" {
+	//	client.WithProjectUID(uid)(c)
+	//}
 	if uid != "" {
-		client.WithProjectUID(uid)(c)
+		client.SetProjectUID(uid)(c)
 	}
 
 	return c, diags
 
+}
+
+func GetResourceLevelV1Client(m interface{}, context string) *client.V1Client {
+	switch context {
+	case "project":
+		return m.(*client.V1Client).SetProjectContextForResource()
+	case "tenant":
+		return m.(*client.V1Client)
+	default:
+		return m.(*client.V1Client).SetProjectContextForResource()
+	}
 }
