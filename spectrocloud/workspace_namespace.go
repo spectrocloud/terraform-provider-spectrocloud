@@ -90,8 +90,8 @@ func IsRegex(name string) bool {
 
 }
 
-func toUpdateWorkspaceNamespaces(d *schema.ResourceData) *models.V1WorkspaceResourceAllocationsEntity {
-	return &models.V1WorkspaceResourceAllocationsEntity{
+func toUpdateWorkspaceNamespaces(d *schema.ResourceData) *models.V1WorkspaceClusterNamespacesEntity {
+	return &models.V1WorkspaceClusterNamespacesEntity{
 		ClusterNamespaces: toWorkspaceNamespaces(d),
 		ClusterRefs:       toClusterRefs(d),
 		Quota:             toQuota(d),
