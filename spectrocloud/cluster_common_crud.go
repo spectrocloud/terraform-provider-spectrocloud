@@ -235,7 +235,7 @@ func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interf
 			return diags
 		}
 	} else {
-		err = c.DeleteCluster(clusterContext, d.Id())
+		err = c.DeleteCluster(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
 		}

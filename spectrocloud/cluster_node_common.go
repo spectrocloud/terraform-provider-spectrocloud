@@ -23,7 +23,7 @@ type GetMaintenanceStatus func(string, string, string) (*models.V1MachineMainten
 
 type GetNodeStatusMap func(string, string, string) (map[string]models.V1CloudMachineStatus, error)
 
-func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn GetMaintenanceStatus, ClusterContext, ConfigUID, MachineName, NodeId string) (error, bool) {
+func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn GetMaintenanceStatus, ConfigUID, MachineName, NodeId string) (error, bool) {
 
 	stateConf := &retry.StateChangeConf{
 		Delay:      30 * time.Second,
@@ -56,12 +56,12 @@ func resourceClusterNodeMaintenanceRefreshFunc(c *client.V1Client, fn GetMainten
 	}
 }
 
-func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool interface{}, fn GetMaintenanceStatus, CloudType, ClusterContext, ConfigUID, MachineName string) error {
+func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool interface{}, fn GetMaintenanceStatus, CloudType, ConfigUID, MachineName string) error {
 	newNodes := newMachinePool.(map[string]interface{})["node"]
 	if newNodes != nil {
 		for _, n := range newNodes.([]interface{}) {
 			node := n.(map[string]interface{})
-			nodeMaintenanceStatus, err := c.GetNodeMaintenanceStatus(client.GetMaintenanceStatus(fn), ClusterContext, ConfigUID, MachineName, node["node_id"].(string))
+			nodeMaintenanceStatus, err := c.GetNodeMaintenanceStatus(client.GetMaintenanceStatus(fn), ConfigUID, MachineName, node["node_id"].(string))
 			if err != nil {
 				return err
 			}
@@ -69,11 +69,11 @@ func resourceNodeAction(c *client.V1Client, ctx context.Context, newMachinePool 
 				nm := &models.V1MachineMaintenance{
 					Action: node["action"].(string),
 				}
-				err := c.ToggleMaintenanceOnNode(nm, CloudType, ClusterContext, ConfigUID, MachineName, node["node_id"].(string))
+				err := c.ToggleMaintenanceOnNode(nm, CloudType, ConfigUID, MachineName, node["node_id"].(string))
 				if err != nil {
 					return err
 				}
-				err, isError := waitForNodeMaintenanceCompleted(c, ctx, fn, ClusterContext, ConfigUID, MachineName, node["node_id"].(string))
+				err, isError := waitForNodeMaintenanceCompleted(c, ctx, fn, ConfigUID, MachineName, node["node_id"].(string))
 				if isError {
 					return err
 				}
