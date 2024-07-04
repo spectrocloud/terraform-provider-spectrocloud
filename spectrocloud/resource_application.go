@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceApplication() *schema.Resource {
@@ -93,7 +92,7 @@ func resourceApplication() *schema.Resource {
 }
 
 func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 

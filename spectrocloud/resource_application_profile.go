@@ -79,7 +79,8 @@ func resourceApplicationProfile() *schema.Resource {
 }
 
 func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ProfileContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -90,8 +91,8 @@ func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceDat
 	}
 
 	// Create
-	ProfileContext := d.Get("context").(string)
-	uid, err := c.CreateApplicationProfile(applicationProfile, ProfileContext)
+
+	uid, err := c.CreateApplicationProfile(applicationProfile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -102,7 +103,8 @@ func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceApplicationProfileRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ProfileContext)
 
 	var diags diag.Diagnostics
 
@@ -225,7 +227,8 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 }
 
 func resourceApplicationProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ProfileContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -241,19 +244,18 @@ func resourceApplicationProfileUpdate(ctx context.Context, d *schema.ResourceDat
 			return diag.FromErr(err)
 		}
 
-		ProfileContext := d.Get("context").(string)
-		if err := c.CreateApplicationProfileTiers(d.Id(), tiersCreate, ProfileContext); err != nil {
+		if err := c.CreateApplicationProfileTiers(d.Id(), tiersCreate); err != nil {
 			return diag.FromErr(err)
 		}
 		for i, tier := range tiersUpdateMap {
-			if err := c.UpdateApplicationProfileTiers(d.Id(), i, tier, ProfileContext); err != nil {
+			if err := c.UpdateApplicationProfileTiers(d.Id(), i, tier); err != nil {
 				return diag.FromErr(err)
 			}
 		}
-		if err := c.DeleteApplicationProfileTiers(d.Id(), tiersDeleteIds, ProfileContext); err != nil {
+		if err := c.DeleteApplicationProfileTiers(d.Id(), tiersDeleteIds); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PatchApplicationProfile(d.Id(), metadata, ProfileContext); err != nil {
+		if err := c.PatchApplicationProfile(d.Id(), metadata); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -264,7 +266,8 @@ func resourceApplicationProfileUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceApplicationProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ProfileContext)
 
 	var diags diag.Diagnostics
 

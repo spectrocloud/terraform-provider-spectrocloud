@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceAlert() *schema.Resource {
@@ -116,7 +115,7 @@ func resourceAlert() *schema.Resource {
 }
 
 func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var err error
 	projectUid, err := getProjectID(d, m)
 	if err != nil {
@@ -133,7 +132,7 @@ func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interfac
 }
 
 func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var err error
 
 	var diags diag.Diagnostics
@@ -183,7 +182,7 @@ func toAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
 
 func resourceAlertDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var err error
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	projectUid, err := getProjectID(d, m)
 	if err != nil {
@@ -198,7 +197,7 @@ func resourceAlertDelete(ctx context.Context, d *schema.ResourceData, m interfac
 
 func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var err error
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	projectUid, _ := getProjectID(d, m)
 	alertPayload, err := c.ReadAlert(projectUid, d.Get("component").(string), d.Id())
@@ -240,7 +239,7 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 func getProjectID(d *schema.ResourceData, m interface{}) (string, error) {
 	projectUid := ""
 	var err error
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	if v, ok := d.GetOk("project"); ok && v.(string) != "" {
 		projectUid, err = c.GetProjectUID(v.(string))
 		if err != nil {

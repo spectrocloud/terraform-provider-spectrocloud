@@ -65,7 +65,7 @@ var resourceApplianceCreatePendingStates = []string{
 }
 
 func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 
 	appliance := toApplianceEntity(d)
@@ -112,7 +112,7 @@ func resourceApplianceStateRefreshFunc(c *client.V1Client, id string) retry.Stat
 }
 
 func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	if id, okId := d.GetOk("uid"); okId {
 		appliance, err := c.GetAppliance(id.(string))
@@ -132,7 +132,7 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	// Currently, we only support updating tags during day 2 operations in the appliance, which will be handled via UpdateApplianceMeta (above code snippet).
 	if d.HasChange("tags") {
@@ -147,7 +147,7 @@ func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceApplianceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	err := c.DeleteAppliance(d.Id())
 	if err != nil {

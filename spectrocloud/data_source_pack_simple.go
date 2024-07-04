@@ -8,8 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -58,12 +56,12 @@ func dataSourcePackSimple() *schema.Resource {
 }
 
 func dataSourcePackReadSimple(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	packContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, packContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	packContext := d.Get("context").(string)
 	packName := ""
 	registryUID := ""
 	if v, ok := d.GetOk("type"); ok {
@@ -103,7 +101,7 @@ func dataSourcePackReadSimple(_ context.Context, d *schema.ResourceData, m inter
 		packName = v.(string)
 	}
 
-	pack, err := c.GetPacksByNameAndRegistry(packName, registryUID, packContext)
+	pack, err := c.GetPacksByNameAndRegistry(packName, registryUID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
