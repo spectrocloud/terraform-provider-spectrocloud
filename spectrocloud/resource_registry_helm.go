@@ -9,10 +9,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-api-go/models"
 )
 
 func resourceRegistryHelm() *schema.Resource {
@@ -74,7 +72,7 @@ func resourceRegistryHelm() *schema.Resource {
 }
 
 func resourceRegistryHelmCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 
 	registry := toRegistryEntityHelm(d)
@@ -87,7 +85,7 @@ func resourceRegistryHelmCreate(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 
 	registry, err := c.GetHelmRegistry(d.Id())
@@ -143,7 +141,7 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceRegistryHelmUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 
 	registry := toRegistryHelm(d)
@@ -156,7 +154,7 @@ func resourceRegistryHelmUpdate(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceRegistryHelmDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	err := c.DeleteHelmRegistry(d.Id())
 	if err != nil {

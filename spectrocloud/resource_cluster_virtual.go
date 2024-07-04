@@ -211,7 +211,8 @@ func resourceClusterVirtual() *schema.Resource {
 }
 
 func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ClusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -226,8 +227,7 @@ func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -239,7 +239,8 @@ func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ClusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 
 	var diags diag.Diagnostics
 
@@ -270,7 +271,8 @@ func flattenCloudConfigVirtual(configUID string, d *schema.ResourceData, c *clie
 }
 
 func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ClusterContext := d.Get("context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics

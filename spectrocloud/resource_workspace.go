@@ -57,7 +57,7 @@ func resourceWorkspace() *schema.Resource {
 }
 
 func resourceWorkspaceCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 
 	var diags diag.Diagnostics
 
@@ -76,7 +76,7 @@ func resourceWorkspaceCreate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 
 	var diags diag.Diagnostics
 
@@ -115,7 +115,7 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 }
 
 func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 
 	var diags diag.Diagnostics
 
@@ -173,7 +173,7 @@ func updateWorkspaceRBACs(d *schema.ResourceData, c *client.V1Client, workspace 
 }
 
 func resourceWorkspaceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	err := c.DeleteWorkspace(d.Id())
 	if err != nil {

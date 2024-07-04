@@ -32,7 +32,7 @@ var resourceVirtualMachineCreatePendingStates = []string{
 	"Deleted",
 }
 
-func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceData, scope, clusterUid, vmName, namespace string, diags diag.Diagnostics, c *client.V1Client, state, targetState string) (diag.Diagnostics, bool) {
+func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceData, clusterUid, vmName, namespace string, diags diag.Diagnostics, c *client.V1Client, state, targetState string) (diag.Diagnostics, bool) {
 	vm, err := c.GetVirtualMachine(clusterUid, namespace, vmName)
 	if err != nil {
 		return diags, true
@@ -48,7 +48,7 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 	stateConf := &retry.StateChangeConf{
 		Pending:    resourceVirtualMachineCreatePendingStates,
 		Target:     []string{targetState},
-		Refresh:    resourceVirtualMachineStateRefreshFunc(c, scope, clusterUid, vmName, namespace),
+		Refresh:    resourceVirtualMachineStateRefreshFunc(c, clusterUid, vmName, namespace),
 		Timeout:    d.Timeout(state) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
@@ -62,7 +62,7 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 	return nil, false
 }
 
-func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, scope, clusterUid, vmName, vmNamespace string) retry.StateRefreshFunc {
+func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid, vmName, vmNamespace string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		vm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 		if err != nil {

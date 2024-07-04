@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterEdgeNativeImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
@@ -36,34 +35,6 @@ func resourceClusterEdgeNativeImport(ctx context.Context, d *schema.ResourceData
 	// import one resource at a time, so you should return the resource data
 	// in a slice with a single element.
 	return []*schema.ResourceData{d}, nil
-}
-
-func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
-	// parse resource ID and scope
-	_, clusterID, err := ParseResourceID(d)
-	if err != nil {
-		return err
-	}
-
-	// Use the IDs to retrieve the cluster data from the API
-	cluster, err := c.GetCluster(clusterID)
-	if err != nil {
-		return fmt.Errorf("unable to retrieve cluster data: %s", err)
-	}
-
-	err = d.Set("name", cluster.Metadata.Name)
-	if err != nil {
-		return err
-	}
-	err = d.Set("context", cluster.Metadata.Annotations["scope"])
-	if err != nil {
-		return err
-	}
-
-	// Set the ID of the resource in the state. This ID is used to track the
-	// resource and must be set in the state during the import.
-	d.SetId(clusterID)
-	return nil
 }
 
 func ParseResourceID(d *schema.ResourceData) (string, string, error) {

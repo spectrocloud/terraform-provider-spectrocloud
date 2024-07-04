@@ -34,13 +34,14 @@ func resourceKubevirtVirtualMachine() *schema.Resource {
 	}
 }
 func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ClusterContext := d.Get("cluster_context").(string)
+	c := GetResourceLevelV1Client(m, ClusterContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 	clusterUid := d.Get("cluster_uid").(string)
-	ClusterContext := d.Get("cluster_context").(string)
-	cluster, err := c.GetCluster(ClusterContext, clusterUid)
+
+	cluster, err := c.GetCluster(clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -67,11 +68,11 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 	}
 	if cloneFromVM, ok := d.GetOk("base_vm_name"); ok && cloneFromVM != "" {
 		// Handling clone case
-		err = c.CloneVirtualMachine(ClusterContext, clusterUid, cloneFromVM.(string), hapiVM.Metadata.Name, hapiVM.Metadata.Namespace)
+		err = c.CloneVirtualMachine(clusterUid, cloneFromVM.(string), hapiVM.Metadata.Name, hapiVM.Metadata.Namespace)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		vm, err := c.GetVirtualMachine(ClusterContext, clusterUid, hapiVM.Metadata.Namespace, hapiVM.Metadata.Name)
+		vm, err := c.GetVirtualMachine(clusterUid, hapiVM.Metadata.Namespace, hapiVM.Metadata.Name)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -91,14 +92,14 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 			return diag.FromErr(err)
 		}
 	} else {
-		vm, err := c.CreateVirtualMachine(ClusterContext, cluster.Metadata.UID, hapiVM)
+		vm, err := c.CreateVirtualMachine(cluster.Metadata.UID, hapiVM)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 		d.SetId(utils.BuildId(ClusterContext, clusterUid, vm.Metadata))
 	}
 	if d.Get("run_on_launch").(bool) {
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, ClusterContext, cluster.Metadata.UID, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace, diags, c, "create", "Running")
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, cluster.Metadata.UID, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace, diags, c, "create", "Running")
 		if diags.HasError() {
 			return diags
 		}
@@ -109,16 +110,15 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 }
 
 func resourceKubevirtVirtualMachineRead(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	cli := (meta).(*client.V1Client)
 
 	scope, clusterUid, namespace, name, err := utils.IdParts(resourceData.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
+	cli := GetResourceLevelV1Client(meta, scope)
 	log.Printf("[INFO] Reading virtual machine %s", name)
 
-	hapiVM, err := cli.GetVirtualMachine(scope, clusterUid, namespace, name)
+	hapiVM, err := cli.GetVirtualMachine(clusterUid, namespace, name)
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
@@ -139,12 +139,14 @@ func resourceKubevirtVirtualMachineRead(ctx context.Context, resourceData *schem
 	return nil
 }
 func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
 	scope, clusterUid, vmNamespace, vmName, err := utils.IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	hapiVM, err := c.GetVirtualMachine(scope, clusterUid, vmNamespace, vmName)
+	c := GetResourceLevelV1Client(m, scope)
+
+	hapiVM, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -163,7 +165,7 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	// needed to get context for the cluster
-	cluster, err := c.GetCluster(scope, clusterUid)
+	cluster, err := c.GetCluster(clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -190,7 +192,6 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *schema.ResourceData, stateToChange, scope, clusterUid, vmName, vmNamespace string) diag.Diagnostics {
 	var diags diag.Diagnostics
-	ClusterContext := d.Get("cluster_context").(string)
 	// need to add validation status and allowed actions
 	// Stopped  - start
 	// Paused - restart, resume
@@ -198,58 +199,58 @@ func resourceVirtualMachineActions(c *client.V1Client, ctx context.Context, d *s
 	switch strings.ToLower(stateToChange) {
 	//"start", "stop", "restart", "pause", "resume", "migrate"
 	case "start":
-		err := c.StartVirtualMachine(scope, clusterUid, vmName, vmNamespace)
+		err := c.StartVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, ClusterContext, clusterUid, vmName, vmNamespace, diags, c, "update", "Running")
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, clusterUid, vmName, vmNamespace, diags, c, "update", "Running")
 		if diags.HasError() {
 			return diags
 		}
 	case "stop":
-		err := c.StopVirtualMachine(scope, clusterUid, vmName, vmNamespace)
+		err := c.StopVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, ClusterContext, clusterUid, vmName, vmNamespace, diags, c, "update", "Stopped")
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, clusterUid, vmName, vmNamespace, diags, c, "update", "Stopped")
 		if diags.HasError() {
 			return diags
 		}
 	case "restart":
-		err := c.RestartVirtualMachine(scope, clusterUid, vmName, vmNamespace)
+		err := c.RestartVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, ClusterContext, clusterUid, vmName, vmNamespace, diags, c, "update", "Running")
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, clusterUid, vmName, vmNamespace, diags, c, "update", "Running")
 		if diags.HasError() {
 			return diags
 		}
 	case "pause":
-		err := c.PauseVirtualMachine(scope, clusterUid, vmName, vmNamespace)
+		err := c.PauseVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, ClusterContext, clusterUid, vmName, vmNamespace, diags, c, "update", "Paused")
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, clusterUid, vmName, vmNamespace, diags, c, "update", "Paused")
 		if diags.HasError() {
 			return diags
 		}
 	case "resume":
-		err := c.ResumeVirtualMachine(scope, clusterUid, vmName, vmNamespace)
+		err := c.ResumeVirtualMachine(clusterUid, vmName, vmNamespace)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, ClusterContext, clusterUid, vmName, vmNamespace, diags, c, "update", "Running")
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, clusterUid, vmName, vmNamespace, diags, c, "update", "Running")
 		if diags.HasError() {
 			return diags
 		}
 	case "migrate":
-		_ = c.MigrateVirtualMachineNodeToNode(scope, clusterUid, vmName, vmNamespace)
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, ClusterContext, clusterUid, vmName, vmNamespace, diags, c, "update", "Running")
+		_ = c.MigrateVirtualMachineNodeToNode(clusterUid, vmName, vmNamespace)
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, clusterUid, vmName, vmNamespace, diags, c, "update", "Running")
 		if diags.HasError() {
 			return diags
 		}
 	}
-	hapiVM, err := c.GetVirtualMachine(ClusterContext, clusterUid, vmNamespace, vmName)
+	hapiVM, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -266,13 +267,13 @@ func resourceKubevirtVirtualMachineDelete(ctx context.Context, resourceData *sch
 		return diag.FromErr(err)
 	}
 
-	cli := (meta).(*client.V1Client)
+	cli := GetResourceLevelV1Client(meta, scope)
 
 	log.Printf("[INFO] Deleting virtual machine: %#v", name)
-	if err := cli.DeleteVirtualMachine(scope, clusterUid, namespace, name); err != nil {
+	if err := cli.DeleteVirtualMachine(clusterUid, namespace, name); err != nil {
 		return diag.FromErr(err)
 	}
-	diags, _ = waitForVirtualMachineToTargetState(ctx, resourceData, scope, clusterUid, name, namespace, diags, cli, "delete", "Deleted")
+	diags, _ = waitForVirtualMachineToTargetState(ctx, resourceData, clusterUid, name, namespace, diags, cli, "delete", "Deleted")
 	if diags.HasError() {
 		return diags
 	}

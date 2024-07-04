@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/apiutil/transport"
 	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 	"time"
 )
 
@@ -46,7 +45,7 @@ func resourceMacros() *schema.Resource {
 }
 
 func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	uid := ""
 	var err error
@@ -65,7 +64,7 @@ func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	var macros []*models.V1Macro
 	var err error
@@ -105,7 +104,7 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	var err error
 	uid := ""
@@ -135,7 +134,7 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceMacrosDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := GetResourceLevelV1Client(m, "")
 	var diags diag.Diagnostics
 	var err error
 	uid := ""

@@ -25,7 +25,7 @@ func TestNameSpacesRPSScenario(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		client.WithProjectUID(uid)(h)
+		client.SetProjectUID(uid)(h)
 		GetNamespaces1Test(t, h, c)
 	}
 }

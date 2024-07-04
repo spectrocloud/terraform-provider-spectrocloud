@@ -156,6 +156,12 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 		return err
 	}
 
+	if cluster.Metadata.Annotations["description"] != "" {
+		if err := d.Set("description", cluster.Metadata.Annotations["description"]); err != nil {
+			return err
+		}
+	}
+
 	if cluster.Status.SpcApply != nil {
 		err = d.Set("apply_setting", cluster.Status.SpcApply.ActionType)
 		if err != nil {
@@ -194,5 +200,37 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
+	// parse resource ID and scope
+	_, clusterID, err := ParseResourceID(d)
+	if err != nil {
+		return err
+	}
+
+	// Use the IDs to retrieve the cluster data from the API
+	cluster, err := c.GetCluster(clusterID)
+	if err != nil {
+		return fmt.Errorf("unable to retrieve cluster data: %s", err)
+	}
+	if cluster != nil {
+		err = d.Set("name", cluster.Metadata.Name)
+		if err != nil {
+			return err
+		}
+		err = d.Set("context", cluster.Metadata.Annotations["scope"])
+		if err != nil {
+			return err
+		}
+
+		// Set the ID of the resource in the state. This ID is used to track the
+		// resource and must be set in the state during the import.
+		d.SetId(clusterID)
+	} else {
+		return fmt.Errorf("couldn’t find cluster. Kindly check the cluster UID and context")
+	}
+
 	return nil
 }
