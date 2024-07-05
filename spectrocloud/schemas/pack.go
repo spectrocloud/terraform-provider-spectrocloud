@@ -17,7 +17,7 @@ func PackSchema() *schema.Schema {
 					Type:        schema.TypeString,
 					Computed:    true,
 					Optional:    true,
-					Description: "The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro`.",
+					Description: "The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro` and for `helm` if the chart is from a public helm registry.",
 				},
 				"type": {
 					Type:        schema.TypeString,
