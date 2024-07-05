@@ -54,7 +54,7 @@ func TestToMachinePoolAws(t *testing.T) {
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					AdditionalLabels: map[string]string{},
 					IsControlPlane:   false,
-					Labels:           []string{},
+					Labels:           []string{"worker"},
 					Name:             types.Ptr("testPool"),
 					Size:             types.Ptr(int32(3)),
 					UpdateStrategy: &models.V1UpdateStrategy{

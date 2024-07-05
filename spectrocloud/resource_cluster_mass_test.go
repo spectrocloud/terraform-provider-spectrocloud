@@ -137,7 +137,7 @@ func TestToMachinePoolMaas(t *testing.T) {
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:        map[string]string{"TF": "test_label"},
-			Labels:                  []string{},
+			Labels:                  []string{"worker"},
 			MaxSize:                 3,
 			MinSize:                 2,
 			Name:                    &name,
