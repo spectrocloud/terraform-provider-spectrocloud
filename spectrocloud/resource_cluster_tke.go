@@ -582,7 +582,9 @@ func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfi
 	labels := make([]string, 0)
 	controlPlane, _ := m["control_plane"].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, "control-plane")
+	} else {
+		labels = append(labels, "worker")
 	}
 
 	azs := make([]string, 0)
