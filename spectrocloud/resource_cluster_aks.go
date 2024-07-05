@@ -679,7 +679,9 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 	labels := make([]string, 0)
 	controlPlane, _ := m["control_plane"].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, "control-plane")
+	} else {
+		labels = append(labels, "worker")
 	}
 
 	min := int32(m["count"].(int))

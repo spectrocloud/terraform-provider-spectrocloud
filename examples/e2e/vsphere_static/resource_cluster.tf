@@ -22,7 +22,7 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
-    name                    = "master-pool"
+    name                    = "cp-pool"
     count                   = 3
 
     placement {

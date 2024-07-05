@@ -737,7 +737,9 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 	controlPlane := m["control_plane"].(bool)
 	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, "control-plane")
+	} else {
+		labels = append(labels, "worker")
 	}
 
 	placements := make([]*models.V1LibvirtPlacementEntity, 0)

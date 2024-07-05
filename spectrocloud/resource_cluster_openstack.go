@@ -587,7 +587,9 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 	controlPlane := m["control_plane"].(bool)
 	controlPlaneAsWorker := m["control_plane_as_worker"].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, "control-plane")
+	} else {
+		labels = append(labels, "worker")
 	}
 
 	azs := make([]string, 0)
