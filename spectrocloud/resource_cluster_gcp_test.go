@@ -38,7 +38,7 @@ func TestToMachinePoolGcp(t *testing.T) {
 					AdditionalLabels: map[string]string{},
 					Taints:           nil,
 					IsControlPlane:   true,
-					Labels:           []string{"master"},
+					Labels:           []string{"control-plane"},
 					Name:             types.Ptr("example-name"),
 					Size:             types.Ptr(int32(3)),
 					UpdateStrategy: &models.V1UpdateStrategy{
@@ -71,7 +71,7 @@ func TestToMachinePoolGcp(t *testing.T) {
 					AdditionalLabels: map[string]string{"example": "label"},
 					Taints:           []*models.V1Taint{},
 					IsControlPlane:   true,
-					Labels:           []string{"master"},
+					Labels:           []string{"control-plane"},
 					Name:             types.Ptr("example-name-2"),
 					Size:             types.Ptr(int32(2)),
 					UpdateStrategy: &models.V1UpdateStrategy{

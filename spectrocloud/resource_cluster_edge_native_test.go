@@ -265,7 +265,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 					AdditionalLabels:        toAdditionalNodePoolLabels(tt.input),
 					Taints:                  toClusterTaints(tt.input),
 					IsControlPlane:          true,
-					Labels:                  []string{"master"},
+					Labels:                  []string{"control-plane"},
 					Name:                    types.Ptr("pool1"),
 					Size:                    types.Ptr(int32(len(edgeHosts.EdgeHosts))),
 					UpdateStrategy:          &models.V1UpdateStrategy{Type: getUpdateStrategy(tt.input)},
@@ -286,7 +286,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 			if !reflect.DeepEqual(result, expected) {
 				t.Errorf("Expected %v, got %v", expected, result)
 			}
-			if !cmp.Equal(result.PoolConfig.Labels[0], "master") {
+			if !cmp.Equal(result.PoolConfig.Labels[0], "control-plane") {
 				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(result.PoolConfig.Labels[0], "master"))
 			}
 

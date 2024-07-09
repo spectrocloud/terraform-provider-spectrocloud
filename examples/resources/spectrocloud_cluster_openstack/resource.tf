@@ -35,7 +35,7 @@ resource "spectrocloud_cluster_openstack" "cluster" {
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
-    name                    = "master-pool"
+    name                    = "cp-pool"
     count                   = 1
     instance_type           = "spectro-xlarge"
     azs                     = ["zone1"]

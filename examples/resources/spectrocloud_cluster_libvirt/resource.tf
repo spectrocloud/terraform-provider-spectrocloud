@@ -31,9 +31,9 @@ resource "spectrocloud_cluster_libvirt" "libvirt_cluster" {
     network_type          = "VIP" # By default is VIP
   }
   machine_pool {
-    name = "master-pool"
+    name = "cp-pool"
     additional_labels = {
-      "type" : "master"
+      "type" : "control-plane"
     }
     control_plane           = true
     control_plane_as_worker = true
@@ -45,7 +45,7 @@ resource "spectrocloud_cluster_libvirt" "libvirt_cluster" {
       cpu          = 2
     }
     placements {
-      appliance_id        = "tf-test-edge-master"
+      appliance_id        = "tf-test-edge-cp"
       network_type        = "default"
       network_names       = "tf-test-network"
       image_storage_pool  = "tf-test-storage-pool"
