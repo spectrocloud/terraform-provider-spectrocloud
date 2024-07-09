@@ -737,6 +737,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 						machinePool.CloudConfig.Placements[0].Folder = cConfig["folder"].(string)
 					}
 					err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
+
 					// Node Maintenance Actions
 					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusVsphere, CloudConfig.Kind, cloudConfigId, name)
 					if err != nil {

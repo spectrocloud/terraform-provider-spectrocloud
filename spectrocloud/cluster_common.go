@@ -205,13 +205,17 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 
 func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
 	// parse resource ID and scope
+
 	_, clusterID, err := ParseResourceID(d)
+
 	if err != nil {
 		return err
 	}
 
 	// Use the IDs to retrieve the cluster data from the API
+
 	cluster, err := c.GetCluster(clusterID)
+
 	if err != nil {
 		return fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}
