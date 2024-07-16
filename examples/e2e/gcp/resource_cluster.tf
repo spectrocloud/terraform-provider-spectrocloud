@@ -33,4 +33,12 @@ resource "spectrocloud_cluster_gcp" "cluster" {
     disk_size_gb  = var.worker_nodes.disk_size_gb
     azs           = var.worker_nodes.availability_zones
   }
+
+  # Custom timeouts for each CRUD operation
+  #timeouts {
+  #  create = "120m"
+  #  update = "120m"
+  #  delete = "120m"
+  #}
+
 }

@@ -54,4 +54,11 @@ resource "spectrocloud_cluster_azure" "cluster" {
     azs                 = []
   }
 
+  # Custom timeouts for each CRUD operation
+  #timeouts {
+  #  create = "120m"
+  #  update = "120m"
+  #  delete = "120m"
+  #}
+
 }
