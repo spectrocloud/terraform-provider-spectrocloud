@@ -13,16 +13,19 @@ import (
 func dataSourceCloudAccountAws() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceCloudAccountAwsRead,
+		Description: "A data source for retrieving information about an AWS cloud account registered in Palette.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:         schema.TypeString,
+				Description: "ID of the AWS cloud account registered in Palette.",
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
 			"name": {
 				Type:         schema.TypeString,
+				Description: "Name of the AWS cloud account registered in Palette.",
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
