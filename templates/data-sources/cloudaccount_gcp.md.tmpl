@@ -12,19 +12,19 @@ description: |-
 ## Example Usage
 
 
-You can retrieve the details of an Azure cloud registered in Palette by specifying the ID of the cloud account.
+You can retrieve the details of a GCP cloud registered in Palette by specifying the ID of the cloud account.
 
 ```hcl
-data "spectrocloud_cloudaccount_azure" "azure_account" {
+data "spectrocloud_cloudaccount_gcp" "gcp_account" {
   id = "45bddf48b8fc3ea6c1774886"
 }
 ```
 
-Alternatively, you specify the ID of the cloud account to retrieve the details of the Azure cloud account.
+Alternatively, you specify the ID of the cloud account to retrieve the details of the GCP cloud account.
 
 ```hcl
-data "spectrocloud_cloudaccount_azure" "azure_account" {
-   name = "primary-azure-account"
+data "spectrocloud_cloudaccount_gcp" "gcp_account" {
+   name = "primary-gcp-account"
 }
 ```
 

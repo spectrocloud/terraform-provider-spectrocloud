@@ -20,7 +20,7 @@ data "spectrocloud_cloudaccount_azure" "azure_account" {
 }
 ```
 
-Alternatively, you specify the ID of the cloud account to retrieve the details of the Azure cloud.
+Alternatively, you specify the ID of the cloud account to retrieve the details of the Azure cloud account.
 
 ```hcl
 data "spectrocloud_cloudaccount_azure" "azure_account" {
