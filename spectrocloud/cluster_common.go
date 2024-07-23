@@ -127,12 +127,12 @@ func ValidateCloudType(resourceName string, cluster *models.V1SpectroCluster) er
 }
 
 func updateAgentUpgradeSetting(c *client.V1Client, d *schema.ResourceData) error {
-	clusterContext := d.Get("context").(string)
+	//clusterContext := d.Get("context").(string)
 	if v, ok := d.GetOk("pause_agent_upgrades"); ok {
 		setting := &models.V1ClusterUpgradeSettingsEntity{
 			SpectroComponents: v.(string),
 		}
-		if err := c.UpdatePauseAgentUpgradeSettingCluster(setting, d.Id(), clusterContext); err != nil {
+		if err := c.UpdatePauseAgentUpgradeSettingCluster(setting, d.Id()); err != nil {
 			return err
 		}
 	}

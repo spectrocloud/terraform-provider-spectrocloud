@@ -106,7 +106,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cloudaccount_vsphere": resourceCloudAccountVsphere(),
 				"spectrocloud_cluster_vsphere":      resourceClusterVsphere(),
 
-				"spectrocloud_cluster_libvirt": resourceClusterLibvirt(),
+				//"spectrocloud_cluster_libvirt": resourceClusterLibvirt(),
 
 				"spectrocloud_cluster_edge_native": resourceClusterEdgeNative(),
 
@@ -232,10 +232,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
-
-	//if uid != "" {
-	//	client.WithProjectUID(uid)(c)
-	//}
 	if uid != "" {
 		client.SetProjectUID(uid)(c)
 	}
