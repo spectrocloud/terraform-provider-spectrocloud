@@ -26,7 +26,7 @@ check-diff: reviewable ## Execute branch is clean
 	git diff --quiet || ($(ERR) please run 'make reviewable' to include all changes && false)
 	@$(OK) branch is clean
 
-reviewable: fmt vet lint ## Ensure code is ready for review
+reviewable: fmt vet lint generate ## Ensure code is ready for review
 	git submodule update --remote
 	go mod tidy
 
@@ -38,6 +38,9 @@ vet: ## Run go vet against code
 
 lint: golangci-lint ## Run golangci-lint against code
 	$(GOLANGCI_LINT) run
+
+generate:
+	go generate ./...
 
 ##@ Test Targets
 .PHONY: testacc
