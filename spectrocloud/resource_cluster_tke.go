@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -558,7 +559,7 @@ func toTkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	machinePoolConfigs := make([]*models.V1TencentMachinePoolConfigEntity, 0)
 	/*cpPool := map[string]interface{}{
 		"control_plane": true,
-		"name":          "master-pool",
+		"name":          "cp-pool",
 		"az_subnets":    cloudConfig["az_subnets"],
 		"instance_type": "S3.LARGE8",
 		"disk_size_gb":  60,

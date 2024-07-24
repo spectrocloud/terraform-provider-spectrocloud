@@ -48,7 +48,7 @@ description: |-
         }
         control_plane           = true
         control_plane_as_worker = true
-        node_pool_config        = templatefile("config_templates/master_pool_config.yaml", local.node_pool_config_variables)
+        node_pool_config        = templatefile("config_templates/cp_pool_config.yaml", local.node_pool_config_variables)
       }
 
       machine_pool {

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -479,7 +480,7 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	}
 
 	for _, pool := range cloudConfig.Spec.MachinePoolConfig {
-		if pool.Name == "master-pool" {
+		if pool.Name == "cp-pool" {
 			ret["az_subnets"] = pool.SubnetIds
 		}
 	}
@@ -786,7 +787,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	// Following same logic as UI for setting up control plane for managed cluster
 	cpPool := map[string]interface{}{
 		"control_plane": true,
-		"name":          "master-pool",
+		"name":          "cp-pool",
 		"az_subnets":    cloudConfig["az_subnets"],
 		"capacity_type": "spot",
 		"count":         0,

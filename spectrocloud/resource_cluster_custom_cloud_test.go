@@ -2,11 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -46,7 +48,7 @@ func TestFlattenCloudConfigCustom(t *testing.T) {
 	mps = append(mps, &models.V1CustomMachinePoolConfig{
 		AdditionalLabels:        nil,
 		IsControlPlane:          ptr.BoolPtr(true),
-		Name:                    "master-pool",
+		Name:                    "cp-pool",
 		Size:                    1,
 		Taints:                  nil,
 		UseControlPlaneAsWorker: true,
@@ -230,7 +232,7 @@ func TestResourceClusterCustomCloudUpdate(t *testing.T) {
 	mps = append(mps, &models.V1CustomMachinePoolConfig{
 		AdditionalLabels:        nil,
 		IsControlPlane:          ptr.BoolPtr(true),
-		Name:                    "master-pool",
+		Name:                    "cp-pool",
 		Size:                    1,
 		Taints:                  nil,
 		UseControlPlaneAsWorker: true,

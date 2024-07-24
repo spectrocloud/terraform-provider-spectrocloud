@@ -13,15 +13,15 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 	addLabels["by"] = "Siva"
 	addLabels["purpose"] = "unittest"
 
-	subnetIdsMaster := make(map[string]string)
-	subnetIdsMaster["us-east-2a"] = "subnet-031a7ff4ff5e7fb9a"
+	subnetIdsCP := make(map[string]string)
+	subnetIdsCP["us-east-2a"] = "subnet-031a7ff4ff5e7fb9a"
 
 	subnetIdsWorker := make(map[string]string)
 	subnetIdsWorker["us-east-2a"] = "subnet-08864975df862eb58"
 
 	isControl := func(b bool) *bool { return &b }(true)
 	machinePoolConfig = append(machinePoolConfig, &models.V1AwsMachinePoolConfig{
-		Name:                    "master-pool",
+		Name:                    "cp-pool",
 		IsControlPlane:          isControl,
 		InstanceType:            "t3.large",
 		Size:                    1,
@@ -31,7 +31,7 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 		UpdateStrategy: &models.V1UpdateStrategy{
 			Type: "",
 		},
-		SubnetIds: subnetIdsMaster,
+		SubnetIds: subnetIdsCP,
 	})
 	machinePoolConfig = append(machinePoolConfig, &models.V1AwsMachinePoolConfig{
 		Name:             "worker-pool",
@@ -46,7 +46,7 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 	machinePools := flattenMachinePoolConfigsAws(machinePoolConfig)
 	if len(machinePools) != 2 {
 		t.Fail()
-		t.Logf("Machine pool for master and worker is not returned by func - FlattenMachinePoolConfigsAws")
+		t.Logf("Machine pool for control-plane and worker is not returned by func - FlattenMachinePoolConfigsAws")
 	} else {
 		for i := range machinePools {
 			k := machinePools[i].(map[string]interface{})
@@ -66,7 +66,7 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 				t.Errorf("Machine pool - additional labels is not matching got %v, wanted %v", addLabels, k["additional_labels"])
 				t.Fail()
 			}
-			if k["name"] == "master-pool" {
+			if k["name"] == "cp-pool" {
 				if k["control_plane_as_worker"].(bool) != machinePoolConfig[i].UseControlPlaneAsWorker {
 					t.Errorf("Machine pool - control_plane_as_worker is not matching got %s, wanted %v", k["control_plane_as_worker"].(string), machinePoolConfig[i].UseControlPlaneAsWorker)
 					t.Fail()
@@ -75,8 +75,8 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 					t.Errorf("Machine pool - disk_size_gb is not matching got %v, wanted %v", k["disk_size_gb"].(int), int(machinePoolConfig[i].RootDeviceSize))
 					t.Fail()
 				}
-				if !validateMapString(subnetIdsMaster, k["az_subnets"].(map[string]string)) {
-					t.Errorf("Machine pool - additional labels is not matching got %v, wanted %v", subnetIdsMaster, k["az_subnets"])
+				if !validateMapString(subnetIdsCP, k["az_subnets"].(map[string]string)) {
+					t.Errorf("Machine pool - additional labels is not matching got %v, wanted %v", subnetIdsCP, k["az_subnets"])
 					t.Fail()
 				}
 
@@ -101,7 +101,7 @@ func TestFlattenMachinePoolConfigsAwsAZ(t *testing.T) {
 
 	isControl := func(b bool) *bool { return &b }(true)
 	machinePoolConfig = append(machinePoolConfig, &models.V1AwsMachinePoolConfig{
-		Name:                    "master",
+		Name:                    "cp",
 		IsControlPlane:          isControl,
 		InstanceType:            "t3.xlarge",
 		Size:                    1,
@@ -126,7 +126,7 @@ func TestFlattenMachinePoolConfigsAwsAZ(t *testing.T) {
 	machinePools := flattenMachinePoolConfigsAws(machinePoolConfig)
 	if len(machinePools) != 2 {
 		t.Fail()
-		t.Logf("Machine pool for master and worker is not returned by func - FlattenMachinePoolConfigsAws")
+		t.Logf("Machine pool for control-plane and worker is not returned by func - FlattenMachinePoolConfigsAws")
 	} else {
 		for i := range machinePools {
 			k := machinePools[i].(map[string]interface{})
@@ -150,7 +150,7 @@ func TestFlattenMachinePoolConfigsAwsAZ(t *testing.T) {
 				t.Errorf("Machine pool - AZS is not matching got %v, wanted %v", azs, k["azs"])
 				t.Fail()
 			}
-			if k["name"] == "master-pool" {
+			if k["name"] == "cp-pool" {
 				if k["control_plane_as_worker"].(bool) != machinePoolConfig[i].UseControlPlaneAsWorker {
 					t.Errorf("Machine pool - control_plane_as_worker is not matching got %s, wanted %v", k["control_plane_as_worker"].(string), machinePoolConfig[i].UseControlPlaneAsWorker)
 					t.Fail()

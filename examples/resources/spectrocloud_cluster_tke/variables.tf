@@ -6,5 +6,5 @@ variable "sc_trace" {}
 variable "tke_ssh_key_name" {}
 variable "tke_region" {}
 variable "tke_vpc_id" {}
-variable "master_tke_subnets_map" {}
+variable "cp_tke_subnets_map" {}
 variable "worker_tke_subnets_map" {}

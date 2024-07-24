@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -354,7 +355,7 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
+	diags = validateCPPoolCount(cluster.Spec.Machinepoolconfig)
 	if diags != nil {
 		return diags
 	}
@@ -540,7 +541,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		diags = validateMasterPoolCount(cluster.Spec.Machinepoolconfig)
+		diags = validateCPPoolCount(cluster.Spec.Machinepoolconfig)
 		if diags != nil {
 			return diags
 		}
@@ -762,11 +763,11 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 	return mp, nil
 }
 
-func validateMasterPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {
+func validateCPPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {
 	for _, machineConfig := range machinePool {
 		if machineConfig.PoolConfig.IsControlPlane {
 			if *machineConfig.PoolConfig.Size%2 == 0 {
-				return diag.FromErr(fmt.Errorf("The master node pool size should be in an odd number. But it set to an even number '%d' in node name '%s' ", *machineConfig.PoolConfig.Size, *machineConfig.PoolConfig.Name))
+				return diag.FromErr(fmt.Errorf("The control-plane node pool size should be in an odd number. But it set to an even number '%d' in node name '%s' ", *machineConfig.PoolConfig.Size, *machineConfig.PoolConfig.Name))
 			}
 		}
 	}

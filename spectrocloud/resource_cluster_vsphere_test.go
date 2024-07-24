@@ -63,9 +63,9 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 
 	mPools := make([]map[string]interface{}, 0)
 
-	// Adding Master pool
-	masterPlacement := make([]interface{}, 0)
-	masterPlacement = append(masterPlacement, map[string]interface{}{
+	// Adding control-plane pool
+	cpPlacement := make([]interface{}, 0)
+	cpPlacement = append(cpPlacement, map[string]interface{}{
 		"id":                "",
 		"cluster":           "test cluster",
 		"resource_pool":     "Default",
@@ -73,8 +73,8 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 		"network":           "VM Network",
 		"static_ip_pool_id": "testpoolid",
 	})
-	masterInstance := make([]interface{}, 0)
-	masterInstance = append(masterInstance, map[string]interface{}{
+	cpInstance := make([]interface{}, 0)
+	cpInstance = append(cpInstance, map[string]interface{}{
 		"disk_size_gb": 40,
 		"memory_mb":    8192,
 		"cpu":          4,
@@ -82,10 +82,10 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 	mPools = append(mPools, map[string]interface{}{
 		"control_plane":           true,
 		"control_plane_as_worker": true,
-		"name":                    "master-pool",
+		"name":                    "cp-pool",
 		"count":                   1,
-		"placement":               masterPlacement,
-		"instance_type":           masterInstance,
+		"placement":               cpPlacement,
+		"instance_type":           cpInstance,
 		"node":                    []interface{}{},
 	})
 
@@ -160,29 +160,29 @@ func TestToVsphereCluster(t *testing.T) {
 	assert.Equal(2, len(vSphereSchema.Spec.CloudConfig.SSHKeys))
 	assert.Equal(false, vSphereSchema.Spec.CloudConfig.StaticIP)
 
-	// Verifying Master pool attributes
+	// Verifying control-plane pool attributes
 	assert.Equal(2, len(vSphereSchema.Spec.Machinepoolconfig))
-	masterPoolIndex := 0
+	cpPoolIndex := 0
 	workerPoolIndex := 1
-	if *vSphereSchema.Spec.Machinepoolconfig[0].PoolConfig.Name == "master-pool" {
-		masterPoolIndex = 0
+	if *vSphereSchema.Spec.Machinepoolconfig[0].PoolConfig.Name == "cp-pool" {
+		cpPoolIndex = 0
 		workerPoolIndex = 1
 	} else {
-		masterPoolIndex = 1
+		cpPoolIndex = 1
 		workerPoolIndex = 0
 	}
 
-	assert.Equal("master-pool", *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].PoolConfig.Name)
-	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].PoolConfig.IsControlPlane)
-	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.InstanceType.DiskGiB)
-	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.InstanceType.MemoryMiB)
-	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.InstanceType.NumCPUs)
-	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Cluster)
-	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Datastore)
-	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].ResourcePool)
-	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Network.NetworkName)
-	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Network.ParentPoolUID)
-	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[masterPoolIndex].CloudConfig.Placements[0].Network.StaticIP)
+	assert.Equal("cp-pool", *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].PoolConfig.Name)
+	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].PoolConfig.IsControlPlane)
+	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.InstanceType.DiskGiB)
+	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.InstanceType.MemoryMiB)
+	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.InstanceType.NumCPUs)
+	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Cluster)
+	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Datastore)
+	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].ResourcePool)
+	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Network.NetworkName)
+	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Network.ParentPoolUID)
+	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Network.StaticIP)
 
 	// Verifying Worker pool attributes
 	assert.Equal("worker-basic", *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].PoolConfig.Name)
