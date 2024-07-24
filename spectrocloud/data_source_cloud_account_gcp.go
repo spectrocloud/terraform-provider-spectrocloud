@@ -18,14 +18,14 @@ func dataSourceCloudAccountGcp() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:         schema.TypeString,
-				Description: "ID of the GCP cloud account registered in Palette.",
+				Description:  "ID of the GCP cloud account registered in Palette.",
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
 			"name": {
 				Type:         schema.TypeString,
-				Description: "Name of the GCP cloud account registered in Palette.",
+				Description:  "Name of the GCP cloud account registered in Palette.",
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
