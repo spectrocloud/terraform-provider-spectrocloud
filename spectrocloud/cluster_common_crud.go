@@ -36,13 +36,13 @@ var virtualClusterLifecycleStates = []string{
 	"Paused",
 }
 
-func waitForClusterReady(ctx context.Context, d *schema.ResourceData, scope, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
+func waitForClusterReady(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
 	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterReadyPendingStates,
 		Target:     []string{"Ready"},
-		Refresh:    resourceClusterReadyRefreshFunc(c, scope, d.Id()),
+		Refresh:    resourceClusterReadyRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
@@ -97,7 +97,7 @@ func waitForVirtualClusterLifecycleResume(ctx context.Context, d *schema.Resourc
 	return nil, false
 }
 
-func resourceClusterReadyRefreshFunc(c *client.V1Client, scope, id string) retry.StateRefreshFunc {
+func resourceClusterReadyRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		cluster, err := c.GetClusterWithoutStatus(id)
 		if err != nil {
@@ -109,7 +109,7 @@ func resourceClusterReadyRefreshFunc(c *client.V1Client, scope, id string) retry
 	}
 }
 
-func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, scope, uid string, diags diag.Diagnostics, c *client.V1Client, initial bool) (diag.Diagnostics, bool) {
+func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, initial bool) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
 	if initial { // only skip_completion when initally creating a cluster, do not skip when attach addon profile
@@ -122,7 +122,7 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, scope, 
 		}
 	}
 
-	diagnostics, isError := waitForClusterReady(ctx, d, scope, uid, diags, c)
+	diagnostics, isError := waitForClusterReady(ctx, d, uid, diags, c)
 	if isError {
 		return diagnostics, true
 	}

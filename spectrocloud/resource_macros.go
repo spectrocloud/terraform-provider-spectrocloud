@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/hapi/apiutil/transport"
@@ -85,7 +86,7 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 		d.SetId("")
 		return diags
 	}
-	macrosId, err := c.GetMacrosId(uid)
+	macrosId, err := GetMacrosId(c, uid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -187,4 +188,19 @@ func mergeExistingMacros(d *schema.ResourceData, existMacros []*models.V1Macro) 
 		Macros: macro,
 	}
 	return retMacros
+}
+
+func GetMacrosId(c *client.V1Client, uid string) (string, error) {
+
+	hashId := ""
+	if uid != "" {
+		hashId = fmt.Sprintf("%s-%s-%s", "project", "macros", uid)
+	} else {
+		tenantID, err := c.GetTenantUID()
+		if err != nil {
+			return "", err
+		}
+		hashId = fmt.Sprintf("%s-%s-%s", "tenant", "macros", tenantID)
+	}
+	return hashId, nil
 }

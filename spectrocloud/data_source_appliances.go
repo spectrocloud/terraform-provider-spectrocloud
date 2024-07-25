@@ -67,13 +67,13 @@ func dataSourcesApplianceRead(ctx context.Context, d *schema.ResourceData, m int
 		tags = expandStringMap(v)
 	}
 
-	applianceContext := d.Get("context").(string)
+	//applianceContext := d.Get("context").(string)
 	status := d.Get("status").(string)
 	health := d.Get("health").(string)
 	architecture := d.Get("architecture").(string)
 
 	// Read appliances using the new GetAppliances method
-	appliances, err := c.GetAppliances(applianceContext, tags, status, health, architecture)
+	appliances, err := c.GetAppliances(tags, status, health, architecture)
 	if err != nil {
 		return diag.FromErr(err)
 	}

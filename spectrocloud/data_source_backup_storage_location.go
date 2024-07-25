@@ -37,9 +37,9 @@ func dataSourceBackupStorageLocationRead(_ context.Context, d *schema.ResourceDa
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	projectScope := true
+	//projectScope := true
 
-	bsls, err := c.ListBackupStorageLocation(projectScope)
+	bsls, err := c.ListBackupStorageLocation()
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -322,7 +322,7 @@ func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceDat
 	}
 
 	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterEdgeVsphere(cluster, ClusterContext)
+	uid, err := c.CreateClusterEdgeVsphere(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -363,12 +363,12 @@ func flattenCloudConfigEdgeVsphere(configUID string, d *schema.ResourceData, c *
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	ClusterContext := d.Get("context").(string)
-	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
+	//ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		mp := flattenMachinePoolConfigsEdgeVsphere(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeVsphere, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeVsphere, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -443,7 +443,7 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigEdgeVsphere(cloudConfigId, ClusterContext)
+	CloudConfig, err := c.GetCloudConfigEdgeVsphere(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -482,7 +482,7 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					oldMachinePool, _ := toMachinePoolEdgeVsphere(oldMachinePool)
@@ -494,7 +494,7 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 						}
 					}
 
-					err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
 					// Node Maintenance Actions
 					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeVsphere, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
 					if err != nil {
@@ -514,7 +514,7 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

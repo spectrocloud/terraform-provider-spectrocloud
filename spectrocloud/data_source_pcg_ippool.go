@@ -34,7 +34,7 @@ func dataSourceIpPoolRead(_ context.Context, d *schema.ResourceData, m interface
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
 	name := d.Get("name").(string)
 
-	pool, err := c.GetIpPoolByName(pcgUID, name)
+	pool, err := c.GetIPPoolByName(pcgUID, name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

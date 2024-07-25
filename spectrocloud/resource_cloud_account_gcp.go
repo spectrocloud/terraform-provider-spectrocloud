@@ -48,8 +48,8 @@ func resourceCloudAccountGcpCreate(ctx context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	account := toGcpAccount(d)
-	AccountContext := d.Get("context").(string)
-	uid, err := c.CreateCloudAccountGcp(account, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountGcp(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -67,8 +67,8 @@ func resourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	AccountContext := d.Get("context").(string)
-	account, err := c.GetCloudAccountGcp(uid, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountGcp(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -111,8 +111,8 @@ func resourceCloudAccountGcpDelete(_ context.Context, d *schema.ResourceData, m 
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-	AccountContext := d.Get("context").(string)
-	err := c.DeleteCloudAccountGcp(cloudAccountID, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountGcp(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

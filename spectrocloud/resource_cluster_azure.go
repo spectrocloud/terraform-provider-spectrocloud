@@ -361,7 +361,7 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 	}
 
 	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterAzure(cluster, ClusterContext)
+	uid, err := c.CreateClusterAzure(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -456,11 +456,11 @@ func flattenClusterConfigsAzure(config *models.V1AzureCloudConfig) []interface{}
 	return []interface{}{m}
 }
 func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigAzure(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigAzure(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
@@ -470,7 +470,7 @@ func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsAzure(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAzure, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAzure, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -532,7 +532,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigAzure(cloudConfigId, ClusterContext)
+	CloudConfig, err := c.GetCloudConfigAzure(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -579,10 +579,10 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolAzure(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolAzure(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolAzureHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolAzure(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolAzure(cloudConfigId, machinePool)
 					// Node Maintenance Actions
 					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusAzure, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
 					if err != nil {
@@ -604,7 +604,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAzure(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolAzure(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

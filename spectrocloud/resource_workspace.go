@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -150,7 +151,7 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 
 	if d.HasChange("backup_policy") {
 		if len(d.Get("backup_policy").([]interface{})) == 0 {
-			return diag.FromErr(c.WorkspaceBackupDelete())
+			return diag.FromErr(errors.New("not implemented"))
 		}
 		if err := updateWorkspaceBackupPolicy(c, d); err != nil {
 			return diag.FromErr(err)

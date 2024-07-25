@@ -324,7 +324,7 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterAws(cluster, ClusterContext)
+	uid, err := c.CreateClusterAws(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -369,7 +369,7 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 }
 
 func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -377,7 +377,7 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 		return diag.FromErr(err)
 	}
 
-	if config, err := c.GetCloudConfigAws(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigAws(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
@@ -389,7 +389,7 @@ func flattenCloudConfigAws(configUID string, d *schema.ResourceData, c *client.V
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsAws(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAws, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAws, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -501,7 +501,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigAws(cloudConfigId, ClusterContext)
+	CloudConfig, err := c.GetCloudConfigAws(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -543,10 +543,10 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 					if oldMachinePool, ok := osMap[name]; !ok {
 						log.Printf("Create machine pool %s", name)
-						err = c.CreateMachinePoolAws(cloudConfigId, machinePool, ClusterContext)
+						err = c.CreateMachinePoolAws(cloudConfigId, machinePool)
 					} else if hash != resourceMachinePoolAwsHash(oldMachinePool) {
 						log.Printf("Change in machine pool %s", name)
-						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool, ClusterContext)
+						err = c.UpdateMachinePoolAws(cloudConfigId, machinePool)
 						// Node Maintenance Actions
 						err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusAws, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
 						if err != nil {
@@ -569,7 +569,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAws(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolAws(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

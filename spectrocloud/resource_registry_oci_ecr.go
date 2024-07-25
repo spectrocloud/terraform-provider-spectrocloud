@@ -152,7 +152,7 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	registry := toRegistryEcr(d)
-	err := c.UpdateEcrRegistry(d.Id(), registry)
+	err := c.UpdateOciEcrRegistry(d.Id(), registry)
 	if err != nil {
 		return diag.FromErr(err)
 	}

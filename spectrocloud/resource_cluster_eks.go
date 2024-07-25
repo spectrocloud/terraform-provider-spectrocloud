@@ -382,7 +382,7 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterEks(cluster, ClusterContext)
+	uid, err := c.CreateClusterEks(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -417,8 +417,8 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	var config *models.V1EksCloudConfig
-	ClusterContext := d.Get("context").(string)
-	if config, err = c.GetCloudConfigEks(configUID, ClusterContext); err != nil {
+	//ClusterContext := d.Get("context").(string)
+	if config, err = c.GetCloudConfigEks(configUID); err != nil {
 		return diag.FromErr(err)
 	}
 	if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
@@ -431,7 +431,7 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 
 	mp := flattenMachinePoolConfigsEks(config.Spec.MachinePoolConfig)
 
-	mp, err = flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEks, mp, configUID, ClusterContext)
+	mp, err = flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEks, mp, configUID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -619,7 +619,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigEks(cloudConfigId, ClusterContext)
+	CloudConfig, err := c.GetCloudConfigEks(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -635,7 +635,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			FargateProfiles: fargateProfiles,
 		}
 
-		err := c.UpdateFargateProfilesEks(cloudConfigId, ClusterContext, fargateProfilesList)
+		err := c.UpdateFargateProfilesEks(cloudConfigId, fargateProfilesList)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -675,11 +675,11 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 				var err error
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolEks(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolEks(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
 					// TODO
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolEks(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
 					// Node Maintenance Actions
 					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEks, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
 					if err != nil {
@@ -701,7 +701,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEks(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolEks(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

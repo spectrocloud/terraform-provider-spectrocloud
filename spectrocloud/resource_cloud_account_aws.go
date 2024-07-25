@@ -95,8 +95,8 @@ func resourceCloudAccountAwsCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	AccountContext := d.Get("context").(string)
-	uid, err := c.CreateCloudAccountAws(account, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountAws(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -114,8 +114,8 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	AccountContext := d.Get("context").(string)
-	account, err := c.GetCloudAccountAws(uid, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountAws(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -160,8 +160,8 @@ func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m 
 
 	cloudAccountID := d.Id()
 
-	AccountContext := d.Get("context").(string)
-	err := c.DeleteCloudAccountAws(cloudAccountID, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountAws(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -294,7 +294,7 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 	}
 
 	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterEdgeNative(cluster, ClusterContext)
+	uid, err := c.CreateClusterEdgeNative(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -341,7 +341,7 @@ func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m 
 }
 
 func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -349,7 +349,7 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 		return diag.FromErr(err)
 	}
 
-	if config, err := c.GetCloudConfigEdgeNative(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
@@ -357,7 +357,7 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeNative, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeNative, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -483,10 +483,10 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
 					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", ClusterContext, cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
@@ -507,7 +507,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

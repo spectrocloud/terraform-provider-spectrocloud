@@ -57,7 +57,7 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, resourceData *schema.
 	// Warning or errors can be collected in a slice type
 	clusterUid := resourceData.Get("cluster_uid").(string)
 	ClusterContext := resourceData.Get("cluster_context").(string)
-	_, err = c.GetCluster(ClusterContext, clusterUid)
+	_, err = c.GetCluster(clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -72,7 +72,7 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, resourceData *schema.
 	}
 	vmNamespace := resourceData.Get("vm_namespace").(string)
 
-	if _, err := c.CreateDataVolume(ClusterContext, clusterUid, vmName, hapiVolume); err != nil {
+	if _, err := c.CreateDataVolume(clusterUid, vmName, hapiVolume); err != nil {
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new data volume: %#v", dv)
@@ -87,14 +87,14 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, resourceData *schema.
 func resourceKubevirtDataVolumeRead(ctx context.Context, resourceData *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	cli := (meta).(*client.V1Client)
 
-	scope, clusterUid, namespace, vm_name, _, err := utils.IdPartsDV(resourceData.Id())
+	_, clusterUid, namespace, vm_name, _, err := utils.IdPartsDV(resourceData.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Reading virtual machine %s", vm_name)
 
-	hapiVM, err := cli.GetVirtualMachine(scope, clusterUid, namespace, vm_name)
+	hapiVM, err := cli.GetVirtualMachine(clusterUid, namespace, vm_name)
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
@@ -143,18 +143,18 @@ func resourceKubevirtDataVolumeDelete(ctx context.Context, resourceData *schema.
 	c := m.(*client.V1Client)
 
 	var diags diag.Diagnostics
-	scope, clusterUid, namespace, vm_name, vol_name, err := utils.IdPartsDV(resourceData.Id())
+	_, clusterUid, namespace, vm_name, vol_name, err := utils.IdPartsDV(resourceData.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	_, err = c.GetCluster(scope, clusterUid)
+	_, err = c.GetCluster(clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Deleting data volume: %#v", vm_name)
-	if err := c.DeleteDataVolume(scope, clusterUid, namespace, vm_name, &models.V1VMRemoveVolumeEntity{
+	if err := c.DeleteDataVolume(clusterUid, namespace, vm_name, &models.V1VMRemoveVolumeEntity{
 		Persist: true,
 		RemoveVolumeOptions: &models.V1VMRemoveVolumeOptions{
 			Name: types.Ptr(vol_name),

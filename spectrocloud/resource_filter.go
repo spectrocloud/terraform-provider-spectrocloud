@@ -164,7 +164,7 @@ func resourceFilterUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 func resourceFilterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
 
-	err := c.DeleteTag(d.Id())
+	err := c.DeleteTagFilter(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -92,8 +92,8 @@ func resourceCloudAccountAzureCreate(ctx context.Context, d *schema.ResourceData
 
 	account := toAzureAccount(d)
 
-	AccountContext := d.Get("context").(string)
-	uid, err := c.CreateCloudAccountAzure(account, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountAzure(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -112,8 +112,8 @@ func resourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m 
 
 	uid := d.Id()
 
-	AccountContext := d.Get("context").(string)
-	account, err := c.GetCloudAccountAzure(uid, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountAzure(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -184,8 +184,8 @@ func resourceCloudAccountAzureDelete(_ context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-	AccountContext := d.Get("context").(string)
-	err := c.DeleteCloudAccountAzure(cloudAccountID, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountAzure(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

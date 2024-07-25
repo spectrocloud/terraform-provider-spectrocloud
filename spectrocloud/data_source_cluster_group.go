@@ -40,7 +40,7 @@ func dataSourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m int
 		GroupContext := d.Get("context").(string)
 		switch GroupContext {
 		case "system", "tenant":
-			group, err := c.GetClusterGroupByName(name.(string), GroupContext)
+			group, err := c.GetClusterGroupScopeMetadataByName(name.(string))
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -51,7 +51,7 @@ func dataSourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m int
 				}
 			}
 		case "project":
-			group, err := c.GetClusterGroupByNameForProject(name.(string), GroupContext)
+			group, err := c.GetClusterGroupSummaryByName(name.(string))
 			if err != nil {
 				return diag.FromErr(err)
 			}

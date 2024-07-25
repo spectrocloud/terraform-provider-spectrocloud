@@ -90,8 +90,8 @@ func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceDat
 	}
 
 	// Create
-	ProfileContext := d.Get("context").(string)
-	uid, err := c.CreateApplicationProfile(applicationProfile, ProfileContext)
+	//ProfileContext := d.Get("context").(string)
+	uid, err := c.CreateApplicationProfile(applicationProfile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -241,19 +241,19 @@ func resourceApplicationProfileUpdate(ctx context.Context, d *schema.ResourceDat
 			return diag.FromErr(err)
 		}
 
-		ProfileContext := d.Get("context").(string)
-		if err := c.CreateApplicationProfileTiers(d.Id(), tiersCreate, ProfileContext); err != nil {
+		//ProfileContext := d.Get("context").(string)
+		if err := c.CreateApplicationProfileTiers(d.Id(), tiersCreate); err != nil {
 			return diag.FromErr(err)
 		}
 		for i, tier := range tiersUpdateMap {
-			if err := c.UpdateApplicationProfileTiers(d.Id(), i, tier, ProfileContext); err != nil {
+			if err := c.UpdateApplicationProfileTiers(d.Id(), i, tier); err != nil {
 				return diag.FromErr(err)
 			}
 		}
-		if err := c.DeleteApplicationProfileTiers(d.Id(), tiersDeleteIds, ProfileContext); err != nil {
+		if err := c.DeleteApplicationProfileTiers(d.Id(), tiersDeleteIds); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PatchApplicationProfile(d.Id(), metadata, ProfileContext); err != nil {
+		if err := c.PatchApplicationProfile(d.Id(), metadata); err != nil {
 			return diag.FromErr(err)
 		}
 	}

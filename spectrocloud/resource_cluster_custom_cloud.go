@@ -226,12 +226,12 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 	clusterContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 
-	err = c.ValidateCustomCloudType(cloudType, clusterContext)
+	err = c.ValidateCustomCloudType(cloudType)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	uid, err := c.CreateClusterCustomCloud(cluster, cloudType, clusterContext)
+	uid, err := c.CreateClusterCustomCloud(cluster, cloudType)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -277,10 +277,10 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	clusterContext := d.Get("context").(string)
+	//clusterContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 
-	_, err := c.GetCloudConfigCustomCloud(cloudConfigId, cloudType, clusterContext)
+	_, err := c.GetCloudConfigCustomCloud(cloudConfigId, cloudType)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -289,7 +289,7 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 		configEntity := &models.V1CustomCloudClusterConfigEntity{
 			ClusterConfig: config,
 		}
-		err = c.UpdateCloudConfigCustomCloud(configEntity, cloudConfigId, cloudType, clusterContext)
+		err = c.UpdateCloudConfigCustomCloud(configEntity, cloudConfigId, cloudType)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -324,12 +324,12 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 				machinePool := toMachinePoolCustomCloud(mp)
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					if err = c.CreateMachinePoolCustomCloud(machinePool, cloudConfigId, cloudType, clusterContext); err != nil {
+					if err = c.CreateMachinePoolCustomCloud(machinePool, cloudConfigId, cloudType); err != nil {
 						return diag.FromErr(err)
 					}
 				} else if hash != resourceMachinePoolCustomCloudHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					if err = c.UpdateMachinePoolCustomCloud(machinePool, name, cloudConfigId, cloudType, clusterContext); err != nil {
+					if err = c.UpdateMachinePoolCustomCloud(machinePool, name, cloudConfigId, cloudType); err != nil {
 						return diag.FromErr(err)
 					}
 				}
@@ -342,7 +342,7 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err = c.DeleteMachinePoolCustomCloud(name, cloudConfigId, cloudType, clusterContext); err != nil {
+			if err = c.DeleteMachinePoolCustomCloud(name, cloudConfigId, cloudType); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -449,7 +449,7 @@ func flattenMachinePoolConfigsCustomCloud(machinePools []*models.V1CustomMachine
 }
 
 func flattenCloudConfigCustom(configUID string, d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err), true
@@ -458,7 +458,7 @@ func flattenCloudConfigCustom(configUID string, d *schema.ResourceData, c *clien
 	if err := ReadCommonAttributes(d); err != nil {
 		return diag.FromErr(err), true
 	}
-	if config, err := c.GetCloudConfigCustomCloud(configUID, cloudType, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigCustomCloud(configUID, cloudType); err != nil {
 		return diag.FromErr(err), true
 	} else {
 		if config.Spec != nil && config.Spec.CloudAccountRef != nil {

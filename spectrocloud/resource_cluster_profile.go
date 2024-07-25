@@ -95,7 +95,7 @@ func resourceClusterProfile() *schema.Resource {
 
 func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
+	//clusterC := c.GetClusterClient()
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -106,14 +106,14 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	// Create
-	ProfileContext := d.Get("context").(string)
-	uid, err := c.CreateClusterProfile(clusterC, clusterProfile, ProfileContext)
+	//ProfileContext := d.Get("context").(string)
+	uid, err := c.CreateClusterProfile(clusterProfile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	// And then publish
-	if err = c.PublishClusterProfile(clusterC, uid, ProfileContext); err != nil {
+	if err = c.PublishClusterProfile(uid); err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
@@ -123,7 +123,7 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
+	//clusterC := c.GetClusterClient()
 
 	var diags diag.Diagnostics
 
@@ -132,7 +132,7 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(fmt.Errorf("incorrect cluster profile id: %s, scope is not supported", d.Id()))
 	}
 
-	cp, err := c.GetClusterProfile(clusterC, d.Id())
+	cp, err := c.GetClusterProfile(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cp == nil {
@@ -164,7 +164,7 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	}
 
 	// Profile variables
-	profileVariables, err := c.GetProfileVariables(clusterC, d.Id())
+	profileVariables, err := c.GetProfileVariables(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -210,14 +210,14 @@ func flattenClusterProfileCommon(d *schema.ResourceData, cp *models.V1ClusterPro
 
 func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
+	//clusterC := c.GetClusterClient()
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") {
 		log.Printf("Updating packs")
-		cp, err := c.GetClusterProfile(clusterC, d.Id())
+		cp, err := c.GetClusterProfile(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -230,14 +230,14 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 			return diag.FromErr(err)
 		}
 
-		ProfileContext := d.Get("context").(string)
-		if err := c.UpdateClusterProfile(clusterC, cluster, ProfileContext); err != nil {
+		//ProfileContext := d.Get("context").(string)
+		if err := c.UpdateClusterProfile(cluster); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PatchClusterProfile(clusterC, cluster, metadata, ProfileContext); err != nil {
+		if err := c.PatchClusterProfile(cluster, metadata); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := c.PublishClusterProfile(clusterC, cluster.Metadata.UID, ProfileContext); err != nil {
+		if err := c.PublishClusterProfile(cluster.Metadata.UID); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -250,7 +250,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		mVars := &models.V1Variables{
 			Variables: pvs,
 		}
-		err = c.UpdateProfileVariables(clusterC, mVars, d.Id())
+		err = c.UpdateProfileVariables(mVars, d.Id())
 		if err != nil {
 			oldVariables, _ := d.GetChange("profile_variables")
 			_ = d.Set("profile_variables", oldVariables)
@@ -265,11 +265,11 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 
 func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
+	//clusterC := c.GetClusterClient()
 
 	var diags diag.Diagnostics
 
-	if err := c.DeleteClusterProfile(clusterC, d.Id()); err != nil {
+	if err := c.DeleteClusterProfile(d.Id()); err != nil {
 		return diag.FromErr(err)
 	}
 

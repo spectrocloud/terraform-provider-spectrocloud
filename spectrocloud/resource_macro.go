@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/palette-sdk-go/client/apiutil"
 	"time"
 
 	"github.com/spectrocloud/palette-api-go/models"
@@ -64,7 +65,7 @@ func resourceMacroCreate(ctx context.Context, d *schema.ResourceData, m interfac
 		return diag.FromErr(err)
 	}
 	name := d.Get("name").(string)
-	d.SetId(c.GetMacroId(uid, name))
+	d.SetId(getMacroId(uid, name))
 	return diags
 }
 
@@ -91,7 +92,7 @@ func resourceMacroRead(ctx context.Context, d *schema.ResourceData, m interface{
 		return diags
 	}
 
-	d.SetId(c.GetMacroId(uid, d.Get("name").(string)))
+	d.SetId(getMacroId(uid, d.Get("name").(string)))
 
 	if err := d.Set("name", macro.Name); err != nil {
 		return diag.FromErr(err)
@@ -153,4 +154,14 @@ func toMacro(d *schema.ResourceData) *models.V1Macros {
 		Macros: macro,
 	}
 	return retMacros
+}
+
+func getMacroId(uid, name string) string {
+	var hash string
+	if uid != "" {
+		hash = apiutil.StringHash(name + uid)
+	} else {
+		hash = apiutil.StringHash(name + "%tenant")
+	}
+	return hash
 }

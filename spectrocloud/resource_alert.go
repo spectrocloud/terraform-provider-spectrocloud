@@ -189,7 +189,7 @@ func resourceAlertDelete(ctx context.Context, d *schema.ResourceData, m interfac
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = c.DeleteAlerts(projectUid, d.Get("component").(string), d.Id())
+	err = c.DeleteAlert(projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -201,7 +201,7 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 	c := m.(*client.V1Client)
 	var diags diag.Diagnostics
 	projectUid, _ := getProjectID(d, m)
-	alertPayload, err := c.ReadAlert(projectUid, d.Get("component").(string), d.Id())
+	alertPayload, err := c.GetAlert(projectUid, d.Get("component").(string), d.Id())
 	if alertPayload == nil {
 		d.SetId("")
 		return diag.FromErr(err)

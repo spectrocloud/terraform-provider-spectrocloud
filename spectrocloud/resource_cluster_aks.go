@@ -322,7 +322,7 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterAks(cluster, ClusterContext)
+	uid, err := c.CreateClusterAks(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -365,8 +365,8 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err := ReadCommonAttributes(d); err != nil {
 		return diag.FromErr(err)
 	}
-	ClusterContext := d.Get("context").(string)
-	if config, err := c.GetCloudConfigAks(configUID, ClusterContext); err != nil {
+	//ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigAks(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
@@ -376,7 +376,7 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsAks(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAks, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapAks, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -518,7 +518,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigAks(cloudConfigId, ClusterContext)
+	CloudConfig, err := c.GetCloudConfigAks(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -555,10 +555,10 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 				var err error
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolAks(cloudConfigId, machinePool, ClusterContext)
+					err = c.CreateMachinePoolAks(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolAksHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolAks(cloudConfigId, machinePool, ClusterContext)
+					err = c.UpdateMachinePoolAks(cloudConfigId, machinePool)
 					// Node Maintenance Actions
 					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusAks, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
 					if err != nil {
@@ -577,7 +577,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolAks(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolAks(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

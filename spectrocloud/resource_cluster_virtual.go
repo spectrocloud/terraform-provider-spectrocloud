@@ -226,8 +226,8 @@ func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	//ClusterContext := d.Get("context").(string)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}

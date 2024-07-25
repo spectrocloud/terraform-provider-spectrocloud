@@ -372,13 +372,13 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterVsphere(cluster, ClusterContext)
+	//ClusterContext := d.Get("context").(string)
+	uid, err := c.CreateClusterVsphere(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -413,8 +413,8 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	ClusterContext := d.Get("context").(string)
-	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
+	//ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
@@ -425,7 +425,7 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapVsphere, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapVsphere, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -443,14 +443,14 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 }
 
 func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	if config, err := c.GetCloudConfigVsphere(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfig, err := c.GetCloudConfigVsphereValues(configUID, ClusterContext)
+		cloudConfig, err := c.GetCloudConfigVsphere(configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -660,8 +660,8 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigVsphere(cloudConfigId, ClusterContext)
+	//ClusterContext := d.Get("context").(string)
+	CloudConfig, err := c.GetCloudConfigVsphere(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -671,7 +671,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 			return diag.Errorf("Validation error: %s", "Datacenter value cannot be updated after cluster provisioning. Kindly destroy and recreate with updated Datacenter attribute.")
 		}
 		cloudConfig := toCloudConfigUpdate(d.Get("cloud_config").([]interface{})[0].(map[string]interface{}))
-		if err := c.UpdateCloudConfigVsphereValues(cloudConfigId, ClusterContext, cloudConfig); err != nil {
+		if err := c.UpdateCloudConfigVsphere(cloudConfigId, cloudConfig); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -716,7 +716,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolVsphere(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolVsphereHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					oldMachinePool, _ := toMachinePoolVsphere(oldMachinePool)
@@ -734,9 +734,9 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 						machinePool.CloudConfig.Placements[0].Datacenter = cConfig["datacenter"].(string)
 						machinePool.CloudConfig.Placements[0].Folder = cConfig["folder"].(string)
 					}
-					err = c.UpdateMachinePoolVsphere(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolVsphere(cloudConfigId, machinePool)
 					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusVsphere, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusVsphere, CloudConfig.Kind, cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -756,7 +756,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolVsphere(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

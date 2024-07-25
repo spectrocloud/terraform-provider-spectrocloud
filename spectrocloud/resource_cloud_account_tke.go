@@ -50,8 +50,8 @@ func resourceCloudAccountTencentCreate(ctx context.Context, d *schema.ResourceDa
 	var diags diag.Diagnostics
 
 	account := toTencentAccount(d)
-	AccountContext := d.Get("context").(string)
-	uid, err := c.CreateCloudAccountTke(account, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountTke(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -69,8 +69,8 @@ func resourceCloudAccountTencentRead(_ context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	AccountContext := d.Get("context").(string)
-	account, err := c.GetCloudAccountTke(uid, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountTke(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -97,7 +97,7 @@ func resourceCloudAccountTencentUpdate(ctx context.Context, d *schema.ResourceDa
 
 	account := toTencentAccount(d)
 
-	err := c.UpdateCloudAccountTencent(account)
+	err := c.UpdateCloudAccountTke(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -113,8 +113,8 @@ func resourceCloudAccountTencentDelete(_ context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-	AccountContext := d.Get("context").(string)
-	err := c.DeleteCloudAccountTke(cloudAccountID, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountTke(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

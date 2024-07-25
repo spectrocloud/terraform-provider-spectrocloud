@@ -73,8 +73,8 @@ func resourceCloudAccountVsphereCreate(ctx context.Context, d *schema.ResourceDa
 
 	account := toVsphereAccount(d)
 
-	AccountContext := d.Get("context").(string)
-	uid, err := c.CreateCloudAccountVsphere(account, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	uid, err := c.CreateCloudAccountVsphere(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -92,8 +92,8 @@ func resourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	AccountContext := d.Get("context").(string)
-	account, err := c.GetCloudAccountVsphere(uid, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	account, err := c.GetCloudAccountVsphere(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -140,8 +140,8 @@ func resourceCloudAccountVsphereUpdate(ctx context.Context, d *schema.ResourceDa
 
 	account := toVsphereAccount(d)
 
-	AccountContext := d.Get("context").(string)
-	err := c.UpdateCloudAccountVsphere(account, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	err := c.UpdateCloudAccountVsphere(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -157,8 +157,8 @@ func resourceCloudAccountVsphereDelete(_ context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-	AccountContext := d.Get("context").(string)
-	err := c.DeleteCloudAccountVsphere(cloudAccountID, AccountContext)
+	//AccountContext := d.Get("context").(string)
+	err := c.DeleteCloudAccountVsphere(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

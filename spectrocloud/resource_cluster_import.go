@@ -97,10 +97,10 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	stateConf := &retry.StateChangeConf{
 		Target:     []string{"Pending"},
-		Refresh:    resourceClusterStateRefreshFunc(c, ClusterContext, d.Id()),
+		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 1 * time.Second,
 		Delay:      5 * time.Second,
@@ -119,7 +119,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	if profiles != nil {
-		if err := c.UpdateClusterProfileValues(uid, ClusterContext, profiles); err != nil {
+		if err := c.UpdateClusterProfileValues(uid, profiles); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -174,8 +174,8 @@ func resourceCloudClusterImportManoifests(cluster *models.V1SpectroCluster, d *s
 		// Importing from Pending which isn't desired until intention is to apply the manifest locally
 		if len(cluster.Metadata.Labels) > 0 {
 			if v, ok := cluster.Metadata.Labels["apply"]; ok && v == "true" {
-				context := d.Get("context").(string)
-				importManifest, err := c.GetClusterImportManifest(cluster.Metadata.UID, context)
+				//context := d.Get("context").(string)
+				importManifest, err := c.GetClusterImportManifest(cluster.Metadata.UID)
 				if err != nil {
 					return err
 				}
@@ -215,8 +215,8 @@ func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m int
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	clusterContext := d.Get("context").(string)
-	err = c.UpdateClusterProfileValues(d.Id(), clusterContext, profiles)
+	//clusterContext := d.Get("context").(string)
+	err = c.UpdateClusterProfileValues(d.Id(), profiles)
 	if err != nil {
 		return diag.FromErr(err)
 	}
