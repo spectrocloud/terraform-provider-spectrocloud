@@ -2,7 +2,7 @@
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: KubeadmControlPlane
 metadata:
-  name: ${MASTER_NODE_POOL_NAME}
+  name: ${CP_NODE_POOL_NAME}
 spec:
   kubeadmConfigSpec:
     clusterConfiguration:

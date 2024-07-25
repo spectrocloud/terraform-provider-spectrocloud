@@ -12,7 +12,7 @@ locals {
   }
   # Node Pool config variables
   node_pool_config_variables = {
-    MASTER_NODE_POOL_NAME               = "master-pool"
+    CP_NODE_POOL_NAME                   = "cp-pool"
     CLUSTER_NAME                        = local.cloud_config_override_variables["CLUSTER_NAME"]
     CONTROL_PLANE_ENDPOINT_IP           = local.cloud_config_override_variables["CONTROL_PLANE_ENDPOINT_IP"]
     NUTANIX_SSH_AUTHORIZED_KEY          = "ssh -a test-test"
@@ -71,7 +71,7 @@ resource "spectrocloud_cluster_custom_cloud" "cluster_nutanix" {
   machine_pool {
     control_plane           = true
     control_plane_as_worker = true
-    node_pool_config        = templatefile("config_templates/master_pool_config.yaml", local.node_pool_config_variables)
+    node_pool_config        = templatefile("config_templates/cp_pool_config.yaml", local.node_pool_config_variables)
   }
 
   machine_pool {

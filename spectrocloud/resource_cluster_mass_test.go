@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
@@ -186,7 +187,7 @@ func TestToMaasCluster(t *testing.T) {
 	mpools := []interface{}{
 		map[string]interface{}{
 			"control_plane":   true,
-			"name":            "mass_mp_master",
+			"name":            "mass_mp_cp",
 			"count":           2,
 			"update_strategy": "RollingUpdateScaleOut",
 			"max":             3,

@@ -1,14 +1,16 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"sort"
 	"testing"
 
+	"github.com/spectrocloud/gomi/pkg/ptr"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
@@ -132,17 +134,17 @@ func TestToStaticPlacement(t *testing.T) {
 	assert.Equal(t, expected, c)
 }
 
-func TestValidateMasterPoolCount(t *testing.T) {
-	// Test case 1: Even master pool size
-	masterConfig1 := &models.V1AzureMachinePoolConfigEntity{
+func TestValidateCPPoolCount(t *testing.T) {
+	// Test case 1: Even control-plane pool size
+	cpConfig1 := &models.V1AzureMachinePoolConfigEntity{
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: true,
 			Size:           types.Ptr(int32(4)),
-			Name:           types.Ptr("master1"),
+			Name:           types.Ptr("cp1"),
 		},
 	}
 
-	// Test case 2: Non-master pool
+	// Test case 2: Non-cp pool
 	workerConfig := &models.V1AzureMachinePoolConfigEntity{
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: false,
@@ -152,7 +154,7 @@ func TestValidateMasterPoolCount(t *testing.T) {
 	}
 
 	// Test case 3: Non-control plane pool with odd size
-	nonMasterConfig := &models.V1AzureMachinePoolConfigEntity{
+	nonCPConfig := &models.V1AzureMachinePoolConfigEntity{
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: false,
 			Size:           types.Ptr(int32(7)),
@@ -161,13 +163,13 @@ func TestValidateMasterPoolCount(t *testing.T) {
 	}
 
 	machinePool := []*models.V1AzureMachinePoolConfigEntity{
-		masterConfig1,
+		cpConfig1,
 		workerConfig,
-		nonMasterConfig,
+		nonCPConfig,
 	}
 
 	// Run the function and capture the diagnostics
-	diagnostics := validateMasterPoolCount(machinePool)
+	diagnostics := validateCPPoolCount(machinePool)
 
 	// Test case 1 should return an error, so diagnostics should not be nil
 	assert.NotNil(t, diagnostics, "Test case 1 failed: Expected diagnostics to be non-nil")

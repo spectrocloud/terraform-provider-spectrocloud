@@ -52,7 +52,7 @@ resource "spectrocloud_cluster_tke" "cluster" {
     ssh_key_name        = var.tke_ssh_key_name
     region              = var.tke_region
     vpc_id              = var.tke_vpc_id
-    az_subnets          = var.master_tke_subnets_map
+    az_subnets          = var.cp_tke_subnets_map
   }
 
   machine_pool {

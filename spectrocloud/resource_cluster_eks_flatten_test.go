@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/spectrocloud/hapi/models"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -149,7 +150,7 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 					},
 					MachinePoolConfig: []*models.V1EksMachinePoolConfig{
 						{
-							Name:      "master-pool",
+							Name:      "cp-pool",
 							SubnetIds: map[string]string{"subnet-12345678": "subnet-87654321"},
 						},
 					},
@@ -211,7 +212,7 @@ func TestFlattenClusterConfigsEKSPrivateCIDRS(t *testing.T) {
 					},
 					MachinePoolConfig: []*models.V1EksMachinePoolConfig{
 						{
-							Name:      "master-pool",
+							Name:      "cp-pool",
 							SubnetIds: map[string]string{"subnet-12345678": "subnet-87654321"},
 						},
 					},

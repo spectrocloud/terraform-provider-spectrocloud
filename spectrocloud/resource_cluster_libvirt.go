@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/hapi/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -784,9 +785,9 @@ func toMachinePoolLibvirt(machinePool interface{}) (*models.V1LibvirtMachinePool
 	addDisks := getAdditionalDisks(ins)
 
 	updateStrategyType := getUpdateStrategy(m)
-	if m["name"].(string) == "master-pool" && updateStrategyType == "RollingUpdateScaleIn" {
-		// If master pool has RollingUpdateScaleIn as an update strategy, return an error
-		return nil, fmt.Errorf("update strategy RollingUpdateScaleIn is not allowed for the 'master-pool' machine pool")
+	if m["name"].(string) == "cp-pool" && updateStrategyType == "RollingUpdateScaleIn" {
+		// If control-plane pool has RollingUpdateScaleIn as an update strategy, return an error
+		return nil, fmt.Errorf("update strategy RollingUpdateScaleIn is not allowed for the 'cp-pool' machine pool")
 	}
 
 	var xlstemplate string

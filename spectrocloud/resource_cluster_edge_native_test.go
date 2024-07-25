@@ -1,11 +1,13 @@
 package spectrocloud
 
 import (
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/spectrocloud/hapi/models"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -287,7 +289,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 				t.Errorf("Expected %v, got %v", expected, result)
 			}
 			if !cmp.Equal(result.PoolConfig.Labels[0], "control-plane") {
-				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(result.PoolConfig.Labels[0], "master"))
+				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(result.PoolConfig.Labels[0], "control-plane"))
 			}
 
 		})

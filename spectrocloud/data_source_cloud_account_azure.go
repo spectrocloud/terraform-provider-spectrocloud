@@ -17,38 +17,38 @@ func dataSourceCloudAccountAzure() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"azure_tenant_id": {
-				Type:     schema.TypeString,
+				Type:        schema.TypeString,
 				Description: "The tenant ID of the Azure cloud account registered in Palette.",
-				Computed: true,
+				Computed:    true,
 			},
 			"azure_client_id": {
-				Type:     schema.TypeString,
+				Type:        schema.TypeString,
 				Description: "The unique client ID from Azure Management Portal.",
-				Computed: true,
+				Computed:    true,
 			},
 			"id": {
 				Type:         schema.TypeString,
-				Description: "ID of the Azure cloud account registered in Palette.",
+				Description:  "ID of the Azure cloud account registered in Palette.",
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
 			"name": {
 				Type:         schema.TypeString,
-				Description: "Name of the Azure cloud account registered in Palette.",
+				Description:  "Name of the Azure cloud account registered in Palette.",
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
 			"tenant_name": {
 				Description: "The name of the Azure tenant.",
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
 			},
 			"disable_properties_request": {
-				Type:     schema.TypeBool,
+				Type:        schema.TypeBool,
 				Description: "The status of the disable properties option.",
-				Computed: true,
+				Computed:    true,
 			},
 		},
 	}
