@@ -18,6 +18,8 @@ const (
 		"[`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema)."
 )
 
+var ProviderInitProjectUid = ""
+
 func New(_ string) func() *schema.Provider {
 	return func() *schema.Provider {
 		p := &schema.Provider{
@@ -221,7 +223,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	}
 
 	c := client.New(
-		client.WithHubbleURI(host),
+		client.WithPaletteURI(host),
 		client.WithAPIKey(apiKey),
 		client.WithRetries(retryAttempts))
 
@@ -234,8 +236,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	}
 
 	if uid != "" {
-		client.WithProjectUID(uid)(c)
+		ProviderInitProjectUid = uid
+		client.WithScopeProject(uid)(c)
 	}
+	//else {
+	//	client.WithScopeTenant()(c)
+	//}
 
 	return c, diags
 

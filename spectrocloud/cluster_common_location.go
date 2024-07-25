@@ -2,7 +2,7 @@ package spectrocloud
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -90,7 +90,7 @@ func updateLocationConfig(c *client.V1Client, d *schema.ResourceData) error {
 		return err
 	}
 	if locationConfigs := toClusterLocationConfigs(d); locationConfigs != nil {
-		return c.ApplyClusterLocationConfig(clusterContext, d.Id(), &models.V1SpectroClusterLocationInputEntity{
+		return c.ApplyClusterLocationConfig(d.Id(), &models.V1SpectroClusterLocationInputEntity{
 			Location: locationConfigs,
 		})
 	}

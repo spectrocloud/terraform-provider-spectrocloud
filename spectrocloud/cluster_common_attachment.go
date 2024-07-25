@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -22,7 +22,7 @@ var resourceAddonDeploymentCreatePendingStates = []string{
 }
 
 func waitForAddonDeployment(ctx context.Context, d *schema.ResourceData, cl models.V1SpectroCluster, profile_uid string, diags diag.Diagnostics, c *client.V1Client, state string) (diag.Diagnostics, bool) {
-	cluster, err := c.GetCluster(cl.Metadata.Annotations["scope"], cl.Metadata.UID)
+	cluster, err := c.GetCluster(cl.Metadata.UID)
 	if err != nil {
 		return diags, true
 	}
@@ -58,7 +58,7 @@ func waitForAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, c
 
 func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, cluster models.V1SpectroCluster, profile_uid string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetCluster(cluster.Metadata.Annotations["scope"], cluster.Metadata.UID)
+		cluster, err := c.GetCluster(cluster.Metadata.UID)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {
@@ -103,12 +103,11 @@ func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, cluster models.
 
 func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
 
 	var diags diag.Diagnostics
 	clusterUid := d.Get("cluster_uid").(string)
-	clusterContext := d.Get("context").(string)
-	cluster, err := c.GetCluster(clusterContext, clusterUid)
+	//clusterContext := d.Get("context").(string)
+	cluster, err := c.GetCluster(clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if cluster == nil {
@@ -123,7 +122,7 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 	profile_uids = append(profile_uids, profileId)
 
 	if len(profile_uids) > 0 {
-		err = c.DeleteAddonDeployment(clusterC, clusterUid, clusterContext, &models.V1SpectroClusterProfilesDeleteEntity{
+		err = c.DeleteAddonDeployment(clusterUid, &models.V1SpectroClusterProfilesDeleteEntity{
 			ProfileUids: profile_uids,
 		})
 		if err != nil {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"strings"
 )
@@ -127,12 +127,12 @@ func ValidateCloudType(resourceName string, cluster *models.V1SpectroCluster) er
 }
 
 func updateAgentUpgradeSetting(c *client.V1Client, d *schema.ResourceData) error {
-	clusterContext := d.Get("context").(string)
+	//clusterContext := d.Get("context").(string)
 	if v, ok := d.GetOk("pause_agent_upgrades"); ok {
 		setting := &models.V1ClusterUpgradeSettingsEntity{
 			SpectroComponents: v.(string),
 		}
-		if err := c.UpdatePauseAgentUpgradeSettingCluster(setting, d.Id(), clusterContext); err != nil {
+		if err := c.UpdatePauseAgentUpgradeSettingCluster(setting, d.Id()); err != nil {
 			return err
 		}
 	}
@@ -205,13 +205,13 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 
 func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
 	// parse resource ID and scope
-	scope, clusterID, err := ParseResourceID(d)
+	_, clusterID, err := ParseResourceID(d)
 	if err != nil {
 		return err
 	}
 
 	// Use the IDs to retrieve the cluster data from the API
-	cluster, err := c.GetCluster(scope, clusterID)
+	cluster, err := c.GetCluster(clusterID)
 	if err != nil {
 		return fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}

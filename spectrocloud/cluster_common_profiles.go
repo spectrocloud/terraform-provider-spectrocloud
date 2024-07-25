@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -42,7 +42,7 @@ func toProfilesCommon(c *client.V1Client, d *schema.ResourceData, clusterUID, co
 	var cluster *models.V1SpectroCluster
 	var err error
 	if clusterUID != "" {
-		cluster, err = c.GetClusterWithoutStatus(context, clusterUID)
+		cluster, err = c.GetClusterWithoutStatus(clusterUID)
 		if err != nil || cluster == nil {
 			return nil, fmt.Errorf("cluster %s cannot be retrieved in context %s", clusterUID, context)
 		}
@@ -157,7 +157,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		SpcApplySettings: settings,
 	}
 	clusterContext := d.Get("context").(string)
-	if err := c.UpdateClusterProfileValues(d.Id(), clusterContext, body); err != nil {
+	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
 		return err
 	}
 
@@ -174,12 +174,12 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 }
 
 func flattenClusterProfileForImport(c *client.V1Client, d *schema.ResourceData) ([]interface{}, error) {
-	clusterContext := "project"
-	if v, ok := d.GetOk("context"); ok {
-		clusterContext = v.(string)
-	}
+	//clusterContext := "project"
+	//if v, ok := d.GetOk("context"); ok {
+	//	clusterContext = v.(string)
+	//}
 	clusterProfiles := make([]interface{}, 0)
-	cluster, err := c.GetCluster(clusterContext, d.Id())
+	cluster, err := c.GetCluster(d.Id())
 	if err != nil {
 		return clusterProfiles, err
 	}
