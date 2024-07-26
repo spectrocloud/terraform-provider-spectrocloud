@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceApplication() *schema.Resource {
@@ -93,7 +92,7 @@ func resourceApplication() *schema.Resource {
 }
 
 func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
@@ -185,12 +184,10 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	if d.HasChanges("cluster_uid", "cluster_profile") {
-		c := m.(*client.V1Client)
+		c := getV1ClientWithResourceContext(m, "")
 		//clusterC := c.GetClusterClient()
 
 		clusterUid := d.Get("cluster_uid").(string)
-		//clusterScope := d.Get("cluster_context").(string)
-
 		cluster, err := c.GetCluster(clusterUid)
 		if err != nil && cluster == nil {
 			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
