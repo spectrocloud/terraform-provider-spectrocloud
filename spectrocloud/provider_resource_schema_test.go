@@ -133,12 +133,6 @@ func prepareCloudAccountVsphereTestData(id string) *schema.ResourceData {
 	return d
 }
 
-func prepareClusterLibvirtTestData(id string) *schema.ResourceData {
-	d := resourceClusterLibvirt().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
 func prepareClusterEdgeNativeTestData(id string) *schema.ResourceData {
 	d := resourceClusterEdgeNative().TestResourceData()
 	d.SetId(id)
@@ -367,11 +361,6 @@ func TestResourceClusterOpenStack(t *testing.T) {
 
 func TestResourceCloudAccountVsphere(t *testing.T) {
 	testData := prepareCloudAccountVsphereTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceClusterLibvirt(t *testing.T) {
-	testData := prepareClusterLibvirtTestData("test-id")
 	assert.Equal(t, "test-id", testData.Id())
 }
 
