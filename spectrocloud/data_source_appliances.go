@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func dataSourceAppliances() *schema.Resource {
@@ -59,7 +58,8 @@ func dataSourceAppliances() *schema.Resource {
 }
 
 func dataSourcesApplianceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Initialize tags if present
 	var tags map[string]string
@@ -67,7 +67,6 @@ func dataSourcesApplianceRead(ctx context.Context, d *schema.ResourceData, m int
 		tags = expandStringMap(v)
 	}
 
-	//applianceContext := d.Get("context").(string)
 	status := d.Get("status").(string)
 	health := d.Get("health").(string)
 	architecture := d.Get("architecture").(string)

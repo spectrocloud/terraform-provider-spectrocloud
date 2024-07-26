@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -24,7 +22,7 @@ func dataSourceWorkspace() *schema.Resource {
 }
 
 func dataSourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
 		workspace, err := c.GetWorkspaceByName(name.(string))

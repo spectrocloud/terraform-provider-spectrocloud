@@ -4,10 +4,8 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func dataSourceClusterGroup() *schema.Resource {
@@ -34,10 +32,11 @@ func dataSourceClusterGroup() *schema.Resource {
 }
 
 func dataSourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	GroupContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, GroupContext)
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
-		GroupContext := d.Get("context").(string)
+
 		switch GroupContext {
 		case "system", "tenant":
 			group, err := c.GetClusterGroupScopeMetadataByName(name.(string))
