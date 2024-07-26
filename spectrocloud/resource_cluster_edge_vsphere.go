@@ -312,7 +312,8 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 }
 
 func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -321,7 +322,6 @@ func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterEdgeVsphere(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -338,7 +338,8 @@ func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceClusterEdgeVsphereRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -434,7 +435,8 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 }
 
 func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 	err := validateSystemRepaveApproval(d, c)
@@ -442,7 +444,6 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigEdgeVsphere(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)

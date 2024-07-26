@@ -90,14 +90,14 @@ func resourceClusterImport() *schema.Resource {
 }
 
 func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
 	uid, err := cloudClusterImportFunc(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
-	//ClusterContext := d.Get("context").(string)
 	stateConf := &retry.StateChangeConf{
 		Target:     []string{"Pending"},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
@@ -127,7 +127,8 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -208,14 +209,14 @@ func cloudClusterImportFunc(c *client.V1Client, d *schema.ResourceData) (string,
 }
 
 func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
 
 	profiles, err := toCloudClusterProfiles(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	//clusterContext := d.Get("context").(string)
 	err = c.UpdateClusterProfileValues(d.Id(), profiles)
 	if err != nil {
 		return diag.FromErr(err)

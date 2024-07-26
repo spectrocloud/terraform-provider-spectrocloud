@@ -114,7 +114,7 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	if Pcontext, ok_context := d.GetOk("context"); ok_context {
 		ProjectContext = Pcontext.(string)
 	}
-	c := setResourceContext(m, ProjectContext)
+	c := getV1ClientWithResourceContext(m, ProjectContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics

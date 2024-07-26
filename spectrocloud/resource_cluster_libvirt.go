@@ -597,7 +597,6 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigLibvirt(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -643,7 +642,7 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolLibvirt(cloudConfigId, machinePool)
 					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusLibvirt, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusLibvirt, CloudConfig.Kind, cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -663,7 +662,7 @@ func resourceClusterVirtUpdate(ctx context.Context, d *schema.ResourceData, m in
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolLibvirt(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolLibvirt(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

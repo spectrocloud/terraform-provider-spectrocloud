@@ -131,11 +131,11 @@ func resourceClusterGroup() *schema.Resource {
 }
 
 func resourceClusterGroupCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-	//scope := d.Get("context").(string)
 	cluster := toClusterGroup(c, d)
 
 	uid, err := c.CreateClusterGroup(cluster)
@@ -152,13 +152,11 @@ func resourceClusterGroupCreate(ctx context.Context, d *schema.ResourceData, m i
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
-	//
 	uid := d.Id()
-	//scope := d.Get("context").(string)
-	//
 	clusterGroup, err := c.GetClusterGroup(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -240,10 +238,10 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 }
 
 func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-	//scope := d.Get("context").(string)
 	// if there are changes in the name of  cluster group, update it using UpdateClusterGroupMeta()
 	if d.HasChanges("name", "tags") {
 		clusterGroup := toClusterGroup(c, d)
@@ -401,10 +399,10 @@ func toClusterGroupLimitConfig(resources map[string]interface{}) *models.V1Clust
 }
 
 func resourceClusterGroupDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
-	//scope := d.Get("context").(string)
 	err := c.DeleteClusterGroup(d.Id())
 	if err != nil {
 		return diag.FromErr(err)

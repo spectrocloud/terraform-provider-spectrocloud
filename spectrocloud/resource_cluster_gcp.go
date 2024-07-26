@@ -41,7 +41,7 @@ func resourceClusterGcp() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"context": {s
+			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",

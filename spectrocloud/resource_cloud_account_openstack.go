@@ -24,7 +24,7 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 			},
 			"context": {
 				Type:         schema.TypeString,
-				Optional:     true,s
+				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description: "The context of the OpenStack configuration. " +
