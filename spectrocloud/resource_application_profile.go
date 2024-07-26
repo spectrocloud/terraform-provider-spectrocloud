@@ -79,7 +79,8 @@ func resourceApplicationProfile() *schema.Resource {
 }
 
 func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -90,7 +91,7 @@ func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceDat
 	}
 
 	// Create
-	//ProfileContext := d.Get("context").(string)
+
 	uid, err := c.CreateApplicationProfile(applicationProfile)
 	if err != nil {
 		return diag.FromErr(err)
@@ -102,7 +103,8 @@ func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceApplicationProfileRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	var diags diag.Diagnostics
 
@@ -225,7 +227,8 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 }
 
 func resourceApplicationProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -264,7 +267,8 @@ func resourceApplicationProfileUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceApplicationProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	var diags diag.Diagnostics
 

@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterProfile() *schema.Resource {
@@ -94,8 +93,8 @@ func resourceClusterProfile() *schema.Resource {
 }
 
 func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	//clusterC := c.GetClusterClient()
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -106,7 +105,6 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	// Create
-	//ProfileContext := d.Get("context").(string)
 	uid, err := c.CreateClusterProfile(clusterProfile)
 	if err != nil {
 		return diag.FromErr(err)
@@ -122,8 +120,8 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	//clusterC := c.GetClusterClient()
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	var diags diag.Diagnostics
 
@@ -209,8 +207,8 @@ func flattenClusterProfileCommon(d *schema.ResourceData, cp *models.V1ClusterPro
 }
 
 func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	//clusterC := c.GetClusterClient()
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -264,8 +262,8 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	//clusterC := c.GetClusterClient()
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	var diags diag.Diagnostics
 

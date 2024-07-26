@@ -38,14 +38,14 @@ func resourceClusterProfileImportFeature() *schema.Resource {
 
 // implement the resource functions
 func resourceClusterProfileImportFeatureCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
 
 	importFile, err := toClusterProfileImportCreate(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	//ProfileContext := d.Get("context").(string)
 	uid, err := c.CreateClusterProfileImport(importFile)
 	if err != nil {
 		return diag.FromErr(err)
@@ -73,15 +73,16 @@ func toClusterProfileImportCreate(d *schema.ResourceData) (*os.File, error) {
 }
 
 func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	//c := m.(*client.V1Client)
-	//_, err := c.ClusterProfileExport(d.Id())
-	//if err != nil {
-	//	return diag.FromErr(err)
-	//}
-	// we don't want to set back the cluster profile, currently we're only supporting profile file name in schema not content.
-	//if err := d.Set("import_file", clusterProfile); err != nil {
-	//	return diag.FromErr(err)
-	//}
+	ProfileContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, ProfileContext)
+	clusterProfile, err := c.ClusterProfileExport(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	//we don't want to set back the cluster profile, currently we're only supporting profile file name in schema not content.
+	if err := d.Set("import_file", clusterProfile); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }

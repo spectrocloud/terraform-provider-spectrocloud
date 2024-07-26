@@ -7,8 +7,6 @@ import (
 	"github.com/spectrocloud/palette-api-go/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -53,7 +51,8 @@ func resourceProject() *schema.Resource {
 }
 
 func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	uid, err := c.CreateProject(toProject(d))
@@ -66,7 +65,8 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	project, err := c.GetProjectByUID(d.Id())
@@ -96,7 +96,8 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 }
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	err := c.UpdateProject(d.Id(), toProject(d))
@@ -107,7 +108,8 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	err := c.DeleteProject(d.Id())

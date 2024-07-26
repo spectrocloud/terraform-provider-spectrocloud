@@ -90,13 +90,13 @@ func IsRegex(name string) bool {
 
 }
 
-//func toUpdateWorkspaceNamespaces(d *schema.ResourceData) *models.V1WorkspaceResourceAllocationsEntity {
-//	return &models.V1WorkspaceResourceAllocationsEntity{
-//		ClusterNamespaces: toWorkspaceNamespaces(d),
-//		ClusterRefs:       toClusterRefs(d),
-//		Quota:             toQuota(d),
-//	}
-//}
+func toUpdateWorkspaceNamespaces(d *schema.ResourceData) *models.V1WorkspaceClusterNamespacesEntity {
+	return &models.V1WorkspaceClusterNamespacesEntity{
+		ClusterNamespaces: toWorkspaceNamespaces(d),
+		ClusterRefs:       toClusterRefs(d),
+		Quota:             toQuota(d),
+	}
+}
 
 func flattenWorkspaceClusterNamespaces(items []*models.V1WorkspaceClusterNamespace) []interface{} {
 	result := make([]interface{}, 0)
