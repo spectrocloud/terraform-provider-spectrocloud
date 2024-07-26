@@ -223,7 +223,7 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	clusterContext := d.Get("context").(string)
+	//clusterContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 
 	err = c.ValidateCustomCloudType(cloudType)
@@ -236,7 +236,7 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, clusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError && diagnostics != nil {
 		return diagnostics
 	}

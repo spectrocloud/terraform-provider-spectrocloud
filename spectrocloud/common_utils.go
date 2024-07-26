@@ -4,14 +4,17 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
-func setResourceContext(c *client.V1Client, resourceContext string) {
+func setResourceContext(m interface{}, resourceContext string) *client.V1Client {
+	c := m.(*client.V1Client)
 	switch resourceContext {
 	case "tenant":
 		client.WithScopeTenant()(c)
+		return c
 	default:
 		if ProviderInitProjectUid != "" {
 			client.WithScopeProject(ProviderInitProjectUid)(c)
 		}
+		return c
 	}
 }
 

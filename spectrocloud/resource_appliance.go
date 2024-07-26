@@ -2,10 +2,10 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/go-openapi/strfmt"
 	"log"
 	"time"
 
-	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"

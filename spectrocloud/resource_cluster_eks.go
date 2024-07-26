@@ -381,13 +381,13 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterEks(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -618,7 +618,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigEks(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -681,7 +681,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
 					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEks, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEks, CloudConfig.Kind, cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}

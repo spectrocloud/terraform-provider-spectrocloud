@@ -360,13 +360,13 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 		return diags
 	}
 
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterAzure(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -531,7 +531,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigAzure(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -584,7 +584,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolAzure(cloudConfigId, machinePool)
 					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusAzure, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusAzure, CloudConfig.Kind, cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}

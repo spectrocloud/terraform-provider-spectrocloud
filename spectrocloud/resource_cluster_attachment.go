@@ -65,7 +65,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	clusterUid := d.Get("cluster_uid").(string)
-	clusterScope := d.Get("context").(string)
+	//clusterScope := d.Get("context").(string)
 
 	cluster, err := c.GetCluster(clusterUid)
 	if err != nil && cluster == nil {
@@ -77,7 +77,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, clusterScope, clusterUid, diags, c, false)
+	diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c, false)
 	if isError {
 		return diagnostics
 	}

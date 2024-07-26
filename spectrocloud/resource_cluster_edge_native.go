@@ -293,13 +293,13 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterEdgeNative(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -443,7 +443,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
@@ -487,7 +487,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
 					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", ClusterContext, cloudConfigId, name)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}

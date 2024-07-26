@@ -45,8 +45,8 @@ func resourceClusterProfileImportFeatureCreate(ctx context.Context, d *schema.Re
 		return diag.FromErr(err)
 	}
 
-	ProfileContext := d.Get("context").(string)
-	uid, err := c.CreateClusterProfileImport(importFile, ProfileContext)
+	//ProfileContext := d.Get("context").(string)
+	uid, err := c.CreateClusterProfileImport(importFile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -73,12 +73,11 @@ func toClusterProfileImportCreate(d *schema.ResourceData) (*os.File, error) {
 }
 
 func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-
-	_, err := c.ClusterProfileExport(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	//c := m.(*client.V1Client)
+	//_, err := c.ClusterProfileExport(d.Id())
+	//if err != nil {
+	//	return diag.FromErr(err)
+	//}
 	// we don't want to set back the cluster profile, currently we're only supporting profile file name in schema not content.
 	//if err := d.Set("import_file", clusterProfile); err != nil {
 	//	return diag.FromErr(err)
@@ -89,7 +88,7 @@ func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.Reso
 
 func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
+	//clusterC := c.GetClusterClient()
 
 	importFile, err := toClusterProfileImportCreate(d)
 	if err != nil {
@@ -97,14 +96,14 @@ func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.Re
 	}
 
 	// Call the API endpoint to delete the cluster profile import resource
-	err = c.DeleteClusterProfile(clusterC, d.Id())
+	err = c.DeleteClusterProfile(d.Id())
 	if err != nil {
 		// Return an error if the API call fails
 		return diag.FromErr(err)
 	}
 
-	ProfileContext := d.Get("context").(string)
-	uid, err := c.CreateClusterProfileImport(importFile, ProfileContext)
+	//ProfileContext := d.Get("context").(string)
+	uid, err := c.CreateClusterProfileImport(importFile)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -116,10 +115,10 @@ func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.Re
 
 func resourceClusterProfileImportFeatureDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := m.(*client.V1Client)
-	clusterC := c.GetClusterClient()
+	//clusterC := c.GetClusterClient()
 
 	// Call the API endpoint to delete the cluster profile import resource
-	if err := c.DeleteClusterProfile(clusterC, d.Id()); err != nil {
+	if err := c.DeleteClusterProfile(d.Id()); err != nil {
 		// Return an error if the API call fails
 		return diag.FromErr(err)
 	}

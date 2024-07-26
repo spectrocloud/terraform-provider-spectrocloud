@@ -108,13 +108,13 @@ func dataSourceClusterProfile() *schema.Resource {
 }
 
 func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	//c := m.(*client.V1Client)
 
 	ProjectContext := "project"
 	if Pcontext, ok_context := d.GetOk("context"); ok_context {
 		ProjectContext = Pcontext.(string)
 	}
-	setResourceContext(c, ProjectContext)
+	c := setResourceContext(m, ProjectContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics

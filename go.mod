@@ -13,6 +13,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/gomi v1.14.1-0.20240214074114-c19394812368
 	github.com/spectrocloud/hapi v1.14.1-0.20240214071352-81f589b1d86d
+	github.com/spectrocloud/palette-api-go v0.2.3
 	github.com/spectrocloud/palette-sdk-go v0.0.0-20240712084429-dbee5cfc7d3c
 	github.com/stretchr/testify v1.9.0
 	gotest.tools v2.2.0+incompatible
@@ -37,6 +38,7 @@ require (
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.23.0 // indirect
 	github.com/go-openapi/errors v0.22.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
@@ -101,10 +103,14 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/zclconf/go-cty v1.14.1 // indirect
 	go.mongodb.org/mongo-driver v1.16.0 // indirect
+	go.opentelemetry.io/otel v1.28.0 // indirect
+	go.opentelemetry.io/otel/metric v1.28.0 // indirect
+	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
