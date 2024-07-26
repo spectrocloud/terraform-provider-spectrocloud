@@ -13,8 +13,8 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/gomi v1.14.1-0.20240214074114-c19394812368
 	github.com/spectrocloud/hapi v1.14.1-0.20240214071352-81f589b1d86d
-	github.com/spectrocloud/palette-api-go v0.2.3
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20240712084429-dbee5cfc7d3c
+	github.com/spectrocloud/palette-api-go v0.2.6-0.20240725074130-1ff2dfd80370
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20240726090324-5a61d3f21d00
 	github.com/stretchr/testify v1.9.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.23.5
@@ -129,4 +129,4 @@ require (
 )
 
 //replace github.com/spectrocloud/hapi => ../hapi
-replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
+//replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
