@@ -7,8 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -26,7 +24,7 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 			},
 			"context": {
 				Type:         schema.TypeString,
-				Optional:     true,
+				Optional:     true,s
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description: "The context of the OpenStack configuration. " +
@@ -84,13 +82,13 @@ func resourceCloudAccountOpenstack() *schema.Resource {
 }
 
 func resourceCloudAccountOpenStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	account := toOpenStackAccount(d)
-	//AccountContext := d.Get("context").(string)
 	uid, err := c.CreateCloudAccountOpenStack(account)
 	if err != nil {
 		return diag.FromErr(err)
@@ -104,12 +102,12 @@ func resourceCloudAccountOpenStackCreate(ctx context.Context, d *schema.Resource
 }
 
 func resourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	//AccountContext := d.Get("context").(string)
 	account, err := c.GetCloudAccountOpenStack(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -151,7 +149,8 @@ func resourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceData
 }
 
 func resourceCloudAccountOpenStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -169,12 +168,12 @@ func resourceCloudAccountOpenStackUpdate(ctx context.Context, d *schema.Resource
 }
 
 func resourceCloudAccountOpenStackDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-	//AccountContext := d.Get("context").(string)
 	err := c.DeleteCloudAccountOpenStack(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)

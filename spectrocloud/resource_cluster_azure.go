@@ -346,7 +346,8 @@ func resourceClusterAzure() *schema.Resource {
 }
 
 func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -360,7 +361,6 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 		return diags
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterAzure(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -378,7 +378,8 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterAzureRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -521,7 +522,8 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 }
 
 func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics

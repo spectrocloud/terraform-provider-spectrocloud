@@ -41,7 +41,7 @@ func resourceClusterGcp() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"context": {
+			"context": {s
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
@@ -257,7 +257,8 @@ func resourceClusterGcp() *schema.Resource {
 }
 
 func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -267,7 +268,6 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterGcp(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -285,7 +285,8 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -392,7 +393,8 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 }
 
 func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -401,7 +403,6 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigGcp(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)

@@ -275,7 +275,8 @@ func resourceClusterTke() *schema.Resource {
 }
 
 func resourceClusterTkeCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -284,7 +285,6 @@ func resourceClusterTkeCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterTke(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -301,7 +301,8 @@ func resourceClusterTkeCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -422,7 +423,8 @@ func flattenMachinePoolConfigsTke(machinePools []*models.V1TencentMachinePoolCon
 }
 
 func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 	err := validateSystemRepaveApproval(d, c)
@@ -431,7 +433,6 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	//ClusterContext := d.Get("context").(string)
 	_ = d.Get("machine_pool")
 
 	if d.HasChange("machine_pool") {

@@ -311,7 +311,8 @@ func resourceClusterAks() *schema.Resource {
 }
 
 func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -321,7 +322,6 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterAks(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -339,7 +339,8 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -508,7 +509,8 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 }
 
 func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -517,7 +519,6 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigAks(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)

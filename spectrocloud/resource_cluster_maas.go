@@ -301,7 +301,8 @@ func resourceClusterMaas() *schema.Resource {
 }
 
 func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -311,7 +312,6 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterMaas(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -328,7 +328,8 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 }
 
 func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -449,7 +450,8 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 }
 
 func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -459,7 +461,7 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	//ClusterContext := d.Get("context").(string)
+
 	CloudConfig, err := c.GetCloudConfigMaas(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)

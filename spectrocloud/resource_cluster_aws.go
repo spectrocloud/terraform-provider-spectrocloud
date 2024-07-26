@@ -313,7 +313,8 @@ func resourceClusterAws() *schema.Resource {
 }
 
 func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -323,7 +324,6 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterAws(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -341,7 +341,8 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -491,7 +492,8 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 }
 
 func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics

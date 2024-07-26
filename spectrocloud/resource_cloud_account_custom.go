@@ -6,7 +6,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceCloudAccountCustom() *schema.Resource {
@@ -56,7 +55,8 @@ func resourceCloudAccountCustom() *schema.Resource {
 }
 
 func resourceCloudAccountCustomCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
 
 	//accountContext := d.Get("context").(string)
@@ -82,9 +82,10 @@ func resourceCloudAccountCustomCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
+
 	var diags diag.Diagnostics
-	//accountContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 
 	account, err := c.GetCustomCloudAccount(d.Id(), cloudType)
@@ -104,11 +105,11 @@ func resourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData, m
 }
 
 func resourceCloudAccountCustomUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-	//accountContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 	account, err := toCloudAccountCustom(d)
 	if err != nil {
@@ -124,11 +125,11 @@ func resourceCloudAccountCustomUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceCloudAccountCustomDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 	customAccountID := d.Id()
-	//accountContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 	err := c.DeleteCloudAccountCustomCloud(customAccountID, cloudType)
 	if err != nil {

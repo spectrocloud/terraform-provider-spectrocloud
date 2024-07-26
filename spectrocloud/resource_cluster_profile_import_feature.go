@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterProfileImportFeature() *schema.Resource {
@@ -73,8 +72,8 @@ func toClusterProfileImportCreate(d *schema.ResourceData) (*os.File, error) {
 }
 
 func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	ProfileContext := d.Get("context").(string)
-	c := getV1ClientWithResourceContext(m, ProfileContext)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	clusterProfile, err := c.ClusterProfileExport(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
@@ -88,8 +87,8 @@ func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.Reso
 }
 
 func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	//clusterC := c.GetClusterClient()
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	importFile, err := toClusterProfileImportCreate(d)
 	if err != nil {
@@ -103,7 +102,6 @@ func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.Re
 		return diag.FromErr(err)
 	}
 
-	//ProfileContext := d.Get("context").(string)
 	uid, err := c.CreateClusterProfileImport(importFile)
 	if err != nil {
 		return diag.FromErr(err)
@@ -115,8 +113,8 @@ func resourceClusterProfileImportFeatureUpdate(ctx context.Context, d *schema.Re
 }
 
 func resourceClusterProfileImportFeatureDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
-	//clusterC := c.GetClusterClient()
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Call the API endpoint to delete the cluster profile import resource
 	if err := c.DeleteClusterProfile(d.Id()); err != nil {

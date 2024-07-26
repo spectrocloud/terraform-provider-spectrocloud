@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceCloudAccountGcp() *schema.Resource {
@@ -42,13 +41,13 @@ func resourceCloudAccountGcp() *schema.Resource {
 }
 
 func resourceCloudAccountGcpCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	account := toGcpAccount(d)
-	//AccountContext := d.Get("context").(string)
 	uid, err := c.CreateCloudAccountGcp(account)
 	if err != nil {
 		return diag.FromErr(err)
@@ -62,12 +61,12 @@ func resourceCloudAccountGcpCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	//AccountContext := d.Get("context").(string)
 	account, err := c.GetCloudAccountGcp(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -88,7 +87,8 @@ func resourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m in
 }
 
 func resourceCloudAccountGcpUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -106,7 +106,8 @@ func resourceCloudAccountGcpUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceCloudAccountGcpDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 

@@ -8,8 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -85,7 +83,8 @@ Default is 'aws'.`,
 }
 
 func resourceCloudAccountAwsCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -95,7 +94,6 @@ func resourceCloudAccountAwsCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	//AccountContext := d.Get("context").(string)
 	uid, err := c.CreateCloudAccountAws(account)
 	if err != nil {
 		return diag.FromErr(err)
@@ -109,12 +107,12 @@ func resourceCloudAccountAwsCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	//AccountContext := d.Get("context").(string)
 	account, err := c.GetCloudAccountAws(uid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -133,7 +131,8 @@ func resourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m in
 }
 
 func resourceCloudAccountAwsUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -154,13 +153,13 @@ func resourceCloudAccountAwsUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
 
-	//AccountContext := d.Get("context").(string)
 	err := c.DeleteCloudAccountAws(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)

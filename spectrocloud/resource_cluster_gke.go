@@ -230,7 +230,8 @@ func resourceClusterGke() *schema.Resource {
 }
 
 func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -239,7 +240,6 @@ func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterGke(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -255,7 +255,8 @@ func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceClusterGkeRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 	cluster, err := resourceClusterRead(d, c, diags)
@@ -287,7 +288,8 @@ func resourceClusterGkeRead(ctx context.Context, d *schema.ResourceData, m inter
 }
 
 func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 	err := validateSystemRepaveApproval(d, c)
@@ -295,7 +297,7 @@ func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	//ClusterContext := d.Get("context").(string)
+
 	CloudConfig, err := c.GetCloudConfigGke(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -375,7 +377,7 @@ func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func flattenCloudConfigGke(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	//ClusterContext := d.Get("context").(string)
+
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}

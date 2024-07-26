@@ -371,7 +371,8 @@ func resourceClusterEks() *schema.Resource {
 }
 
 func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -381,7 +382,6 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterEks(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -398,7 +398,8 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -417,7 +418,6 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	var config *models.V1EksCloudConfig
-	//ClusterContext := d.Get("context").(string)
 	if config, err = c.GetCloudConfigEks(configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -609,7 +609,8 @@ func flattenFargateProfilesEks(fargateProfiles []*models.V1FargateProfile) []int
 }
 
 func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -618,7 +619,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	//ClusterContext := d.Get("context").(string)
+
 	CloudConfig, err := c.GetCloudConfigEks(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)

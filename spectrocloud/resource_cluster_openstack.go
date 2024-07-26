@@ -276,7 +276,8 @@ func resourceClusterOpenStack() *schema.Resource {
 }
 
 func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -286,7 +287,6 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	//ClusterContext := d.Get("context").(string)
 	uid, err := c.CreateClusterOpenStack(cluster)
 	if err != nil {
 		return diag.FromErr(err)
@@ -370,7 +370,8 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1S
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -392,7 +393,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	//ClusterContext := d.Get("context").(string)
+
 	if config, err := c.GetCloudConfigOpenStack(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
@@ -489,7 +490,8 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachin
 }
 
 func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -498,7 +500,6 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigOpenStack(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)

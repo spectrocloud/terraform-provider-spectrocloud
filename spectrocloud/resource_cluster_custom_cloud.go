@@ -215,7 +215,8 @@ func resourceClusterCustomCloud() *schema.Resource {
 }
 
 func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -223,7 +224,6 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	//clusterContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 
 	err = c.ValidateCustomCloudType(cloudType)
@@ -247,7 +247,8 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceClusterCustomCloudRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -271,7 +272,8 @@ func resourceClusterCustomCloudRead(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
