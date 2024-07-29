@@ -319,7 +319,7 @@ func resourceClusterGcpRead(_ context.Context, d *schema.ResourceData, m interfa
 }
 
 func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	//ClusterContext := d.Get("context").(string)
+	var diags diag.Diagnostics
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -341,7 +341,8 @@ func flattenCloudConfigGcp(configUID string, d *schema.ResourceData, c *client.V
 			return diag.FromErr(err)
 		}
 	}
-	return diag.Diagnostics{}
+	generalWarningForRepave(&diags)
+	return diags
 }
 
 func flattenClusterConfigsGcp(config *models.V1GcpCloudConfig) []interface{} {

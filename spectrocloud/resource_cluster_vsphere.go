@@ -438,7 +438,7 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	if done {
 		return diagnostics
 	}
-
+	generalWarningForRepave(&diags)
 	return diags
 }
 

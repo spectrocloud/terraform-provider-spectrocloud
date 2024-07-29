@@ -357,7 +357,7 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 }
 
 func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	//ClusterContext := d.Get("context").(string)
+	var diags diag.Diagnostics
 	err := d.Set("cloud_config_id", configUID)
 	if err != nil {
 		return diag.FromErr(err)
@@ -387,7 +387,8 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 		}
 	}
 
-	return diag.Diagnostics{}
+	generalWarningForRepave(&diags)
+	return diags
 }
 
 func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {

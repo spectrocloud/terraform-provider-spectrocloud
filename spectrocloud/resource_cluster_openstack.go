@@ -421,7 +421,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if done {
 		return diagnostics
 	}
-
+	generalWarningForRepave(&diags)
 	return diags
 }
 

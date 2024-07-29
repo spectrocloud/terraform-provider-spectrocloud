@@ -457,7 +457,7 @@ func flattenClusterConfigsAzure(config *models.V1AzureCloudConfig) []interface{}
 	return []interface{}{m}
 }
 func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	//ClusterContext := d.Get("context").(string)
+	var diags diag.Diagnostics
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -480,7 +480,8 @@ func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client
 		}
 	}
 
-	return diag.Diagnostics{}
+	generalWarningForRepave(&diags)
+	return diags
 }
 
 func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolConfig) []interface{} {

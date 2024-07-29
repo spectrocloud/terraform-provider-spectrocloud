@@ -454,7 +454,7 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if done {
 		return diagnostics
 	}
-
+	generalWarningForRepave(&diags)
 	return diags
 }
 

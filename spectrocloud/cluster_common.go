@@ -236,18 +236,24 @@ func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
 	return nil
 }
 
-func generalWarningForRepave(diags *diag.Diagnostics, d *schema.ResourceData, keys []string) {
-
-	for _, k := range keys {
-		if d.HasChange(k) {
-			message := "You are about to perform an action that may trigger a node pool repave or a full repave of your cluster. " +
-				"Repaving might temporarily affect your cluster's performance or configuration."
-			*diags = append(*diags, diag.Diagnostic{
-				Severity: diag.Warning,
-				Summary:  "Warning",
-				Detail:   message,
-			})
-			break
-		}
-	}
+func generalWarningForRepave(diags *diag.Diagnostics) {
+	//for _, k := range keys {
+	//	if d.HasChange(k) {
+	//		message := "You are about to perform an action that may trigger a node pool repave or a full repave of your cluster. " +
+	//			"Repaving might temporarily affect your cluster's performance or configuration."
+	//		*diags = append(*diags, diag.Diagnostic{
+	//			Severity: diag.Warning,
+	//			Summary:  "Warning",
+	//			Detail:   message,
+	//		})
+	//		break
+	//	}
+	//}
+	message := "You are about to perform an action that may trigger a node pool repave or a full repave of your cluster. " +
+		"Repaving might temporarily affect your cluster's performance or configuration."
+	*diags = append(*diags, diag.Diagnostic{
+		Severity: diag.Warning,
+		Summary:  "Warning",
+		Detail:   message,
+	})
 }

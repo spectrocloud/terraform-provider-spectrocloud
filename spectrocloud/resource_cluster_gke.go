@@ -377,7 +377,7 @@ func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func flattenCloudConfigGke(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-
+	var diags diag.Diagnostics
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -401,7 +401,8 @@ func flattenCloudConfigGke(configUID string, d *schema.ResourceData, c *client.V
 		}
 	}
 
-	return diag.Diagnostics{}
+	generalWarningForRepave(&diags)
+	return diags
 }
 
 func flattenClusterConfigsGke(config *models.V1GcpCloudConfig) []interface{} {

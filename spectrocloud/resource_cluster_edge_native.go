@@ -338,6 +338,7 @@ func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m 
 	}
 
 	diags = flattenCloudConfigEdgeNative(cluster.Spec.CloudConfigRef.UID, d, c)
+	generalWarningForRepave(&diags)
 	return diags
 }
 
