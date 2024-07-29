@@ -27,6 +27,7 @@ var (
 		"spectrocloud_cluster_vsphere":      "vsphere",
 		"spectrocloud_cluster_gke":          "gke",
 	}
+	//clusterVsphereKeys = []string{"name", "context", "tags", "description", "cluster_meta_attribute", "cluster_profile", "apply_setting", "cloud_account_id", "cloud_config_id", "review_repave_state", "pause_agent_upgrades", "os_patch_on_boot", "os_patch_schedule", "os_patch_after", "kubeconfig", "admin_kube_config", "cloud_config", "machine_pool", "backup_policy", "scan_policy", "cluster_rbac_binding", "namespaces", "host_config", "location_config", "skip_completion", "force_delete", "force_delete_delay"}
 )
 
 func toNtpServers(in map[string]interface{}) []string {
@@ -233,4 +234,20 @@ func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
 	}
 
 	return nil
+}
+
+func generalWarningForRepave(diags *diag.Diagnostics, d *schema.ResourceData, keys []string) {
+
+	for _, k := range keys {
+		if d.HasChange(k) {
+			message := "You are about to perform an action that may trigger a node pool repave or a full repave of your cluster. " +
+				"Repaving might temporarily affect your cluster's performance or configuration."
+			*diags = append(*diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "Warning",
+				Detail:   message,
+			})
+			break
+		}
+	}
 }
