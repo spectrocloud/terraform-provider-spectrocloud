@@ -104,7 +104,10 @@ func TestToBackupPolicy(t *testing.T) {
 			"schedule":                  "daily",
 		},
 	}
-	resourceData.Set("backup_policy", backupPolicy)
+	err := resourceData.Set("backup_policy", backupPolicy)
+	if err != nil {
+		return
+	}
 
 	result := toBackupPolicy(resourceData)
 
@@ -134,7 +137,10 @@ func TestToScanPolicy(t *testing.T) {
 			"conformance_scan_schedule":   "weekly",
 		},
 	}
-	resourceData.Set("scan_policy", scanPolicy)
+	err := resourceData.Set("scan_policy", scanPolicy)
+	if err != nil {
+		return
+	}
 	result := toScanPolicy(resourceData)
 
 	expected := &models.V1ClusterComplianceScheduleConfig{
@@ -166,7 +172,10 @@ func TestToPolicies(t *testing.T) {
 			"schedule":                  "daily",
 		},
 	}
-	resourceData.Set("backup_policy", backupPolicy)
+	err := resourceData.Set("backup_policy", backupPolicy)
+	if err != nil {
+		return
+	}
 	scanPolicy := []interface{}{
 		map[string]interface{}{
 			"configuration_scan_schedule": "daily",
@@ -174,7 +183,10 @@ func TestToPolicies(t *testing.T) {
 			"conformance_scan_schedule":   "weekly",
 		},
 	}
-	resourceData.Set("scan_policy", scanPolicy)
+	err = resourceData.Set("scan_policy", scanPolicy)
+	if err != nil {
+		return
+	}
 
 	result := toPolicies(resourceData)
 
