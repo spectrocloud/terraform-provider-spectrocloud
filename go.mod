@@ -14,7 +14,7 @@ require (
 	github.com/spectrocloud/gomi v1.14.1-0.20240214074114-c19394812368
 	github.com/spectrocloud/hapi v1.14.1-0.20240214071352-81f589b1d86d
 	github.com/spectrocloud/palette-api-go v0.2.6-0.20240729071851-f40fbaf1615e
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20240729072114-9cd712ddb30b
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20240730055016-6e530909265a
 	github.com/stretchr/testify v1.9.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.23.5

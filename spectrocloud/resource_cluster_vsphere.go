@@ -358,6 +358,25 @@ func resourceClusterVsphere() *schema.Resource {
 				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
 			},
 		},
+		//CustomizeDiff: customdiff.All(func(ctx context.Context, d *schema.ResourceDiff, meta any) error {
+		//	var diags diag.Diagnostics
+		//	for _, k := range d.GetChangedKeysPrefix("") {
+		//		old, new := d.GetChange(k)
+		//		if old != new {
+		//			warningMessage := fmt.Sprintf("Warning: The value for '%s' has changed from %v to %v", k, old, new)
+		//			diags = append(diags, diag.Diagnostic{
+		//				Severity: diag.Warning,
+		//				Summary:  fmt.Sprintf("Change Detected for '%s'", k),
+		//				Detail:   warningMessage,
+		//			})
+		//		}
+		//	}
+		//	if len(diags) > 0 {
+		//		return nil
+		//	}
+		//	return nil
+		//},
+		//),
 	}
 }
 
