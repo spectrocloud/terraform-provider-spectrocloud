@@ -203,36 +203,37 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 	return nil
 }
 
-func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
+func GetCommonCluster(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
 	// parse resource ID and scope
-	_, clusterID, err := ParseResourceID(d)
+	resourceContext, clusterID, err := ParseResourceID(d)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Use the IDs to retrieve the cluster data from the API
 	cluster, err := c.GetCluster(clusterID)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve cluster data: %s", err)
+		return c, fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}
 	if cluster != nil {
 		err = d.Set("name", cluster.Metadata.Name)
 		if err != nil {
-			return err
+			return c, err
 		}
 		err = d.Set("context", cluster.Metadata.Annotations["scope"])
 		if err != nil {
-			return err
+			return c, err
 		}
 
 		// Set the ID of the resource in the state. This ID is used to track the
 		// resource and must be set in the state during the import.
 		d.SetId(clusterID)
 	} else {
-		return fmt.Errorf("couldn’t find cluster. Kindly check the cluster UID and context")
+		return c, fmt.Errorf("couldn’t find cluster. Kindly check the cluster UID and context")
 	}
 
-	return nil
+	return c, nil
 }
 
 func generalWarningForRepave(diags *diag.Diagnostics) {

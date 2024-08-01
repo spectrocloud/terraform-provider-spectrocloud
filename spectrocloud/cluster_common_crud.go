@@ -212,7 +212,8 @@ func resourceClusterRead(d *schema.ResourceData, c *client.V1Client, diags diag.
 }
 
 func resourceClusterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
 	var err error
 	clusterContext := d.Get("context").(string)

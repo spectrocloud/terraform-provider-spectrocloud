@@ -9,7 +9,8 @@ import (
 )
 
 func resourceAccountGcpImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	err := GetCommonAccount(d, c)
 	if err != nil {
