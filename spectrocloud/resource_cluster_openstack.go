@@ -430,34 +430,34 @@ func flattenClusterConfigsOpenstack(config *models.V1OpenStackCloudConfig) []int
 		return make([]interface{}, 0)
 	}
 
-	m := make(map[string]interface{})
+	cloudConfig := make(map[string]interface{})
 
 	if config.Spec.ClusterConfig.Domain != nil {
-		m["domain"] = *config.Spec.ClusterConfig.Domain
+		cloudConfig["domain"] = config.Spec.ClusterConfig.Domain.Name
 	}
 	if config.Spec.ClusterConfig.Region != "" {
-		m["region"] = config.Spec.ClusterConfig.Region
+		cloudConfig["region"] = config.Spec.ClusterConfig.Region
 	}
 	if config.Spec.ClusterConfig.Project != nil {
-		m["project"] = config.Spec.ClusterConfig.Project
+		cloudConfig["project"] = config.Spec.ClusterConfig.Project.Name
 	}
 	if config.Spec.ClusterConfig.SSHKeyName != "" {
-		m["ssh_key"] = config.Spec.ClusterConfig.SSHKeyName
+		cloudConfig["ssh_key"] = config.Spec.ClusterConfig.SSHKeyName
 	}
 	if config.Spec.ClusterConfig.Network != nil {
-		m["network_id"] = config.Spec.ClusterConfig.Network.ID
+		cloudConfig["network_id"] = config.Spec.ClusterConfig.Network.ID
 	}
 	if config.Spec.ClusterConfig.Subnet != nil {
-		m["subnet_id"] = config.Spec.ClusterConfig.Subnet.ID
+		cloudConfig["subnet_id"] = config.Spec.ClusterConfig.Subnet.ID
 	}
 	if config.Spec.ClusterConfig.DNSNameservers != nil {
-		m["dns_servers"] = config.Spec.ClusterConfig.DNSNameservers
+		cloudConfig["dns_servers"] = config.Spec.ClusterConfig.DNSNameservers
 	}
 	if config.Spec.ClusterConfig.NodeCidr != "" {
-		m["subnet_cidr"] = config.Spec.ClusterConfig.NodeCidr
+		cloudConfig["subnet_cidr"] = config.Spec.ClusterConfig.NodeCidr
 	}
 
-	return []interface{}{m}
+	return []interface{}{cloudConfig}
 }
 
 func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachinePoolConfig) []interface{} {
