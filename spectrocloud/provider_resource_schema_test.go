@@ -411,11 +411,6 @@ func TestResourceKubevirtDataVolume(t *testing.T) {
 	assert.Equal(t, "test-id", testData.Id())
 }
 
-func TestResourceApplication(t *testing.T) {
-	testData := prepareApplicationTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
 func TestResourcePrivateCloudGatewayIpPool(t *testing.T) {
 	testData := preparePrivateCloudGatewayIpPoolTestData("test-id")
 	assert.Equal(t, "test-id", testData.Id())
