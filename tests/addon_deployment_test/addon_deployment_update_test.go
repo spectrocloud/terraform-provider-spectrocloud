@@ -7,15 +7,10 @@ import (
 
 	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-
-	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 )
 
 func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
 	h := client.V1Client{}
-	mock := &mock.ClusterClientMock{
-		PatchClusterProfileErr: nil,
-	}
 
 	// Create mock cluster
 	cluster := &models.V1SpectroCluster{
@@ -48,7 +43,7 @@ func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
 	}
 
 	// Call UpdateAddonDeployment
-	err := h.UpdateAddonDeployment(mock, cluster, body, newProfile)
+	err := h.UpdateAddonDeployment(cluster, body, newProfile)
 
 	// Assert there was no error
 	assert.NoError(t, err)
@@ -56,9 +51,6 @@ func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
 
 func TestUpdateAddonDeploymentIsAttached(t *testing.T) {
 	h := client.V1Client{}
-	mock := &mock.ClusterClientMock{
-		PatchClusterProfileErr: nil,
-	}
 
 	// Create mock cluster
 	cluster := &models.V1SpectroCluster{
@@ -91,7 +83,7 @@ func TestUpdateAddonDeploymentIsAttached(t *testing.T) {
 	}
 
 	// Call UpdateAddonDeployment
-	err := h.UpdateAddonDeployment(mock, cluster, body, newProfile)
+	err := h.UpdateAddonDeployment(cluster, body, newProfile)
 
 	// Assert there was no error
 	assert.NoError(t, err)

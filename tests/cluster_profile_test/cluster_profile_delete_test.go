@@ -33,7 +33,7 @@ func TestDeleteClusterProfileError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			hapiClient := &client.V1Client{}
-			err := hapiClient.DeleteClusterProfile(tc.mock, tc.uid)
+			err := hapiClient.DeleteClusterProfile(tc.uid)
 			schema.CompareErrors(t, err, tc.expectedError)
 		})
 	}
@@ -53,7 +53,7 @@ func TestDeleteClusterProfile(t *testing.T) {
 			expectedError: nil,
 			mock: &mock.ClusterClientMock{
 				GetClusterProfilesResponse: &clusterC.V1ClusterProfilesGetOK{
-					Payload: &models.V1ClusterProfile{Metadata: &models.V1ObjectMeta{Annotations: map[string]string{"scope": "project"}}},
+					//Payload: &models.V1ClusterProfile{Metadata: &models.V1ObjectMeta{Annotations: map[string]string{"scope": "project"}}},
 				},
 				GetClusterProfilesErr: nil,
 			},
@@ -64,7 +64,7 @@ func TestDeleteClusterProfile(t *testing.T) {
 			expectedError: nil,
 			mock: &mock.ClusterClientMock{
 				GetClusterProfilesResponse: &clusterC.V1ClusterProfilesGetOK{
-					Payload: &models.V1ClusterProfile{Metadata: &models.V1ObjectMeta{Annotations: map[string]string{"scope": "tenant"}}},
+					//Payload: &models.V1ClusterProfile{Metadata: &models.V1ObjectMeta{Annotations: map[string]string{"scope": "tenant"}}},
 				},
 				GetClusterProfilesErr: nil,
 			},
@@ -75,7 +75,7 @@ func TestDeleteClusterProfile(t *testing.T) {
 			expectedError: errors.New("invalid scope"),
 			mock: &mock.ClusterClientMock{
 				GetClusterProfilesResponse: &clusterC.V1ClusterProfilesGetOK{
-					Payload: &models.V1ClusterProfile{Metadata: &models.V1ObjectMeta{Annotations: map[string]string{"scope": "invalid"}}},
+					//Payload: &models.V1ClusterProfile{Metadata: &models.V1ObjectMeta{Annotations: map[string]string{"scope": "invalid"}}},
 				},
 				GetClusterProfilesErr: nil,
 			},
@@ -85,7 +85,7 @@ func TestDeleteClusterProfile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			h := &client.V1Client{}
-			err := h.DeleteClusterProfile(tc.mock, tc.uid)
+			err := h.DeleteClusterProfile(tc.uid)
 			schema.CompareErrors(t, err, tc.expectedError)
 		})
 	}

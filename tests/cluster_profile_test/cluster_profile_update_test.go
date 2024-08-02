@@ -60,7 +60,7 @@ func TestUpdateClusterProfile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			h := &client.V1Client{}
-			err := h.UpdateClusterProfile(tc.mock, tc.clusterProfile, tc.ProfileContext)
+			err := h.UpdateClusterProfile(tc.clusterProfile)
 			if tc.expectedError != nil {
 				assert.EqualError(t, err, tc.expectedError.Error())
 			} else {

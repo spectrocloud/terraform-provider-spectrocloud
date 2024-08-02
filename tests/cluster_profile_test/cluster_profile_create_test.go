@@ -2,6 +2,7 @@ package cluster_profile_test
 
 import (
 	"errors"
+	models2 "github.com/spectrocloud/hapi/models"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,7 +31,7 @@ func TestCreateClusterProfile(t *testing.T) {
 			expectedReturnedUID: "1",
 			mock: &mock.ClusterClientMock{
 				CreateClusterProfileErr:      nil,
-				CreateClusterProfileResponse: &clusterC.V1ClusterProfilesCreateCreated{Payload: &models.V1UID{UID: types.Ptr("1")}},
+				CreateClusterProfileResponse: &clusterC.V1ClusterProfilesCreateCreated{Payload: (*models2.V1UID)(&models.V1UID{UID: types.Ptr("1")})},
 			},
 		},
 		{
@@ -41,7 +42,7 @@ func TestCreateClusterProfile(t *testing.T) {
 			expectedReturnedUID: "2",
 			mock: &mock.ClusterClientMock{
 				CreateClusterProfileErr:      nil,
-				CreateClusterProfileResponse: &clusterC.V1ClusterProfilesCreateCreated{Payload: &models.V1UID{UID: types.Ptr("2")}},
+				CreateClusterProfileResponse: &clusterC.V1ClusterProfilesCreateCreated{Payload: (*models2.V1UID)(&models.V1UID{UID: types.Ptr("2")})},
 			},
 		},
 		{
@@ -65,7 +66,7 @@ func TestCreateClusterProfile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			h := &client.V1Client{}
-			id, err := h.CreateClusterProfile(tc.mock, tc.clusterProfile, tc.profileContext)
+			id, err := h.CreateClusterProfile(tc.clusterProfile)
 			if tc.expectedError != nil {
 				assert.EqualError(t, err, tc.expectedError.Error())
 			} else {

@@ -47,7 +47,7 @@ func TestPublishClusterProfile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			h := &client.V1Client{}
-			err := h.PublishClusterProfile(tc.mock, tc.uid, tc.ProfileContext)
+			err := h.PublishClusterProfile(tc.uid)
 			schema.CompareErrors(t, err, tc.expectedError)
 		})
 	}

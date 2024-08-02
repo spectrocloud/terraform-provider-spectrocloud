@@ -66,7 +66,7 @@ func TestPatchClusterProfile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			h := &client.V1Client{}
-			err := h.PatchClusterProfile(tc.mock, tc.clusterProfile, metadata, tc.ProfileContext)
+			err := h.PatchClusterProfile(tc.clusterProfile, metadata)
 			if tc.expectedError != nil {
 				assert.EqualError(t, err, tc.expectedError.Error())
 			} else {
