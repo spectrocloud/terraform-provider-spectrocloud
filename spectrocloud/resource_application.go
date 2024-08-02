@@ -185,7 +185,7 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 	if d.HasChanges("cluster_uid", "cluster_profile") {
 		c := getV1ClientWithResourceContext(m, "")
-		
+
 		clusterUid := d.Get("cluster_uid").(string)
 		cluster, err := c.GetCluster(clusterUid)
 		if err != nil && cluster == nil {
