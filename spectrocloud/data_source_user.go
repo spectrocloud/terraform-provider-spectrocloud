@@ -20,7 +20,7 @@ func dataSourceUser() *schema.Resource {
 			},
 			"email": {
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 			},
 		},
 	}
