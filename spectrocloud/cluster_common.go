@@ -237,20 +237,7 @@ func GetCommonCluster(d *schema.ResourceData, m interface{}) (*client.V1Client, 
 }
 
 func generalWarningForRepave(diags *diag.Diagnostics) {
-	//for _, k := range keys {
-	//	if d.HasChange(k) {
-	//		message := "You are about to perform an action that may trigger a node pool repave or a full repave of your cluster. " +
-	//			"Repaving might temporarily affect your cluster's performance or configuration."
-	//		*diags = append(*diags, diag.Diagnostic{
-	//			Severity: diag.Warning,
-	//			Summary:  "Warning",
-	//			Detail:   message,
-	//		})
-	//		break
-	//	}
-	//}
-	message := "You are about to perform an action that may trigger a node pool repave or a full repave of your cluster. " +
-		"Repaving might temporarily affect your cluster's performance or configuration."
+	message := "Please note that certain day 2 operations on a running cluster may trigger a node pool repave or a full repave of your cluster. This process might temporarily affect your cluster’s performance or configuration. For more details, please refer to the https://docs.spectrocloud.com/clusters/cluster-management/node-pool/"
 	*diags = append(*diags, diag.Diagnostic{
 		Severity: diag.Warning,
 		Summary:  "Warning",
