@@ -23,7 +23,7 @@ func PackSchema() *schema.Schema {
 					Type:        schema.TypeString,
 					Optional:    true,
 					Default:     "spectro",
-					Description: "The type of the pack. Allowed values are `spectro`, `manifest` or `helm`. The default value is `spectro`.",
+					Description: "The type of the pack. Allowed values are `spectro`, `manifest`, `helm`, or `oci`. The default value is spectro. If using an OCI registry for pack, set the type to `oci`.",
 				},
 				"name": {
 					Type:        schema.TypeString,
