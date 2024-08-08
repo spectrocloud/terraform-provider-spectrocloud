@@ -7,10 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-api-go/models"
 )
 
 func resourceBackupStorageLocation() *schema.Resource {
@@ -92,7 +90,7 @@ func resourceBackupStorageLocation() *schema.Resource {
 }
 
 func resourceBackupStorageLocationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	bsl := toBackupStorageLocation(d)
@@ -106,7 +104,7 @@ func resourceBackupStorageLocationCreate(ctx context.Context, d *schema.Resource
 }
 
 func resourceBackupStorageLocationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	bsl, err := c.GetBackupStorageLocation(d.Id())
@@ -175,7 +173,7 @@ func resourceBackupStorageLocationRead(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceBackupStorageLocationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	bsl := toBackupStorageLocation(d)
@@ -188,7 +186,7 @@ func resourceBackupStorageLocationUpdate(ctx context.Context, d *schema.Resource
 }
 
 func resourceBackupStorageLocationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 	err := c.DeleteS3BackupStorageLocation(d.Id())
 	if err != nil {

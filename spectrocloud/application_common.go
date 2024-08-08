@@ -89,7 +89,8 @@ func resourceApplicationStateRefreshFunc(c *client.V1Client, d *schema.ResourceD
 }
 
 func resourceApplicationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
+	c := getV1ClientWithResourceContext(m, "")
 
 	var diags diag.Diagnostics
 	err := c.DeleteApplication(d.Id())

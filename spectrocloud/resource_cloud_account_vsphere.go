@@ -6,9 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -66,15 +64,15 @@ func resourceCloudAccountVsphere() *schema.Resource {
 }
 
 func resourceCloudAccountVsphereCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	account := toVsphereAccount(d)
 
-	AccountContext := d.Get("context").(string)
-	uid, err := c.CreateCloudAccountVsphere(account, AccountContext)
+	uid, err := c.CreateCloudAccountVsphere(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -87,13 +85,13 @@ func resourceCloudAccountVsphereCreate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	AccountContext := d.Get("context").(string)
-	account, err := c.GetCloudAccountVsphere(uid, AccountContext)
+	account, err := c.GetCloudAccountVsphere(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -133,15 +131,15 @@ func flattenVsphereCloudAccount(d *schema.ResourceData, account *models.V1Vspher
 }
 
 func resourceCloudAccountVsphereUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	account := toVsphereAccount(d)
 
-	AccountContext := d.Get("context").(string)
-	err := c.UpdateCloudAccountVsphere(account, AccountContext)
+	err := c.UpdateCloudAccountVsphere(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -152,13 +150,13 @@ func resourceCloudAccountVsphereUpdate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceCloudAccountVsphereDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-	AccountContext := d.Get("context").(string)
-	err := c.DeleteCloudAccountVsphere(cloudAccountID, AccountContext)
+	err := c.DeleteCloudAccountVsphere(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -3,7 +3,7 @@ package spectrocloud
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -140,7 +140,7 @@ func updateClusterRBAC(c *client.V1Client, d *schema.ResourceData) error {
 		return err
 	}
 	if rbacs := toClusterRBACsInputEntities(d); rbacs != nil {
-		return c.ApplyClusterRbacConfig(d.Id(), clusterContext, rbacs)
+		return c.ApplyClusterRbacConfig(d.Id(), rbacs)
 	}
 	return nil
 }

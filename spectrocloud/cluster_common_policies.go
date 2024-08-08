@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -64,8 +64,8 @@ func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
 
 func updateBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	if policy := toBackupPolicy(d); policy != nil {
-		clusterContext := d.Get("context").(string)
-		return c.ApplyClusterBackupConfig(d.Id(), policy, clusterContext)
+		//clusterContext := d.Get("context").(string)
+		return c.ApplyClusterBackupConfig(d.Id(), policy)
 	} else {
 		return errors.New("backup policy validation: The backup policy cannot be destroyed. To disable it, set the schedule to an empty string")
 	}
@@ -124,11 +124,11 @@ func flattenScanPolicy(driverSpec map[string]models.V1ComplianceScanDriverSpec) 
 
 func updateScanPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	if policy := toScanPolicy(d); policy != nil || d.HasChange("scan_policy") {
-		ClusterContext := d.Get("context").(string)
+		//ClusterContext := d.Get("context").(string)
 		if policy == nil {
 			policy = getEmptyScanPolicy()
 		}
-		return c.ApplyClusterScanConfig(d.Id(), policy, ClusterContext)
+		return c.ApplyClusterScanConfig(d.Id(), policy)
 	}
 	return nil
 }

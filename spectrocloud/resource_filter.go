@@ -7,8 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/palette-api-go/models"
 )
 
 func resourceFilter() *schema.Resource {
@@ -105,7 +104,7 @@ func resourceFilter() *schema.Resource {
 }
 
 func resourceFilterCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 
 	metadata := d.Get("metadata").([]interface{})
 	spec := d.Get("spec").([]interface{})
@@ -125,7 +124,7 @@ func resourceFilterCreate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceFilterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 
 	uid := d.Id()
 
@@ -146,7 +145,7 @@ func resourceFilterRead(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceFilterUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 
 	tagFilter := &models.V1TagFilter{
 		Metadata: expandMetadata(d.Get("metadata").([]interface{})),
@@ -162,9 +161,9 @@ func resourceFilterUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceFilterDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 
-	err := c.DeleteTag(d.Id())
+	err := c.DeleteTagFilter(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

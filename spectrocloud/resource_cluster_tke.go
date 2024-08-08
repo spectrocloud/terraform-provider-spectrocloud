@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -275,7 +275,8 @@ func resourceClusterTke() *schema.Resource {
 }
 
 func resourceClusterTkeCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -284,13 +285,12 @@ func resourceClusterTkeCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterTke(cluster, ClusterContext)
+	uid, err := c.CreateClusterTke(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -301,7 +301,8 @@ func resourceClusterTkeCreate(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -323,8 +324,8 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	ClusterContext := d.Get("context").(string)
-	if config, err := c.GetCloudConfigTke(configUID, ClusterContext); err != nil {
+	//ClusterContext := d.Get("context").(string)
+	if config, err := c.GetCloudConfigTke(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
@@ -337,7 +338,7 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 		}
 
 		mp := flattenMachinePoolConfigsTke(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapTke, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapTke, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -350,7 +351,7 @@ func resourceClusterTkeRead(_ context.Context, d *schema.ResourceData, m interfa
 	if done {
 		return diagnostics
 	}
-
+	generalWarningForRepave(&diags)
 	return diags
 }
 
@@ -422,7 +423,8 @@ func flattenMachinePoolConfigsTke(machinePools []*models.V1TencentMachinePoolCon
 }
 
 func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 	err := validateSystemRepaveApproval(d, c)
@@ -431,7 +433,6 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
 	_ = d.Get("machine_pool")
 
 	if d.HasChange("machine_pool") {
@@ -466,12 +467,12 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 				var err error
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolTke(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolTkeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolTke(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolTke(cloudConfigId, machinePool)
 					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusTke, "tke", ClusterContext, cloudConfigId, name)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusTke, "tke", cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -490,7 +491,7 @@ func resourceClusterTkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolTke(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolTke(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

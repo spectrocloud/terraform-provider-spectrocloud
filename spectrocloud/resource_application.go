@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceApplication() *schema.Resource {
@@ -93,7 +92,7 @@ func resourceApplication() *schema.Resource {
 }
 
 func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
@@ -185,13 +184,10 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	if d.HasChanges("cluster_uid", "cluster_profile") {
-		c := m.(*client.V1Client)
-		clusterC := c.GetClusterClient()
+		c := getV1ClientWithResourceContext(m, "")
 
 		clusterUid := d.Get("cluster_uid").(string)
-		clusterScope := d.Get("cluster_context").(string)
-
-		cluster, err := c.GetCluster(clusterScope, clusterUid)
+		cluster, err := c.GetCluster(clusterUid)
 		if err != nil && cluster == nil {
 			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
 		}
@@ -201,16 +197,16 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 
-		newProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
+		newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		err = c.UpdateAddonDeployment(clusterC, cluster, addonDeployment, newProfile)
+		err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 
-		clusterProfile, err := c.GetClusterProfile(clusterC, addonDeployment.Profiles[0].UID)
+		clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
 		if err != nil {
 			return diag.FromErr(err)
 		}

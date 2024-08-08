@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func dataSourcePrivateCloudGatewayIpPool() *schema.Resource {
@@ -30,11 +29,11 @@ func dataSourcePrivateCloudGatewayIpPool() *schema.Resource {
 func dataSourceIpPoolRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
 	name := d.Get("name").(string)
 
-	pool, err := c.GetIpPoolByName(pcgUID, name)
+	pool, err := c.GetIPPoolByName(pcgUID, name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

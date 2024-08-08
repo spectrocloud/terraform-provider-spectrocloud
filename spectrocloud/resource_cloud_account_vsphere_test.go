@@ -3,7 +3,7 @@ package spectrocloud
 import (
 	"testing"
 
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"

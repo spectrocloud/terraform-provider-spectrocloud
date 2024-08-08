@@ -2,7 +2,7 @@ package spectrocloud
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -29,7 +29,7 @@ func updateClusterMetadata(c *client.V1Client, d *schema.ResourceData) error {
 	if err != nil {
 		return err
 	}
-	return c.UpdateClusterMetadata(d.Id(), clusterContext, toUpdateClusterMetadata(d))
+	return c.UpdateClusterMetadata(d.Id(), toUpdateClusterMetadata(d))
 }
 
 func toUpdateClusterMetadata(d *schema.ResourceData) *models.V1ObjectMetaInputEntitySchema {
@@ -44,7 +44,7 @@ func updateClusterAdditionalMetadata(c *client.V1Client, d *schema.ResourceData)
 	if err != nil {
 		return err
 	}
-	return c.UpdateAdditionalClusterMetadata(d.Id(), clusterContext, toUpdateClusterAdditionalMetadata(d))
+	return c.UpdateAdditionalClusterMetadata(d.Id(), toUpdateClusterAdditionalMetadata(d))
 }
 
 func toUpdateClusterAdditionalMetadata(d *schema.ResourceData) *models.V1ClusterMetaAttributeEntity {

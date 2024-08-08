@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -122,7 +122,8 @@ func resourceTeam() *schema.Resource {
 }
 
 func resourceTeamCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	uid, err := c.CreateTeam(toTeam(d))
@@ -155,7 +156,8 @@ func resourceTeamCreate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceTeamRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	team, err := c.GetTeam(d.Id())
@@ -265,7 +267,8 @@ func setWorkspaceRoles(c *client.V1Client, d *schema.ResourceData) error {
 }
 
 func resourceTeamUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	err := c.UpdateTeam(d.Id(), toTeam(d))
@@ -295,7 +298,7 @@ func resourceTeamUpdate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceTeamDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	err := c.DeleteTeam(d.Id())

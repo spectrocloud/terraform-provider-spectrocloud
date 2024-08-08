@@ -1,7 +1,7 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 )
 
 func toClusterTaints(m map[string]interface{}) []*models.V1Taint {

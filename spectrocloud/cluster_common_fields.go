@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"strings"
 )
 
 // read common fields like kubeconfig, tags, backup policy, scan policy, cluster_rbac_binding, namespaces
 func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
-	ClusterContext := "project"
-	if cluster.Metadata.Annotations["scope"] != "" {
-		ClusterContext = cluster.Metadata.Annotations["scope"]
-	}
-	kubecfg, err := c.GetClusterKubeConfig(d.Id(), ClusterContext)
+	//ClusterContext := "project"
+	//if cluster.Metadata.Annotations["scope"] != "" {
+	//	ClusterContext = cluster.Metadata.Annotations["scope"]
+	//}
+	kubecfg, err := c.GetClusterKubeConfig(d.Id())
 	if err != nil {
 		return diag.FromErr(err), true
 	}
@@ -30,7 +30,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 			return diag.FromErr(err), true
 		}
 	}
-	adminKubeConfig, err := c.GetClusterAdminKubeConfig(d.Id(), ClusterContext)
+	adminKubeConfig, err := c.GetClusterAdminKubeConfig(d.Id())
 	if err != nil {
 		return diag.FromErr(err), true
 	}
@@ -42,7 +42,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		return diag.FromErr(err), true
 	}
 
-	if policy, err := c.GetClusterBackupConfig(d.Id(), ClusterContext); err != nil {
+	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
 		return diag.FromErr(err), true
 	} else if policy != nil && policy.Spec.Config != nil {
 		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
@@ -50,7 +50,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	if policy, err := c.GetClusterScanConfig(d.Id(), ClusterContext); err != nil {
+	if policy, err := c.GetClusterScanConfig(d.Id()); err != nil {
 		return diag.FromErr(err), true
 	} else if policy != nil && policy.Spec.DriverSpec != nil {
 		if err := d.Set("scan_policy", flattenScanPolicy(policy.Spec.DriverSpec)); err != nil {
@@ -58,7 +58,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	if rbac, err := c.GetClusterRbacConfig(d.Id(), ClusterContext); err != nil {
+	if rbac, err := c.GetClusterRbacConfig(d.Id()); err != nil {
 		return diag.FromErr(err), true
 	} else if rbac != nil && rbac.Items != nil {
 		if err := d.Set("cluster_rbac_binding", flattenClusterRBAC(rbac.Items)); err != nil {
@@ -66,7 +66,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	if namespace, err := c.GetClusterNamespaceConfig(d.Id(), ClusterContext); err != nil {
+	if namespace, err := c.GetClusterNamespaceConfig(d.Id()); err != nil {
 		return diag.FromErr(err), true
 	} else if namespace != nil && namespace.Items != nil {
 		if err := d.Set("namespaces", flattenClusterNamespaces(namespace.Items)); err != nil {
@@ -107,9 +107,9 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	clusterContext := d.Get("context").(string)
+	//clusterContext := d.Get("context").(string)
 
-	if clusterStatus, err := c.GetClusterWithoutStatus(clusterContext, d.Id()); err != nil {
+	if clusterStatus, err := c.GetClusterWithoutStatus(d.Id()); err != nil {
 		return diag.FromErr(err), true
 	} else if clusterStatus != nil && clusterStatus.Status != nil && clusterStatus.Status.Location != nil {
 		if err := d.Set("location_config", flattenLocationConfig(clusterStatus.Status.Location)); err != nil {
@@ -206,8 +206,8 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 
 func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) error {
 	approveClusterRepave := d.Get("review_repave_state").(string)
-	context := d.Get("context").(string)
-	cluster, err := c.GetCluster(context, d.Id())
+	//context := d.Get("context").(string)
+	cluster, err := c.GetCluster(d.Id())
 	if err != nil {
 		return err
 	}
@@ -216,11 +216,11 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 	}
 	if cluster.Status.Repave.State == "Pending" {
 		if approveClusterRepave == "Approved" {
-			err := c.ApproveClusterRepave(context, d.Id())
+			err := c.ApproveClusterRepave(d.Id())
 			if err != nil {
 				return err
 			}
-			cluster, err := c.GetCluster(context, d.Id())
+			cluster, err := c.GetCluster(d.Id())
 			if err != nil {
 				return err
 			}
@@ -232,7 +232,7 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 			}
 
 		} else {
-			reasons, err := c.GetRepaveReasons(context, d.Id())
+			reasons, err := c.GetRepaveReasons(d.Id())
 			if err != nil {
 				return err
 			}

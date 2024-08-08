@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -111,7 +111,7 @@ func updateHostConfig(c *client.V1Client, d *schema.ResourceData) error {
 		if err != nil {
 			return err
 		}
-		return c.ApplyClusterHostConfig(d.Id(), clusterContext, &models.V1HostClusterConfigEntity{
+		return c.ApplyClusterHostConfig(d.Id(), &models.V1HostClusterConfigEntity{
 			HostClusterConfig: hostConfigs,
 		})
 	}

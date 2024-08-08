@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -90,17 +90,17 @@ func resourceClusterImport() *schema.Resource {
 }
 
 func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
 	uid, err := cloudClusterImportFunc(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
-	ClusterContext := d.Get("context").(string)
 	stateConf := &retry.StateChangeConf{
 		Target:     []string{"Pending"},
-		Refresh:    resourceClusterStateRefreshFunc(c, ClusterContext, d.Id()),
+		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 1 * time.Second,
 		Delay:      5 * time.Second,
@@ -119,7 +119,7 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	if profiles != nil {
-		if err := c.UpdateClusterProfileValues(uid, ClusterContext, profiles); err != nil {
+		if err := c.UpdateClusterProfileValues(uid, profiles); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -127,7 +127,8 @@ func resourceCloudClusterImport(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceCloudClusterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -174,8 +175,8 @@ func resourceCloudClusterImportManoifests(cluster *models.V1SpectroCluster, d *s
 		// Importing from Pending which isn't desired until intention is to apply the manifest locally
 		if len(cluster.Metadata.Labels) > 0 {
 			if v, ok := cluster.Metadata.Labels["apply"]; ok && v == "true" {
-				context := d.Get("context").(string)
-				importManifest, err := c.GetClusterImportManifest(cluster.Metadata.UID, context)
+				//context := d.Get("context").(string)
+				importManifest, err := c.GetClusterImportManifest(cluster.Metadata.UID)
 				if err != nil {
 					return err
 				}
@@ -208,15 +209,15 @@ func cloudClusterImportFunc(c *client.V1Client, d *schema.ResourceData) (string,
 }
 
 func resourceCloudClusterUpdate(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
 
 	profiles, err := toCloudClusterProfiles(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	clusterContext := d.Get("context").(string)
-	err = c.UpdateClusterProfileValues(d.Id(), clusterContext, profiles)
+	err = c.UpdateClusterProfileValues(d.Id(), profiles)
 	if err != nil {
 		return diag.FromErr(err)
 	}

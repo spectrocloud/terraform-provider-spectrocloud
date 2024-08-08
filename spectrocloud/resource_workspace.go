@@ -2,10 +2,10 @@ package spectrocloud
 
 import (
 	"context"
-
+	"errors"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
@@ -57,7 +57,7 @@ func resourceWorkspace() *schema.Resource {
 }
 
 func resourceWorkspaceCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 
 	var diags diag.Diagnostics
 
@@ -76,7 +76,7 @@ func resourceWorkspaceCreate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 
 	var diags diag.Diagnostics
 
@@ -115,7 +115,7 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 }
 
 func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 
 	var diags diag.Diagnostics
 
@@ -150,7 +150,7 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 
 	if d.HasChange("backup_policy") {
 		if len(d.Get("backup_policy").([]interface{})) == 0 {
-			return diag.FromErr(c.WorkspaceBackupDelete())
+			return diag.FromErr(errors.New("not implemented"))
 		}
 		if err := updateWorkspaceBackupPolicy(c, d); err != nil {
 			return diag.FromErr(err)
@@ -173,7 +173,7 @@ func updateWorkspaceRBACs(d *schema.ResourceData, c *client.V1Client, workspace 
 }
 
 func resourceWorkspaceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 	err := c.DeleteWorkspace(d.Id())
 	if err != nil {

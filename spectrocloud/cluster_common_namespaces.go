@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -79,7 +79,7 @@ func updateClusterNamespaces(c *client.V1Client, d *schema.ResourceData) error {
 		if err != nil {
 			return err
 		}
-		return c.ApplyClusterNamespaceConfig(d.Id(), clusterContext, namespaces)
+		return c.ApplyClusterNamespaceConfig(d.Id(), namespaces)
 	}
 	return nil
 }
