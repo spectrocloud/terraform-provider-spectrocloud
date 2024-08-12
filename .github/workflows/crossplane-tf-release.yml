@@ -1,4 +1,4 @@
-name: Update Terraform Provider Version
+name: Trigger cross plane release
 
 #on:
 #  release:
