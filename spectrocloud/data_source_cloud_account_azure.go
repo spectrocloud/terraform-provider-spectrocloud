@@ -4,10 +4,8 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-api-go/models"
 )
 
 func dataSourceCloudAccountAzure() *schema.Resource {
@@ -55,7 +53,7 @@ func dataSourceCloudAccountAzure() *schema.Resource {
 }
 
 func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics

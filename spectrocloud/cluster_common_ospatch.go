@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/robfig/cron"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -20,9 +20,9 @@ func updateClusterOsPatchConfig(c *client.V1Client, d *schema.ResourceData) erro
 		return err
 	}
 	if machineConfig.OsPatchConfig != nil {
-		return c.UpdateClusterOsPatchConfig(d.Id(), clusterContext, toUpdateOsPatchEntityClusterRbac(machineConfig.OsPatchConfig))
+		return c.UpdateClusterOsPatchConfig(d.Id(), toUpdateOsPatchEntityClusterRbac(machineConfig.OsPatchConfig))
 	} else {
-		return c.UpdateClusterOsPatchConfig(d.Id(), clusterContext, toUpdateOsPatchEntityClusterRbac(getDefaultOsPatchConfig().OsPatchConfig))
+		return c.UpdateClusterOsPatchConfig(d.Id(), toUpdateOsPatchEntityClusterRbac(getDefaultOsPatchConfig().OsPatchConfig))
 	}
 }
 

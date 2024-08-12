@@ -9,7 +9,8 @@ import (
 )
 
 func resourceAccountGcpImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	err := GetCommonAccount(d, c)
 	if err != nil {
@@ -35,7 +36,7 @@ func GetCommonAccount(d *schema.ResourceData, c *client.V1Client) error {
 	}
 
 	// Use the IDs to retrieve the cluster data from the API
-	cluster, err := c.GetCloudAccount(scope, accountID)
+	cluster, err := c.GetCloudAccount(accountID)
 	if err != nil {
 		return fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}

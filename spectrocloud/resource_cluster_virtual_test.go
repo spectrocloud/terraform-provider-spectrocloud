@@ -1,13 +1,13 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
-	"github.com/stretchr/testify/assert"
 )
 
 func prepareVirtualClusterTestData() *schema.ResourceData {
@@ -40,36 +40,36 @@ func prepareVirtualClusterTestData() *schema.ResourceData {
 	return d
 }
 
-func TestToVirtualCluster(t *testing.T) {
-	assert := assert.New(t)
-	// Create a mock ResourceData object
-	d := prepareVirtualClusterTestData()
-
-	// Mock the client
-	mockClient := &client.V1Client{}
-
-	// Create a mock ResourceData for testing
-	vCluster, err := toVirtualCluster(mockClient, d)
-	assert.Nil(err)
-
-	// Check the output against the expected values
-
-	// Verifying cluster name attribute
-	assert.Equal(d.Get("name").(string), vCluster.Metadata.Name)
-
-	// Verifying host cluster uid and cluster group uid attributes
-	assert.Equal(d.Get("host_cluster_uid").(string), vCluster.Spec.ClusterConfig.HostClusterConfig.HostCluster.UID)
-	assert.Equal(d.Get("cluster_group_uid").(string), vCluster.Spec.ClusterConfig.HostClusterConfig.ClusterGroup.UID)
-
-	// Verifying cloud config attributes
-	val, _ := d.GetOk("cloud_config")
-	cloudConfig := val.([]interface{})[0].(map[string]interface{})
-	assert.Equal(cloudConfig["chart_name"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Name)
-	assert.Equal(cloudConfig["chart_repo"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Repo)
-	assert.Equal(cloudConfig["chart_version"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Version)
-	assert.Equal(cloudConfig["chart_values"].(string), vCluster.Spec.CloudConfig.HelmRelease.Values)
-	assert.Equal(cloudConfig["k8s_version"].(string), vCluster.Spec.CloudConfig.KubernetesVersion)
-}
+//func TestToVirtualCluster(t *testing.T) {
+//	assert := assert.New(t)
+//	// Create a mock ResourceData object
+//	d := prepareVirtualClusterTestData()
+//
+//	// Mock the client
+//	mockClient := &client.V1Client{}
+//
+//	// Create a mock ResourceData for testing
+//	vCluster, err := toVirtualCluster(mockClient, d)
+//	assert.Nil(err)
+//
+//	// Check the output against the expected values
+//
+//	// Verifying cluster name attribute
+//	assert.Equal(d.Get("name").(string), vCluster.Metadata.Name)
+//
+//	// Verifying host cluster uid and cluster group uid attributes
+//	assert.Equal(d.Get("host_cluster_uid").(string), vCluster.Spec.ClusterConfig.HostClusterConfig.HostCluster.UID)
+//	assert.Equal(d.Get("cluster_group_uid").(string), vCluster.Spec.ClusterConfig.HostClusterConfig.ClusterGroup.UID)
+//
+//	// Verifying cloud config attributes
+//	val, _ := d.GetOk("cloud_config")
+//	cloudConfig := val.([]interface{})[0].(map[string]interface{})
+//	assert.Equal(cloudConfig["chart_name"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Name)
+//	assert.Equal(cloudConfig["chart_repo"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Repo)
+//	assert.Equal(cloudConfig["chart_version"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Version)
+//	assert.Equal(cloudConfig["chart_values"].(string), vCluster.Spec.CloudConfig.HelmRelease.Values)
+//	assert.Equal(cloudConfig["k8s_version"].(string), vCluster.Spec.CloudConfig.KubernetesVersion)
+//}
 
 func TestToVirtualClusterResize(t *testing.T) {
 	resources := map[string]interface{}{
@@ -96,5 +96,193 @@ func TestToVirtualClusterResize(t *testing.T) {
 
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Expected %v, but got %v", expected, result)
+	}
+}
+
+func TestToVirtualCluster(t *testing.T) {
+	// Mock client
+	mockClient := &client.V1Client{}
+
+	// Define test cases
+	testCases := []struct {
+		name     string
+		input    map[string]interface{}
+		expected *models.V1SpectroVirtualClusterEntity
+		err      error
+	}{
+		{
+			name: "valid input with cloud config and resources",
+			input: map[string]interface{}{
+				"host_cluster_uid":  "host-cluster-uid-123",
+				"cluster_group_uid": "cluster-group-uid-123",
+				"context":           "project-context",
+				"cloud_config": []interface{}{
+					map[string]interface{}{
+						"chart_name":    "test-chart",
+						"chart_repo":    "test-repo",
+						"chart_version": "1.0.0",
+						"chart_values":  "test-values",
+						"k8s_version":   "1.21.0",
+					},
+				},
+			},
+			expected: &models.V1SpectroVirtualClusterEntity{
+				Metadata: &models.V1ObjectMeta{
+					Name:        "", // Replace with expected values
+					UID:         "", // Replace with expected values if applicable
+					Labels:      map[string]string{},
+					Annotations: map[string]string{"description": ""},
+				},
+				Spec: &models.V1SpectroVirtualClusterEntitySpec{
+					CloudConfig: &models.V1VirtualClusterConfig{
+						HelmRelease: &models.V1VirtualClusterHelmRelease{
+							Chart: &models.V1VirtualClusterHelmChart{
+								Name:    "test-chart",
+								Repo:    "test-repo",
+								Version: "1.0.0",
+							},
+							Values: "test-values",
+						},
+						KubernetesVersion: "1.21.0",
+					},
+					ClusterConfig: &models.V1ClusterConfigEntity{
+						HostClusterConfig: &models.V1HostClusterConfig{
+							ClusterGroup: &models.V1ObjectReference{
+								UID: "cluster-group-uid-123",
+							},
+							HostCluster: &models.V1ObjectReference{
+								UID: "host-cluster-uid-123",
+							},
+						},
+					},
+					Profiles:          []*models.V1SpectroClusterProfileEntity{}, // Adjust according to expected output of toProfiles
+					Policies:          &models.V1SpectroClusterPolicies{},        // Adjust according to expected output of toPolicies
+					Machinepoolconfig: []*models.V1VirtualMachinePoolConfigEntity{},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "missing cloud config",
+			input: map[string]interface{}{
+				"host_cluster_uid":  "host-cluster-uid-123",
+				"cluster_group_uid": "cluster-group-uid-123",
+				"context":           "project-context",
+				"resources":         []interface{}{},
+			},
+			expected: &models.V1SpectroVirtualClusterEntity{
+				Metadata: &models.V1ObjectMeta{
+					Name:        "", // Replace with expected values
+					UID:         "", // Replace with expected values if applicable
+					Labels:      map[string]string{},
+					Annotations: map[string]string{"description": ""},
+				},
+				Spec: &models.V1SpectroVirtualClusterEntitySpec{
+					CloudConfig: &models.V1VirtualClusterConfig{
+						HelmRelease: &models.V1VirtualClusterHelmRelease{
+							Chart: &models.V1VirtualClusterHelmChart{
+								Name:    "",
+								Repo:    "",
+								Version: "",
+							},
+							Values: "",
+						},
+						KubernetesVersion: "",
+					},
+					ClusterConfig: &models.V1ClusterConfigEntity{
+						HostClusterConfig: &models.V1HostClusterConfig{
+							ClusterGroup: &models.V1ObjectReference{
+								UID: "cluster-group-uid-123",
+							},
+							HostCluster: &models.V1ObjectReference{
+								UID: "host-cluster-uid-123",
+							},
+						},
+					},
+					Profiles:          []*models.V1SpectroClusterProfileEntity{}, // Adjust according to expected output of toProfiles
+					Policies:          &models.V1SpectroClusterPolicies{},        // Adjust according to expected output of toPolicies
+					Machinepoolconfig: []*models.V1VirtualMachinePoolConfigEntity{},
+				},
+			},
+			err: nil,
+		},
+		// Add more test cases as necessary
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := schema.TestResourceDataRaw(t, resourceClusterVirtual().Schema, tc.input) // Replace with correct schema
+			result, err := toVirtualCluster(mockClient, d)
+
+			if err != nil {
+				assert.Equal(t, tc.err, err, "Unexpected error in test case: %s", tc.name)
+			} else {
+				assert.Equal(t, tc.expected, result, "Unexpected result in test case: %s", tc.name)
+			}
+		})
+	}
+}
+
+func TestToMachinePoolVirtual(t *testing.T) {
+	// Define test cases
+	testCases := []struct {
+		name     string
+		input    map[string]interface{}
+		expected *models.V1VirtualMachinePoolConfigEntity
+	}{
+		{
+			name: "valid input",
+			input: map[string]interface{}{
+				"max_cpu":           8,
+				"max_mem_in_mb":     32768,
+				"max_storage_in_gb": 500,
+				"min_cpu":           2,
+				"min_mem_in_mb":     8192,
+				"min_storage_in_gb": 100,
+			},
+			expected: &models.V1VirtualMachinePoolConfigEntity{
+				CloudConfig: &models.V1VirtualMachinePoolCloudConfigEntity{
+					InstanceType: &models.V1VirtualInstanceType{
+						MaxCPU:        int32(8),
+						MaxMemInMiB:   int32(32768),
+						MaxStorageGiB: int32(500),
+						MinCPU:        int32(2),
+						MinMemInMiB:   int32(8192),
+						MinStorageGiB: int32(100),
+					},
+				},
+			},
+		},
+		{
+			name: "zero values input",
+			input: map[string]interface{}{
+				"max_cpu":           0,
+				"max_mem_in_mb":     0,
+				"max_storage_in_gb": 0,
+				"min_cpu":           0,
+				"min_mem_in_mb":     0,
+				"min_storage_in_gb": 0,
+			},
+			expected: &models.V1VirtualMachinePoolConfigEntity{
+				CloudConfig: &models.V1VirtualMachinePoolCloudConfigEntity{
+					InstanceType: &models.V1VirtualInstanceType{
+						MaxCPU:        int32(0),
+						MaxMemInMiB:   int32(0),
+						MaxStorageGiB: int32(0),
+						MinCPU:        int32(0),
+						MinMemInMiB:   int32(0),
+						MinStorageGiB: int32(0),
+					},
+				},
+			},
+		},
+		// Add more test cases as needed
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := toMachinePoolVirtual(tc.input)
+			assert.Equal(t, tc.expected, result, "Unexpected result in test case: %s", tc.name)
+		})
 	}
 }

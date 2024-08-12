@@ -171,14 +171,14 @@ to import the resource spectrocloud_cluster_profile by using its `id`. For examp
 ```terraform
 import {
   to = spectrocloud_cluster_profile.example
-  id = "id"
+  id = "example_id:context"
 }
 ```
 
 You can also use the Terraform CLI and the `terraform import`, command to import the cluster using by referencing the resource `id`. For example:
 
 ```console
-% terraform import spectrocloud_cluster_profile.example id
+% terraform import spectrocloud_cluster_profile.example example_id:project
 ```
 
 Refer to the [Import section](/docs#import) to learn more.
@@ -192,7 +192,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Optional
 
-- `cloud` (String) Specify the infrastructure provider the cluster profile is for. Only Palette supported infrastructure providers can be used. The  supported cloud types are - `all, aws, azure, gcp, vsphere, openstack, maas, virtual, baremetal, eks, aks, edge, edge-native, libvirt, tencent, tke, coxedge, generic, and gke`,If the value is set to `all`, then the type must be set to `add-on`. Otherwise, the cluster profile may be incompatible with other providers. Default value is `all`.
+- `cloud` (String) Specify the infrastructure provider the cluster profile is for. Only Palette supported infrastructure providers can be used. The  supported cloud types are - `all, aws, azure, gcp, vsphere, openstack, maas, virtual, baremetal, eks, aks, edge, edge-native, tencent, tke, generic, and gke`,If the value is set to `all`, then the type must be set to `add-on`. Otherwise, the cluster profile may be incompatible with other providers. Default value is `all`.
 - `context` (String) The context of the cluster profile. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String)
 - `pack` (Block List) For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified. (see [below for nested schema](#nestedblock--pack))
@@ -218,7 +218,7 @@ Optional:
 - `manifest` (Block List) (see [below for nested schema](#nestedblock--pack--manifest))
 - `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name.
 - `tag` (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`.
-- `type` (String) The type of the pack. Allowed values are `spectro`, `manifest` or `helm`. The default value is `spectro`.
+- `type` (String) The type of the pack. Allowed values are `spectro`, `manifest`, `helm`, or `oci`. The default value is spectro. If using an OCI registry for pack, set the type to `oci`.
 - `uid` (String) The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro` and for `helm` if the chart is from a public helm registry.
 - `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 

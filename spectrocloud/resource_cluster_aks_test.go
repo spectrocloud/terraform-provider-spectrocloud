@@ -2,7 +2,7 @@ package spectrocloud
 
 import (
 	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

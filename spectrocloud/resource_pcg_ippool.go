@@ -8,10 +8,8 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-api-go/models"
 )
 
 func resourcePrivateCloudGatewayIpPool() *schema.Resource {
@@ -90,13 +88,13 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 }
 
 func resourceIpPoolCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
 
 	pool := toIpPool(d)
 
-	uid, err := c.CreateIpPool(pcgUID, pool)
+	uid, err := c.CreateIPPool(pcgUID, pool)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -106,12 +104,12 @@ func resourceIpPoolCreate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
 
-	pool, err := c.GetIpPool(pcgUID, d.Id())
+	pool, err := c.GetIPPool(pcgUID, d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	} else if pool == nil {
@@ -160,14 +158,14 @@ func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceIpPoolUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
 
 	pool := toIpPool(d)
 
-	err := c.UpdateIpPool(pcgUID, d.Id(), pool)
+	err := c.UpdateIPPool(pcgUID, d.Id(), pool)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -176,12 +174,12 @@ func resourceIpPoolUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceIpPoolDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
 
-	err := c.DeleteIpPool(pcgUID, d.Id())
+	err := c.DeleteIPPool(pcgUID, d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

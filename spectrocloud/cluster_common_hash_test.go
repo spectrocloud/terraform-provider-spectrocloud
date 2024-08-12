@@ -272,37 +272,6 @@ func TestEksLaunchTemplate(t *testing.T) {
 	}
 }
 
-func TestResourceMachinePoolCoxEdgeHash(t *testing.T) {
-
-	testCases := []struct {
-		input    map[string]interface{}
-		expected int
-	}{
-		{
-
-			input:    commonNodePool(),
-			expected: 513591628,
-		},
-		{
-			// Test case with empty input
-			input:    nil,
-			expected: 2166136261,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run("", func(t *testing.T) {
-			// Call the function with the test input
-			result := resourceMachinePoolCoxEdgeHash(tc.input)
-
-			// Check if the result matches the expected output
-			if result != tc.expected {
-				t.Errorf("Expected: %d, Got: %d", tc.expected, result)
-			}
-		})
-	}
-}
-
 func TestResourceMachinePoolTkeHash(t *testing.T) {
 	testCases := []struct {
 		input    map[string]interface{}
@@ -535,58 +504,6 @@ func TestInstanceTypeHash(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			hash := InstanceTypeHash(tc.input)
-			assert.Equal(t, tc.expectedHash, hash)
-		})
-	}
-}
-
-func TestResourceMachinePoolLibvirtHash(t *testing.T) {
-	testCases := []struct {
-		name         string
-		input        interface{}
-		expectedHash int
-	}{
-		{
-			name: "Valid MachinePoolLibvirtHash",
-			input: map[string]interface{}{
-				"xsl_template": "xsl-template-1",
-				"instance_type": []interface{}{
-					map[string]interface{}{
-						"cpu":               4,
-						"disk_size_gb":      100,
-						"memory_mb":         8192,
-						"cpus_sets":         "0-3",
-						"cache_passthrough": true,
-						"gpu_config": map[string]interface{}{
-							"num_gpus":     2,
-							"device_model": "Tesla T4",
-							"vendor":       "NVIDIA",
-							"addresses": map[string]interface{}{
-								"gpu-address-1": "10.0.0.1",
-								"gpu-address-2": "10.0.0.2",
-							},
-						},
-						"attached_disks": []interface{}{
-							map[string]interface{}{
-								"managed":    true,
-								"size_in_gb": 500,
-							},
-						},
-					},
-				},
-			},
-			expectedHash: 3451728783,
-		},
-		{
-			name:         "Test Case 2",
-			input:        map[string]interface{}{},
-			expectedHash: 2166136261,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			hash := resourceMachinePoolLibvirtHash(tc.input)
 			assert.Equal(t, tc.expectedHash, hash)
 		})
 	}

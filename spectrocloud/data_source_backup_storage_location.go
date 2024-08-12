@@ -6,8 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/palette-api-go/models"
 )
 
 func dataSourceBackupStorageLocation() *schema.Resource {
@@ -32,14 +31,14 @@ func dataSourceBackupStorageLocation() *schema.Resource {
 }
 
 func dataSourceBackupStorageLocationRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	c := getV1ClientWithResourceContext(m, "")
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	projectScope := true
+	//projectScope := true
 
-	bsls, err := c.ListBackupStorageLocation(projectScope)
+	bsls, err := c.ListBackupStorageLocation()
 	if err != nil {
 		return diag.FromErr(err)
 	}

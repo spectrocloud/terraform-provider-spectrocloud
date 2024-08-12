@@ -133,12 +133,6 @@ func prepareCloudAccountVsphereTestData(id string) *schema.ResourceData {
 	return d
 }
 
-func prepareClusterLibvirtTestData(id string) *schema.ResourceData {
-	d := resourceClusterLibvirt().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
 func prepareClusterEdgeNativeTestData(id string) *schema.ResourceData {
 	d := resourceClusterEdgeNative().TestResourceData()
 	d.SetId(id)
@@ -168,9 +162,18 @@ func prepareAddonDeploymentTestData(id string) *schema.ResourceData {
 	d.SetId(id)
 
 	// Set the cluster_uid, cluster_context, and apply_setting fields
-	d.Set("cluster_uid", "cluster-123")
-	d.Set("context", "tenant")
-	d.Set("apply_setting", "test-setting")
+	err := d.Set("cluster_uid", "cluster-123")
+	if err != nil {
+		return nil
+	}
+	err = d.Set("context", "tenant")
+	if err != nil {
+		return nil
+	}
+	err = d.Set("apply_setting", "test-setting")
+	if err != nil {
+		return nil
+	}
 
 	// Set up the cluster_profile field
 	profiles := []interface{}{
@@ -209,7 +212,10 @@ func prepareAddonDeploymentTestData(id string) *schema.ResourceData {
 			},
 		},
 	}
-	d.Set("cluster_profile", profiles)
+	err = d.Set("cluster_profile", profiles)
+	if err != nil {
+		return nil
+	}
 
 	return d
 }
@@ -370,11 +376,6 @@ func TestResourceCloudAccountVsphere(t *testing.T) {
 	assert.Equal(t, "test-id", testData.Id())
 }
 
-func TestResourceClusterLibvirt(t *testing.T) {
-	testData := prepareClusterLibvirtTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
 func TestResourceClusterEdgeNative(t *testing.T) {
 	testData := prepareClusterEdgeNativeTestData("test-id")
 	assert.Equal(t, "test-id", testData.Id())
@@ -407,11 +408,6 @@ func TestResourceKubevirtVirtualMachine(t *testing.T) {
 
 func TestResourceKubevirtDataVolume(t *testing.T) {
 	testData := prepareKubevirtDataVolumeTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceApplication(t *testing.T) {
-	testData := prepareApplicationTestData("test-id")
 	assert.Equal(t, "test-id", testData.Id())
 }
 

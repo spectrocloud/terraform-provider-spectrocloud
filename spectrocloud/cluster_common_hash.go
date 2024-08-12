@@ -215,13 +215,6 @@ func eksLaunchTemplate(v interface{}) string {
 	return buf.String()
 }
 
-func resourceMachinePoolCoxEdgeHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
-
-	return int(hash(buf.String()))
-}
-
 func resourceMachinePoolTkeHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
@@ -321,24 +314,6 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 	}
 	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
 	buf.WriteString(fmt.Sprintf("%s-", m["node_tags"].(*schema.Set).GoString()))
-	return int(hash(buf.String()))
-}
-
-func resourceMachinePoolLibvirtHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
-
-	if v, found := m["xsl_template"]; found {
-		buf.WriteString(fmt.Sprintf("%s-", v.(string)))
-	}
-
-	if v, found := m["instance_type"]; found {
-		if len(v.([]interface{})) > 0 {
-			ins := v.([]interface{})[0].(map[string]interface{})
-			buf.WriteString(InstanceTypeHash(ins))
-		}
-	}
-
 	return int(hash(buf.String()))
 }
 

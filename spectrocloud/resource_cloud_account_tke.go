@@ -6,9 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/hapi/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
-
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -45,13 +43,13 @@ func resourceCloudAccountTencent() *schema.Resource {
 }
 
 func resourceCloudAccountTencentCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	account := toTencentAccount(d)
-	AccountContext := d.Get("context").(string)
-	uid, err := c.CreateCloudAccountTke(account, AccountContext)
+	uid, err := c.CreateCloudAccountTke(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -64,13 +62,13 @@ func resourceCloudAccountTencentCreate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceCloudAccountTencentRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	uid := d.Id()
-	AccountContext := d.Get("context").(string)
-	account, err := c.GetCloudAccountTke(uid, AccountContext)
+	account, err := c.GetCloudAccountTke(uid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if account == nil {
@@ -90,14 +88,15 @@ func resourceCloudAccountTencentRead(_ context.Context, d *schema.ResourceData, 
 }
 
 func resourceCloudAccountTencentUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
 	account := toTencentAccount(d)
 
-	err := c.UpdateCloudAccountTencent(account)
+	err := c.UpdateCloudAccountTke(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -108,13 +107,14 @@ func resourceCloudAccountTencentUpdate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceCloudAccountTencentDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
 	cloudAccountID := d.Id()
-	AccountContext := d.Get("context").(string)
-	err := c.DeleteCloudAccountTke(cloudAccountID, AccountContext)
+
+	err := c.DeleteCloudAccountTke(cloudAccountID)
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -5,13 +5,11 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterAwsImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	c := m.(*client.V1Client)
 
-	err := GetCommonCluster(d, c)
+	c, err := GetCommonCluster(d, m)
 	if err != nil {
 		return nil, err
 	}

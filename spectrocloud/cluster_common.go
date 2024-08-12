@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"strings"
 )
@@ -27,6 +27,7 @@ var (
 		"spectrocloud_cluster_vsphere":      "vsphere",
 		"spectrocloud_cluster_gke":          "gke",
 	}
+	//clusterVsphereKeys = []string{"name", "context", "tags", "description", "cluster_meta_attribute", "cluster_profile", "apply_setting", "cloud_account_id", "cloud_config_id", "review_repave_state", "pause_agent_upgrades", "os_patch_on_boot", "os_patch_schedule", "os_patch_after", "kubeconfig", "admin_kube_config", "cloud_config", "machine_pool", "backup_policy", "scan_policy", "cluster_rbac_binding", "namespaces", "host_config", "location_config", "skip_completion", "force_delete", "force_delete_delay"}
 )
 
 func toNtpServers(in map[string]interface{}) []string {
@@ -127,12 +128,11 @@ func ValidateCloudType(resourceName string, cluster *models.V1SpectroCluster) er
 }
 
 func updateAgentUpgradeSetting(c *client.V1Client, d *schema.ResourceData) error {
-	clusterContext := d.Get("context").(string)
 	if v, ok := d.GetOk("pause_agent_upgrades"); ok {
 		setting := &models.V1ClusterUpgradeSettingsEntity{
 			SpectroComponents: v.(string),
 		}
-		if err := c.UpdatePauseAgentUpgradeSettingCluster(setting, d.Id(), clusterContext); err != nil {
+		if err := c.UpdatePauseAgentUpgradeSettingCluster(setting, d.Id()); err != nil {
 			return err
 		}
 	}
@@ -203,34 +203,44 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 	return nil
 }
 
-func GetCommonCluster(d *schema.ResourceData, c *client.V1Client) error {
+func GetCommonCluster(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
 	// parse resource ID and scope
-	scope, clusterID, err := ParseResourceID(d)
+	resourceContext, clusterID, err := ParseResourceID(d)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Use the IDs to retrieve the cluster data from the API
-	cluster, err := c.GetCluster(scope, clusterID)
+	cluster, err := c.GetCluster(clusterID)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve cluster data: %s", err)
+		return c, fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}
 	if cluster != nil {
 		err = d.Set("name", cluster.Metadata.Name)
 		if err != nil {
-			return err
+			return c, err
 		}
 		err = d.Set("context", cluster.Metadata.Annotations["scope"])
 		if err != nil {
-			return err
+			return c, err
 		}
 
 		// Set the ID of the resource in the state. This ID is used to track the
 		// resource and must be set in the state during the import.
 		d.SetId(clusterID)
 	} else {
-		return fmt.Errorf("couldn’t find cluster. Kindly check the cluster UID and context")
+		return c, fmt.Errorf("couldn’t find cluster. Kindly check the cluster UID and context")
 	}
 
-	return nil
+	return c, nil
+}
+
+func generalWarningForRepave(diags *diag.Diagnostics) {
+	message := "Please note that certain day 2 operations on a running cluster may trigger a node pool repave or a full repave of your cluster. This process might temporarily affect your cluster’s performance or configuration. For more details, please refer to the https://docs.spectrocloud.com/clusters/cluster-management/node-pool/"
+	*diags = append(*diags, diag.Diagnostic{
+		Severity: diag.Warning,
+		Summary:  "Warning",
+		Detail:   message,
+	})
 }

@@ -14,7 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -283,7 +283,8 @@ func resourceClusterEdgeNative() *schema.Resource {
 }
 
 func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -293,13 +294,12 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterEdgeNative(cluster, ClusterContext)
+	uid, err := c.CreateClusterEdgeNative(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -311,7 +311,8 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -337,11 +338,12 @@ func resourceClusterEdgeNativeRead(_ context.Context, d *schema.ResourceData, m 
 	}
 
 	diags = flattenCloudConfigEdgeNative(cluster.Spec.CloudConfigRef.UID, d, c)
+	generalWarningForRepave(&diags)
 	return diags
 }
 
 func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	ClusterContext := d.Get("context").(string)
+	//ClusterContext := d.Get("context").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
@@ -349,15 +351,19 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 		return diag.FromErr(err)
 	}
 
-	if config, err := c.GetCloudConfigEdgeNative(configUID, ClusterContext); err != nil {
+	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		cloudConfig := map[string]interface{}{}
+		if _, ok := d.GetOk("cloud_config"); ok {
+			cloudConfig = d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		}
+
 		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(cloudConfig, config)); err != nil {
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeNative, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeNative, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -380,6 +386,8 @@ func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config 
 	}
 	if config.Spec.ClusterConfig.ControlPlaneEndpoint.Host != "" {
 		if v, ok := cloudConfig["vip"]; ok && v.(string) != "" {
+			m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
+		} else {
 			m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
 		}
 	}
@@ -433,7 +441,8 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 }
 
 func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -443,7 +452,6 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
 
 	if d.HasChange("machine_pool") {
 		oraw, nraw := d.GetChange("machine_pool")
@@ -483,11 +491,11 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, ClusterContext, machinePool)
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", ClusterContext, cloudConfigId, name)
+					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -507,7 +515,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}

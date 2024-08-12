@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/hapi/models"
+	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -276,7 +276,8 @@ func resourceClusterOpenStack() *schema.Resource {
 }
 
 func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -286,13 +287,12 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	ClusterContext := d.Get("context").(string)
-	uid, err := c.CreateClusterOpenStack(cluster, ClusterContext)
+	uid, err := c.CreateClusterOpenStack(cluster)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, ClusterContext, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
 	}
@@ -370,7 +370,8 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1S
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
@@ -392,8 +393,8 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
 	}
-	ClusterContext := d.Get("context").(string)
-	if config, err := c.GetCloudConfigOpenStack(configUID, ClusterContext); err != nil {
+
+	if config, err := c.GetCloudConfigOpenStack(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
 
@@ -407,7 +408,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 		}
 
 		mp := flattenMachinePoolConfigsOpenStack(config.Spec.MachinePoolConfig)
-		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapOpenStack, mp, configUID, ClusterContext)
+		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapOpenStack, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -420,7 +421,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if done {
 		return diagnostics
 	}
-
+	generalWarningForRepave(&diags)
 	return diags
 }
 
@@ -429,34 +430,34 @@ func flattenClusterConfigsOpenstack(config *models.V1OpenStackCloudConfig) []int
 		return make([]interface{}, 0)
 	}
 
-	m := make(map[string]interface{})
+	cloudConfig := make(map[string]interface{})
 
 	if config.Spec.ClusterConfig.Domain != nil {
-		m["domain"] = *config.Spec.ClusterConfig.Domain
+		cloudConfig["domain"] = config.Spec.ClusterConfig.Domain.Name
 	}
 	if config.Spec.ClusterConfig.Region != "" {
-		m["region"] = config.Spec.ClusterConfig.Region
+		cloudConfig["region"] = config.Spec.ClusterConfig.Region
 	}
 	if config.Spec.ClusterConfig.Project != nil {
-		m["project"] = config.Spec.ClusterConfig.Project
+		cloudConfig["project"] = config.Spec.ClusterConfig.Project.Name
 	}
 	if config.Spec.ClusterConfig.SSHKeyName != "" {
-		m["ssh_key"] = config.Spec.ClusterConfig.SSHKeyName
+		cloudConfig["ssh_key"] = config.Spec.ClusterConfig.SSHKeyName
 	}
 	if config.Spec.ClusterConfig.Network != nil {
-		m["network_id"] = config.Spec.ClusterConfig.Network.ID
+		cloudConfig["network_id"] = config.Spec.ClusterConfig.Network.ID
 	}
 	if config.Spec.ClusterConfig.Subnet != nil {
-		m["subnet_id"] = config.Spec.ClusterConfig.Subnet.ID
+		cloudConfig["subnet_id"] = config.Spec.ClusterConfig.Subnet.ID
 	}
 	if config.Spec.ClusterConfig.DNSNameservers != nil {
-		m["dns_servers"] = config.Spec.ClusterConfig.DNSNameservers
+		cloudConfig["dns_servers"] = config.Spec.ClusterConfig.DNSNameservers
 	}
 	if config.Spec.ClusterConfig.NodeCidr != "" {
-		m["subnet_cidr"] = config.Spec.ClusterConfig.NodeCidr
+		cloudConfig["subnet_cidr"] = config.Spec.ClusterConfig.NodeCidr
 	}
 
-	return []interface{}{m}
+	return []interface{}{cloudConfig}
 }
 
 func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachinePoolConfig) []interface{} {
@@ -489,7 +490,8 @@ func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachin
 }
 
 func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := m.(*client.V1Client)
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -498,8 +500,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
-	ClusterContext := d.Get("context").(string)
-	CloudConfig, err := c.GetCloudConfigOpenStack(cloudConfigId, ClusterContext)
+	CloudConfig, err := c.GetCloudConfigOpenStack(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -537,12 +538,12 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 
 				if oldMachinePool, ok := osMap[name]; !ok {
 					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
+					err = c.CreateMachinePoolOpenStack(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolOpenStack(cloudConfigId, ClusterContext, machinePool)
+					err = c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool)
 					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusOpenStack, CloudConfig.Kind, ClusterContext, cloudConfigId, name)
+					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusOpenStack, CloudConfig.Kind, cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -562,7 +563,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name, ClusterContext); err != nil {
+			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
 		}
