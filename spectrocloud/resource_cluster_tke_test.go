@@ -120,8 +120,8 @@ func TestToMachinePoolTke(t *testing.T) {
 				"instance_type": "m1.medium",
 				"disk_size_gb":  100,
 				"az_subnets": map[string]interface{}{
-					"us-west-2a": "subnet-123456",
-					"us-west-2b": "subnet-654321",
+					"us-west-2":  "subnet-123456",
+					"us-west-22": "subnet-654321",
 				},
 				"control_plane": false,
 				"taints":        []interface{}{},
@@ -130,7 +130,7 @@ func TestToMachinePoolTke(t *testing.T) {
 				CloudConfig: &models.V1TencentMachinePoolCloudConfigEntity{
 					RootDeviceSize: 100,
 					InstanceType:   "m1.medium",
-					Azs:            []string{"us-west-2a", "us-west-2b"},
+					Azs:            []string{"us-west-2", "us-west-22"},
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					Labels:         []string{"worker"},
