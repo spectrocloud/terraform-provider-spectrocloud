@@ -1,0 +1,54 @@
+name: Update Terraform Provider Version
+
+#on:
+#  release:
+#    types: [published]  # Trigger when a new release is published
+on:
+  workflow_dispatch:
+
+jobs:
+  update-provider:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Clone provider-palette repository
+        run: git clone https://github.com/crossplane-contrib/provider-palette.git
+
+      - name: Update Makefile
+        run: |
+          cd provider-palette
+          sed -i 's/^export TERRAFORM_PROVIDER_VERSION := .*/export TERRAFORM_PROVIDER_VERSION := ${{ github.event.release.tag_name }}/' Makefile
+
+      - name: Install goimports
+        run: go install golang.org/x/tools/cmd/goimports@latest
+
+      - name: Run make commands
+        run: |
+          cd provider-palette
+          make submodules vendor vendor.check
+          make generate
+
+      - name: Commit and Push Changes
+        run: |
+          cd provider-palette
+          git checkout -b update-terraform-provider-${{ github.event.release.tag_name }}
+          git add Makefile
+          git add .
+          git commit -m "Update Terraform Provider to version ${{ github.event.release.tag_name }}"
+          git push origin update-terraform-provider-${{ github.event.release.tag_name }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: update-terraform-provider-${{ github.event.release.tag_name }}
+          title: "Update Terraform Provider to version ${{ github.event.release.tag_name }}"
+          body: "This PR updates the Terraform Provider version to ${{ github.event.release.tag_name }}."
