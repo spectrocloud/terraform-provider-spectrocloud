@@ -1,7 +1,6 @@
 package spectrocloud
 
 import (
-	"github.com/google/go-cmp/cmp"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"testing"
 

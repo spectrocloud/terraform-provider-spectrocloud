@@ -354,7 +354,11 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		cloudConfig := map[string]interface{}{}
+		if _, ok := d.GetOk("cloud_config"); ok {
+			cloudConfig = d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		}
+
 		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(cloudConfig, config)); err != nil {
 			return diag.FromErr(err)
 		}
@@ -382,6 +386,8 @@ func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config 
 	}
 	if config.Spec.ClusterConfig.ControlPlaneEndpoint.Host != "" {
 		if v, ok := cloudConfig["vip"]; ok && v.(string) != "" {
+			m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
+		} else {
 			m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
 		}
 	}
