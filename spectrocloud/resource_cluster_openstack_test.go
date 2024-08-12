@@ -4,6 +4,7 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-api-go/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -245,6 +246,65 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestFlattenMachinePoolConfigsOpenStack(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    []*models.V1OpenStackMachinePoolConfig
+		expected []interface{}
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: []interface{}{},
+		},
+		{
+			name:     "empty input",
+			input:    []*models.V1OpenStackMachinePoolConfig{},
+			expected: []interface{}{},
+		},
+		{
+			name: "non-empty input",
+			input: []*models.V1OpenStackMachinePoolConfig{
+				{
+					Name:                    "pool1",
+					IsControlPlane:          true,
+					UseControlPlaneAsWorker: false,
+					Size:                    3,
+					Subnet: &models.V1OpenStackResource{
+						ID: "subnet-12345",
+					},
+					Azs: []string{"az1", "az2"},
+					FlavorConfig: &models.V1OpenstackFlavorConfig{
+						Name: strPtr("m1.medium"),
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":                    "pool1",
+					"control_plane":           true,
+					"control_plane_as_worker": false,
+					"count":                   3,
+					"subnet_id":               "subnet-12345",
+					"azs":                     []string{"az1", "az2"},
+					"instance_type":           strPtr("m1.medium"),
+					"additional_labels":       map[string]interface{}{},
+					"update_strategy":         "RollingUpdateScaleOut",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := flattenMachinePoolConfigsOpenStack(tc.input)
+			if !cmp.Equal(result, tc.expected) {
+				t.Errorf("Unexpected result for %s (-want +got):\n%s", tc.name, cmp.Diff(tc.expected, result))
 			}
 		})
 	}

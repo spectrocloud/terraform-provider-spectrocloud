@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"fmt"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"reflect"
 	"testing"
 
@@ -449,3 +451,101 @@ func TestFlattenMachinePoolConfigsVsphereNil(t *testing.T) {
 //	assert.Equal(t, "", d.Id())
 //
 //}
+
+func TestFlattenMachinePoolConfigsVsphere(t *testing.T) {
+	// Define test cases
+	testCases := []struct {
+		name     string
+		input    []*models.V1VsphereMachinePoolConfig
+		expected []interface{}
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: []interface{}{},
+		},
+		{
+			name:     "empty input",
+			input:    []*models.V1VsphereMachinePoolConfig{},
+			expected: []interface{}{},
+		},
+		{
+			name: "valid input",
+			input: []*models.V1VsphereMachinePoolConfig{
+				{
+					Name:                    "pool1", // Match this name with input data
+					Size:                    int32(3),
+					MinSize:                 1,
+					MaxSize:                 5,
+					IsControlPlane:          types.Ptr(true),
+					UseControlPlaneAsWorker: false,
+					NodeRepaveInterval:      int32(24),
+					UpdateStrategy: &models.V1UpdateStrategy{
+						Type: "RollingUpdate",
+					},
+					InstanceType: &models.V1VsphereInstanceType{
+						DiskGiB:   types.Ptr(int32(100)),
+						MemoryMiB: types.Ptr(int64(8192)),
+						NumCPUs:   types.Ptr(int32(4)),
+					},
+					Placements: []*models.V1VspherePlacementConfig{
+						{
+							UID:          "placement1",
+							Cluster:      "cluster1",
+							ResourcePool: "resource-pool1",
+							Datastore:    "datastore1",
+							Network: &models.V1VsphereNetworkConfig{
+								NetworkName: types.Ptr("network1"),
+								ParentPoolRef: &models.V1ObjectReference{
+									UID: "pool1",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":                    "pool1", // Match with the input data
+					"count":                   int32(3),
+					"min":                     1,
+					"max":                     5,
+					"control_plane_as_worker": false,
+					"control_plane":           true, // Include additional fields returned by the function
+					"instance_type": []interface{}{
+						map[string]interface{}{
+							"disk_size_gb": 100,
+							"memory_mb":    8192,
+							"cpu":          4,
+						},
+					},
+					"placement": []interface{}{
+						map[string]interface{}{
+							"id":                "placement1",
+							"cluster":           "cluster1",
+							"resource_pool":     "resource-pool1",
+							"datastore":         "datastore1",
+							"network":           types.Ptr("network1"), // Handle pointer or use (*string)(nil) if necessary
+							"static_ip_pool_id": "pool1",
+						},
+					},
+					"update_strategy":   "RollingUpdate",          // Include this field in expected
+					"additional_labels": map[string]interface{}{}, // Include this field in expected
+				},
+			},
+		},
+		// Add more test cases as needed
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := flattenMachinePoolConfigsVsphere(tc.input)
+
+			// Debugging output
+			fmt.Printf("Expected: %+v\n", tc.expected)
+			fmt.Printf("Result: %+v\n", result)
+
+			assert.Equal(t, tc.expected, result, "Unexpected result in test case: %s", tc.name)
+		})
+	}
+}
