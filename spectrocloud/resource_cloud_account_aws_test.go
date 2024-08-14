@@ -171,3 +171,139 @@ func TestFlattenCloudAccountAws_NonStsType(t *testing.T) {
 	expectedARNs := []string{"arn:aws:test_policy_secret1", "arn:aws:test_policy_secret2"}
 	assert.ElementsMatch(t, expectedARNs, actualARNs)
 }
+
+//func TestFlattenCloudAccountAws(t *testing.T) {
+//	testCases := []struct {
+//		name         string
+//		inputAccount map[string]interface{}
+//		expectedData *models.V1AwsAccount
+//	}{
+//		{
+//			name: "Successful flattening with AWS access key",
+//			inputAccount: map[string]interface{}{
+//				"name":           "test-account",
+//				"context":        "test-context",
+//				"type":           "secret",
+//				"aws_access_key": "access-key",
+//				"partition":      "aws-partition",
+//				"policy_arns":    []interface{}{"policy-arn-1", "policy-arn-2"},
+//			},
+//			expectedData: &models.V1AwsAccount{
+//				Metadata: &models.V1ObjectMeta{
+//					Name: "test-account",
+//					Annotations: map[string]string{
+//						"scope": "test-context",
+//					},
+//				},
+//				Spec: &models.V1AwsCloudAccount{
+//					CredentialType: "secret",
+//					AccessKey:      "access-key",
+//					Partition:      types.Ptr("aws-partition"),
+//					PolicyARNs:     []string{"policy-arn-1", "policy-arn-2"},
+//				},
+//			},
+//		},
+//		{
+//			name: "Successful flattening with ARN",
+//			inputAccount: map[string]interface{}{
+//				"name":        "test-account",
+//				"context":     "test-context",
+//				"type":        "arn",
+//				"arn":         "arn:aws:sts::123456789012:assumed-role/role-name",
+//				"partition":   "aws-partition",
+//				"policy_arns": []interface{}{"policy-arn-1", "policy-arn-2"},
+//			},
+//			expectedData: &models.V1AwsAccount{
+//				Metadata: &models.V1ObjectMeta{
+//					Name: "test-account",
+//					Annotations: map[string]string{
+//						"scope": "test-context",
+//					},
+//				},
+//				Spec: &models.V1AwsCloudAccount{
+//					CredentialType: "arn",
+//					Sts: &models.V1AwsStsCredentials{
+//						Arn: "arn:aws:sts::123456789012:assumed-role/role-name",
+//					},
+//					Partition:  types.Ptr("aws-partition"),
+//					PolicyARNs: []string{"policy-arn-1", "policy-arn-2"},
+//				},
+//			},
+//		},
+//		{
+//			name: "Flattening with empty fields",
+//			inputAccount: map[string]interface{}{
+//				"name":        "test-account",
+//				"context":     "test-context",
+//				"type":        "arn",
+//				"arn":         "arn:aws:sts::123456789012:assumed-role/role-name",
+//				"policy_arns": nil,
+//			},
+//			expectedData: &models.V1AwsAccount{
+//				Metadata: &models.V1ObjectMeta{
+//					Name: "test-account",
+//					Annotations: map[string]string{
+//						"scope": "test-context",
+//					},
+//				},
+//				Spec: &models.V1AwsCloudAccount{
+//					CredentialType: "arn",
+//					Sts: &models.V1AwsStsCredentials{
+//						Arn: "arn:aws:sts::123456789012:assumed-role/role-name",
+//					},
+//					PolicyARNs: nil,
+//				},
+//			},
+//		},
+//	}
+//
+//	for _, tc := range testCases {
+//		t.Run(tc.name, func(t *testing.T) {
+//			// Create ResourceData with test values
+//			resourceData := schema.TestResourceDataRaw(t, resourceCloudAccountAws().Schema, tc.inputAccount)
+//
+//			diags, _ := flattenCloudAccountAws(resourceData, tc.expectedData)
+//
+//			assert.Nil(t, diags) // Expect no diagnostics (errors)
+//
+//			// Convert *schema.Set to []string for comparison
+//			if policyARNs, ok := tc.inputAccount["policy_arns"].([]interface{}); ok {
+//				expectedPolicyARNs := convertInterfaceSliceToStringSlice(policyARNs)
+//				actualPolicyARNs := convertSchemaSetToStringSlice(resourceData.Get("policy_arns").(*schema.Set))
+//
+//				// Sort both slices before comparison
+//				sort.Strings(expectedPolicyARNs)
+//				sort.Strings(actualPolicyARNs)
+//
+//				assert.Equal(t, expectedPolicyARNs, actualPolicyARNs, "Mismatch in field: policy_arns")
+//			}
+//
+//			// Compare other fields
+//			for key, expectedValue := range tc.inputAccount {
+//				if key == "policy_arns" {
+//					continue
+//				}
+//				actualValue := resourceData.Get(key)
+//				assert.Equal(t, expectedValue, actualValue, "Mismatch in field: "+key)
+//			}
+//		})
+//	}
+//}
+//
+//// Helper function to convert *schema.Set to []string
+//func convertSchemaSetToStringSlice(set *schema.Set) []string {
+//	var result []string
+//	for _, v := range set.List() {
+//		result = append(result, v.(string))
+//	}
+//	return result
+//}
+//
+//// Helper function to convert []interface{} to []string
+//func convertInterfaceSliceToStringSlice(slice []interface{}) []string {
+//	var result []string
+//	for _, v := range slice {
+//		result = append(result, v.(string))
+//	}
+//	return result
+//}

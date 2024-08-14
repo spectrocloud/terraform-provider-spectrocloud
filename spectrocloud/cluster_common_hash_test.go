@@ -128,32 +128,55 @@ func TestResourceMachinePoolAksHash(t *testing.T) {
 	}
 }
 
+// Test function
 func TestResourceMachinePoolGcpHash(t *testing.T) {
 	testCases := []struct {
+		name     string
 		input    interface{}
 		expected int
 	}{
 		{
+			name: "With all fields",
+			input: map[string]interface{}{
+				"disk_size_gb":  100,
+				"instance_type": "n1-standard-4",
+				"azs":           schema.NewSet(schema.HashString, []interface{}{"us-central1-a", "us-central1-b"}),
+			},
+			expected: int(hash("100-n1-standard-4-us-central1-a-us-central1-b-")),
+		},
+		{
+			name: "Without disk_size_gb",
 			input: map[string]interface{}{
 				"instance_type": "n1-standard-4",
-				"min":           1,
-				"max":           3,
-				"capacity_type": "ON_DEMAND",
-				"max_price":     "0.12",
 				"azs":           schema.NewSet(schema.HashString, []interface{}{"us-central1-a", "us-central1-b"}),
-				"az_subnets": map[string]interface{}{
-					"us-central1-a": "subnet-1",
-					"us-central1-b": "subnet-2",
-				},
 			},
-			expected: 2586515099,
+			expected: int(hash("n1-standard-4-us-central1-a-us-central1-b-")),
+		},
+		{
+			name: "Without azs",
+			input: map[string]interface{}{
+				"disk_size_gb":  100,
+				"instance_type": "n1-standard-4",
+			},
+			expected: int(hash("100-n1-standard-4-")),
+		},
+		{
+			name: "With empty azs",
+			input: map[string]interface{}{
+				"disk_size_gb":  100,
+				"instance_type": "n1-standard-4",
+				"azs":           schema.NewSet(schema.HashString, []interface{}{}),
+			},
+			expected: 1518306019,
 		},
 	}
+
 	for _, tc := range testCases {
-		actual := resourceMachinePoolGcpHash(tc.input)
-		if actual != tc.expected {
-			t.Errorf("Expected hash %d, but got %d for input %+v", tc.expected, actual, tc.input)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			actual := resourceMachinePoolGcpHash(tc.input)
+			fmt.Printf("Debug: For input %+v, got hash %d, expected %d\n", tc.input, actual, tc.expected)
+			assert.Equal(t, tc.expected, actual, "For %s, expected hash %d, but got %d", tc.name, tc.expected, actual)
+		})
 	}
 }
 
@@ -603,6 +626,77 @@ func TestResourceMachinePoolOpenStackHash(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			hash := resourceMachinePoolOpenStackHash(tc.input)
 			assert.Equal(t, tc.expectedHash, hash)
+		})
+	}
+}
+
+func TestResourceMachinePoolGkeHash(t *testing.T) {
+	testCases := []struct {
+		input    interface{}
+		expected int
+	}{
+		{
+			input: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"disk_size_gb":  100,
+			},
+			expected: 1800178524,
+		},
+
+		{
+			input: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+			},
+			//expected: 987654321, // Replace with expected hash value
+			expected: int(hash("n1-standard-4-")),
+		},
+	}
+
+	for _, tc := range testCases {
+		actual := resourceMachinePoolGkeHash(tc.input)
+		if actual != tc.expected {
+			t.Errorf("Expected hash %d, but got %d for input %+v", tc.expected, actual, tc.input)
+		}
+	}
+}
+
+func TestResourceMachinePoolCustomCloudHash(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    interface{}
+		expected int
+	}{
+		{
+			name: "With all fields",
+			input: map[string]interface{}{
+				"name":                    "custom-cloud",
+				"count":                   3,
+				"control_plane":           true,
+				"control_plane_as_worker": false, //comment this for fail test
+				"additional_labels":       map[string]string{"env": "prod"},
+				"taints":                  []interface{}{"key1=value1", "key2=value2"},
+				"node_pool_config":        "standard",
+			},
+			expected: 208692298,
+		},
+		{
+			name: "Missing optional fields",
+			input: map[string]interface{}{
+				"name":             "test-pool",
+				"count":            3,
+				"node_pool_config": "standard", //comment this for fail test
+			},
+			expected: 1525978111,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := resourceMachinePoolCustomCloudHash(tc.input)
+			fmt.Printf("Debug: For input %+v, got hash %d, expected %d\n", tc.input, actual, tc.expected)
+			if actual != tc.expected {
+				t.Errorf("For test case '%s', expected hash %d, but got %d for input %+v", tc.name, tc.expected, actual, tc.input)
+			}
 		})
 	}
 }
