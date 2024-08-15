@@ -35,6 +35,7 @@ resource "spectrocloud_registry_oci" "r1" {
 - `endpoint` (String)
 - `is_private` (Boolean)
 - `name` (String)
+- `provider_type` (String)
 - `type` (String)
 
 ### Optional
@@ -57,7 +58,7 @@ Optional:
 - `access_key` (String)
 - `arn` (String)
 - `external_id` (String)
-- `password` (String)
+- `password` (String, Sensitive)
 - `secret_key` (String, Sensitive)
 - `username` (String)
 
