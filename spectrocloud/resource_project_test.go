@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -80,4 +82,16 @@ func TestToProject(t *testing.T) {
 			assert.Equal(t, val.expected.Metadata.Annotations, result.Metadata.Annotations)
 		})
 	}
+}
+
+func TestCreateFunc(t *testing.T) {
+	d := resourceProject().TestResourceData()
+	var diags diag.Diagnostics
+	err := d.Set("name", "dev")
+	if err != nil {
+		return
+	}
+	var ctx context.Context
+	diags = resourceProjectCreate(ctx, d, unitTestMockAPIClient)
+	assert.Equal(t, 0, len(diags))
 }

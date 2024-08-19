@@ -19,3 +19,9 @@ kubeconfig_*
 .local
 dist
 providers
+
+# ignore for mock api server
+server.crt
+server.key
+MockAPIServer
+mock_api_server.log

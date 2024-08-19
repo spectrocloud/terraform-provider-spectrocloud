@@ -1,20 +1,37 @@
 package spectrocloud
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"os"
+	"os/exec"
 	"testing"
 )
 
-type Cred struct {
-	hubbleHost string
-	project    string
-	apikey     string
-	component  string
-	AlertUid   string
-}
+//type Cred struct {
+//	hubbleHost string
+//	project    string
+//	apikey     string
+//	component  string
+//	AlertUid   string
+//}
 
-var baseConfig Cred
+const (
+	host          = "127.0.0.1:8080"
+	trace         = false
+	retryAttempts = 10
+	apiKey        = "12345"
+	projectName   = "unittest"
+	projectUID    = "testprojectuid"
+)
+
+// var baseConfig Cred
+var unitTestMockAPIClient interface{}
+var basePath = os.Getenv("TF_SRC")
+var startMockApiServerScript = basePath + "/tests/mockApiServer/start_mock_api_server.sh"
+var stopMockApiServerScript = basePath + "/tests/mockApiServer/stop_mock_api_server.sh"
 
 func TestMain(m *testing.M) {
 	setup()
@@ -23,39 +40,50 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func unitTestProviderConfigure(ctx context.Context) (interface{}, diag.Diagnostics) {
+	host := host
+	apiKey := apiKey
+	retryAttempts := retryAttempts
+
+	// Warning or errors can be collected in a slice type
+	var diags diag.Diagnostics
+
+	c := client.New(
+		client.WithPaletteURI(host),
+		client.WithAPIKey(apiKey),
+		client.WithRetries(retryAttempts),
+		client.WithInsecureSkipVerify(true))
+	//// comment to trace flag
+	//client.WithTransportDebug()(c)
+	uid := projectUID
+	ProviderInitProjectUid = uid
+	client.WithScopeProject(uid)(c)
+
+	return c, diags
+
+}
+
 func setup() {
-	// Setting up test credentials & base config from env variables
-	baseConfig.hubbleHost = getEnvWithFallBack("TEST_HOST")
-	baseConfig.project = getEnvWithFallBack("TEST_PROJECT")
-	baseConfig.apikey = getEnvWithFallBack("TEST_API_KEY")
-	baseConfig.component = "ClusterHealth"
-	baseConfig.AlertUid = ""
-	if IsIntegrationTestEnvSet(baseConfig) {
-		fmt.Printf("\033[1;36m%s\033[0m", "> Credentials & Base config setup completed\n")
-		fmt.Printf("\033[1;36m%s\033[0m", "-- Test Runnig with below crdentials & base config\n")
-		fmt.Printf("* Test host - %s \n", baseConfig.hubbleHost)
-		fmt.Printf("* Test project - %s \n", baseConfig.project)
-		fmt.Printf("* Test key - %s \n", "***********************")
-		fmt.Printf("\033[1;36m%s\033[0m", "-------------------------------\n")
-	} else {
-		fmt.Printf("\033[1;36m%s\033[0m", "> Since env variable not sipping integration test\n")
+	fmt.Printf("\033[1;36m%s\033[0m", "> Starting Mock API Server \n")
+	var ctx context.Context
+
+	cmd := exec.Command("sh", startMockApiServerScript)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Failed to run start api server script: %s\nError: %s", output, err)
 	}
+	fmt.Printf("\033[1;36m%s\033[0m", "> Started Mock Api Server at https://127.0.0.1:8080 \n")
+	unitTestMockAPIClient, _ = unitTestProviderConfigure(ctx)
+
 	fmt.Printf("\033[1;36m%s\033[0m", "> Setup completed \n")
 }
-func IsIntegrationTestEnvSet(config Cred) (envSet bool) {
-	if config.hubbleHost != "" && config.project != "" && config.apikey != "" {
-		return true
-	} else {
-		return false
-	}
-}
-func getEnvWithFallBack(key string) (response string) {
-	value := os.Getenv(key)
-	if len(value) == 0 {
-		return ""
-	}
-	return value
-}
+
 func teardown() {
+	cmd := exec.Command("bash", stopMockApiServerScript)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Failed to run stop api server script: %s\nError: %s", output, err)
+	}
+	fmt.Printf("\033[1;36m%s\033[0m", "> Stopped Mock Api Server \n")
 	fmt.Printf("\033[1;36m%s\033[0m", "> Teardown completed \n")
 }
