@@ -606,3 +606,74 @@ func TestResourceMachinePoolOpenStackHash(t *testing.T) {
 		})
 	}
 }
+
+func TestResourceMachinePoolGkeHash(t *testing.T) {
+	testCases := []struct {
+		input    interface{}
+		expected int
+	}{
+		{
+			input: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"disk_size_gb":  100,
+			},
+			expected: 1800178524,
+		},
+
+		{
+			input: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+			},
+			//expected: 987654321, // Replace with expected hash value
+			expected: int(hash("n1-standard-4-")),
+		},
+	}
+
+	for _, tc := range testCases {
+		actual := resourceMachinePoolGkeHash(tc.input)
+		if actual != tc.expected {
+			t.Errorf("Expected hash %d, but got %d for input %+v", tc.expected, actual, tc.input)
+		}
+	}
+}
+
+func TestResourceMachinePoolCustomCloudHash(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    interface{}
+		expected int
+	}{
+		{
+			name: "With all fields",
+			input: map[string]interface{}{
+				"name":                    "custom-cloud",
+				"count":                   3,
+				"control_plane":           true,
+				"control_plane_as_worker": false, //comment this for fail test
+				"additional_labels":       map[string]string{"env": "prod"},
+				"taints":                  []interface{}{"key1=value1", "key2=value2"},
+				"node_pool_config":        "standard",
+			},
+			expected: 208692298,
+		},
+		{
+			name: "Missing optional fields",
+			input: map[string]interface{}{
+				"name":             "test-pool",
+				"count":            3,
+				"node_pool_config": "standard", //comment this for fail test
+			},
+			expected: 1525978111,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := resourceMachinePoolCustomCloudHash(tc.input)
+			fmt.Printf("Debug: For input %+v, got hash %d, expected %d\n", tc.input, actual, tc.expected)
+			if actual != tc.expected {
+				t.Errorf("For test case '%s', expected hash %d, but got %d for input %+v", tc.name, tc.expected, actual, tc.input)
+			}
+		})
+	}
+}
