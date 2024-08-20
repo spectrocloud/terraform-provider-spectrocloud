@@ -263,3 +263,90 @@ func TestToCustomCloudCluster(t *testing.T) {
 //	var d diag.Diagnostics
 //	assert.Equal(t, d, diags)
 //}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+func TestFlattenMachinePoolConfigsCustomCloud(t *testing.T) {
+	// Define test cases
+	tests := []struct {
+		name         string
+		input        []*models.V1CustomMachinePoolConfig
+		expectedSize int
+		expected     []interface{}
+	}{
+		{
+			name:         "Empty machine pool",
+			input:        []*models.V1CustomMachinePoolConfig{},
+			expectedSize: 0,
+			expected:     []interface{}{},
+		},
+		{
+			name: "Single machine pool",
+			input: []*models.V1CustomMachinePoolConfig{
+				{
+					UseControlPlaneAsWorker: true,
+					IsControlPlane:          boolPtr(true),
+					Values:                  "node-pool-values",
+					Name:                    "pool-1",
+					Size:                    int32(3),
+				},
+			},
+			expectedSize: 1,
+			expected: []interface{}{
+				map[string]interface{}{
+					"control_plane_as_worker": true,
+					"control_plane":           boolPtr(true),
+					"node_pool_config":        "node-pool-values",
+					"name":                    "pool-1",
+					"count":                   int32(3),
+				},
+			},
+		},
+		{
+			name: "Multiple machine pools",
+			input: []*models.V1CustomMachinePoolConfig{
+				{
+					UseControlPlaneAsWorker: true,
+					IsControlPlane:          boolPtr(true),
+					Values:                  "node-pool-1-values",
+					Name:                    "pool-1",
+					Size:                    int32(3),
+				},
+				{
+					UseControlPlaneAsWorker: false,
+					IsControlPlane:          boolPtr(false),
+					Values:                  "node-pool-2-values",
+					Name:                    "pool-2",
+					Size:                    int32(5),
+				},
+			},
+			expectedSize: 2,
+			expected: []interface{}{
+				map[string]interface{}{
+					"control_plane_as_worker": true,
+					"control_plane":           boolPtr(true),
+					"node_pool_config":        "node-pool-1-values",
+					"name":                    "pool-1",
+					"count":                   int32(3),
+				},
+				map[string]interface{}{
+					"control_plane_as_worker": false,
+					"control_plane":           boolPtr(false),
+					"node_pool_config":        "node-pool-2-values",
+					"name":                    "pool-2",
+					"count":                   int32(5),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := flattenMachinePoolConfigsCustomCloud(tt.input)
+			assert.Equal(t, tt.expectedSize, len(output))
+			assert.Equal(t, tt.expected, output)
+		})
+	}
+}
