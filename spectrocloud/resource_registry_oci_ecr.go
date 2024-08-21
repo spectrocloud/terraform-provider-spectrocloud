@@ -103,7 +103,6 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	registryType := d.Get("type").(string)
 
-	diag.FromErr(errors.New(registryType))
 	if registryType == "ecr" {
 		registry := toRegistryEcr(d)
 
@@ -130,49 +129,77 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
-	registry, err := c.GetOciEcrRegistry(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	} else if registry == nil {
-		// Deleted - Terraform will recreate it
-		d.SetId("")
+	registryType := d.Get("type").(string)
+
+	if registryType == "ecr" {
+
+		registry, err := c.GetOciEcrRegistry(d.Id())
+		if err != nil {
+			return diag.FromErr(err)
+		} else if registry == nil {
+			// Deleted - Terraform will recreate it
+			d.SetId("")
+			return diags
+		}
+
+		if err := d.Set("name", registry.Metadata.Name); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("is_private", registry.Spec.IsPrivate); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
+			return diag.FromErr(err)
+		}
+		switch registry.Spec.Credentials.CredentialType {
+		case models.V1AwsCloudAccountCredentialTypeSts:
+			credentials := make([]interface{}, 0, 1)
+			acc := make(map[string]interface{})
+			acc["arn"] = registry.Spec.Credentials.Sts.Arn
+			acc["external_id"] = registry.Spec.Credentials.Sts.ExternalID
+			acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSts
+			credentials = append(credentials, acc)
+			if err := d.Set("credentials", credentials); err != nil {
+				return diag.FromErr(err)
+			}
+		case models.V1AwsCloudAccountCredentialTypeSecret:
+			credentials := make([]interface{}, 0, 1)
+			acc := make(map[string]interface{})
+			acc["access_key"] = registry.Spec.Credentials.AccessKey
+			acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
+			credentials = append(credentials, acc)
+			if err := d.Set("credentials", credentials); err != nil {
+				return diag.FromErr(err)
+			}
+		default:
+			errMsg := fmt.Sprintf("Registry type %s not implemented.", registry.Spec.Credentials.CredentialType)
+			err = errors.New(errMsg)
+			return diag.FromErr(err)
+		}
+		return diags
+
+	} else if registryType == "basic" {
+		registry, err := c.GetOciBasicRegistry(d.Id())
+		if err != nil {
+			return diag.FromErr(err)
+		} else if registry == nil {
+			// Deleted - Terraform will recreate it
+			d.SetId("")
+			return diags
+		}
+
+		if err := d.Set("name", registry.Metadata.Name); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
+			return diag.FromErr(err)
+		}
 		return diags
 	}
 
-	if err := d.Set("name", registry.Metadata.Name); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("is_private", registry.Spec.IsPrivate); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
-		return diag.FromErr(err)
-	}
-	switch registry.Spec.Credentials.CredentialType {
-	case models.V1AwsCloudAccountCredentialTypeSts:
-		credentials := make([]interface{}, 0, 1)
-		acc := make(map[string]interface{})
-		acc["arn"] = registry.Spec.Credentials.Sts.Arn
-		acc["external_id"] = registry.Spec.Credentials.Sts.ExternalID
-		acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSts
-		credentials = append(credentials, acc)
-		if err := d.Set("credentials", credentials); err != nil {
-			return diag.FromErr(err)
-		}
-	case models.V1AwsCloudAccountCredentialTypeSecret:
-		credentials := make([]interface{}, 0, 1)
-		acc := make(map[string]interface{})
-		acc["access_key"] = registry.Spec.Credentials.AccessKey
-		acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
-		credentials = append(credentials, acc)
-		if err := d.Set("credentials", credentials); err != nil {
-			return diag.FromErr(err)
-		}
-	default:
-		errMsg := fmt.Sprintf("Registry type %s not implemented.", registry.Spec.Credentials.CredentialType)
-		err = errors.New(errMsg)
-		return diag.FromErr(err)
-	}
 	return diags
 }
 
