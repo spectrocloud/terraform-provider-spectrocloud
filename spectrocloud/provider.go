@@ -185,28 +185,20 @@ func New(_ string) func() *schema.Provider {
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
 	host := d.Get("host").(string)
+	projectName := d.Get("project_name").(string)
+
+	insecure := d.Get("ignore_insecure_tls_error").(bool)
+	if insecure {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	apiKey := ""
-	transportDebug := false
-	retryAttempts := 10
-
-	if d.Get("trace") != nil {
-		transportDebug = d.Get("trace").(bool)
-	}
-
-	if d.Get("retry_attempts") != nil {
-		retryAttempts = d.Get("retry_attempts").(int)
-	}
-
 	if d.Get("api_key") != nil {
 		apiKey = d.Get("api_key").(string)
 	}
-	projectName := d.Get("project_name").(string)
-	ignoreTlsError := d.Get("ignore_insecure_tls_error").(bool)
-
-	// Warning or errors can be collected in a slice type
-	var diags diag.Diagnostics
-
 	if apiKey == "" {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -216,30 +208,34 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		return nil, diags
 	}
 
-	if ignoreTlsError {
-		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	retryAttempts := 10
+	if d.Get("retry_attempts") != nil {
+		retryAttempts = d.Get("retry_attempts").(int)
+	}
+
+	transportDebug := false
+	if d.Get("trace") != nil {
+		transportDebug = d.Get("trace").(bool)
 	}
 
 	c := client.New(
 		client.WithPaletteURI(host),
 		client.WithAPIKey(apiKey),
-		client.WithRetries(retryAttempts))
-
+		client.WithInsecureSkipVerify(insecure),
+		client.WithRetries(retryAttempts),
+	)
 	if transportDebug {
 		client.WithTransportDebug()(c)
 	}
+
 	uid, err := c.GetProjectUID(projectName)
 	if err != nil {
 		return nil, diag.FromErr(err)
 	}
-
 	if uid != "" {
 		ProviderInitProjectUid = uid
 		client.WithScopeProject(uid)(c)
 	}
-	//else {
-	//	client.WithScopeTenant()(c)
-	//}
 
 	return c, diags
 
