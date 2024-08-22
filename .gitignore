@@ -3,7 +3,7 @@
 .DS_Store
 
 bin
-__debug_bin
+__debug_bin*
 profile.cov
 
 terraform.tfplan
