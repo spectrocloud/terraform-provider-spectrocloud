@@ -1,12 +1,14 @@
 package spectrocloud
 
 import (
-	"github.com/google/go-cmp/cmp"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/spectrocloud/palette-api-go/models"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func TestFlattenMachinePoolConfigsTke(t *testing.T) {
