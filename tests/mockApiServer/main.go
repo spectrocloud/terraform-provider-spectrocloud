@@ -1,114 +1,118 @@
-package main
+package mockApiServer
 
 import (
-	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
-	"strings"
 )
 
+// ResponseData defines the structure of mock responses
+type ResponseData struct {
+	StatusCode int
+	Payload    interface{}
+}
+
+// Route defines a mock route with method, path, and response
 type Route struct {
-	Path     string            `json:"path"`
-	Method   string            `json:"method"`
-	Headers  map[string]string `json:"headers,omitempty"`
-	Auth     *AuthConfig       `json:"auth,omitempty"`
-	Response ResponseConfig    `json:"response"`
+	Method   string
+	Path     string
+	Response ResponseData
 }
 
-type AuthConfig struct {
-	Type     string `json:"type"`
-	Header   string `json:"header,omitempty"`
-	Key      string `json:"key,omitempty"`
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
+// API key for authentication
+const apiKey = "12345"
+
+// Define userRoutes as a separate slice
+var userRoutes = []Route{
+	{
+		Method: "GET",
+		Path:   "/api/v1/users",
+		Response: ResponseData{
+			StatusCode: http.StatusOK,
+			Payload: []map[string]interface{}{
+				{"id": 1, "name": "John Doe"},
+				{"id": 2, "name": "Jane Doe"},
+			},
+		},
+	},
+	{
+		Method: "POST",
+		Path:   "/api/v1/users",
+		Response: ResponseData{
+			StatusCode: http.StatusCreated,
+			Payload: map[string]interface{}{
+				"id":   3,
+				"name": "New User",
+			},
+		},
+	},
+	{
+		Method: "GET",
+		Path:   "/api/v1/users/{userId}",
+		Response: ResponseData{
+			StatusCode: http.StatusOK,
+			Payload: map[string]interface{}{
+				"id":   1,
+				"name": "John Doe",
+			},
+		},
+	},
+	{
+		Method: "PUT",
+		Path:   "/api/v1/users/{userId}",
+		Response: ResponseData{
+			StatusCode: http.StatusOK,
+			Payload: map[string]interface{}{
+				"id":   1,
+				"name": "Updated User",
+			},
+		},
+	},
+	{
+		Method: "DELETE",
+		Path:   "/api/v1/users/{userId}",
+		Response: ResponseData{
+			StatusCode: http.StatusNoContent,
+			Payload:    nil,
+		},
+	},
 }
 
-type ResponseConfig struct {
-	Status int             `json:"status"`
-	Body   json.RawMessage `json:"body"`
+// Aggregate all routes into a single slice
+var allRoutes = append(userRoutes)
+
+// Middleware to check for the API key in the header
+func apiKeyAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("ApiKey") != apiKey {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func main() {
-	// Load routes from JSON file
-	routes := loadRoutes("./routes.json")
+	router := mux.NewRouter()
 
-	// Setup handlers based on routes
-	for _, route := range routes {
-		http.HandleFunc(route.Path, createHandler(route))
-	}
+	// Apply API key middleware to all routes
+	router.Use(apiKeyAuthMiddleware)
 
-	// Start server
-	log.Println("Starting server on :8080")
-	err := http.ListenAndServeTLS(":8080", "./server.crt", "./server.key", nil)
-	if err != nil {
-		log.Fatal("ListenAndServeTLS: ", err)
-	}
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
+	// Register all routes
+	for _, route := range allRoutes {
+		route := route // capture the range variable
 
-func loadRoutes(file string) []Route {
-	data, err := ioutil.ReadFile(file)
-	if err != nil {
-		log.Fatalf("Error reading routes file: %v", err)
-	}
-
-	var routes []Route
-	if err := json.Unmarshal(data, &routes); err != nil {
-		log.Fatalf("Error unmarshaling routes: %v", err)
-	}
-	return routes
-}
-
-func createHandler(route Route) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != route.Method {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		// Check authentication if required
-		if route.Auth != nil && !checkAuth(route.Auth, r) {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		// Set headers
-		for key, value := range route.Headers {
-			w.Header().Set(key, value)
-		}
-
-		// Handle dynamic project_uid replacement
-		responseBody := string(route.Response.Body)
-		if strings.Contains(responseBody, "{{project_uid}}") {
-			projectUID := r.Header.Get("project_uid")
-			responseBody = strings.ReplaceAll(responseBody, "{{project_uid}}", projectUID)
-		}
-
-		w.WriteHeader(route.Response.Status)
-		_, err := w.Write([]byte(responseBody))
-		if err != nil {
-			return
-		}
-	}
-}
-
-func checkAuth(auth *AuthConfig, r *http.Request) bool {
-	switch auth.Type {
-	case "apikey":
-		return r.Header.Get(auth.Header) == auth.Key
-	case "basic":
-		authHeader := r.Header.Get("Authorization")
-		if strings.HasPrefix(authHeader, "Basic ") {
-			payload, err := base64.StdEncoding.DecodeString(authHeader[len("Basic "):])
-			if err == nil {
-				pair := strings.SplitN(string(payload), ":", 2)
-				if len(pair) == 2 && pair[0] == auth.Username && pair[1] == auth.Password {
-					return true
-				}
+		router.HandleFunc(route.Path, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(route.Response.StatusCode)
+			if route.Response.Payload != nil {
+				json.NewEncoder(w).Encode(route.Response.Payload)
 			}
-		}
+		}).Methods(route.Method)
 	}
-	return false
+
+	// Start the server
+	log.Println("Starting server on :8080...")
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
