@@ -52,6 +52,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 			"provider_type": {
 				Type:     schema.TypeString,
 				Required: true,
+				Default:  "helm",
 			},
 			"credentials": {
 				Type:     schema.TypeList,
@@ -132,7 +133,6 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 	registryType := d.Get("type").(string)
 
 	if registryType == "ecr" {
-
 		registry, err := c.GetOciEcrRegistry(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
