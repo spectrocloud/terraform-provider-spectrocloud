@@ -7,6 +7,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFlattenMachinePoolConfigsAws(t *testing.T) {
@@ -70,6 +71,90 @@ func TestFlattenMachinePoolConfigsAws(t *testing.T) {
 			if !cmp.Equal(result, tc.expected) {
 				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
 			}
+		})
+	}
+}
+
+func TestFlattenClusterConfigsAws(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *models.V1AwsCloudConfig
+		expected []interface{}
+	}{
+		{
+			name:     "Nil config",
+			input:    nil,
+			expected: []interface{}{},
+		},
+		{
+			name: "Nil Spec",
+			input: &models.V1AwsCloudConfig{
+				Spec: nil,
+			},
+			expected: []interface{}{},
+		},
+		{
+			name: "Nil ClusterConfig",
+			input: &models.V1AwsCloudConfig{
+				Spec: &models.V1AwsCloudConfigSpec{
+					ClusterConfig: nil,
+				},
+			},
+			expected: []interface{}{},
+		},
+		{
+			name: "Empty ClusterConfig",
+			input: &models.V1AwsCloudConfig{
+				Spec: &models.V1AwsCloudConfigSpec{
+					ClusterConfig: &models.V1AwsClusterConfig{},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{},
+			},
+		},
+		{
+			name: "Partial ClusterConfig",
+			input: &models.V1AwsCloudConfig{
+				Spec: &models.V1AwsCloudConfigSpec{
+					ClusterConfig: &models.V1AwsClusterConfig{
+						SSHKeyName: "my-ssh-key",
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"ssh_key_name": "my-ssh-key",
+				},
+			},
+		},
+		{
+			name: "Complete ClusterConfig",
+			input: &models.V1AwsCloudConfig{
+				Spec: &models.V1AwsCloudConfigSpec{
+					ClusterConfig: &models.V1AwsClusterConfig{
+						SSHKeyName:               "my-ssh-key",
+						Region:                   types.Ptr("us-west-2"),
+						VpcID:                    "vpc-12345",
+						ControlPlaneLoadBalancer: "lb-12345",
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"ssh_key_name":     "my-ssh-key",
+					"region":           "us-west-2",
+					"vpc_id":           "vpc-12345",
+					"control_plane_lb": "lb-12345",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := flattenClusterConfigsAws(tt.input)
+			assert.Equal(t, tt.expected, output)
 		})
 	}
 }

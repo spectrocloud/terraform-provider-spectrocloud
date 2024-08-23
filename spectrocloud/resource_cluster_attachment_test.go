@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -23,5 +24,58 @@ func TestGetAddonDeploymentIdANDReverse(t *testing.T) {
 	testClusterProfileId, _ := getClusterProfileUID(testAddonDeploymentId)
 	if testClusterProfileId != clusterProfileId {
 		t.Errorf("got %s, wanted %s", testClusterProfileId, clusterProfileId)
+	}
+}
+
+func TestIsProfileAttached(t *testing.T) {
+	tests := []struct {
+		name     string
+		cluster  *models.V1SpectroCluster
+		uid      string
+		expected bool
+	}{
+		{
+			name: "Profile Attached",
+			cluster: &models.V1SpectroCluster{
+				Spec: &models.V1SpectroClusterSpec{
+					ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
+						{UID: "profile-123"},
+						{UID: "profile-456"},
+					},
+				},
+			},
+			uid:      "profile-123",
+			expected: true,
+		},
+		{
+			name: "Profile Not Attached",
+			cluster: &models.V1SpectroCluster{
+				Spec: &models.V1SpectroClusterSpec{
+					ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
+						{UID: "profile-123"},
+						{UID: "profile-456"},
+					},
+				},
+			},
+			uid:      "profile-789",
+			expected: false,
+		},
+		{
+			name: "Empty Profile List",
+			cluster: &models.V1SpectroCluster{
+				Spec: &models.V1SpectroClusterSpec{
+					ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{},
+				},
+			},
+			uid:      "profile-123",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := isProfileAttached(tt.cluster, tt.uid)
+			assert.Equal(t, tt.expected, output)
+		})
 	}
 }
