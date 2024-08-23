@@ -1,7 +1,7 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/palette-api-go/models"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"testing"
 )
 

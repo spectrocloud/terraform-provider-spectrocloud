@@ -12,7 +12,7 @@ require (
 	github.com/spectrocloud/gomi v1.14.1-0.20240214074114-c19394812368
 	github.com/spectrocloud/hapi v1.14.1-0.20240214071352-81f589b1d86d
 	github.com/spectrocloud/palette-api-go v0.2.6
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20240805053215-cd5a46468dda
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20240821155632-0ed2f9fb8366
 	github.com/stretchr/testify v1.9.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.23.5
@@ -126,4 +126,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-//replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
+replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
