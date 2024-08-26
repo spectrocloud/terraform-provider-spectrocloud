@@ -1,13 +1,11 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/palette-api-go/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"testing"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-  "github.com/stretchr/testify/assert"
-
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestToMachinePoolAws(t *testing.T) {
