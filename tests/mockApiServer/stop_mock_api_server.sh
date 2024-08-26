@@ -8,5 +8,6 @@ if [ -z "$PID" ]; then
 else
   # Kill the process
   kill $PID
+#  [ -f ./MockAPIServer ] && rm -f ./MockAPIServer
   echo "MockAPIServer (PID: $PID) has been stopped."
 fi

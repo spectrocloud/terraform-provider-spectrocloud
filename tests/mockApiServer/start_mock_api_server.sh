@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export MOCK_SERVER_PATH="$TF_SRC/tests/mockApiServer"
+
 # Navigate to the mock API server directory
 cd $MOCK_SERVER_PATH || exit
 

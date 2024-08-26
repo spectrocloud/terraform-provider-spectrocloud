@@ -10,6 +10,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func prepareBaseProjectSchema() *schema.ResourceData {
+	d := resourceProject().TestResourceData()
+	d.SetId("test123")
+	err := d.Set("name", "Default")
+	if err != nil {
+		return nil
+	}
+	return d
+}
+
 // TestToProject tests the toProject function
 func TestToProject(t *testing.T) {
 	tests := []struct {
@@ -85,7 +95,7 @@ func TestToProject(t *testing.T) {
 }
 
 func TestCreateProjectFunc(t *testing.T) {
-	d := resourceProject().TestResourceData()
+	d := prepareBaseProjectSchema()
 	var diags diag.Diagnostics
 	err := d.Set("name", "dev")
 	if err != nil {
@@ -104,4 +114,77 @@ func TestReadProjectFunc(t *testing.T) {
 	var ctx context.Context
 	diags = resourceProjectRead(ctx, d, unitTestMockAPIClient)
 	assert.Equal(t, 0, len(diags))
+}
+
+func TestResourceProjectUpdate(t *testing.T) {
+	// Prepare the schema data for the test.
+	d := prepareBaseProjectSchema()
+	// Call the function you want to test.
+	ctx := context.Background()
+	diags := resourceProjectUpdate(ctx, d, unitTestMockAPIClient)
+	// Assert that no diagnostics were returned (i.e., no errors).
+	assert.Empty(t, diags)
+}
+
+func TestResourceProjectDelete(t *testing.T) {
+	// Prepare the schema data for the test.
+	d := prepareBaseProjectSchema()
+	// Call the function you want to test.
+	ctx := context.Background()
+	diags := resourceProjectDelete(ctx, d, unitTestMockAPIClient)
+	// Assert that no diagnostics were returned (i.e., no errors).
+	assert.Empty(t, diags)
+}
+
+// Negative case's
+
+func TestCreateProjectNegativeFunc(t *testing.T) {
+	d := prepareBaseProjectSchema()
+	var diags diag.Diagnostics
+	err := d.Set("name", "dev")
+	if err != nil {
+		return
+	}
+	var ctx context.Context
+	diags = resourceProjectCreate(ctx, d, unitTestMockAPINegativeClient)
+	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
+		assert.Contains(t, diags[0].Summary, "Project already exist", "The first diagnostic message does not contain the expected error message")
+	}
+}
+
+func TestReadProjectNegativeFunc(t *testing.T) {
+	d := resourceProject().TestResourceData()
+	var diags diag.Diagnostics
+	d.SetId("test123")
+
+	var ctx context.Context
+	diags = resourceProjectRead(ctx, d, unitTestMockAPINegativeClient)
+	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
+		assert.Contains(t, diags[0].Summary, "Project not found", "The first diagnostic message does not contain the expected error message")
+	}
+}
+
+func TestUpdateProjectNegativeFunc(t *testing.T) {
+	d := prepareBaseProjectSchema()
+	var diags diag.Diagnostics
+	err := d.Set("name", "dev")
+	if err != nil {
+		return
+	}
+	var ctx context.Context
+	diags = resourceProjectUpdate(ctx, d, unitTestMockAPINegativeClient)
+	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
+		assert.Contains(t, diags[0].Summary, "Operation not allowed", "The first diagnostic message does not contain the expected error message")
+	}
+}
+
+func TestResourceProjectInvalidDelete(t *testing.T) {
+	// Prepare the schema data for the test.
+	d := prepareBaseProjectSchema()
+	ctx := context.Background()
+	// Call the function you want to test.
+	diags := resourceProjectDelete(ctx, d, unitTestMockAPINegativeClient)
+	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
+		assert.Contains(t, diags[0].Summary, "Project not found", "The first diagnostic message does not contain the expected error message")
+	}
 }
