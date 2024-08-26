@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/spectrocloud/palette-api-go/models"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 )
 

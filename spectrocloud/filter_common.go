@@ -1,6 +1,6 @@
 package spectrocloud
 
-import "github.com/spectrocloud/palette-api-go/models"
+import "github.com/spectrocloud/palette-sdk-go/api/models"
 
 func expandMetadata(list []interface{}) *models.V1ObjectMetaInputEntity {
 	if len(list) == 0 || list[0] == nil {
