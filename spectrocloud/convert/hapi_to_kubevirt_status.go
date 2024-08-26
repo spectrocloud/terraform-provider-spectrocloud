@@ -3,7 +3,7 @@ package convert
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/spectrocloud/palette-api-go/models"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	k8sv1 "k8s.io/api/core/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
