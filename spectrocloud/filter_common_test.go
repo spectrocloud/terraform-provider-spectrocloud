@@ -1,10 +1,11 @@
 package spectrocloud
 
 import (
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 
-	"github.com/spectrocloud/palette-api-go/models"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -239,6 +240,82 @@ func TestExpandFilterGroup(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := expandFilterGroup(tt.input)
 			assert.Equal(t, tt.output, result)
+		})
+	}
+}
+
+func TestFlattenFilters(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    []*models.V1TagFilterItem
+		expected []interface{}
+	}{
+		{
+			name:     "Nil input",
+			input:    nil,
+			expected: []interface{}{},
+		},
+		{
+			name:     "Empty slice",
+			input:    []*models.V1TagFilterItem{},
+			expected: []interface{}{},
+		},
+		{
+			name: "Single filter item",
+			input: []*models.V1TagFilterItem{
+				{
+					Key:      "env",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("EQUALS"),
+					Values:   []string{"production"},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"key":      "env",
+					"negation": false,
+					"operator": "EQUALS",
+					"values":   []string{"production"},
+				},
+			},
+		},
+		{
+			name: "Multiple filter items",
+			input: []*models.V1TagFilterItem{
+				{
+					Key:      "env",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("EQUALS"),
+					Values:   []string{"production"},
+				},
+				{
+					Key:      "app",
+					Negation: true,
+					Operator: models.V1SearchFilterKeyValueOperator("NOT_EQUALS"),
+					Values:   []string{"test"},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"key":      "env",
+					"negation": false,
+					"operator": "EQUALS",
+					"values":   []string{"production"},
+				},
+				map[string]interface{}{
+					"key":      "app",
+					"negation": true,
+					"operator": "NOT_EQUALS",
+					"values":   []string{"test"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := flattenFilters(tc.input)
+			require.ElementsMatch(t, tc.expected, actual)
 		})
 	}
 }
