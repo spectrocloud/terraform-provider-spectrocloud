@@ -84,7 +84,7 @@ func TestToProject(t *testing.T) {
 	}
 }
 
-func TestCreateFunc(t *testing.T) {
+func TestCreateProjectFunc(t *testing.T) {
 	d := resourceProject().TestResourceData()
 	var diags diag.Diagnostics
 	err := d.Set("name", "dev")
@@ -93,5 +93,15 @@ func TestCreateFunc(t *testing.T) {
 	}
 	var ctx context.Context
 	diags = resourceProjectCreate(ctx, d, unitTestMockAPIClient)
+	assert.Equal(t, 0, len(diags))
+}
+
+func TestReadProjectFunc(t *testing.T) {
+	d := resourceProject().TestResourceData()
+	var diags diag.Diagnostics
+	d.SetId("test123")
+
+	var ctx context.Context
+	diags = resourceProjectRead(ctx, d, unitTestMockAPIClient)
 	assert.Equal(t, 0, len(diags))
 }

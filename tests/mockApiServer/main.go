@@ -1,9 +1,10 @@
-package mockApiServer
+package main
 
 import (
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"log"
+	"mockApiServer/routes"
 	"net/http"
 )
 
@@ -23,71 +24,19 @@ type Route struct {
 // API key for authentication
 const apiKey = "12345"
 
-// Define userRoutes as a separate slice
-var userRoutes = []Route{
-	{
-		Method: "GET",
-		Path:   "/api/v1/users",
-		Response: ResponseData{
-			StatusCode: http.StatusOK,
-			Payload: []map[string]interface{}{
-				{"id": 1, "name": "John Doe"},
-				{"id": 2, "name": "Jane Doe"},
-			},
-		},
-	},
-	{
-		Method: "POST",
-		Path:   "/api/v1/users",
-		Response: ResponseData{
-			StatusCode: http.StatusCreated,
-			Payload: map[string]interface{}{
-				"id":   3,
-				"name": "New User",
-			},
-		},
-	},
-	{
-		Method: "GET",
-		Path:   "/api/v1/users/{userId}",
-		Response: ResponseData{
-			StatusCode: http.StatusOK,
-			Payload: map[string]interface{}{
-				"id":   1,
-				"name": "John Doe",
-			},
-		},
-	},
-	{
-		Method: "PUT",
-		Path:   "/api/v1/users/{userId}",
-		Response: ResponseData{
-			StatusCode: http.StatusOK,
-			Payload: map[string]interface{}{
-				"id":   1,
-				"name": "Updated User",
-			},
-		},
-	},
-	{
-		Method: "DELETE",
-		Path:   "/api/v1/users/{userId}",
-		Response: ResponseData{
-			StatusCode: http.StatusNoContent,
-			Payload:    nil,
-		},
-	},
-}
-
 // Aggregate all routes into a single slice
-var allRoutes = append(userRoutes)
+var allRoutes []routes.Route
 
-// Middleware to check for the API key in the header
+// Middleware to check for the API key and log the Project-ID if present
 func apiKeyAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("ApiKey") != apiKey {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
+		}
+		// Log the Project-ID if it is present
+		if projectID := r.Header.Get("Project-ID"); projectID != "" {
+			log.Printf("Project-ID: %s", projectID)
 		}
 		next.ServeHTTP(w, r)
 	})
@@ -98,7 +47,7 @@ func main() {
 
 	// Apply API key middleware to all routes
 	router.Use(apiKeyAuthMiddleware)
-
+	setAllRoutes()
 	// Register all routes
 	for _, route := range allRoutes {
 		route := route // capture the range variable
@@ -114,5 +63,9 @@ func main() {
 
 	// Start the server
 	log.Println("Starting server on :8080...")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServeTLS(":8080", "mock_server.crt", "mock_server.key", router))
+}
+
+func setAllRoutes() {
+	allRoutes = append(allRoutes, routes.ProjectRoutes()...)
 }
