@@ -181,7 +181,7 @@ func teardown() {
 }
 
 func deleteBuild() error {
-	err := os.Remove(basePath + "/tests/mockApiServer/MockAPIServer")
+	err := os.Remove(basePath + "/tests/mockApiServer/MockBuild")
 	if err != nil {
 		return err
 	}
