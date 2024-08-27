@@ -21,7 +21,7 @@ dist
 providers
 
 # ignore for mock api server
-server.crt
-server.key
-MockAPIServer
+mock_server.crt
+mock_server.key
+MockBuild
 mock_api_server.log

@@ -12,7 +12,7 @@ openssl genpkey -algorithm RSA -out mock_server.key -pkeyopt rsa_keygen_bits:204
 openssl req -new -x509 -key mock_server.key -out mock_server.crt -days 365 -subj "/C=US/ST=CA/L=City/O=Organization/OU=Department/CN=localhost"
 
 # Build the Go project
-go build -o MockAPIServer mockApiServer.go
+go build -o MockBuild apiServerMock.go
 
 # Run the server in the background and redirect output to server.log
-nohup ./MockAPIServer > mock_api_server.log 2>&1 &
+nohup ./MockBuild > mock_api_server.log 2>&1 &
