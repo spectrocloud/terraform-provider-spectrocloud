@@ -51,7 +51,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 			},
 			"provider_type": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				Default:  "helm",
 			},
 			"credentials": {
