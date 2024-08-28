@@ -11,7 +11,7 @@ description: |-
 
 
 
-~> Starting with version 0.21.0 the attribute `registry_uid` is required.
+~> Starting with Palette version 4.5 (and the corresponding provider release), the `registry_uid` attribute will become required. The existing `filters` attribute will be deprecated, and a new `pack_filters` attribute will be introduced for advanced search functionality.
 
 ## Example Usage
 
