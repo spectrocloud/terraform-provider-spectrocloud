@@ -100,7 +100,7 @@ Optional:
 
 - `cluster_uids` (Set of String) The list of cluster UIDs to include in the backup. If `include_all_clusters` is set to `true`, then all clusters will be included.
 - `include_all_clusters` (Boolean) Whether to include all clusters in the backup. If set to false, only the clusters specified in `cluster_uids` will be included.
-- `include_cluster_resources` (Boolean) Whether to include the cluster resources in the backup. If set to false, only the cluster configuration and disks will be backed up. (Note: Starting with Palette version 4.5, the `include_cluster_resources` attribute will be changed to a string type, supporting the values `always`, `never`, and `auto`.)
+- `include_cluster_resources` (Boolean) Whether to include the cluster resources in the backup. If set to false, only the cluster configuration and disks will be backed up. (Note: Starting with Palette version 4.6, the `include_cluster_resources` attribute will be changed to a string type, supporting the values `always`, `never`, and `auto`.)
 - `include_disks` (Boolean) Whether to include the disks in the backup. If set to false, only the cluster configuration will be backed up.
 - `namespaces` (Set of String) The list of Kubernetes namespaces to include in the backup. If not specified, all namespaces will be included.
 

@@ -40,7 +40,7 @@ func BackupPolicySchema() *schema.Schema {
 					Type:        schema.TypeBool,
 					Optional:    true,
 					Default:     true,
-					Description: "Whether to include the cluster resources in the backup. If set to false, only the cluster configuration and disks will be backed up. (Note: Starting with Palette version 4.5, the `include_cluster_resources` attribute will be changed to a string type, supporting the values `always`, `never`, and `auto`.)",
+					Description: "Whether to include the cluster resources in the backup. If set to false, only the cluster configuration and disks will be backed up. (Note: Starting with Palette version 4.6, the `include_cluster_resources` attribute will be changed to a string type, supporting the values `always`, `never`, and `auto`.)",
 				},
 				"namespaces": {
 					Type:     schema.TypeSet,
