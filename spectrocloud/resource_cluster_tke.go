@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"log"
+	"slices"
 	"time"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
@@ -12,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
-	"github.com/spectrocloud/palette-api-go/models"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -593,6 +594,7 @@ func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfi
 	for k := range m["az_subnets"].(map[string]interface{}) {
 		azs = append(azs, k)
 	}
+	slices.Sort(azs)
 
 	min := int32(m["count"].(int))
 	max := int32(m["count"].(int))
