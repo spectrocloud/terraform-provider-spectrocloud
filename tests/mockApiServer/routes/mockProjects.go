@@ -67,6 +67,23 @@ func ProjectRoutes() []Route {
 				Payload:    nil,
 			},
 		},
+		{
+			Method: "GET",
+			Path:   "/v1/dashboard/projects/metadata",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1ProjectsMetadata{
+					Items: []*models.V1ProjectMetadata{
+						{
+							Metadata: &models.V1ObjectEntity{
+								Name: "Default",
+								UID:  generateRandomStringUID(),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -102,6 +119,14 @@ func ProjectNegativeRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: http.StatusNotFound,
 				Payload:    getError(strconv.Itoa(http.StatusOK), "Project not found"),
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/dashboard/projects/metadata",
+			Response: ResponseData{
+				StatusCode: http.StatusNotFound,
+				Payload:    getError(strconv.Itoa(http.StatusOK), "Project metadata not found"),
 			},
 		},
 	}
