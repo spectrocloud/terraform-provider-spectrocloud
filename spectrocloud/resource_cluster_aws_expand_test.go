@@ -60,10 +60,9 @@ func TestToMachinePoolAws(t *testing.T) {
 				"control_plane":           false,
 				"control_plane_as_worker": false,
 				"az_subnets": map[string]interface{}{
-					"us-west-2a": "subnet-abc123",
-					"us-west-2b": "subnet-def456",
+					"us-west-1a": "subnet-1",
 				},
-				"azs":                  schema.NewSet(schema.HashString, []interface{}{"us-west-2a", "us-west-2b"}),
+				"azs":                  schema.NewSet(schema.HashString, []interface{}{"us-west-1a"}),
 				"capacity_type":        "spot",
 				"max_price":            "0.5",
 				"node_repave_interval": 10,
@@ -71,13 +70,12 @@ func TestToMachinePoolAws(t *testing.T) {
 			vpcId: "vpc-67890",
 			expected: &models.V1AwsMachinePoolConfigEntity{
 				CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
-					Azs:            []string{"us-west-2a", "us-west-2b"},
+					Azs:            []string{"us-west-1a"},
 					InstanceType:   types.Ptr("t3.medium"),
 					CapacityType:   types.Ptr("spot"),
 					RootDeviceSize: 50,
 					Subnets: []*models.V1AwsSubnetEntity{
-						{ID: "subnet-abc123", Az: "us-west-2a"},
-						{ID: "subnet-def456", Az: "us-west-2b"},
+						{ID: "subnet-1", Az: "us-west-1a"},
 					},
 					SpotMarketOptions: &models.V1SpotMarketOptions{
 						MaxPrice: "0.5",
