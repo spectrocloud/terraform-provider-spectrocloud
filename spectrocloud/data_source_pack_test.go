@@ -1,0 +1,5 @@
+package spectrocloud
+
+func prepareBaseDataSourcePackResourceData() {
+
+}

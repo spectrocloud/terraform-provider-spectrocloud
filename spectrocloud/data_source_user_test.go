@@ -32,13 +32,8 @@ func TestDataSourceUserRead(t *testing.T) {
 func TestDataSourceUserNegativeRead(t *testing.T) {
 	// Initialize ResourceData with a test email
 	resourceData := prepareBaseUserResourceData()
-
 	// Call the dataSourceUserRead function
 	diags := dataSourceUserRead(context.Background(), resourceData, unitTestMockAPINegativeClient)
+	assertFirstDiagMessage(t, diags, "User not found")
 
-	// Assertions
-
-	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
-		assert.Contains(t, diags[0].Summary, "User not found", "The first diagnostic message does not contain the expected error message")
-	}
 }

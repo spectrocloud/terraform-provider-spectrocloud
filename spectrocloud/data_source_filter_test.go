@@ -36,3 +36,10 @@ func TestDataSourceFilterRead(t *testing.T) {
 	diags := dataSourceFilterRead(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
 }
+
+func TestDataSourceFilterNegativeRead(t *testing.T) {
+	d := prepareBaseFilterResourceData()
+	ctx := context.Background()
+	diags := dataSourceFilterRead(ctx, d, unitTestMockAPINegativeClient)
+	assertFirstDiagMessage(t, diags, "filter not found")
+}
