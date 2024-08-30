@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -206,3 +208,268 @@ func TestMergeExistingMacros_NoMacros(t *testing.T) {
 //	// Assertions for error case
 //	assert.Equal(t, "failed to get project UID", diagsWithError[0].Summary)
 //}
+
+func prepareBaseTenantMacrosSchema() *schema.ResourceData {
+	// Get an initialized ResourceData from resourceMacros
+	d := resourceMacros().TestResourceData()
+
+	// Set values for the macros and project fields
+	err := d.Set("macros", map[string]interface{}{
+		"macro1": "value1",
+		"macro2": "value2",
+	})
+	if err != nil {
+		panic(err) // Handle the error as appropriate in your test setup
+	}
+	return d
+}
+
+func prepareBaseProjectMacrosSchema() *schema.ResourceData {
+	// Get an initialized ResourceData from resourceMacros
+	d := resourceMacros().TestResourceData()
+
+	// Set values for the macros and project fields
+	err := d.Set("macros", map[string]interface{}{
+		"macro1": "value1",
+		"macro2": "value2",
+	})
+	if err != nil {
+		panic(err) // Handle the error as appropriate in your test setup
+	}
+
+	err = d.Set("project", "Default")
+	if err != nil {
+		panic(err) // Handle the error as appropriate in your test setup
+	}
+	return d
+}
+
+func TestResourceProjectMacrosCreate(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseProjectMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosCreate(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Equal(t, 0, len(diags))
+
+}
+
+func TestResourceTenantMacrosCreate(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosCreate(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Equal(t, 0, len(diags))
+
+}
+
+func TestResourceProjectMacrosRead(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseProjectMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosRead(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Equal(t, 0, len(diags))
+
+}
+
+func TestResourceTenantMacrosRead(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosRead(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Equal(t, 0, len(diags))
+
+}
+
+func TestResourceProjectMacrosUpdate(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseProjectMacrosSchema()
+	// Set values for the macros update
+	err := resourceData.Set("macros", map[string]interface{}{
+		"macro1": "value12",
+		"macro2": "value23",
+	})
+	if err != nil {
+		panic(err) // Handle the error as appropriate in your test setup
+	}
+
+	// Call the function
+	diags := resourceMacrosUpdate(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Equal(t, 0, len(diags))
+
+}
+
+func TestResourceTenantMacrosUpdate(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+	// Set values for the macros update
+	err := resourceData.Set("macros", map[string]interface{}{
+		"macro1": "value12",
+		"macro2": "value23",
+	})
+	if err != nil {
+		panic(err) // Handle the error as appropriate in your test setup
+	}
+
+	// Call the function
+	diags := resourceMacrosUpdate(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Equal(t, 0, len(diags))
+}
+
+func TestResourceProjectMacrosDelete(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseProjectMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosDelete(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Equal(t, 0, len(diags))
+
+}
+
+func TestResourceTenantMacrosDelete(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosDelete(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Equal(t, 0, len(diags))
+}
+
+func TestResourceProjectMacrosCreateNegative(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseProjectMacrosSchema() // Assuming this prepares the schema data correctly
+
+	// Call the function
+	diags := resourceMacrosCreate(ctx, resourceData, unitTestMockAPINegativeClient)
+
+	// Assertions
+	if assert.NotEmpty(t, diags) { // Check that diags is not empty
+		assert.Contains(t, diags[0].Summary, "Macro already exists") // Verify the error message
+	}
+}
+
+func TestResourceTenantMacrosCreateNegative(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosCreate(ctx, resourceData, unitTestMockAPINegativeClient)
+
+	// Assertions
+	if assert.NotEmpty(t, diags) { // Check that diags is not empty
+		assert.Contains(t, diags[0].Summary, "Macro already exists") // Verify the error message
+	}
+}
+
+func TestResourceProjectMacrosReadNegative(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseProjectMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosRead(ctx, resourceData, unitTestMockAPINegativeClient)
+
+	// Assertions
+	if assert.NotEmpty(t, diags) { // Check that diags is not empty
+		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
+	}
+
+}
+
+func TestResourceTenantMacrosReadNegative(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosRead(ctx, resourceData, unitTestMockAPINegativeClient)
+
+	// Assertions
+	if assert.NotEmpty(t, diags) { // Check that diags is not empty
+		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
+	}
+
+}
+
+func TestResourceProjectMacrosUpdateNegative(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseProjectMacrosSchema()
+	// Set values for the macros update
+	err := resourceData.Set("macros", map[string]interface{}{
+		"macro1": "value12",
+		"macro2": "value23",
+	})
+	if err != nil {
+		panic(err) // Handle the error as appropriate in your test setup
+	}
+
+	// Call the function
+	diags := resourceMacrosUpdate(ctx, resourceData, unitTestMockAPINegativeClient)
+
+	// Assertions
+	assert.Empty(t, diags)
+
+}
+
+func TestResourceTenantMacrosUpdateNegative(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+	// Set values for the macros update
+	err := resourceData.Set("macros", map[string]interface{}{
+		"macro1": "value12",
+		"macro2": "value23",
+	})
+	if err != nil {
+		panic(err) // Handle the error as appropriate in your test setup
+	}
+
+	// Call the function
+	diags := resourceMacrosUpdate(ctx, resourceData, unitTestMockAPINegativeClient)
+
+	// Assertions
+	assert.Empty(t, diags)
+}
+
+func TestResourceProjectMacrosDeleteNegative(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseProjectMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosDelete(ctx, resourceData, unitTestMockAPINegativeClient)
+
+	// Assertions
+	if assert.NotEmpty(t, diags) { // Check that diags is not empty
+		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
+	}
+
+}
+
+func TestResourceTenantMacrosDeleteNegative(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+
+	// Call the function
+	diags := resourceMacrosDelete(ctx, resourceData, unitTestMockAPINegativeClient)
+
+	// Assertions
+	if assert.NotEmpty(t, diags) { // Check that diags is not empty
+		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
+	}
+}

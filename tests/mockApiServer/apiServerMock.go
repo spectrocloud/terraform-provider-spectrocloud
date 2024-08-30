@@ -80,12 +80,16 @@ func setupRoutes(router *mux.Router, routes []routes.Route) {
 
 func init() {
 	// Initialize routes for port 8080
+	allRoutesPositive = append(allRoutesPositive, routes.TenantRoutes()...)
 	allRoutesPositive = append(allRoutesPositive, routes.ProjectRoutes()...)
 	allRoutesPositive = append(allRoutesPositive, routes.AppliancesRoutes()...)
 	allRoutesPositive = append(allRoutesPositive, routes.CommonProjectRoutes()...)
+	allRoutesPositive = append(allRoutesPositive, routes.MacrosRoutes()...)
 
 	// Initialize routes for port 8888
+	allRoutesNegative = append(allRoutesNegative, routes.TenantNegativeRoutes()...)
 	allRoutesNegative = append(allRoutesNegative, routes.ProjectNegativeRoutes()...)
 	allRoutesNegative = append(allRoutesNegative, routes.AppliancesNegativeRoutes()...)
 	allRoutesNegative = append(allRoutesNegative, routes.CommonProjectRoutes()...)
+	allRoutesNegative = append(allRoutesNegative, routes.MacrosNegativeRoutes()...)
 }
