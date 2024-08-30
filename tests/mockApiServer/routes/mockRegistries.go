@@ -41,10 +41,58 @@ func RegistriesRoutes() []Route {
 	return []Route{
 		{
 			Method: "GET",
+			Path:   "/v1/registries/oci/summary",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1OciRegistries{
+					Items: []*models.V1OciRegistry{
+						{
+							Metadata: &models.V1ObjectMeta{
+								Name: "test-registry-oci",
+								UID:  generateRandomStringUID(),
+							},
+							Spec:   nil,
+							Status: nil,
+						},
+					},
+				},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/registries/helm",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1HelmRegistries{
+					Items: []*models.V1HelmRegistry{getHelmRegistryPayload()},
+				},
+			},
+		},
+		{
+			Method: "GET",
 			Path:   "/v1/registries/helm/{uid}",
 			Response: ResponseData{
 				StatusCode: http.StatusOK,
 				Payload:    getHelmRegistryPayload(),
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/registries/metadata",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1RegistriesMetadata{
+					Items: []*models.V1RegistryMetadata{
+						{
+							IsDefault: false,
+							IsPrivate: false,
+							Kind:      "",
+							Name:      "test-registry-name",
+							Scope:     "project",
+							UID:       "test-registry-uid",
+						},
+					},
+				},
 			},
 		},
 	}
