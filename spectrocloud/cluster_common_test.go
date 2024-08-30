@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"reflect"
@@ -485,4 +486,158 @@ func TestValidateReviewRepaveValue(t *testing.T) {
 	assert.Empty(t, warns, "Expected no warnings for invalid repave value")
 	expectedError := fmt.Sprintf("expected review_repave_state to be one of [``, `Pending`, `Approved`], got %s", invalidValue)
 	assert.Equal(t, expectedError, errs[0].Error(), "Expected specific error message for invalid repave value")
+}
+
+func TestGeneralWarningForRepave(t *testing.T) {
+	var diags diag.Diagnostics
+
+	generalWarningForRepave(&diags)
+
+	expectedMessage := "Please note that certain day 2 operations on a running cluster may trigger a node pool repave or a full repave of your cluster. This process might temporarily affect your cluster’s performance or configuration. For more details, please refer to the https://docs.spectrocloud.com/clusters/cluster-management/node-pool/"
+
+	assert.Len(t, diags, 1)
+	assert.Equal(t, diag.Warning, diags[0].Severity)
+	assert.Equal(t, "Warning", diags[0].Summary)
+	assert.Equal(t, expectedMessage, diags[0].Detail)
+}
+
+func TestToClusterRBACsInputEntities(t *testing.T) {
+	d := resourceClusterGcp().TestResourceData()
+	var clusterBinding []interface{}
+	clusterBinding = append(clusterBinding, map[string]interface{}{
+		"type":      "ClusterRoleBinding",
+		"namespace": "default",
+		"role": map[string]interface{}{
+			"kind": "ClusterRole",
+			"name": "admin",
+		},
+		"subjects": []interface{}{
+			map[string]interface{}{
+				"type":      "User",
+				"name":      "admin-user",
+				"namespace": "default",
+			},
+		},
+	})
+	clusterBinding = append(clusterBinding, map[string]interface{}{
+		"type":      "RoleBinding",
+		"namespace": "default",
+		"role": map[string]interface{}{
+			"kind": "Role",
+			"name": "edit",
+		},
+		"subjects": []interface{}{
+			map[string]interface{}{
+				"type":      "Group",
+				"name":      "editors",
+				"namespace": "default",
+			},
+		},
+	})
+	err := d.Set("cluster_rbac_binding", clusterBinding)
+	if err != nil {
+		return
+	}
+
+	rbacs := toClusterRBACsInputEntities(d)
+
+	assert.Len(t, rbacs, 2)
+
+	assert.Equal(t, "ClusterRoleBinding", rbacs[0].Spec.Bindings[0].Type)
+	assert.Equal(t, "ClusterRole", rbacs[0].Spec.Bindings[0].Role.Kind)
+	assert.Equal(t, "admin", rbacs[0].Spec.Bindings[0].Role.Name)
+	assert.Equal(t, "User", rbacs[0].Spec.Bindings[0].Subjects[0].Type)
+	assert.Equal(t, "admin-user", rbacs[0].Spec.Bindings[0].Subjects[0].Name)
+
+	assert.Equal(t, "RoleBinding", rbacs[1].Spec.Bindings[0].Type)
+	assert.Equal(t, "Role", rbacs[1].Spec.Bindings[0].Role.Kind)
+	assert.Equal(t, "edit", rbacs[1].Spec.Bindings[0].Role.Name)
+	assert.Equal(t, "Group", rbacs[1].Spec.Bindings[0].Subjects[0].Type)
+	assert.Equal(t, "editors", rbacs[1].Spec.Bindings[0].Subjects[0].Name)
+}
+
+func TestFlattenClusterRBAC(t *testing.T) {
+	// Setup test data
+	clusterRBACs := []*models.V1ClusterRbac{
+		{
+			Spec: &models.V1ClusterRbacSpec{
+				Bindings: []*models.V1ClusterRbacBinding{
+					{
+						Type:      "ClusterRoleBinding",
+						Namespace: "default",
+						Role: &models.V1ClusterRoleRef{
+							Kind: "ClusterRole",
+							Name: "admin",
+						},
+						Subjects: []*models.V1ClusterRbacSubjects{
+							{
+								Type:      "User",
+								Name:      "admin-user",
+								Namespace: "default",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Spec: &models.V1ClusterRbacSpec{
+				Bindings: []*models.V1ClusterRbacBinding{
+					{
+						Type:      "RoleBinding",
+						Namespace: "kube-system",
+						Role: &models.V1ClusterRoleRef{
+							Kind: "Role",
+							Name: "edit",
+						},
+						Subjects: []*models.V1ClusterRbacSubjects{
+							{
+								Type:      "Group",
+								Name:      "editors",
+								Namespace: "kube-system",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Execute the function under test
+	flattenedRBACs := flattenClusterRBAC(clusterRBACs)
+
+	// Validate the results
+	assert.Len(t, flattenedRBACs, 2)
+
+	// First RBAC entry
+	firstRBAC := flattenedRBACs[0].(map[string]interface{})
+	assert.Equal(t, "ClusterRoleBinding", firstRBAC["type"])
+	assert.Equal(t, "default", firstRBAC["namespace"])
+
+	firstRole := firstRBAC["role"].(map[string]interface{})
+	assert.Equal(t, "ClusterRole", firstRole["kind"])
+	assert.Equal(t, "admin", firstRole["name"])
+
+	firstSubjects := firstRBAC["subjects"].([]interface{})
+	assert.Len(t, firstSubjects, 1)
+	firstSubject := firstSubjects[0].(map[string]interface{})
+	assert.Equal(t, "User", firstSubject["type"])
+	assert.Equal(t, "admin-user", firstSubject["name"])
+	assert.Equal(t, "default", firstSubject["namespace"])
+
+	// Second RBAC entry
+	secondRBAC := flattenedRBACs[1].(map[string]interface{})
+	assert.Equal(t, "RoleBinding", secondRBAC["type"])
+	assert.Equal(t, "kube-system", secondRBAC["namespace"])
+
+	secondRole := secondRBAC["role"].(map[string]interface{})
+	assert.Equal(t, "Role", secondRole["kind"])
+	assert.Equal(t, "edit", secondRole["name"])
+
+	secondSubjects := secondRBAC["subjects"].([]interface{})
+	assert.Len(t, secondSubjects, 1)
+	secondSubject := secondSubjects[0].(map[string]interface{})
+	assert.Equal(t, "Group", secondSubject["type"])
+	assert.Equal(t, "editors", secondSubject["name"])
+	assert.Equal(t, "kube-system", secondSubject["namespace"])
 }

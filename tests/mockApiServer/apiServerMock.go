@@ -97,6 +97,7 @@ func init() {
 		routes.RolesRoutes,
 		routes.RegistriesRoutes,
 		routes.PacksRoutes,
+		routes.ClusterProfileRoutes,
 	)
 	// Initialize routes for port 8888
 	allRoutesNegative = aggregateRoutes(
@@ -108,6 +109,7 @@ func init() {
 		routes.RolesNegativeRoutes,
 		routes.RegistriesNegativeRoutes,
 		routes.PacksNegativeRoutes,
+		routes.ClusterProfileNegativeRoutes,
 	)
 
 }

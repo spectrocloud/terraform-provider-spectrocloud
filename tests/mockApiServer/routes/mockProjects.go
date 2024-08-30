@@ -102,7 +102,7 @@ func ProjectNegativeRoutes() []Route {
 			Path:   "/v1/projects/{uid}",
 			Response: ResponseData{
 				StatusCode: http.StatusNotFound,
-				Payload:    getError(strconv.Itoa(http.StatusOK), "Project not found"),
+				Payload:    getError(strconv.Itoa(http.StatusNotFound), "Project not found"),
 			},
 		},
 		{
@@ -110,7 +110,7 @@ func ProjectNegativeRoutes() []Route {
 			Path:   "/v1/projects/{uid}",
 			Response: ResponseData{
 				StatusCode: http.StatusMethodNotAllowed,
-				Payload:    getError(strconv.Itoa(http.StatusNoContent), "Operation not allowed"),
+				Payload:    getError(strconv.Itoa(http.StatusMethodNotAllowed), "Operation not allowed"),
 			},
 		},
 		{
@@ -118,7 +118,7 @@ func ProjectNegativeRoutes() []Route {
 			Path:   "/v1/projects/{uid}",
 			Response: ResponseData{
 				StatusCode: http.StatusNotFound,
-				Payload:    getError(strconv.Itoa(http.StatusOK), "Project not found"),
+				Payload:    getError(strconv.Itoa(http.StatusNotFound), "Project not found"),
 			},
 		},
 		{
@@ -126,7 +126,7 @@ func ProjectNegativeRoutes() []Route {
 			Path:   "/v1/dashboard/projects/metadata",
 			Response: ResponseData{
 				StatusCode: http.StatusNotFound,
-				Payload:    getError(strconv.Itoa(http.StatusOK), "Project metadata not found"),
+				Payload:    getError(strconv.Itoa(http.StatusNotFound), "Project metadata not found"),
 			},
 		},
 	}

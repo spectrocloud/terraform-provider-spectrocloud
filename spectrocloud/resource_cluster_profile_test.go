@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -234,4 +235,126 @@ func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
 
+}
+
+func TestToClusterProfilePackCreate(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         map[string]interface{}
+		expectedError string
+		expectedPack  *models.V1PackManifestEntity
+	}{
+		{
+			name: "Valid Spectro Pack",
+			input: map[string]interface{}{
+				"name":         "test-pack",
+				"type":         "spectro",
+				"tag":          "v1.0",
+				"uid":          "test-uid",
+				"registry_uid": "test-registry-uid",
+				"values":       "test-values",
+				"manifest":     []interface{}{},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-pack"),
+				Tag:         "v1.0",
+				RegistryUID: "test-registry-uid",
+				UID:         "test-uid",
+				Type:        models.V1PackTypeSpectro,
+				Values:      "test-values",
+				Manifests:   []*models.V1ManifestInputEntity{},
+			},
+		},
+		{
+			name: "Spectro Pack Missing UID",
+			input: map[string]interface{}{
+				"name":     "test-pack",
+				"type":     "spectro",
+				"tag":      "v1.0",
+				"uid":      "",
+				"values":   "test-values",
+				"manifest": []interface{}{},
+			},
+			expectedError: "pack test-pack needs to specify tag and/or uid",
+			expectedPack:  nil,
+		},
+		{
+			name: "Valid Manifest Pack with Default UID",
+			input: map[string]interface{}{
+				"name":   "test-manifest-pack",
+				"type":   "manifest",
+				"tag":    "",
+				"uid":    "",
+				"values": "test-values",
+				"manifest": []interface{}{
+					map[string]interface{}{
+						"content": "manifest-content",
+						"name":    "manifest-name",
+					},
+				},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-manifest-pack"),
+				Tag:         "",
+				RegistryUID: "",
+				UID:         "spectro-manifest-pack",
+				Type:        models.V1PackTypeManifest,
+				Values:      "test-values",
+				Manifests: []*models.V1ManifestInputEntity{
+					{
+						Content: "manifest-content",
+						Name:    "manifest-name",
+					},
+				},
+			},
+		},
+		{
+			name: "Valid Manifest Pack with Provided UID",
+			input: map[string]interface{}{
+				"name":   "test-manifest-pack",
+				"type":   "manifest",
+				"tag":    "",
+				"uid":    "custom-uid",
+				"values": "test-values",
+				"manifest": []interface{}{
+					map[string]interface{}{
+						"content": "manifest-content",
+						"name":    "manifest-name",
+					},
+				},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-manifest-pack"),
+				Tag:         "",
+				RegistryUID: "",
+				UID:         "custom-uid",
+				Type:        models.V1PackTypeManifest,
+				Values:      "test-values",
+				Manifests: []*models.V1ManifestInputEntity{
+					{
+						Content: "manifest-content",
+						Name:    "manifest-name",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Call the function under test
+			actualPack, err := toClusterProfilePackCreate(tt.input)
+
+			// Check for errors
+			if tt.expectedError != "" {
+				assert.EqualError(t, err, tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedPack, actualPack)
+			}
+		})
+	}
 }
