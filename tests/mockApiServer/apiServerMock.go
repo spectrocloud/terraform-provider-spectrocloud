@@ -87,7 +87,7 @@ func aggregateRoutes(routeFuncs ...func() []routes.Route) []routes.Route {
 }
 
 func init() {
-	// Initialize routes for port 8080
+	// Initialize routes for port 8080	
 	allRoutesPositive = aggregateRoutes(
 		routes.CommonProjectRoutes,
 		routes.ProjectRoutes,
@@ -106,6 +106,7 @@ func init() {
 		routes.ApplicationRoutes,
 		routes.BackupRoutes,
 		routes.IPPoolRoutes,
+    routes.MacrosRoutes,
 	)
 	// Initialize routes for port 8888
 	allRoutesNegative = aggregateRoutes(
@@ -120,6 +121,6 @@ func init() {
 		routes.ClusterProfileNegativeRoutes,
 		routes.CloudAccountsNegativeRoutes,
 		routes.ClusterCommonNegativeRoutes,
+    routes.MacrosNegativeRoutes,
 	)
-
 }
