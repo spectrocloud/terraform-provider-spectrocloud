@@ -78,18 +78,49 @@ func setupRoutes(router *mux.Router, routes []routes.Route) {
 	}
 }
 
-func init() {
-	// Initialize routes for port 8080
-	allRoutesPositive = append(allRoutesPositive, routes.TenantRoutes()...)
-	allRoutesPositive = append(allRoutesPositive, routes.ProjectRoutes()...)
-	allRoutesPositive = append(allRoutesPositive, routes.AppliancesRoutes()...)
-	allRoutesPositive = append(allRoutesPositive, routes.CommonProjectRoutes()...)
-	allRoutesPositive = append(allRoutesPositive, routes.MacrosRoutes()...)
+func aggregateRoutes(routeFuncs ...func() []routes.Route) []routes.Route {
+	var aggregatedRoutes []routes.Route
+	for _, routeFunc := range routeFuncs {
+		aggregatedRoutes = append(aggregatedRoutes, routeFunc()...)
+	}
+	return aggregatedRoutes
+}
 
+func init() {
+	// Initialize routes for port 8080	
+	allRoutesPositive = aggregateRoutes(
+		routes.CommonProjectRoutes,
+		routes.ProjectRoutes,
+		routes.AppliancesRoutes,
+		routes.UserRoutes,
+		routes.FilterRoutes,
+		routes.RolesRoutes,
+		routes.RegistriesRoutes,
+		routes.PacksRoutes,
+		routes.ClusterProfileRoutes,
+		routes.CloudAccountsRoutes,
+		routes.ClusterCommonRoutes,
+		routes.ClusterRoutes,
+		routes.AppProfilesRoutes,
+		routes.TeamRoutes,
+		routes.ApplicationRoutes,
+		routes.BackupRoutes,
+		routes.IPPoolRoutes,
+    routes.MacrosRoutes,
+	)
 	// Initialize routes for port 8888
-	allRoutesNegative = append(allRoutesNegative, routes.TenantNegativeRoutes()...)
-	allRoutesNegative = append(allRoutesNegative, routes.ProjectNegativeRoutes()...)
-	allRoutesNegative = append(allRoutesNegative, routes.AppliancesNegativeRoutes()...)
-	allRoutesNegative = append(allRoutesNegative, routes.CommonProjectRoutes()...)
-	allRoutesNegative = append(allRoutesNegative, routes.MacrosNegativeRoutes()...)
+	allRoutesNegative = aggregateRoutes(
+		routes.CommonProjectRoutes,
+		routes.ProjectNegativeRoutes,
+		routes.AppliancesNegativeRoutes,
+		routes.UserNegativeRoutes,
+		routes.FilterNegativeRoutes,
+		routes.RolesNegativeRoutes,
+		routes.RegistriesNegativeRoutes,
+		routes.PacksNegativeRoutes,
+		routes.ClusterProfileNegativeRoutes,
+		routes.CloudAccountsNegativeRoutes,
+		routes.ClusterCommonNegativeRoutes,
+    routes.MacrosNegativeRoutes,
+	)
 }

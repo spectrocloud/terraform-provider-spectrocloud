@@ -57,7 +57,7 @@ func dataSourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData,
 	if account == nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  "Unable to find aws cloud account",
+			Summary:  "Unable to find cloud account",
 			Detail:   "Unable to find the specified aws cloud account",
 		})
 		return diags

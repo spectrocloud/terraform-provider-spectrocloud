@@ -84,6 +84,23 @@ func ProjectRoutes() []Route {
 				Payload:    nil,
 			},
 		},
+		{
+			Method: "GET",
+			Path:   "/v1/dashboard/projects/metadata",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1ProjectsMetadata{
+					Items: []*models.V1ProjectMetadata{
+						{
+							Metadata: &models.V1ObjectEntity{
+								Name: "Default",
+								UID:  generateRandomStringUID(),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -102,7 +119,7 @@ func ProjectNegativeRoutes() []Route {
 			Path:   "/v1/projects/{uid}",
 			Response: ResponseData{
 				StatusCode: http.StatusNotFound,
-				Payload:    getError(strconv.Itoa(http.StatusOK), "Project not found"),
+				Payload:    getError(strconv.Itoa(http.StatusNotFound), "Project not found"),
 			},
 		},
 		{
@@ -110,7 +127,7 @@ func ProjectNegativeRoutes() []Route {
 			Path:   "/v1/projects/{uid}",
 			Response: ResponseData{
 				StatusCode: http.StatusMethodNotAllowed,
-				Payload:    getError(strconv.Itoa(http.StatusNoContent), "Operation not allowed"),
+				Payload:    getError(strconv.Itoa(http.StatusMethodNotAllowed), "Operation not allowed"),
 			},
 		},
 		{
@@ -118,7 +135,15 @@ func ProjectNegativeRoutes() []Route {
 			Path:   "/v1/projects/{uid}",
 			Response: ResponseData{
 				StatusCode: http.StatusNotFound,
-				Payload:    getError(strconv.Itoa(http.StatusOK), "Project not found"),
+				Payload:    getError(strconv.Itoa(http.StatusNotFound), "Project not found"),
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/dashboard/projects/metadata",
+			Response: ResponseData{
+				StatusCode: http.StatusNotFound,
+				Payload:    getError(strconv.Itoa(http.StatusNotFound), "Project metadata not found"),
 			},
 		},
 		{

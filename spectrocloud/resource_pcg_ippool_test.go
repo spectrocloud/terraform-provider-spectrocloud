@@ -1,6 +1,9 @@
 package spectrocloud
 
 import (
+	"context"
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
@@ -92,6 +95,113 @@ func TestToIpPool(t *testing.T) {
 
 			// Compare the results
 			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func prepareResourcePrivateCloudGatewayIpPool() *schema.ResourceData {
+	d := resourcePrivateCloudGatewayIpPool().TestResourceData()
+	d.SetId("test-pcg-id")
+	_ = d.Set("name", "test-ippool")
+	_ = d.Set("private_cloud_gateway_id", "test-pcg-id")
+	_ = d.Set("network_type", "subnet")
+	_ = d.Set("ip_start_range", "121.0.0.1")
+	_ = d.Set("ip_end_range", "121.0.0.100")
+	_ = d.Set("subnet_cidr", "test-subnet-cidr")
+	_ = d.Set("prefix", 0)
+	_ = d.Set("gateway", "test-gateway")
+	_ = d.Set("nameserver_addresses", []string{"test.test.cm"})
+	_ = d.Set("nameserver_search_suffix", []string{"test-suffix"})
+	_ = d.Set("restrict_to_single_cluster", false)
+	return d
+}
+
+func TestResourceIpPoolCreate(t *testing.T) {
+	d := prepareResourcePrivateCloudGatewayIpPool()
+	ctx := context.Background()
+	diags := resourceIpPoolCreate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-pcg-id", d.Id())
+}
+
+func TestResourceIpPoolRead(t *testing.T) {
+	d := prepareResourcePrivateCloudGatewayIpPool()
+	ctx := context.Background()
+	diags := resourceIpPoolRead(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-pcg-id", d.Id())
+}
+
+func TestResourceIpPoolReadRange(t *testing.T) {
+	d := prepareResourcePrivateCloudGatewayIpPool()
+	ctx := context.Background()
+	diags := resourceIpPoolRead(ctx, d, unitTestMockAPIClient)
+	_ = d.Set("network_type", "range")
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-pcg-id", d.Id())
+}
+
+func TestResourceIpPoolUpdate(t *testing.T) {
+	d := prepareResourcePrivateCloudGatewayIpPool()
+	ctx := context.Background()
+	diags := resourceIpPoolUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-pcg-id", d.Id())
+}
+
+func TestResourceIpPoolDelete(t *testing.T) {
+	d := prepareResourcePrivateCloudGatewayIpPool()
+	ctx := context.Background()
+	diags := resourceIpPoolDelete(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-pcg-id", d.Id())
+}
+
+func TestValidateNetworkType(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          interface{}
+		expectedDiags  diag.Diagnostics
+		expectedError  bool
+		expectedErrMsg string
+	}{
+		{
+			name:          "Valid network type - range",
+			input:         "range",
+			expectedDiags: diag.Diagnostics{},
+			expectedError: false,
+		},
+		{
+			name:          "Valid network type - subnet",
+			input:         "subnet",
+			expectedDiags: diag.Diagnostics{},
+			expectedError: false,
+		},
+		{
+			name:           "Invalid network type - random",
+			input:          "random",
+			expectedError:  true,
+			expectedErrMsg: "network type 'random' is invalid. valid network types are 'range' and 'subnet'",
+		},
+		{
+			name:           "Invalid network type - empty string",
+			input:          "",
+			expectedError:  true,
+			expectedErrMsg: "network type '' is invalid. valid network types are 'range' and 'subnet'",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			diags := validateNetworkType(tt.input, cty.Path{})
+
+			if tt.expectedError {
+				assert.NotEmpty(t, diags)
+				assert.Equal(t, diag.Error, diags[0].Severity)
+				assert.Equal(t, tt.expectedErrMsg, diags[0].Summary)
+			} else {
+				assert.Empty(t, diags)
+			}
 		})
 	}
 }
