@@ -103,6 +103,9 @@ func init() {
 		routes.ClusterRoutes,
 		routes.AppProfilesRoutes,
 		routes.TeamRoutes,
+		routes.ApplicationRoutes,
+		routes.BackupRoutes,
+		routes.IPPoolRoutes,
 	)
 	// Initialize routes for port 8888
 	allRoutesNegative = aggregateRoutes(

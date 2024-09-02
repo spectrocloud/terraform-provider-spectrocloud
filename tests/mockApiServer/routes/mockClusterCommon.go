@@ -4,39 +4,112 @@ import (
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
-import "github.com/spectrocloud/palette-sdk-go/api/client/v1"
-
-func getBSLListLocation() *models.V1UserAssetsLocations {
-	return &models.V1UserAssetsLocations{
-		Items: []*models.V1UserAssetsLocation{
-			{
-				Metadata: &models.V1ObjectMeta{
-					Annotations:           nil,
-					CreationTimestamp:     models.V1Time{},
-					DeletionTimestamp:     models.V1Time{},
-					Labels:                nil,
-					LastModifiedTimestamp: models.V1Time{},
-					Name:                  "test-bsl-location",
-					UID:                   "test-bsl-location-id",
-				},
-				Spec: &models.V1UserAssetsLocationSpec{},
-			},
-		},
-	}
-}
 
 func ClusterCommonRoutes() []Route {
-	s := "test-dep-1"
+
 	return []Route{
 		{
 			Method: "POST",
 			Path:   "/v1/appDeployments",
 			Response: ResponseData{
 				StatusCode: 201,
-				Payload: &v1.V1AppDeploymentsVirtualClusterCreateCreated{
-					AuditUID: "test-audit-id-1",
-					Payload: &models.V1UID{
-						UID: ptr.StringPtr(s),
+				Payload:    map[string]string{"UID": "test-application-id"},
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/appDeployments/clusterGroup",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "test-application-id"},
+			},
+		},
+		{
+			Method: "DELETE",
+			Path:   "/v1/appDeployments/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/appDeployments/{uid}",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1AppDeployment{
+					Metadata: &models.V1ObjectMeta{
+						Name:        "test-app-deployment",
+						UID:         "test-app-id",
+						Annotations: map[string]string{"skip_apps": "skip_apps"},
+						Labels:      map[string]string{"skip_apps": "skip_apps"},
+					},
+					Spec: &models.V1AppDeploymentSpec{
+						Config: &models.V1AppDeploymentConfig{
+							Target: &models.V1AppDeploymentTargetConfig{
+								ClusterRef: &models.V1AppDeploymentClusterRef{
+									DeploymentClusterType: "test",
+									Name:                  "test-cluster-ref",
+									UID:                   "test-clsuterref-uid",
+								},
+								EnvRef: &models.V1AppDeploymentTargetEnvironmentRef{
+									Name: "test-clsuterref-name",
+									Type: "test",
+									UID:  "test-envref-id",
+								},
+							},
+						},
+						Profile: &models.V1AppDeploymentProfile{
+							Metadata: &models.V1AppDeploymentProfileMeta{
+								Name:    "test-app-profile",
+								UID:     "test-app-profile-id",
+								Version: "1.0.0",
+							},
+							Template: &models.V1AppProfileTemplate{
+								AppTiers: []*models.V1AppTierRef{
+									{
+										Name:    "test-app-tier-name",
+										Type:    "test",
+										UID:     "test-app-id",
+										Version: "1.0.0",
+									},
+								},
+								RegistryRefs: []*models.V1ObjectReference{
+									{
+										Kind: "test-template",
+										Name: "test-reg-ref-name",
+										UID:  "test-reg-ref-id",
+									},
+								},
+							},
+						},
+					},
+					Status: &models.V1AppDeploymentStatus{
+						AppTiers: []*models.V1ClusterPackStatus{
+							{
+								Condition: &models.V1ClusterCondition{
+									LastProbeTime:      models.V1Time{},
+									LastTransitionTime: models.V1Time{},
+									Message:            "",
+									Reason:             "",
+									Status:             ptr.StringPtr("Ready"),
+									Type:               nil,
+								},
+								EndTime:    models.V1Time{},
+								Manifests:  nil,
+								Name:       "test-pack-a",
+								ProfileUID: "test-profile-uid",
+								Services:   nil,
+								StartTime:  models.V1Time{},
+								Type:       "test",
+								Version:    "1.0.0",
+							},
+						},
+						LifecycleStatus: &models.V1LifecycleStatus{
+							Msg:    "test msg",
+							Status: "Deployed",
+						},
+						State: "Deployed",
 					},
 				},
 			},
@@ -77,31 +150,7 @@ func ClusterCommonRoutes() []Route {
 				},
 			},
 		},
-		{
-			Method: "GET",
-			Path:   "/v1/users/assets/locations",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload:    getBSLListLocation(),
-			},
-		},
-		{
-			Method: "GET",
-			Path:   "/v1/overlords/vsphere/{uid}/pools",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &models.V1IPPools{
-					Items: []*models.V1IPPoolEntity{
-						{
-							Metadata: &models.V1ObjectMeta{
-								Name: "test-name",
-								UID:  "test-pcg-id",
-							},
-						},
-					},
-				},
-			},
-		},
+
 		{
 			Method: "GET",
 			Path:   "/v1/overlords",

@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -61,4 +62,48 @@ func TestToMaasAccount(t *testing.T) {
 			}
 		})
 	}
+}
+
+func prepareResourceCloudAccountMaas() *schema.ResourceData {
+	d := resourceCloudAccountMaas().TestResourceData()
+	d.SetId("test-maas-account-id-1")
+	_ = d.Set("name", "test-maas-account-1")
+	_ = d.Set("context", "project")
+	_ = d.Set("private_cloud_gateway_id", "test-pcg-id")
+	_ = d.Set("maas_api_endpoint", "test-maas-api-endpoint")
+	_ = d.Set("maas_api_key", "test-maas-api-key")
+	return d
+}
+func TestResourceCloudAccountMaasCreate(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountMaas()
+	ctx := context.Background()
+	diags := resourceCloudAccountMaasCreate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-maas-account-1", d.Id())
+}
+
+func TestResourceCloudAccountMaasRead(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountMaas()
+	ctx := context.Background()
+	diags := resourceCloudAccountMaasRead(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-maas-account-id-1", d.Id())
+}
+func TestResourceCloudAccountMaasUpdate(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountMaas()
+	ctx := context.Background()
+	diags := resourceCloudAccountMaasUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-maas-account-id-1", d.Id())
+}
+func TestResourceCloudAccountMaasDelete(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountMaas()
+	ctx := context.Background()
+	diags := resourceCloudAccountMaasDelete(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+
 }

@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"net/http"
 )
@@ -19,8 +20,14 @@ func getHelmRegistryPayload() *models.V1HelmRegistry {
 			UID:                   generateRandomStringUID(),
 		},
 		Spec: &models.V1HelmRegistrySpec{
-			Auth:        nil,
-			Endpoint:    nil,
+			Auth: &models.V1RegistryAuth{
+				Password: "test=pwd",
+				TLS:      nil,
+				Token:    "as",
+				Type:     "token",
+				Username: "sf",
+			},
+			Endpoint:    ptr.StringPtr("test.com"),
 			IsPrivate:   false,
 			Name:        "Public",
 			RegistryUID: generateRandomStringUID(),
@@ -40,6 +47,76 @@ func getHelmRegistryPayload() *models.V1HelmRegistry {
 func RegistriesRoutes() []Route {
 	return []Route{
 		{
+			Method: "PUT",
+			Path:   "/v1/registries/oci/{uid}/ecr",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "DELETE",
+			Path:   "/v1/registries/oci/{uid}/ecr",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/registries/oci/{uid}/ecr",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1EcrRegistry{
+					Kind: "",
+					Metadata: &models.V1ObjectMeta{
+						Annotations:           nil,
+						CreationTimestamp:     models.V1Time{},
+						DeletionTimestamp:     models.V1Time{},
+						Labels:                nil,
+						LastModifiedTimestamp: models.V1Time{},
+						Name:                  "testSecretRegistry",
+						UID:                   "testSecretRegistry-id",
+					},
+					Spec: &models.V1EcrRegistrySpec{
+						BaseContentPath: "test-path",
+						Credentials: &models.V1AwsCloudAccount{
+							AccessKey:      "test-key",
+							CredentialType: "sts",
+							Partition:      ptr.StringPtr("test-part"),
+							PolicyARNs:     []string{"test-arns"},
+							SecretKey:      "test-secret-key",
+							Sts: &models.V1AwsStsCredentials{
+								Arn:        "test-arn",
+								ExternalID: "test-external-id",
+							},
+						},
+						DefaultRegion: "test-region",
+						Endpoint:      ptr.StringPtr("test.point"),
+						IsPrivate:     ptr.BoolPtr(false),
+						ProviderType:  ptr.StringPtr("test-type"),
+						RegistryUID:   "test-reg-uid",
+						Scope:         "project",
+						TLS: &models.V1TLSConfiguration{
+							Ca:                 "test-ca",
+							Certificate:        "test-cert",
+							Enabled:            false,
+							InsecureSkipVerify: false,
+							Key:                "test-key",
+						},
+					},
+				},
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/registries/oci/ecr",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "test-sts-oci-reg-ecr-uid"},
+			},
+		},
+		{
 			Method: "GET",
 			Path:   "/v1/registries/oci/summary",
 			Response: ResponseData{
@@ -56,6 +133,30 @@ func RegistriesRoutes() []Route {
 						},
 					},
 				},
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/registries/helm",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": generateRandomStringUID()},
+			},
+		},
+		{
+			Method: "DELETE",
+			Path:   "/v1/registries/helm/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/registries/helm/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
 			},
 		},
 		{
@@ -106,8 +207,6 @@ func RegistriesNegativeRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: http.StatusOK,
 				Payload:    getHelmRegistryPayload(),
-				//StatusCode: http.StatusNotFound,
-				//Payload:    getError(strconv.Itoa(http.StatusConflict), "Registry not found"),
 			},
 		},
 	}

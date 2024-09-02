@@ -142,16 +142,16 @@ func getEdgeHostPayload() models.V1EdgeHostDevice {
 	}
 }
 
-func creatEdgeHostErrorResponse() interface{} {
-	var payload interface{}
-	payload = map[string]interface{}{
-		"UID": ptr.StringPtr("test-edge-host-id"),
-	}
-	return map[string]interface{}{
-		"AuditUID": generateRandomStringUID(),
-		"Payload":  payload,
-	}
-}
+//func creatEdgeHostErrorResponse() interface{} {
+//	var payload interface{}
+//	payload = map[string]interface{}{
+//		"UID": ptr.StringPtr("test-edge-host-id"),
+//	}
+//	return map[string]interface{}{
+//		"AuditUID": generateRandomStringUID(),
+//		"Payload":  payload,
+//	}
+//}
 
 func AppliancesRoutes() []Route {
 	return []Route{
