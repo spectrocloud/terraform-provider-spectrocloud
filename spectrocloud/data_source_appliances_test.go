@@ -49,7 +49,5 @@ func TestDataSourceAppliancesReadNegativeFunc(t *testing.T) {
 
 	var ctx context.Context
 	diags = dataSourcesApplianceRead(ctx, d, unitTestMockAPINegativeClient)
-	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
-		assert.Contains(t, diags[0].Summary, "No edge host found", "The first diagnostic message does not contain the expected error message")
-	}
+	assertFirstDiagMessage(t, diags, "No edge host found")
 }

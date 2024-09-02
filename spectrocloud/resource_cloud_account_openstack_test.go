@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -99,4 +100,54 @@ func TestToOpenStackAccount(t *testing.T) {
 			assert.Equal(t, tt.expected.Spec.Username, result.Spec.Username)
 		})
 	}
+}
+
+func prepareResourceCloudAccountOpenstack() *schema.ResourceData {
+	d := resourceCloudAccountOpenstack().TestResourceData()
+	d.SetId("test-openstack-account-id-1")
+	_ = d.Set("name", "test-openstack-account-1")
+	_ = d.Set("context", "project")
+	_ = d.Set("private_cloud_gateway_id", "pcg-id")
+	_ = d.Set("openstack_username", "test-uname")
+	_ = d.Set("openstack_password", "test-pwd")
+	_ = d.Set("identity_endpoint", "test-ep")
+	_ = d.Set("openstack_allow_insecure", false)
+	_ = d.Set("ca_certificate", "test-cert")
+	_ = d.Set("parent_region", "test-region1")
+	_ = d.Set("default_domain", "test.com")
+	_ = d.Set("default_project", "default")
+
+	return d
+}
+
+func TestResourceCloudAccountOpenstackCreate(t *testing.T) {
+	d := prepareResourceCloudAccountOpenstack()
+	ctx := context.Background()
+	diags := resourceCloudAccountOpenStackCreate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-openstack-account-id-1", d.Id())
+}
+
+func TestResourceCloudAccountOpenstackRead(t *testing.T) {
+	d := prepareResourceCloudAccountOpenstack()
+	ctx := context.Background()
+	diags := resourceCloudAccountOpenStackRead(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-openstack-account-id-1", d.Id())
+}
+
+func TestResourceCloudAccountOpenstackUpdate(t *testing.T) {
+	d := prepareResourceCloudAccountOpenstack()
+	ctx := context.Background()
+	diags := resourceCloudAccountOpenStackUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-openstack-account-id-1", d.Id())
+}
+
+func TestResourceCloudAccountOpenstackDelete(t *testing.T) {
+	d := prepareResourceCloudAccountOpenstack()
+	ctx := context.Background()
+	diags := resourceCloudAccountOpenStackDelete(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-openstack-account-id-1", d.Id())
 }

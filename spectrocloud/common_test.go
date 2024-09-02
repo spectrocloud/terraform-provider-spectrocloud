@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"os"
 	"os/exec"
@@ -186,4 +187,10 @@ func deleteBuild() error {
 		return err
 	}
 	return nil
+}
+
+func assertFirstDiagMessage(t *testing.T, diags diag.Diagnostics, msg string) {
+	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
+		assert.Contains(t, diags[0].Summary, msg, "The first diagnostic message does not contain the expected error message")
+	}
 }

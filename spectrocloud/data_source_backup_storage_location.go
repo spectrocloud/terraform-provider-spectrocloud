@@ -2,10 +2,8 @@ package spectrocloud
 
 import (
 	"context"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 

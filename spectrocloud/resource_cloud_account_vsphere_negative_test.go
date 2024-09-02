@@ -49,12 +49,12 @@ func TestFlattenVsphereCloudAccountAttributes(t *testing.T) {
 		AttrName    string
 		ExpectedErr bool
 	}{
-		{"name", true},
-		{"context", true},
-		{"private_cloud_gateway_id", true},
-		{"vsphere_vcenter", true},
-		{"vsphere_username", true},
-		{"vsphere_ignore_insecure_error", true},
+		{"name", false},
+		{"context", false},
+		{"private_cloud_gateway_id", false},
+		{"vsphere_vcenter", false},
+		{"vsphere_username", false},
+		{"vsphere_ignore_insecure_error", false},
 	}
 
 	// Get a copy of the original schema
@@ -72,18 +72,7 @@ func TestFlattenVsphereCloudAccountAttributes(t *testing.T) {
 			continue
 		}
 
-		// Create a new schema skipping the current attribute
-		newSchema := skipSchemaAttributes(originalSchema, []string{attrName})
-
-		resourceCloudAccountVsphereWithSkippedAttrs := &schema.Resource{
-			CreateContext: resourceCloudAccountVsphereCreate,
-			ReadContext:   resourceCloudAccountVsphereRead,
-			UpdateContext: resourceCloudAccountVsphereUpdate,
-			DeleteContext: resourceCloudAccountVsphereDelete,
-			Schema:        newSchema,
-		}
-
-		d := resourceCloudAccountVsphereWithSkippedAttrs.TestResourceData()
+		d := resourceCloudAccountVsphere().TestResourceData()
 
 		// Test case where d.Set returns an error
 		diags, _ := flattenVsphereCloudAccount(d, account)

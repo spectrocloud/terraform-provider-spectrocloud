@@ -147,9 +147,7 @@ func TestCreateProjectNegativeFunc(t *testing.T) {
 	}
 	var ctx context.Context
 	diags = resourceProjectCreate(ctx, d, unitTestMockAPINegativeClient)
-	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
-		assert.Contains(t, diags[0].Summary, "Project already exist", "The first diagnostic message does not contain the expected error message")
-	}
+	assertFirstDiagMessage(t, diags, "Project already exist")
 }
 
 func TestReadProjectNegativeFunc(t *testing.T) {
@@ -159,9 +157,7 @@ func TestReadProjectNegativeFunc(t *testing.T) {
 
 	var ctx context.Context
 	diags = resourceProjectRead(ctx, d, unitTestMockAPINegativeClient)
-	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
-		assert.Contains(t, diags[0].Summary, "Project not found", "The first diagnostic message does not contain the expected error message")
-	}
+	assertFirstDiagMessage(t, diags, "Project not found")
 }
 
 func TestUpdateProjectNegativeFunc(t *testing.T) {
@@ -173,9 +169,8 @@ func TestUpdateProjectNegativeFunc(t *testing.T) {
 	}
 	var ctx context.Context
 	diags = resourceProjectUpdate(ctx, d, unitTestMockAPINegativeClient)
-	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
-		assert.Contains(t, diags[0].Summary, "Operation not allowed", "The first diagnostic message does not contain the expected error message")
-	}
+	assertFirstDiagMessage(t, diags, "Operation not allowed")
+
 }
 
 func TestResourceProjectInvalidDelete(t *testing.T) {
@@ -184,7 +179,5 @@ func TestResourceProjectInvalidDelete(t *testing.T) {
 	ctx := context.Background()
 	// Call the function you want to test.
 	diags := resourceProjectDelete(ctx, d, unitTestMockAPINegativeClient)
-	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
-		assert.Contains(t, diags[0].Summary, "Project not found", "The first diagnostic message does not contain the expected error message")
-	}
+	assertFirstDiagMessage(t, diags, "Project not found")
 }
