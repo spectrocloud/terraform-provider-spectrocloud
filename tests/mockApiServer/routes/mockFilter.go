@@ -80,6 +80,30 @@ func FilterRoutes() []Route {
 			},
 		},
 		{
+			Method: "POST",
+			Path:   "/v1/filters/tag",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "test-filter-id"},
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/filters/tag/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "DELETE",
+			Path:   "/v1/filters/tag/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
 			Method: "GET",
 			Path:   "/v1/filters/tag/{uid}",
 			Response: ResponseData{

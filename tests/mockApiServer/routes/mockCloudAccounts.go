@@ -421,6 +421,106 @@ func CloudAccountsRoutes() []Route {
 				Payload:    getAccountResponse("custom"),
 			},
 		},
+		{
+			Method: "POST",
+			Path:   "/v1/cloudaccounts/cloudTypes/{cloudType}",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "mock-uid"},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/clouds/cloudTypes",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1CustomCloudTypes{
+					CloudTypes: []*models.V1CustomCloudType{
+						{
+							CloudCategory: "test",
+							CloudFamily:   "",
+							DisplayName:   "test-cloud",
+							IsCustom:      true,
+							IsManaged:     false,
+							IsVertex:      false,
+							Logo:          "",
+							Name:          "test-cloud",
+						},
+					},
+				},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/overlords/{uid}",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1Overlord{
+					Kind: "",
+					Metadata: &models.V1ObjectMeta{
+						Name: "pcg-1",
+						UID:  "pcg-1-id",
+					},
+					Spec: &models.V1OverloadSpec{
+						CloudAccountUID:   "test-acc-id",
+						IPAddress:         "121.0.0.1",
+						IPPools:           nil,
+						IsSelfHosted:      false,
+						IsSystem:          false,
+						SpectroClusterUID: "test-spectro-id",
+						TenantUID:         "test-tenant-id",
+					},
+					Status: &models.V1OverloadStatus{
+						Health:          nil,
+						IsActive:        false,
+						IsReady:         false,
+						KubectlCommands: nil,
+						Notifications:   nil,
+						State:           "Running",
+					},
+				},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/cloudaccounts/cloudTypes/{cloudType}/{uid}",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1CustomAccount{
+					APIVersion: "",
+					Kind:       "",
+					Metadata: &models.V1ObjectMeta{
+						Name: "test-name",
+						UID:  "test-uid",
+					},
+					Spec: &models.V1CustomCloudAccount{
+						Credentials: map[string]string{
+							"username": "test",
+							"password": "test",
+						},
+					},
+					Status: &models.V1CloudAccountStatus{
+						State: "Active",
+					},
+				},
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/cloudaccounts/cloudTypes/{cloudType}/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "DELETE",
+			Path:   "/v1/cloudaccounts/cloudTypes/{cloudType}/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
 	}
 }
 

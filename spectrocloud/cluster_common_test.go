@@ -5,9 +5,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
@@ -413,22 +415,6 @@ func prepareSpectroClusterModel() *models.V1SpectroCluster {
 	return scp
 }
 
-//func TestReadCommonFieldsCluster(t *testing.T) {
-//	d := prepareClusterVsphereTestData()
-//	spc := prepareSpectroClusterModel()
-//	c := getClientForCluster()
-//	_, done := readCommonFields(c, d, spc)
-//	assert.Equal(t, false, done)
-//}
-
-//func TestReadCommonFieldsVirtualCluster(t *testing.T) {
-//	d := resourceClusterVirtual().TestResourceData()
-//	spc := prepareSpectroClusterModel()
-//	c := getClientForCluster()
-//	_, done := readCommonFields(c, d, spc)
-//	assert.Equal(t, false, done)
-//}
-
 func TestToSSHKeys(t *testing.T) {
 	// Test case 1: When cloudConfig has "ssh_key" attribute
 	cloudConfig1 := map[string]interface{}{
@@ -640,4 +626,777 @@ func TestFlattenClusterRBAC(t *testing.T) {
 	assert.Equal(t, "Group", secondSubject["type"])
 	assert.Equal(t, "editors", secondSubject["name"])
 	assert.Equal(t, "kube-system", secondSubject["namespace"])
+}
+
+func TestToNtpServers(t *testing.T) {
+	data := map[string]interface{}{
+		"ntp_servers": schema.NewSet(schema.HashString, []interface{}{"0.pool.ntp1.org"}),
+	}
+
+	servers := toNtpServers(data)
+
+	expected := []string{"0.pool.ntp1.org"}
+	assert.Equal(t, expected, servers)
+}
+
+func TestToClusterHostConfigs(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"host_config": {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"host_endpoint_type": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"ingress_host": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"external_traffic_policy": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"load_balancer_source_ranges": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+				},
+			},
+		},
+	}, map[string]interface{}{
+		"host_config": []interface{}{
+			map[string]interface{}{
+				"host_endpoint_type":          "LoadBalancer",
+				"ingress_host":                "example.com",
+				"external_traffic_policy":     "Cluster",
+				"load_balancer_source_ranges": "10.0.0.0/24,192.168.1.0/24",
+			},
+		},
+	})
+
+	result := toClusterHostConfigs(d)
+
+	expected := &models.V1HostClusterConfig{
+		ClusterEndpoint: &models.V1HostClusterEndpoint{
+			Type: "LoadBalancer",
+			Config: &models.V1HostClusterEndpointConfig{
+				IngressConfig: &models.V1IngressConfig{
+					Host: "example.com",
+				},
+				LoadBalancerConfig: &models.V1LoadBalancerConfig{
+					ExternalTrafficPolicy:    "Cluster",
+					LoadBalancerSourceRanges: []string{"10.0.0.0/24", "192.168.1.0/24"},
+				},
+			},
+		},
+		IsHostCluster: ptr.BoolPtr(true),
+	}
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToClusterHostConfigsNoHostConfig(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"host_config": {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"host_endpoint_type": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"ingress_host": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"external_traffic_policy": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"load_balancer_source_ranges": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+				},
+			},
+		},
+	}, map[string]interface{}{})
+
+	result := toClusterHostConfigs(d)
+
+	expected := &models.V1HostClusterConfig{
+		ClusterEndpoint: nil,
+		IsHostCluster:   ptr.BoolPtr(false),
+	}
+
+	assert.Equal(t, expected, result)
+}
+
+func TestFlattenHostConfig(t *testing.T) {
+	hostConfig := &models.V1HostClusterConfig{
+		ClusterEndpoint: &models.V1HostClusterEndpoint{
+			Type: "LoadBalancer",
+			Config: &models.V1HostClusterEndpointConfig{
+				IngressConfig: &models.V1IngressConfig{
+					Host: "example.com",
+				},
+				LoadBalancerConfig: &models.V1LoadBalancerConfig{
+					ExternalTrafficPolicy:    "Cluster",
+					LoadBalancerSourceRanges: []string{"10.0.0.0/24", "192.168.1.0/24"},
+				},
+			},
+		},
+	}
+
+	expected := []interface{}{
+		map[string]interface{}{
+			"host_endpoint_type":          "LoadBalancer",
+			"ingress_host":                "example.com",
+			"external_traffic_policy":     "Cluster",
+			"load_balancer_source_ranges": "10.0.0.0/24,192.168.1.0/24",
+		},
+	}
+
+	result := flattenHostConfig(hostConfig)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestFlattenHostConfigNil(t *testing.T) {
+	hostConfig := &models.V1HostClusterConfig{}
+
+	expected := []interface{}{}
+
+	result := flattenHostConfig(hostConfig)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestFlattenSourceRanges(t *testing.T) {
+	hostConfig := &models.V1HostClusterConfig{
+		ClusterEndpoint: &models.V1HostClusterEndpoint{
+			Config: &models.V1HostClusterEndpointConfig{
+				LoadBalancerConfig: &models.V1LoadBalancerConfig{
+					LoadBalancerSourceRanges: []string{"10.0.0.0/24", "192.168.1.0/24"},
+				},
+			},
+		},
+	}
+
+	expected := "10.0.0.0/24,192.168.1.0/24"
+
+	result := flattenSourceRanges(hostConfig)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestFlattenSourceRangesNil(t *testing.T) {
+	hostConfig := &models.V1HostClusterConfig{
+		ClusterEndpoint: &models.V1HostClusterEndpoint{
+			Config: &models.V1HostClusterEndpointConfig{
+				LoadBalancerConfig: &models.V1LoadBalancerConfig{
+					LoadBalancerSourceRanges: []string{},
+				},
+			},
+		},
+	}
+
+	expected := ""
+
+	result := flattenSourceRanges(hostConfig)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToClusterLocationConfigs(t *testing.T) {
+	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"location_config": {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"country_code": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"country_name": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"region_code": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"region_name": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"latitude": {
+						Type:     schema.TypeFloat,
+						Optional: true,
+					},
+					"longitude": {
+						Type:     schema.TypeFloat,
+						Optional: true,
+					},
+				},
+			},
+		},
+	}, map[string]interface{}{
+		"location_config": []interface{}{
+			map[string]interface{}{
+				"country_code": "US",
+				"country_name": "United States",
+				"region_code":  "CA",
+				"region_name":  "California",
+				"latitude":     37.7749,
+				"longitude":    -122.4194,
+			},
+		},
+	})
+
+	expected := &models.V1ClusterLocation{
+		CountryCode: "US",
+		CountryName: "United States",
+		RegionCode:  "CA",
+		RegionName:  "California",
+		GeoLoc: &models.V1GeolocationLatlong{
+			Latitude:  37.7749,
+			Longitude: -122.4194,
+		},
+	}
+
+	result := toClusterLocationConfigs(resourceData)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToClusterLocationConfig(t *testing.T) {
+	config := map[string]interface{}{
+		"country_code": "US",
+		"country_name": "United States",
+		"region_code":  "CA",
+		"region_name":  "California",
+		"latitude":     37.7749,
+		"longitude":    -122.4194,
+	}
+
+	expected := &models.V1ClusterLocation{
+		CountryCode: "US",
+		CountryName: "United States",
+		RegionCode:  "CA",
+		RegionName:  "California",
+		GeoLoc: &models.V1GeolocationLatlong{
+			Latitude:  37.7749,
+			Longitude: -122.4194,
+		},
+	}
+
+	result := toClusterLocationConfig(config)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToClusterGeoLoc(t *testing.T) {
+	config := map[string]interface{}{
+		"latitude":  37.7749,
+		"longitude": -122.4194,
+	}
+
+	expected := &models.V1GeolocationLatlong{
+		Latitude:  37.7749,
+		Longitude: -122.4194,
+	}
+
+	result := toClusterGeoLoc(config)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestFlattenLocationConfig(t *testing.T) {
+	location := &models.V1ClusterLocation{
+		CountryCode: "US",
+		CountryName: "United States",
+		RegionCode:  "CA",
+		RegionName:  "California",
+		GeoLoc: &models.V1GeolocationLatlong{
+			Latitude:  37.7749,
+			Longitude: -122.4194,
+		},
+	}
+
+	expected := []interface{}{
+		map[string]interface{}{
+			"country_code": "US",
+			"country_name": "United States",
+			"region_code":  "CA",
+			"region_name":  "California",
+			"latitude":     37.7749,
+			"longitude":    -122.4194,
+		},
+	}
+
+	result := flattenLocationConfig(location)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestFlattenLocationConfigNil(t *testing.T) {
+	location := &models.V1ClusterLocation{}
+
+	expected := []interface{}{
+		map[string]interface{}{
+			"country_code": "",
+			"country_name": "",
+			"region_code":  "",
+			"region_name":  "",
+		},
+	}
+
+	result := flattenLocationConfig(location)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestGetClusterMetadata(t *testing.T) {
+	resourceData := resourceClusterAws().TestResourceData()
+	_ = resourceData.Set("name", "test-cluster")
+	_ = resourceData.Set("description", "A test cluster")
+	_ = resourceData.Set("tags", []string{"env:prod", "team:devops"})
+
+	resourceData.SetId("cluster-uid")
+
+	expected := &models.V1ObjectMeta{
+		Name:        "test-cluster",
+		UID:         "cluster-uid",
+		Labels:      map[string]string{"env": "prod", "team": "devops"},
+		Annotations: map[string]string{"description": "A test cluster"},
+	}
+
+	result := getClusterMetadata(resourceData)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToClusterMetadataUpdate(t *testing.T) {
+	resourceData := resourceClusterAws().TestResourceData()
+	_ = resourceData.Set("name", "test-cluster")
+	_ = resourceData.Set("description", "A test cluster")
+	_ = resourceData.Set("tags", []string{"env:prod", "team:devops"})
+
+	expected := &models.V1ObjectMetaInputEntity{
+		Name:        "test-cluster",
+		Labels:      map[string]string{"env": "prod", "team": "devops"},
+		Annotations: map[string]string{"description": "A test cluster"},
+	}
+
+	result := toClusterMetadataUpdate(resourceData)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToUpdateClusterMetadata(t *testing.T) {
+	resourceData := resourceClusterAws().TestResourceData()
+	_ = resourceData.Set("name", "test-cluster")
+	_ = resourceData.Set("description", "A test cluster")
+	_ = resourceData.Set("tags", []string{"env:prod", "team:devops"})
+
+	expected := &models.V1ObjectMetaInputEntitySchema{
+		Metadata: &models.V1ObjectMetaInputEntity{
+			Name:        "test-cluster",
+			Labels:      map[string]string{"env": "prod", "team": "devops"},
+			Annotations: map[string]string{"description": "A test cluster"},
+		},
+	}
+
+	result := toUpdateClusterMetadata(resourceData)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToUpdateClusterAdditionalMetadata(t *testing.T) {
+	resourceData := resourceClusterAws().TestResourceData()
+	_ = resourceData.Set("cluster_meta_attribute", "test-cluster-meta-attribute")
+	expected := &models.V1ClusterMetaAttributeEntity{
+		ClusterMetaAttribute: "test-cluster-meta-attribute",
+	}
+	result := toUpdateClusterAdditionalMetadata(resourceData)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestFlattenClusterNamespaces(t *testing.T) {
+	namespaces := []*models.V1ClusterNamespaceResource{
+		{
+			Metadata: &models.V1ObjectMeta{
+				Name: "namespace1",
+			},
+			Spec: &models.V1ClusterNamespaceSpec{
+				ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
+					CPUCores:  2,
+					MemoryMiB: 1024,
+				},
+			},
+		},
+		{
+			Metadata: &models.V1ObjectMeta{
+				Name: "namespace2",
+			},
+			Spec: &models.V1ClusterNamespaceSpec{
+				ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
+					CPUCores:  4,
+					MemoryMiB: 2048,
+				},
+			},
+		},
+	}
+
+	expected := []interface{}{
+		map[string]interface{}{
+			"name": "namespace1",
+			"resource_allocation": map[string]interface{}{
+				"cpu_cores":  "2",
+				"memory_MiB": "1024",
+			},
+		},
+		map[string]interface{}{
+			"name": "namespace2",
+			"resource_allocation": map[string]interface{}{
+				"cpu_cores":  "4",
+				"memory_MiB": "2048",
+			},
+		},
+	}
+
+	result := flattenClusterNamespaces(namespaces)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToClusterNamespace(t *testing.T) {
+	clusterRbacBinding := map[string]interface{}{
+		"name": "namespace1",
+		"resource_allocation": map[string]interface{}{
+			"cpu_cores":  "2",
+			"memory_MiB": "1024",
+		},
+	}
+
+	expected := &models.V1ClusterNamespaceResourceInputEntity{
+		Metadata: &models.V1ObjectMetaUpdateEntity{
+			Name: "namespace1",
+		},
+		Spec: &models.V1ClusterNamespaceSpec{
+			IsRegex: false,
+			ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
+				CPUCores:  2,
+				MemoryMiB: 1024,
+			},
+		},
+	}
+
+	result := toClusterNamespace(clusterRbacBinding)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToClusterNamespaces(t *testing.T) {
+	resourceData := resourceClusterAws().TestResourceData()
+	var ns []interface{}
+	ns = append(ns, map[string]interface{}{
+		"name": "namespace1",
+		"resource_allocation": map[string]interface{}{
+			"cpu_cores":  "2",
+			"memory_MiB": "1024",
+		},
+	})
+	ns = append(ns, map[string]interface{}{
+		"name": "namespace2",
+		"resource_allocation": map[string]interface{}{
+			"cpu_cores":  "4",
+			"memory_MiB": "2048",
+		},
+	})
+	_ = resourceData.Set("namespaces", ns)
+	expected := []*models.V1ClusterNamespaceResourceInputEntity{
+		{
+			Metadata: &models.V1ObjectMetaUpdateEntity{
+				Name: "namespace1",
+			},
+			Spec: &models.V1ClusterNamespaceSpec{
+				IsRegex: false,
+				ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
+					CPUCores:  2,
+					MemoryMiB: 1024,
+				},
+			},
+		},
+		{
+			Metadata: &models.V1ObjectMetaUpdateEntity{
+				Name: "namespace2",
+			},
+			Spec: &models.V1ClusterNamespaceSpec{
+				IsRegex: false,
+				ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
+					CPUCores:  4,
+					MemoryMiB: 2048,
+				},
+			},
+		},
+	}
+
+	result := toClusterNamespaces(resourceData)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestGetDefaultOsPatchConfig(t *testing.T) {
+	expected := &models.V1MachineManagementConfig{
+		OsPatchConfig: &models.V1OsPatchConfig{
+			PatchOnBoot:      false,
+			RebootIfRequired: false,
+		},
+	}
+
+	result := getDefaultOsPatchConfig()
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToUpdateOsPatchEntityClusterRbac(t *testing.T) {
+	config := &models.V1OsPatchConfig{
+		PatchOnBoot:      true,
+		RebootIfRequired: true,
+	}
+
+	expected := &models.V1OsPatchEntity{
+		OsPatchConfig: config,
+	}
+
+	result := toUpdateOsPatchEntityClusterRbac(config)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestToOsPatchConfig(t *testing.T) {
+	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"os_patch_on_boot": {
+			Type:     schema.TypeBool,
+			Optional: true,
+		},
+		"os_patch_schedule": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+		"os_patch_after": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}, map[string]interface{}{
+		"os_patch_on_boot":  true,
+		"os_patch_schedule": "0 0 * * *",
+		"os_patch_after":    "2024-01-01T00:00:00.000Z",
+	})
+
+	patchTime, _ := time.Parse(time.RFC3339, "2024-01-01T00:00:00.000Z")
+
+	expected := &models.V1OsPatchConfig{
+		PatchOnBoot:        true,
+		Schedule:           "0 0 * * *",
+		OnDemandPatchAfter: models.V1Time(patchTime),
+	}
+
+	result := toOsPatchConfig(resourceData)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestValidateOsPatchSchedule(t *testing.T) {
+	validData := "0 0 * * *"
+	invalidData := "invalid cron expression"
+
+	validResult := validateOsPatchSchedule(validData, nil)
+	invalidResult := validateOsPatchSchedule(invalidData, nil)
+
+	assert.Empty(t, validResult)
+	assert.NotEmpty(t, invalidResult)
+	assert.Contains(t, invalidResult[0].Summary, "os patch schedule is invalid")
+}
+
+func TestValidateOsPatchOnDemandAfter(t *testing.T) {
+	validData := time.Now().Add(20 * time.Minute).Format(time.RFC3339)
+	invalidData := "invalid time format"
+	pastData := time.Now().Add(-20 * time.Minute).Format(time.RFC3339)
+
+	validResult := validateOsPatchOnDemandAfter(validData, nil)
+	invalidResult := validateOsPatchOnDemandAfter(invalidData, nil)
+	pastResult := validateOsPatchOnDemandAfter(pastData, nil)
+
+	assert.Empty(t, validResult)
+	assert.NotEmpty(t, invalidResult)
+	assert.Contains(t, invalidResult[0].Summary, "time for 'os_patch_after' is invalid")
+
+	assert.NotEmpty(t, pastResult)
+	assert.Contains(t, pastResult[0].Summary, "valid timestamp is timestamp which is 10 mins ahead of current timestamp")
+}
+
+func TestToSpcApplySettings(t *testing.T) {
+	// Test case when "apply_setting" is set
+	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"apply_setting": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}, map[string]interface{}{
+		"apply_setting": "reboot",
+	})
+
+	expected := &models.V1SpcApplySettings{
+		ActionType: "reboot",
+	}
+
+	result, err := toSpcApplySettings(resourceData)
+
+	assert.Nil(t, err)
+	assert.Equal(t, expected, result)
+
+	// Test case when "apply_setting" is not set (empty string)
+	resourceDataEmpty := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"apply_setting": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}, map[string]interface{}{
+		"apply_setting": "",
+	})
+
+	resultEmpty, errEmpty := toSpcApplySettings(resourceDataEmpty)
+
+	assert.Nil(t, errEmpty)
+	assert.Nil(t, resultEmpty)
+
+	// Test case when "apply_setting" is not present at all
+	resourceDataNil := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"apply_setting": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}, map[string]interface{}{})
+
+	resultNil, errNil := toSpcApplySettings(resourceDataNil)
+
+	assert.Nil(t, errNil)
+	assert.Nil(t, resultNil)
+}
+
+func TestGetNodeValue(t *testing.T) {
+	// Test case 1: Standard input
+	nodeId := "node1"
+	action := "update"
+	expected := map[string]interface{}{
+		"node_id": nodeId,
+		"action":  action,
+	}
+	result := getNodeValue(nodeId, action)
+	assert.Equal(t, expected, result, "The returned map should match the expected map")
+
+	// Test case 2: Different action
+	nodeId = "node2"
+	action = "reboot"
+	expected = map[string]interface{}{
+		"node_id": nodeId,
+		"action":  action,
+	}
+	result = getNodeValue(nodeId, action)
+	assert.Equal(t, expected, result, "The returned map should match the expected map")
+
+	// Test case 3: Empty action
+	nodeId = "node3"
+	action = ""
+	expected = map[string]interface{}{
+		"node_id": nodeId,
+		"action":  action,
+	}
+	result = getNodeValue(nodeId, action)
+	assert.Equal(t, expected, result, "The returned map should match the expected map")
+
+	// Test case 4: Empty nodeId
+	nodeId = ""
+	action = "update"
+	expected = map[string]interface{}{
+		"node_id": nodeId,
+		"action":  action,
+	}
+	result = getNodeValue(nodeId, action)
+	assert.Equal(t, expected, result, "The returned map should match the expected map")
+}
+
+func TestGetSpectroComponentsUpgrade(t *testing.T) {
+	tests := []struct {
+		name     string
+		cluster  *models.V1SpectroCluster
+		expected string
+	}{
+		{
+			name: "Annotation is 'true'",
+			cluster: &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{
+					Annotations: map[string]string{
+						"spectroComponentsUpgradeForbidden": "true",
+					},
+				},
+			},
+			expected: "lock",
+		},
+		{
+			name: "Annotation is 'false'",
+			cluster: &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{
+					Annotations: map[string]string{
+						"spectroComponentsUpgradeForbidden": "false",
+					},
+				},
+			},
+			expected: "unlock",
+		},
+		{
+			name: "Annotation is not present",
+			cluster: &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			expected: "unlock",
+		},
+		{
+			name: "Annotations are nil",
+			cluster: &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{
+					Annotations: nil,
+				},
+			},
+			expected: "unlock",
+		},
+		{
+			name: "Different annotation key",
+			cluster: &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{
+					Annotations: map[string]string{
+						"otherKey": "someValue",
+					},
+				},
+			},
+			expected: "unlock",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getSpectroComponentsUpgrade(tt.cluster)
+			require.Equal(t, tt.expected, result)
+		})
+	}
 }

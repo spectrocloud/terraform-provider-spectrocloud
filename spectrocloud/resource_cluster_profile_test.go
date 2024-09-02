@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -357,4 +359,119 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func prepareBaseClusterProfileTestData() *schema.ResourceData {
+	d := resourceClusterProfile().TestResourceData()
+	_ = d.Set("context", "project")
+	_ = d.Set("name", "test-cluster-profile")
+	_ = d.Set("version", "1.0.0")
+	_ = d.Set("description", "test unit-test")
+	_ = d.Set("cloud", "all")
+	_ = d.Set("type", "cluster")
+	var variables []interface{}
+	variables = append(variables, []interface{}{
+		map[string]interface{}{
+			"variable": map[string]interface{}{
+				"name":          "test_variable",
+				"display_name":  "Test Vat",
+				"format":        "string",
+				"description":   "test var description",
+				"default_value": "test",
+				"regex":         "*",
+				"required":      false,
+				"immutable":     false,
+				"is_sensitive":  false,
+				"hidden":        false,
+			},
+		},
+	})
+	_ = d.Set("profile_variables", variables)
+	_ = d.Set("pack", []interface{}{
+		map[string]interface{}{
+			"uid":          "test-pack-uid-1",
+			"type":         "spectro",
+			"name":         "k8",
+			"registry_uid": "test-pub-reg-uid",
+			"tag":          "test:test",
+			"values":       "test values",
+			"manifest": map[string]interface{}{
+				"uid":     "test-manifest-uid",
+				"name":    "test-manifest",
+				"content": "value content",
+			},
+		},
+		map[string]interface{}{
+			"uid":          "test-pack-uid-2",
+			"type":         "spectro",
+			"name":         "csi",
+			"registry_uid": "test-pub-reg-uid",
+			"tag":          "test:test",
+			"values":       "test values",
+			"manifest": map[string]interface{}{
+				"uid":     "test-manifest-uid",
+				"name":    "test-manifest",
+				"content": "value content",
+			},
+		},
+		map[string]interface{}{
+			"uid":          "test-pack-uid-3",
+			"type":         "spectro",
+			"name":         "cni",
+			"registry_uid": "test-pub-reg-uid",
+			"tag":          "test:test",
+			"values":       "test values",
+			"manifest": map[string]interface{}{
+				"uid":     "test-manifest-uid",
+				"name":    "test-manifest",
+				"content": "value content",
+			},
+		},
+		map[string]interface{}{
+			"uid":          "test-pack-uid-4",
+			"type":         "spectro",
+			"name":         "os",
+			"registry_uid": "test-pub-reg-uid",
+			"tag":          "test:test",
+			"values":       "test values",
+			"manifest": map[string]interface{}{
+				"uid":     "test-manifest-uid",
+				"name":    "test-manifest",
+				"content": "value content",
+			},
+		},
+	})
+	d.SetId("cluster-profile-1")
+	return d
+}
+
+func TestResourceClusterProfileCreate(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	var ctx context.Context
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "cluster-profile-1", d.Id())
+}
+
+func TestResourceClusterProfileRead(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	var ctx context.Context
+	diags := resourceClusterProfileRead(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "cluster-profile-1", d.Id())
+}
+
+func TestResourceClusterProfileUpdate(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	var ctx context.Context
+	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "cluster-profile-1", d.Id())
+}
+
+func TestResourceClusterProfileDelete(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	var ctx context.Context
+	diags := resourceClusterProfileDelete(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
 }

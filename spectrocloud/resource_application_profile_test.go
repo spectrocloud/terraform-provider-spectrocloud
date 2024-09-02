@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -335,7 +336,7 @@ func TestToApplicationProfileCreate(t *testing.T) {
 			"dbname": "testDB",
 		},
 	})
-	d.Set("pack", p)
+	_ = d.Set("pack", p)
 	cp, _ := toApplicationProfileCreate(d)
 	assert.Equal(t, p[0]["type"], string(cp.Spec.Template.AppTiers[0].Type))
 	assert.Equal(t, p[0]["source_app_tier"], cp.Spec.Template.AppTiers[0].SourceAppTierUID)
@@ -344,40 +345,48 @@ func TestToApplicationProfileCreate(t *testing.T) {
 	assert.Equal(t, "testDB", string(cp.Spec.Template.AppTiers[0].Properties[0].Value))
 }
 
-//func TestToApplicationTiersUpdate(t *testing.T) {
-//	d := getBaseResourceData()
-//	var p []map[string]interface{}
-//	p = append(p, map[string]interface{}{
-//		"type":            "operator-instance",
-//		"source_app_tier": "testSUID",
-//		"registry_uid":    "test_reg_uid",
-//		"uid":             "test_pack_uid",
-//		"name":            "mysql",
-//		"properties": map[string]interface{}{
-//			"dbname": "testDB",
-//		},
-//	})
-//	d.Set("pack", p)
-//	m := &client.V1Client{}
-//	_, ut, _, _ := toApplicationTiersUpdate(d, m)
-//	assert.Equal(t, "mysql", ut["test-uid"].Name)
-//	assert.Equal(t, "dbname", string(ut["test-uid"].Properties[0].Name))
-//	assert.Equal(t, "testDB", string(ut["test-uid"].Properties[0].Value))
-//}
+func TestToApplicationTiersUpdate(t *testing.T) {
+	d := getBaseResourceData()
+	d.SetId("test-app-profile-id")
+	var p []map[string]interface{}
+	p = append(p, map[string]interface{}{
+		"type":            "operator-instance",
+		"source_app_tier": "testSUID",
+		"registry_uid":    "test_reg_uid",
+		"uid":             "test_pack_uid",
+		"name":            "mysql",
+		"properties": map[string]interface{}{
+			"dbname": "testDB",
+		},
+	})
+	_ = d.Set("pack", p)
 
-//func TestResourceApplicationProfileCreate(t *testing.T) {
-//	d := getBaseResourceData()
-//	ctx := context.Background()
-//	m := &client.V1Client{}
-//	s := resourceApplicationProfileCreate(ctx, d, m)
-//	assert.Equal(t, false, s.HasError())
-//
-//}
+	_, _, _, err := toApplicationTiersUpdate(d, getV1ClientWithResourceContext(unitTestMockAPIClient, ""))
+	assert.Empty(t, err)
+}
 
-//func TestResourceApplicationProfileDelete(t *testing.T) {
-//	d := getBaseResourceData()
-//	ctx := context.Background()
-//	m := &client.V1Client{}
-//	r := resourceApplicationProfileDelete(ctx, d, m)
-//	assert.Equal(t, false, r.HasError())
-//}
+func TestResourceApplicationProfileCreate(t *testing.T) {
+	d := getBaseResourceData()
+	var ctx context.Context
+	_ = d.Set("context", "project")
+	s := resourceApplicationProfileCreate(ctx, d, unitTestMockAPIClient)
+	assert.Equal(t, false, s.HasError())
+
+}
+
+func TestResourceApplicationProfileUpdate(t *testing.T) {
+	d := getBaseResourceData()
+	var ctx context.Context
+	_ = d.Set("context", "project")
+	s := resourceApplicationProfileUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Equal(t, false, s.HasError())
+
+}
+
+func TestResourceApplicationProfileDelete(t *testing.T) {
+	d := getBaseResourceData()
+	var ctx context.Context
+	d.SetId("test-app-profile-id")
+	r := resourceApplicationProfileDelete(ctx, d, unitTestMockAPIClient)
+	assert.Equal(t, false, r.HasError())
+}

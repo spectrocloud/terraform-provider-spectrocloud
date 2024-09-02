@@ -112,6 +112,61 @@ func getClusterProfilePackManifestResponse() *models.V1ManifestEntities {
 func ClusterProfileRoutes() []Route {
 	return []Route{
 		{
+			Method: "POST",
+			Path:   "/v1/clusterprofiles/import/file",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "cluster-profile-import-1"},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/clusterprofiles/{uid}/variables",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload:    &models.V1Variables{
+					//Variables: []*models.V1Variable{
+					//	{
+					//		DefaultValue: "test",
+					//		Description:  "test profile variable",
+					//		DisplayName:  "Test Var",
+					//		Format:       "string",
+					//		Hidden:       false,
+					//		Immutable:    false,
+					//		IsSensitive:  false,
+					//		Name:         nil,
+					//		Regex:        "*",
+					//		Required:     false,
+					//	},
+					//},
+				},
+			},
+		},
+		{
+			Method: "DELETE",
+			Path:   "/v1/clusterprofiles/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/clusterprofiles",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "cluster-profile-1"},
+			},
+		},
+		{
+			Method: "PATCH",
+			Path:   "/v1/clusterprofiles/{uid}/publish",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
 			Method: "GET",
 			Path:   "/v1/dashboard/clusterprofiles/metadata",
 			Response: ResponseData{

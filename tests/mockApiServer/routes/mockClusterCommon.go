@@ -1,6 +1,10 @@
 package routes
 
-import "github.com/spectrocloud/palette-sdk-go/api/models"
+import (
+	"github.com/spectrocloud/gomi/pkg/ptr"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+)
+import "github.com/spectrocloud/palette-sdk-go/api/client/v1"
 
 func getBSLListLocation() *models.V1UserAssetsLocations {
 	return &models.V1UserAssetsLocations{
@@ -22,7 +26,57 @@ func getBSLListLocation() *models.V1UserAssetsLocations {
 }
 
 func ClusterCommonRoutes() []Route {
+	s := "test-dep-1"
 	return []Route{
+		{
+			Method: "POST",
+			Path:   "/v1/appDeployments",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload: &v1.V1AppDeploymentsVirtualClusterCreateCreated{
+					AuditUID: "test-audit-id-1",
+					Payload: &models.V1UID{
+						UID: ptr.StringPtr(s),
+					},
+				},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/clustergroups/hostCluster",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1ClusterGroupsHostClusterSummary{
+					Summaries: []*models.V1ClusterGroupSummary{
+						{
+							Metadata: &models.V1ObjectMeta{
+								Name: "test-cluster-group",
+								UID:  generateRandomStringUID(),
+							},
+							Spec: &models.V1ClusterGroupSummarySpec{
+								Scope: "project",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/clustergroups/hostCluster/metadata",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1ClusterGroupsHostClusterMetadata{
+					Items: []*models.V1ObjectScopeEntity{
+						{
+							Name:  "test-cluster-group",
+							Scope: "system",
+							UID:   generateRandomStringUID(),
+						},
+					},
+				},
+			},
+		},
 		{
 			Method: "GET",
 			Path:   "/v1/users/assets/locations",
