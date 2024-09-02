@@ -142,14 +142,6 @@ func ProjectNegativeRoutes() []Route {
 			Method: "GET",
 			Path:   "/v1/dashboard/projects/metadata",
 			Response: ResponseData{
-				StatusCode: http.StatusNotFound,
-				Payload:    getError(strconv.Itoa(http.StatusNotFound), "Project metadata not found"),
-			},
-		},
-		{
-			Method: "GET",
-			Path:   "/v1/dashboard/projects/metadata",
-			Response: ResponseData{
 				StatusCode: http.StatusOK,
 				Payload: models.V1ProjectsMetadata{
 					Items: []*models.V1ProjectMetadata{

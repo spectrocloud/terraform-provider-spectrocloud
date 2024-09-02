@@ -44,7 +44,7 @@ func MacrosRoutes() []Route {
 			Path:   "/v1/tenants/{tenantUid}/macros",
 			Response: ResponseData{
 				StatusCode: http.StatusNoContent,
-				Payload:    map[string]interface{}{"UID": generateRandomStringUID()},
+				Payload:    nil,
 			},
 		},
 		{

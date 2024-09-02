@@ -10,6 +10,14 @@ func ClusterCommonRoutes() []Route {
 	return []Route{
 		{
 			Method: "POST",
+			Path:   "/v1/spectroclusters/{uid}/upgrade/settings",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
+			},
+		},
+		{
+			Method: "POST",
 			Path:   "/v1/appDeployments",
 			Response: ResponseData{
 				StatusCode: 201,

@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"context"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 
@@ -134,12 +136,14 @@ func TestToAlertHttpEmail(t *testing.T) {
 
 func prepareAlertTestData() *schema.ResourceData {
 	rd := resourceAlert().TestResourceData()
-	rd.Set("type", "email")
-	rd.Set("is_active", true)
-	rd.Set("alert_all_users", false)
-	rd.Set("project", "Default")
+	rd.SetId("test-alert-id")
+	_ = rd.Set("type", "email")
+	_ = rd.Set("is_active", true)
+	_ = rd.Set("alert_all_users", false)
+	_ = rd.Set("project", "Default")
+	_ = rd.Set("component", "ClusterHealth")
 	emails := []string{"testuser1@spectrocloud.com", "testuser2@spectrocloud.com"}
-	rd.Set("identifiers", emails)
+	_ = rd.Set("identifiers", emails)
 	var http []map[string]interface{}
 	hookConfig := map[string]interface{}{
 		"method": "POST",
@@ -151,160 +155,34 @@ func prepareAlertTestData() *schema.ResourceData {
 		},
 	}
 	http = append(http, hookConfig)
-	rd.Set("http", http)
+	_ = rd.Set("http", http)
 	return rd
 }
 
-//func TestGetProjectIDError(t *testing.T) {
-//	assert := assert.New(t)
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	pjtUid, err := getProjectID(rd, m)
-//	if err == nil {
-//		assert.Error(errors.New("unexpected Error"))
-//	}
-//	assert.Equal(err.Error(), "unable to read project uid")
-//	assert.Equal("", pjtUid)
-//}
+func TestResourceAlertCreate(t *testing.T) {
+	rd := prepareAlertTestData()
+	ctx := context.Background()
+	diags := resourceAlertCreate(ctx, rd, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}
 
-//func TestResourceAlertCreate(t *testing.T) {
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertCreate(ctx, rd, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
+func TestResourceAlertRead(t *testing.T) {
+	rd := prepareAlertTestData()
+	ctx := context.Background()
+	diags := resourceAlertRead(ctx, rd, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}
 
-//func TestResourceAlertCreateProjectUIDError(t *testing.T) {
-//	assert := assert.New(t)
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertCreate(ctx, rd, m)
-//	assert.Equal(diags[0].Summary, "unable to read project uid")
-//}
+func TestResourceAlertUpdate(t *testing.T) {
+	rd := prepareAlertTestData()
+	ctx := context.Background()
+	diags := resourceAlertUpdate(ctx, rd, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}
 
-//func TestResourceAlertCreateAlertUIDError(t *testing.T) {
-//	assert := assert.New(t)
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertCreate(ctx, rd, m)
-//	assert.Equal(diags[0].Summary, "alert creation failed")
-//}
-
-//func TestResourceAlertUpdate(t *testing.T) {
-//
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertUpdate(ctx, rd, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
-
-//func TestResourceAlertUpdateError(t *testing.T) {
-//	assert := assert.New(t)
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertUpdate(ctx, rd, m)
-//	assert.Equal(diags[0].Summary, "alert update failed")
-//}
-
-//func TestResourceAlertDelete(t *testing.T) {
-//
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertDelete(ctx, rd, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
-
-//func TestResourceAlertDeleteProjectUIDError(t *testing.T) {
-//	assert := assert.New(t)
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertDelete(ctx, rd, m)
-//	assert.Equal(diags[0].Summary, "unable to read project uid")
-//}
-
-//func TestResourceAlertDeleteError(t *testing.T) {
-//	assert := assert.New(t)
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertDelete(ctx, rd, m)
-//	assert.Equal(diags[0].Summary, "unable to delete alert")
-//}
-
-//func TestResourceAlertReadAlertNil(t *testing.T) {
-//	rd := prepareAlertTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertRead(ctx, rd, m)
-//
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
-
-//func TestResourceAlertReadAlertEmail(t *testing.T) {
-//	rd := resourceAlert().TestResourceData()
-//	rd.Set("type", "email")
-//	rd.Set("is_active", true)
-//	rd.Set("alert_all_users", false)
-//	rd.Set("project", "Default")
-//	emails := []string{"testuser1@spectrocloud.com", "testuser2@spectrocloud.com"}
-//	rd.Set("identifiers", emails)
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertRead(ctx, rd, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
-
-//func TestResourceAlertReadAlertHttp(t *testing.T) {
-//	rd := resourceAlert().TestResourceData()
-//	rd.Set("type", "http")
-//	rd.Set("is_active", true)
-//	rd.Set("alert_all_users", false)
-//	rd.Set("project", "Default")
-//	emails := []string{"testuser1@spectrocloud.com", "testuser2@spectrocloud.com"}
-//	rd.Set("identifiers", emails)
-//	var http []map[string]interface{}
-//	hookConfig := map[string]interface{}{
-//		"method": "POST",
-//		"url":    "https://www.openhook.com/spc/notify",
-//		"body":   "{ \"text\": \"{{message}}\" }",
-//		"headers": map[string]interface{}{
-//			"tag":    "Health",
-//			"source": "spectrocloud",
-//		},
-//	}
-//	http = append(http, hookConfig)
-//	rd.Set("http", http)
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertRead(ctx, rd, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
-
-//func TestResourceAlertReadNegative(t *testing.T) {
-//	rd := resourceAlert().TestResourceData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceAlertRead(ctx, rd, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
+func TestResourceAlertDelete(t *testing.T) {
+	rd := prepareAlertTestData()
+	ctx := context.Background()
+	diags := resourceAlertDelete(ctx, rd, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}

@@ -2,9 +2,11 @@ package spectrocloud
 
 import (
 	"fmt"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/gomi/pkg/ptr"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/require"
 	"reflect"
 	"sort"
@@ -1399,4 +1401,197 @@ func TestGetSpectroComponentsUpgrade(t *testing.T) {
 			require.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestGetCommonCluster(t *testing.T) {
+	tests := []struct {
+		name          string
+		resourceData  *schema.ResourceData
+		expectedError string
+		expectedID    string
+		expectedName  string
+		expectedCtx   string
+	}{
+		{
+			name: "Successful cluster retrieval",
+
+			resourceData: func() *schema.ResourceData {
+				d := resourceClusterGcp().TestResourceData()
+				d.SetId("cluster-id:project")
+				return d
+			}(),
+			expectedError: "",
+			expectedID:    "cluster-id",
+			expectedName:  "cluster-name",
+			expectedCtx:   "resource-context",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			_, err := GetCommonCluster(tt.resourceData, unitTestMockAPIClient)
+			assert.NoError(t, err)
+
+		})
+	}
+}
+
+func TestValidateCloudType(t *testing.T) {
+	tests := []struct {
+		name          string
+		resourceName  string
+		cluster       *models.V1SpectroCluster
+		expectedError string
+	}{
+		{
+			name:         "Successful validation",
+			resourceName: "spectrocloud_cluster_aws",
+			cluster: &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{UID: "cluster-uid-123"},
+				Spec:     &models.V1SpectroClusterSpec{CloudType: "aws"},
+			},
+			expectedError: "",
+		},
+		{
+			name:         "Cluster spec is nil",
+			resourceName: "spectrocloud_cluster_aws",
+			cluster: &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{UID: "cluster-uid-123"},
+				Spec:     nil,
+			},
+			expectedError: "cluster spec is nil in cluster cluster-uid-123",
+		},
+		{
+			name:         "Cloud type mismatch",
+			resourceName: "spectrocloud_cluster_aws",
+			cluster: &models.V1SpectroCluster{
+				Metadata: &models.V1ObjectMeta{UID: "cluster-uid-123"},
+				Spec:     &models.V1SpectroClusterSpec{CloudType: "gcp"},
+			},
+			expectedError: "resource with id cluster-uid-123 is not of type spectrocloud_cluster_aws, need to correct resource type",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateCloudType(tt.resourceName, tt.cluster)
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestUpdateAgentUpgradeSetting(t *testing.T) {
+	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"pause_agent_upgrades": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}, map[string]interface{}{})
+
+	tests := []struct {
+		name               string
+		inputPauseUpgrades string
+		mockError          error
+		expectError        bool
+	}{
+		{
+			name:               "Pause agent upgrades is set",
+			inputPauseUpgrades: "true",
+			mockError:          nil,
+			expectError:        false,
+		},
+		{
+			name:               "Pause agent upgrades is not set",
+			inputPauseUpgrades: "",
+			mockError:          nil,
+			expectError:        false,
+		},
+		{
+			name:               "Client returns an error",
+			inputPauseUpgrades: "true",
+			mockError:          assert.AnError,
+			expectError:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceData.Set("pause_agent_upgrades", tt.inputPauseUpgrades)
+			resourceData.SetId("test-cluster-id")
+
+			err := updateAgentUpgradeSetting(getV1ClientWithResourceContext(unitTestMockAPIClient, "project"), resourceData)
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+		})
+	}
+}
+
+func TestValidateCloudTypeOne(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          interface{}
+		expectedDiags  diag.Diagnostics
+		expectedErrors bool
+	}{
+		{
+			name:           "Valid cloud type: aws",
+			input:          "aws",
+			expectedDiags:  diag.Diagnostics{},
+			expectedErrors: false,
+		},
+		{
+			name:           "Valid cloud type: azure",
+			input:          "azure",
+			expectedDiags:  diag.Diagnostics{},
+			expectedErrors: false,
+		},
+		{
+			name:           "Invalid cloud type",
+			input:          "invalid-cloud",
+			expectedDiags:  diag.Diagnostics{diag.Diagnostic{Severity: diag.Error, Summary: fmt.Sprintf("cloud type '%s' is invalid. valid cloud types are %v", "invalid-cloud", "cloud_types")}},
+			expectedErrors: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			diags := validateCloudType(tt.input, cty.Path{})
+
+			if tt.expectedErrors {
+				assert.Len(t, diags, 1)
+				assert.Equal(t, tt.expectedDiags[0].Summary, diags[0].Summary)
+			} else {
+				assert.Empty(t, diags)
+			}
+		})
+	}
+}
+
+func TestFlattenCloudConfigGeneric(t *testing.T) {
+	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+		"cloud_config_id": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}, map[string]interface{}{})
+
+	client := &client.V1Client{}
+	configUID := "test-config-uid"
+
+	diags := flattenCloudConfigGeneric(configUID, resourceData, client)
+
+	assert.Empty(t, diags)
+	assert.Equal(t, configUID, resourceData.Get("cloud_config_id"))
 }
