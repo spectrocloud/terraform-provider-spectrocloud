@@ -34,40 +34,6 @@ func TestFlattenCloudConfigsValuesCustomCloud(t *testing.T) {
 	assert.Equal(t, "test-values", result[0].(map[string]interface{})["values"], "Values should match")
 }
 
-//func TestFlattenCloudConfigCustom(t *testing.T) {
-//	// Mock resource data
-//	mockResourceData := resourceClusterCustomCloud().TestResourceData()
-//	mockResourceData.Set("context", "project")
-//	mockResourceData.Set("cloud", "aws")
-//	mockResourceData.Set("cloud_config_id", "config123")
-//
-//	var mps []*models.V1CustomMachinePoolConfig
-//	mps = append(mps, &models.V1CustomMachinePoolConfig{
-//		AdditionalLabels:        nil,
-//		IsControlPlane:          ptr.BoolPtr(true),
-//		Name:                    "cp-pool",
-//		Size:                    1,
-//		Taints:                  nil,
-//		UseControlPlaneAsWorker: true,
-//		Values:                  "-- test yaml string",
-//	})
-//
-//	// Mock client
-//	mockClient := &client.V1Client{}
-//
-//	// Call the function with mocked dependencies
-//	diags, _ := flattenCloudConfigCustom("config123", mockResourceData, mockClient)
-//
-//	var emptyErr diag.Diagnostics
-//	// Assertions
-//	assert.Equal(t, emptyErr, diags)
-//
-//	// Assert resource data values
-//	assert.Equal(t, "config123", mockResourceData.Get("cloud_config_id"))
-//	assert.Equal(t, "account123", mockResourceData.Get("cloud_account_id"))
-//
-//}
-
 func TestToMachinePoolCustomCloud(t *testing.T) {
 	// Test case 1: Valid machine pool configuration
 	machinePool := map[string]interface{}{
@@ -192,79 +158,6 @@ func TestToCustomCloudCluster(t *testing.T) {
 	assert.NotNil(t, cluster.Spec.Machinepoolconfig)                                      // Verify Machinepoolconfig
 	assert.NotNil(t, cluster.Spec.Profiles)                                               // Verify Profiles
 }
-
-//func TestResourceClusterCustomCloudUpdate(t *testing.T) {
-//	// Mock schema.ResourceData with necessary fields
-//	mockResourceData := resourceClusterCustomCloud().TestResourceData()
-//	mockResourceData.Set("cloud_config", []interface{}{
-//		map[string]interface{}{
-//			"values": "test-values",
-//		},
-//	})
-//	mockResourceData.Set("machine_pool", []interface{}{
-//		map[string]interface{}{
-//			"control_plane":           true,
-//			"control_plane_as_worker": false,
-//			"node_pool_config":        "test-node-pool-config",
-//		},
-//	})
-//	mockResourceData.Set("context", "project")
-//	mockResourceData.Set("cloud", "custom-cloud")
-//	mockResourceData.Set("cloud_account_id", "test-cloud-account-id")
-//
-//	var mps []*models.V1CustomMachinePoolConfig
-//	mps = append(mps, &models.V1CustomMachinePoolConfig{
-//		AdditionalLabels:        nil,
-//		IsControlPlane:          ptr.BoolPtr(true),
-//		Name:                    "cp-pool",
-//		Size:                    1,
-//		Taints:                  nil,
-//		UseControlPlaneAsWorker: true,
-//		Values:                  "-- test yaml string",
-//	})
-//
-//	// Mock client.V1Client
-//	mockClient := &client.V1Client{}
-//
-//	// Call the resourceClusterCustomCloudUpdate function with mock objects
-//	diags := resourceClusterCustomCloudUpdate(context.Background(), mockResourceData, mockClient)
-//
-//	// Assertions
-//	var d diag.Diagnostics
-//	assert.Equal(t, d, diags)
-//
-//}
-
-//func TestResourceClusterCustomCloudCreate(t *testing.T) {
-//	// Mock schema.ResourceData with necessary fields
-//	mockResourceData := resourceClusterCustomCloud().TestResourceData()
-//	mockResourceData.Set("cloud_config", []interface{}{
-//		map[string]interface{}{
-//			"values": "test-values",
-//		},
-//	})
-//	mockResourceData.Set("machine_pool", []interface{}{
-//		map[string]interface{}{
-//			"control_plane":           true,
-//			"control_plane_as_worker": false,
-//			"node_pool_config":        "test-node-pool-config",
-//		},
-//	})
-//	mockResourceData.Set("context", "project")
-//	mockResourceData.Set("cloud", "custom-cloud")
-//	mockResourceData.Set("cloud_account_id", "test-cloud-account-id")
-//	mockResourceData.Set("skip_completion", true)
-//
-//	// Mock client.V1Client
-//	mockClient := &client.V1Client{}
-//
-//	// Call the resourceClusterCustomCloudCreate function with mock objects
-//	diags := resourceClusterCustomCloudCreate(context.Background(), mockResourceData, mockClient)
-//
-//	// Assertions
-//	var d diag.Diagnostics
-//	assert.Equal(t, d, diags)
-//}
 
 func boolPtr(b bool) *bool {
 	return &b
