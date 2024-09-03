@@ -11,6 +11,112 @@ description: |-
 
 ## Example Usage
 
+
+
+### Example of a Cluster Profile with Data Resources and Custom YAML
+
+In the following example, the cluster profile references data resources for the pack information. The pack information is used to define the cluster profile. The cluster profile also references a YAML file that contains the manifest information.
+
+```terraform
+
+data "spectrocloud_registry" "public_registry" {
+  name = "Public Repo"
+}
+
+data "spectrocloud_cloudaccount_aws" "account" {
+  count = var.deploy-aws ? 1 : 0
+  name  = var.aws-cloud-account-name
+}
+
+data "spectrocloud_pack" "aws_csi" {
+  name         = "csi-aws-ebs"
+  version      = "1.22.0"
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data "spectrocloud_pack" "aws_cni" {
+  name         = "cni-calico"
+  version      = "3.26.1"
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data "spectrocloud_pack" "aws_k8s" {
+  name         = "kubernetes"
+  version      = "1.27.5"
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data "spectrocloud_pack" "aws_ubuntu" {
+  name         = "ubuntu-aws"
+  version      = "22.04"
+  registry_uid = data.spectrocloud_registry.public_registry.id
+}
+
+data "spectrocloud_cluster" "aws_cluster_api" {
+  count = var.deploy-aws ? 1 : 0
+
+  name    = "aws-cluster-api"
+  context = "project"
+
+  depends_on = [spectrocloud_cluster_aws.aws-cluster-api]
+}
+
+
+resource "spectrocloud_cluster_profile" "aws-profile" {
+  count = var.deploy-aws ? 1 : 0
+
+  name        = "tf-aws-profile"
+  description = "A basic cluster profile for AWS"
+  tags        = concat(var.tags, ["env:aws"])
+  cloud       = "aws"
+  type        = "cluster"
+  version     = "1.0.0"
+
+  pack {
+    name   = data.spectrocloud_pack.aws_ubuntu.name
+    tag    = data.spectrocloud_pack.aws_ubuntu.version
+    uid    = data.spectrocloud_pack.aws_ubuntu.id
+    values = data.spectrocloud_pack.aws_ubuntu.values
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_k8s.name
+    tag    = data.spectrocloud_pack.aws_k8s.version
+    uid    = data.spectrocloud_pack.aws_k8s.id
+    values = data.spectrocloud_pack.aws_k8s.values
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_cni.name
+    tag    = data.spectrocloud_pack.aws_cni.version
+    uid    = data.spectrocloud_pack.aws_cni.id
+    values = data.spectrocloud_pack.aws_cni.values
+  }
+
+  pack {
+    name   = data.spectrocloud_pack.aws_csi.name
+    tag    = data.spectrocloud_pack.aws_csi.version
+    uid    = data.spectrocloud_pack.aws_csi.id
+    values = data.spectrocloud_pack.aws_csi.values
+  }
+
+  pack {
+    name   = "hello-universe"
+    type   = "manifest"
+    tag    = "1.0.0"
+    values = ""
+    manifest {
+      name    = "hello-universe"
+      content = file("manifests/hello-universe.yaml")
+    }
+  }
+}
+```
+
+### Inline YAML Example
+
+An example of a cluster profile using inline YAML.
+
 ```terraform
 # If looking up a cluster profile instead of creating a new one
 # data "spectrocloud_cluster_profile" "profile" {
@@ -177,6 +283,72 @@ resource "spectrocloud_cluster_profile" "this" {
     for_each = var.my-packs
   }
 ```
+
+### Profile Variables Example
+
+An example of a cluster profile with profile variables. Refer to the [Profile Variables](#nested-schema-for-profile_variablesvariable) section for more information on the nested schema for profile variables.
+
+~> Profile variables are currently under Tech Preview and only available for Edge clusters. Refer to the [Define and Manage Profile Variables](https://docs.spectrocloud.com/profiles/cluster-profiles/create-cluster-profiles/define-profile-variables/) documentation for more information on how to use profile variables.
+
+
+```terraform
+resource "spectrocloud_cluster_profile" "profile" {
+  name        = "vsphere-picard-4"
+  description = "basic cp"
+  tags        = ["dev", "department:devops", "owner:bob"]
+  cloud       = "vsphere"
+  type        = "cluster"
+
+  pack {
+    name   = "ubuntu-vsphere"
+    tag    = "LTS__18.4.x"
+    uid    = data.spectrocloud_pack.ubuntu.id
+    values = "foo: 1"
+  }
+
+  pack {
+    name   = "kubernetes"
+    tag    = "1.21.5"
+    uid    = data.spectrocloud_pack.k8s.id
+    values = data.spectrocloud_pack.k8s.values
+  }
+
+  pack {
+    name   = "cni-calico"
+    tag    = "3.16.x"
+    uid    = data.spectrocloud_pack.cni.id
+    values = data.spectrocloud_pack.cni.values
+  }
+
+  pack {
+    name   = "csi-vsphere-csi"
+    tag    = "2.3.x"
+    uid    = data.spectrocloud_pack.csi.id
+    values = data.spectrocloud_pack.csi.values
+  }
+
+
+  profile_variables{
+    variable {
+      name = "default_password"
+      display_name = "Default Password"
+      format = "string"
+      hidden = true // For sensitive variables like passwords, setting hidden to true will mask the variable value.
+    }
+    variable {
+      name = "default_version"
+      display_name = "Version"
+      format = "version"
+      description = "description hard-version"
+      default_value = "0.0.1"
+      regex = "*.*"
+      required = true
+      immutable = false
+    }
+  }
+}
+```
+
 
 ## Import
 
