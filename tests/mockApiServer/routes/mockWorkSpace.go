@@ -76,7 +76,7 @@ func getMockWorkspacePayload() *models.V1Workspace {
 					BackupConfig: &models.V1ClusterBackupConfig{
 						// Add relevant fields with dummy data for BackupConfig here
 						Schedule: &models.V1ClusterFeatureSchedule{
-							"daily",
+							ScheduledRunTime: "daily",
 						},
 						BackupLocationName: "Default", // Keep backups for 7 days
 					},
@@ -112,7 +112,7 @@ func getMockWorkspaceBackUpPayload() *models.V1WorkspaceBackup {
 				BackupConfig: &models.V1ClusterBackupConfig{
 					// Add relevant fields with dummy data for BackupConfig here
 					Schedule: &models.V1ClusterFeatureSchedule{
-						"daily",
+						ScheduledRunTime: "daily",
 					},
 					BackupLocationName: "Default", // Keep backups for 7 days
 				},
