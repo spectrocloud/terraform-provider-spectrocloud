@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 	basePath = os.Getenv("TF_SRC")
 	startMockApiServerScript = basePath + "/tests/mockApiServer/start_mock_api_server.sh"
 	stopMockApiServerScript = basePath + "/tests/mockApiServer/stop_mock_api_server.sh"
-
+	fmt.Printf("\033[1;36m%s\033[0m", "> [Debug] Basepath -"+basePath+" \n")
 	err := setup()
 	if err != nil {
 		fmt.Printf("Error during setup: %v\n", err)
@@ -163,7 +163,7 @@ func setup() error {
 		return err
 	}
 
-	fmt.Printf("\033[1;36m%s\033[0m", "> Started Mock Api Server at https://127.0.0.1:8080 \n")
+	fmt.Printf("\033[1;36m%s\033[0m", "> Started Mock Api Server at https://127.0.0.1:8080 & https://127.0.0.1:8888 \n")
 	unitTestMockAPIClient, _ = unitTestProviderConfigure(ctx)
 	unitTestMockAPINegativeClient, _ = unitTestNegativeCaseProviderConfigure(ctx)
 	fmt.Printf("\033[1;36m%s\033[0m", "> Setup completed \n")

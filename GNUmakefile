@@ -45,10 +45,9 @@ generate:
 ##@ Test Targets
 .PHONY: testacc
 testacc: ## Run acceptance tests
-	TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./... -timeout 120m
+	TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m
 
 ##@ Development Targets
-
 DEV_PROVIDER_VERSION=100.100.100
 dev-provider:  ## Generate dev provider
 	bash generate_dev_provider.sh $(DEV_PROVIDER_VERSION)
