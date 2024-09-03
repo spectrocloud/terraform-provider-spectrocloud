@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"testing"
 	"time"
 )
@@ -44,7 +43,7 @@ var stopMockApiServerScript = ""
 
 func TestMain(m *testing.M) {
 	cwd, _ := os.Getwd()
-	_ = os.Setenv("TF_SRC", filepath.Dir(cwd))
+	_ = os.Setenv("TF_SRC", cwd)
 	basePath = os.Getenv("TF_SRC")
 	startMockApiServerScript = basePath + "/tests/mockApiServer/start_mock_api_server.sh"
 	stopMockApiServerScript = basePath + "/tests/mockApiServer/stop_mock_api_server.sh"
