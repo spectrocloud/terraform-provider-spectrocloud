@@ -43,9 +43,9 @@ func TestToClusterProfileVariables(t *testing.T) {
 		},
 	}
 	proVar = append(proVar, variables)
-	mockResourceData.Set("cloud", "edge-native")
-	mockResourceData.Set("type", "add-on")
-	mockResourceData.Set("profile_variables", proVar)
+	_ = mockResourceData.Set("cloud", "edge-native")
+	_ = mockResourceData.Set("type", "add-on")
+	_ = mockResourceData.Set("profile_variables", proVar)
 	result, err := toClusterProfileVariables(mockResourceData)
 
 	// Assertions for valid profile variables
@@ -54,9 +54,9 @@ func TestToClusterProfileVariables(t *testing.T) {
 
 	// Test case 2: Empty profile variables
 	mockResourceDataEmpty := resourceClusterProfile().TestResourceData()
-	mockResourceDataEmpty.Set("cloud", "edge-native")
-	mockResourceDataEmpty.Set("type", "add-on")
-	mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
+	_ = mockResourceDataEmpty.Set("cloud", "edge-native")
+	_ = mockResourceDataEmpty.Set("type", "add-on")
+	_ = mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
 	resultEmpty, errEmpty := toClusterProfileVariables(mockResourceDataEmpty)
 
 	// Assertions for empty profile variables
@@ -65,8 +65,8 @@ func TestToClusterProfileVariables(t *testing.T) {
 
 	// Test case 3: Invalid profile variables format
 	mockResourceDataInvalid := resourceClusterProfile().TestResourceData()
-	mockResourceDataInvalid.Set("cloud", "edge-native")
-	mockResourceDataInvalid.Set("profile_variables", []interface{}{
+	_ = mockResourceDataInvalid.Set("cloud", "edge-native")
+	_ = mockResourceDataInvalid.Set("profile_variables", []interface{}{
 		map[string]interface{}{
 			"variable": []interface{}{}, // Invalid format, should be a list
 		},
@@ -108,8 +108,8 @@ func TestFlattenProfileVariables(t *testing.T) {
 		},
 	}
 	proVar = append(proVar, variables)
-	mockResourceData.Set("cloud", "edge-native")
-	mockResourceData.Set("profile_variables", proVar)
+	_ = mockResourceData.Set("cloud", "edge-native")
+	_ = mockResourceData.Set("profile_variables", proVar)
 
 	pv := []*models.V1Variable{
 		{Name: ptr.StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: "string", DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
@@ -155,8 +155,8 @@ func TestFlattenProfileVariables(t *testing.T) {
 	// Test case 2: Empty profile variables and pv
 	//mockResourceDataEmpty := schema.TestResourceDataRaw(t, resourceClusterProfileVariables().Schema, map[string]interface{}{})
 	mockResourceDataEmpty := resourceClusterProfile().TestResourceData()
-	mockResourceDataEmpty.Set("cloud", "edge-native")
-	mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
+	_ = mockResourceDataEmpty.Set("cloud", "edge-native")
+	_ = mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
 	resultEmpty, errEmpty := flattenProfileVariables(mockResourceDataEmpty, nil)
 
 	// Assertions for empty profile variables and pv
@@ -198,41 +198,41 @@ func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
 		},
 	}
 	proVar = append(proVar, variables)
-	mockResourceData.Set("cloud", "all")
-	mockResourceData.Set("type", "infra")
-	mockResourceData.Set("profile_variables", proVar)
+	_ = mockResourceData.Set("cloud", "all")
+	_ = mockResourceData.Set("type", "infra")
+	_ = mockResourceData.Set("profile_variables", proVar)
 	result, err := toClusterProfileVariables(mockResourceData)
 
 	// Assertions for valid profile variables
 	assert.Error(t, err)
 	assert.Len(t, result, 0)
 
-	mockResourceData.Set("cloud", "edge-native")
-	mockResourceData.Set("type", "infra")
+	_ = mockResourceData.Set("cloud", "edge-native")
+	_ = mockResourceData.Set("type", "infra")
 	result, err = toClusterProfileVariables(mockResourceData)
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
 
-	mockResourceData.Set("cloud", "aws")
-	mockResourceData.Set("type", "add-on")
+	_ = mockResourceData.Set("cloud", "aws")
+	_ = mockResourceData.Set("type", "add-on")
 	result, err = toClusterProfileVariables(mockResourceData)
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
 
-	mockResourceData.Set("cloud", "all")
-	mockResourceData.Set("type", "add-on")
+	_ = mockResourceData.Set("cloud", "all")
+	_ = mockResourceData.Set("type", "add-on")
 	result, err = toClusterProfileVariables(mockResourceData)
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
 
-	mockResourceData.Set("cloud", "aws")
-	mockResourceData.Set("type", "infra")
+	_ = mockResourceData.Set("cloud", "aws")
+	_ = mockResourceData.Set("type", "infra")
 	result, err = toClusterProfileVariables(mockResourceData)
 	assert.Error(t, err)
 	assert.Len(t, result, 0)
 
-	mockResourceData.Set("cloud", "edge-native")
-	mockResourceData.Set("type", "add-on")
+	_ = mockResourceData.Set("cloud", "edge-native")
+	_ = mockResourceData.Set("type", "add-on")
 	result, err = toClusterProfileVariables(mockResourceData)
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
@@ -370,9 +370,9 @@ func prepareBaseClusterProfileTestData() *schema.ResourceData {
 	_ = d.Set("cloud", "all")
 	_ = d.Set("type", "cluster")
 	var variables []interface{}
-	variables = append(variables, []interface{}{
+	variables = append(variables,
 		map[string]interface{}{
-			"variable": map[string]interface{}{
+			"variable": []interface{}{map[string]interface{}{
 				"name":          "test_variable",
 				"display_name":  "Test Vat",
 				"format":        "string",
@@ -384,8 +384,9 @@ func prepareBaseClusterProfileTestData() *schema.ResourceData {
 				"is_sensitive":  false,
 				"hidden":        false,
 			},
+			},
 		},
-	})
+	)
 	_ = d.Set("profile_variables", variables)
 	_ = d.Set("pack", []interface{}{
 		map[string]interface{}{
@@ -395,10 +396,11 @@ func prepareBaseClusterProfileTestData() *schema.ResourceData {
 			"registry_uid": "test-pub-reg-uid",
 			"tag":          "test:test",
 			"values":       "test values",
-			"manifest": map[string]interface{}{
+			"manifest": []interface{}{map[string]interface{}{
 				"uid":     "test-manifest-uid",
 				"name":    "test-manifest",
 				"content": "value content",
+			},
 			},
 		},
 		map[string]interface{}{
@@ -408,10 +410,11 @@ func prepareBaseClusterProfileTestData() *schema.ResourceData {
 			"registry_uid": "test-pub-reg-uid",
 			"tag":          "test:test",
 			"values":       "test values",
-			"manifest": map[string]interface{}{
+			"manifest": []interface{}{map[string]interface{}{
 				"uid":     "test-manifest-uid",
 				"name":    "test-manifest",
 				"content": "value content",
+			},
 			},
 		},
 		map[string]interface{}{
@@ -421,10 +424,11 @@ func prepareBaseClusterProfileTestData() *schema.ResourceData {
 			"registry_uid": "test-pub-reg-uid",
 			"tag":          "test:test",
 			"values":       "test values",
-			"manifest": map[string]interface{}{
+			"manifest": []interface{}{map[string]interface{}{
 				"uid":     "test-manifest-uid",
 				"name":    "test-manifest",
 				"content": "value content",
+			},
 			},
 		},
 		map[string]interface{}{
@@ -434,10 +438,11 @@ func prepareBaseClusterProfileTestData() *schema.ResourceData {
 			"registry_uid": "test-pub-reg-uid",
 			"tag":          "test:test",
 			"values":       "test values",
-			"manifest": map[string]interface{}{
+			"manifest": []interface{}{map[string]interface{}{
 				"uid":     "test-manifest-uid",
 				"name":    "test-manifest",
 				"content": "value content",
+			},
 			},
 		},
 	})
@@ -448,9 +453,17 @@ func prepareBaseClusterProfileTestData() *schema.ResourceData {
 func TestResourceClusterProfileCreate(t *testing.T) {
 	d := prepareBaseClusterProfileTestData()
 	var ctx context.Context
+	_ = d.Set("type", "add-on")
 	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
 	assert.Equal(t, "cluster-profile-1", d.Id())
+}
+
+func TestResourceClusterProfileCreateError(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	var ctx context.Context
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
+	assert.NotEmpty(t, diags)
 }
 
 func TestResourceClusterProfileRead(t *testing.T) {

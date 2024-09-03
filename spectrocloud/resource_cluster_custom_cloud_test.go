@@ -116,14 +116,16 @@ func TestToCustomClusterConfig(t *testing.T) {
 			"node_pool_config": "test-config-yaml",
 		},
 	})
-	mockResourceData.Set("location_config", map[string]interface{}{
+	var location []interface{}
+	location = append(location, map[string]interface{}{
 		"country_code": "ind",
 		"country_name": "india",
 		"region_code":  "MZ",
 		"region_name":  "mumbai",
-		"latitude":     "N12312",
-		"longitude":    "S12312",
+		"latitude":     0.0,
+		"longitude":    0.0,
 	})
+	mockResourceData.Set("location_config", location)
 
 	expected := &models.V1CustomClusterConfigEntity{
 		Location:                toClusterLocationConfigs(mockResourceData),
