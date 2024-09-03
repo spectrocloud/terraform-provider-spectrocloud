@@ -34,15 +34,19 @@ func TestDataSourceClusterRead(t *testing.T) {
 		{
 			name: "Cluster not found",
 			resourceData: schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-				"name":    {Type: schema.TypeString, Required: true},
-				"context": {Type: schema.TypeString, Required: true},
-				"virtual": {Type: schema.TypeBool, Optional: true},
+				"name":              {Type: schema.TypeString, Required: true},
+				"context":           {Type: schema.TypeString, Required: true},
+				"virtual":           {Type: schema.TypeBool, Optional: true},
+				"kube_config":       {Type: schema.TypeString, Computed: true},
+				"admin_kube_config": {Type: schema.TypeString, Computed: true},
 			}, map[string]interface{}{
-				"name":    "test-cluster",
-				"context": "some-context",
-				"virtual": false,
+				"name":              "test-cluster",
+				"context":           "some-context",
+				"virtual":           false,
+				"kube_config":       "",
+				"admin_kube_config": "",
 			}),
-			expectedError: true,
+			expectedError: false,
 			expectedDiags: diag.Diagnostics{
 				diag.Diagnostic{
 					Severity: diag.Error,
