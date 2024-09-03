@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -69,4 +70,50 @@ func TestToTencentAccount(t *testing.T) {
 			assert.Equal(t, *tt.expected.Spec.SecretKey, *result.Spec.SecretKey)
 		})
 	}
+}
+
+func prepareResourceCloudAccountTencent() *schema.ResourceData {
+	d := resourceCloudAccountTencent().TestResourceData()
+	d.SetId("test-tke-account-id-1")
+	_ = d.Set("name", "test-tke-account-1")
+	_ = d.Set("context", "project")
+	_ = d.Set("tencent_secret_id", "test-secret-id")
+	_ = d.Set("tencent_secret_key", "test-secret-key")
+
+	return d
+}
+
+func TestResourceCloudAccountTencentCreate(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountTencent()
+	ctx := context.Background()
+	diags := resourceCloudAccountTencentCreate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-tke-account-id-1", d.Id())
+}
+
+func TestResourceCloudAccountTencentRead(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountTencent()
+	ctx := context.Background()
+	diags := resourceCloudAccountTencentRead(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-tke-account-id-1", d.Id())
+}
+
+func TestResourceCloudAccountTencentUpdate(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountTencent()
+	ctx := context.Background()
+	diags := resourceCloudAccountTencentUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-tke-account-id-1", d.Id())
+}
+
+func TestResourceCloudAccountTencentDelete(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountTencent()
+	ctx := context.Background()
+	diags := resourceCloudAccountTencentDelete(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
 }

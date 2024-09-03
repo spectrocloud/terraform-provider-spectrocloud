@@ -217,19 +217,6 @@ func TestToMachinePoolAzure(t *testing.T) {
 
 }
 
-//func TestToAzureCluster(t *testing.T) {
-//	// Mock data for schema.ResourceData
-//	d := prepareAzureTestData()
-//
-//	m := &client.V1Client{}
-//	result, err := toAzureCluster(m, d)
-//
-//	// Assertions
-//	assert.NoError(t, err, "Expected no error")
-//	assert.NotNil(t, result, "Expected non-nil result")
-//
-//}
-
 func TestFlattenMachinePoolConfigsAzure(t *testing.T) {
 	// Sample V1AzureMachinePoolConfig data
 	azsList := []string{"us-east-1a", "us-east-1b"}

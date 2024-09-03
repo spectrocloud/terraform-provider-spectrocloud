@@ -170,40 +170,6 @@ func resourceKubevirtDataVolumeDelete(ctx context.Context, d *schema.ResourceDat
 	return diags
 }
 
-func FlattenAddVolumeOptions(addVolumeOptions *models.V1VMAddVolumeOptions) []interface{} {
-	if addVolumeOptions == nil {
-		return []interface{}{}
-	}
-
-	result := map[string]interface{}{
-		"name": addVolumeOptions.Name,
-	}
-
-	if addVolumeOptions.Disk != nil && addVolumeOptions.Disk.Disk != nil {
-		result["disk"] = []interface{}{
-			map[string]interface{}{
-				"name": addVolumeOptions.Disk.Name,
-				"bus":  addVolumeOptions.Disk.Disk.Bus,
-			},
-		}
-	}
-
-	if addVolumeOptions.VolumeSource != nil && addVolumeOptions.VolumeSource.DataVolume != nil {
-		result["volume_source"] = []interface{}{
-			map[string]interface{}{
-				"data_volume": []interface{}{
-					map[string]interface{}{
-						"name":         addVolumeOptions.VolumeSource.DataVolume.Name,
-						"hotpluggable": addVolumeOptions.VolumeSource.DataVolume.Hotpluggable,
-					},
-				},
-			},
-		}
-	}
-
-	return []interface{}{result}
-}
-
 func ExpandAddVolumeOptions(addVolumeOptions []interface{}) *models.V1VMAddVolumeOptions {
 	if len(addVolumeOptions) == 0 || addVolumeOptions[0] == nil {
 		return nil

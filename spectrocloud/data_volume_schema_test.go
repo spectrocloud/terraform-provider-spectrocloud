@@ -89,68 +89,6 @@ func prepareDataVolumeTestData() *schema.ResourceData {
 	return rd
 }
 
-//func TestCreateDataVolume(t *testing.T) {
-//	rd := prepareDataVolumeTestData()
-//
-//	m := &client.V1Client{}
-//
-//	ctx := context.Background()
-//	resourceKubevirtDataVolumeCreate(ctx, rd, m)
-//}
-//
-//func TestDeleteDataVolume(t *testing.T) {
-//	var diags diag.Diagnostics
-//	assert := assert.New(t)
-//	rd := prepareDataVolumeTestData()
-//
-//	m := &client.V1Client{}
-//
-//	ctx := context.Background()
-//	diags = resourceKubevirtDataVolumeDelete(ctx, rd, m)
-//	if diags.HasError() {
-//		assert.Error(errors.New("delete operation failed"))
-//	} else {
-//		assert.NoError(nil)
-//	}
-//}
-//
-//func TestReadDataVolumeWithoutStatus(t *testing.T) {
-//	assert := assert.New(t)
-//	rd := prepareDataVolumeTestData()
-//	rd.SetId("project/cluster-123/default/vm-test/vol-test")
-//	m := &client.V1Client{}
-//
-//	ctx := context.Background()
-//	diags := resourceKubevirtDataVolumeRead(ctx, rd, m)
-//	if diags.HasError() {
-//		assert.Error(errors.New("read operation failed"))
-//	} else {
-//		assert.NoError(nil)
-//	}
-//
-//	// Read from metadata block
-//	metadata := rd.Get("metadata").([]interface{})[0].(map[string]interface{})
-//
-//	// Check that the resource data has been updated correctly
-//	assert.Equal("vol-test", metadata["name"])
-//	assert.Equal("default", metadata["namespace"])
-//}
-//
-//func TestReadDataVolume(t *testing.T) {
-//	assert := assert.New(t)
-//	rd := prepareDataVolumeTestData()
-//
-//	m := &client.V1Client{}
-//
-//	ctx := context.Background()
-//	diags := resourceKubevirtDataVolumeRead(ctx, rd, m)
-//	if diags.HasError() {
-//		assert.Error(errors.New("read operation failed"))
-//	} else {
-//		assert.NoError(nil)
-//	}
-//}
-
 func TestExpandAddVolumeOptions(t *testing.T) {
 	assert := assert.New(t)
 

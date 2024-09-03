@@ -1,7 +1,9 @@
 package spectrocloud
 
 import (
+	"context"
 	"github.com/go-openapi/strfmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
@@ -115,4 +117,70 @@ func TestSetFields_WithoutNameTag(t *testing.T) {
 
 	resultWithoutNameTag := setFields(d, mockTagsWithoutName)
 	assert.Equal(t, expectedApplianceWithoutNameTag, resultWithoutNameTag)
+}
+
+func prepareApplianceBaseData() *schema.ResourceData {
+	d := resourceAppliance().TestResourceData()
+	_ = d.Set("uid", "test-edge-host-id")
+	_ = d.Set("wait", false)
+	d.SetId("test-idz")
+	return d
+}
+
+func TestResourceApplianceCreateInvalid(t *testing.T) {
+
+	d := prepareApplianceBaseData()
+
+	diags := resourceApplianceCreate(context.Background(), d, unitTestMockAPINegativeClient)
+
+	assert.NotEmpty(t, diags)
+	assertFirstDiagMessage(t, diags, "Operation not allowed")
+}
+
+func TestResourceApplianceRead(t *testing.T) {
+
+	d := prepareApplianceBaseData()
+
+	diags := resourceApplianceRead(context.Background(), d, unitTestMockAPIClient)
+
+	assert.Empty(t, diags)
+
+}
+
+func TestResourceApplianceUpdate(t *testing.T) {
+
+	d := prepareApplianceBaseData()
+
+	diags := resourceApplianceUpdate(context.Background(), d, unitTestMockAPIClient)
+
+	assert.Empty(t, diags)
+
+}
+
+func TestResourceApplianceDelete(t *testing.T) {
+
+	d := prepareApplianceBaseData()
+
+	diags := resourceApplianceDelete(context.Background(), d, unitTestMockAPIClient)
+
+	assert.Empty(t, diags)
+}
+
+func TestResourceApplianceDeleteInvalid(t *testing.T) {
+
+	d := prepareApplianceBaseData()
+
+	diags := resourceApplianceDelete(context.Background(), d, unitTestMockAPINegativeClient)
+
+	assert.NotEmpty(t, diags)
+	assertFirstDiagMessage(t, diags, "No edge host found")
+
+}
+
+func TestResourceApplianceGetState(t *testing.T) {
+
+	diags := resourceApplianceStateRefreshFunc(getV1ClientWithResourceContext(unitTestMockAPIClient, "project"), "test")
+
+	assert.NotEmpty(t, diags)
+
 }

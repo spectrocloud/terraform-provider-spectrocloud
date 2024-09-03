@@ -142,7 +142,7 @@ func TestToMachinePoolTke(t *testing.T) {
 					MaxSize:        5,
 					IsControlPlane: false,
 					UpdateStrategy: &models.V1UpdateStrategy{
-						Type: "RollingUpdateScaleOut", // Replace with the result of getUpdateStrategy if necessary
+						Type: "RollingUpdateScaleOut",
 					},
 					Taints:           []*models.V1Taint{}, // Expected taints if any
 					AdditionalLabels: map[string]string{},
@@ -176,7 +176,7 @@ func TestToMachinePoolTke(t *testing.T) {
 					MaxSize:        3,
 					IsControlPlane: true,
 					UpdateStrategy: &models.V1UpdateStrategy{
-						Type: "RollingUpdateScaleOut", // Replace with the result of getUpdateStrategy if necessary
+						Type: "RollingUpdateScaleOut",
 					},
 					Taints:           []*models.V1Taint{}, // Expected taints if any
 					AdditionalLabels: map[string]string{},

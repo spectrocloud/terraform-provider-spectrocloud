@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -102,4 +103,63 @@ func TestToWorkspace(t *testing.T) {
 			assert.ElementsMatch(t, tt.expected.Spec.ClusterRefs, result.Spec.ClusterRefs)
 		})
 	}
+}
+
+func prepareResourceWorkspace() *schema.ResourceData {
+	d := resourceWorkspace().TestResourceData()
+	d.SetId("test-ws-id")
+	_ = d.Set("name", "test-ws")
+	_ = d.Set("tags", []string{"dev:test"})
+	_ = d.Set("description", "test description")
+	var c []interface{}
+	c = append(c, map[string]interface{}{
+		"uid": "test-cluster-id",
+	})
+	var bp []interface{}
+	bp = append(bp, map[string]interface{}{
+		"prefix":                    "test-prefix",
+		"backup_location_id":        "test-location-id",
+		"schedule":                  "0 1 * * *",
+		"expiry_in_hour":            1,
+		"include_disks":             false,
+		"include_cluster_resources": true,
+		"namespaces":                []string{"ns1", "ns2"},
+		"cluster_uids":              []string{"cluster1", "cluster2"},
+		"include_all_clusters":      false,
+	})
+	_ = d.Set("backup_policy", bp)
+	var subjects []interface{}
+	subjects = append(subjects, map[string]interface{}{
+		"type":      "User",
+		"name":      "test-name-user",
+		"namespace": "ns1",
+	})
+	var rbacs []interface{}
+	rbacs = append(rbacs, map[string]interface{}{
+		"type":      "RoleBinding",
+		"namespace": "ns1",
+		"role": map[string]string{
+			"test": "admin",
+		},
+		"subjects": subjects,
+	})
+	_ = d.Set("cluster_rbac_binding", rbacs)
+	var ns []interface{}
+	ns = append(ns, map[string]interface{}{
+		"name": "test-ns-name",
+		"resource_allocation": map[string]string{
+			"test": "test",
+		},
+		"images_blacklist": []string{"test-list"},
+	})
+	_ = d.Set("namespaces", ns)
+
+	return d
+}
+
+func TestResourceWorkspaceDelete(t *testing.T) {
+	d := prepareResourceWorkspace()
+	var ctx context.Context
+	diags := resourceWorkspaceDelete(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
 }

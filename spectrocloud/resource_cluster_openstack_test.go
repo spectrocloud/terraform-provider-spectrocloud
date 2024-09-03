@@ -20,6 +20,9 @@ func int32Ptr(i int32) *int32 {
 	return &i
 }
 
+func int64Ptr(i int64) *int64 {
+	return &i
+}
 func TestToOpenStackCluster(t *testing.T) {
 	// Setup test data
 	d := schema.TestResourceDataRaw(t, resourceClusterOpenStack().Schema, map[string]interface{}{
