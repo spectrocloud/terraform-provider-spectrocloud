@@ -11,7 +11,11 @@ description: |-
 
 ## Example Usage
 
-Example of a cluster profile using data resources.
+
+
+### Example of a Cluster Profile with Data Resources and Custom YAML
+
+In the following example, the cluster profile references data resources for the pack information. The pack information is used to define the cluster profile. The cluster profile also references a YAML file that contains the manifest information.
 
 ```terraform
 
@@ -132,7 +136,7 @@ resource "spectrocloud_cluster_profile" "this" {
 
 ### Profile Variables Example
 
-An example of a cluster profile with profile variables.
+An example of a cluster profile with profile variables. Refer to the [Profile Variables](#nested-schema-for-profile_variablesvariable) section for more information on the nested schema for profile variables.
 
 ~> Profile variables are currently under Tech Preview and only available for Edge clusters. Refer to the [Define and Manage Profile Variables](https://docs.spectrocloud.com/profiles/cluster-profiles/create-cluster-profiles/define-profile-variables/) documentation for more information on how to use profile variables.
 
