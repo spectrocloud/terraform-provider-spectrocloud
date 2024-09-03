@@ -244,3 +244,61 @@ func generalWarningForRepave(diags *diag.Diagnostics) {
 		Detail:   message,
 	})
 }
+
+func flattenCommonAttributeForCustomClusterImport(c *client.V1Client, d *schema.ResourceData) error {
+	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	if err != nil {
+		return err
+	}
+	err = d.Set("cluster_profile", clusterProfiles)
+	if err != nil {
+		return err
+	}
+
+	var diags diag.Diagnostics
+	cluster, err := resourceClusterRead(d, c, diags)
+	if err != nil {
+		return err
+	}
+
+	if cluster.Metadata.Annotations["description"] != "" {
+		if err := d.Set("description", cluster.Metadata.Annotations["description"]); err != nil {
+			return err
+		}
+	}
+
+	if cluster.Status.SpcApply != nil {
+		err = d.Set("apply_setting", cluster.Status.SpcApply.ActionType)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster))
+	if err != nil {
+		return err
+	}
+	if cluster.Spec.ClusterConfig.MachineManagementConfig != nil {
+		err = d.Set("os_patch_on_boot", cluster.Spec.ClusterConfig.MachineManagementConfig.OsPatchConfig.PatchOnBoot)
+		if err != nil {
+			return err
+		}
+		err = d.Set("os_patch_schedule", cluster.Spec.ClusterConfig.MachineManagementConfig.OsPatchConfig.Schedule)
+		if err != nil {
+			return err
+		}
+	}
+	err = d.Set("force_delete", false)
+	if err != nil {
+		return err
+	}
+	err = d.Set("force_delete_delay", 20)
+	if err != nil {
+		return err
+	}
+	err = d.Set("skip_completion", false)
+	if err != nil {
+		return err
+	}
+	return nil
+}
