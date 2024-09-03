@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"net/http"
 )
 
 func getClusterProfilesMetadataResponse() *models.V1ClusterProfilesMetadata {
@@ -124,22 +125,7 @@ func ClusterProfileRoutes() []Route {
 			Path:   "/v1/clusterprofiles/{uid}/variables",
 			Response: ResponseData{
 				StatusCode: 200,
-				Payload:    &models.V1Variables{
-					//Variables: []*models.V1Variable{
-					//	{
-					//		DefaultValue: "test",
-					//		Description:  "test profile variable",
-					//		DisplayName:  "Test Var",
-					//		Format:       "string",
-					//		Hidden:       false,
-					//		Immutable:    false,
-					//		IsSensitive:  false,
-					//		Name:         nil,
-					//		Regex:        "*",
-					//		Required:     false,
-					//	},
-					//},
-				},
+				Payload:    &models.V1Variables{},
 			},
 		},
 		{
@@ -201,6 +187,14 @@ func ClusterProfileNegativeRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: 200,
 				Payload:    &models.V1ClusterProfilesMetadata{},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/clusterprofiles/{uid}",
+			Response: ResponseData{
+				StatusCode: http.StatusLocked,
+				Payload:    nil,
 			},
 		},
 	}

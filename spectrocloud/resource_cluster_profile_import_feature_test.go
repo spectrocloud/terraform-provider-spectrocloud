@@ -26,7 +26,7 @@ func TestResourceClusterProfileImportFeatureRead(t *testing.T) {
 	d := prepareProfileImportTestdata()
 	var ctx context.Context
 	d.SetId("cluster-profile-import-1")
-	diags := resourceClusterProfileImportFeatureRead(ctx, d, unitTestMockAPIClient)
+	diags := resourceClusterProfileImportFeatureRead(ctx, d, unitTestMockAPINegativeClient)
 	assert.NotEmpty(t, diags)
 
 }
