@@ -108,7 +108,7 @@ func init() {
 		routes.IPPoolRoutes,
 		routes.MacrosRoutes,
 		routes.TenantRoutes,
-		routes.WorkSpaceRoutes,
+		routes.WorkspaceRoutes,
 		routes.AlertRoutes,
 		routes.ClusterGroupRoutes,
 	)
@@ -127,5 +127,6 @@ func init() {
 		routes.ClusterCommonNegativeRoutes,
 		routes.MacrosNegativeRoutes,
 		routes.TenantNegativeRoutes,
+		routes.WorkspaceNegativeRoutes,
 	)
 }
