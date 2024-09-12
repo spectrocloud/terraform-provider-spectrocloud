@@ -245,3 +245,72 @@ func TestFlattenMachinePoolConfigsCustomCloud(t *testing.T) {
 		})
 	}
 }
+
+func TestParseResourceCustomCloudImportID(t *testing.T) {
+	tests := []struct {
+		id                  string
+		expectedClusterID   string
+		expectedScope       string
+		expectedCloudName   string
+		expectedError       bool
+		expectedErrorString string
+	}{
+		{
+			id:                "cluster456:project:nutanix",
+			expectedClusterID: "cluster456",
+			expectedScope:     "project",
+			expectedCloudName: "nutanix",
+			expectedError:     false,
+		},
+		{
+			id:                "cluster789:tenant:oracle",
+			expectedClusterID: "cluster789",
+			expectedScope:     "tenant",
+			expectedCloudName: "oracle",
+			expectedError:     false,
+		},
+		{
+			id:                  "cluster123:invalid:gcp",
+			expectedClusterID:   "",
+			expectedScope:       "",
+			expectedCloudName:   "",
+			expectedError:       true,
+			expectedErrorString: "invalid cluster ID format specified for import custom cloud cluster123:invalid:gcp, Ex: it should cluster_id:context:custom_cloud_name, `cluster456:project:nutanix`",
+		},
+		{
+			id:                  "cluster456:project",
+			expectedClusterID:   "",
+			expectedScope:       "",
+			expectedCloudName:   "",
+			expectedError:       true,
+			expectedErrorString: "invalid cluster ID format specified for import custom cloud cluster456:project, Ex: it should cluster_id:context:custom_cloud_name, `cluster456:project:nutanix`",
+		},
+		{
+			id:                  "cluster456:tenant:",
+			expectedClusterID:   "",
+			expectedScope:       "",
+			expectedCloudName:   "",
+			expectedError:       true,
+			expectedErrorString: "invalid cluster ID format specified for import custom cloud cluster456:tenant:, Ex: it should cluster_id:context:custom_cloud_name, `cluster456:project:nutanix`",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.id, func(t *testing.T) {
+			resourceData := resourceClusterCustomCloud().TestResourceData()
+			resourceData.SetId(test.id)
+
+			clusterID, scope, customCloudName, err := ParseResourceCustomCloudImportID(resourceData)
+
+			if test.expectedError {
+				assert.Error(t, err)
+				assert.EqualError(t, err, test.expectedErrorString)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.expectedClusterID, clusterID)
+				assert.Equal(t, test.expectedScope, scope)
+				assert.Equal(t, test.expectedCloudName, customCloudName)
+			}
+		})
+	}
+}

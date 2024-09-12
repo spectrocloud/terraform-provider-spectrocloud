@@ -36,15 +36,20 @@ func ParseResourceCustomCloudImportID(d *schema.ResourceData) (string, string, s
 	// Example: If the ID is a combination of ClusterId, then name of context/scope: `project` or `tenant` and then cloud type
 	// and if scope is then followed by projectID  "cluster456:project:nutanix" or "cluster456:tenant:oracle"
 	parts := strings.Split(d.Id(), ":")
-
+	errMsg := "invalid cluster ID format specified for import custom cloud %s, Ex: it should cluster_id:context:custom_cloud_name, `cluster456:project:nutanix`"
 	scope := "invalid"
 	clusterID := ""
 	customCloudName := ""
 	if len(parts) == 3 && (parts[1] == "tenant" || parts[1] == "project") {
-		clusterID, scope, customCloudName = parts[0], parts[1], parts[2]
+		if strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" || strings.TrimSpace(parts[2]) == "" {
+			return "", "", "", fmt.Errorf(errMsg, d.Id())
+		} else {
+			clusterID, scope, customCloudName = parts[0], parts[1], parts[2]
+		}
+
 	}
 	if scope == "invalid" {
-		return "", "", "", fmt.Errorf("invalid cluster ID format specified for import custom cloud %s, Ex: it should cluster_id:context:custom_cloud_name, `cluster456:project:nutanix`", d.Id())
+		return "", "", "", fmt.Errorf(errMsg, d.Id())
 	}
 	return clusterID, scope, customCloudName, nil
 }
