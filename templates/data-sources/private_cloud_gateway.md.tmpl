@@ -1,0 +1,22 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+## Example Usage
+
+
+```hcl
+ data "spectrocloud_private_cloud_gateway" "pcg" {
+   name = "wst-1-pcg"
+ }
+
+```
+
+{{ .SchemaMarkdown | trimspace }}
