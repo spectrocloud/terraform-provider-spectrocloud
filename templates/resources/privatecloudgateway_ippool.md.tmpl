@@ -38,7 +38,7 @@ An example of creating an IP Pool for a Private Cloud Gateway using a subnet of 
 
 ```hcl
  data "spectrocloud_private_cloud_gateway" "pcg" {
-   name = "wst-1-pcg"
+   name = "east-3-pcg"
  }
 
  resource "spectrocloud_privatecloudgateway_ippool" "ippool" {

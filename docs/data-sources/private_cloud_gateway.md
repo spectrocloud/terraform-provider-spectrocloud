@@ -9,6 +9,8 @@ description: |-
 
   A data resource to get the ID or name of Private Cloud Gateway.
 
+To learn more about Private Cloud Gateways, review the [Private Cloud Gateway](https://docs.spectrocloud.com/clusters/pcg/) documentation.
+
 ## Example Usage
 
 
@@ -25,4 +27,4 @@ description: |-
 ### Optional
 
 - `id` (String) The ID of Private Cloud Gateway.
-- `name` (String) The Name of Private Cloud Gateway.
+- `name` (String) The name of Private Cloud Gateway.
