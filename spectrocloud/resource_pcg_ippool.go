@@ -18,6 +18,7 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 		ReadContext:   resourceIpPoolRead,
 		UpdateContext: resourceIpPoolUpdate,
 		DeleteContext: resourceIpPoolDelete,
+		Description:   "A Resource to manage IP pools for Private Cloud Gateway.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -28,39 +29,47 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the IP pool.",
 			},
 			"private_cloud_gateway_id": {
-				Type:     schema.TypeString,
-				ForceNew: true,
-				Required: true,
+				Type:        schema.TypeString,
+				ForceNew:    true,
+				Required:    true,
+				Description: "The ID of the Private Cloud Gateway.",
 			},
 			"network_type": {
 				Type:             schema.TypeString,
 				Required:         true,
 				ValidateDiagFunc: validateNetworkType,
+				Description:      "The type of network for the IP pool. Allowed values are: `range` and `subnet`.",
 			},
 			"ip_start_range": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The start IP address of the IP pool. Required if `network_type` is `range`.",
 			},
 			"ip_end_range": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The end IP address of the IP pool. Required if `network_type` is `range`.",
 			},
 			"subnet_cidr": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The subnet CIDR of the IP pool. Required if `network_type` is `subnet`.",
 			},
 			"prefix": {
-				Type:     schema.TypeInt,
-				Required: true,
+				Type:        schema.TypeInt,
+				Required:    true,
+				Description: "The prefix of the IP pool provided network range or subnet. For example `24` for a `/24` subnet or a range that falls inside a `24` subnet.",
 			},
 			"gateway": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The network gateway IP address for the IP pool. Typically, this is the default network gateway for the subnet.",
 			},
 			"nameserver_addresses": {
 				Type:     schema.TypeSet,
@@ -69,6 +78,7 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "The list of nameserver IP addresses for the IP pool.",
 			},
 			"nameserver_search_suffix": {
 				Type:     schema.TypeSet,
@@ -77,11 +87,13 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "The list of nameserver search suffixes for the IP pool. For example, `example.org`.",
 			},
 			"restrict_to_single_cluster": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Restrict the IP pool to a single cluster. If set to `true`, the IP pool is restricted to a single cluster. We recommend setting this to `true` for production environments and creating separate IP pools for each cluster.",
 			},
 		},
 	}

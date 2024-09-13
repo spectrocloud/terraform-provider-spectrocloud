@@ -9,9 +9,48 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
+You can learn more about Private Cloud Gateways IP Pools by revewing the [Create and Manage IPAM Node Pools](https://docs.spectrocloud.com/clusters/pcg/manage-pcg/create-manage-node-pool/) guide.
+
 ## Example Usage
 
+An example of creating an IP Pool for a Private Cloud Gateway using a range of IP addresses and restricting the IP Pool to a single cluster.
 
+```hcl
+ data "spectrocloud_private_cloud_gateway" "pcg" {
+   name = "wst-1-pcg"
+ }
+
+ resource "spectrocloud_privatecloudgateway_ippool" "ippool" {
+   gateway                  = "192.168.1.1"
+   name                     = "primary-compute-pool-1"
+   network_type             = "range"
+   prefix                   = "24"
+   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
+   ip_start_range           = "192.168.1.10"
+   ip_end_range             = "192.168.1.100"
+   nameserver_addresses     = "192.168.1.8"
+   restrict_to_single_cluster = true
+ }
+```
+
+
+An example of creating an IP Pool for a Private Cloud Gateway using a subnet of IP addresses.
+
+```hcl
+ data "spectrocloud_private_cloud_gateway" "pcg" {
+   name = "east-3-pcg"
+ }
+
+ resource "spectrocloud_privatecloudgateway_ippool" "ippool" {
+   gateway                  = "10.10.192.1"
+   name                     = "backup-compute-pool"
+   network_type             = "subnet"
+   prefix                   = "24"
+   subnet_cidr              = "10.10.100.0/24"
+   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
+   nameserver_addresses     = "192.168.1.8"
+ }
+```
 
 
 {{ .SchemaMarkdown | trimspace }}

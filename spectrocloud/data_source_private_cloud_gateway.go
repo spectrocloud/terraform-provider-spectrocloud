@@ -10,6 +10,7 @@ import (
 func dataSourcePCG() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourcePCGRead,
+		Description: "A data resource to get the ID or name of Private Cloud Gateway.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -23,7 +24,7 @@ func dataSourcePCG() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Optional:    true,
-				Description: "The Name of Private Cloud Gateway.",
+				Description: "The name of Private Cloud Gateway.",
 			},
 		},
 	}
