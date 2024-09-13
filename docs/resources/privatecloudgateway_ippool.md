@@ -27,6 +27,7 @@ description: |-
 
 ### Optional
 
+- `context` (String) Specifies cluster context where IP Pool is created. Allowed values are `project` or `tenant`. Defaults to `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `ip_end_range` (String)
 - `ip_start_range` (String)
 - `nameserver_addresses` (Set of String)
