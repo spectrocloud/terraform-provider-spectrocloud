@@ -88,7 +88,6 @@ The following example is for creating an IP pool that belongs to a Private Cloud
 
 ### Optional
 
-- `context` (String) Specifies cluster context where IP Pool is created. Allowed values are `project` or `tenant`. Defaults to `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `ip_end_range` (String) The end IP address of the IP pool. Required if `network_type` is `range`.
 - `ip_start_range` (String) The start IP address of the IP pool. Required if `network_type` is `range`.
 - `nameserver_addresses` (Set of String) The list of nameserver IP addresses for the IP pool.

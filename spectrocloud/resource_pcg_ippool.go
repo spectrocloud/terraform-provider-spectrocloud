@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
@@ -30,14 +29,6 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
-			"context": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
-				Default:      "project",
-				Description: "Specifies cluster context where IP Pool is created. " +
-					"Allowed values are `project` or `tenant`. Defaults to `project`. " + PROJECT_NAME_NUANCE,
-			},
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -110,8 +101,7 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 }
 
 func resourceIpPoolCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	resourceContext := d.Get("context").(string)
-	c := getV1ClientWithResourceContext(m, resourceContext)
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
 
@@ -127,8 +117,7 @@ func resourceIpPoolCreate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	resourceContext := d.Get("context").(string)
-	c := getV1ClientWithResourceContext(m, resourceContext)
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
@@ -182,8 +171,7 @@ func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceIpPoolUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	resourceContext := d.Get("context").(string)
-	c := getV1ClientWithResourceContext(m, resourceContext)
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
@@ -199,8 +187,7 @@ func resourceIpPoolUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceIpPoolDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	resourceContext := d.Get("context").(string)
-	c := getV1ClientWithResourceContext(m, resourceContext)
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
