@@ -52,7 +52,7 @@ An example of creating an IP Pool for a Private Cloud Gateway using a subnet of 
  }
 ```
 
-The following example is for creating an IP that belongs to a Private Cloud Gateway created at the tenant scope.
+The following example is for creating an IP pool that belongs to a Private Cloud Gateway created at the tenant scope.
 
 ```hcl
  data "spectrocloud_private_cloud_gateway" "pcg" {
