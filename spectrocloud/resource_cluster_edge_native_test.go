@@ -529,7 +529,7 @@ func TestToOverlayNetworkConfigAndVip(t *testing.T) {
 	assert.NoError(t, errValid)
 	assert.Equal(t, &models.V1EdgeNativeControlPlaneEndPoint{
 		Host: "192.168.1.1",
-		Type: "IP",
+		Type: "VIP",
 	}, controlPlaneEndpointValid)
 	assert.Equal(t, &models.V1EdgeNativeOverlayNetworkConfiguration{
 		Cidr:   "10.0.0.0/16",
@@ -547,7 +547,7 @@ func TestToOverlayNetworkConfigAndVip(t *testing.T) {
 	assert.NoError(t, errOverlayOnly)
 	assert.Equal(t, &models.V1EdgeNativeControlPlaneEndPoint{
 		Host: "10.0.0.1", // Automatically generated VIP
-		Type: "IP",
+		Type: "VIP",
 	}, controlPlaneEndpointOverlayOnly)
 	assert.Equal(t, &models.V1EdgeNativeOverlayNetworkConfiguration{
 		Cidr:   "10.0.0.0/16",
@@ -565,7 +565,7 @@ func TestToOverlayNetworkConfigAndVip(t *testing.T) {
 	assert.NoError(t, errVipOnly)
 	assert.Equal(t, &models.V1EdgeNativeControlPlaneEndPoint{
 		Host: "192.168.1.1",
-		Type: "IP",
+		Type: "VIP",
 	}, controlPlaneEndpointVipOnly)
 	assert.Equal(t, &models.V1EdgeNativeOverlayNetworkConfiguration{
 		Cidr:   "", // Empty CIDR since overlay_cidr_range is missing

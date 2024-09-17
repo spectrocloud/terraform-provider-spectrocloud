@@ -673,7 +673,7 @@ func toOverlayNetworkConfigAndVip(cloudConfig map[string]interface{}) (*models.V
 		controlPlaneEndpoint =
 			&models.V1EdgeNativeControlPlaneEndPoint{
 				Host: vip,
-				Type: "IP",
+				Type: "VIP",
 			}
 	} else {
 		if overlayConfig.Enable {
@@ -684,7 +684,8 @@ func toOverlayNetworkConfigAndVip(cloudConfig map[string]interface{}) (*models.V
 			controlPlaneEndpoint =
 				&models.V1EdgeNativeControlPlaneEndPoint{
 					Host: autoGenVip,
-					Type: "IP",
+					Type: "V" +
+						"IP",
 				}
 		}
 	}
