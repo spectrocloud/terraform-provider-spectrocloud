@@ -913,27 +913,6 @@ func CloudAccountsRoutes() []Route {
 		},
 		{
 			Method: "GET",
-			Path:   "/v1/clouds/cloudTypes",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &models.V1CustomCloudTypes{
-					CloudTypes: []*models.V1CustomCloudType{
-						{
-							CloudCategory: "test",
-							CloudFamily:   "",
-							DisplayName:   "test-cloud",
-							IsCustom:      true,
-							IsManaged:     false,
-							IsVertex:      false,
-							Logo:          "",
-							Name:          "test-cloud",
-						},
-					},
-				},
-			},
-		},
-		{
-			Method: "GET",
 			Path:   "/v1/overlords/{uid}",
 			Response: ResponseData{
 				StatusCode: 200,

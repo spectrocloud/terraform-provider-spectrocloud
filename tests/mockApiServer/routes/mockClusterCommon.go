@@ -9,6 +9,27 @@ func ClusterCommonRoutes() []Route {
 
 	return []Route{
 		{
+			Method: "GET",
+			Path:   "/v1/clouds/cloudTypes",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1CustomCloudTypes{
+					CloudTypes: []*models.V1CustomCloudType{
+						{
+							CloudCategory: "private",
+							CloudFamily:   "nutanix",
+							DisplayName:   "test-cloud",
+							IsCustom:      true,
+							IsManaged:     false,
+							IsVertex:      false,
+							Logo:          "",
+							Name:          "test-cloud",
+						},
+					},
+				},
+			},
+		},
+		{
 			Method: "POST",
 			Path:   "/v1/spectroclusters/{uid}/upgrade/settings",
 			Response: ResponseData{

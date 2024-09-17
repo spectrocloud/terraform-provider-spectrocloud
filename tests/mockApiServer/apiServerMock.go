@@ -111,6 +111,7 @@ func init() {
 		routes.WorkspaceRoutes,
 		routes.AlertRoutes,
 		routes.ClusterGroupRoutes,
+		routes.CustomClusterRoutes,
 	)
 	// Initialize routes for port 8888
 	allRoutesNegative = aggregateRoutes(
@@ -128,5 +129,6 @@ func init() {
 		routes.MacrosNegativeRoutes,
 		routes.TenantNegativeRoutes,
 		routes.WorkspaceNegativeRoutes,
+		routes.CustomClusterRoutesNegative,
 	)
 }

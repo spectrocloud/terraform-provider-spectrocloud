@@ -1,6 +1,9 @@
 package spectrocloud
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/spectrocloud/gomi/pkg/ptr"
@@ -61,23 +64,23 @@ func TestToMachinePoolCustomCloud(t *testing.T) {
 func TestToCustomClusterConfig(t *testing.T) {
 	// Create a mock schema.ResourceData with relevant data for testing
 	mockResourceData := resourceClusterCustomCloud().TestResourceData()
-	mockResourceData.Set("name", "test-cluster")
-	mockResourceData.Set("context", "project")
-	mockResourceData.Set("tags", []string{"tf:test", "env:dev"})
-	mockResourceData.Set("cloud", "nutanix")
-	mockResourceData.Set("description", "test description")
-	mockResourceData.Set("cloud_config_id", "config123")
-	mockResourceData.Set("cluster_profile", []interface{}{
+	_ = mockResourceData.Set("name", "test-cluster")
+	_ = mockResourceData.Set("context", "project")
+	_ = mockResourceData.Set("tags", []string{"tf:test", "env:dev"})
+	_ = mockResourceData.Set("cloud", "nutanix")
+	_ = mockResourceData.Set("description", "test description")
+	_ = mockResourceData.Set("cloud_config_id", "config123")
+	_ = mockResourceData.Set("cluster_profile", []interface{}{
 		map[string]interface{}{
 			"id": "cluster-profile-id",
 		},
 	})
-	mockResourceData.Set("cloud_config", []interface{}{
+	_ = mockResourceData.Set("cloud_config", []interface{}{
 		map[string]interface{}{
 			"values": "test-config",
 		},
 	})
-	mockResourceData.Set("machine_pool", []interface{}{
+	_ = mockResourceData.Set("machine_pool", []interface{}{
 		map[string]interface{}{
 			"node_pool_config": "test-config-yaml",
 		},
@@ -91,7 +94,7 @@ func TestToCustomClusterConfig(t *testing.T) {
 		"latitude":     0.0,
 		"longitude":    0.0,
 	})
-	mockResourceData.Set("location_config", location)
+	_ = mockResourceData.Set("location_config", location)
 
 	expected := &models.V1CustomClusterConfigEntity{
 		Location:                toClusterLocationConfigs(mockResourceData),
@@ -107,7 +110,7 @@ func TestToCustomClusterConfig(t *testing.T) {
 func TestToCustomCloudConfig(t *testing.T) {
 	// Create mock schema.ResourceData with relevant data for testing
 	mockResourceData := resourceClusterCustomCloud().TestResourceData()
-	mockResourceData.Set("cloud_config", []interface{}{
+	_ = mockResourceData.Set("cloud_config", []interface{}{
 		map[string]interface{}{
 			"values": "mock values YAML string",
 		},
@@ -126,20 +129,20 @@ func TestToCustomCloudConfig(t *testing.T) {
 func TestToCustomCloudCluster(t *testing.T) {
 	// Mock schema.ResourceData
 	mockResourceData := resourceClusterCustomCloud().TestResourceData()
-	mockResourceData.Set("cloud_config", []interface{}{
+	_ = mockResourceData.Set("cloud_config", []interface{}{
 		map[string]interface{}{
 			"values": "test-values",
 		},
 	})
-	mockResourceData.Set("machine_pool", []interface{}{
+	_ = mockResourceData.Set("machine_pool", []interface{}{
 		map[string]interface{}{
 			"control_plane":           true,
 			"control_plane_as_worker": false,
 			"node_pool_config":        "test-node-pool-config",
 		},
 	})
-	mockResourceData.Set("context", "project")
-	mockResourceData.Set("cloud_account_id", "test-cloud-account-id")
+	_ = mockResourceData.Set("context", "project")
+	_ = mockResourceData.Set("cloud_account_id", "test-cloud-account-id")
 
 	// Mock client.V1Client
 	mockClient := &client.V1Client{
@@ -313,4 +316,134 @@ func TestParseResourceCustomCloudImportID(t *testing.T) {
 			}
 		})
 	}
+}
+
+func prepareClusterCustomTestData() *schema.ResourceData {
+	d := resourceClusterCustomCloud().TestResourceData()
+	_ = d.Set("name", "test-custom-cluster")
+	_ = d.Set("context", "project")
+	_ = d.Set("cloud", "test-cloud")
+	_ = d.Set("tags", []string{"tf:unit", "env:dev"})
+	_ = d.Set("description", "test description")
+	_ = d.Set("cluster_profile", []interface{}{
+		map[string]interface{}{
+			"id": "test-cluster-profile-id",
+			"pack": []interface{}{
+				map[string]interface{}{
+					"uid":          "pack-uid-1",
+					"type":         "spectro",
+					"name":         "k8",
+					"registry_uid": "test-regi-uid",
+					"tag":          "test",
+					"values":       "test-pack-value",
+				},
+				map[string]interface{}{
+					"uid":          "pack-uid-2",
+					"type":         "manifest",
+					"name":         "csi",
+					"registry_uid": "test-regi-uid",
+					"tag":          "test",
+					"values":       "test-pack-value",
+					"manifest": []interface{}{
+						map[string]interface{}{
+							"uid":     "test-manifest-id-1",
+							"name":    "test-csi",
+							"content": "test-content",
+						},
+					},
+				},
+				map[string]interface{}{
+					"uid":          "pack-uid-3",
+					"type":         "manifest",
+					"name":         "cni",
+					"registry_uid": "test-regi-uid",
+					"tag":          "test",
+					"values":       "test-pack-value",
+					"manifest": []interface{}{
+						map[string]interface{}{
+							"uid":     "test-manifest-id-2",
+							"name":    "test-cni",
+							"content": "test-content",
+						},
+					},
+				},
+			},
+		},
+	})
+	_ = d.Set("apply_setting", "DownloadAndInstall")
+	_ = d.Set("cloud_account_id", "test-cloud-id")
+	_ = d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"values": "test-custom-cloud-config/values",
+		},
+	})
+	_ = d.Set("machine_pool", []interface{}{
+		map[string]interface{}{
+			"name":                    "test-cp-pool",
+			"count":                   1,
+			"control_plane":           true,
+			"control_plane_as_worker": false,
+			"node_pool_config":        "node-pool-config-values",
+		},
+	})
+	_ = d.Set("pause_agent_upgrades", "unlock")
+	_ = d.Set("os_patch_on_boot", false)
+	_ = d.Set("os_patch_schedule", "0 0 * * *")
+
+	_ = d.Set("skip_completion", true)
+	_ = d.Set("backup_policy", []interface{}{
+		map[string]interface{}{
+			"prefix":                    "test",
+			"backup_location_id":        "backup-location-id",
+			"schedule":                  "0 1 * * *",
+			"expiry_in_hour":            5,
+			"include_disks":             true,
+			"include_cluster_resources": true,
+			"namespaces":                []string{"default"},
+			"include_all_clusters":      true,
+		},
+	})
+	_ = d.Set("scan_policy", []interface{}{
+		map[string]interface{}{
+			"configuration_scan_schedule": "0 1 * * *",
+			"penetration_scan_schedule":   "0 1 * * *",
+			"conformance_scan_schedule":   "0 1 * * *",
+		},
+	})
+	_ = d.Set("cluster_rbac_binding", []interface{}{
+		map[string]interface{}{
+			"type":      "RoleBinding",
+			"namespace": "default",
+			"role": map[string]interface{}{
+				"kind": "test",
+				"name": "test",
+			},
+			"subjects": []interface{}{
+				map[string]interface{}{
+					"type":      "User",
+					"name":      "test-subject",
+					"namespace": "default",
+				},
+			},
+		},
+	})
+
+	return d
+}
+
+func TestResourceClusterCustomCloudCreate(t *testing.T) {
+	d := prepareClusterCustomTestData()
+	var diags diag.Diagnostics
+	var ctx context.Context
+	diags = resourceClusterCustomCloudCreate(ctx, d, unitTestMockAPIClient)
+	assert.Equal(t, 0, len(diags))
+}
+
+func TestResourceClusterCustomCloudInvalidCloud(t *testing.T) {
+	d := prepareClusterCustomTestData()
+	_ = d.Set("cloud", "1234")
+	var diags diag.Diagnostics
+	var ctx context.Context
+	diags = resourceClusterCustomCloudCreate(ctx, d, unitTestMockAPIClient)
+	assert.Equal(t, 1, len(diags))
 }
