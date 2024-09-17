@@ -684,8 +684,7 @@ func toOverlayNetworkConfigAndVip(cloudConfig map[string]interface{}) (*models.V
 			controlPlaneEndpoint =
 				&models.V1EdgeNativeControlPlaneEndPoint{
 					Host: autoGenVip,
-					Type: "V" +
-						"IP",
+					Type: "VIP",
 				}
 		}
 	}
