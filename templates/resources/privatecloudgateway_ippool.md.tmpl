@@ -28,7 +28,7 @@ An example of creating an IP Pool for a Private Cloud Gateway using a range of I
    private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
    ip_start_range           = "192.168.1.10"
    ip_end_range             = "192.168.1.100"
-   nameserver_addresses     = "192.168.1.8"
+   nameserver_addresses     = ["192.168.1.8"]
    restrict_to_single_cluster = true
  }
 ```
@@ -48,7 +48,7 @@ An example of creating an IP Pool for a Private Cloud Gateway using a subnet of 
    prefix                   = "24"
    subnet_cidr              = "10.10.100.0/24"
    private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
-   nameserver_addresses     = "192.168.1.8"
+   nameserver_addresses     = ["192.168.1.8"]
  }
 ```
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -100,7 +101,7 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 }
 
 func resourceIpPoolCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
 
@@ -116,7 +117,7 @@ func resourceIpPoolCreate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
@@ -170,7 +171,7 @@ func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceIpPoolUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
@@ -186,7 +187,7 @@ func resourceIpPoolUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceIpPoolDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	pcgUID := d.Get("private_cloud_gateway_id").(string)
