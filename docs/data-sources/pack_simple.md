@@ -33,7 +33,7 @@ data "spectrocloud_pack_simple" "pack" {
 ### Required
 
 - `name` (String) The name of the pack.
-- `registry_uid` (String) The unique identifier of the registry the pack belongs to.
+- `registry_uid` (String) The unique identifier (UID) of the registry that the pack belongs to. This is mandatory for identifying the specific registry in which the pack resides.
 - `type` (String) The type of Pack. Allowed values are `helm`, `manifest`, `container` or `operator-instance`.
 
 ### Optional
