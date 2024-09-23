@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -170,4 +171,57 @@ func TestFlattenCloudAccountAws_NonStsType(t *testing.T) {
 
 	expectedARNs := []string{"arn:aws:test_policy_secret1", "arn:aws:test_policy_secret2"}
 	assert.ElementsMatch(t, expectedARNs, actualARNs)
+}
+
+func prepareBaseAwsAccountTestData() *schema.ResourceData {
+	d := resourceCloudAccountAws().TestResourceData()
+	d.SetId("test-aws-account-1")
+	_ = d.Set("name", "test-aws-account")
+	_ = d.Set("context", "project")
+	_ = d.Set("aws_access_key", "test-access-key")
+	_ = d.Set("aws_secret_key", "test-secret-key")
+	_ = d.Set("type", "secret")
+	_ = d.Set("arn", "test-arn")
+	_ = d.Set("external_id", "test-external-id")
+	_ = d.Set("partition", "aws")
+	_ = d.Set("policy_arns", []string{"test-policy-arn"})
+	return d
+}
+
+func TestResourceCloudAccountAwsCreate(t *testing.T) {
+	ctx := context.Background()
+	d := prepareBaseAwsAccountTestData()
+	diags := resourceCloudAccountAwsCreate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-aws-account-1", d.Id())
+}
+
+func TestResourceCloudAccountAwsRead(t *testing.T) {
+	ctx := context.Background()
+	d := prepareBaseAwsAccountTestData()
+	diags := resourceCloudAccountAwsRead(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-aws-account-1", d.Id())
+}
+func TestResourceCloudAccountAwsUpdate(t *testing.T) {
+	ctx := context.Background()
+	d := prepareBaseAwsAccountTestData()
+	diags := resourceCloudAccountAwsUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-aws-account-1", d.Id())
+}
+func TestResourceCloudAccountAwsDelete(t *testing.T) {
+	ctx := context.Background()
+	d := prepareBaseAwsAccountTestData()
+	diags := resourceCloudAccountAwsDelete(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+}
+
+func TestResourceCloudAccountAwsImport(t *testing.T) {
+	ctx := context.Background()
+	d := prepareBaseAwsAccountTestData()
+	d.SetId("test-import-acc-id:project")
+	_, err := resourceAccountAwsImport(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, err)
+	assert.Equal(t, "test-import-acc-id", d.Id())
 }

@@ -40,37 +40,6 @@ func prepareVirtualClusterTestData() *schema.ResourceData {
 	return d
 }
 
-//func TestToVirtualCluster(t *testing.T) {
-//	assert := assert.New(t)
-//	// Create a mock ResourceData object
-//	d := prepareVirtualClusterTestData()
-//
-//	// Mock the client
-//	mockClient := &client.V1Client{}
-//
-//	// Create a mock ResourceData for testing
-//	vCluster, err := toVirtualCluster(mockClient, d)
-//	assert.Nil(err)
-//
-//	// Check the output against the expected values
-//
-//	// Verifying cluster name attribute
-//	assert.Equal(d.Get("name").(string), vCluster.Metadata.Name)
-//
-//	// Verifying host cluster uid and cluster group uid attributes
-//	assert.Equal(d.Get("host_cluster_uid").(string), vCluster.Spec.ClusterConfig.HostClusterConfig.HostCluster.UID)
-//	assert.Equal(d.Get("cluster_group_uid").(string), vCluster.Spec.ClusterConfig.HostClusterConfig.ClusterGroup.UID)
-//
-//	// Verifying cloud config attributes
-//	val, _ := d.GetOk("cloud_config")
-//	cloudConfig := val.([]interface{})[0].(map[string]interface{})
-//	assert.Equal(cloudConfig["chart_name"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Name)
-//	assert.Equal(cloudConfig["chart_repo"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Repo)
-//	assert.Equal(cloudConfig["chart_version"].(string), vCluster.Spec.CloudConfig.HelmRelease.Chart.Version)
-//	assert.Equal(cloudConfig["chart_values"].(string), vCluster.Spec.CloudConfig.HelmRelease.Values)
-//	assert.Equal(cloudConfig["k8s_version"].(string), vCluster.Spec.CloudConfig.KubernetesVersion)
-//}
-
 func TestToVirtualClusterResize(t *testing.T) {
 	resources := map[string]interface{}{
 		"max_cpu":           4,

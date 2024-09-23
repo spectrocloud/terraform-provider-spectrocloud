@@ -111,35 +111,3 @@ func TestFlattenMachinePoolConfigsGke(t *testing.T) {
 	assert.Equal(t, "n1-standard-4", pool2["instance_type"])
 	assert.Equal(t, 200, pool2["disk_size_gb"])
 }
-
-//func TestFlattenClusterProfileForImport(t *testing.T) {
-//	m := &client.V1Client{}
-//
-//	// Test case: Successfully retrieve cluster profiles
-//	clusterContext := "project"
-//	clusterID := "test-cluster-id"
-//	clusterProfiles := []interface{}{
-//		map[string]interface{}{"id": "profile-1"},
-//		map[string]interface{}{"id": "profile-2"},
-//	}
-//	mockResourceData := resourceClusterGke().TestResourceData()
-//	err := mockResourceData.Set("cluster_profile", clusterProfiles)
-//	if err != nil {
-//		return
-//	}
-//	err = mockResourceData.Set("context", clusterContext)
-//	if err != nil {
-//		return
-//	}
-//	mockResourceData.SetId(clusterID)
-//
-//	result, err := flattenClusterProfileForImport(m, mockResourceData)
-//	assert.NoError(t, err)
-//	assert.Equal(t, clusterProfiles, result)
-//
-//	//Test case: Error retrieving cluster
-//	m = &client.V1Client{}
-//	result, err = flattenClusterProfileForImport(m, mockResourceData)
-//	assert.Error(t, err)
-//	assert.Empty(t, result)
-//}

@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"context"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
@@ -67,4 +69,53 @@ func TestFlattenCloudAccountAzure(t *testing.T) {
 	assert.Equal(t, "test_tenant_name", rd.Get("tenant_name"))
 	assert.Equal(t, true, rd.Get("disable_properties_request"))
 	assert.Equal(t, "AzureUSGovernmentCloud", rd.Get("cloud"))
+}
+
+func prepareResourceCloudAccountAzureTestData() *schema.ResourceData {
+	d := resourceCloudAccountAzure().TestResourceData()
+	d.SetId("test-azure-account-id-1")
+	_ = d.Set("name", "test-azure-account-1")
+	_ = d.Set("context", "project")
+	_ = d.Set("azure_tenant_id", "tenant-azure-id")
+	_ = d.Set("azure_client_id", "azure-client-id")
+	_ = d.Set("azure_client_secret", "test-client-secret")
+	_ = d.Set("tenant_name", "azure-tenant")
+	_ = d.Set("disable_properties_request", false)
+	_ = d.Set("cloud", "AzurePublicCloud")
+	return d
+}
+
+func TestResourceCloudAccountAzureCreate(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountAzureTestData()
+	ctx := context.Background()
+	diags := resourceCloudAccountAzureCreate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-aws-account-1", d.Id())
+}
+
+func TestResourceCloudAccountAzureRead(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountAzureTestData()
+	ctx := context.Background()
+	diags := resourceCloudAccountAzureRead(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-azure-account-id-1", d.Id())
+}
+
+func TestResourceCloudAccountAzureUpdate(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountAzureTestData()
+	ctx := context.Background()
+	diags := resourceCloudAccountAzureUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-azure-account-id-1", d.Id())
+}
+
+func TestResourceCloudAccountAzureDelete(t *testing.T) {
+	// Mock context and resource data
+	d := prepareResourceCloudAccountAzureTestData()
+	ctx := context.Background()
+	diags := resourceCloudAccountAzureDelete(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
 }

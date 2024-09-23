@@ -1,6 +1,8 @@
 package spectrocloud
 
 import (
+	"context"
+	"errors"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -81,95 +83,82 @@ func TestFlattenCustomCloudAccount(t *testing.T) {
 	assert.Equal(t, "test-cloud", d.Get("cloud"))
 }
 
-// Need mock
-//func TestResourceCustomCloudAccountCreate(t *testing.T) {
-//	// Mock context and resource data
-//	ctx := context.Background()
-//	d := resourceCloudAccountCustom().TestResourceData()
-//	d.Set("name", "test-name")
-//	d.Set("cloud", "test-cloud")
-//	d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
-//	cred := map[string]interface{}{
-//		"username": "test-username",
-//		"password": "test-password",
-//	}
-//	d.Set("credentials", cred)
-//
-//	mockClient := &client.V1Client{}
-//	d.Set("context", "test-context")
-//	d.Set("cloud", "test-cloud")
-//	diags := resourceCloudAccountCustomCreate(ctx, d, mockClient)
-//	assert.Len(t, diags, 0)
-//	assert.Equal(t, "mock-uid", d.Id())
-//}
+// mock
+func TestResourceCustomCloudAccountCreate(t *testing.T) {
+	// Mock context and resource data
+	ctx := context.Background()
+	d := resourceCloudAccountCustom().TestResourceData()
+	_ = d.Set("name", "test-name")
+	_ = d.Set("cloud", "test-cloud")
+	_ = d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
+	cred := map[string]interface{}{
+		"username": "test-username",
+		"password": "test-password",
+	}
+	_ = d.Set("credentials", cred)
 
-//func TestResourceCustomCloudAccountCreateError(t *testing.T) {
-//	// Mock context and resource data
-//	ctx := context.Background()
-//	d := resourceCloudAccountCustom().TestResourceData()
-//	d.Set("name", "test-name")
-//	d.Set("cloud", "test-cloud")
-//	d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
-//	cred := map[string]interface{}{
-//		"username": "test-username",
-//		"password": "test-password",
-//	}
-//	d.Set("credentials", cred)
-//
-//	// Set up mock client
-//	mockClient := &client.V1Client{}
-//	d.Set("context", "test-context")
-//	d.Set("cloud", "test-cloud")
-//	diags := resourceCloudAccountCustomCreate(ctx, d, mockClient)
-//	assert.Error(t, errors.New("unable to find account"))
-//	assert.Len(t, diags, 1)
-//	assert.Equal(t, "", d.Id())
-//}
-//
-//func TestResourceCustomCloudAccountRead(t *testing.T) {
-//	ctx := context.Background()
-//	d := resourceCloudAccountCustom().TestResourceData()
-//
-//	mockClient := &client.V1Client{}
-//
-//	d.SetId("existing-id")
-//	d.Set("context", "test-context")
-//	d.Set("cloud", "test-cloud")
-//	diags := resourceCloudAccountCustomRead(ctx, d, mockClient)
-//
-//	assert.Len(t, diags, 0)
-//	assert.Equal(t, "existing-id", d.Id())
-//	assert.Equal(t, "test-name", d.Get("name"))
-//	assert.Equal(t, "test-scope", d.Get("context"))
-//	assert.Equal(t, "test-overlord-uid", d.Get("private_cloud_gateway_id"))
-//	assert.Equal(t, "test-cloud", d.Get("cloud"))
-//}
-//
-//func TestResourceCustomCloudAccountUpdate(t *testing.T) {
-//	ctx := context.Background()
-//	d := resourceCloudAccountCustom().TestResourceData()
-//	mockClient := &client.V1Client{}
-//
-//	d.SetId("existing-id")
-//	d.Set("context", "updated-context")
-//	d.Set("cloud", "updated-cloud")
-//	diags := resourceCloudAccountCustomUpdate(ctx, d, mockClient)
-//
-//	assert.Len(t, diags, 0)
-//	assert.Equal(t, "existing-id", d.Id())
-//	assert.Equal(t, "updated-name", d.Get("name"))
-//	assert.Equal(t, "updated-scope", d.Get("context"))
-//	assert.Equal(t, "updated-overlord-uid", d.Get("private_cloud_gateway_id"))
-//	assert.Equal(t, "updated-cloud", d.Get("cloud"))
-//}
-//
-//func TestResourceCustomCloudAccountDelete(t *testing.T) {
-//	ctx := context.Background()
-//	d := resourceCloudAccountCustom().TestResourceData()
-//	mockClient := &client.V1Client{}
-//	d.SetId("existing-id")
-//	d.Set("context", "test-context")
-//	d.Set("cloud", "test-cloud")
-//	diags := resourceCloudAccountCustomDelete(ctx, d, mockClient)
-//	assert.Len(t, diags, 0)
-//}
+	_ = d.Set("context", "test-context")
+	_ = d.Set("cloud", "test-cloud")
+	diags := resourceCloudAccountCustomCreate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "mock-uid", d.Id())
+}
+
+func TestResourceCustomCloudAccountCreateError(t *testing.T) {
+	// Mock context and resource data
+	ctx := context.Background()
+	d := resourceCloudAccountCustom().TestResourceData()
+	_ = d.Set("name", "test-name")
+	_ = d.Set("cloud", "test-cloud")
+	_ = d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
+	cred := map[string]interface{}{
+		"username": "test-username",
+		"password": "test-password",
+	}
+	_ = d.Set("credentials", cred)
+
+	// Set up mock client
+	_ = d.Set("context", "test-context")
+	_ = d.Set("cloud", "test-cloud")
+	diags := resourceCloudAccountCustomCreate(ctx, d, unitTestMockAPINegativeClient)
+	assert.Error(t, errors.New("unable to find account"))
+	assert.Len(t, diags, 1)
+	assert.Equal(t, "", d.Id())
+}
+
+func TestResourceCustomCloudAccountRead(t *testing.T) {
+	ctx := context.Background()
+	d := resourceCloudAccountCustom().TestResourceData()
+
+	d.SetId("mock-uid")
+	_ = d.Set("context", "test-context")
+	_ = d.Set("cloud", "test-cloud")
+	diags := resourceCloudAccountCustomRead(ctx, d, unitTestMockAPIClient)
+
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "mock-uid", d.Id())
+
+}
+
+func TestResourceCustomCloudAccountUpdate(t *testing.T) {
+	ctx := context.Background()
+	d := resourceCloudAccountCustom().TestResourceData()
+
+	d.SetId("existing-id")
+	_ = d.Set("context", "updated-context")
+	_ = d.Set("cloud", "updated-cloud")
+	diags := resourceCloudAccountCustomUpdate(ctx, d, unitTestMockAPIClient)
+
+	assert.Len(t, diags, 0)
+}
+
+func TestResourceCustomCloudAccountDelete(t *testing.T) {
+	ctx := context.Background()
+	d := resourceCloudAccountCustom().TestResourceData()
+
+	d.SetId("existing-id")
+	_ = d.Set("context", "test-context")
+	_ = d.Set("cloud", "test-cloud")
+	diags := resourceCloudAccountCustomDelete(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+}

@@ -99,75 +99,6 @@ func prepareClusterVsphereTestData() *schema.ResourceData {
 	return d
 }
 
-//func TestToVsphereCluster(t *testing.T) {
-//	assert := assert.New(t)
-//	// Create a mock ResourceData object
-//	d := prepareClusterVsphereTestData()
-//
-//	m := &client.V1Client{}
-//
-//	vSphereSchema, err := toVsphereCluster(m, d)
-//	assert.Nil(err)
-//
-//	// Check the output against the expected values
-//	// Verifying cluster name attribute
-//	assert.Equal(d.Get("name"), vSphereSchema.Metadata.Name)
-//
-//	// Verifying cluster name attribute
-//	assert.Equal("vmware-basic-infra-profile-id", vSphereSchema.Spec.Profiles[0].UID)
-//
-//	// Verifying cluster_meta_attribute attribute
-//	assert.Equal("{'nic_name': 'test', 'env': 'stage'}", vSphereSchema.Spec.ClusterConfig.ClusterMetaAttribute)
-//
-//	// Verifying account id attribute
-//	assert.Equal("vmware-basic-account-id", vSphereSchema.Spec.CloudAccountUID)
-//
-//	// Verifying cloud config attributes
-//	assert.Equal("spectrocloud.dev", vSphereSchema.Spec.CloudConfig.ControlPlaneEndpoint.DdnsSearchDomain)
-//	assert.Equal("DDNS", vSphereSchema.Spec.CloudConfig.ControlPlaneEndpoint.Type)
-//	assert.Equal("Datacenter", vSphereSchema.Spec.CloudConfig.Placement.Datacenter)
-//	assert.Equal("sc_test/terraform", vSphereSchema.Spec.CloudConfig.Placement.Folder)
-//	assert.Equal(2, len(vSphereSchema.Spec.CloudConfig.SSHKeys))
-//	assert.Equal(false, vSphereSchema.Spec.CloudConfig.StaticIP)
-//
-//	// Verifying control-plane pool attributes
-//	assert.Equal(2, len(vSphereSchema.Spec.Machinepoolconfig))
-//	cpPoolIndex := 0
-//	workerPoolIndex := 1
-//	if *vSphereSchema.Spec.Machinepoolconfig[0].PoolConfig.Name == "cp-pool" {
-//		cpPoolIndex = 0
-//		workerPoolIndex = 1
-//	} else {
-//		cpPoolIndex = 1
-//		workerPoolIndex = 0
-//	}
-//
-//	assert.Equal("cp-pool", *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].PoolConfig.Name)
-//	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].PoolConfig.IsControlPlane)
-//	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.InstanceType.DiskGiB)
-//	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.InstanceType.MemoryMiB)
-//	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.InstanceType.NumCPUs)
-//	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Cluster)
-//	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Datastore)
-//	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].ResourcePool)
-//	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Network.NetworkName)
-//	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Network.ParentPoolUID)
-//	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[cpPoolIndex].CloudConfig.Placements[0].Network.StaticIP)
-//
-//	// Verifying Worker pool attributes
-//	assert.Equal("worker-basic", *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].PoolConfig.Name)
-//	assert.Equal(false, vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].PoolConfig.IsControlPlane)
-//	assert.Equal(int32(40), *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.InstanceType.DiskGiB)
-//	assert.Equal(int64(8192), *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.InstanceType.MemoryMiB)
-//	assert.Equal(int32(4), *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.InstanceType.NumCPUs)
-//	assert.Equal("test cluster", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Cluster)
-//	assert.Equal("datastore55_2", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Datastore)
-//	assert.Equal("Default", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].ResourcePool)
-//	assert.Equal("VM Network", *vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Network.NetworkName)
-//	assert.Equal("testpoolid", vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Network.ParentPoolUID)
-//	assert.Equal(true, vSphereSchema.Spec.Machinepoolconfig[workerPoolIndex].CloudConfig.Placements[0].Network.StaticIP)
-//}
-
 func TestToCloudConfigUpdate(t *testing.T) {
 	assert := assert.New(t)
 	cloudConfig := map[string]interface{}{
@@ -187,100 +118,6 @@ func TestToCloudConfigUpdate(t *testing.T) {
 	assert.Equal("ssh-rsa AAAAB3NzaC1y", cloudEntity.ClusterConfig.SSHKeys[0])
 	assert.Equal(false, cloudEntity.ClusterConfig.StaticIP)
 }
-
-//func TestResourceClusterVsphereCreate(t *testing.T) {
-//
-//	// Create a mock ResourceData object
-//	d := prepareClusterVsphereTestData()
-//	d.Set("skip_completion", true)
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceClusterVsphereCreate(ctx, d, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//
-//	if d.Id() != "vsphere-cluster-uid" {
-//		t.Errorf("Expected ID to be 'test-uid', got %s", d.Id())
-//	}
-//}
-
-//func TestResourceClusterVsphereCreateError(t *testing.T) {
-//
-//	d := prepareClusterVsphereTestData()
-//	d.Set("skip_completion", true)
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceClusterVsphereCreate(ctx, d, m)
-//	if diags[0].Summary != "covering error case" {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
-//
-//func getClientForCluster() *client.V1Client {
-//	m := &client.V1Client{}
-//	return m
-//}
-//func TestResourceClusterVsphereRead(t *testing.T) {
-//	// Create a mock ResourceData object
-//	d := prepareClusterVsphereTestData()
-//	m := getClientForCluster()
-//	ctx := context.Background()
-//	diags := resourceClusterVsphereRead(ctx, d, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
-//
-//func TestResourceClusterVsphereReadValidationErrorSpec(t *testing.T) {
-//	d := prepareClusterVsphereTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceClusterVsphereRead(ctx, d, m)
-//	if len(diags) == 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//	if diags[0].Summary != "cluster spec is nil in cluster mockid123" {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
-
-//func TestResourceClusterVsphereReadValidationErrorCloudType(t *testing.T) {
-//	d := prepareClusterVsphereTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceClusterVsphereRead(ctx, d, m)
-//	if len(diags) == 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//	if diags[0].Summary != "resource with id mockid123 is not of type spectrocloud_cluster_vsphere, need to correct resource type" {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
-
-//func TestResourceClusterVsphereReadNilCluster(t *testing.T) {
-//	// Create a mock ResourceData object
-//	d := prepareClusterVsphereTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceClusterVsphereRead(ctx, d, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//	assert.Equal(t, "", d.Id())
-//}
-
-//func TestResourceClusterVsphereReadError(t *testing.T) {
-//	// Create a mock ResourceData object
-//	d := prepareClusterVsphereTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceClusterVsphereRead(ctx, d, m)
-//	assert.Equal(t, len(diags), 1)
-//	if diags[0].Summary != "unexpected Error" {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//}
 
 func getMachinePlacement() []*models.V1VspherePlacementConfig {
 	network := new(string)
@@ -369,16 +206,6 @@ func getCloudConfig() *models.V1VsphereCloudConfig {
 	return cloudConfig
 }
 
-//func TestFlattenCloudConfigVsphere(t *testing.T) {
-//	d := prepareClusterVsphereTestData()
-//	m := &client.V1Client{}
-//	diags := flattenCloudConfigVsphere("", d, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//
-//}
-
 func TestFlattenClusterConfigsVsphere(t *testing.T) {
 	inputCloudConfig := &models.V1VsphereCloudConfig{
 		Spec: &models.V1VsphereCloudConfigSpec{
@@ -439,18 +266,6 @@ func TestFlattenMachinePoolConfigsVsphereNil(t *testing.T) {
 		t.Errorf("flattenMachinePoolConfigsVsphere returning value for nill: %#v", flatPool)
 	}
 }
-
-//func TestResourceClusterVsphereUpdate(t *testing.T) {
-//	d := prepareClusterVsphereTestData()
-//	m := &client.V1Client{}
-//	ctx := context.Background()
-//	diags := resourceClusterVsphereUpdate(ctx, d, m)
-//	if len(diags) > 0 {
-//		t.Errorf("Unexpected diagnostics: %#v", diags)
-//	}
-//	assert.Equal(t, "", d.Id())
-//
-//}
 
 func TestFlattenMachinePoolConfigsVsphere(t *testing.T) {
 	// Define test cases
