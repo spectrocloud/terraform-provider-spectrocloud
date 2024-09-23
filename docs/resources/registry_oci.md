@@ -35,11 +35,11 @@ resource "spectrocloud_registry_oci" "r1" {
 - `endpoint` (String)
 - `is_private` (Boolean)
 - `name` (String)
-- `provider_type` (String)
 - `type` (String)
 
 ### Optional
 
+- `provider_type` (String)
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
