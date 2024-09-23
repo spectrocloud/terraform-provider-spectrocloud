@@ -39,6 +39,7 @@ resource "spectrocloud_registry_oci" "r1" {
 
 ### Optional
 
+- `provider_type` (String)
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -57,7 +58,9 @@ Optional:
 - `access_key` (String)
 - `arn` (String)
 - `external_id` (String)
+- `password` (String, Sensitive)
 - `secret_key` (String, Sensitive)
+- `username` (String)
 
 
 <a id="nestedblock--timeouts"></a>

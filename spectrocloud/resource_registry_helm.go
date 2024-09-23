@@ -72,7 +72,7 @@ func resourceRegistryHelm() *schema.Resource {
 }
 
 func resourceRegistryHelmCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	registry := toRegistryEntityHelm(d)
@@ -85,7 +85,7 @@ func resourceRegistryHelmCreate(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	registry, err := c.GetHelmRegistry(d.Id())
@@ -141,7 +141,7 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 }
 
 func resourceRegistryHelmUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	registry := toRegistryHelm(d)
@@ -154,7 +154,7 @@ func resourceRegistryHelmUpdate(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceRegistryHelmDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 	err := c.DeleteHelmRegistry(d.Id())
 	if err != nil {
