@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-
 )
 
 func resourceRegistryOciEcr() *schema.Resource {
@@ -99,7 +98,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 }
 
 func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	registryType := d.Get("type").(string)
@@ -127,7 +126,7 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 }
 
 func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	registryType := d.Get("type").(string)
@@ -204,7 +203,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	registryType := d.Get("type").(string)
@@ -227,7 +226,7 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 }
 
 func resourceRegistryEcrDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	registryType := d.Get("type").(string)
