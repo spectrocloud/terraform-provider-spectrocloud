@@ -59,7 +59,7 @@ data "spectrocloud_pack" "cni" {
 - `filters` (String) Filters to apply when searching for a pack. This is a string of the form 'key1=value1' with 'AND', 'OR` operators. Refer to the Palette API [pack search API endpoint documentation](https://docs.spectrocloud.com/api/v1/v-1-packs-search/) for filter examples..
 - `id` (String) The UID of the pack returned.
 - `name` (String) The name of the pack to search for.
-- `registry_uid` (String) The UID of the registry to search for the pack in. This is a required parameter starting from version 0.21.0.
+- `registry_uid` (String) The unique identifier (UID) of the specific registry where the pack is located. Required if searching within a specific registry. Only one of `filters`, `id`, or `registry_uid` can be provided.
 - `type` (String) The type of pack to search for. Supported values are `helm`, `manifest`, `container`, `operator-instance`.
 - `version` (String) The version of the pack to search for.
 

@@ -37,8 +37,8 @@ func dataSourcePackSimple() *schema.Resource {
 			},
 			"registry_uid": {
 				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The unique identifier of the registry the pack belongs to. This is a required parameter starting from version 0.21.0",
+				Required:    true,
+				Description: "The unique identifier (UID) of the registry that the pack belongs to. This is mandatory for identifying the specific registry in which the pack resides.",
 			},
 			"type": {
 				Type:         schema.TypeString,
