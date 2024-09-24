@@ -21,7 +21,11 @@ func resourceClusterCustomCloud() *schema.Resource {
 		ReadContext:   resourceClusterCustomCloudRead,
 		UpdateContext: resourceClusterCustomCloudUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "Resource for managing custom cloud clusters in Spectro Cloud through Palette.",
+		Importer: &schema.ResourceImporter{
+
+			StateContext: resourceClusterCustomImport,
+		},
+		Description: "Resource for managing custom cloud clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -451,7 +455,6 @@ func flattenMachinePoolConfigsCustomCloud(machinePools []*models.V1CustomMachine
 }
 
 func flattenCloudConfigCustom(configUID string, d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
-	//ClusterContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err), true
