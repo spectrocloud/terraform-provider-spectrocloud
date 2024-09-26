@@ -48,7 +48,7 @@ function downloadProviderFromRegistry() {
 
 function generateSpectrocloudProvider() {
   rm -rf dist
-  goreleaser build --skip validate --clean -f dev/dev-goreleaser.yml
+  goreleaser build --snapshot --skip validate --clean -f dev/dev-goreleaser.yml
 }
 
 function generateProvidersPlugins() {
