@@ -92,7 +92,7 @@ func resourceApplication() *schema.Resource {
 }
 
 func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "tenant")
+	resourceContext := ""
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
@@ -113,13 +113,12 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 
 		config = configList.([]interface{})[0].(map[string]interface{})
 		cluster_uid = config["cluster_uid"]
-		resourceContext := config["cluster_context"].(string)
-		c = getV1ClientWithResourceContext(m, resourceContext)
+		resourceContext = config["cluster_context"].(string)
 
 	} else {
 		return diag.FromErr(val_error)
 	}
-
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	if cluster_uid == "" {
 		if config["cluster_group_uid"] == "" {
 			return diag.FromErr(val_error)
