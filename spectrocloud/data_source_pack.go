@@ -52,7 +52,7 @@ func dataSourcePack() *schema.Resource {
 			},
 			"registry_uid": {
 				Type:        schema.TypeString,
-				Description: "The UID of the registry to search for the pack in. This is a required parameter starting from version 0.21.0.",
+				Description: "The unique identifier (UID) of the registry where the pack is located. Specify `registry_uid` to search within a specific registry.",
 				Computed:    true,
 				Optional:    true,
 			},

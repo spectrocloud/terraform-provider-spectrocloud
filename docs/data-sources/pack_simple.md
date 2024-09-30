@@ -11,8 +11,6 @@ description: |-
 
 ## Example Usage
 
-~> Starting with version 0.21.0 the attribute `registry_uid` is required.
-
 ```hcl
 data "spectrocloud_registry" "registry" {
   name = "Public Repo"
@@ -38,7 +36,7 @@ data "spectrocloud_pack_simple" "pack" {
 ### Optional
 
 - `context` (String) Indicates in which context registry should be searched for the pack values. Allowed values are `system`, `project` or `tenant`. Defaults to `project`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
-- `registry_uid` (String) The unique identifier of the registry the pack belongs to. This is a required parameter starting from version 0.21.0
+- `registry_uid` (String) The unique identifier (UID) of the registry where the pack is located. Specify `registry_uid` to search within a specific registry.
 - `version` (String) The version of the pack.
 
 ### Read-Only

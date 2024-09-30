@@ -11,7 +11,7 @@ description: |-
 
 
 
-~> Starting with Palette version 4.5 (and the corresponding provider release), the `registry_uid` attribute will become required. The existing `filters` attribute will be deprecated, and a new `pack_filters` attribute will be introduced for advanced search functionality.
+~> The existing `filters` attribute will be deprecated, and a new `pack_filters` attribute will be introduced for advanced search functionality.
 
 ## Example Usage
 
@@ -59,7 +59,7 @@ data "spectrocloud_pack" "cni" {
 - `filters` (String) Filters to apply when searching for a pack. This is a string of the form 'key1=value1' with 'AND', 'OR` operators. Refer to the Palette API [pack search API endpoint documentation](https://docs.spectrocloud.com/api/v1/v-1-packs-search/) for filter examples..
 - `id` (String) The UID of the pack returned.
 - `name` (String) The name of the pack to search for.
-- `registry_uid` (String) The UID of the registry to search for the pack in. This is a required parameter starting from version 0.21.0.
+- `registry_uid` (String) The unique identifier (UID) of the registry where the pack is located. Specify `registry_uid` to search within a specific registry.
 - `type` (String) The type of pack to search for. Supported values are `helm`, `manifest`, `container`, `operator-instance`.
 - `version` (String) The version of the pack to search for.
 
