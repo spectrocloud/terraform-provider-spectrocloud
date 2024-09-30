@@ -90,8 +90,13 @@ func resourceApplicationStateRefreshFunc(c *client.V1Client, d *schema.ResourceD
 
 func resourceApplicationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
+	configList := d.Get("config")
 	c := getV1ClientWithResourceContext(m, "")
-
+	if configList.([]interface{})[0] != nil {
+		config := configList.([]interface{})[0].(map[string]interface{})
+		resourceContext := config["cluster_context"].(string)
+		c = getV1ClientWithResourceContext(m, resourceContext)
+	}
 	var diags diag.Diagnostics
 	err := c.DeleteApplication(d.Id())
 	if err != nil {
