@@ -51,10 +51,10 @@ func dataSourcePack() *schema.Resource {
 				Optional:    true,
 			},
 			"registry_uid": {
-				Type:         schema.TypeString,
-				Description:  "The unique identifier (UID) of the specific registry where the pack is located. Required if searching within a specific registry. Only one of `filters`, `id`, or `registry_uid` can be provided.",
-				Optional:     true,
-				ExactlyOneOf: []string{"filters", "id", "registry_uid"},
+				Type:        schema.TypeString,
+				Description: "The unique identifier (UID) of the registry where the pack is located. Specify `registry_uid` to search within a specific registry.",
+				Computed:    true,
+				Optional:    true,
 			},
 			"type": {
 				Type:        schema.TypeString,
