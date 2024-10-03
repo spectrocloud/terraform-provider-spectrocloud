@@ -26,60 +26,71 @@ func resourceApplication() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The name of the application being created.",
 			},
 			"tags": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Set:      schema.HashString,
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Set:         schema.HashString,
+				Description: "A set of tags to associate with the application for easier identification and categorization.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
 			"application_profile_uid": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The unique identifier (UID) of the application profile to use for this application.",
 			},
 			"config": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MaxItems: 1,
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "The configuration block for specifying cluster and resource limits for the application.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"cluster_uid": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The unique identifier (UID) of the target cluster. Either `cluster_uid` or `cluster_group_uid` can be provided.",
 						},
 						"cluster_group_uid": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The unique identifier (UID) of the cluster group. Either `cluster_uid` or `cluster_group_uid` can be provided.",
 						},
 						"cluster_context": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The context for the cluster,  Either `tenant` or `project` can be provided.",
 						},
 						"cluster_name": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "An optional name for the target cluster.",
 						},
 						"limits": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "Optional resource limits for the application, including CPU, memory, and storage constraints.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"cpu": {
-										Type:     schema.TypeInt,
-										Optional: true,
-										Default:  "spectro",
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Description: "The CPU allocation for the application, specified in integer values.",
 									},
 									"memory": {
-										Type:     schema.TypeInt,
-										Optional: true,
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Description: "The memory allocation for the application, specified in megabytes.",
 									},
 									"storage": {
-										Type:     schema.TypeInt,
-										Optional: true,
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Description: "The storage allocation for the application, specified in gigabytes.",
 									},
 								},
 							},

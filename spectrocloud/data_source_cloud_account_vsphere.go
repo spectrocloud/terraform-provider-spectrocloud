@@ -18,12 +18,14 @@ func dataSourceCloudAccountVsphere() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The unique ID of the vSphere cloud account. Either `id` or `name` must be provided, but not both.",
 			},
 			"name": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The name of the vSphere cloud account. Either `id` or `name` must be provided, but not both.",
 			},
 		},
 	}

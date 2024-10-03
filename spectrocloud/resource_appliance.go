@@ -33,25 +33,29 @@ func resourceAppliance() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"uid": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The unique identifier (UID) for the appliance.",
 			},
 			"tags": {
-				Type:     schema.TypeMap,
-				Optional: true,
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "A set of key-value pairs that can be used to organize and categorize the appliance.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
 			"pairing_key": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The pairing key used for appliance pairing.",
 			},
 			"wait": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				ForceNew: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "If set to `true`, the resource creation will wait for the appliance provisioning process to complete before returning. Defaults to `false`.",
 			},
 		},
 	}

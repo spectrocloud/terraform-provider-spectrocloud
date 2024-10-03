@@ -22,17 +22,20 @@ func dataSourceClusterProfile() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The unique ID of the cluster profile. Either `id` or `name` must be provided, but not both.",
 			},
 			"name": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The name of the cluster profile. Either `id` or `name` must be provided, but not both.",
 			},
 			"version": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "The version of the cluster profile.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -48,22 +51,26 @@ func dataSourceClusterProfile() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"type": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "spectro",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "spectro",
+							Description: "The type of pack. Defaults to `spectro`.",
 						},
 						"registry_uid": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The UID of the registry associated with the pack.",
 						},
 						"uid": {
-							Type:     schema.TypeString,
-							Computed: true,
-							Optional: true,
+							Type:        schema.TypeString,
+							Computed:    true,
+							Optional:    true,
+							Description: "The unique identifier for the pack.",
 						},
 						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of the pack.",
 						},
 						"manifest": {
 							Type:     schema.TypeList,
@@ -71,12 +78,14 @@ func dataSourceClusterProfile() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"uid": {
-										Type:     schema.TypeString,
-										Computed: true,
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "The unique ID of the manifest.",
 									},
 									"name": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the manifest.",
 									},
 									"content": {
 										Type:     schema.TypeString,
@@ -84,13 +93,15 @@ func dataSourceClusterProfile() *schema.Resource {
 										DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
 											return strings.TrimSpace(old) == strings.TrimSpace(new)
 										},
+										Description: "The content of the manifest.",
 									},
 								},
 							},
 						},
 						"tag": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The tag associated with the pack.",
 						},
 						"values": {
 							Type:     schema.TypeString,
@@ -99,6 +110,7 @@ func dataSourceClusterProfile() *schema.Resource {
 								// UI strips the trailing newline on save
 								return strings.TrimSpace(old) == strings.TrimSpace(new)
 							},
+							Description: "Values associated with the pack.",
 						},
 					},
 				},

@@ -14,20 +14,23 @@ func dataSourceCloudAccountTencent() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"tencent_secret_id": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The Tencent Secret ID used for authentication. This value is automatically retrieved and should not be provided manually.",
 			},
 			"id": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The unique ID of the Tencent cloud account. Either `id` or `name` must be provided, but not both.",
 			},
 			"name": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The name of the Tencent cloud account. Either `id` or `name` must be provided, but not both.",
 			},
 		},
 	}

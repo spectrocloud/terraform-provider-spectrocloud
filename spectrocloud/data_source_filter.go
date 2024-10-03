@@ -22,18 +22,21 @@ func dataSourceFilter() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The name of the filter.",
 						},
 						"annotations": {
-							Type:     schema.TypeMap,
-							Computed: true,
-							Elem:     &schema.Schema{Type: schema.TypeString},
+							Type:        schema.TypeMap,
+							Computed:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "Annotations related to the filter, represented as key-value pairs.",
 						},
 						"labels": {
-							Type:     schema.TypeMap,
-							Computed: true,
-							Elem:     &schema.Schema{Type: schema.TypeString},
+							Type:        schema.TypeMap,
+							Computed:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "Labels associated with the filter, represented as key-value pairs.",
 						},
 					},
 				},
@@ -49,8 +52,9 @@ func dataSourceFilter() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"conjunction": {
-										Type:     schema.TypeString,
-										Computed: true,
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "The conjunction used to combine filter groups. Common values: `AND`, `OR`.",
 									},
 									"filters": {
 										Type:     schema.TypeList,
@@ -58,21 +62,25 @@ func dataSourceFilter() *schema.Resource {
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"key": {
-													Type:     schema.TypeString,
-													Computed: true,
+													Type:        schema.TypeString,
+													Computed:    true,
+													Description: "The key for the filter condition.",
 												},
 												"negation": {
-													Type:     schema.TypeBool,
-													Computed: true,
+													Type:        schema.TypeBool,
+													Computed:    true,
+													Description: "A flag indicating whether the filter is negated.",
 												},
 												"operator": {
-													Type:     schema.TypeString,
-													Computed: true,
+													Type:        schema.TypeString,
+													Computed:    true,
+													Description: "The operator used in the filter condition. Examples: `=`, `!=`.",
 												},
 												"values": {
-													Type:     schema.TypeList,
-													Computed: true,
-													Elem:     &schema.Schema{Type: schema.TypeString},
+													Type:        schema.TypeList,
+													Computed:    true,
+													Elem:        &schema.Schema{Type: schema.TypeString},
+													Description: "A list of values to compare against in the filter condition.",
 												},
 											},
 										},
