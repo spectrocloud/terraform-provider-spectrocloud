@@ -50,15 +50,15 @@ resource "spectrocloud_backup_storage_location" "bsl2" {
 
 ### Required
 
-- `bucket_name` (String)
-- `is_default` (Boolean)
-- `name` (String)
-- `region` (String)
-- `s3` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--s3))
+- `bucket_name` (String) The name of the storage bucket where backups are stored. This is relevant for S3 or S3-compatible storage services.
+- `is_default` (Boolean) Specifies if this backup storage location should be used as the default location for storing backups.
+- `name` (String) The name of the backup storage location. This is a unique identifier for the backup location.
+- `region` (String) The region where the backup storage is located, typically corresponding to the region of the cloud provider.
+- `s3` (Block List, Min: 1, Max: 1) S3-specific settings for configuring the backup storage location. (see [below for nested schema](#nestedblock--s3))
 
 ### Optional
 
-- `ca_cert` (String)
+- `ca_cert` (String) An optional CA certificate used for SSL connections to ensure secure communication with the storage provider.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -70,16 +70,16 @@ resource "spectrocloud_backup_storage_location" "bsl2" {
 
 Required:
 
-- `credential_type` (String)
+- `credential_type` (String) The type of credentials used to access the S3 storage. Supported values are 'secret' for static credentials and 'sts' for temporary, token-based credentials.
 
 Optional:
 
-- `access_key` (String)
-- `arn` (String)
-- `external_id` (String)
-- `s3_force_path_style` (Boolean)
-- `s3_url` (String)
-- `secret_key` (String)
+- `access_key` (String) The access key for S3 authentication, required if 'credential_type' is set to 'secret'.
+- `arn` (String) The Amazon Resource Name (ARN) of the IAM role to assume for accessing S3 when using 'sts' credentials.
+- `external_id` (String) An external ID used for cross-account access to the S3 storage when using 'sts' credentials.
+- `s3_force_path_style` (Boolean) A boolean flag indicating whether to enforce the path-style URL for accessing S3.
+- `s3_url` (String) The S3 URL endpoint.
+- `secret_key` (String) The secret key for S3 authentication, required if 'credential_type' is set to 'secret'.
 
 
 <a id="nestedblock--timeouts"></a>

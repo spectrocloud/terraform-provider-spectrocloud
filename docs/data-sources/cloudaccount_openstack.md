@@ -17,8 +17,5 @@ description: |-
 
 ### Optional
 
-- `name` (String)
-
-### Read-Only
-
-- `id` (String) The ID of this resource.
+- `id` (String) The unique ID of the OpenStack cloud account. Either `id` or `name` must be provided, but not both.
+- `name` (String) The name of the OpenStack cloud account. Either `id` or `name` must be provided, but not both.

@@ -24,13 +24,13 @@ resource "spectrocloud_cloudaccount_tencent" "tencent-1" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) The name of the Tencent account to be managed.
 
 ### Optional
 
 - `context` (String) The context of the Tencent account. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
-- `tencent_secret_id` (String)
-- `tencent_secret_key` (String, Sensitive)
+- `tencent_secret_id` (String) The secret ID associated with the Tencent account for authentication.
+- `tencent_secret_key` (String, Sensitive) The secret key associated with the Tencent account for authentication.
 
 ### Read-Only
 

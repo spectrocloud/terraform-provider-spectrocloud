@@ -17,10 +17,12 @@ func dataSourceUser() *schema.Resource {
 				Computed:      true,
 				Optional:      true,
 				ConflictsWith: []string{"email"},
+				Description:   "The unique ID of the user. If provided, `email` cannot be used.",
 			},
 			"email": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The email address of the user. If provided, `id` cannot be used.",
 			},
 		},
 	}

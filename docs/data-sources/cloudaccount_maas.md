@@ -17,10 +17,10 @@ description: |-
 
 ### Optional
 
-- `name` (String)
+- `id` (String) The unique ID of the cloud account. Either `id` or `name` must be provided, but not both.
+- `name` (String) The name of the cloud account. This can be used instead of `id` to retrieve the account details. Only one of `id` or `name` can be specified.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
-- `maas_api_endpoint` (String)
-- `maas_api_key` (String)
+- `maas_api_endpoint` (String) The API endpoint of the MaaS account. This value is computed based on the cloud account's configuration and is used for interaction with the MaaS service.
+- `maas_api_key` (String) The API key associated with the MaaS account. This is used to authenticate API requests to the MaaS service and is computed from the cloud account's credentials.

@@ -17,9 +17,9 @@ description: |-
 
 ### Optional
 
-- `name` (String)
+- `id` (String) The unique ID of the Tencent cloud account. Either `id` or `name` must be provided, but not both.
+- `name` (String) The name of the Tencent cloud account. Either `id` or `name` must be provided, but not both.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
-- `tencent_secret_id` (String)
+- `tencent_secret_id` (String) The Tencent Secret ID used for authentication. This value is automatically retrieved and should not be provided manually.

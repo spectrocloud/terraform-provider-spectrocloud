@@ -26,8 +26,5 @@ data "spectrocloud_user" "user1" {
 
 ### Optional
 
-- `email` (String)
-
-### Read-Only
-
-- `id` (String) The ID of this resource.
+- `email` (String) The email address of the user. If provided, `id` cannot be used.
+- `id` (String) The unique ID of the user. If provided, `email` cannot be used.

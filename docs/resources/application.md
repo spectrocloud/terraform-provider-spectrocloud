@@ -38,13 +38,13 @@ resource "spectrocloud_application" "application" {
 
 ### Required
 
-- `application_profile_uid` (String)
-- `name` (String)
+- `application_profile_uid` (String) The unique identifier (UID) of the application profile to use for this application.
+- `name` (String) The name of the application being created.
 
 ### Optional
 
-- `config` (Block List, Max: 1) (see [below for nested schema](#nestedblock--config))
-- `tags` (Set of String)
+- `config` (Block List, Max: 1) The configuration block for specifying cluster and resource limits for the application. (see [below for nested schema](#nestedblock--config))
+- `tags` (Set of String) A set of tags to associate with the application for easier identification and categorization.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -56,23 +56,23 @@ resource "spectrocloud_application" "application" {
 
 Required:
 
-- `cluster_context` (String)
+- `cluster_context` (String) The context for the cluster,  Either `tenant` or `project` can be provided.
 
 Optional:
 
-- `cluster_group_uid` (String)
-- `cluster_name` (String)
-- `cluster_uid` (String)
-- `limits` (Block List) (see [below for nested schema](#nestedblock--config--limits))
+- `cluster_group_uid` (String) The unique identifier (UID) of the cluster group. Either `cluster_uid` or `cluster_group_uid` can be provided.
+- `cluster_name` (String) An optional name for the target cluster.
+- `cluster_uid` (String) The unique identifier (UID) of the target cluster. Either `cluster_uid` or `cluster_group_uid` can be provided.
+- `limits` (Block List) Optional resource limits for the application, including CPU, memory, and storage constraints. (see [below for nested schema](#nestedblock--config--limits))
 
 <a id="nestedblock--config--limits"></a>
 ### Nested Schema for `config.limits`
 
 Optional:
 
-- `cpu` (Number)
-- `memory` (Number)
-- `storage` (Number)
+- `cpu` (Number) The CPU allocation for the application, specified in integer values.
+- `memory` (Number) The memory allocation for the application, specified in megabytes.
+- `storage` (Number) The storage allocation for the application, specified in gigabytes.
 
 
 

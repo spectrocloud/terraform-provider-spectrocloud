@@ -18,8 +18,9 @@ func resourceCloudAccountTencent() *schema.Resource {
 		DeleteContext: resourceCloudAccountTencentDelete,
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The name of the Tencent account to be managed.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -30,13 +31,15 @@ func resourceCloudAccountTencent() *schema.Resource {
 					"Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"tencent_secret_id": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The secret ID associated with the Tencent account for authentication.",
 			},
 			"tencent_secret_key": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "The secret key associated with the Tencent account for authentication.",
 			},
 		},
 	}

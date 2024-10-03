@@ -17,17 +17,19 @@ func dataSourceCloudAccountCustom() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The unique identifier of the cloud account. Either `id` or `name` must be provided.",
 			},
 			"name": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The name of the cloud account. Either `id` or `name` must be provided.",
 			},
 			"cloud": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The cloud provider name.",
+				Description: "The custom cloud provider name (e.g., `nutanix`).",
 			},
 		},
 	}

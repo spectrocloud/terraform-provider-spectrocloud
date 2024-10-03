@@ -38,7 +38,7 @@ resource "local_file" "adminkubeconfig" {
 
 ### Required
 
-- `name` (String)
+- `name` (String) The name of the cluster.
 
 ### Optional
 
@@ -47,6 +47,6 @@ resource "local_file" "adminkubeconfig" {
 
 ### Read-Only
 
-- `admin_kube_config` (String)
+- `admin_kube_config` (String) The admin kubeconfig file for accessing the cluster. This is computed automatically.
 - `id` (String) The ID of this resource.
-- `kube_config` (String)
+- `kube_config` (String) The kubeconfig file for accessing the cluster as a non-admin user. This is computed automatically.

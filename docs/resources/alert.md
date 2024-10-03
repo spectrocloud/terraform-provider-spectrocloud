@@ -48,18 +48,18 @@ resource "spectrocloud_alert" "alert_http" {
 
 ### Required
 
-- `component` (String)
-- `is_active` (Boolean)
-- `project` (String)
-- `type` (String)
+- `component` (String) The component of the system that the alert is associated with. Currently, `ClusterHealth` is the only supported value.
+- `is_active` (Boolean) Indicates whether the alert is active. Set to `true` to activate the alert, or `false` to deactivate it.
+- `project` (String) The project to which the alert belongs to.
+- `type` (String) The type of alert mechanism to use. Can be either `email` for email alerts or `http` for sending HTTP requests.
 
 ### Optional
 
-- `alert_all_users` (Boolean)
-- `created_by` (String)
-- `http` (Block List) (see [below for nested schema](#nestedblock--http))
-- `identifiers` (Set of String)
-- `status` (Block List) (see [below for nested schema](#nestedblock--status))
+- `alert_all_users` (Boolean) If set to `true`, the alert will be sent to all users. If `false`, it will target specific users or identifiers.
+- `created_by` (String) The user who created the alert.
+- `http` (Block List) The configuration block for HTTP-based alerts. This is used when the `type` is set to `http`. (see [below for nested schema](#nestedblock--http))
+- `identifiers` (Set of String) A set of unique identifiers to which the alert will be sent. This is used to target specific users or groups.
+- `status` (Block List) A status block representing the internal status of the alert. This is primarily for internal use and not utilized directly. (see [below for nested schema](#nestedblock--status))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -71,13 +71,13 @@ resource "spectrocloud_alert" "alert_http" {
 
 Required:
 
-- `body` (String)
-- `method` (String)
-- `url` (String)
+- `body` (String) The payload to include in the HTTP request body when the alert is triggered.
+- `method` (String) The HTTP method to use for the alert. Supported values are `POST`, `GET`, and `PUT`.
+- `url` (String) The target URL to send the HTTP request to when the alert is triggered.
 
 Optional:
 
-- `headers` (Map of String)
+- `headers` (Map of String) Optional HTTP headers to include in the request. Each header should be specified as a key-value pair.
 
 
 <a id="nestedblock--status"></a>

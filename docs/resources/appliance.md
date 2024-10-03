@@ -26,14 +26,14 @@ resource "spectrocloud_appliance" "appliance" {
 
 ### Required
 
-- `uid` (String)
+- `uid` (String) The unique identifier (UID) for the appliance.
 
 ### Optional
 
-- `pairing_key` (String)
-- `tags` (Map of String)
+- `pairing_key` (String) The pairing key used for appliance pairing.
+- `tags` (Map of String) A set of key-value pairs that can be used to organize and categorize the appliance.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `wait` (Boolean)
+- `wait` (Boolean) If set to `true`, the resource creation will wait for the appliance provisioning process to complete before returning. Defaults to `false`.
 
 ### Read-Only
 

@@ -17,8 +17,8 @@ description: |-
 
 ### Required
 
-- `name` (String)
+- `name` (String) The name of the OCI registry.
 
-### Read-Only
+### Optional
 
-- `id` (String) The ID of this resource.
+- `id` (String) The unique identifier of the OCI registry.

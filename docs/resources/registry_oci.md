@@ -31,15 +31,15 @@ resource "spectrocloud_registry_oci" "r1" {
 
 ### Required
 
-- `credentials` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--credentials))
-- `endpoint` (String)
-- `is_private` (Boolean)
-- `name` (String)
-- `type` (String)
+- `credentials` (Block List, Min: 1, Max: 1) Authentication credentials for accessing the OCI registry. (see [below for nested schema](#nestedblock--credentials))
+- `endpoint` (String) The URL endpoint of the OCI registry. This is where the container images are hosted and accessed.
+- `is_private` (Boolean) Specifies whether the registry is private or public. Private registries require authentication to access.
+- `name` (String) The name of the OCI registry.
+- `type` (String) The type of the registry. Possible values are 'ecr' (Amazon Elastic Container Registry) or 'basic' (for other types of registries).
 
 ### Optional
 
-- `provider_type` (String)
+- `provider_type` (String) The type of provider used for interacting with the registry. The default is 'helm'.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -51,16 +51,16 @@ resource "spectrocloud_registry_oci" "r1" {
 
 Required:
 
-- `credential_type` (String)
+- `credential_type` (String) The type of authentication used for accessing the registry. Supported values are 'secret', 'sts', 'basic', and 'noAuth'.
 
 Optional:
 
-- `access_key` (String)
-- `arn` (String)
-- `external_id` (String)
-- `password` (String, Sensitive)
-- `secret_key` (String, Sensitive)
-- `username` (String)
+- `access_key` (String) The access key for accessing the registry. Required if 'credential_type' is set to 'secret'.
+- `arn` (String) The Amazon Resource Name (ARN) used for AWS-based authentication. Required if 'credential_type' is 'sts'.
+- `external_id` (String) The external ID used for AWS STS (Security Token Service) authentication. Required if 'credential_type' is 'sts'.
+- `password` (String, Sensitive) The password for basic authentication. Required if 'credential_type' is 'basic'.
+- `secret_key` (String, Sensitive) The secret key for accessing the registry. Required if 'credential_type' is set to 'secret'.
+- `username` (String) The username for basic authentication. Required if 'credential_type' is 'basic'.
 
 
 <a id="nestedblock--timeouts"></a>
