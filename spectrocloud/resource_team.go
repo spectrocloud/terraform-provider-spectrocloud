@@ -123,7 +123,7 @@ func resourceTeam() *schema.Resource {
 
 func resourceTeamCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	uid, err := c.CreateTeam(toTeam(d))
@@ -157,7 +157,7 @@ func resourceTeamCreate(ctx context.Context, d *schema.ResourceData, m interface
 
 func resourceTeamRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	team, err := c.GetTeam(d.Id())
@@ -268,7 +268,7 @@ func setWorkspaceRoles(c *client.V1Client, d *schema.ResourceData) error {
 
 func resourceTeamUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	err := c.UpdateTeam(d.Id(), toTeam(d))
@@ -298,7 +298,7 @@ func resourceTeamUpdate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceTeamDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
 	err := c.DeleteTeam(d.Id())

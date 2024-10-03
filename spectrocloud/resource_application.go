@@ -92,7 +92,7 @@ func resourceApplication() *schema.Resource {
 }
 
 func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	resourceContext := ""
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
@@ -110,12 +110,15 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 	var cluster_uid interface{}
 	configList := d.Get("config")
 	if configList.([]interface{})[0] != nil {
+
 		config = configList.([]interface{})[0].(map[string]interface{})
 		cluster_uid = config["cluster_uid"]
+		resourceContext = config["cluster_context"].(string)
+
 	} else {
 		return diag.FromErr(val_error)
 	}
-
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	if cluster_uid == "" {
 		if config["cluster_group_uid"] == "" {
 			return diag.FromErr(val_error)
@@ -183,8 +186,14 @@ func resourceApplicationUpdate(ctx context.Context, d *schema.ResourceData, m in
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if d.HasChanges("cluster_uid", "cluster_profile") {
+	if d.HasChanges("config.0.cluster_uid", "config.0.cluster_profile") {
+		configList := d.Get("config")
 		c := getV1ClientWithResourceContext(m, "")
+		if configList.([]interface{})[0] != nil {
+			config := configList.([]interface{})[0].(map[string]interface{})
+			resourceContext := config["cluster_context"].(string)
+			c = getV1ClientWithResourceContext(m, resourceContext)
+		}
 
 		clusterUid := d.Get("cluster_uid").(string)
 		cluster, err := c.GetCluster(clusterUid)
