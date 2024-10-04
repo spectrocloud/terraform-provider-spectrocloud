@@ -62,7 +62,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Type:        schema.TypeList,
 				Required:    true,
 				MaxItems:    1,
-				Description: "Authentication credentials for accessing the OCI registry.",
+				Description: "Authentication credentials to access the private OCI registry. Required if `is_private` is set to `true`",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"credential_type": {
