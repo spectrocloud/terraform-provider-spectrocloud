@@ -40,7 +40,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Required:     true,
 				ForceNew:     true,
 				ValidateFunc: validation.StringInSlice([]string{"ecr", "basic"}, false),
-				Description:  "The type of the registry. Possible values are 'ecr' (Amazon Elastic Container Registry) or 'basic' (for other types of registries).",
+				Description:  "The type of the registry. Possible values are 'ecr' (Amazon Elastic Container Registry) or 'basic' (for other types of OCI registries).",
 			},
 			"is_private": {
 				Type:        schema.TypeBool,
