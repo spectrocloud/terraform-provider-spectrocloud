@@ -110,7 +110,7 @@ func dataSourceClusterProfile() *schema.Resource {
 								// UI strips the trailing newline on save
 								return strings.TrimSpace(old) == strings.TrimSpace(new)
 							},
-							Description: "Values associated with the pack.",
+							Description: "The YAML values associated with the pack.",
 						},
 					},
 				},
