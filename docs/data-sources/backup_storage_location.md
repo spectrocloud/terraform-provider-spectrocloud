@@ -17,8 +17,5 @@ description: |-
 
 ### Optional
 
-- `name` (String)
-
-### Read-Only
-
-- `id` (String) The ID of this resource.
+- `id` (String) The unique ID of the backup storage location. This is an optional field, but if provided, it will be used to retrieve the specific backup storage location.
+- `name` (String) The name of the backup storage location. This is an optional field, but if provided, it will be used to retrieve the specific backup storage location.

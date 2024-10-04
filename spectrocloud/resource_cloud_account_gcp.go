@@ -20,8 +20,9 @@ func resourceCloudAccountGcp() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The name of the GCP account.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -32,9 +33,10 @@ func resourceCloudAccountGcp() *schema.Resource {
 					"Allowed values are `project` or `tenant`. Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"gcp_json_credentials": {
-				Type:      schema.TypeString,
-				Required:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Sensitive:   true,
+				Description: "The GCP credentials in JSON format. These credentials are required to authenticate and manage.",
 			},
 		},
 	}

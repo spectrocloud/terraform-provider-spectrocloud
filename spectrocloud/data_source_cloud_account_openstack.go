@@ -18,12 +18,14 @@ func dataSourceCloudAccountOpenStack() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The unique ID of the OpenStack cloud account. Either `id` or `name` must be provided, but not both.",
 			},
 			"name": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The name of the OpenStack cloud account. Either `id` or `name` must be provided, but not both.",
 			},
 		},
 	}

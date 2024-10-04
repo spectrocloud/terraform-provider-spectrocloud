@@ -28,12 +28,12 @@ output "same" {
 ### Optional
 
 - `context` (String) Cluster profile context. Allowed values are `project` or `tenant`. Defaults to `project`.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
-- `name` (String)
-- `version` (String)
+- `id` (String) The unique ID of the cluster profile. Either `id` or `name` must be provided, but not both.
+- `name` (String) The name of the cluster profile. Either `id` or `name` must be provided, but not both.
+- `version` (String) The version of the cluster profile.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
 - `pack` (List of Object) (see [below for nested schema](#nestedatt--pack))
 
 <a id="nestedatt--pack"></a>

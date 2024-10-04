@@ -24,8 +24,8 @@ resource "spectrocloud_cloudaccount_gcp" "gcp-1" {
 
 ### Required
 
-- `gcp_json_credentials` (String, Sensitive)
-- `name` (String)
+- `gcp_json_credentials` (String, Sensitive) The GCP credentials in JSON format. These credentials are required to authenticate and manage.
+- `name` (String) The name of the GCP account.
 
 ### Optional
 

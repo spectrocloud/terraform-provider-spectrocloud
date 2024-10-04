@@ -39,13 +39,15 @@ func resourceCloudAccountAws() *schema.Resource {
 				Description: "ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.",
 			},
 			"aws_access_key": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The AWS access key used to authenticate.",
 			},
 			"aws_secret_key": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "The AWS secret key used in conjunction with the access key for authentication.",
 			},
 			"type": {
 				Type:         schema.TypeString,
@@ -55,13 +57,15 @@ func resourceCloudAccountAws() *schema.Resource {
 				Description:  "The type of AWS credentials to use. Can be `secret` or `sts`. ",
 			},
 			"arn": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The Amazon Resource Name (ARN) associated with the AWS resource. This is used for identifying resources in AWS.",
 			},
 			"external_id": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "An optional external ID that can be used for cross-account access in AWS.",
 			},
 			"partition": {
 				Type:         schema.TypeString,

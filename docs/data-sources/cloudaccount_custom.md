@@ -17,12 +17,9 @@ description: |-
 
 ### Required
 
-- `cloud` (String) The cloud provider name.
+- `cloud` (String) The custom cloud provider name (e.g., `nutanix`).
 
 ### Optional
 
-- `name` (String)
-
-### Read-Only
-
-- `id` (String) The ID of this resource.
+- `id` (String) The unique identifier of the cloud account. Either `id` or `name` must be provided.
+- `name` (String) The name of the cloud account. Either `id` or `name` must be provided.

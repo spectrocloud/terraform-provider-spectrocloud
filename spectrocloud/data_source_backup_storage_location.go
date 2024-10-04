@@ -17,12 +17,14 @@ func dataSourceBackupStorageLocation() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The unique ID of the backup storage location. This is an optional field, but if provided, it will be used to retrieve the specific backup storage location.",
 			},
 			"name": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The name of the backup storage location. This is an optional field, but if provided, it will be used to retrieve the specific backup storage location.",
 			},
 		},
 	}

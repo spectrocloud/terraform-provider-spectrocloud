@@ -30,10 +30,10 @@ resource "spectrocloud_registry_helm" "r1" {
 
 ### Required
 
-- `credentials` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--credentials))
-- `endpoint` (String)
-- `is_private` (Boolean)
-- `name` (String)
+- `credentials` (Block List, Min: 1, Max: 1) Authentication credentials for accessing the Helm registry. (see [below for nested schema](#nestedblock--credentials))
+- `endpoint` (String) The URL endpoint of the Helm registry where the charts are hosted.
+- `is_private` (Boolean) Specifies whether the Helm registry is private or public.
+- `name` (String) The name of the Helm registry. This must be unique
 
 ### Optional
 
@@ -48,13 +48,13 @@ resource "spectrocloud_registry_helm" "r1" {
 
 Required:
 
-- `credential_type` (String)
+- `credential_type` (String) The type of authentication used for the Helm registry. Supported values are 'noAuth' for no authentication, 'basic' for username/password, and 'token' for token-based authentication.
 
 Optional:
 
-- `password` (String)
-- `token` (String)
-- `username` (String)
+- `password` (String) The password for basic authentication. Required if 'credential_type' is set to 'basic'.
+- `token` (String) The authentication token. Required if 'credential_type' is set to 'token'.
+- `username` (String) The username for basic authentication. Required if 'credential_type' is set to 'basic'.
 
 
 <a id="nestedblock--timeouts"></a>

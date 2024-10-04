@@ -14,24 +14,28 @@ func dataSourceCloudAccountMaas() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"maas_api_endpoint": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The API endpoint of the MaaS account. This value is computed based on the cloud account's configuration and is used for interaction with the MaaS service.",
 			},
 			"maas_api_key": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The API key associated with the MaaS account. This is used to authenticate API requests to the MaaS service and is computed from the cloud account's credentials.",
 			},
 			"id": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The unique ID of the cloud account. Either `id` or `name` must be provided, but not both.",
 			},
 			"name": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+				Description:  "The name of the cloud account. This can be used instead of `id` to retrieve the account details. Only one of `id` or `name` can be specified.",
 			},
 		},
 	}

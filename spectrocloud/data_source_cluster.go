@@ -14,17 +14,20 @@ func dataSourceCluster() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the cluster.",
 			},
 			"admin_kube_config": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The admin kubeconfig file for accessing the cluster. This is computed automatically.",
 			},
 			"kube_config": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The kubeconfig file for accessing the cluster as a non-admin user. This is computed automatically.",
 			},
 			"context": {
 				Type:         schema.TypeString,
