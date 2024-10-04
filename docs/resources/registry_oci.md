@@ -31,11 +31,11 @@ resource "spectrocloud_registry_oci" "r1" {
 
 ### Required
 
-- `credentials` (Block List, Min: 1, Max: 1) Authentication credentials for accessing the OCI registry. (see [below for nested schema](#nestedblock--credentials))
+- `credentials` (Block List, Min: 1, Max: 1) Authentication credentials to access the private OCI registry. Required if `is_private` is set to `true` (see [below for nested schema](#nestedblock--credentials))
 - `endpoint` (String) The URL endpoint of the OCI registry. This is where the container images are hosted and accessed.
 - `is_private` (Boolean) Specifies whether the registry is private or public. Private registries require authentication to access.
 - `name` (String) The name of the OCI registry.
-- `type` (String) The type of the registry. Possible values are 'ecr' (Amazon Elastic Container Registry) or 'basic' (for other types of registries).
+- `type` (String) The type of the registry. Possible values are 'ecr' (Amazon Elastic Container Registry) or 'basic' (for other types of OCI registries).
 
 ### Optional
 
