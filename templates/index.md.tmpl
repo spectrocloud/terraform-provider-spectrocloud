@@ -19,7 +19,7 @@ infrastructure stacks.
 
 ## Palette Account
 
-Sign up for a free trial account [here](https://www.spectrocloud.com/free-trial/).
+To get started with Palette, sign up for an account [here](https://www.spectrocloud.com/get-started).
 Use your Palette [API key](https://docs.spectrocloud.com/user-management/authentication/api-key/create-api-key) to authenticate. For more details on the authentication, navigate to the [authentication](#authentication) section.
 
 ## Example Usage
