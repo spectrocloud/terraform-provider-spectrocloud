@@ -643,11 +643,14 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 			StaticIP: host.(map[string]interface{})["static_ip"].(string),
 		}
 		if v, ok := host.(map[string]interface{})["two_node_role"].(string); ok {
-			if _, ok := twoNodeHostRoles[v]; ok {
-				return nil, fmt.Errorf("two node role '%s' already assigned to edge host '%s'; roles must be unique", v, hostId)
+			if v != "" {
+				if _, ok := twoNodeHostRoles[v]; ok {
+					return nil, fmt.Errorf("two node role '%s' already assigned to edge host '%s'; roles must be unique", v, hostId)
+				}
+				edgeHost.TwoNodeCandidatePriority = v
+				twoNodeHostRoles[v] = hostId
 			}
-			edgeHost.TwoNodeCandidatePriority = v
-			twoNodeHostRoles[v] = hostId
+
 		}
 		edgeHosts = append(edgeHosts, edgeHost)
 	}
