@@ -15,6 +15,7 @@ description: |-
 ```terraform
 resource "spectrocloud_backup_storage_location" "bsl1" {
   name        = "dev-backup-s3"
+  context     = "tenant"
   is_default  = false
   region      = "us-east-2"
   bucket_name = "dev-backup"
@@ -59,6 +60,7 @@ resource "spectrocloud_backup_storage_location" "bsl2" {
 ### Optional
 
 - `ca_cert` (String) An optional CA certificate used for SSL connections to ensure secure communication with the storage provider.
+- `context` (String) The context of the backup storage location. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only

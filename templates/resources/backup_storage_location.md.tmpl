@@ -15,6 +15,7 @@ description: |-
 ```terraform
 resource "spectrocloud_backup_storage_location" "bsl1" {
   name        = "dev-backup-s3"
+  context     = "tenant"
   is_default  = false
   region      = "us-east-2"
   bucket_name = "dev-backup"

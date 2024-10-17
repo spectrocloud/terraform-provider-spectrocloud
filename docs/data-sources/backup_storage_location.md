@@ -17,5 +17,6 @@ description: |-
 
 ### Optional
 
+- `context` (String) The context of the backup storage location. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `id` (String) The unique ID of the backup storage location. This is an optional field, but if provided, it will be used to retrieve the specific backup storage location.
 - `name` (String) The name of the backup storage location. This is an optional field, but if provided, it will be used to retrieve the specific backup storage location.
