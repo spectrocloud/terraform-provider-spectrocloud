@@ -494,6 +494,7 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 		placement := cloudConfig.Spec.ClusterConfig.Placement
 		ret["datacenter"] = placement.Datacenter
 		ret["folder"] = placement.Folder
+		ret["image_template_folder"] = placement.ImageTemplateFolder
 	}
 	//Currently we do support ssh_key and ssh_keys in vsphere cluster.
 	//Handling flatten for if ssh_key is set
