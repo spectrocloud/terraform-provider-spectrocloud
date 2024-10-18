@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -27,21 +26,12 @@ func dataSourceBackupStorageLocation() *schema.Resource {
 				ExactlyOneOf: []string{"id", "name"},
 				Description:  "The name of the backup storage location. This is an optional field, but if provided, it will be used to retrieve the specific backup storage location.",
 			},
-			"context": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "project",
-				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
-				Description: "The context of the backup storage location. Allowed values are `project` or `tenant`. " +
-					"Default value is `project`. " + PROJECT_NAME_NUANCE,
-			},
 		},
 	}
 }
 
 func dataSourceBackupStorageLocationRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	BSLContext := d.Get("context").(string)
-	c := getV1ClientWithResourceContext(m, BSLContext)
+	c := getV1ClientWithResourceContext(m, "project")
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
