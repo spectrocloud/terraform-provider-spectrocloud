@@ -494,8 +494,50 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 					err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
 				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
 					log.Printf("Change in machine pool %s", name)
+
+					// Logic for delete machine in node pool starts
+					deletedHosts := make([]string, 0)
+					for _, oEdgeHost := range osMap[name].(map[string]interface{})["edge_host"].([]interface{}) {
+						oHostName := oEdgeHost.(map[string]interface{})["host_name"].(string)
+						isPresent := false
+						for _, nEdgeHost := range nsMap[name].(map[string]interface{})["edge_host"].([]interface{}) {
+							nHostName := nEdgeHost.(map[string]interface{})["host_name"].(string)
+							if oHostName == nHostName {
+								// Found the host, so it's not deleted
+								isPresent = true
+								break
+							}
+						}
+						if !isPresent {
+							deletedHosts = append(deletedHosts, oHostName)
+						}
+					}
+					machineList, err := c.GetNodeListInEdgeNativeMachinePool(cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
+					for _, existingMachine := range machineList.Items {
+						found := false
+						for _, host := range deletedHosts {
+							if existingMachine.Metadata.Name == host {
+								found = true
+								break
+							}
+						}
+						if found {
+							err := c.DeleteNodeInEdgeNativeMachinePool(cloudConfigId, name, existingMachine.Metadata.UID)
+							if err != nil {
+								return diag.FromErr(err)
+							}
+						}
+					}
+					// Logic for delete machine in node pool ends
+
 					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", cloudConfigId, name)
+					if err != nil {
+						return diag.FromErr(err)
+					}
+					err = resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
@@ -515,9 +557,21 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
-			if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
+			machineList, err := c.GetNodeListInEdgeNativeMachinePool(cloudConfigId, name)
+			if err != nil {
 				return diag.FromErr(err)
 			}
+			for _, existingMachine := range machineList.Items {
+				err := c.DeleteNodeInEdgeNativeMachinePool(cloudConfigId, name, existingMachine.Metadata.UID)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+
+			// We Tested when all nodes in node pool is deleted node pool will me remove by default no need to delete worker pool explicit
+			//if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
+			//	return diag.FromErr(err)
+			//}
 		}
 	}
 
