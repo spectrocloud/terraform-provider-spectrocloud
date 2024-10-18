@@ -534,6 +534,9 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 					// Logic for delete machine in node pool ends
 
 					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
+					if err != nil {
+						return diag.FromErr(err)
+					}
 					err = resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
