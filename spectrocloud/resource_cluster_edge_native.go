@@ -564,7 +564,8 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 					return diag.FromErr(err)
 				}
 			}
-			// Need to test it and wait %
+
+			// We Tested when all nodes in node pool is deleted node pool will me remove by default no need to delete worker pool explicit
 			//if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
 			//	return diag.FromErr(err)
 			//}
