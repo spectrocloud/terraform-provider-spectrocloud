@@ -1,0 +1,30 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+You can learn more about Private Cloud Gateways DNS Mapping by reviewing the [Create and Manage DNS Mappings](https://docs.spectrocloud.com/clusters/pcg/manage-pcg/add-dns-mapping/) guide.
+
+## Example Usage
+
+An example of creating an DNS Map for a Private Cloud Gateway using a search domain, datacenter and network.
+
+```hcl
+ data "spectrocloud_private_cloud_gateway" "gateway" {
+   name = "test-vm-pcg"
+ }
+ resource "spectrocloud_privatecloudgateway_dns_map" "dns_map_test" {
+   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.gateway.id
+   search_domain_name = "test1.spectro.com"
+   data_center = "DataCenterTest"
+   network = "TEST-VM-NETWORK"
+ }
+```
+
+{{ .SchemaMarkdown | trimspace }}

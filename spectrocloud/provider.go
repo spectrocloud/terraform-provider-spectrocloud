@@ -128,6 +128,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_privatecloudgateway_ippool": resourcePrivateCloudGatewayIpPool(),
 
+				"spectrocloud_privatecloudgateway_dns_map": resourcePrivateCloudGatewayDNSMap(),
+
 				"spectrocloud_backup_storage_location": resourceBackupStorageLocation(),
 
 				"spectrocloud_registry_oci":  resourceRegistryOciEcr(),
@@ -174,8 +176,9 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_application_profile": dataSourceApplicationProfile(),
 				"spectrocloud_workspace":           dataSourceWorkspace(),
 
-				"spectrocloud_private_cloud_gateway": dataSourcePCG(),
-				"spectrocloud_ippool":                dataSourcePrivateCloudGatewayIpPool(),
+				"spectrocloud_private_cloud_gateway":       dataSourcePCG(),
+				"spectrocloud_ippool":                      dataSourcePrivateCloudGatewayIpPool(),
+				"spectrocloud_privatecloudgateway_dns_map": dataSourcePrivateCloudGatewayDNSMap(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}
