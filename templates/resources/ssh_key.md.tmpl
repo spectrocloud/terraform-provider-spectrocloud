@@ -1,0 +1,31 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+You can learn more about managing ssh key by reviewing the [Create and Manage DNS Mappings](https://docs.spectrocloud.com/clusters/cluster-management/ssh-keys/) guide.
+
+## Example Usage
+
+An example of creating an ssh key assets in project or tenant context.
+
+```hcl
+data "spectrocloud_ssh_key" "ssh_project" {
+  name    = "test-tf-ssh"
+  context = "project"
+}
+
+resource "spectrocloud_ssh_key" "ssh_tenant" {
+  name        = "ssh-dev-1"
+  context     = "tenant"
+  ssh_key = data.spectrocloud_ssh_key.ssh_project.ssh_key
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
