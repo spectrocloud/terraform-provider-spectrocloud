@@ -234,6 +234,35 @@ func resourceClusterEdgeNative() *schema.Resource {
 										Description: "Edge host static IP",
 										Optional:    true,
 									},
+									"nic_name": {
+										Type:        schema.TypeString,
+										Description: "Edge host IP Address",
+										Optional:    true,
+									},
+									"ip": {
+										Type:        schema.TypeString,
+										Description: "Edge host IP Address",
+										Optional:    true,
+									},
+									"default_gateway": {
+										Type:        schema.TypeString,
+										Description: "Edge host default gateway",
+										Optional:    true,
+									},
+									"subnet_mask": {
+										Type:        schema.TypeString,
+										Description: "Edge host subnet mask",
+										Optional:    true,
+									},
+									"dns_servers": {
+										Type:     schema.TypeSet,
+										Required: true,
+										ForceNew: true,
+										Set:      schema.HashString,
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+									},
 									"two_node_role": {
 										Type:         schema.TypeString,
 										Description:  "Two node role for edge host. Valid values are `primary` and `secondary`.",
