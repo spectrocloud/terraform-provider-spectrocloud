@@ -170,17 +170,16 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_registry_oci":  dataSourceRegistryOci(),
 				"spectrocloud_registry":      dataSourceRegistry(), // registry datasource for all types.
 
-				"spectrocloud_appliance":           dataSourceAppliance(),
-				"spectrocloud_appliances":          dataSourceAppliances(),
-				"spectrocloud_cluster":             dataSourceCluster(),
-				"spectrocloud_cluster_group":       dataSourceClusterGroup(),
-				"spectrocloud_application_profile": dataSourceApplicationProfile(),
-				"spectrocloud_workspace":           dataSourceWorkspace(),
+				"spectrocloud_appliance":                   dataSourceAppliance(),
+				"spectrocloud_appliances":                  dataSourceAppliances(),
+				"spectrocloud_cluster":                     dataSourceCluster(),
+				"spectrocloud_cluster_group":               dataSourceClusterGroup(),
+				"spectrocloud_application_profile":         dataSourceApplicationProfile(),
+				"spectrocloud_workspace":                   dataSourceWorkspace(),
 				"spectrocloud_private_cloud_gateway":       dataSourcePCG(),
 				"spectrocloud_ippool":                      dataSourcePrivateCloudGatewayIpPool(),
 				"spectrocloud_privatecloudgateway_dns_map": dataSourcePrivateCloudGatewayDNSMap(),
-        "spectrocloud_ssh_key":               dataSourceSSHKey(),
-
+				"spectrocloud_ssh_key":                     dataSourceSSHKey(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}
