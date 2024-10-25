@@ -236,7 +236,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 									},
 									"nic_name": {
 										Type:        schema.TypeString,
-										Description: "Edge host IP Address",
+										Description: "NIC Name for edge host.",
 										Optional:    true,
 									},
 									"default_gateway": {
@@ -250,9 +250,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 										Optional:    true,
 									},
 									"dns_servers": {
-										Type:     schema.TypeSet,
-										Optional: true,
-										Set:      schema.HashString,
+										Type:        schema.TypeSet,
+										Optional:    true,
+										Set:         schema.HashString,
+										Description: "Edge host DNS servers",
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},

@@ -48,6 +48,11 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     edge_host {
       host_uid  = spectrocloud_appliance.appliance1.uid
       static_ip = "1.2.3.4"
+      dns_servers     = ["tf.test.com"]
+      host_name       = "test-test"
+      nic_name        = "auto160"
+      static_ip       = "112.21.12.21"
+      subnet_mask     = "2.2.1.0"
     }
   }
 
