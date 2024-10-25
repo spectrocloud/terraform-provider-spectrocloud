@@ -722,12 +722,7 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 		edgeHost := &models.V1EdgeNativeMachinePoolHostEntity{
 			HostName: hostName,
 			HostUID:  &hostId,
-			Nic: &models.V1Nic{
-				Gateway: host.(map[string]interface{})["default_gateway"].(string),
-				IP:      host.(map[string]interface{})["static_ip"].(string),
-				NicName: host.(map[string]interface{})["nic_name"].(string),
-				Subnet:  host.(map[string]interface{})["subnet_mask"].(string),
-			},
+			Nic:      &models.V1Nic{},
 			// Hubble deprecated it and need to set it inside nic
 			// StaticIP: host.(map[string]interface{})["static_ip"].(string),
 		}
@@ -740,6 +735,19 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 				edgeHost.Nic.DNS = result
 			}
 		}
+		if v, ok := host.(map[string]interface{})["default_gateway"]; ok {
+			edgeHost.Nic.Gateway = v.(string)
+		}
+		if v, ok := host.(map[string]interface{})["static_ip"]; ok {
+			edgeHost.Nic.IP = v.(string)
+		}
+		if v, ok := host.(map[string]interface{})["nic_name"]; ok {
+			edgeHost.Nic.NicName = v.(string)
+		}
+		if v, ok := host.(map[string]interface{})["subnet_mask"]; ok {
+			edgeHost.Nic.Subnet = v.(string)
+		}
+
 		if v, ok := host.(map[string]interface{})["two_node_role"].(string); ok {
 			if v != "" {
 				if _, ok := twoNodeHostRoles[v]; ok {

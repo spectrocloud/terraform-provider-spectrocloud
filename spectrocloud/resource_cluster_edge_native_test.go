@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"testing"
 
@@ -12,6 +13,14 @@ import (
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
+
+func ToSchemaSetFromStrings(strings []string) *schema.Set {
+	set := schema.NewSet(schema.HashString, nil)
+	for _, v := range strings {
+		set.Add(v)
+	}
+	return set
+}
 
 func TestToEdgeHosts(t *testing.T) {
 	hostUI1 := "uid1"
@@ -39,7 +48,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"nic_name":        "test_nic",
 						"default_gateway": "1.1.1.1",
 						"subnet_mask":     "2.2.2.2",
-						"dns_servers":     []string{"t.t.com"},
+						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
 					map[string]interface{}{
 						"host_name":       "host2",
@@ -48,7 +57,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"nic_name":        "test_nic",
 						"default_gateway": "1.1.1.1",
 						"subnet_mask":     "2.2.2.2",
-						"dns_servers":     []string{"t.t.com"},
+						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
 				},
 			},
@@ -90,7 +99,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"nic_name":        "test_nic",
 						"default_gateway": "1.1.1.1",
 						"subnet_mask":     "2.2.2.2",
-						"dns_servers":     []string{"t.t.com"},
+						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
 					map[string]interface{}{
 						"host_name":       "",
@@ -99,7 +108,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"nic_name":        "test_nic",
 						"default_gateway": "1.1.1.1",
 						"subnet_mask":     "2.2.2.2",
-						"dns_servers":     []string{"t.t.com"},
+						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
 				},
 			},
