@@ -152,8 +152,12 @@ Required:
 
 Optional:
 
+- `default_gateway` (String) Edge host default gateway
+- `dns_servers` (Set of String)
 - `host_name` (String) Edge host name
-- `static_ip` (String) Edge host static IP
+- `nic_name` (String) Edge host IP Address
+- `static_ip` (String) Edge host static IP address
+- `subnet_mask` (String) Edge host subnet mask
 - `two_node_role` (String) Two node role for edge host. Valid values are `primary` and `secondary`.
 
 
