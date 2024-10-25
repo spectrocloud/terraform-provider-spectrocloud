@@ -577,37 +577,12 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 	return cluster, nil
 }
 
-func getSSHKey(cloudConfig map[string]interface{}) []string {
-
-	sshKeys, _ := toSSHKeys(cloudConfig)
-	return sshKeys
-}
-
-func getStaticIP(cloudConfig map[string]interface{}) bool {
-	staticIP := cloudConfig["static_ip"].(bool)
-	return staticIP
-}
-
 func getImageTemplateFolder(cloudConfig map[string]interface{}) string {
 	imageTemplateFolder := "spectro-templates"
 	if cloudConfig["image_template_folder"] != nil {
 		imageTemplateFolder = cloudConfig["image_template_folder"].(string)
 	}
 	return imageTemplateFolder
-}
-
-func getClusterConfigEntity(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
-	clusterConfigEntity := &models.V1VsphereClusterConfigEntity{
-		NtpServers: toNtpServers(cloudConfig),
-		Placement: &models.V1VspherePlacementConfigEntity{
-			Datacenter:          cloudConfig["datacenter"].(string),
-			Folder:              cloudConfig["folder"].(string),
-			ImageTemplateFolder: getImageTemplateFolder(cloudConfig),
-		},
-		SSHKeys:  getSSHKey(cloudConfig),
-		StaticIP: getStaticIP(cloudConfig),
-	}
-	return clusterConfigEntity
 }
 
 func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachinePoolConfigEntity, error) {
