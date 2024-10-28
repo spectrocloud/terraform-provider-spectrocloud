@@ -106,6 +106,7 @@ func TestToCloudConfigUpdate(t *testing.T) {
 		"datacenter":            "Datacenter",
 		"folder":                "sc_test/terraform",
 		"network_type":          "DDNS",
+		"host_endpoint":         "tt.tt.test.com",
 		"network_search_domain": "spectrocloud.dev",
 		"static_ip":             false,
 	}
@@ -116,6 +117,7 @@ func TestToCloudConfigUpdate(t *testing.T) {
 	assert.Equal("sc_test/terraform", cloudEntity.ClusterConfig.Placement.Folder)
 	assert.Equal("spectro-templates", cloudEntity.ClusterConfig.Placement.ImageTemplateFolder)
 	assert.Equal("ssh-rsa AAAAB3NzaC1y", cloudEntity.ClusterConfig.SSHKeys[0])
+	assert.Equal("tt.tt.test.com", cloudEntity.ClusterConfig.ControlPlaneEndpoint.Host)
 	assert.Equal(false, cloudEntity.ClusterConfig.StaticIP)
 }
 

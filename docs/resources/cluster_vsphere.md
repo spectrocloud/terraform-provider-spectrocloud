@@ -65,6 +65,7 @@ Required:
 
 Optional:
 
+- `host_endpoint` (String) The host endpoint to use for the cluster. This can be `IP` or `FQDN(External/DDNS)`.
 - `image_template_folder` (String) The name of the image template folder in vSphere. This is the name of the folder as it appears in vSphere.
 - `network_search_domain` (String) The search domain to use for the cluster in case of DHCP.
 - `network_type` (String) The type of network to use for the cluster. This can be `VIP` or `DDNS`.

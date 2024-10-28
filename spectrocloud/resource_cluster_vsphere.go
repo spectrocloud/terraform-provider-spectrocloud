@@ -188,6 +188,11 @@ func resourceClusterVsphere() *schema.Resource {
 							Optional:    true,
 							Description: "The type of network to use for the cluster. This can be `VIP` or `DDNS`.",
 						},
+						"host_endpoint": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "The host endpoint to use for the cluster. This can be `IP` or `FQDN(External/DDNS)`.",
+						},
 						"network_search_domain": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -487,6 +492,9 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 
 		if cpEndpoint.DdnsSearchDomain != "" {
 			ret["network_search_domain"] = cpEndpoint.DdnsSearchDomain
+		}
+		if cpEndpoint.Host != "" {
+			ret["host_endpoint"] = cpEndpoint.Host
 		}
 	}
 	//Setting up placement attributes if its defined
@@ -812,15 +820,12 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 }
 
 func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
-	staticIP := cloudConfig["static_ip"].(bool)
 
 	V1VsphereClusterConfigEntity := getClusterConfigEntity(cloudConfig)
-
-	if !staticIP {
-		V1VsphereClusterConfigEntity.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
-			DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
-			Type:             cloudConfig["network_type"].(string),
-		}
+	V1VsphereClusterConfigEntity.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
+		DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
+		Type:             cloudConfig["network_type"].(string),
+		Host:             cloudConfig["host_endpoint"].(string),
 	}
 
 	return V1VsphereClusterConfigEntity
@@ -919,4 +924,29 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 	}
 
 	return mp, nil
+}
+
+func getSSHKey(cloudConfig map[string]interface{}) []string {
+
+	sshKeys, _ := toSSHKeys(cloudConfig)
+	return sshKeys
+}
+
+func getStaticIP(cloudConfig map[string]interface{}) bool {
+	staticIP := cloudConfig["static_ip"].(bool)
+	return staticIP
+}
+
+func getClusterConfigEntity(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
+	clusterConfigEntity := &models.V1VsphereClusterConfigEntity{
+		NtpServers: toNtpServers(cloudConfig),
+		Placement: &models.V1VspherePlacementConfigEntity{
+			Datacenter:          cloudConfig["datacenter"].(string),
+			Folder:              cloudConfig["folder"].(string),
+			ImageTemplateFolder: getImageTemplateFolder(cloudConfig),
+		},
+		SSHKeys:  getSSHKey(cloudConfig),
+		StaticIP: getStaticIP(cloudConfig),
+	}
+	return clusterConfigEntity
 }
