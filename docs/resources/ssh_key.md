@@ -2,12 +2,12 @@
 page_title: "spectrocloud_ssh_key Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  The SSH key resource allows you to manage SSH keys in Palette.
 ---
 
 # spectrocloud_ssh_key (Resource)
 
-  
+  The SSH key resource allows you to manage SSH keys in Palette.
 
 You can learn more about managing ssh key by reviewing the [Create and Manage DNS Mappings](https://docs.spectrocloud.com/clusters/cluster-management/ssh-keys/) guide.
 
@@ -34,7 +34,7 @@ resource "spectrocloud_ssh_key" "ssh_tenant" {
 ### Required
 
 - `name` (String) The name of the SSH key resource.
-- `ssh_key` (String, Sensitive) The SSH key value.
+- `ssh_key` (String, Sensitive) The SSH key value. This is the public key that will be used to access the cluster. Must be a valid RSA or DSA public key in PEM format.
 
 ### Optional
 

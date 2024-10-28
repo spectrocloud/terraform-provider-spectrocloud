@@ -2,11 +2,12 @@ package spectrocloud
 
 import (
 	"context"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"time"
 )
 
 func resourceSSHKey() *schema.Resource {
@@ -15,6 +16,7 @@ func resourceSSHKey() *schema.Resource {
 		ReadContext:   resourceSSHKeyRead,
 		UpdateContext: resourceSSHKeyUpdate,
 		DeleteContext: resourceSSHKeyDelete,
+		Description:  "The SSH key resource allows you to manage SSH keys in Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -32,7 +34,7 @@ func resourceSSHKey() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Sensitive:   true,
-				Description: "The SSH key value.",
+				Description: "The SSH key value. This is the public key that will be used to access the cluster. Must be a valid RSA or DSA public key in PEM format.",
 			},
 			"context": {
 				Type:         schema.TypeString,
