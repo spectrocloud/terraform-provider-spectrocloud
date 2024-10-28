@@ -34,7 +34,7 @@ func resourceSSHKey() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Sensitive:   true,
-				Description: "The SSH key value. This is the public key that will be used to access the cluster. Must be a valid RSA or DSA public key in PEM format.",
+				Description: "The SSH key value. This is the public key that will be used to access the cluster. Must be in the [Authorized Keys](https://www.ssh.com/academy/ssh/authorized-keys-openssh#format-of-the-authorized-keys-file) format, such as `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDZ...`",
 			},
 			"context": {
 				Type:         schema.TypeString,

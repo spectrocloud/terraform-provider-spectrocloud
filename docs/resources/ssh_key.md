@@ -15,18 +15,23 @@ You can learn more about managing SSH keys in Palette by reviewing the [SSH Keys
 
 ## Example Usage
 
-An example of creating an ssh key assets in project or tenant context.
+An example of creating an SSH key resource in Palette.
 
 ```hcl
-data "spectrocloud_ssh_key" "ssh_project" {
-  name    = "test-tf-ssh"
-  context = "project"
+resource "spectrocloud_ssh_key" "ssh_tenant" {
+  name        = "ssh-dev-1"
+  context     = "project"
+  ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDZ....."
 }
+```
 
+The example below demonstrates how to create an SSH key resource in Palette with the `context` attribute set to `tenant`.
+
+```hcl
 resource "spectrocloud_ssh_key" "ssh_tenant" {
   name        = "ssh-dev-1"
   context     = "tenant"
-  ssh_key = data.spectrocloud_ssh_key.ssh_project.ssh_key
+  ssh_key = var.ssh_key_value
 }
 ```
 
@@ -60,7 +65,7 @@ resource "spectrocloud_ssh_key" "primary_key_1" {
 ### Required
 
 - `name` (String) The name of the SSH key resource.
-- `ssh_key` (String, Sensitive) The SSH key value. This is the public key that will be used to access the cluster. Must be a valid RSA or DSA public key in PEM format.
+- `ssh_key` (String, Sensitive) The SSH key value. This is the public key that will be used to access the cluster. Must be in the [Authorized Keys](https://www.ssh.com/academy/ssh/authorized-keys-openssh#format-of-the-authorized-keys-file) format, such as `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDZ...`
 
 ### Optional
 
