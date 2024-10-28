@@ -9,7 +9,7 @@ description: |-
 
   The SSH key resource allows you to manage SSH keys in Palette.
 
-You can learn more about managing ssh key by reviewing the [Create and Manage DNS Mappings](https://docs.spectrocloud.com/clusters/cluster-management/ssh-keys/) guide.
+You can learn more about managing SSH keys in Palette by reviewing the [SSH Keys](https://docs.spectrocloud.com/clusters/cluster-management/ssh-keys/) guide.
 
 ~> The `ssh_key` resource will not generate an SSH key pair. You must provide the public key to an existing SSH key as a string value to the `ssh_key` attribute. Refer to the [Generate Key with TLS Provider](#generate-ssh-key-with-tls-provider) section for additonal guidance.
 
