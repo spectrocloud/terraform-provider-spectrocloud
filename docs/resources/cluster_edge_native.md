@@ -48,6 +48,11 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     edge_host {
       host_uid  = spectrocloud_appliance.appliance1.uid
       static_ip = "1.2.3.4"
+      dns_servers     = ["tf.test.com"]
+      host_name       = "test-test"
+      nic_name        = "auto160"
+      static_ip       = "112.21.12.21"
+      subnet_mask     = "2.2.1.0"
     }
   }
 
@@ -152,8 +157,12 @@ Required:
 
 Optional:
 
+- `default_gateway` (String) Edge host default gateway
+- `dns_servers` (Set of String) Edge host DNS servers
 - `host_name` (String) Edge host name
-- `static_ip` (String) Edge host static IP
+- `nic_name` (String) NIC Name for edge host.
+- `static_ip` (String) Edge host static IP address
+- `subnet_mask` (String) Edge host subnet mask
 - `two_node_role` (String) Two node role for edge host. Valid values are `primary` and `secondary`.
 
 

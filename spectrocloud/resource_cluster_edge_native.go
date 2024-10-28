@@ -231,8 +231,32 @@ func resourceClusterEdgeNative() *schema.Resource {
 									},
 									"static_ip": {
 										Type:        schema.TypeString,
-										Description: "Edge host static IP",
+										Description: "Edge host static IP address",
 										Optional:    true,
+									},
+									"nic_name": {
+										Type:        schema.TypeString,
+										Description: "NIC Name for edge host.",
+										Optional:    true,
+									},
+									"default_gateway": {
+										Type:        schema.TypeString,
+										Description: "Edge host default gateway",
+										Optional:    true,
+									},
+									"subnet_mask": {
+										Type:        schema.TypeString,
+										Description: "Edge host subnet mask",
+										Optional:    true,
+									},
+									"dns_servers": {
+										Type:        schema.TypeSet,
+										Optional:    true,
+										Set:         schema.HashString,
+										Description: "Edge host DNS servers",
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
 									},
 									"two_node_role": {
 										Type:         schema.TypeString,
@@ -418,12 +442,16 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 
-		var hosts []map[string]string
+		var hosts []map[string]interface{}
 		for _, host := range machinePool.Hosts {
-			rawHost := map[string]string{
-				"host_name": host.HostName,
-				"host_uid":  *host.HostUID,
-				"static_ip": host.StaticIP,
+			rawHost := map[string]interface{}{
+				"host_name":       host.HostName,
+				"host_uid":        *host.HostUID,
+				"static_ip":       host.Nic.IP,
+				"nic_name":        host.Nic.NicName,
+				"default_gateway": host.Nic.Gateway,
+				"subnet_mask":     host.Nic.Subnet,
+				"dns_servers":     host.Nic.DNS,
 			}
 			if host.TwoNodeCandidatePriority != "" {
 				rawHost["two_node_role"] = host.TwoNodeCandidatePriority
@@ -694,8 +722,32 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 		edgeHost := &models.V1EdgeNativeMachinePoolHostEntity{
 			HostName: hostName,
 			HostUID:  &hostId,
-			StaticIP: host.(map[string]interface{})["static_ip"].(string),
+			Nic:      &models.V1Nic{},
+			// Hubble deprecated it and need to set it inside nic
+			// StaticIP: host.(map[string]interface{})["static_ip"].(string),
 		}
+		if v, ok := host.(map[string]interface{})["dns_servers"].(*schema.Set); ok {
+			if v.Len() > 0 {
+				var result []string
+				for _, val := range v.List() {
+					result = append(result, val.(string)) // Type assertion
+				}
+				edgeHost.Nic.DNS = result
+			}
+		}
+		if v, ok := host.(map[string]interface{})["default_gateway"]; ok {
+			edgeHost.Nic.Gateway = v.(string)
+		}
+		if v, ok := host.(map[string]interface{})["static_ip"]; ok {
+			edgeHost.Nic.IP = v.(string)
+		}
+		if v, ok := host.(map[string]interface{})["nic_name"]; ok {
+			edgeHost.Nic.NicName = v.(string)
+		}
+		if v, ok := host.(map[string]interface{})["subnet_mask"]; ok {
+			edgeHost.Nic.Subnet = v.(string)
+		}
+
 		if v, ok := host.(map[string]interface{})["two_node_role"].(string); ok {
 			if v != "" {
 				if _, ok := twoNodeHostRoles[v]; ok {

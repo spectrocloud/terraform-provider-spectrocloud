@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"testing"
 
@@ -12,6 +13,14 @@ import (
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
+
+func ToSchemaSetFromStrings(strings []string) *schema.Set {
+	set := schema.NewSet(schema.HashString, nil)
+	for _, v := range strings {
+		set.Add(v)
+	}
+	return set
+}
 
 func TestToEdgeHosts(t *testing.T) {
 	hostUI1 := "uid1"
@@ -33,14 +42,22 @@ func TestToEdgeHosts(t *testing.T) {
 			input: map[string]interface{}{
 				"edge_host": []interface{}{
 					map[string]interface{}{
-						"host_name": "host1",
-						"host_uid":  "uid1",
-						"static_ip": "ip1",
+						"host_name":       "host1",
+						"host_uid":        "uid1",
+						"static_ip":       "ip1",
+						"nic_name":        "test_nic",
+						"default_gateway": "1.1.1.1",
+						"subnet_mask":     "2.2.2.2",
+						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
 					map[string]interface{}{
-						"host_name": "host2",
-						"host_uid":  "uid2",
-						"static_ip": "ip2",
+						"host_name":       "host2",
+						"host_uid":        "uid2",
+						"static_ip":       "ip2",
+						"nic_name":        "test_nic",
+						"default_gateway": "1.1.1.1",
+						"subnet_mask":     "2.2.2.2",
+						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
 				},
 			},
@@ -49,12 +66,24 @@ func TestToEdgeHosts(t *testing.T) {
 					{
 						HostName: "host1",
 						HostUID:  &hostUI1,
-						StaticIP: "ip1",
+						Nic: &models.V1Nic{
+							IP:      "ip1",
+							NicName: "test_nic",
+							Gateway: "1.1.1.1",
+							Subnet:  "2.2.2.2",
+							DNS:     []string{"t.t.com"},
+						},
 					},
 					{
 						HostName: "host2",
 						HostUID:  &hostUI2,
-						StaticIP: "ip2",
+						Nic: &models.V1Nic{
+							IP:      "ip2",
+							NicName: "test_nic",
+							Gateway: "1.1.1.1",
+							Subnet:  "2.2.2.2",
+							DNS:     []string{"t.t.com"},
+						},
 					},
 				},
 			},
@@ -64,14 +93,22 @@ func TestToEdgeHosts(t *testing.T) {
 			input: map[string]interface{}{
 				"edge_host": []interface{}{
 					map[string]interface{}{
-						"host_name": "",
-						"host_uid":  "uid1",
-						"static_ip": "ip1",
+						"host_name":       "",
+						"host_uid":        "uid1",
+						"static_ip":       "ip1",
+						"nic_name":        "test_nic",
+						"default_gateway": "1.1.1.1",
+						"subnet_mask":     "2.2.2.2",
+						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
 					map[string]interface{}{
-						"host_name": "",
-						"host_uid":  "uid2",
-						"static_ip": "ip2",
+						"host_name":       "",
+						"host_uid":        "uid2",
+						"static_ip":       "ip2",
+						"nic_name":        "test_nic",
+						"default_gateway": "1.1.1.1",
+						"subnet_mask":     "2.2.2.2",
+						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
 				},
 			},
@@ -80,12 +117,24 @@ func TestToEdgeHosts(t *testing.T) {
 					{
 						HostName: "",
 						HostUID:  &hostUI1,
-						StaticIP: "ip1",
+						Nic: &models.V1Nic{
+							IP:      "ip1",
+							NicName: "test_nic",
+							Gateway: "1.1.1.1",
+							Subnet:  "2.2.2.2",
+							DNS:     []string{"t.t.com"},
+						},
 					},
 					{
 						HostName: "",
 						HostUID:  &hostUI2,
-						StaticIP: "ip2",
+						Nic: &models.V1Nic{
+							IP:      "ip2",
+							NicName: "test_nic",
+							Gateway: "1.1.1.1",
+							Subnet:  "2.2.2.2",
+							DNS:     []string{"t.t.com"},
+						},
 					},
 				},
 			},
@@ -111,15 +160,19 @@ func TestToEdgeHosts(t *testing.T) {
 			expected: &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 				EdgeHosts: []*models.V1EdgeNativeMachinePoolHostEntity{
 					{
-						HostName:                 "",
-						HostUID:                  &hostUI1,
-						StaticIP:                 "ip1",
+						HostName: "",
+						HostUID:  &hostUI1,
+						Nic: &models.V1Nic{
+							IP: "ip1",
+						},
 						TwoNodeCandidatePriority: "primary",
 					},
 					{
-						HostName:                 "",
-						HostUID:                  &hostUI2,
-						StaticIP:                 "ip2",
+						HostName: "",
+						HostUID:  &hostUI2,
+						Nic: &models.V1Nic{
+							IP: "ip2",
+						},
 						TwoNodeCandidatePriority: "secondary",
 					},
 				},
@@ -323,12 +376,16 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 						{
 							HostName: "host1",
 							HostUID:  &hui1,
-							StaticIP: "ip1",
+							Nic: &models.V1Nic{
+								IP: "ip1",
+							},
 						},
 						{
 							HostName: "host2",
 							HostUID:  &huid2,
-							StaticIP: "ip2",
+							Nic: &models.V1Nic{
+								IP: "ip2",
+							},
 						},
 					},
 					UpdateStrategy: &models.V1UpdateStrategy{Type: "strategy1"},
@@ -342,7 +399,9 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 						{
 							HostName: "host3",
 							HostUID:  &huid3,
-							StaticIP: "ip3",
+							Nic: &models.V1Nic{
+								IP: "ip3",
+							},
 						},
 					},
 					UpdateStrategy: &models.V1UpdateStrategy{Type: "strategy2"},
@@ -355,16 +414,24 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool1",
-					"edge_host": []map[string]string{
+					"edge_host": []map[string]interface{}{
 						{
-							"host_name": "host1",
-							"host_uid":  "uid1",
-							"static_ip": "ip1",
+							"host_name":       "host1",
+							"host_uid":        "uid1",
+							"static_ip":       "ip1",
+							"nic_name":        "",
+							"default_gateway": "",
+							"subnet_mask":     "",
+							"dns_servers":     []string(nil),
 						},
 						{
-							"host_name": "host2",
-							"host_uid":  "uid2",
-							"static_ip": "ip2",
+							"host_name":       "host2",
+							"host_uid":        "uid2",
+							"static_ip":       "ip2",
+							"nic_name":        "",
+							"default_gateway": "",
+							"subnet_mask":     "",
+							"dns_servers":     []string(nil),
 						},
 					},
 					"update_strategy": "strategy1",
@@ -375,11 +442,15 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool2",
-					"edge_host": []map[string]string{
+					"edge_host": []map[string]interface{}{
 						{
-							"host_name": "host3",
-							"host_uid":  "uid3",
-							"static_ip": "ip3",
+							"host_name":       "host3",
+							"host_uid":        "uid3",
+							"static_ip":       "ip3",
+							"nic_name":        "",
+							"default_gateway": "",
+							"subnet_mask":     "",
+							"dns_servers":     []string(nil),
 						},
 					},
 					"update_strategy": "strategy2",
