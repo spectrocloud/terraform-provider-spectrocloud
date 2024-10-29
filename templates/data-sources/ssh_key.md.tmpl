@@ -1,0 +1,39 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+To learn more about SSH Keys in Palette, review the [SSH Keys](https://docs.spectrocloud.com/clusters/cluster-management/ssh-keys/) section of the documentation.
+
+## Example Usage
+
+
+
+You can specify the context as `project` or `tenant` to get the SSH key from the respective context.
+
+
+Example with context as `project`.
+
+```hcl
+data "spectrocloud_ssh_key" "ssh_project" {
+  name    = "test-tf-ssh"
+  context = "project"
+}
+```
+
+Example with context as `tenant`.
+
+```hcl
+data "spectrocloud_ssh_key" "ssh_project" {
+  name    = "global-tf-ssh"
+  context = "tenant"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

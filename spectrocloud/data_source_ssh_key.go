@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -11,6 +12,7 @@ import (
 func dataSourceSSHKey() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceSSHKeyRead,
+		Description: "The SSH key data source allows you to retrieve information about SSH keys in Palette.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -30,7 +32,7 @@ func dataSourceSSHKey() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Sensitive:   true,
-				Description: "The SSH key value.",
+				Description: "The SSH key value. This is the public key that was uploaded to Palette.",
 			},
 			"context": {
 				Type:         schema.TypeString,
