@@ -23,10 +23,10 @@ import (
 
 func resourceClusterImport() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceCloudClusterImport,
-		ReadContext:   resourceCloudClusterRead,
-		UpdateContext: resourceCloudClusterUpdate,
-		DeleteContext: resourceClusterDelete,
+		CreateContext:      resourceCloudClusterImport,
+		ReadContext:        resourceCloudClusterRead,
+		UpdateContext:      resourceCloudClusterUpdate,
+		DeleteContext:      resourceClusterDelete,
 		DeprecationMessage: "This resource is deprecated. To import a cluster deployed outside of the context of Palette, refer to the Import a Cluster guide at https://docs.spectrocloud.com/clusters/imported-clusters/cluster-import/) to learn more.",
 
 		Timeouts: &schema.ResourceTimeout{
