@@ -60,7 +60,10 @@ func dataSourceDNSMapRead(_ context.Context, d *schema.ResourceData, m interface
 			matchDNSMap.Items = append(matchDNSMap.Items, dnsMap)
 		}
 	}
-	if len(matchDNSMap.Items) == 1 {
+	if len(matchDNSMap.Items) == 0 {
+		err := fmt.Errorf("error: No DNS Map identified for name `%s`. Kindly re-try with up valid `name`", name)
+		return diag.FromErr(err)
+	} else if len(matchDNSMap.Items) == 1 {
 		err := setBackDNSMap(matchDNSMap.Items[0], d)
 		if err != nil {
 			return diag.FromErr(err)

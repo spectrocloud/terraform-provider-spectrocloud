@@ -4,8 +4,10 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"regexp"
 	"time"
 )
 
@@ -34,6 +36,10 @@ func resourcePrivateCloudGatewayDNSMap() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The domain name used for DNS search queries within the private cloud.",
+				ValidateFunc: validation.StringMatch(
+					regexp.MustCompile(`^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$`),
+					"must be a valid domain name",
+				),
 			},
 			"data_center": {
 				Type:        schema.TypeString,
