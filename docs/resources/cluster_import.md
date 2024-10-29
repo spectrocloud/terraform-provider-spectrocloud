@@ -7,6 +7,8 @@ description: |-
 
 # spectrocloud_cluster_import (Resource)
 
+~> The `spectrocloud_cluster_import` resource will be deprecated starting from version v0.22.x onwards.
+
   
 
 ## Example Usage
