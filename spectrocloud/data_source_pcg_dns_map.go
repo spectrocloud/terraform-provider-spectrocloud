@@ -57,11 +57,17 @@ func dataSourceDNSMapRead(_ context.Context, d *schema.ResourceData, m interface
 	matchDNSMap := &models.V1VsphereDNSMappings{}
 	for _, dnsMap := range DNSMappings.Items {
 		if name == *dnsMap.Spec.DNSName {
-			matchDNSMap.Items = append(matchDNSMap.Items, dnsMap)
+			if network != "" {
+				if network == *dnsMap.Spec.Network {
+					matchDNSMap.Items = append(matchDNSMap.Items, dnsMap)
+				}
+			} else {
+				matchDNSMap.Items = append(matchDNSMap.Items, dnsMap)
+			}
 		}
 	}
 	if len(matchDNSMap.Items) == 0 {
-		err := fmt.Errorf("error: No DNS Map identified for name `%s`. Kindly re-try with up valid `name`", name)
+		err := fmt.Errorf("error: No DNS Map identified for name `%s` and network `%s`. Kindly re-try with up valid `name` and `network`", name, network)
 		return diag.FromErr(err)
 	} else if len(matchDNSMap.Items) == 1 {
 		err := setBackDNSMap(matchDNSMap.Items[0], d)
