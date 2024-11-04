@@ -3,9 +3,9 @@ data "spectrocloud_private_cloud_gateway" "gateway" {
 }
 
 data "spectrocloud_privatecloudgateway_dns_map" "gateway_dns_map" {
-  search_domain_name = "spectrocloud.dev"
+  search_domain_name = "spectrocloud.com"
   # Option to filter with network, if more than one dns map in same search_domain_name.
-  # network = "VM-NETWORK"
+  network                  = "VM-NETWORK2"
   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.gateway.id
 }
 
