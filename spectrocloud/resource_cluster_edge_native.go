@@ -411,8 +411,6 @@ func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config 
 	if config.Spec.ClusterConfig.ControlPlaneEndpoint.Host != "" {
 		if v, ok := cloudConfig["vip"]; ok && v.(string) != "" {
 			m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
-		} else {
-			m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
 		}
 	}
 	if config.Spec.ClusterConfig.NtpServers != nil {
