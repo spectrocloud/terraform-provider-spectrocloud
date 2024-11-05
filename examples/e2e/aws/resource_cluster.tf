@@ -38,14 +38,14 @@ resource "spectrocloud_cluster_aws" "cluster" {
     count                   = 1
     instance_type           = "t3.large"
     disk_size_gb            = 62
-    azs                     = var.aws_region_az
+    azs                     = [var.aws_region_az]
   }
 
   machine_pool {
     name          = "worker-basic"
     count         = 1
     instance_type = "t3.large"
-    azs           = var.aws_region_az
+    azs           = [var.aws_region_az]
   }
 
 }
