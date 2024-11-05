@@ -142,6 +142,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_ssh_key":   resourceSSHKey(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
+				"spectrocloud_team": dataSourceTeam(),
+
 				"spectrocloud_user":    dataSourceUser(),
 				"spectrocloud_project": dataSourceProject(),
 
