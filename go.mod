@@ -12,7 +12,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/gomi v1.14.1-0.20240214074114-c19394812368
 	github.com/spectrocloud/hapi v1.14.1-0.20240214071352-81f589b1d86d
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20241022161234-3782615736bb
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20241106055848-76d563f78474
 	github.com/stretchr/testify v1.9.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.23.5
