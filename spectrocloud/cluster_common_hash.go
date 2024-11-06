@@ -375,6 +375,30 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 			if staticIP, ok := hostMap["static_ip"]; ok {
 				buf.WriteString(fmt.Sprintf("static_ip:%s-", staticIP.(string)))
 			}
+
+			if nicName, ok := hostMap["nic_name"]; ok {
+				buf.WriteString(fmt.Sprintf("nic_name:%s-", nicName.(string)))
+			}
+
+			if defaultGateway, ok := hostMap["default_gateway"]; ok {
+				buf.WriteString(fmt.Sprintf("default_gateway:%s-", defaultGateway.(string)))
+			}
+
+			if subnetMask, ok := hostMap["subnet_mask"]; ok {
+				buf.WriteString(fmt.Sprintf("subnet_mask:%s-", subnetMask.(string)))
+			}
+
+			if dnsServers, ok := hostMap["dns_servers"]; ok {
+				var dns []string
+				for _, v := range dnsServers.(*schema.Set).List() {
+					dns = append(dns, v.(string))
+				}
+				buf.WriteString(fmt.Sprintf("dns_servers:%s-", strings.Join(dns, ",")))
+			}
+
+			if twoNodeRole, ok := hostMap["two_node_role"]; ok {
+				buf.WriteString(fmt.Sprintf("two_node_role:%s-", twoNodeRole.(string)))
+			}
 		}
 	}
 
