@@ -2,7 +2,7 @@ resource "spectrocloud_user" "user-test"{
   first_name = "tf"
   last_name = "test"
   email = "test-tf@spectrocloud.com"
-
+  team_ids  = [data.spectrocloud_team.team2.id]
   project_role {
     project_id = data.spectrocloud_project.default.id
     role_ids =  [for r in data.spectrocloud_role.app_roles : r.id]
@@ -19,6 +19,10 @@ resource "spectrocloud_user" "user-test"{
     workspace {
       id = data.spectrocloud_workspace.workspace.id
       role_ids = [for w in data.spectrocloud_role.workspace_roles : w.id]
+    }
+    workspace {
+      id = data.spectrocloud_workspace.workspace2.id
+      role_ids = ["66fbea622947f81fc26983e6"]
     }
   }
 

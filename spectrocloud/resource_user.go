@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"regexp"
 	"sort"
 	"time"
@@ -51,7 +52,7 @@ func resourceUser() *schema.Resource {
 				),
 				Description: "The email of the user.",
 			},
-			"teams": {
+			"team_ids": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				ForceNew:    true,
@@ -59,10 +60,9 @@ func resourceUser() *schema.Resource {
 				Description: "The team id's assigned to the user.",
 			},
 			"project_role": {
-				Type:          schema.TypeSet,
-				Set:           resourceUserProjectRoleMappingHash,
-				Optional:      true,
-				ConflictsWith: []string{"teams"},
+				Type:     schema.TypeSet,
+				Set:      resourceUserProjectRoleMappingHash,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"project_id": {
@@ -84,20 +84,18 @@ func resourceUser() *schema.Resource {
 				Description: "List of project roles to be associated with the user. ",
 			},
 			"tenant_role": {
-				Type:          schema.TypeSet,
-				Optional:      true,
-				ConflictsWith: []string{"teams"},
-				Set:           schema.HashString,
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 				Description: "List of tenant role ids to be associated with the user. ",
 			},
 			"workspace_role": {
-				Type:          schema.TypeSet,
-				ConflictsWith: []string{"teams"},
-				Set:           resourceUserWorkspaceRoleMappingHash,
-				Optional:      true,
+				Type:     schema.TypeSet,
+				Set:      resourceUserWorkspaceRoleMappingHash,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"project_id": {
@@ -134,10 +132,9 @@ func resourceUser() *schema.Resource {
 				Description: "List of workspace roles to be associated with the user. ",
 			},
 			"resource_role": {
-				Type:          schema.TypeSet,
-				ConflictsWith: []string{"teams"},
-				Set:           resourceUserResourceRoleMappingHash,
-				Optional:      true,
+				Type:     schema.TypeSet,
+				Set:      resourceUserResourceRoleMappingHash,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"project_ids": {
@@ -166,10 +163,6 @@ func resourceUser() *schema.Resource {
 								Type: schema.TypeString,
 							},
 							Description: "List of resource role ids to be associated with the user.",
-						},
-						"id": {
-							Type:     schema.TypeString,
-							Computed: true,
 						},
 					},
 				},
@@ -398,7 +391,6 @@ func toUserWorkspaceRoleMapping(d *schema.ResourceData) *models.V1WorkspacesRole
 					roles = append(roles, role.(string))
 				}
 			}
-
 			workspaces = append(workspaces, &models.V1WorkspaceRolesPatch{
 				UID:   workspaceData["id"].(string),
 				Roles: roles,
@@ -434,7 +426,7 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		d.SetId("")
 		return diags
 	}
-	err = flattenUser(user, d)
+	err = flattenUser(user, d, c)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -463,14 +455,23 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 	}
 	if d.HasChanges("workspace_role") {
 		workspaceRole := toUserWorkspaceRoleMapping(d)
+		if len(workspaceRole.Workspaces) > 0 {
+			nws, ows := d.GetChange("workspace_role")
+			println(nws)
+			println(ows)
+
+		}
 		err := c.AssociateUserWorkspaceRole(uid, workspaceRole)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if d.HasChanges("resource_role") {
+		err := deleteUserResourceRoles(m, uid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		resourceRoles := toUserResourceRoleMapping(d)
-		_ = deleteUserResourceRoles(m, uid)
 		for _, role := range resourceRoles {
 			err := c.CreateUserResourceRole(uid, role)
 			if err != nil {
@@ -484,9 +485,12 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 
 func deleteUserResourceRoles(m interface{}, userUID string) error {
 	c := getV1ClientWithResourceContext(m, "tenant")
-	_, resourceRoles := c.GetUserResourceRoles(userUID)
+	resourceRoles, _ := c.GetUserResourceRoles(userUID)
 	for _, re := range resourceRoles {
-		_ = c.DeleteUserResourceRoles(userUID, re.UID)
+		err := c.DeleteUserResourceRoles(userUID, re.UID)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -504,7 +508,7 @@ func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface
 	return diags
 }
 
-func flattenUser(user *models.V1UserSummary, d *schema.ResourceData) error {
+func flattenUser(user *models.V1UserSummary, d *schema.ResourceData, c *client.V1Client) error {
 	if user != nil {
 		if err := d.Set("first_name", user.Spec.FirstName); err != nil {
 			return err
@@ -521,12 +525,115 @@ func flattenUser(user *models.V1UserSummary, d *schema.ResourceData) error {
 			for _, team := range user.Spec.Teams {
 				teamIds = append(teamIds, team.UID)
 			}
-			if err := d.Set("teams", teamIds); err != nil {
+			if err := d.Set("team_ids", teamIds); err != nil {
 				return err
 			}
 		}
+		if err := flattenUserProjectRoleMapping(d, c); err != nil {
+			return err
+		}
+		if err := flattenUserTenantRoleMapping(d, c); err != nil {
+			return err
+		}
+		if err := flattenUserWorkspaceRoleMapping(d, c); err != nil {
+			return err
+		}
+		if err := flattenUserResourceRoleMapping(d, c); err != nil {
+			return err
+		}
 	}
 
+	return nil
+}
+
+func flattenUserResourceRoleMapping(d *schema.ResourceData, c *client.V1Client) error {
+	userUID := d.Id()
+	resourceRoles, err := c.GetUserResourceRoles(userUID)
+	if err != nil {
+		return err
+	}
+	rRoles := make([]interface{}, 0)
+	for _, rr := range resourceRoles {
+		rRoles = append(rRoles, map[string]interface{}{
+			"project_ids": convertSummaryToIDS(rr.ProjectUids),
+			"filter_ids":  convertSummaryToIDS(rr.FilterRefs),
+			"role_ids":    convertSummaryToIDS(rr.Roles),
+		})
+	}
+	if err := d.Set("resource_role", rRoles); err != nil {
+		return err
+	}
+	return nil
+}
+
+func flattenUserWorkspaceRoleMapping(d *schema.ResourceData, c *client.V1Client) error {
+	userUID := d.Id()
+	workspaceRoles, err := c.GetUserWorkspaceRole(userUID)
+	if err != nil {
+		return err
+	}
+	wRoles := make([]interface{}, 0)
+	for _, w := range workspaceRoles.Projects {
+		wsRoles := make([]interface{}, 0)
+		for _, wr := range w.Workspaces {
+			wsIDS := make([]string, 0)
+			for _, ri := range wr.Roles {
+				wsIDS = append(wsIDS, ri.UID)
+			}
+			wsRoles = append(wsRoles, map[string]interface{}{
+				"id":       wr.UID,
+				"role_ids": wsIDS,
+			})
+		}
+		wRoles = append(wRoles, map[interface{}]interface{}{
+			"project_id": w.UID,
+			"workspace":  wsRoles,
+		})
+	}
+	if err := d.Set("workspace_role", wRoles); err != nil {
+		return err
+	}
+	return nil
+}
+
+func flattenUserTenantRoleMapping(d *schema.ResourceData, c *client.V1Client) error {
+	userUID := d.Id()
+	tenantRoles, err := c.GetUserTenantRole(userUID)
+	if err != nil {
+		return err
+	}
+	var tRoles []string
+	for _, t := range tenantRoles.Roles {
+		tRoles = append(tRoles, t.UID)
+	}
+	if err := d.Set("tenant_role", tRoles); err != nil {
+		return err
+	}
+	return nil
+}
+
+func flattenUserProjectRoleMapping(d *schema.ResourceData, c *client.V1Client) error {
+	userUID := d.Id()
+	projectRoles, err := c.GetUserProjectRole(userUID)
+	if err != nil {
+		return err
+	}
+	pRoles := make([]interface{}, 0)
+	for _, p := range projectRoles.Projects {
+		if len(p.Roles) > 0 {
+			roles := make([]string, 0)
+			for _, r := range p.Roles {
+				roles = append(roles, r.UID)
+			}
+			pRoles = append(pRoles, map[string]interface{}{
+				"project_id": p.UID,
+				"role_ids":   roles,
+			})
+		}
+	}
+	if err := d.Set("project_role", pRoles); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -543,8 +650,26 @@ func toUser(d *schema.ResourceData) *models.V1UserEntity {
 			LastName:  lName,
 		},
 	}
-	if teams, ok := d.GetOk("teams"); ok && teams != nil {
-		user.Spec.Teams = teams.([]string)
+	if teams, ok := d.GetOk("team_ids"); ok && teams != nil {
+		user.Spec.Teams = convertToStrings(teams.([]interface{}))
 	}
 	return user
+}
+
+func convertToStrings(input []interface{}) []string {
+	var output []string
+	for _, v := range input {
+		if str, ok := v.(string); ok {
+			output = append(output, str)
+		}
+	}
+	return output
+}
+
+func convertSummaryToIDS(sum []*models.V1UIDSummary) []string {
+	var out []string
+	for _, v := range sum {
+		out = append(out, v.UID)
+	}
+	return out
 }

@@ -21,6 +21,10 @@ data "spectrocloud_workspace" "workspace" {
   name = "test-ws-tf"
 }
 
+data "spectrocloud_workspace" "workspace2" {
+  name = "test-ws-2"
+}
+
 data "spectrocloud_role" "workspace_roles"{
   for_each = toset(var.workspace_role_var)
   name     = each.key
@@ -38,4 +42,8 @@ data "spectrocloud_role" "resource_roles"{
 data "spectrocloud_role" "resource_roles_editor"{
   for_each = toset(var.resource_role_editor_var)
   name     = each.key
+}
+
+data "spectrocloud_team" "team2" {
+  name = "team2"
 }
