@@ -6,8 +6,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestFlattenMachinePoolConfigsAws(t *testing.T) {
@@ -31,7 +32,7 @@ func TestFlattenMachinePoolConfigsAws(t *testing.T) {
 			input: []*models.V1AwsMachinePoolConfig{
 				{
 					Name:                    "pool1",
-					IsControlPlane:          types.Ptr(true),
+					IsControlPlane:          ptr.To(true),
 					UseControlPlaneAsWorker: false,
 					Size:                    3,
 					MinSize:                 1,
@@ -134,7 +135,7 @@ func TestFlattenClusterConfigsAws(t *testing.T) {
 				Spec: &models.V1AwsCloudConfigSpec{
 					ClusterConfig: &models.V1AwsClusterConfig{
 						SSHKeyName:               "my-ssh-key",
-						Region:                   types.Ptr("us-west-2"),
+						Region:                   ptr.To("us-west-2"),
 						VpcID:                    "vpc-12345",
 						ControlPlaneLoadBalancer: "lb-12345",
 					},

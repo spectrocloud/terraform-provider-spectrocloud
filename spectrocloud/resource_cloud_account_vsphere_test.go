@@ -2,13 +2,14 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToVsphereAccount(t *testing.T) {
@@ -60,8 +61,8 @@ func TestFlattenVsphereCloudAccount(t *testing.T) {
 			UID:         "abcdef",
 		},
 		Spec: &models.V1VsphereCloudAccount{
-			VcenterServer: types.Ptr("vcenter.example.com"),
-			Username:      types.Ptr("testuser"),
+			VcenterServer: ptr.To("vcenter.example.com"),
+			Username:      ptr.To("testuser"),
 			Insecure:      true,
 		},
 	}

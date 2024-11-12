@@ -2,11 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 // Test for the `toOpenStackAccount` function
@@ -40,11 +42,11 @@ func TestToOpenStackAccount(t *testing.T) {
 					CaCert:           "ca-cert",
 					DefaultDomain:    "default-domain",
 					DefaultProject:   "default-project",
-					IdentityEndpoint: types.Ptr("http://identity.endpoint"),
+					IdentityEndpoint: ptr.To("http://identity.endpoint"),
 					Insecure:         true,
 					ParentRegion:     "parent-region",
-					Password:         types.Ptr("password"),
-					Username:         types.Ptr("username"),
+					Password:         ptr.To("password"),
+					Username:         ptr.To("username"),
 				},
 			},
 		},
@@ -69,10 +71,10 @@ func TestToOpenStackAccount(t *testing.T) {
 				Spec: &models.V1OpenStackCloudAccount{
 					DefaultDomain:    "default-domain",
 					DefaultProject:   "default-project",
-					IdentityEndpoint: types.Ptr("http://identity.endpoint"),
+					IdentityEndpoint: ptr.To("http://identity.endpoint"),
 					ParentRegion:     "parent-region",
-					Password:         types.Ptr("password"),
-					Username:         types.Ptr("username"),
+					Password:         ptr.To("password"),
+					Username:         ptr.To("username"),
 				},
 			},
 		},

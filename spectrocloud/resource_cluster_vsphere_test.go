@@ -2,9 +2,10 @@ package spectrocloud
 
 import (
 	"fmt"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"reflect"
 	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
@@ -294,16 +295,16 @@ func TestFlattenMachinePoolConfigsVsphere(t *testing.T) {
 					Size:                    int32(3),
 					MinSize:                 1,
 					MaxSize:                 5,
-					IsControlPlane:          types.Ptr(true),
+					IsControlPlane:          ptr.To(true),
 					UseControlPlaneAsWorker: false,
 					NodeRepaveInterval:      int32(24),
 					UpdateStrategy: &models.V1UpdateStrategy{
 						Type: "RollingUpdate",
 					},
 					InstanceType: &models.V1VsphereInstanceType{
-						DiskGiB:   types.Ptr(int32(100)),
-						MemoryMiB: types.Ptr(int64(8192)),
-						NumCPUs:   types.Ptr(int32(4)),
+						DiskGiB:   ptr.To(int32(100)),
+						MemoryMiB: ptr.To(int64(8192)),
+						NumCPUs:   ptr.To(int32(4)),
 					},
 					Placements: []*models.V1VspherePlacementConfig{
 						{
@@ -312,7 +313,7 @@ func TestFlattenMachinePoolConfigsVsphere(t *testing.T) {
 							ResourcePool: "resource-pool1",
 							Datastore:    "datastore1",
 							Network: &models.V1VsphereNetworkConfig{
-								NetworkName: types.Ptr("network1"),
+								NetworkName: ptr.To("network1"),
 								ParentPoolRef: &models.V1ObjectReference{
 									UID: "pool1",
 								},
@@ -342,7 +343,7 @@ func TestFlattenMachinePoolConfigsVsphere(t *testing.T) {
 							"cluster":           "cluster1",
 							"resource_pool":     "resource-pool1",
 							"datastore":         "datastore1",
-							"network":           types.Ptr("network1"), // Handle pointer or use (*string)(nil) if necessary
+							"network":           ptr.To("network1"), // Handle pointer or use (*string)(nil) if necessary
 							"static_ip_pool_id": "pool1",
 						},
 					},

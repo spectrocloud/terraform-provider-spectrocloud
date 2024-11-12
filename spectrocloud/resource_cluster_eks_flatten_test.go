@@ -7,7 +7,7 @@ import (
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestFlattenEksLaunchTemplate(t *testing.T) {
@@ -135,7 +135,7 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 			input: &models.V1EksCloudConfig{
 				Spec: &models.V1EksCloudConfigSpec{
 					ClusterConfig: &models.V1EksClusterConfig{
-						Region: types.Ptr("us-west-2"),
+						Region: ptr.To("us-west-2"),
 						EndpointAccess: &models.V1EksClusterConfigEndpointAccess{
 							PublicCIDRs: []string{"0.0.0.0/0"},
 							Private:     true,
@@ -197,7 +197,7 @@ func TestFlattenClusterConfigsEKSPrivateCIDRS(t *testing.T) {
 			input: &models.V1EksCloudConfig{
 				Spec: &models.V1EksCloudConfigSpec{
 					ClusterConfig: &models.V1EksClusterConfig{
-						Region: types.Ptr("us-west-2"),
+						Region: ptr.To("us-west-2"),
 						EndpointAccess: &models.V1EksClusterConfigEndpointAccess{
 							PrivateCIDRs: []string{"172.23.12.12/0"},
 							Private:      true,

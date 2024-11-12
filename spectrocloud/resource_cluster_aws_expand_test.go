@@ -1,11 +1,13 @@
 package spectrocloud
 
 import (
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToMachinePoolAws(t *testing.T) {
@@ -32,14 +34,14 @@ func TestToMachinePoolAws(t *testing.T) {
 			expected: &models.V1AwsMachinePoolConfigEntity{
 				CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
 					Azs:            []string{"us-west-2b", "us-west-2a"},
-					InstanceType:   types.Ptr("t3.large"),
-					CapacityType:   types.Ptr("on-demand"),
+					InstanceType:   ptr.To("t3.large"),
+					CapacityType:   ptr.To("on-demand"),
 					RootDeviceSize: 100,
 					Subnets:        []*models.V1AwsSubnetEntity{},
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
-					Name:             types.Ptr("control-plane-pool"),
-					Size:             types.Ptr(int32(3)),
+					Name:             ptr.To("control-plane-pool"),
+					Size:             ptr.To(int32(3)),
 					MinSize:          3,
 					MaxSize:          3,
 					IsControlPlane:   true,
@@ -71,8 +73,8 @@ func TestToMachinePoolAws(t *testing.T) {
 			expected: &models.V1AwsMachinePoolConfigEntity{
 				CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
 					Azs:            []string{"us-west-1a"},
-					InstanceType:   types.Ptr("t3.medium"),
-					CapacityType:   types.Ptr("spot"),
+					InstanceType:   ptr.To("t3.medium"),
+					CapacityType:   ptr.To("spot"),
 					RootDeviceSize: 50,
 					Subnets: []*models.V1AwsSubnetEntity{
 						{ID: "subnet-1", Az: "us-west-1a"},
@@ -82,8 +84,8 @@ func TestToMachinePoolAws(t *testing.T) {
 					},
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
-					Name:               types.Ptr("worker-pool"),
-					Size:               types.Ptr(int32(5)),
+					Name:               ptr.To("worker-pool"),
+					Size:               ptr.To(int32(5)),
 					MinSize:            5,
 					MaxSize:            5,
 					IsControlPlane:     false,

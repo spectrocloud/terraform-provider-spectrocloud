@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
-	"github.com/spectrocloud/hapi/apiutil/transport"
+	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"

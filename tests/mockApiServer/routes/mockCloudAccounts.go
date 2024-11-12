@@ -1,8 +1,9 @@
 package routes
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func getAccountResponse(cloud string) interface{} {
@@ -69,11 +70,11 @@ func getAccountResponse(cloud string) interface{} {
 						UID:  "test-azure-account-id-1",
 					},
 					Spec: &models.V1AzureCloudAccount{
-						AzureEnvironment: ptr.StringPtr("test-env"),
-						ClientID:         ptr.StringPtr("test-client-id"),
-						ClientSecret:     ptr.StringPtr("test-secret"),
+						AzureEnvironment: ptr.To("test-env"),
+						ClientID:         ptr.To("test-client-id"),
+						ClientSecret:     ptr.To("test-secret"),
 						Settings:         nil,
-						TenantID:         ptr.StringPtr("tenant-id"),
+						TenantID:         ptr.To("tenant-id"),
 						TenantName:       "test",
 					},
 					Status: nil,
@@ -97,8 +98,8 @@ func getAccountResponse(cloud string) interface{} {
 						UID:                   "test-tke-account-id-1",
 					},
 					Spec: &models.V1TencentCloudAccount{
-						SecretID:  ptr.StringPtr("test-secretID"),
-						SecretKey: ptr.StringPtr("test-secretKey"),
+						SecretID:  ptr.To("test-secretID"),
+						SecretKey: ptr.To("test-secretKey"),
 					},
 					Status: &models.V1CloudAccountStatus{
 						State: "active",
@@ -166,8 +167,8 @@ func getAccountResponse(cloud string) interface{} {
 						UID:  "test-maas-account-id-1",
 					},
 					Spec: &models.V1MaasCloudAccount{
-						APIEndpoint:      ptr.StringPtr("test.end.com"),
-						APIKey:           ptr.StringPtr("testApiKey"),
+						APIEndpoint:      ptr.To("test.end.com"),
+						APIKey:           ptr.To("testApiKey"),
 						PreferredSubnets: []string{"subnet1"},
 					},
 				},
@@ -234,11 +235,11 @@ func getAccountNegativeResponse(cloud string) interface{} {
 						UID:  "test-azure-account-id-1-neg",
 					},
 					Spec: &models.V1AzureCloudAccount{
-						AzureEnvironment: ptr.StringPtr("test-env"),
-						ClientID:         ptr.StringPtr("test-client-id"),
-						ClientSecret:     ptr.StringPtr("test-secret"),
+						AzureEnvironment: ptr.To("test-env"),
+						ClientID:         ptr.To("test-client-id"),
+						ClientSecret:     ptr.To("test-secret"),
 						Settings:         nil,
-						TenantID:         ptr.StringPtr("tenant-id"),
+						TenantID:         ptr.To("tenant-id"),
 						TenantName:       "test",
 					},
 					Status: nil,
@@ -262,8 +263,8 @@ func getAccountNegativeResponse(cloud string) interface{} {
 						UID:                   "test-id-1",
 					},
 					Spec: &models.V1TencentCloudAccount{
-						SecretID:  ptr.StringPtr("test-secretID"),
-						SecretKey: ptr.StringPtr("test-secretKey"),
+						SecretID:  ptr.To("test-secretID"),
+						SecretKey: ptr.To("test-secretKey"),
 					},
 					Status: &models.V1CloudAccountStatus{
 						State: "notActive",
@@ -331,8 +332,8 @@ func getAccountNegativeResponse(cloud string) interface{} {
 						UID:  "test-maas-account-id-1-neg",
 					},
 					Spec: &models.V1MaasCloudAccount{
-						APIEndpoint:      ptr.StringPtr("test.end.com"),
-						APIKey:           ptr.StringPtr("testApiKey"),
+						APIEndpoint:      ptr.To("test.end.com"),
+						APIKey:           ptr.To("testApiKey"),
 						PreferredSubnets: []string{"subnet1"},
 					},
 				},
@@ -514,8 +515,8 @@ func CloudAccountsRoutes() []Route {
 						Annotations: map[string]string{"overlordUid": "test-pcg-id"},
 					},
 					Spec: &models.V1MaasCloudAccount{
-						APIEndpoint:      ptr.StringPtr("test.end.com"),
-						APIKey:           ptr.StringPtr("testApiKey"),
+						APIEndpoint:      ptr.To("test.end.com"),
+						APIKey:           ptr.To("testApiKey"),
 						PreferredSubnets: []string{"subnet1"},
 					},
 				},
@@ -578,13 +579,13 @@ func CloudAccountsRoutes() []Route {
 						UID:         "test-azure-account-id-1",
 					},
 					Spec: &models.V1AzureCloudAccount{
-						AzureEnvironment: ptr.StringPtr("test-env"),
-						ClientID:         ptr.StringPtr("test-client-id"),
-						ClientSecret:     ptr.StringPtr("test-secret"),
+						AzureEnvironment: ptr.To("test-env"),
+						ClientID:         ptr.To("test-client-id"),
+						ClientSecret:     ptr.To("test-secret"),
 						Settings: &models.V1CloudAccountSettings{
 							DisablePropertiesRequest: false,
 						},
-						TenantID:   ptr.StringPtr("tenant-id"),
+						TenantID:   ptr.To("tenant-id"),
 						TenantName: "test",
 					},
 					Status: nil,
@@ -728,8 +729,8 @@ func CloudAccountsRoutes() []Route {
 						UID:                   "test-tke-account-id-1",
 					},
 					Spec: &models.V1TencentCloudAccount{
-						SecretID:  ptr.StringPtr("test-secretID"),
-						SecretKey: ptr.StringPtr("test-secretKey"),
+						SecretID:  ptr.To("test-secretID"),
+						SecretKey: ptr.To("test-secretKey"),
 					},
 					Status: &models.V1CloudAccountStatus{
 						State: "active",
@@ -800,9 +801,9 @@ func CloudAccountsRoutes() []Route {
 					},
 					Spec: &models.V1VsphereCloudAccount{
 						Insecure:      false,
-						Password:      ptr.StringPtr("test-pwd"),
-						Username:      ptr.StringPtr("test-uname"),
-						VcenterServer: ptr.StringPtr("test-uname.com"),
+						Password:      ptr.To("test-pwd"),
+						Username:      ptr.To("test-uname"),
+						VcenterServer: ptr.To("test-uname.com"),
 					},
 					Status: &models.V1CloudAccountStatus{
 						State: "Running",
@@ -874,11 +875,11 @@ func CloudAccountsRoutes() []Route {
 						CaCert:           "testcert",
 						DefaultDomain:    "test.com",
 						DefaultProject:   "Default",
-						IdentityEndpoint: ptr.StringPtr("testtest"),
+						IdentityEndpoint: ptr.To("testtest"),
 						Insecure:         false,
 						ParentRegion:     "test-region",
-						Password:         ptr.StringPtr("test-pwd"),
-						Username:         ptr.StringPtr("test-uname"),
+						Password:         ptr.To("test-pwd"),
+						Username:         ptr.To("test-uname"),
 					},
 					Status: &models.V1CloudAccountStatus{
 						State: "Running",

@@ -3,15 +3,17 @@ package convert
 import (
 	"encoding/json"
 	"errors"
+	"testing"
+
 	"github.com/go-openapi/strfmt"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
-	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToHapiVolume(t *testing.T) {
@@ -204,8 +206,8 @@ func TestToKubevirtVMStatus(t *testing.T) {
 		PrintableStatus:    "Running",
 		Conditions: []*models.V1VMVirtualMachineCondition{
 			{
-				Type:    types.Ptr("Ready"),
-				Status:  types.Ptr("True"),
+				Type:    ptr.To("Ready"),
+				Status:  ptr.To("True"),
 				Reason:  "Ready",
 				Message: "VM is ready",
 			},
@@ -305,12 +307,12 @@ func TestToKubevirtVM(t *testing.T) {
 			UID:       "123456",
 			OwnerReferences: []*models.V1VMOwnerReference{
 				{
-					APIVersion:         types.Ptr("v1"),
+					APIVersion:         ptr.To("v1"),
 					BlockOwnerDeletion: true,
 					Controller:         true,
-					Kind:               types.Ptr("ReplicaSet"),
-					Name:               types.Ptr("test-owner"),
-					UID:                types.Ptr("654321"),
+					Kind:               ptr.To("ReplicaSet"),
+					Name:               ptr.To("test-owner"),
+					UID:                ptr.To("654321"),
 				},
 			},
 			ManagedFields: []*models.V1VMManagedFieldsEntry{

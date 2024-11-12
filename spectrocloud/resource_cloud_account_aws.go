@@ -8,7 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func resourceCloudAccountAws() *schema.Resource {
@@ -206,7 +207,7 @@ func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 
 	// add partition to account
 	if d.Get("partition") != nil {
-		account.Spec.Partition = types.Ptr(d.Get("partition").(string))
+		account.Spec.Partition = ptr.To(d.Get("partition").(string))
 	}
 
 	// add policy arns to account

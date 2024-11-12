@@ -7,7 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 const OverlordUID = "overlordUid"
@@ -175,9 +176,9 @@ func toVsphereAccount(d *schema.ResourceData) *models.V1VsphereAccount {
 			UID: d.Id(),
 		},
 		Spec: &models.V1VsphereCloudAccount{
-			VcenterServer: types.Ptr(d.Get("vsphere_vcenter").(string)),
-			Username:      types.Ptr(d.Get("vsphere_username").(string)),
-			Password:      types.Ptr(d.Get("vsphere_password").(string)),
+			VcenterServer: ptr.To(d.Get("vsphere_vcenter").(string)),
+			Username:      ptr.To(d.Get("vsphere_username").(string)),
+			Password:      ptr.To(d.Get("vsphere_password").(string)),
 			Insecure:      d.Get("vsphere_ignore_insecure_error").(bool),
 		},
 	}

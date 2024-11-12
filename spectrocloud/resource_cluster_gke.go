@@ -2,16 +2,17 @@ package spectrocloud
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"log"
-	"time"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func resourceClusterGke() *schema.Resource {
@@ -414,8 +415,8 @@ func flattenClusterConfigsGke(config *models.V1GcpCloudConfig) []interface{} {
 	if config.Spec.ClusterConfig.Project != nil {
 		m["project"] = config.Spec.ClusterConfig.Project
 	}
-	if ptr.String(config.Spec.ClusterConfig.Region) != "" {
-		m["region"] = ptr.String(config.Spec.ClusterConfig.Region)
+	if ptr.DeRef(config.Spec.ClusterConfig.Region) != "" {
+		m["region"] = ptr.DeRef(config.Spec.ClusterConfig.Region)
 	}
 	return []interface{}{m}
 }
@@ -456,12 +457,12 @@ func toGkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster := &models.V1SpectroGcpClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroGcpClusterEntitySpec{
-			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: ptr.To(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1GcpClusterConfig{
-				Project: types.Ptr(cloudConfig["project"].(string)),
-				Region:  types.Ptr(cloudConfig["region"].(string)),
+				Project: ptr.To(cloudConfig["project"].(string)),
+				Region:  ptr.To(cloudConfig["region"].(string)),
 				ManagedClusterConfig: &models.V1GcpManagedClusterConfig{
 					Location: cloudConfig["region"].(string),
 				},
@@ -487,14 +488,14 @@ func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEn
 
 	mp := &models.V1GcpMachinePoolConfigEntity{
 		CloudConfig: &models.V1GcpMachinePoolCloudConfigEntity{
-			InstanceType:   types.Ptr(m["instance_type"].(string)),
+			InstanceType:   ptr.To(m["instance_type"].(string)),
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Name:             ptr.To(m["name"].(string)),
+			Size:             ptr.To(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

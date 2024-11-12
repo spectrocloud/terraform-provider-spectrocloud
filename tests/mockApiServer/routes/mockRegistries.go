@@ -1,9 +1,11 @@
 package routes
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"net/http"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func getHelmRegistryPayload() *models.V1HelmRegistry {
@@ -27,7 +29,7 @@ func getHelmRegistryPayload() *models.V1HelmRegistry {
 				Type:     "token",
 				Username: "sf",
 			},
-			Endpoint:    ptr.StringPtr("test.com"),
+			Endpoint:    ptr.To("test.com"),
 			IsPrivate:   false,
 			Name:        "Public",
 			RegistryUID: generateRandomStringUID(),
@@ -83,7 +85,7 @@ func RegistriesRoutes() []Route {
 						Credentials: &models.V1AwsCloudAccount{
 							AccessKey:      "test-key",
 							CredentialType: "sts",
-							Partition:      ptr.StringPtr("test-part"),
+							Partition:      ptr.To("test-part"),
 							PolicyARNs:     []string{"test-arns"},
 							SecretKey:      "test-secret-key",
 							Sts: &models.V1AwsStsCredentials{
@@ -92,18 +94,18 @@ func RegistriesRoutes() []Route {
 							},
 						},
 						DefaultRegion: "test-region",
-						Endpoint:      ptr.StringPtr("test.point"),
-						IsPrivate:     ptr.BoolPtr(false),
-						ProviderType:  ptr.StringPtr("test-type"),
+						Endpoint:      ptr.To("test.point"),
+						IsPrivate: ptr.To((false),
+							ProviderType:  ptr.To("test-type"),
 						RegistryUID:   "test-reg-uid",
 						Scope:         "project",
 						TLS: &models.V1TLSConfiguration{
-							Ca:                 "test-ca",
-							Certificate:        "test-cert",
-							Enabled:            false,
-							InsecureSkipVerify: false,
-							Key:                "test-key",
-						},
+						Ca:                 "test-ca",
+						Certificate:        "test-cert",
+						Enabled:            false,
+						InsecureSkipVerify: false,
+						Key:                "test-key",
+					},
 					},
 				},
 			},

@@ -8,7 +8,7 @@ import (
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestFlattenMachinePoolConfigsTke(t *testing.T) {
@@ -136,8 +136,8 @@ func TestToMachinePoolTke(t *testing.T) {
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					Labels:         []string{"worker"},
-					Name:           types.Ptr("worker-pool"),
-					Size:           types.Ptr(int32(3)),
+					Name:           ptr.To("worker-pool"),
+					Size:           ptr.To(int32(3)),
 					MinSize:        1,
 					MaxSize:        5,
 					IsControlPlane: false,
@@ -170,8 +170,8 @@ func TestToMachinePoolTke(t *testing.T) {
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					Labels:         []string{"control-plane"},
-					Name:           types.Ptr("control-plane-pool"),
-					Size:           types.Ptr(int32(3)),
+					Name:           ptr.To("control-plane-pool"),
+					Size:           ptr.To(int32(3)),
 					MinSize:        3,
 					MaxSize:        3,
 					IsControlPlane: true,

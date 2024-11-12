@@ -1,8 +1,9 @@
 package routes
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func BackupRoutes() []Route {
@@ -44,7 +45,7 @@ func BackupRoutes() []Route {
 					},
 					Spec: &models.V1UserAssetsLocationS3Spec{
 						Config: &models.V1S3StorageConfig{
-							BucketName: ptr.StringPtr("test-bucket"),
+							BucketName: ptr.To("test-bucket"),
 							CaCert:     "test-cert",
 							Credentials: &models.V1AwsCloudAccount{
 								AccessKey:      "test-access-key",
@@ -54,8 +55,8 @@ func BackupRoutes() []Route {
 								SecretKey:      "test-secret-key",
 								Sts:            nil,
 							},
-							Region:           ptr.StringPtr("test-east"),
-							S3ForcePathStyle: ptr.BoolPtr(false),
+							Region:           ptr.To("test-east"),
+							S3ForcePathStyle: ptr.To(false),
 							S3URL:            "s3://test/test",
 							UseRestic:        nil,
 						},

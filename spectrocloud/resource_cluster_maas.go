@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -558,7 +558,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 	cluster := &models.V1SpectroMaasClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroMaasClusterEntitySpec{
-			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: ptr.To(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
@@ -632,8 +632,8 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Name:             ptr.To(m["name"].(string)),
+			Size:             ptr.To(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -644,7 +644,7 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 	}
 	if len(m["placement"].([]interface{})) > 0 {
 		Placement := m["placement"].([]interface{})[0].(map[string]interface{})
-		mp.CloudConfig.ResourcePool = types.Ptr(Placement["resource_pool"].(string))
+		mp.CloudConfig.ResourcePool = ptr.To(Placement["resource_pool"].(string))
 	} else {
 		rp := ""
 		mp.CloudConfig.ResourcePool = &rp // backend is not accepting nil, rather pointer to empty string.

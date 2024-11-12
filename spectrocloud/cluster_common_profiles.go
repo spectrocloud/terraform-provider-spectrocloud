@@ -10,7 +10,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func toProfiles(c *client.V1Client, d *schema.ResourceData, clusterContext string) ([]*models.V1SpectroClusterProfileEntity, error) {
@@ -86,7 +86,7 @@ func toPack(cluster *models.V1SpectroCluster, pSrc interface{}) *models.V1PackVa
 	p := pSrc.(map[string]interface{})
 
 	pack := &models.V1PackValuesEntity{
-		Name: types.Ptr(p["name"].(string)),
+		Name: ptr.To(p["name"].(string)),
 	}
 
 	setPackValues(pack, p)
@@ -130,7 +130,7 @@ func setPackManifests(pack *models.V1PackValuesEntity, p map[string]interface{},
 				uid = getManifestUID(data["name"].(string), packs)
 			}
 			manifests[i] = &models.V1ManifestRefUpdateEntity{
-				Name:    types.Ptr(data["name"].(string)),
+				Name:    ptr.To(data["name"].(string)),
 				Content: data["content"].(string),
 				UID:     uid,
 			}

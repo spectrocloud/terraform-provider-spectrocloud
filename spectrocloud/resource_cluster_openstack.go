@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -314,7 +314,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1S
 	cluster := &models.V1SpectroOpenStackClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroOpenStackClusterEntitySpec{
-			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: ptr.To(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1OpenStackClusterConfig{
@@ -603,7 +603,7 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 				ID: m["subnet_id"].(string),
 			},
 			FlavorConfig: &models.V1OpenstackFlavorConfig{
-				Name: types.Ptr(m["instance_type"].(string)),
+				Name: ptr.To(m["instance_type"].(string)),
 			},
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
@@ -611,8 +611,8 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Name:             ptr.To(m["name"].(string)),
+			Size:             ptr.To(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

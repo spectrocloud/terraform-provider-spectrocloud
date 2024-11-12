@@ -8,7 +8,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToAwsAccountCTXProjectSecret(t *testing.T) {
@@ -96,7 +96,7 @@ func TestFlattenCloudAccountAwsSTS(t *testing.T) {
 		Spec: &models.V1AwsCloudAccount{
 			CredentialType: models.V1AwsCloudAccountCredentialTypeSts,
 			Sts:            &models.V1AwsStsCredentials{Arn: "test_arn"},
-			Partition:      types.Ptr("test_partition"),
+			Partition:      ptr.To("test_partition"),
 			PolicyARNs:     []string{"arn:aws:test_policy1", "arn:aws:test_policy2"},
 		},
 	}
@@ -141,7 +141,7 @@ func TestFlattenCloudAccountAws_NonStsType(t *testing.T) {
 		Spec: &models.V1AwsCloudAccount{
 			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret,
 			AccessKey:      "test_access_key_secret",
-			Partition:      types.Ptr("test_partition_secret"),
+			Partition:      ptr.To("test_partition_secret"),
 			PolicyARNs:     []string{"arn:aws:test_policy_secret1", "arn:aws:test_policy_secret2"},
 		},
 	}

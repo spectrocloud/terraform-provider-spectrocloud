@@ -1,9 +1,10 @@
 package spectrocloud
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/stretchr/testify/assert"
 
@@ -11,7 +12,7 @@ import (
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func ToSchemaSetFromStrings(strings []string) *schema.Set {
@@ -321,8 +322,8 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 					Taints:                  toClusterTaints(tt.input),
 					IsControlPlane:          true,
 					Labels:                  []string{"control-plane"},
-					Name:                    types.Ptr("pool1"),
-					Size:                    types.Ptr(int32(len(edgeHosts.EdgeHosts))),
+					Name:                    ptr.To("pool1"),
+					Size:                    ptr.To(int32(len(edgeHosts.EdgeHosts))),
 					UpdateStrategy:          &models.V1UpdateStrategy{Type: getUpdateStrategy(tt.input)},
 					UseControlPlaneAsWorker: false,
 				},

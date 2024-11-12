@@ -1,12 +1,13 @@
 package spectrocloud
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToMachinePoolGcp(t *testing.T) {
@@ -31,7 +32,7 @@ func TestToMachinePoolGcp(t *testing.T) {
 			expectedOutput: &models.V1GcpMachinePoolConfigEntity{
 				CloudConfig: &models.V1GcpMachinePoolCloudConfigEntity{
 					Azs:            []string{"us-central1-a"},
-					InstanceType:   types.Ptr("n1-standard-1"),
+					InstanceType:   ptr.To("n1-standard-1"),
 					RootDeviceSize: int64(50),
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
@@ -39,8 +40,8 @@ func TestToMachinePoolGcp(t *testing.T) {
 					Taints:           nil,
 					IsControlPlane:   true,
 					Labels:           []string{"control-plane"},
-					Name:             types.Ptr("example-name"),
-					Size:             types.Ptr(int32(3)),
+					Name:             ptr.To("example-name"),
+					Size:             ptr.To(int32(3)),
 					UpdateStrategy: &models.V1UpdateStrategy{
 						Type: "RollingUpdateScaleOut",
 					},
@@ -64,7 +65,7 @@ func TestToMachinePoolGcp(t *testing.T) {
 			expectedOutput: &models.V1GcpMachinePoolConfigEntity{
 				CloudConfig: &models.V1GcpMachinePoolCloudConfigEntity{
 					Azs:            []string{"us-central1-a"},
-					InstanceType:   types.Ptr("n1-standard-2"),
+					InstanceType:   ptr.To("n1-standard-2"),
 					RootDeviceSize: int64(100),
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
@@ -72,8 +73,8 @@ func TestToMachinePoolGcp(t *testing.T) {
 					Taints:           []*models.V1Taint{},
 					IsControlPlane:   true,
 					Labels:           []string{"control-plane"},
-					Name:             types.Ptr("example-name-2"),
-					Size:             types.Ptr(int32(2)),
+					Name:             ptr.To("example-name-2"),
+					Size:             ptr.To(int32(2)),
 					UpdateStrategy: &models.V1UpdateStrategy{
 						Type: "RollingUpdate",
 					},
@@ -110,12 +111,12 @@ func TestFlattenMachinePoolConfigsGcp(t *testing.T) {
 				{
 					AdditionalLabels:        map[string]string{"label1": "value1", "label2": "value2"},
 					Taints:                  []*models.V1Taint{{Key: "taint1", Value: "value1", Effect: "NoSchedule"}},
-					IsControlPlane:          ptr.BoolPtr(true),
+					IsControlPlane:          ptr.To(true),
 					UseControlPlaneAsWorker: true,
 					Name:                    "machine-pool-1",
 					Size:                    int32(3),
 					UpdateStrategy:          &models.V1UpdateStrategy{Type: "RollingUpdate"},
-					InstanceType:            types.Ptr("n1-standard-4"),
+					InstanceType:            ptr.To("n1-standard-4"),
 					RootDeviceSize:          int64(100),
 					Azs:                     []string{"us-west1-a", "us-west1-b"},
 					NodeRepaveInterval:      0,
@@ -166,15 +167,15 @@ func TestFlattenClusterConfigsGcp(t *testing.T) {
 			input: &models.V1GcpCloudConfig{
 				Spec: &models.V1GcpCloudConfigSpec{
 					ClusterConfig: &models.V1GcpClusterConfig{
-						Project: ptr.StringPtr("my-project"),
+						Project: ptr.To("my-project"),
 						Network: "my-network",
-						Region:  ptr.StringPtr("us-west1"),
+						Region:  ptr.To("us-west1"),
 					},
 				},
 			},
 			expectedOutput: []interface{}{
 				map[string]interface{}{
-					"project": ptr.StringPtr("my-project"),
+					"project": ptr.To("my-project"),
 					"network": "my-network",
 					"region":  "us-west1",
 				},

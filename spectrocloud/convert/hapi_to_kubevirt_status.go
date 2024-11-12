@@ -3,10 +3,12 @@ package convert
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	k8sv1 "k8s.io/api/core/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func ToKubevirtVMStatusM(status *models.V1ClusterVirtualMachineStatus) (kubevirtapiv1.VirtualMachineStatus, error) {
@@ -35,8 +37,8 @@ func ToKubevirtVMStatus(status *models.V1ClusterVirtualMachineStatus) kubevirtap
 	}
 
 	return kubevirtapiv1.VirtualMachineStatus{
-		SnapshotInProgress:     types.Ptr(status.SnapshotInProgress),
-		RestoreInProgress:      types.Ptr(status.RestoreInProgress),
+		SnapshotInProgress:     ptr.To(status.SnapshotInProgress),
+		RestoreInProgress:      ptr.To(status.RestoreInProgress),
 		Created:                status.Created,
 		Ready:                  status.Ready,
 		PrintableStatus:        PrintableStatus,

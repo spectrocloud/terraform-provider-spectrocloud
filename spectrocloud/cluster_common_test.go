@@ -2,16 +2,18 @@ package spectrocloud
 
 import (
 	"fmt"
-	"github.com/hashicorp/go-cty/cty"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/palette-sdk-go/client"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/stretchr/testify/require"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
@@ -373,10 +375,10 @@ func prepareSpectroClusterModel() *models.V1SpectroCluster {
 						Name: "",
 						UID:  "test-host-cluster-uid",
 					},
-					IsHostCluster: ptr.BoolPtr(false),
+					IsHostCluster: ptr.To((false),,
 				},
 				LifecycleConfig: &models.V1LifecycleConfig{
-					Pause: ptr.BoolPtr(false),
+					Pause: ptr.To((false),,
 				},
 				MachineHealthConfig: &models.V1MachineHealthCheckConfig{
 					HealthCheckMaxUnhealthy:         "",
@@ -693,7 +695,7 @@ func TestToClusterHostConfigs(t *testing.T) {
 				},
 			},
 		},
-		IsHostCluster: ptr.BoolPtr(true),
+		IsHostCluster: ptr.To((true),,
 	}
 
 	assert.Equal(t, expected, result)
@@ -731,7 +733,7 @@ func TestToClusterHostConfigsNoHostConfig(t *testing.T) {
 
 	expected := &models.V1HostClusterConfig{
 		ClusterEndpoint: nil,
-		IsHostCluster:   ptr.BoolPtr(false),
+		IsHostCluster:   ptr.To((false),,
 	}
 
 	assert.Equal(t, expected, result)

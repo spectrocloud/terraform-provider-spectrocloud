@@ -1,10 +1,12 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"testing"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestFlattenMachinePoolConfigsEdgeVsphere(t *testing.T) {
@@ -36,28 +38,28 @@ func TestFlattenMachinePoolConfigsEdgeVsphere(t *testing.T) {
 							Value:     "np",
 						},
 					},
-					IsControlPlane:          ptr.BoolPtr(true),
-					NodeRepaveInterval:      30,
+					IsControlPlane: ptr.To((true),
+						NodeRepaveInterval:      30,
 					UseControlPlaneAsWorker: true,
 					Name:                    "pool1",
 					Size:                    3,
 					InstanceType: &models.V1VsphereInstanceType{
-						DiskGiB:   int32Ptr(100),
-						MemoryMiB: int64Ptr(8192),
-						NumCPUs:   int32Ptr(4),
-					},
+					DiskGiB:   int32Ptr(100),
+					MemoryMiB: int64Ptr(8192),
+					NumCPUs:   int32Ptr(4),
+				},
 					Placements: []*models.V1VspherePlacementConfig{
-						{
-							UID:          "placement1",
-							Cluster:      "cluster1",
-							ResourcePool: "resourcepool1",
-							Datastore:    "datastore1",
-							Network: &models.V1VsphereNetworkConfig{
-								NetworkName:   ptr.StringPtr("network1"),
-								ParentPoolRef: &models.V1ObjectReference{UID: "pool1"},
-							},
-						},
-					},
+				{
+					UID:          "placement1",
+					Cluster:      "cluster1",
+					ResourcePool: "resourcepool1",
+					Datastore:    "datastore1",
+					Network: &models.V1VsphereNetworkConfig{
+					NetworkName:   ptr.To("network1"),
+					ParentPoolRef: &models.V1ObjectReference{UID: "pool1"},
+				},
+				},
+				},
 				},
 			},
 			expected: []interface{}{
@@ -136,23 +138,23 @@ func TestToMachinePoolEdgeVsphere(t *testing.T) {
 							ResourcePool: "resourcepool1",
 							Datastore:    "datastore1",
 							Network: &models.V1VsphereNetworkConfigEntity{
-								NetworkName:   types.Ptr("network1"),
+								NetworkName:   ptr.To("network1"),
 								ParentPoolUID: "pool1",
 								StaticIP:      true,
 							},
 						},
 					},
 					InstanceType: &models.V1VsphereInstanceType{
-						DiskGiB:   types.Ptr(int32(100)),
-						MemoryMiB: types.Ptr(int64(8192)),
-						NumCPUs:   types.Ptr(int32(4)),
+						DiskGiB:   ptr.To(int32(100)),
+						MemoryMiB: ptr.To(int64(8192)),
+						NumCPUs:   ptr.To(int32(4)),
 					},
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					IsControlPlane:     false,
 					Labels:             []string{"worker"},
-					Name:               types.Ptr("worker-pool"),
-					Size:               types.Ptr(int32(3)),
+					Name:               ptr.To("worker-pool"),
+					Size:               ptr.To(int32(3)),
 					NodeRepaveInterval: 24,
 					UpdateStrategy: &models.V1UpdateStrategy{
 						Type: "",
@@ -197,23 +199,23 @@ func TestToMachinePoolEdgeVsphere(t *testing.T) {
 							ResourcePool: "resourcepool2",
 							Datastore:    "datastore2",
 							Network: &models.V1VsphereNetworkConfigEntity{
-								NetworkName:   types.Ptr("network2"),
+								NetworkName:   ptr.To("network2"),
 								ParentPoolUID: "",
 								StaticIP:      false,
 							},
 						},
 					},
 					InstanceType: &models.V1VsphereInstanceType{
-						DiskGiB:   types.Ptr(int32(200)),
-						MemoryMiB: types.Ptr(int64(16384)),
-						NumCPUs:   types.Ptr(int32(8)),
+						DiskGiB:   ptr.To(int32(200)),
+						MemoryMiB: ptr.To(int64(16384)),
+						NumCPUs:   ptr.To(int32(8)),
 					},
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					IsControlPlane: true,
 					Labels:         []string{"control-plane"},
-					Name:           types.Ptr("control-plane-pool"),
-					Size:           types.Ptr(int32(1)),
+					Name:           ptr.To("control-plane-pool"),
+					Size:           ptr.To(int32(1)),
 					UpdateStrategy: &models.V1UpdateStrategy{
 						Type: "",
 					},

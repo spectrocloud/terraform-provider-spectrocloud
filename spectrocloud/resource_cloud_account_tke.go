@@ -7,7 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func resourceCloudAccountTencent() *schema.Resource {
@@ -134,8 +135,8 @@ func toTencentAccount(d *schema.ResourceData) *models.V1TencentAccount {
 			UID:  d.Id(),
 		},
 		Spec: &models.V1TencentCloudAccount{
-			SecretID:  types.Ptr(d.Get("tencent_secret_id").(string)),
-			SecretKey: types.Ptr(d.Get("tencent_secret_key").(string)),
+			SecretID:  ptr.To(d.Get("tencent_secret_id").(string)),
+			SecretKey: ptr.To(d.Get("tencent_secret_key").(string)),
 		},
 	}
 

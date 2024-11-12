@@ -1,10 +1,12 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
+	"testing"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
-	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToMachinePoolAks(t *testing.T) {
@@ -42,10 +44,10 @@ func TestFlattenClusterConfigsAks(t *testing.T) {
 	azureCloudConfig := &models.V1AzureCloudConfig{
 		Spec: &models.V1AzureCloudConfigSpec{
 			ClusterConfig: &models.V1AzureClusterConfig{
-				SubscriptionID: ptr.StringPtr("mySubscriptionID"),
+				SubscriptionID: ptr.To("mySubscriptionID"),
 				ResourceGroup:  "myResourceGroup",
-				Location:       ptr.StringPtr("eastus"),
-				SSHKey:         ptr.StringPtr("sshPublicKey"),
+				Location:       ptr.To("eastus"),
+				SSHKey:         ptr.To("sshPublicKey"),
 				APIServerAccessProfile: &models.V1APIServerAccessProfile{
 					EnablePrivateCluster: true,
 				},
@@ -74,7 +76,7 @@ func TestFlattenClusterConfigsAks(t *testing.T) {
 	assert.Len(t, flattened, 1)
 
 	m := flattened[0].(map[string]interface{})
-	assert.Equal(t, ptr.StringPtr("mySubscriptionID"), m["subscription_id"])
+	assert.Equal(t, ptr.To("mySubscriptionID"), m["subscription_id"])
 	assert.Equal(t, "myResourceGroup", m["resource_group"])
 	assert.Equal(t, "eastus", m["region"])
 	assert.Equal(t, "sshPublicKey", m["ssh_key"])

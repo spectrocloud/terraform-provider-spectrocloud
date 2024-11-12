@@ -4,13 +4,12 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/spectrocloud/gomi/pkg/ptr"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func prepareAzureTestData() *schema.ResourceData {
@@ -137,8 +136,8 @@ func TestValidateCPPoolCount(t *testing.T) {
 	cpConfig1 := &models.V1AzureMachinePoolConfigEntity{
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: true,
-			Size:           types.Ptr(int32(4)),
-			Name:           types.Ptr("cp1"),
+			Size:           ptr.To(int32(4)),
+			Name:           ptr.To("cp1"),
 		},
 	}
 
@@ -146,8 +145,8 @@ func TestValidateCPPoolCount(t *testing.T) {
 	workerConfig := &models.V1AzureMachinePoolConfigEntity{
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: false,
-			Size:           types.Ptr(int32(6)),
-			Name:           types.Ptr("worker1"),
+			Size:           ptr.To(int32(6)),
+			Name:           ptr.To("worker1"),
 		},
 	}
 
@@ -155,8 +154,8 @@ func TestValidateCPPoolCount(t *testing.T) {
 	nonCPConfig := &models.V1AzureMachinePoolConfigEntity{
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			IsControlPlane: false,
-			Size:           types.Ptr(int32(7)),
-			Name:           types.Ptr("worker2"),
+			Size:           ptr.To(int32(7)),
+			Name:           ptr.To("worker2"),
 		},
 	}
 
@@ -231,7 +230,7 @@ func TestFlattenMachinePoolConfigsAzure(t *testing.T) {
 			Azs:                   azsList,
 			InstanceConfig:        nil,
 			InstanceType:          "Standard_DS2_v2",
-			IsControlPlane:        types.Ptr(false),
+			IsControlPlane:        ptr.To(false),
 			IsSystemNodePool:      false,
 			Labels:                nil,
 			MachinePoolProperties: nil,
@@ -280,10 +279,10 @@ func TestFlattenClusterConfigsAzure(t *testing.T) {
 		config := &models.V1AzureCloudConfig{
 			Spec: &models.V1AzureCloudConfigSpec{
 				ClusterConfig: &models.V1AzureClusterConfig{
-					SubscriptionID:     types.Ptr("test-subscription-id"),
+					SubscriptionID:     ptr.To("test-subscription-id"),
 					ResourceGroup:      "test-resource-group",
-					Location:           types.Ptr("test-location"),
-					SSHKey:             types.Ptr("test-ssh-key"),
+					Location:           ptr.To("test-location"),
+					SSHKey:             ptr.To("test-ssh-key"),
 					StorageAccountName: "test-storage-account",
 					ContainerName:      "test-container",
 					VnetResourceGroup:  "test-network-resource-group",
@@ -297,10 +296,10 @@ func TestFlattenClusterConfigsAzure(t *testing.T) {
 
 		expected := []interface{}{
 			map[string]interface{}{
-				"subscription_id":            ptr.StringPtr("test-subscription-id"),
+				"subscription_id":            ptr.To("test-subscription-id"),
 				"resource_group":             "test-resource-group",
-				"region":                     ptr.StringPtr("test-location"),
-				"ssh_key":                    ptr.StringPtr("test-ssh-key"),
+				"region":                     ptr.To("test-location"),
+				"ssh_key":                    ptr.To("test-ssh-key"),
 				"storage_account_name":       "test-storage-account",
 				"container_name":             "test-container",
 				"network_resource_group":     "test-network-resource-group",
@@ -334,7 +333,7 @@ func TestFlattenClusterConfigsAzure(t *testing.T) {
 			Spec: &models.V1AzureCloudConfigSpec{
 				ClusterConfig: &models.V1AzureClusterConfig{
 					ResourceGroup: "test-resource-group",
-					Location:      types.Ptr("test-location"),
+					Location:      ptr.To("test-location"),
 				},
 			},
 		}
@@ -342,7 +341,7 @@ func TestFlattenClusterConfigsAzure(t *testing.T) {
 		expected := []interface{}{
 			map[string]interface{}{
 				"resource_group": "test-resource-group",
-				"region":         ptr.StringPtr("test-location"),
+				"region":         ptr.To("test-location"),
 			},
 		}
 

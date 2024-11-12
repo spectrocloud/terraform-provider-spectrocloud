@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func prepareDataVolumeTestData() *schema.ResourceData {
@@ -115,16 +115,16 @@ func TestExpandAddVolumeOptions(t *testing.T) {
 	}
 
 	expected := &models.V1VMAddVolumeOptions{
-		Name: types.Ptr("test-volume"),
+		Name: ptr.To("test-volume"),
 		Disk: &models.V1VMDisk{
-			Name: types.Ptr("test-disk"),
+			Name: ptr.To("test-disk"),
 			Disk: &models.V1VMDiskTarget{
 				Bus: "scsi",
 			},
 		},
 		VolumeSource: &models.V1VMHotplugVolumeSource{
 			DataVolume: &models.V1VMCoreDataVolumeSource{
-				Name:         types.Ptr("test-data-volume"),
+				Name:         ptr.To("test-data-volume"),
 				Hotpluggable: true,
 			},
 		},

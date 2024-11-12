@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func skipSchemaAttributes(originalSchema map[string]*schema.Schema, keysToRemove []string) map[string]*schema.Schema {
@@ -38,8 +38,8 @@ func TestFlattenVsphereCloudAccountAttributes(t *testing.T) {
 			},
 		},
 		Spec: &models.V1VsphereCloudAccount{
-			VcenterServer: types.Ptr("vcenter.example.com"),
-			Username:      types.Ptr("user"),
+			VcenterServer: ptr.To("vcenter.example.com"),
+			Username:      ptr.To("user"),
 			Insecure:      false,
 		},
 	}

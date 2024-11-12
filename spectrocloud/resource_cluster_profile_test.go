@@ -2,12 +2,13 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToClusterProfileVariables(t *testing.T) {
@@ -112,8 +113,8 @@ func TestFlattenProfileVariables(t *testing.T) {
 	_ = mockResourceData.Set("profile_variables", proVar)
 
 	pv := []*models.V1Variable{
-		{Name: ptr.StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: "string", DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
-		{Name: ptr.StringPtr("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: "integer", DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
+		{Name: ptr.To("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: "string", DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
+		{Name: ptr.To("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: "integer", DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
 	}
 
 	result, err := flattenProfileVariables(mockResourceData, pv)
@@ -125,7 +126,7 @@ func TestFlattenProfileVariables(t *testing.T) {
 		map[string]interface{}{
 			"variable": []interface{}{
 				map[string]interface{}{
-					"name":          ptr.StringPtr("variable_name_1"),
+					"name":          ptr.To("variable_name_1"),
 					"display_name":  "display_name_1",
 					"description":   "description_1",
 					"format":        models.V1VariableFormat("string"),
@@ -137,7 +138,7 @@ func TestFlattenProfileVariables(t *testing.T) {
 					"is_sensitive":  false,
 				},
 				map[string]interface{}{
-					"name":          ptr.StringPtr("variable_name_2"),
+					"name":          ptr.To("variable_name_2"),
 					"display_name":  "display_name_2",
 					"description":   "description_2",
 					"format":        models.V1VariableFormat("integer"),
@@ -259,7 +260,7 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 			},
 			expectedError: "",
 			expectedPack: &models.V1PackManifestEntity{
-				Name:        types.Ptr("test-pack"),
+				Name:        ptr.To("test-pack"),
 				Tag:         "v1.0",
 				RegistryUID: "test-registry-uid",
 				UID:         "test-uid",
@@ -298,7 +299,7 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 			},
 			expectedError: "",
 			expectedPack: &models.V1PackManifestEntity{
-				Name:        types.Ptr("test-manifest-pack"),
+				Name:        ptr.To("test-manifest-pack"),
 				Tag:         "",
 				RegistryUID: "",
 				UID:         "spectro-manifest-pack",
@@ -329,7 +330,7 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 			},
 			expectedError: "",
 			expectedPack: &models.V1PackManifestEntity{
-				Name:        types.Ptr("test-manifest-pack"),
+				Name:        ptr.To("test-manifest-pack"),
 				Tag:         "",
 				RegistryUID: "",
 				UID:         "custom-uid",

@@ -2,11 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 // Test for the `toMaasAccount` function
@@ -31,8 +33,8 @@ func TestToMaasAccount(t *testing.T) {
 					UID:         "",
 				},
 				Spec: &models.V1MaasCloudAccount{
-					APIEndpoint: types.Ptr("http://api.endpoint"),
-					APIKey:      types.Ptr("api-key"),
+					APIEndpoint: ptr.To("http://api.endpoint"),
+					APIKey:      ptr.To("api-key"),
 				},
 			},
 		},

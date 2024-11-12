@@ -2,17 +2,18 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func resourceClusterCustomCloud() *schema.Resource {
@@ -389,7 +390,7 @@ func toCustomCloudCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 	cluster := &models.V1SpectroCustomClusterEntity{
 		Metadata: toClusterMetadataUpdate(d),
 		Spec: &models.V1SpectroCustomClusterEntitySpec{
-			CloudAccountUID:   types.Ptr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID:   ptr.To(d.Get("cloud_account_id").(string)),
 			CloudConfig:       customCloudConfig,
 			ClusterConfig:     customClusterConfig,
 			Machinepoolconfig: machinePoolConfigs,
@@ -404,7 +405,7 @@ func toCustomCloudConfig(d *schema.ResourceData) *models.V1CustomClusterConfig {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	valuesYamlStr := strings.TrimSpace(cloudConfig["values"].(string))
 	customCloudConfig := &models.V1CustomClusterConfig{
-		Values: ptr.StringPtr(valuesYamlStr),
+		Values: ptr.To(valuesYamlStr),
 	}
 
 	return customCloudConfig
@@ -489,8 +490,8 @@ func flattenCloudConfigsValuesCustomCloud(config *models.V1CustomCloudConfig) []
 
 	m := make(map[string]interface{})
 
-	if ptr.String(config.Spec.ClusterConfig.Values) != "" {
-		m["values"] = ptr.String(config.Spec.ClusterConfig.Values)
+	if ptr.DeRef(config.Spec.ClusterConfig.Values) != "" {
+		m["values"] = ptr.DeRef(config.Spec.ClusterConfig.Values)
 	}
 	return []interface{}{m}
 }

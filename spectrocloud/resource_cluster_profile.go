@@ -4,16 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/spectrocloud/gomi/pkg/ptr"
-
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
 	"log"
 	"strings"
 	"time"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -343,7 +342,7 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 	}
 
 	pack := &models.V1PackManifestEntity{
-		Name:        types.Ptr(pName),
+		Name:        ptr.To(pName),
 		Tag:         p["tag"].(string),
 		RegistryUID: pRegistryUID,
 		UID:         pUID,
@@ -438,7 +437,7 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 
 	pack := &models.V1PackManifestUpdateEntity{
 		//Layer:  p["layer"].(string),
-		Name:        types.Ptr(pName),
+		Name:        ptr.To(pName),
 		Tag:         p["tag"].(string),
 		RegistryUID: pRegistryUID,
 		UID:         pUID,
@@ -452,7 +451,7 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 		m := manifest.(map[string]interface{})
 		manifests = append(manifests, &models.V1ManifestRefUpdateEntity{
 			Content: strings.TrimSpace(m["content"].(string)),
-			Name:    types.Ptr(m["name"].(string)),
+			Name:    ptr.To(m["name"].(string)),
 			UID:     getManifestUID(m["name"].(string), packs),
 		})
 	}
@@ -498,7 +497,7 @@ func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, er
 					Format:       models.V1VariableFormat(variable["format"].(string)),
 					Hidden:       variable["hidden"].(bool),
 					Immutable:    variable["immutable"].(bool),
-					Name:         ptr.StringPtr(variable["name"].(string)),
+					Name:         ptr.To(variable["name"].(string)),
 					Regex:        variable["regex"].(string),
 					IsSensitive:  variable["is_sensitive"].(bool),
 					Required:     variable["required"].(bool),
@@ -536,7 +535,7 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 		mapV := cv.(map[string]interface{})
 		for _, va := range variables {
 			vs := va.(map[string]interface{})
-			if mapV["name"].(string) == ptr.String(vs["name"].(*string)) {
+			if mapV["name"].(string) == ptr.DeRef(vs["name"].(*string)) {
 				sortedVariables = append(sortedVariables, va)
 			}
 		}

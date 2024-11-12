@@ -1,10 +1,12 @@
 package routes
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"net/http"
 	"strconv"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func getEdgeHostSearchSummary() models.V1EdgeHostsSearchSummary {
@@ -42,7 +44,7 @@ func getEdgeHostSearchSummary() models.V1EdgeHostsSearchSummary {
 		Spec: &models.V1EdgeHostsMetadataSpec{
 			ClusterProfileTemplates: profileSummary,
 			Device: &models.V1DeviceSpec{
-				ArchType: ptr.StringPtr("AMD"),
+				ArchType: ptr.To("AMD"),
 				CPU: &models.V1CPU{
 					Cores: 2,
 				},
@@ -113,7 +115,7 @@ func getEdgeHostPayload() models.V1EdgeHostDevice {
 			CloudProperties:         nil,
 			ClusterProfileTemplates: nil,
 			Device: &models.V1DeviceSpec{
-				ArchType: ptr.StringPtr("amd64"),
+				ArchType: ptr.To("amd64"),
 				CPU:      nil,
 				Disks:    nil,
 				Gpus:     nil,
@@ -145,7 +147,7 @@ func getEdgeHostPayload() models.V1EdgeHostDevice {
 //func creatEdgeHostErrorResponse() interface{} {
 //	var payload interface{}
 //	payload = map[string]interface{}{
-//		"UID": ptr.StringPtr("test-edge-host-id"),
+//		"UID": ptr.To("test-edge-host-id"),
 //	}
 //	return map[string]interface{}{
 //		"AuditUID": generateRandomStringUID(),

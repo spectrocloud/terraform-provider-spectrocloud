@@ -1,12 +1,14 @@
 package spectrocloud
 
 import (
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToAddonDeploymentPackCreate(t *testing.T) {
@@ -36,7 +38,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 				},
 			},
 			expected: &models.V1PackManifestEntity{
-				Name:        types.Ptr("test-pack"),
+				Name:        ptr.To("test-pack"),
 				Tag:         "v1.0.0",
 				RegistryUID: "registry-123",
 				Type:        "Addon",
@@ -70,7 +72,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 				},
 			},
 			expected: &models.V1PackManifestEntity{
-				Name:        types.Ptr("test-pack"),
+				Name:        ptr.To("test-pack"),
 				Tag:         "v1.0.0",
 				RegistryUID: "",
 				Type:        "Addon",
@@ -95,7 +97,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 				"manifest":     []interface{}{},
 			},
 			expected: &models.V1PackManifestEntity{
-				Name:        types.Ptr("test-pack"),
+				Name:        ptr.To("test-pack"),
 				Tag:         "v1.0.0",
 				RegistryUID: "registry-123",
 				Type:        "Addon",

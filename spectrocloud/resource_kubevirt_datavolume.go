@@ -10,10 +10,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/convert"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/datavolume"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func resourceKubevirtDataVolume() *schema.Resource {
@@ -158,7 +159,7 @@ func resourceKubevirtDataVolumeDelete(ctx context.Context, d *schema.ResourceDat
 	if err := c.DeleteDataVolume(clusterUid, namespace, vm_name, &models.V1VMRemoveVolumeEntity{
 		Persist: true,
 		RemoveVolumeOptions: &models.V1VMRemoveVolumeOptions{
-			Name: types.Ptr(vol_name),
+			Name: ptr.To(vol_name),
 		},
 	}); err != nil {
 		return diag.FromErr(err)
@@ -178,13 +179,13 @@ func ExpandAddVolumeOptions(addVolumeOptions []interface{}) *models.V1VMAddVolum
 	m := addVolumeOptions[0].(map[string]interface{})
 
 	result := &models.V1VMAddVolumeOptions{
-		Name: types.Ptr(m["name"].(string)),
+		Name: ptr.To(m["name"].(string)),
 	}
 
 	if diskList, ok := m["disk"].([]interface{}); ok && len(diskList) > 0 {
 		if diskMap, ok := diskList[0].(map[string]interface{}); ok {
 			result.Disk = &models.V1VMDisk{
-				Name: types.Ptr(diskMap["name"].(string)),
+				Name: ptr.To(diskMap["name"].(string)),
 				Disk: &models.V1VMDiskTarget{
 					Bus: diskMap["bus"].(string),
 				},
@@ -198,7 +199,7 @@ func ExpandAddVolumeOptions(addVolumeOptions []interface{}) *models.V1VMAddVolum
 				if dataVolumeMap, ok := dataVolumeList[0].(map[string]interface{}); ok {
 					result.VolumeSource = &models.V1VMHotplugVolumeSource{
 						DataVolume: &models.V1VMCoreDataVolumeSource{
-							Name:         types.Ptr(dataVolumeMap["name"].(string)),
+							Name:         ptr.To(dataVolumeMap["name"].(string)),
 							Hotpluggable: dataVolumeMap["hotpluggable"].(bool),
 						},
 					}

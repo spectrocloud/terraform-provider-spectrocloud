@@ -8,7 +8,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestSetAwsLaunchTemplate(t *testing.T) {
@@ -130,7 +130,7 @@ func TestToMachinePoolEks(t *testing.T) {
 				CloudConfig: &models.V1EksMachineCloudConfigEntity{
 					RootDeviceSize: 10,
 					InstanceType:   "t2.micro",
-					CapacityType:   types.Ptr("on-demand"),
+					CapacityType:   ptr.To("on-demand"),
 					Azs:            []string{"us-west-1a"},
 					Subnets: []*models.V1EksSubnetEntity{
 						{
@@ -142,8 +142,8 @@ func TestToMachinePoolEks(t *testing.T) {
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					IsControlPlane:   false,
 					Labels:           []string{},
-					Name:             types.Ptr("test-pool"),
-					Size:             types.Ptr(int32(2)),
+					Name:             ptr.To("test-pool"),
+					Size:             ptr.To(int32(2)),
 					MinSize:          2,
 					MaxSize:          2,
 					AdditionalLabels: map[string]string{},
@@ -170,7 +170,7 @@ func TestToMachinePoolEks(t *testing.T) {
 				CloudConfig: &models.V1EksMachineCloudConfigEntity{
 					RootDeviceSize: 10,
 					InstanceType:   "t2.micro",
-					CapacityType:   types.Ptr("spot"),
+					CapacityType:   ptr.To("spot"),
 					Azs:            []string{"us-west-1a"},
 					Subnets: []*models.V1EksSubnetEntity{
 						{
@@ -185,8 +185,8 @@ func TestToMachinePoolEks(t *testing.T) {
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					IsControlPlane:   false,
 					Labels:           []string{},
-					Name:             types.Ptr("test-pool-spot"),
-					Size:             types.Ptr(int32(2)),
+					Name:             ptr.To("test-pool-spot"),
+					Size:             ptr.To(int32(2)),
 					MinSize:          2,
 					MaxSize:          2,
 					AdditionalLabels: map[string]string{},

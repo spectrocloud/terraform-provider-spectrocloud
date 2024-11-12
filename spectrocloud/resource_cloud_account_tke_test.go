@@ -2,11 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 // Test for the `toTencentAccount` function
@@ -29,8 +31,8 @@ func TestToTencentAccount(t *testing.T) {
 					UID:  "", // UID is set from d.Id(), which is usually populated during resource creation
 				},
 				Spec: &models.V1TencentCloudAccount{
-					SecretID:  types.Ptr("test-secret-id"),
-					SecretKey: types.Ptr("test-secret-key"),
+					SecretID:  ptr.To("test-secret-id"),
+					SecretKey: ptr.To("test-secret-key"),
 				},
 			},
 		},
@@ -47,8 +49,8 @@ func TestToTencentAccount(t *testing.T) {
 					UID:  "",
 				},
 				Spec: &models.V1TencentCloudAccount{
-					SecretID:  types.Ptr(""),
-					SecretKey: types.Ptr(""),
+					SecretID:  ptr.To(""),
+					SecretKey: ptr.To(""),
 				},
 			},
 		},

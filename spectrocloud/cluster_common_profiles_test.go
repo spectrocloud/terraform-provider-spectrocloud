@@ -6,7 +6,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToPack_PacksMerging(t *testing.T) {
@@ -16,13 +16,13 @@ func TestToPack_PacksMerging(t *testing.T) {
 				{
 					Packs: []*models.V1PackRef{
 						{
-							Name: types.Ptr("pack1"),
+							Name: ptr.To("pack1"),
 							Manifests: []*models.V1ObjectReference{
 								{Name: "pack1", UID: "uid1"},
 							},
 						},
 						{
-							Name: types.Ptr("pack2"),
+							Name: ptr.To("pack2"),
 							Manifests: []*models.V1ObjectReference{
 								{Name: "pack2", UID: "uid2"},
 							},
@@ -32,13 +32,13 @@ func TestToPack_PacksMerging(t *testing.T) {
 				{
 					Packs: []*models.V1PackRef{
 						{
-							Name: types.Ptr("pack3"),
+							Name: ptr.To("pack3"),
 							Manifests: []*models.V1ObjectReference{
 								{Name: "pack3", UID: "uid3"},
 							},
 						},
 						{
-							Name: types.Ptr("pack4"),
+							Name: ptr.To("pack4"),
 							Manifests: []*models.V1ObjectReference{
 								{Name: "pack4", UID: "uid4"},
 							},
@@ -67,18 +67,18 @@ func TestToPack_PacksMerging(t *testing.T) {
 	}
 
 	expectedPack := &models.V1PackValuesEntity{
-		Name:   types.Ptr("testPack"),
+		Name:   ptr.To("testPack"),
 		Values: "someValues",
 		Tag:    "v1",
 		Type:   models.V1PackType("testType"),
 		Manifests: []*models.V1ManifestRefUpdateEntity{
 			{
-				Name:    types.Ptr("pack1"),
+				Name:    ptr.To("pack1"),
 				Content: "content1",
 				UID:     "uid1",
 			},
 			{
-				Name:    types.Ptr("pack2"),
+				Name:    ptr.To("pack2"),
 				Content: "content2",
 				UID:     "uid2",
 			},

@@ -9,7 +9,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
@@ -155,9 +155,9 @@ func ExpandPersistentVolumeClaimSpec(l []interface{}) (*v1.PersistentVolumeClaim
 	if v, ok := in["volume_mode"].(string); ok && v != "" {
 		switch v {
 		case string(v1.PersistentVolumeBlock):
-			obj.VolumeMode = types.Ptr(v1.PersistentVolumeBlock)
+			obj.VolumeMode = ptr.To(v1.PersistentVolumeBlock)
 		case string(v1.PersistentVolumeFilesystem):
-			obj.VolumeMode = types.Ptr(v1.PersistentVolumeFilesystem)
+			obj.VolumeMode = ptr.To(v1.PersistentVolumeFilesystem)
 		default:
 			return nil, fmt.Errorf("invalid volume mode: %s", v)
 		}

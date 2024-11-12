@@ -16,7 +16,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func resourceClusterVsphere() *schema.Resource {
@@ -864,7 +864,7 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 			ResourcePool: p["resource_pool"].(string),
 			Datastore:    p["datastore"].(string),
 			Network: &models.V1VsphereNetworkConfigEntity{
-				NetworkName:   types.Ptr(p["network"].(string)),
+				NetworkName:   ptr.To(p["network"].(string)),
 				ParentPoolUID: poolID,
 				StaticIP:      staticIP,
 			},
@@ -874,9 +874,9 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
 	instanceType := models.V1VsphereInstanceType{
-		DiskGiB:   types.Ptr(int32(ins["disk_size_gb"].(int))),
-		MemoryMiB: types.Ptr(int64(ins["memory_mb"].(int))),
-		NumCPUs:   types.Ptr(int32(ins["cpu"].(int))),
+		DiskGiB:   ptr.To(int32(ins["disk_size_gb"].(int))),
+		MemoryMiB: ptr.To(int64(ins["memory_mb"].(int))),
+		NumCPUs:   ptr.To(int32(ins["cpu"].(int))),
 	}
 	min := int32(m["count"].(int))
 	max := int32(m["count"].(int))
@@ -899,8 +899,8 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Name:             ptr.To(m["name"].(string)),
+			Size:             ptr.To(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

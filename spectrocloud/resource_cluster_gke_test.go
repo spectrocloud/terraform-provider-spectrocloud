@@ -1,10 +1,12 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestToMachinePoolGke(t *testing.T) {
@@ -77,13 +79,13 @@ func TestFlattenMachinePoolConfigsGke(t *testing.T) {
 	// Simulate input data
 	machinePools := []*models.V1GcpMachinePoolConfig{
 		{
-			InstanceType:   types.Ptr("n1-standard-2"),
+			InstanceType:   ptr.To("n1-standard-2"),
 			Name:           "pool1",
 			RootDeviceSize: 100,
 			Size:           3,
 		},
 		{
-			InstanceType:   types.Ptr("n1-standard-4"),
+			InstanceType:   ptr.To("n1-standard-4"),
 			Name:           "pool2",
 			Size:           2,
 			RootDeviceSize: 200,

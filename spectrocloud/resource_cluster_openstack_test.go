@@ -1,8 +1,9 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -182,7 +183,7 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 						ID: "subnet-123",
 					},
 					FlavorConfig: &models.V1OpenstackFlavorConfig{
-						Name: types.Ptr("m4.large"),
+						Name: ptr.To("m4.large"),
 					},
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
@@ -219,7 +220,7 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 						ID: "subnet-456",
 					},
 					FlavorConfig: &models.V1OpenstackFlavorConfig{
-						Name: types.Ptr("m4.large"),
+						Name: ptr.To("m4.large"),
 					},
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{

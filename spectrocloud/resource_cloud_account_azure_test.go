@@ -2,13 +2,14 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 // Test for toAzureAccount
@@ -47,14 +48,14 @@ func TestFlattenCloudAccountAzure(t *testing.T) {
 			UID:         "abcdef",
 		},
 		Spec: &models.V1AzureCloudAccount{
-			ClientID:     types.Ptr("test_client_id"),
-			ClientSecret: types.Ptr("test_client_secret"),
-			TenantID:     types.Ptr("test_tenant_id"),
+			ClientID:     ptr.To("test_client_id"),
+			ClientSecret: ptr.To("test_client_secret"),
+			TenantID:     ptr.To("test_tenant_id"),
 			TenantName:   "test_tenant_name",
 			Settings: &models.V1CloudAccountSettings{
 				DisablePropertiesRequest: true,
 			},
-			AzureEnvironment: types.Ptr("AzureUSGovernmentCloud"),
+			AzureEnvironment: ptr.To("AzureUSGovernmentCloud"),
 		},
 	}
 

@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func ToHapiVm(vm *kubevirtapiv1.VirtualMachine) (*models.V1ClusterVirtualMachine, error) {
@@ -52,12 +52,12 @@ func ToHapiVmOwnerReferences(references []metav1.OwnerReference) []*models.V1VMO
 	ret := make([]*models.V1VMOwnerReference, len(references))
 	for i, reference := range references {
 		ret[i] = &models.V1VMOwnerReference{
-			APIVersion:         types.Ptr(reference.APIVersion),
+			APIVersion:         ptr.To(reference.APIVersion),
 			BlockOwnerDeletion: *reference.BlockOwnerDeletion,
 			Controller:         *reference.Controller,
-			Kind:               types.Ptr(reference.Kind),
-			Name:               types.Ptr(reference.Name),
-			UID:                types.Ptr(string(reference.UID)),
+			Kind:               ptr.To(reference.Kind),
+			Name:               ptr.To(reference.Name),
+			UID:                ptr.To(string(reference.UID)),
 		}
 	}
 

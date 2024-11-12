@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -740,13 +740,13 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster := &models.V1SpectroEksClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroEksClusterEntitySpec{
-			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: ptr.To(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
 				BastionDisabled:  true,
 				VpcID:            cloudConfig["vpc_id"].(string),
-				Region:           types.Ptr(cloudConfig["region"].(string)),
+				Region:           ptr.To(cloudConfig["region"].(string)),
 				SSHKeyName:       cloudConfig["ssh_key_name"].(string),
 				EncryptionConfig: encryptionConfig,
 			},
@@ -872,8 +872,8 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Name:             ptr.To(m["name"].(string)),
+			Size:             ptr.To(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -977,12 +977,12 @@ func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {
 
 		selectors = append(selectors, &models.V1FargateSelector{
 			Labels:    expandStringMap(s["labels"].(map[string]interface{})),
-			Namespace: types.Ptr(s["namespace"].(string)),
+			Namespace: ptr.To(s["namespace"].(string)),
 		})
 	}
 
 	f := &models.V1FargateProfile{
-		Name:           types.Ptr(m["name"].(string)),
+		Name:           ptr.To(m["name"].(string)),
 		AdditionalTags: expandStringMap(m["additional_tags"].(map[string]interface{})),
 		Selectors:      selectors,
 		SubnetIds:      expandStringList(m["subnets"].([]interface{})),

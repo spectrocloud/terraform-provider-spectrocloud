@@ -8,7 +8,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
@@ -104,7 +104,7 @@ func toAddonDeploymentPackCreate(pSrc interface{}) (*models.V1PackManifestEntity
 	pType := models.V1PackType(p["type"].(string))
 
 	pack := &models.V1PackManifestEntity{
-		Name:        types.Ptr(pName),
+		Name:        ptr.To(pName),
 		Tag:         pTag,
 		RegistryUID: pRegistryUID,
 		Type:        pType,

@@ -7,7 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func resourceCloudAccountOpenstack() *schema.Resource {
@@ -195,11 +196,11 @@ func toOpenStackAccount(d *schema.ResourceData) *models.V1OpenStackAccount {
 			CaCert:           d.Get("ca_certificate").(string),
 			DefaultDomain:    d.Get("default_domain").(string),
 			DefaultProject:   d.Get("default_project").(string),
-			IdentityEndpoint: types.Ptr(d.Get("identity_endpoint").(string)),
+			IdentityEndpoint: ptr.To(d.Get("identity_endpoint").(string)),
 			Insecure:         d.Get("openstack_allow_insecure").(bool),
 			ParentRegion:     d.Get("parent_region").(string),
-			Password:         types.Ptr(d.Get("openstack_password").(string)),
-			Username:         types.Ptr(d.Get("openstack_username").(string)),
+			Password:         ptr.To(d.Get("openstack_password").(string)),
+			Username:         ptr.To(d.Get("openstack_username").(string)),
 		},
 	}
 

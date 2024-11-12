@@ -8,7 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func resourceCloudAccountAzure() *schema.Resource {
@@ -207,9 +208,9 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 			UID: d.Id(),
 		},
 		Spec: &models.V1AzureCloudAccount{
-			ClientID:     types.Ptr(d.Get("azure_client_id").(string)),
+			ClientID:     ptr.To(d.Get("azure_client_id").(string)),
 			ClientSecret: &clientSecret,
-			TenantID:     types.Ptr(d.Get("azure_tenant_id").(string)),
+			TenantID:     ptr.To(d.Get("azure_tenant_id").(string)),
 			TenantName:   d.Get("tenant_name").(string),
 			Settings: &models.V1CloudAccountSettings{
 				DisablePropertiesRequest: d.Get("disable_properties_request").(bool),
@@ -219,7 +220,7 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 
 	// add partition to account
 	if d.Get("cloud") != nil {
-		account.Spec.AzureEnvironment = types.Ptr(d.Get("cloud").(string))
+		account.Spec.AzureEnvironment = ptr.To(d.Get("cloud").(string))
 	}
 	return account
 }

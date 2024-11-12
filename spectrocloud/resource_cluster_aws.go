@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -597,12 +597,12 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster := &models.V1SpectroAwsClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroAwsClusterEntitySpec{
-			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: ptr.To(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AwsClusterConfig{
 				SSHKeyName:               cloudConfig["ssh_key_name"].(string),
-				Region:                   types.Ptr(cloudConfig["region"].(string)),
+				Region:                   ptr.To(cloudConfig["region"].(string)),
 				VpcID:                    cloudConfig["vpc_id"].(string),
 				ControlPlaneLoadBalancer: cloudConfig["control_plane_lb"].(string),
 			},
@@ -683,7 +683,7 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 	mp := &models.V1AwsMachinePoolConfigEntity{
 		CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
 			Azs:            azs,
-			InstanceType:   types.Ptr(m["instance_type"].(string)),
+			InstanceType:   ptr.To(m["instance_type"].(string)),
 			CapacityType:   &capacityType,
 			RootDeviceSize: int64(m["disk_size_gb"].(int)),
 			Subnets:        azSubnetsConfigs,
@@ -693,8 +693,8 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Name:             ptr.To(m["name"].(string)),
+			Size:             ptr.To(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

@@ -4,7 +4,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func dataVolumeSourceFields() map[string]*schema.Schema {
@@ -212,7 +212,7 @@ func expandDataVolumeSourceRegistry(dataVolumeSourceRegistry []interface{}) *cdi
 	in := dataVolumeSourceRegistry[0].(map[string]interface{})
 
 	if v, ok := in["image_url"].(string); ok {
-		result.URL = types.Ptr(v)
+		result.URL = ptr.To(v)
 	}
 
 	return result

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -524,12 +524,12 @@ func toTkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster := &models.V1SpectroTencentClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroTencentClusterEntitySpec{
-			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
+			CloudAccountUID: ptr.To(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1TencentClusterConfig{
 				VpcID:     cloudConfig["vpc_id"].(string),
-				Region:    types.Ptr(cloudConfig["region"].(string)),
+				Region:    ptr.To(cloudConfig["region"].(string)),
 				SSHKeyIDs: sshKeyIds,
 			},
 		},
@@ -618,8 +618,8 @@ func toMachinePoolTke(machinePool interface{}) *models.V1TencentMachinePoolConfi
 			Taints:           toClusterTaints(m),
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Name:             ptr.To(m["name"].(string)),
+			Size:             ptr.To(int32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

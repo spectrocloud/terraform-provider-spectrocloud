@@ -4,7 +4,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	test_entities "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/test_utils/entities"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 
@@ -30,7 +30,7 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 				Name:      "name",
 			},
 			Registry: &cdiv1.DataVolumeSourceRegistry{
-				URL: types.Ptr("docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"),
+				URL: ptr.To("docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"),
 			},
 		},
 		PVC: &k8sv1.PersistentVolumeClaimSpec{
@@ -131,7 +131,7 @@ func GetBaseOutputForDataVolume() interface{} {
 						},
 						"registry": []interface{}{
 							map[string]interface{}{
-								"image_url": types.Ptr("docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"),
+								"image_url": ptr.To("docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"),
 							},
 						},
 					},
@@ -354,7 +354,7 @@ func GetBaseOutputForVirtualMachine() interface{} {
 								},
 								"registry": []interface{}{
 									map[string]interface{}{
-										"image_url": types.Ptr("docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"),
+										"image_url": ptr.To("docker://gcr.io/spectro-images-public/daily/os/ubuntu-container-disk:22.04"),
 									},
 								},
 							},

@@ -8,7 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 )
 
 func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
@@ -55,7 +56,7 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 		}
 		mockMachinePools = append(mockMachinePools, mp)
 		config := &models.V1MaasClusterConfig{
-			Domain: types.Ptr("maas_resource_pool"),
+			Domain: ptr.To("maas_resource_pool"),
 		}
 
 		expected := []interface{}{

@@ -3,9 +3,10 @@ package spectrocloud
 import (
 	"testing"
 
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/util/ptr"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,7 +28,7 @@ func TestFlattenCloudConfigsValuesCustomCloud(t *testing.T) {
 
 	// Test case 4: When config.Spec.ClusterConfig.Values is not nil
 	config.Spec.ClusterConfig = &models.V1CustomClusterConfig{
-		Values: ptr.StringPtr("test-values"),
+		Values: ptr.To("test-values"),
 	}
 	result = flattenCloudConfigsValuesCustomCloud(config)
 	assert.Len(t, result, 1, "Expected one element in the slice")
@@ -152,11 +153,11 @@ func TestToCustomCloudCluster(t *testing.T) {
 	// Assertions
 	assert.NoError(t, err) // Ensure no error occurred
 	assert.NotNil(t, cluster)
-	assert.Equal(t, ptr.StringPtr("test-cloud-account-id"), cluster.Spec.CloudAccountUID) // Verify CloudAccountUID
-	assert.NotNil(t, cluster.Spec.CloudConfig)                                            // Verify CloudConfig
-	assert.NotNil(t, cluster.Spec.ClusterConfig)                                          // Verify ClusterConfig
-	assert.NotNil(t, cluster.Spec.Machinepoolconfig)                                      // Verify Machinepoolconfig
-	assert.NotNil(t, cluster.Spec.Profiles)                                               // Verify Profiles
+	assert.Equal(t, ptr.To("test-cloud-account-id"), cluster.Spec.CloudAccountUID) // Verify CloudAccountUID
+	assert.NotNil(t, cluster.Spec.CloudConfig)                                     // Verify CloudConfig
+	assert.NotNil(t, cluster.Spec.ClusterConfig)                                   // Verify ClusterConfig
+	assert.NotNil(t, cluster.Spec.Machinepoolconfig)                               // Verify Machinepoolconfig
+	assert.NotNil(t, cluster.Spec.Profiles)                                        // Verify Profiles
 }
 
 func boolPtr(b bool) *bool {
