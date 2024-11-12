@@ -10,7 +10,7 @@ func TestDiffStringMap(t *testing.T) {
 		Path        string
 		Old         map[string]interface{}
 		New         map[string]interface{}
-		ExpectedOps PatchOperations
+		ExpectedOps Operations
 	}{
 		{
 			Path: "/parent/",
@@ -23,10 +23,11 @@ func TestDiffStringMap(t *testing.T) {
 				"two":   "222",
 				"three": "333",
 			},
-			ExpectedOps: []PatchOperation{
-				&AddOperation{
+			ExpectedOps: Operations{
+				{
 					Path:  "/parent/three",
 					Value: "333",
+					Op:    opAdd,
 				},
 			},
 		},
@@ -40,10 +41,11 @@ func TestDiffStringMap(t *testing.T) {
 				"one": "111",
 				"two": "abcd",
 			},
-			ExpectedOps: []PatchOperation{
-				&ReplaceOperation{
+			ExpectedOps: Operations{
+				{
 					Path:  "/parent/two",
 					Value: "abcd",
+					Op:    opReplace,
 				},
 			},
 		},
@@ -57,15 +59,17 @@ func TestDiffStringMap(t *testing.T) {
 				"two":   "abcd",
 				"three": "333",
 			},
-			ExpectedOps: []PatchOperation{
-				&RemoveOperation{Path: "/parent/one"},
-				&ReplaceOperation{
+			ExpectedOps: Operations{
+				{Path: "/parent/one", Op: opRemove},
+				{
 					Path:  "/parent/two",
 					Value: "abcd",
+					Op:    opReplace,
 				},
-				&AddOperation{
+				{
 					Path:  "/parent/three",
 					Value: "333",
+					Op:    opAdd,
 				},
 			},
 		},
@@ -78,8 +82,8 @@ func TestDiffStringMap(t *testing.T) {
 			New: map[string]interface{}{
 				"two": "222",
 			},
-			ExpectedOps: []PatchOperation{
-				&RemoveOperation{Path: "/parent/one"},
+			ExpectedOps: Operations{
+				{Path: "/parent/one", Op: opRemove},
 			},
 		},
 		{
@@ -89,9 +93,9 @@ func TestDiffStringMap(t *testing.T) {
 				"two": "222",
 			},
 			New: map[string]interface{}{},
-			ExpectedOps: []PatchOperation{
-				&RemoveOperation{Path: "/parent/one"},
-				&RemoveOperation{Path: "/parent/two"},
+			ExpectedOps: Operations{
+				{Path: "/parent/one", Op: opRemove},
+				{Path: "/parent/two", Op: opRemove},
 			},
 		},
 		{
@@ -101,13 +105,14 @@ func TestDiffStringMap(t *testing.T) {
 				"one": "111",
 				"two": "222",
 			},
-			ExpectedOps: []PatchOperation{
-				&AddOperation{
+			ExpectedOps: Operations{
+				{
 					Path: "/parent",
 					Value: map[string]interface{}{
 						"one": "111",
 						"two": "222",
 					},
+					Op: opAdd,
 				},
 			},
 		},
@@ -121,17 +126,20 @@ func TestDiffStringMap(t *testing.T) {
 				"one/with-slash":           "111",
 				"three/with/three/slashes": "333",
 			},
-			ExpectedOps: []PatchOperation{
-				&AddOperation{
+			ExpectedOps: Operations{
+				{
 					Path:  "/parent/one~1with-slash",
 					Value: "111",
+					Op:    opAdd,
 				},
-				&RemoveOperation{
+				{
 					Path: "/parent/two~0with-tilde",
+					Op:   opRemove,
 				},
-				&ReplaceOperation{
+				{
 					Path:  "/parent/three~1with~1three~1slashes",
 					Value: "333",
+					Op:    opReplace,
 				},
 			},
 		},
@@ -147,7 +155,7 @@ func TestDiffStringMap(t *testing.T) {
 	}
 }
 
-func TestEscapeJsonPointer(t *testing.T) {
+func TestEscapeJSONPointer(t *testing.T) {
 	testCases := []struct {
 		Input          string
 		ExpectedOutput string
@@ -158,7 +166,7 @@ func TestEscapeJsonPointer(t *testing.T) {
 		{"escape-this~tilde", "escape-this~0tilde"},
 	}
 	for _, tc := range testCases {
-		output := escapeJsonPointer(tc.Input)
+		output := patchKeyEncoder.Replace(tc.Input)
 		if output != tc.ExpectedOutput {
 			t.Fatalf("Expected %q as after escaping %q, given: %q",
 				tc.ExpectedOutput, tc.Input, output)

@@ -1,37 +1,50 @@
 package patch
 
 import (
-	"encoding/json"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 )
 
-func DiffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOperations {
-	ops := make([]PatchOperation, 0)
+var patchKeyEncoder = strings.NewReplacer("~", "~0", "/", "~1")
 
+const (
+	opAdd     = "add"
+	opRemove  = "remove"
+	opReplace = "replace"
+)
+
+type Operation struct {
+	Path  string      `json:"path"`
+	Value interface{} `json:"value"`
+	Op    string      `json:"op"`
+}
+
+func DiffStringMap(pathPrefix string, oldV, newV map[string]interface{}) Operations {
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
-
 	// If old value was empty, just create the object
 	if len(oldV) == 0 {
-		ops = append(ops, &AddOperation{
-			Path:  pathPrefix,
-			Value: newV,
-		})
-		return ops
+		return Operations{
+			{
+				Path:  pathPrefix,
+				Value: newV,
+				Op:    opAdd,
+			},
+		}
 	}
 
 	// This is suboptimal for adding whole new map from scratch
 	// or deleting the whole map, but it's actually intention.
 	// There may be some other map items managed outside of TF
 	// and we don't want to touch these.
-
+	var ops Operations
 	for k := range oldV {
 		if _, ok := newV[k]; ok {
 			continue
 		}
-		ops = append(ops, &RemoveOperation{
-			Path: pathPrefix + "/" + escapeJsonPointer(k),
+		ops = append(ops, Operation{
+			Path: pathPrefix + "/" + patchKeyEncoder.Replace(k),
+			Op:   opRemove,
 		})
 	}
 
@@ -39,116 +52,33 @@ func DiffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOp
 		newValue := v.(string)
 
 		if oldValue, ok := oldV[k].(string); ok {
-			if oldValue == newValue {
-				continue
+			if oldValue != newValue {
+				ops = append(ops, Operation{
+					Path:  pathPrefix + "/" + patchKeyEncoder.Replace(k),
+					Value: newValue,
+					Op:    opReplace,
+				})
 			}
-
-			ops = append(ops, &ReplaceOperation{
-				Path:  pathPrefix + "/" + escapeJsonPointer(k),
+		} else {
+			ops = append(ops, Operation{
+				Path:  pathPrefix + "/" + patchKeyEncoder.Replace(k),
 				Value: newValue,
+				Op:    opAdd,
 			})
-			continue
 		}
-
-		ops = append(ops, &AddOperation{
-			Path:  pathPrefix + "/" + escapeJsonPointer(k),
-			Value: newValue,
-		})
 	}
-
 	return ops
 }
 
-// escapeJsonPointer escapes string per RFC 6901
-// so it can be used as path in JSON patch operations
-func escapeJsonPointer(path string) string {
-	path = strings.Replace(path, "~", "~0", -1)
-	path = strings.Replace(path, "/", "~1", -1)
-	return path
-}
+type Operations []Operation
 
-type PatchOperations []PatchOperation
-
-func (po PatchOperations) MarshalJSON() ([]byte, error) {
-	var v []PatchOperation = po
-	return json.Marshal(v)
-}
-
-func (po PatchOperations) Equal(ops []PatchOperation) bool {
-	var v []PatchOperation = po
-
-	sort.Slice(v, sortByPathAsc(v))
-	sort.Slice(ops, sortByPathAsc(ops))
-
-	return reflect.DeepEqual(v, ops)
-}
-
-func sortByPathAsc(ops []PatchOperation) func(i, j int) bool {
-	return func(i, j int) bool {
-		return ops[i].GetPath() < ops[j].GetPath()
+func (o Operations) Equal(ops Operations) bool {
+	for _, op := range o {
+		if !slices.ContainsFunc(ops, func(operation Operation) bool {
+			return reflect.DeepEqual(op, operation)
+		}) {
+			return false
+		}
 	}
-}
-
-type PatchOperation interface {
-	MarshalJSON() ([]byte, error)
-	GetPath() string
-}
-
-type ReplaceOperation struct {
-	Path  string      `json:"path"`
-	Value interface{} `json:"value"`
-	Op    string      `json:"op"`
-}
-
-func (o *ReplaceOperation) GetPath() string {
-	return o.Path
-}
-
-func (o *ReplaceOperation) MarshalJSON() ([]byte, error) {
-	o.Op = "replace"
-	return json.Marshal(*o)
-}
-
-func (o *ReplaceOperation) String() string {
-	b, _ := o.MarshalJSON()
-	return string(b)
-}
-
-type AddOperation struct {
-	Path  string      `json:"path"`
-	Value interface{} `json:"value"`
-	Op    string      `json:"op"`
-}
-
-func (o *AddOperation) GetPath() string {
-	return o.Path
-}
-
-func (o *AddOperation) MarshalJSON() ([]byte, error) {
-	o.Op = "add"
-	return json.Marshal(*o)
-}
-
-func (o *AddOperation) String() string {
-	b, _ := o.MarshalJSON()
-	return string(b)
-}
-
-type RemoveOperation struct {
-	Path string `json:"path"`
-	Op   string `json:"op"`
-}
-
-func (o *RemoveOperation) GetPath() string {
-	return o.Path
-}
-
-func (o *RemoveOperation) MarshalJSON() ([]byte, error) {
-	o.Op = "remove"
-	return json.Marshal(*o)
-}
-
-func (o *RemoveOperation) String() string {
-	b, _ := o.MarshalJSON()
-	return string(b)
+	return true
 }
