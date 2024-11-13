@@ -22,7 +22,11 @@ func resourceUser() *schema.Resource {
 		ReadContext:   resourceUserRead,
 		UpdateContext: resourceUserUpdate,
 		DeleteContext: resourceUserDelete,
-		Description:   "Create and manage projects in Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceUserImport,
+		},
+
+		Description: "Create and manage projects in Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -106,7 +110,7 @@ func resourceUser() *schema.Resource {
 						"workspace": {
 							Type:     schema.TypeSet,
 							Set:      resourceUserWorkspaceRoleMappingHashInternal,
-							Optional: true,
+							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"id": {
@@ -117,7 +121,7 @@ func resourceUser() *schema.Resource {
 									"role_ids": {
 										Type:     schema.TypeSet,
 										Set:      schema.HashString,
-										Optional: true,
+										Required: true,
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
@@ -440,10 +444,18 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 	var diags diag.Diagnostics
 
 	if d.HasChanges("project_role") {
+		ops, _ := d.GetChange("project_role")
+		if len(ops.(*schema.Set).List()) > 0 {
+			_ = deleteProjectResourceRoles(c, ops, uid)
+		}
 		projectRole := toUserProjectRoleMapping(d)
-		err := c.AssociateUserProjectRole(uid, projectRole)
-		if err != nil {
-			return diag.FromErr(err)
+		if projectRole != nil {
+			err := c.AssociateUserProjectRole(uid, projectRole)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+
 		}
 	}
 	if d.HasChanges("tenant_role") {
@@ -454,20 +466,21 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 		}
 	}
 	if d.HasChanges("workspace_role") {
+		ows, _ := d.GetChange("workspace_role")
+		if len(ows.(*schema.Set).List()) > 0 {
+			_ = deleteWorkspaceResourceRoles(c, ows, uid)
+		}
 		workspaceRole := toUserWorkspaceRoleMapping(d)
 		if len(workspaceRole.Workspaces) > 0 {
-			nws, ows := d.GetChange("workspace_role")
-			println(nws)
-			println(ows)
+			err := c.AssociateUserWorkspaceRole(uid, workspaceRole)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
 
-		}
-		err := c.AssociateUserWorkspaceRole(uid, workspaceRole)
-		if err != nil {
-			return diag.FromErr(err)
-		}
 	}
 	if d.HasChanges("resource_role") {
-		err := deleteUserResourceRoles(m, uid)
+		err := deleteUserResourceRoles(c, uid)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -483,8 +496,40 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 	return diags
 }
 
-func deleteUserResourceRoles(m interface{}, userUID string) error {
-	c := getV1ClientWithResourceContext(m, "tenant")
+func deleteWorkspaceResourceRoles(c *client.V1Client, oldWs interface{}, userUID string) error {
+	oldWorkspaces := oldWs.(*schema.Set).List()
+	for _, p := range oldWorkspaces {
+
+		inWS := make([]*models.V1WorkspaceRolesPatch, 0)
+		for _, ws := range p.(map[string]interface{})["workspace"].(*schema.Set).List() {
+			inWS = append(inWS, &models.V1WorkspaceRolesPatch{
+				Roles: []string{},
+				UID:   ws.(map[string]interface{})["id"].(string),
+			})
+		}
+		deleteWS := &models.V1WorkspacesRolesPatch{
+			Workspaces: inWS,
+		}
+		_ = c.AssociateUserWorkspaceRole(userUID, deleteWS)
+	}
+	return nil
+}
+
+func deleteProjectResourceRoles(c *client.V1Client, oldPs interface{}, userUID string) error {
+	oldProjectRoles := oldPs.(*schema.Set).List()
+	for _, p := range oldProjectRoles {
+		pr := make([]*models.V1ProjectRolesPatchProjectsItems0, 0)
+		pr = append(pr, &models.V1ProjectRolesPatchProjectsItems0{
+			ProjectUID: p.(map[string]interface{})["project_id"].(string),
+			Roles:      []string{},
+		})
+		deletePR := &models.V1ProjectRolesPatch{}
+		_ = c.AssociateUserProjectRole(userUID, deletePR)
+	}
+	return nil
+}
+
+func deleteUserResourceRoles(c *client.V1Client, userUID string) error {
 	resourceRoles, _ := c.GetUserResourceRoles(userUID)
 	for _, re := range resourceRoles {
 		err := c.DeleteUserResourceRoles(userUID, re.UID)

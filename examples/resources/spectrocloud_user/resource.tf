@@ -39,3 +39,15 @@ resource "spectrocloud_user" "user-test"{
   }
 
 }
+
+# import existing user example
+  #import {
+  #  to = spectrocloud_user.test_user
+  #  id = "66fcb5fe19eb6dc880776d59"
+  #}
+
+# To generate TF configuration.
+  #terraform plan -generate-config-out=test_user.tf
+
+# To import State file
+  #terraform import spectrocloud_user.test_user 672c5ae21adfa1c28c9e37c9
