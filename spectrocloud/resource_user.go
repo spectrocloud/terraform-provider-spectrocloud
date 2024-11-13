@@ -175,112 +175,6 @@ func resourceUser() *schema.Resource {
 	}
 }
 
-func resourceUserResourceRoleMappingHash(i interface{}) int {
-	var buf bytes.Buffer
-	m := i.(map[string]interface{})
-
-	// Sort the roles to ensure order does not affect the hash
-	pids := make([]string, len(m["project_ids"].(*schema.Set).List()))
-	for i, pid := range m["project_ids"].(*schema.Set).List() {
-		pids[i] = pid.(string)
-	}
-	sort.Strings(pids)
-
-	fids := make([]string, len(m["filter_ids"].(*schema.Set).List()))
-	for i, fid := range m["filter_ids"].(*schema.Set).List() {
-		fids[i] = fid.(string)
-	}
-	sort.Strings(fids)
-
-	rids := make([]string, len(m["role_ids"].(*schema.Set).List()))
-	for i, rid := range m["role_ids"].(*schema.Set).List() {
-		rids[i] = rid.(string)
-	}
-	sort.Strings(rids)
-
-	//buf.WriteString(fmt.Sprintf("%s-", m["project_id"].(string)))
-
-	for _, id := range pids {
-		buf.WriteString(fmt.Sprintf("%s-", id))
-	}
-	for _, id := range fids {
-		buf.WriteString(fmt.Sprintf("%s-", id))
-	}
-	for _, id := range rids {
-		buf.WriteString(fmt.Sprintf("%s-", id))
-	}
-
-	return int(hash(buf.String()))
-}
-
-func resourceUserWorkspaceRoleMappingHash(i interface{}) int {
-	var buf bytes.Buffer
-	m := i.(map[string]interface{})
-
-	// Hash project id
-	if v, ok := m["project_id"].(string); ok {
-		h := schema.HashString(v)
-		buf.WriteString(fmt.Sprintf("%d-", h))
-	}
-
-	// Hash workspaces
-	if v, ok := m["workspace"].(*schema.Set); ok {
-		// Sort workspace hashes to ensure consistent ordering
-		workspaces := v.List()
-		hashes := make([]int, len(workspaces))
-		for i, workspaceInterface := range workspaces {
-			workspace := workspaceInterface.(map[string]interface{})
-			hashes[i] = resourceUserWorkspaceRoleMappingHashInternal(workspace)
-		}
-		sort.Ints(hashes)
-
-		for _, h := range hashes {
-			buf.WriteString(fmt.Sprintf("%d-", h))
-		}
-	}
-
-	return int(hash(buf.String()))
-}
-
-func resourceUserWorkspaceRoleMappingHashInternal(workspace interface{}) int {
-	var buf bytes.Buffer
-	m := workspace.(map[string]interface{})
-	// Sort the roles to ensure order does not affect the hash
-	roles := make([]string, len(m["role_ids"].(*schema.Set).List()))
-	for i, role := range m["role_ids"].(*schema.Set).List() {
-		roles[i] = role.(string)
-	}
-	sort.Strings(roles)
-
-	buf.WriteString(fmt.Sprintf("%s-", m["id"].(string)))
-
-	for _, role := range roles {
-		buf.WriteString(fmt.Sprintf("%s-", role))
-	}
-
-	return int(hash(buf.String()))
-}
-
-func resourceUserProjectRoleMappingHash(i interface{}) int {
-	var buf bytes.Buffer
-	m := i.(map[string]interface{})
-
-	// Sort the roles to ensure order does not affect the hash
-	roles := make([]string, len(m["role_ids"].(*schema.Set).List()))
-	for i, role := range m["role_ids"].(*schema.Set).List() {
-		roles[i] = role.(string)
-	}
-	sort.Strings(roles)
-
-	buf.WriteString(fmt.Sprintf("%s-", m["project_id"].(string)))
-
-	for _, role := range roles {
-		buf.WriteString(fmt.Sprintf("%s-", role))
-	}
-
-	return int(hash(buf.String()))
-}
-
 func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	c := getV1ClientWithResourceContext(m, "tenant")
@@ -328,6 +222,99 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 				return diag.FromErr(err)
 			}
 		}
+	}
+
+	return diags
+}
+
+func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+
+	c := getV1ClientWithResourceContext(m, "tenant")
+	var diags diag.Diagnostics
+
+	email := d.Get("email").(string)
+	user, err := c.GetUserSummaryByEmail(email)
+	if err != nil {
+		return diag.FromErr(err)
+	} else if user == nil {
+		// Deleted - Terraform will recreate it
+		d.SetId("")
+		return diags
+	}
+	err = flattenUser(user, d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return diags
+}
+
+func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+
+	c := getV1ClientWithResourceContext(m, "tenant")
+	uid := d.Id()
+	var diags diag.Diagnostics
+
+	if d.HasChanges("project_role") {
+		ops, _ := d.GetChange("project_role")
+		if len(ops.(*schema.Set).List()) > 0 {
+			_ = deleteProjectResourceRoles(c, ops, uid)
+		}
+		projectRole := toUserProjectRoleMapping(d)
+		if projectRole != nil {
+			err := c.AssociateUserProjectRole(uid, projectRole)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+
+		}
+	}
+	if d.HasChanges("tenant_role") {
+		tenantRole := toUserTenantRoleMapping(d)
+		err := c.AssociateUserTenantRole(uid, tenantRole)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if d.HasChanges("workspace_role") {
+		ows, _ := d.GetChange("workspace_role")
+		if len(ows.(*schema.Set).List()) > 0 {
+			_ = deleteWorkspaceResourceRoles(c, ows, uid)
+		}
+		workspaceRole := toUserWorkspaceRoleMapping(d)
+		if len(workspaceRole.Workspaces) > 0 {
+			err := c.AssociateUserWorkspaceRole(uid, workspaceRole)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+	}
+	if d.HasChanges("resource_role") {
+		err := deleteUserResourceRoles(c, uid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		resourceRoles := toUserResourceRoleMapping(d)
+		for _, role := range resourceRoles {
+			err := c.CreateUserResourceRole(uid, role)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	return diags
+}
+
+func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+
+	c := getV1ClientWithResourceContext(m, "tenant")
+	var diags diag.Diagnostics
+
+	err := c.DeleteUser(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
 	return diags
@@ -416,86 +403,6 @@ func setToStringArray(ids interface{}) []string {
 	return idList
 }
 
-func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
-	c := getV1ClientWithResourceContext(m, "tenant")
-	var diags diag.Diagnostics
-
-	email := d.Get("email").(string)
-	user, err := c.GetUserSummaryByEmail(email)
-	if err != nil {
-		return diag.FromErr(err)
-	} else if user == nil {
-		// Deleted - Terraform will recreate it
-		d.SetId("")
-		return diags
-	}
-	err = flattenUser(user, d, c)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	return diags
-}
-
-func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
-	c := getV1ClientWithResourceContext(m, "tenant")
-	uid := d.Id()
-	var diags diag.Diagnostics
-
-	if d.HasChanges("project_role") {
-		ops, _ := d.GetChange("project_role")
-		if len(ops.(*schema.Set).List()) > 0 {
-			_ = deleteProjectResourceRoles(c, ops, uid)
-		}
-		projectRole := toUserProjectRoleMapping(d)
-		if projectRole != nil {
-			err := c.AssociateUserProjectRole(uid, projectRole)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		} else {
-
-		}
-	}
-	if d.HasChanges("tenant_role") {
-		tenantRole := toUserTenantRoleMapping(d)
-		err := c.AssociateUserTenantRole(uid, tenantRole)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-	}
-	if d.HasChanges("workspace_role") {
-		ows, _ := d.GetChange("workspace_role")
-		if len(ows.(*schema.Set).List()) > 0 {
-			_ = deleteWorkspaceResourceRoles(c, ows, uid)
-		}
-		workspaceRole := toUserWorkspaceRoleMapping(d)
-		if len(workspaceRole.Workspaces) > 0 {
-			err := c.AssociateUserWorkspaceRole(uid, workspaceRole)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
-
-	}
-	if d.HasChanges("resource_role") {
-		err := deleteUserResourceRoles(c, uid)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		resourceRoles := toUserResourceRoleMapping(d)
-		for _, role := range resourceRoles {
-			err := c.CreateUserResourceRole(uid, role)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
-
-	return diags
-}
-
 func deleteWorkspaceResourceRoles(c *client.V1Client, oldWs interface{}, userUID string) error {
 	oldWorkspaces := oldWs.(*schema.Set).List()
 	for _, p := range oldWorkspaces {
@@ -538,19 +445,6 @@ func deleteUserResourceRoles(c *client.V1Client, userUID string) error {
 		}
 	}
 	return nil
-}
-
-func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
-	c := getV1ClientWithResourceContext(m, "tenant")
-	var diags diag.Diagnostics
-
-	err := c.DeleteUser(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	return diags
 }
 
 func flattenUser(user *models.V1UserSummary, d *schema.ResourceData, c *client.V1Client) error {
@@ -717,4 +611,110 @@ func convertSummaryToIDS(sum []*models.V1UIDSummary) []string {
 		out = append(out, v.UID)
 	}
 	return out
+}
+
+func resourceUserResourceRoleMappingHash(i interface{}) int {
+	var buf bytes.Buffer
+	m := i.(map[string]interface{})
+
+	// Sort the roles to ensure order does not affect the hash
+	pids := make([]string, len(m["project_ids"].(*schema.Set).List()))
+	for i, pid := range m["project_ids"].(*schema.Set).List() {
+		pids[i] = pid.(string)
+	}
+	sort.Strings(pids)
+
+	fids := make([]string, len(m["filter_ids"].(*schema.Set).List()))
+	for i, fid := range m["filter_ids"].(*schema.Set).List() {
+		fids[i] = fid.(string)
+	}
+	sort.Strings(fids)
+
+	rids := make([]string, len(m["role_ids"].(*schema.Set).List()))
+	for i, rid := range m["role_ids"].(*schema.Set).List() {
+		rids[i] = rid.(string)
+	}
+	sort.Strings(rids)
+
+	//buf.WriteString(fmt.Sprintf("%s-", m["project_id"].(string)))
+
+	for _, id := range pids {
+		buf.WriteString(fmt.Sprintf("%s-", id))
+	}
+	for _, id := range fids {
+		buf.WriteString(fmt.Sprintf("%s-", id))
+	}
+	for _, id := range rids {
+		buf.WriteString(fmt.Sprintf("%s-", id))
+	}
+
+	return int(hash(buf.String()))
+}
+
+func resourceUserWorkspaceRoleMappingHash(i interface{}) int {
+	var buf bytes.Buffer
+	m := i.(map[string]interface{})
+
+	// Hash project id
+	if v, ok := m["project_id"].(string); ok {
+		h := schema.HashString(v)
+		buf.WriteString(fmt.Sprintf("%d-", h))
+	}
+
+	// Hash workspaces
+	if v, ok := m["workspace"].(*schema.Set); ok {
+		// Sort workspace hashes to ensure consistent ordering
+		workspaces := v.List()
+		hashes := make([]int, len(workspaces))
+		for i, workspaceInterface := range workspaces {
+			workspace := workspaceInterface.(map[string]interface{})
+			hashes[i] = resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		}
+		sort.Ints(hashes)
+
+		for _, h := range hashes {
+			buf.WriteString(fmt.Sprintf("%d-", h))
+		}
+	}
+
+	return int(hash(buf.String()))
+}
+
+func resourceUserWorkspaceRoleMappingHashInternal(workspace interface{}) int {
+	var buf bytes.Buffer
+	m := workspace.(map[string]interface{})
+	// Sort the roles to ensure order does not affect the hash
+	roles := make([]string, len(m["role_ids"].(*schema.Set).List()))
+	for i, role := range m["role_ids"].(*schema.Set).List() {
+		roles[i] = role.(string)
+	}
+	sort.Strings(roles)
+
+	buf.WriteString(fmt.Sprintf("%s-", m["id"].(string)))
+
+	for _, role := range roles {
+		buf.WriteString(fmt.Sprintf("%s-", role))
+	}
+
+	return int(hash(buf.String()))
+}
+
+func resourceUserProjectRoleMappingHash(i interface{}) int {
+	var buf bytes.Buffer
+	m := i.(map[string]interface{})
+
+	// Sort the roles to ensure order does not affect the hash
+	roles := make([]string, len(m["role_ids"].(*schema.Set).List()))
+	for i, role := range m["role_ids"].(*schema.Set).List() {
+		roles[i] = role.(string)
+	}
+	sort.Strings(roles)
+
+	buf.WriteString(fmt.Sprintf("%s-", m["project_id"].(string)))
+
+	for _, role := range roles {
+		buf.WriteString(fmt.Sprintf("%s-", role))
+	}
+
+	return int(hash(buf.String()))
 }
