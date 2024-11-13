@@ -17,7 +17,10 @@ func resourceRole() *schema.Resource {
 		ReadContext:   resourceRoleRead,
 		UpdateContext: resourceRoleUpdate,
 		DeleteContext: resourceRoleDelete,
-		Description:   "The role resource allows you to manage roles in Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceRoleImport,
+		},
+		Description: "The role resource allows you to manage roles in Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -46,6 +49,67 @@ func resourceRole() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := getV1ClientWithResourceContext(m, "tenant")
+	var diags diag.Diagnostics
+	role := toRole(d)
+	uid, err := c.CreateRole(role)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.SetId(uid)
+	return diags
+}
+
+func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := getV1ClientWithResourceContext(m, "tenant")
+	var diags diag.Diagnostics
+	role, err := c.GetRoleByID(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = flattenRole(d, role)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return diags
+}
+
+func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := getV1ClientWithResourceContext(m, "tenant")
+	var diags diag.Diagnostics
+	role := toRole(d)
+	err := c.UpdateRole(role, d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return diags
+}
+
+func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := getV1ClientWithResourceContext(m, "tenant")
+	var diags diag.Diagnostics
+	err := c.DeleteRole(d.Id())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return diags
+}
+
+func resourceRoleImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	c := getV1ClientWithResourceContext(m, "tenant")
+	_, err := c.GetRoleByID(d.Id())
+	if err != nil {
+		return nil, err
+	}
+
+	diags := resourceRoleRead(ctx, d, m)
+	if diags.HasError() {
+		return nil, fmt.Errorf("could not read role for import: %v", diags)
+	}
+	return []*schema.ResourceData{d}, nil
 }
 
 func convertInterfaceSliceToStringSlice(input []interface{}) ([]string, error) {
@@ -98,51 +162,4 @@ func flattenRole(d *schema.ResourceData, role *models.V1Role) error {
 		return err
 	}
 	return nil
-}
-
-func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "tenant")
-	var diags diag.Diagnostics
-	role := toRole(d)
-	uid, err := c.CreateRole(role)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	d.SetId(uid)
-	return diags
-}
-
-func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "tenant")
-	var diags diag.Diagnostics
-	role, err := c.GetRoleByID(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = flattenRole(d, role)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	return diags
-}
-
-func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "tenant")
-	var diags diag.Diagnostics
-	role := toRole(d)
-	err := c.UpdateRole(role, d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	return diags
-}
-
-func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "tenant")
-	var diags diag.Diagnostics
-	err := c.DeleteRole(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	return diags
 }
