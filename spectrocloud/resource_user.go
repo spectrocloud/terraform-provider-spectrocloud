@@ -265,8 +265,6 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 			if err != nil {
 				return diag.FromErr(err)
 			}
-		} else {
-
 		}
 	}
 	if d.HasChanges("tenant_role") {
@@ -424,13 +422,16 @@ func deleteWorkspaceResourceRoles(c *client.V1Client, oldWs interface{}, userUID
 
 func deleteProjectResourceRoles(c *client.V1Client, oldPs interface{}, userUID string) error {
 	oldProjectRoles := oldPs.(*schema.Set).List()
+
 	for _, p := range oldProjectRoles {
-		pr := make([]*models.V1ProjectRolesPatchProjectsItems0, 0)
-		pr = append(pr, &models.V1ProjectRolesPatchProjectsItems0{
-			ProjectUID: p.(map[string]interface{})["project_id"].(string),
-			Roles:      []string{},
-		})
-		deletePR := &models.V1ProjectRolesPatch{}
+		deletePR := &models.V1ProjectRolesPatch{
+			Projects: []*models.V1ProjectRolesPatchProjectsItems0{
+				{
+					ProjectUID: p.(map[string]interface{})["project_id"].(string),
+					Roles:      []string{},
+				},
+			},
+		}
 		_ = c.AssociateUserProjectRole(userUID, deletePR)
 	}
 	return nil
