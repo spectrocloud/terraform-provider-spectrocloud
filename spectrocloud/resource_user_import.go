@@ -18,7 +18,7 @@ func resourceUserImport(ctx context.Context, d *schema.ResourceData, m interface
 	}
 	diags := resourceUserRead(ctx, d, m)
 	if diags.HasError() {
-		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
+		return nil, fmt.Errorf("could not read user for import: %v", diags)
 	}
 	return []*schema.ResourceData{d}, nil
 }
