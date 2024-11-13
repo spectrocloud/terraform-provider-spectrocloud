@@ -32,5 +32,21 @@ resource "spectrocloud_role" "custom_role" {
 }
 ```
 
+```
+### Importing existing role state & config
+
+```hcl
+# import existing user example
+  import {
+    to = spectrocloud_role.test_role
+    id = "{roleUID}"
+  }
+
+# To generate TF configuration.
+  terraform plan -generate-config-out=test_role.tf
+
+# To import State file
+  terraform import spectrocloud_role.test_role {roleUID}
+```
 
 {{ .SchemaMarkdown | trimspace }}
