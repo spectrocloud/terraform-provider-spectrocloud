@@ -82,6 +82,9 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 
 	d.SetId(account.Metadata.UID)
 	err = d.Set("name", account.Metadata.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	err = d.Set("context", account.Metadata.Annotations["scope"])
 	if err != nil {
 		return diag.FromErr(err)
