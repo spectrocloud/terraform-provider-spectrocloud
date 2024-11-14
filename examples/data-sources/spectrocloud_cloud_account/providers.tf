@@ -7,20 +7,12 @@ terraform {
   }
 }
 
-# variable "sc_host" {}
-# variable "sc_api_key" {}
-# variable "sc_project_name" {}
-
+variable "sc_host" {}
+variable "sc_api_key" {}
+variable "sc_project_name" {}
 
 provider "spectrocloud" {
-  host         = "dev.spectrocloud.com"
-  api_key      =  "MDNlOTQwYTkxYjU2ZDk3MGZlNjU1MThmYTc5Zjk4MzU="
-  project_name = "srini-cluster"
+  host         = var.sc_host
+  api_key      = var.sc_api_key
+  project_name = var.sc_project_name
 }
-
-#
-# provider "spectrocloud" {
-#   host         = var.sc_host
-#   api_key      = var.sc_api_key
-#   project_name = var.sc_project_name
-# }
