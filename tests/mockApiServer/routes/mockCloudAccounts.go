@@ -16,6 +16,9 @@ func getAccountResponse(cloud string) interface{} {
 					Metadata: &models.V1ObjectMeta{
 						Name: "test-aws-account-1",
 						UID:  "test-aws-account-id-1",
+						Annotations: map[string]string{
+							"scope": "project",
+						},
 					},
 					Spec: &models.V1AwsCloudAccount{
 						AccessKey:      "test-access-key",

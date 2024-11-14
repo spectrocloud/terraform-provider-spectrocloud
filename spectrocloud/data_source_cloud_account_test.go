@@ -51,6 +51,7 @@ func TestReadAWSAccountFuncName(t *testing.T) {
 
 	var ctx context.Context
 	_ = d.Set("name", "test-aws-account-1")
+	_ = d.Set("context", "project")
 	diags = dataSourceCloudAccountAwsRead(ctx, d, unitTestMockAPIClient)
 	assert.Equal(t, 0, len(diags))
 }

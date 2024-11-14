@@ -2,9 +2,9 @@ package spectrocloud
 
 import (
 	"context"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -27,6 +27,14 @@ func dataSourceCloudAccountAws() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Description: "The context of the cluster. Allowed values are `project` or `tenant`. " +
+					"Defaults to `project`." + PROJECT_NAME_NUANCE,
 			},
 			"depends": {
 				Type:         schema.TypeString,
@@ -56,8 +64,10 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 			account = a
 			break
 		} else if v, ok := d.GetOk("name"); ok && v.(string) == a.Metadata.Name {
-			account = a
-			break
+			if v, ok := d.GetOk("context"); ok && v.(string) == a.Metadata.Annotations["scope"] {
+				account = a
+				break
+			}
 		}
 	}
 
@@ -72,6 +82,10 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 
 	d.SetId(account.Metadata.UID)
 	err = d.Set("name", account.Metadata.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("context", account.Metadata.Annotations["scope"])
 	if err != nil {
 		return diag.FromErr(err)
 	}
