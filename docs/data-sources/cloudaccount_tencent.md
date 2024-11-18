@@ -17,6 +17,7 @@ description: |-
 
 ### Optional
 
+- `context` (String) The context of the cluster. Allowed values are `project` or `tenant` or ``.
 - `id` (String) The unique ID of the Tencent cloud account. Either `id` or `name` must be provided, but not both.
 - `name` (String) The name of the Tencent cloud account. Either `id` or `name` must be provided, but not both.
 
