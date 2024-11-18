@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"strings"
 )
 
@@ -49,7 +50,7 @@ func dataSourcePermissionRead(_ context.Context, d *schema.ResourceData, m inter
 
 	scope := d.Get("scope").(string)
 	if v, ok := d.GetOk("name"); ok {
-		permission, err := c.GetPermissionByName(v.(string), scope)
+		permission, err := c.GetPermissionByName(v.(string), client.PermissionScope(scope))
 		if err != nil {
 			return diag.FromErr(err)
 		}
