@@ -1,0 +1,52 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+You can learn more about managing roles in Palette by reviewing the [Roles](https://docs.spectrocloud.com/glossary-all/#role) guide.
+
+## Example Usage
+
+```terraform
+variable "roles" {
+  type    = list(string)
+  default = ["Cluster Admin", "Cluster Profile Editor"]
+}
+
+# Data source loop to retrieve multiple roles
+data "spectrocloud_role" "roles" {
+  for_each = toset(var.roles)
+  name     = each.key
+}
+
+resource "spectrocloud_role" "custom_role" {
+  name        = "Test Cluster Role"
+  type        = "project"
+  permissions = flatten([for role in data.spectrocloud_role.roles : role.permissions])
+}
+```
+
+```
+### Importing existing role state & config
+
+```hcl
+# import existing user example
+  import {
+    to = spectrocloud_role.test_role
+    id = "{roleUID}"
+  }
+
+# To generate TF configuration.
+  terraform plan -generate-config-out=test_role.tf
+
+# To import State file
+  terraform import spectrocloud_role.test_role {roleUID}
+```
+
+{{ .SchemaMarkdown | trimspace }}
