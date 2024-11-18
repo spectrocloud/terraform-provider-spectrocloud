@@ -12,10 +12,12 @@ variable "sc_project_name" {
   default     = "Default"
 }
 
-variable "credential_type" {}
-
-variable "aws_access_key" {}
-variable "aws_secret_key" {}
-
-variable "arn" {}
-variable "external_id" {}
+#variable "credential_type" {
+#default = "secret"
+#}
+#
+#variable "aws_access_key" {}
+#variable "aws_secret_key" {}
+#
+#variable "arn" {}
+#variable "external_id" {}
