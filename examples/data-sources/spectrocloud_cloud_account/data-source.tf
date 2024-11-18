@@ -1,6 +1,6 @@
 data "spectrocloud_cloudaccount_aws" "aws_account" {
   # id = <uid>
-  name    = "aws-sts"
+  name    = "ran-tf"
   context = "tenant"
 }
 
