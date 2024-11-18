@@ -34,8 +34,7 @@ func dataSourceCloudAccountAws() *schema.Resource {
 				Optional:     true,
 				Default:      "",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description: "The context of the cluster. Allowed values are `project` or `tenant`. " +
-					"Defaults to `project`." + PROJECT_NAME_NUANCE,
+				Description:  "The context of the cluster. Allowed values are `project` or `tenant` or ``. ",
 			},
 			"depends": {
 				Type:         schema.TypeString,
