@@ -2,9 +2,10 @@ package spectrocloud
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -28,6 +29,13 @@ func dataSourceCloudAccountAws() *schema.Resource {
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the cluster. Allowed values are `project` or `tenant` or ``. ",
+			},
 			"depends": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -48,20 +56,38 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	var account *models.V1AwsAccount
-	for _, a := range accounts {
-
-		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
-			account = a
-			break
-		} else if v, ok := d.GetOk("name"); ok && v.(string) == a.Metadata.Name {
-			account = a
+	var fAccount *models.V1AwsAccount
+	filteredAccounts := make([]*models.V1AwsAccount, 0)
+	for _, acc := range accounts {
+		if v, ok := d.GetOk("id"); ok && v.(string) == acc.Metadata.UID {
+			fAccount = acc
 			break
 		}
+		if v, ok := d.GetOk("name"); ok && v.(string) == acc.Metadata.Name {
+			filteredAccounts = append(filteredAccounts, acc)
+		}
+	}
+	if len(filteredAccounts) > 1 {
+		if accContext, ok := d.GetOk("context"); ok && accContext != "" {
+			for _, ac := range filteredAccounts {
+				if ac.Metadata.Annotations["scope"] == accContext {
+					fAccount = ac
+					break
+				}
+			}
+		} else {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  "Found more than 1 AWS account",
+				Detail:   fmt.Sprintf("more than 1 aws account found for name - '%s'. Kindly re-try with `context` set, Allowed value `project` or `tenant`", d.Get("name").(string)),
+			})
+			return diags
+		}
+	} else if len(filteredAccounts) == 1 {
+		fAccount = filteredAccounts[0]
 	}
 
-	if account == nil {
+	if fAccount == nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  "Unable to find aws cloud account",
@@ -70,8 +96,8 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 		return diags
 	}
 
-	d.SetId(account.Metadata.UID)
-	err = d.Set("name", account.Metadata.Name)
+	d.SetId(fAccount.Metadata.UID)
+	err = d.Set("name", fAccount.Metadata.Name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

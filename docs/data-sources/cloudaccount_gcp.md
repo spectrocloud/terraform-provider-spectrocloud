@@ -33,5 +33,6 @@ data "spectrocloud_cloudaccount_gcp" "gcp_account" {
 
 ### Optional
 
+- `context` (String) The context of the cluster. Allowed values are `project` or `tenant` or ``.
 - `id` (String) ID of the GCP cloud account registered in Palette.
 - `name` (String) Name of the GCP cloud account registered in Palette.

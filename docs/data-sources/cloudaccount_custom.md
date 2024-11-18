@@ -21,5 +21,6 @@ description: |-
 
 ### Optional
 
+- `context` (String) The context of the cluster. Allowed values are `project` or `tenant` or ``.
 - `id` (String) The unique identifier of the cloud account. Either `id` or `name` must be provided.
 - `name` (String) The name of the cloud account. Either `id` or `name` must be provided.
