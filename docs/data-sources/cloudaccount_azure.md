@@ -33,6 +33,7 @@ data "spectrocloud_cloudaccount_azure" "azure_account" {
 
 ### Optional
 
+- `context` (String) The context of the cluster. Allowed values are `project` or `tenant` or ``.
 - `id` (String) ID of the Azure cloud account registered in Palette.
 - `name` (String) Name of the Azure cloud account registered in Palette.
 
