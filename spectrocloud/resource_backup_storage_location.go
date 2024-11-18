@@ -28,7 +28,6 @@ func resourceBackupStorageLocation() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Description: "The name of the backup storage location. This is a unique identifier for the backup location.",
 			},
 			"location_provider": {

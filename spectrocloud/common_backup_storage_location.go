@@ -16,7 +16,7 @@ func schemaValidationForLocationProvider(ctx context.Context, d *schema.Resource
 		return fmt.Errorf("`s3, bucket_name & region` is required when location provider set to 'aws' or 'minio'")
 	}
 	if (provider == "aws" || provider == "minio") && (len(d.Get("azure_storage_config").([]interface{})) != 0 || (len(d.Get("gcp_storage_config").([]interface{}))) != 0) {
-		return fmt.Errorf("`gcp_storage_config & azure_storage_config` are not allowed when location provider set to 'aws' or 'minio'")
+		return fmt.Errorf("`gcp_storage_config or azure_storage_config` are not allowed when location provider set to 'aws' or 'minio'")
 	}
 	if (provider == "gcp") && (len(d.Get("gcp_storage_config").([]interface{})) == 0 || d.Get("bucket_name").(string) == "") {
 		return fmt.Errorf("`gcp_storage_config & bucket_name` is required when location provider set to 'gcp'")
@@ -27,8 +27,8 @@ func schemaValidationForLocationProvider(ctx context.Context, d *schema.Resource
 	if provider == "azure" && (len(d.Get("s3").([]interface{})) != 0 || d.Get("bucket_name").(string) != "" || d.Get("region").(string) != "" || d.Get("ca_cert").(string) != "") {
 		return fmt.Errorf("`s3, bucket_name, region & ca_cert` are not allowed when location provider set to 'azure'")
 	}
-	if (provider == "gcp") && (len(d.Get("azure_storage_config").([]interface{})) != 0 || d.Get("region").(string) != "" || d.Get("ca_cert").(string) != "") {
-		return fmt.Errorf("`azure_storage_config, region, ca_cert` are not allowed when location provider set to 'gcp'")
+	if (provider == "gcp") && (len(d.Get("azure_storage_config").([]interface{})) != 0 || len(d.Get("s3").([]interface{})) != 0 || d.Get("region").(string) != "" || d.Get("ca_cert").(string) != "") {
+		return fmt.Errorf("`azure_storage_config, s3, region, ca_cert` are not allowed when location provider set to 'gcp'")
 	}
 	return nil
 }
@@ -36,7 +36,10 @@ func schemaValidationForLocationProvider(ctx context.Context, d *schema.Resource
 func S3BackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	bsl := toS3BackupStorageLocation(d)
+	bsl, bslCred := toS3BackupStorageLocation(d)
+	if err := c.ValidateS3BackupStorageLocation(bslCred); err != nil {
+		return diag.FromErr(err)
+	}
 
 	uid, err := c.CreateS3BackupStorageLocation(bsl)
 	if err != nil {
@@ -50,8 +53,10 @@ func S3BackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client) d
 func MinioBackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	bsl := toMinioBackupStorageLocation(d)
-
+	bsl, bslCred := toMinioBackupStorageLocation(d)
+	if err := c.ValidateS3BackupStorageLocation(bslCred); err != nil {
+		return diag.FromErr(err)
+	}
 	uid, err := c.CreateMinioBackupStorageLocation(bsl)
 	if err != nil {
 		return diag.FromErr(err)
@@ -64,7 +69,10 @@ func MinioBackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client
 func GcpBackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	bsl := toGcpBackupStorageLocation(d)
+	bsl, bslCred := toGcpBackupStorageLocation(d)
+	if err := c.ValidateGcpBackupStorageLocation(bslCred); err != nil {
+		return diag.FromErr(err)
+	}
 
 	uid, err := c.CreateGcpBackupStorageLocation(bsl)
 	if err != nil {
@@ -78,7 +86,10 @@ func GcpBackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client) 
 func AzureBackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	bsl := toAzureBackupStorageLocation(d)
+	bsl, bslCred := toAzureBackupStorageLocation(d)
+	if err := c.ValidateAzureBackupStorageLocation(bslCred); err != nil {
+		return diag.FromErr(err)
+	}
 
 	uid, err := c.CreateAzureBackupStorageLocation(bsl)
 	if err != nil {
@@ -309,7 +320,10 @@ func AzureBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 
 func S3BackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
-	bsl := toS3BackupStorageLocation(d)
+	bsl, bslCred := toS3BackupStorageLocation(d)
+	if err := c.ValidateS3BackupStorageLocation(bslCred); err != nil {
+		return diag.FromErr(err)
+	}
 	err := c.UpdateS3BackupStorageLocation(d.Id(), bsl)
 	if err != nil {
 		return diag.FromErr(err)
@@ -319,7 +333,10 @@ func S3BackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client) d
 
 func MinioBackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
-	bsl := toMinioBackupStorageLocation(d)
+	bsl, bslCred := toMinioBackupStorageLocation(d)
+	if err := c.ValidateS3BackupStorageLocation(bslCred); err != nil {
+		return diag.FromErr(err)
+	}
 	err := c.UpdateMinioBackupStorageLocation(d.Id(), bsl)
 	if err != nil {
 		return diag.FromErr(err)
@@ -329,7 +346,10 @@ func MinioBackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client
 
 func GcpBackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
-	bsl := toGcpBackupStorageLocation(d)
+	bsl, bslCred := toGcpBackupStorageLocation(d)
+	if err := c.ValidateGcpBackupStorageLocation(bslCred); err != nil {
+		return diag.FromErr(err)
+	}
 	err := c.UpdateGcpBackupStorageLocation(d.Id(), bsl)
 	if err != nil {
 		return diag.FromErr(err)
@@ -339,7 +359,10 @@ func GcpBackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client) 
 
 func AzureBackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
-	bsl := toAzureBackupStorageLocation(d)
+	bsl, bslCred := toAzureBackupStorageLocation(d)
+	if err := c.ValidateAzureBackupStorageLocation(bslCred); err != nil {
+		return diag.FromErr(err)
+	}
 	err := c.UpdateAzureBackupStorageLocation(d.Id(), bsl)
 	if err != nil {
 		return diag.FromErr(err)
@@ -347,12 +370,12 @@ func AzureBackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client
 	return diags
 }
 
-func toS3BackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLocationS3 {
+func toS3BackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsLocationS3, *models.V1AwsS3BucketCredentials) {
 	bucketName := d.Get("bucket_name").(string)
 	region := d.Get("region").(string)
 	s3config := d.Get("s3").([]interface{})[0].(map[string]interface{})
 	s3ForcePathStyle := s3config["s3_force_path_style"].(bool)
-	return &models.V1UserAssetsLocationS3{
+	bslEntity := &models.V1UserAssetsLocationS3{
 		Metadata: &models.V1ObjectMetaInputEntity{
 			Name: d.Get("name").(string),
 		},
@@ -369,14 +392,21 @@ func toS3BackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLocat
 			IsDefault: d.Get("is_default").(bool),
 		},
 	}
+	bslCredEntity := &models.V1AwsS3BucketCredentials{
+		Bucket:      bslEntity.Spec.Config.BucketName,
+		Credentials: bslEntity.Spec.Config.Credentials,
+		Folder:      bslEntity.Spec.Config.S3URL,
+		Region:      bslEntity.Spec.Config.Region,
+	}
+	return bslEntity, bslCredEntity
 }
 
-func toMinioBackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLocationS3 {
+func toMinioBackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsLocationS3, *models.V1AwsS3BucketCredentials) {
 	bucketName := d.Get("bucket_name").(string)
 	region := d.Get("region").(string)
 	s3config := d.Get("s3").([]interface{})[0].(map[string]interface{})
 	s3ForcePathStyle := s3config["s3_force_path_style"].(bool)
-	return &models.V1UserAssetsLocationS3{
+	bslEntity := &models.V1UserAssetsLocationS3{
 		Metadata: &models.V1ObjectMetaInputEntity{
 			Name: d.Get("name").(string),
 		},
@@ -393,9 +423,16 @@ func toMinioBackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLo
 			IsDefault: d.Get("is_default").(bool),
 		},
 	}
+	bslCredEntity := &models.V1AwsS3BucketCredentials{
+		Bucket:      bslEntity.Spec.Config.BucketName,
+		Credentials: bslEntity.Spec.Config.Credentials,
+		Folder:      bslEntity.Spec.Config.S3URL,
+		Region:      bslEntity.Spec.Config.Region,
+	}
+	return bslEntity, bslCredEntity
 }
 
-func toGcpBackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLocationGcp {
+func toGcpBackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsLocationGcp, *models.V1GcpAccountNameValidateSpec) {
 	var account *models.V1UserAssetsLocationGcp
 	gcpCred := d.Get("gcp_storage_config").([]interface{})[0].(map[string]interface{})
 	if len(gcpCred) > 0 {
@@ -422,19 +459,26 @@ func toGcpBackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLoca
 				Type:      "gcp",
 			},
 		}
-		return account
+		accountCredSpec := &models.V1GcpAccountNameValidateSpec{
+			BucketName: account.Spec.Config.BucketName,
+			Credentials: &models.V1GcpAccountValidateSpec{
+				JSONCredentials: account.Spec.Config.Credentials.JSONCredentials,
+			},
+			ProjectID: account.Spec.Config.ProjectID,
+		}
+		return account, accountCredSpec
 	}
 
-	return nil
+	return nil, nil
 }
 
-func toAzureBackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLocationAzure {
+func toAzureBackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsLocationAzure, *models.V1AzureCloudAccount) {
 	var account *models.V1UserAssetsLocationAzure
 	azureCred := d.Get("azure_storage_config").([]interface{})[0].(map[string]interface{})
 	if len(azureCred) > 0 {
 		bslName := d.Get("name").(string)
 		isDefault := d.Get("is_default").(bool)
-		containerName := azureCred["project_id"].(string)
+		containerName := azureCred["container_name"].(string)
 		storageName := azureCred["storage_name"].(string)
 		sku := azureCred["stock_keeping_unit"].(string)
 		resourceGroup := azureCred["resource_group"].(string)
@@ -464,10 +508,16 @@ func toAzureBackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLo
 				Type:      "azure",
 			},
 		}
-
-		return account
+		accountCredSpec := &models.V1AzureCloudAccount{
+			AzureEnvironment: ptr.StringPtr("AzurePublicCloud"),
+			ClientID:         &account.Spec.Config.Credentials.ClientID,
+			ClientSecret:     &account.Spec.Config.Credentials.ClientSecret,
+			Settings:         nil,
+			TenantID:         &account.Spec.Config.Credentials.TenantID,
+		}
+		return account, accountCredSpec
 	}
-	return nil
+	return nil, nil
 }
 
 func toAwsAccountCredential(s3cred map[string]interface{}) *models.V1AwsCloudAccount {
