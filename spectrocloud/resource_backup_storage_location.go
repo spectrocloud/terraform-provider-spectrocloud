@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -51,7 +50,8 @@ func resourceBackupStorageLocation() *schema.Resource {
 			},
 			"is_default": {
 				Type:        schema.TypeBool,
-				Required:    true,
+				Optional:    true,
+				Default:     false,
 				Description: "Specifies if this backup storage location should be used as the default location for storing backups.",
 			},
 			"region": {
@@ -173,6 +173,11 @@ func resourceBackupStorageLocation() *schema.Resource {
 							Required:    true,
 							Description: "Unique client Id from Azure console.",
 						},
+						"subscription_id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Unique subscription Id from Azure console.",
+						},
 						"azure_client_secret": {
 							Type:        schema.TypeString,
 							Required:    true,
@@ -187,30 +192,9 @@ func resourceBackupStorageLocation() *schema.Resource {
 	}
 }
 
-func schemaValidationForLocationProvider(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	provider := d.Get("location_provider").(string)
-	if (provider == "aws" || provider == "minio") && (len(d.Get("s3").([]interface{})) == 0 || d.Get("bucket_name").(string) == "" || d.Get("region").(string) == "") {
-		return fmt.Errorf("`s3, bucket_name & region` is required when location provider set to 'aws' or 'minio'")
-	}
-	if (provider == "aws" || provider == "minio") && (len(d.Get("azure_storage_config").([]interface{})) != 0 || (len(d.Get("gcp_storage_config").([]interface{}))) != 0) {
-		return fmt.Errorf("`gcp_storage_config & azure_storage_config` are not allowed when location provider set to 'aws' or 'minio'")
-	}
-	if (provider == "gcp") && (len(d.Get("gcp_storage_config").([]interface{})) == 0 || d.Get("bucket_name").(string) == "") {
-		return fmt.Errorf("`gcp_storage_config & bucket_name` is required when location provider set to 'gcp'")
-	}
-	if (provider == "azure") && len(d.Get("azure_storage_config").([]interface{})) == 0 {
-		return fmt.Errorf("`azure_storage_config` is required when location provider set to 'azure'")
-	}
-	if (provider == "gcp" || provider == "azure") && (len(d.Get("s3").([]interface{})) != 0 || d.Get("bucket_name").(string) != "" || d.Get("region").(string) != "" || d.Get("ca_cert").(string) != "") {
-		return fmt.Errorf("`s3, bucket_name, region & ca_cert` are not allowed when location provider set to 'gcp' or 'azure'")
-	}
-	return nil
-}
-
 func resourceBackupStorageLocationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	assetContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, assetContext)
-	var diags diag.Diagnostics
 	locationProvider := d.Get("location_provider").(string)
 
 	switch locationProvider {
@@ -219,57 +203,52 @@ func resourceBackupStorageLocationCreate(ctx context.Context, d *schema.Resource
 	case "minio":
 		return MinioBackupStorageLocationCreate(d, c)
 	case "gcp":
-		fmt.Println("gcp")
+		return GcpBackupStorageLocationCreate(d, c)
 	case "azure":
-		fmt.Println("azure")
+		return AzureBackupStorageLocationCreate(d, c)
 	default:
 		return S3BackupStorageLocationCreate(d, c)
 	}
-
-	return diags
 }
 
 func resourceBackupStorageLocationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	assetContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, assetContext)
-	var diags diag.Diagnostics
 	locationProvider := d.Get("location_provider").(string)
 
 	switch locationProvider {
 	case "aws":
 		return S3BackupStorageLocationRead(d, c)
 	case "minio":
-		fmt.Println("minio")
+		return MinioBackupStorageLocationRead(d, c)
 	case "gcp":
-		fmt.Println("gcp")
+		return GcpBackupStorageLocationRead(d, c)
 	case "azure":
-		fmt.Println("azure")
+		return AzureBackupStorageLocationRead(d, c)
 	default:
 		return S3BackupStorageLocationRead(d, c)
 	}
-
-	return diags
 }
 
 func resourceBackupStorageLocationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	assetContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, assetContext)
-	var diags diag.Diagnostics
+
 	locationProvider := d.Get("location_provider").(string)
 
 	switch locationProvider {
 	case "aws":
 		return S3BackupStorageLocationUpdate(d, c)
 	case "minio":
-		fmt.Println("minio")
+		return MinioBackupStorageLocationUpdate(d, c)
 	case "gcp":
-		fmt.Println("gcp")
+		return GcpBackupStorageLocationUpdate(d, c)
 	case "azure":
-		fmt.Println("azure")
+		return AzureBackupStorageLocationUpdate(d, c)
 	default:
 		return S3BackupStorageLocationUpdate(d, c)
 	}
-	return diags
+
 }
 
 func resourceBackupStorageLocationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
