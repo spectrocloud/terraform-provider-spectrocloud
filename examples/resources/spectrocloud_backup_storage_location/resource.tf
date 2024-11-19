@@ -56,10 +56,10 @@ resource "spectrocloud_backup_storage_location" "bsl_azure" {
     storage_name        = "test-storage"
     stock_keeping_unit  = "Standard_LRS"
     resource_group      = "test-resource-group"
-#    azure_tenant_id     = "test-azure-tenant-id"
-#    azure_client_id     = "test-azure-client-id"
-#    subscription_id     = "test-azure-subscription-id"
-#    azure_client_secret = ""
+    azure_tenant_id     = "test-azure-tenant-id"
+    azure_client_id     = "test-azure-client-id"
+    subscription_id     = "test-azure-subscription-id"
+    azure_client_secret = ""
   }
 }
 
@@ -72,7 +72,7 @@ resource "spectrocloud_backup_storage_location" "bsl_sts" {
   bucket_name = "tenant-backup-bucket-sts"
   s3 {
     credential_type     = "sts"
-    arn                 = "arn:aws:iam::123456789012:role/TestRole"
+    arn                 = "arn:aws:role/TestRole"
     external_id         = "test-external-id"
     s3_force_path_style = false
     s3_url              = "https://s3.us-east-2.amazonaws.com"
