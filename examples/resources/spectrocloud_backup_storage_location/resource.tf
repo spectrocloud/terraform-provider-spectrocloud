@@ -41,7 +41,7 @@ resource "spectrocloud_backup_storage_location" "bsl_gcp" {
   bucket_name       = "project-backup-bucket-gcp"
   gcp_storage_config {
     project_id           = "test-gcp-project-id"
-    gcp_json_credentials = "{json cred}"
+    gcp_json_credentials = ""
   }
 }
 
@@ -59,7 +59,7 @@ resource "spectrocloud_backup_storage_location" "bsl_azure" {
     azure_tenant_id     = "test-azure-tenant-id"
     azure_client_id     = "test-azure-client-id"
     subscription_id     = "test-azure-subscription-id"
-    azure_client_secret = "test-azure-client-secret"
+    azure_client_secret = ""
   }
 }
 
