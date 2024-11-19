@@ -1,3 +1,4 @@
+// set permission with data source role
 variable "roles" {
   type    = list(string)
   default = ["Cluster Admin", "Cluster Profile Editor"]
@@ -13,4 +14,22 @@ resource "spectrocloud_role" "custom_role" {
   name        = "Test Cluster Role"
   type        = "project"
   permissions = flatten([for role in data.spectrocloud_role.roles : role.permissions])
+}
+
+// set permission with data source permission
+
+variable "perms" {
+  type    = list(string)
+  default = ["App Profile", "App Deployment"]
+}
+
+data "spectrocloud_permission" "app_permissions" {
+  for_each = toset(var.perms)
+  name     = each.key
+}
+
+resource "spectrocloud_role" "custom_role_permission" {
+  name        = "Test Cluster Role"
+  type        = "project"
+  permissions = flatten([for p in data.spectrocloud_permission.app_permissions : p.permissions])
 }
