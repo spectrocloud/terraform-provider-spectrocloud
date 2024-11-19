@@ -8,7 +8,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
+)
+
+const (
+	StorageProviderAWS   = "aws"
+	StorageProviderMinio = "minio"
+	StorageProviderGCP   = "gcp"
+	StorageProviderAzure = "azure"
 )
 
 func resourceBackupStorageLocation() *schema.Resource {
@@ -29,8 +35,21 @@ func resourceBackupStorageLocation() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				ForceNew:    true,
 				Description: "The name of the backup storage location. This is a unique identifier for the backup location.",
+			},
+			"storage_provider": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Default:  StorageProviderAWS,
+				ValidateFunc: validation.StringInSlice([]string{
+					StorageProviderAWS,
+					StorageProviderMinio,
+					StorageProviderGCP,
+					StorageProviderAzure,
+				}, false),
+				Description: "The location provider for backup storage location. Allowed values are `aws` or `minio` or `gcp` or `azure`. " +
+					"Default value is `aws`.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -42,27 +61,28 @@ func resourceBackupStorageLocation() *schema.Resource {
 			},
 			"is_default": {
 				Type:        schema.TypeBool,
-				Required:    true,
+				Optional:    true,
+				Default:     false,
 				Description: "Specifies if this backup storage location should be used as the default location for storing backups.",
 			},
 			"region": {
 				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The region where the backup storage is located, typically corresponding to the region of the cloud provider.",
+				Optional:    true,
+				Description: "The region where the backup storage is located, typically corresponding to the region of the cloud provider. This is relevant for S3 or S3-compatible(minio) storage services.",
 			},
 			"bucket_name": {
 				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The name of the storage bucket where backups are stored. This is relevant for S3 or S3-compatible storage services.",
+				Optional:    true,
+				Description: "The name of the storage bucket where backups are stored. This is relevant for S3 or S3-compatible(minio) or gcp storage services.",
 			},
 			"ca_cert": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "An optional CA certificate used for SSL connections to ensure secure communication with the storage provider.",
+				Description: "An optional CA certificate used for SSL connections to ensure secure communication with the storage provider. This is relevant for S3 or S3-compatible(minio) storage services.",
 			},
 			"s3": {
 				Type:        schema.TypeList,
-				Required:    true,
+				Optional:    true,
 				MaxItems:    1,
 				Description: "S3-specific settings for configuring the backup storage location.",
 				Elem: &schema.Resource{
@@ -106,108 +126,140 @@ func resourceBackupStorageLocation() *schema.Resource {
 					},
 				},
 			},
+			"gcp_storage_config": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "GCP storage settings for configuring the backup storage location.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"project_id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The GCP project ID.",
+						},
+						"gcp_json_credentials": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Sensitive:   true,
+							Description: "The GCP credentials in JSON format. These credentials are required to authenticate and manage.",
+						},
+					},
+				},
+			},
+			"azure_storage_config": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Azure storage settings for configuring the backup storage location.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"container_name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The container name.",
+						},
+						"storage_name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The storage name.",
+						},
+						"stock_keeping_unit": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The stop-keeping unit. eg: `Standard_LRS`",
+						},
+						"resource_group": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The resource group name.",
+						},
+						"azure_tenant_id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Unique tenant Id from Azure console.",
+						},
+						"azure_client_id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Unique client Id from Azure console.",
+						},
+						"subscription_id": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Unique subscription Id from Azure console.",
+						},
+						"azure_client_secret": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Sensitive:   true,
+							Description: "Azure secret for authentication.",
+						},
+					},
+				},
+			},
 		},
+		CustomizeDiff: schemaValidationForLocationProvider,
 	}
 }
 
 func resourceBackupStorageLocationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	assetContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, assetContext)
-	var diags diag.Diagnostics
+	storageProvider := d.Get("storage_provider").(string)
 
-	bsl := toBackupStorageLocation(d)
-
-	uid, err := c.CreateS3BackupStorageLocation(bsl)
-	if err != nil {
-		return diag.FromErr(err)
+	switch storageProvider {
+	case StorageProviderAWS:
+		return S3BackupStorageLocationCreate(d, c)
+	case StorageProviderMinio:
+		return MinioBackupStorageLocationCreate(d, c)
+	case StorageProviderGCP:
+		return GcpBackupStorageLocationCreate(d, c)
+	case StorageProviderAzure:
+		return AzureBackupStorageLocationCreate(d, c)
+	default:
+		return S3BackupStorageLocationCreate(d, c)
 	}
-	d.SetId(uid)
-
-	return diags
 }
 
 func resourceBackupStorageLocationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	assetContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, assetContext)
-	var diags diag.Diagnostics
+	storageProvider := d.Get("storage_provider").(string)
 
-	bsl, err := c.GetBackupStorageLocation(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	} else if bsl == nil {
-		// Deleted - Terraform will recreate it
-		d.SetId("")
-		return diags
+	switch storageProvider {
+	case StorageProviderAWS:
+		return S3BackupStorageLocationRead(d, c)
+	case StorageProviderMinio:
+		return MinioBackupStorageLocationRead(d, c)
+	case StorageProviderGCP:
+		return GcpBackupStorageLocationRead(d, c)
+	case StorageProviderAzure:
+		return AzureBackupStorageLocationRead(d, c)
+	default:
+		return S3BackupStorageLocationRead(d, c)
 	}
-
-	if err := d.Set("name", bsl.Metadata.Name); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("is_default", bsl.Spec.IsDefault); err != nil {
-		return diag.FromErr(err)
-	}
-
-	if bsl.Spec.Storage == "s3" {
-		s3Bsl, err := c.GetS3BackupStorageLocation(d.Id())
-		if err != nil {
-			return diag.FromErr(err)
-		} else if s3Bsl == nil {
-			// Deleted - Terraform will recreate it
-			d.SetId("")
-			return diags
-		}
-		if len(s3Bsl.Spec.Config.CaCert) > 0 {
-			if err := d.Set("ca_cert", s3Bsl.Spec.Config.CaCert); err != nil {
-				return diag.FromErr(err)
-			}
-		}
-		if err := d.Set("region", *s3Bsl.Spec.Config.Region); err != nil {
-			return diag.FromErr(err)
-		}
-		if err := d.Set("bucket_name", *s3Bsl.Spec.Config.BucketName); err != nil {
-			return diag.FromErr(err)
-		}
-
-		s3 := make(map[string]interface{})
-		if len(s3Bsl.Spec.Config.S3URL) > 0 {
-			s3["s3_url"] = s3Bsl.Spec.Config.S3URL
-		}
-
-		if s3Bsl.Spec.Config.S3ForcePathStyle != nil {
-			s3["s3_force_path_style"] = *s3Bsl.Spec.Config.S3ForcePathStyle
-		}
-		s3["credential_type"] = string(s3Bsl.Spec.Config.Credentials.CredentialType)
-		if s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
-			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
-			s3["secret_key"] = s3Bsl.Spec.Config.Credentials.SecretKey
-		} else {
-			s3["arn"] = s3Bsl.Spec.Config.Credentials.Sts.Arn
-			if len(s3Bsl.Spec.Config.Credentials.Sts.ExternalID) > 0 {
-				s3["external_id"] = s3Bsl.Spec.Config.Credentials.Sts.ExternalID
-			}
-		}
-		s3Config := make([]interface{}, 0, 1)
-		s3Config = append(s3Config, s3)
-		if err := d.Set("s3", s3Config); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	return diags
 }
 
 func resourceBackupStorageLocationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	assetContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, assetContext)
-	var diags diag.Diagnostics
 
-	bsl := toBackupStorageLocation(d)
-	err := c.UpdateS3BackupStorageLocation(d.Id(), bsl)
-	if err != nil {
-		return diag.FromErr(err)
+	storageProvider := d.Get("storage_provider").(string)
+
+	switch storageProvider {
+	case StorageProviderAWS:
+		return S3BackupStorageLocationUpdate(d, c)
+	case StorageProviderMinio:
+		return MinioBackupStorageLocationUpdate(d, c)
+	case StorageProviderGCP:
+		return GcpBackupStorageLocationUpdate(d, c)
+	case StorageProviderAzure:
+		return AzureBackupStorageLocationUpdate(d, c)
+	default:
+		return S3BackupStorageLocationUpdate(d, c)
 	}
 
-	return diags
 }
 
 func resourceBackupStorageLocationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -220,44 +272,4 @@ func resourceBackupStorageLocationDelete(ctx context.Context, d *schema.Resource
 	}
 
 	return diags
-}
-
-func toBackupStorageLocation(d *schema.ResourceData) *models.V1UserAssetsLocationS3 {
-	bucketName := d.Get("bucket_name").(string)
-	region := d.Get("region").(string)
-	s3config := d.Get("s3").([]interface{})[0].(map[string]interface{})
-	s3ForcePathStyle := s3config["s3_force_path_style"].(bool)
-	return &models.V1UserAssetsLocationS3{
-		Metadata: &models.V1ObjectMetaInputEntity{
-			Name: d.Get("name").(string),
-		},
-		Spec: &models.V1UserAssetsLocationS3Spec{
-			Config: &models.V1S3StorageConfig{
-				BucketName:       &bucketName,
-				CaCert:           d.Get("ca_cert").(string),
-				Credentials:      toAwsAccountCredential(s3config),
-				Region:           &region,
-				S3ForcePathStyle: &s3ForcePathStyle,
-				S3URL:            s3config["s3_url"].(string),
-				UseRestic:        nil,
-			},
-			IsDefault: d.Get("is_default").(bool),
-		},
-	}
-}
-
-func toAwsAccountCredential(s3cred map[string]interface{}) *models.V1AwsCloudAccount {
-	account := &models.V1AwsCloudAccount{}
-	if len(s3cred["credential_type"].(string)) == 0 || s3cred["credential_type"].(string) == "secret" {
-		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret
-		account.AccessKey = s3cred["access_key"].(string)
-		account.SecretKey = s3cred["secret_key"].(string)
-	} else if s3cred["credential_type"].(string) == "sts" {
-		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
-		account.Sts = &models.V1AwsStsCredentials{
-			Arn:        s3cred["arn"].(string),
-			ExternalID: s3cred["external_id"].(string),
-		}
-	}
-	return account
 }

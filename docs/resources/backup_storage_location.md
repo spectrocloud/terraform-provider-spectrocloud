@@ -51,21 +51,48 @@ resource "spectrocloud_backup_storage_location" "bsl2" {
 
 ### Required
 
-- `bucket_name` (String) The name of the storage bucket where backups are stored. This is relevant for S3 or S3-compatible storage services.
-- `is_default` (Boolean) Specifies if this backup storage location should be used as the default location for storing backups.
 - `name` (String) The name of the backup storage location. This is a unique identifier for the backup location.
-- `region` (String) The region where the backup storage is located, typically corresponding to the region of the cloud provider.
-- `s3` (Block List, Min: 1, Max: 1) S3-specific settings for configuring the backup storage location. (see [below for nested schema](#nestedblock--s3))
 
 ### Optional
 
-- `ca_cert` (String) An optional CA certificate used for SSL connections to ensure secure communication with the storage provider.
+- `azure_storage_config` (Block List, Max: 1) Azure storage settings for configuring the backup storage location. (see [below for nested schema](#nestedblock--azure_storage_config))
+- `bucket_name` (String) The name of the storage bucket where backups are stored. This is relevant for S3 or S3-compatible(minio) or gcp storage services.
+- `ca_cert` (String) An optional CA certificate used for SSL connections to ensure secure communication with the storage provider. This is relevant for S3 or S3-compatible(minio) storage services.
 - `context` (String) The context of the backup storage location. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+- `gcp_storage_config` (Block List, Max: 1) GCP storage settings for configuring the backup storage location. (see [below for nested schema](#nestedblock--gcp_storage_config))
+- `is_default` (Boolean) Specifies if this backup storage location should be used as the default location for storing backups.
+- `region` (String) The region where the backup storage is located, typically corresponding to the region of the cloud provider. This is relevant for S3 or S3-compatible(minio) storage services.
+- `s3` (Block List, Max: 1) S3-specific settings for configuring the backup storage location. (see [below for nested schema](#nestedblock--s3))
+- `storage_provider` (String) The location provider for backup storage location. Allowed values are `aws` or `minio` or `gcp` or `azure`. Default value is `aws`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+<a id="nestedblock--azure_storage_config"></a>
+### Nested Schema for `azure_storage_config`
+
+Required:
+
+- `azure_client_id` (String) Unique client Id from Azure console.
+- `azure_client_secret` (String, Sensitive) Azure secret for authentication.
+- `azure_tenant_id` (String) Unique tenant Id from Azure console.
+- `container_name` (String) The container name.
+- `resource_group` (String) The resource group name.
+- `stock_keeping_unit` (String) The stop-keeping unit. eg: `Standard_LRS`
+- `storage_name` (String) The storage name.
+- `subscription_id` (String) Unique subscription Id from Azure console.
+
+
+<a id="nestedblock--gcp_storage_config"></a>
+### Nested Schema for `gcp_storage_config`
+
+Required:
+
+- `gcp_json_credentials` (String, Sensitive) The GCP credentials in JSON format. These credentials are required to authenticate and manage.
+- `project_id` (String) The GCP project ID.
+
 
 <a id="nestedblock--s3"></a>
 ### Nested Schema for `s3`
