@@ -42,19 +42,8 @@ resource "spectrocloud_backup_storage_location" "bsl_gcp" {
   gcp_storage_config {
     project_id           = "test-gcp-project-id"
     gcp_json_credentials = <<EOT
-                          {
-                            "type": "service_account",
-                            "project_id": "test-gcp-project-id",
-                            "private_key_id": "test-private-key-id",
-                            "private_key": "-----BEGIN PRIVATE KEY-----\nPRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n",
-                            "client_email": "test-client-email@gcp-project-id.iam.gserviceaccount.com",
-                            "client_id": "test-client-id",
-                            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                            "token_uri": "https://oauth2.googleapis.com/token",
-                            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-client-email%40gcp-project-id.iam.gserviceaccount.com"
-                          }
-                          EOT
+    {"test-json-cred" : "cred"}
+    EOT
   }
 }
 
