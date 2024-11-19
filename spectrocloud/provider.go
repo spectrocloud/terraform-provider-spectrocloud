@@ -144,6 +144,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_role":      resourceRole(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
+				"spectrocloud_permission": dataSourcePermission(),
+
 				"spectrocloud_team": dataSourceTeam(),
 
 				"spectrocloud_user":    dataSourceUser(),
