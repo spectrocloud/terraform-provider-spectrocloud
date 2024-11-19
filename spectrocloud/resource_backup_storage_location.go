@@ -10,6 +10,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+const (
+	StorageProviderAWS   = "aws"
+	StorageProviderMinio = "minio"
+	StorageProviderGCP   = "gcp"
+	StorageProviderAzure = "azure"
+)
+
 func resourceBackupStorageLocation() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceBackupStorageLocationCreate,
@@ -30,12 +37,17 @@ func resourceBackupStorageLocation() *schema.Resource {
 				Required:    true,
 				Description: "The name of the backup storage location. This is a unique identifier for the backup location.",
 			},
-			"location_provider": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				ForceNew:     true,
-				Default:      "aws",
-				ValidateFunc: validation.StringInSlice([]string{"aws", "minio", "gcp", "azure"}, false),
+			"storage_provider": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Default:  StorageProviderAWS,
+				ValidateFunc: validation.StringInSlice([]string{
+					StorageProviderAWS,
+					StorageProviderMinio,
+					StorageProviderGCP,
+					StorageProviderAzure,
+				}, false),
 				Description: "The location provider for backup storage location. Allowed values are `aws` or `minio` or `gcp` or `azure`. " +
 					"Default value is `aws`.",
 			},
@@ -155,7 +167,7 @@ func resourceBackupStorageLocation() *schema.Resource {
 						"stock_keeping_unit": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "The stop-keeping unit.",
+							Description: "The stop-keeping unit. eg: `Standard_LRS`",
 						},
 						"resource_group": {
 							Type:        schema.TypeString,
@@ -194,16 +206,16 @@ func resourceBackupStorageLocation() *schema.Resource {
 func resourceBackupStorageLocationCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	assetContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, assetContext)
-	locationProvider := d.Get("location_provider").(string)
+	storageProvider := d.Get("storage_provider").(string)
 
-	switch locationProvider {
-	case "aws":
+	switch storageProvider {
+	case StorageProviderAWS:
 		return S3BackupStorageLocationCreate(d, c)
-	case "minio":
+	case StorageProviderMinio:
 		return MinioBackupStorageLocationCreate(d, c)
-	case "gcp":
+	case StorageProviderGCP:
 		return GcpBackupStorageLocationCreate(d, c)
-	case "azure":
+	case StorageProviderAzure:
 		return AzureBackupStorageLocationCreate(d, c)
 	default:
 		return S3BackupStorageLocationCreate(d, c)
@@ -213,16 +225,16 @@ func resourceBackupStorageLocationCreate(ctx context.Context, d *schema.Resource
 func resourceBackupStorageLocationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	assetContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, assetContext)
-	locationProvider := d.Get("location_provider").(string)
+	storageProvider := d.Get("storage_provider").(string)
 
-	switch locationProvider {
-	case "aws":
+	switch storageProvider {
+	case StorageProviderAWS:
 		return S3BackupStorageLocationRead(d, c)
-	case "minio":
+	case StorageProviderMinio:
 		return MinioBackupStorageLocationRead(d, c)
-	case "gcp":
+	case StorageProviderGCP:
 		return GcpBackupStorageLocationRead(d, c)
-	case "azure":
+	case StorageProviderAzure:
 		return AzureBackupStorageLocationRead(d, c)
 	default:
 		return S3BackupStorageLocationRead(d, c)
@@ -233,16 +245,16 @@ func resourceBackupStorageLocationUpdate(ctx context.Context, d *schema.Resource
 	assetContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, assetContext)
 
-	locationProvider := d.Get("location_provider").(string)
+	storageProvider := d.Get("storage_provider").(string)
 
-	switch locationProvider {
-	case "aws":
+	switch storageProvider {
+	case StorageProviderAWS:
 		return S3BackupStorageLocationUpdate(d, c)
-	case "minio":
+	case StorageProviderMinio:
 		return MinioBackupStorageLocationUpdate(d, c)
-	case "gcp":
+	case StorageProviderGCP:
 		return GcpBackupStorageLocationUpdate(d, c)
-	case "azure":
+	case StorageProviderAzure:
 		return AzureBackupStorageLocationUpdate(d, c)
 	default:
 		return S3BackupStorageLocationUpdate(d, c)

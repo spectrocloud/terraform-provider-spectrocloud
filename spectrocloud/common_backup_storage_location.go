@@ -11,23 +11,23 @@ import (
 )
 
 func schemaValidationForLocationProvider(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	provider := d.Get("location_provider").(string)
-	if (provider == "aws" || provider == "minio") && (len(d.Get("s3").([]interface{})) == 0 || d.Get("bucket_name").(string) == "" || d.Get("region").(string) == "") {
+	provider := d.Get("storage_provider").(string)
+	if (provider == StorageProviderAWS || provider == StorageProviderMinio) && (len(d.Get("s3").([]interface{})) == 0 || d.Get("bucket_name").(string) == "" || d.Get("region").(string) == "") {
 		return fmt.Errorf("`s3, bucket_name & region` is required when location provider set to 'aws' or 'minio'")
 	}
-	if (provider == "aws" || provider == "minio") && (len(d.Get("azure_storage_config").([]interface{})) != 0 || (len(d.Get("gcp_storage_config").([]interface{}))) != 0) {
+	if (provider == StorageProviderAWS || provider == StorageProviderMinio) && (len(d.Get("azure_storage_config").([]interface{})) != 0 || (len(d.Get("gcp_storage_config").([]interface{}))) != 0) {
 		return fmt.Errorf("`gcp_storage_config or azure_storage_config` are not allowed when location provider set to 'aws' or 'minio'")
 	}
-	if (provider == "gcp") && (len(d.Get("gcp_storage_config").([]interface{})) == 0 || d.Get("bucket_name").(string) == "") {
+	if (provider == StorageProviderGCP) && (len(d.Get("gcp_storage_config").([]interface{})) == 0 || d.Get("bucket_name").(string) == "") {
 		return fmt.Errorf("`gcp_storage_config & bucket_name` is required when location provider set to 'gcp'")
 	}
-	if (provider == "azure") && len(d.Get("azure_storage_config").([]interface{})) == 0 {
+	if (provider == StorageProviderAzure) && len(d.Get("azure_storage_config").([]interface{})) == 0 {
 		return fmt.Errorf("`azure_storage_config` is required when location provider set to 'azure'")
 	}
-	if provider == "azure" && (len(d.Get("s3").([]interface{})) != 0 || d.Get("bucket_name").(string) != "" || d.Get("region").(string) != "" || d.Get("ca_cert").(string) != "") {
+	if provider == StorageProviderAzure && (len(d.Get("s3").([]interface{})) != 0 || d.Get("bucket_name").(string) != "" || d.Get("region").(string) != "" || d.Get("ca_cert").(string) != "") {
 		return fmt.Errorf("`s3, bucket_name, region & ca_cert` are not allowed when location provider set to 'azure'")
 	}
-	if (provider == "gcp") && (len(d.Get("azure_storage_config").([]interface{})) != 0 || len(d.Get("s3").([]interface{})) != 0 || d.Get("region").(string) != "" || d.Get("ca_cert").(string) != "") {
+	if (provider == StorageProviderGCP) && (len(d.Get("azure_storage_config").([]interface{})) != 0 || len(d.Get("s3").([]interface{})) != 0 || d.Get("region").(string) != "" || d.Get("ca_cert").(string) != "") {
 		return fmt.Errorf("`azure_storage_config, s3, region, ca_cert` are not allowed when location provider set to 'gcp'")
 	}
 	return nil
@@ -187,7 +187,7 @@ func MinioBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 		return diag.FromErr(err)
 	}
 
-	if bsl.Spec.Storage == "minio" {
+	if bsl.Spec.Storage == StorageProviderMinio {
 		s3Bsl, err := c.GetMinioBackupStorageLocation(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
@@ -249,7 +249,7 @@ func GcpBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) di
 	if err := d.Set("is_default", bsl.Spec.IsDefault); err != nil {
 		return diag.FromErr(err)
 	}
-	if bsl.Spec.Storage == "gcp" {
+	if bsl.Spec.Storage == StorageProviderGCP {
 		gcpBsl, err := c.GetGCPBackupStorageLocation(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
@@ -456,7 +456,7 @@ func toGcpBackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsLoc
 					ProjectID: projectId,
 				},
 				IsDefault: isDefault,
-				Type:      "gcp",
+				Type:      StorageProviderGCP,
 			},
 		}
 		accountCredSpec := &models.V1GcpAccountNameValidateSpec{
@@ -505,7 +505,7 @@ func toAzureBackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsL
 					StorageName:   &storageName,
 				},
 				IsDefault: isDefault,
-				Type:      "azure",
+				Type:      StorageProviderAzure,
 			},
 		}
 		accountCredSpec := &models.V1AzureCloudAccount{

@@ -61,9 +61,9 @@ resource "spectrocloud_backup_storage_location" "bsl2" {
 - `context` (String) The context of the backup storage location. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `gcp_storage_config` (Block List, Max: 1) GCP storage settings for configuring the backup storage location. (see [below for nested schema](#nestedblock--gcp_storage_config))
 - `is_default` (Boolean) Specifies if this backup storage location should be used as the default location for storing backups.
-- `location_provider` (String) The location provider for backup storage location. Allowed values are `aws` or `minio` or `gcp` or `azure`. Default value is `aws`.
 - `region` (String) The region where the backup storage is located, typically corresponding to the region of the cloud provider. This is relevant for S3 or S3-compatible(minio) storage services.
 - `s3` (Block List, Max: 1) S3-specific settings for configuring the backup storage location. (see [below for nested schema](#nestedblock--s3))
+- `storage_provider` (String) The location provider for backup storage location. Allowed values are `aws` or `minio` or `gcp` or `azure`. Default value is `aws`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
@@ -80,7 +80,7 @@ Required:
 - `azure_tenant_id` (String) Unique tenant Id from Azure console.
 - `container_name` (String) The container name.
 - `resource_group` (String) The resource group name.
-- `stock_keeping_unit` (String) The stop-keeping unit.
+- `stock_keeping_unit` (String) The stop-keeping unit. eg: `Standard_LRS`
 - `storage_name` (String) The storage name.
 - `subscription_id` (String) Unique subscription Id from Azure console.
 
