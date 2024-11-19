@@ -56,10 +56,10 @@ resource "spectrocloud_backup_storage_location" "bsl_azure" {
     storage_name        = "test-storage"
     stock_keeping_unit  = "Standard_LRS"
     resource_group      = "test-resource-group"
-    azure_tenant_id     = "test-azure-tenant-id"
-    azure_client_id     = "test-azure-client-id"
-    subscription_id     = "test-azure-subscription-id"
-    azure_client_secret = ""
+#    azure_tenant_id     = "test-azure-tenant-id"
+#    azure_client_id     = "test-azure-client-id"
+#    subscription_id     = "test-azure-subscription-id"
+#    azure_client_secret = ""
   }
 }
 
