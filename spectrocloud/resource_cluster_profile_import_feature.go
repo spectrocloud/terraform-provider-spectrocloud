@@ -74,14 +74,11 @@ func toClusterProfileImportCreate(d *schema.ResourceData) (*os.File, error) {
 func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
-	clusterProfile, err := c.ClusterProfileExport(d.Id())
+	_, err := c.ClusterProfileExport(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	//we don't want to set back the cluster profile, currently we're only supporting profile file name in schema not content.
-	if err := d.Set("import_file", clusterProfile); err != nil {
-		return diag.FromErr(err)
-	}
 
 	return nil
 }
