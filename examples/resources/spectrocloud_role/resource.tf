@@ -17,10 +17,9 @@ resource "spectrocloud_role" "custom_role" {
 }
 
 // set permission with data source permission
-
 variable "perms" {
   type    = list(string)
-  default = ["API Key", "Audit", "Filter"]
+  default = ["User", "Team", "Role"]
 }
 
 data "spectrocloud_permission" "app_permissions" {
