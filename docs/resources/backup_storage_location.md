@@ -63,7 +63,7 @@ resource "spectrocloud_backup_storage_location" "bsl2" {
 - `is_default` (Boolean) Specifies if this backup storage location should be used as the default location for storing backups.
 - `region` (String) The region where the backup storage is located, typically corresponding to the region of the cloud provider. This is relevant for S3 or S3-compatible(minio) storage services.
 - `s3` (Block List, Max: 1) S3-specific settings for configuring the backup storage location. (see [below for nested schema](#nestedblock--s3))
-- `storage_provider` (String) The location provider for backup storage location. Allowed values are `aws` or `minio` or `gcp` or `azure`. Default value is `aws`.
+- `storage_provider` (String) The storage location provider for backup storage. Allowed values are `aws` or `minio` or `gcp` or `azure`. Default value is `aws`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only

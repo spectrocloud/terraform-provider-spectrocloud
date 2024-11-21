@@ -1,11 +1,11 @@
 // S3 Backup location with secret credential type example
 resource "spectrocloud_backup_storage_location" "bsl_s3" {
-  name              = "project-dev-bsl-s3"
-  context           = "project"
-  location_provider = "aws"
-  is_default        = false
-  region            = "us-east-1"
-  bucket_name       = "project-backup-bucket-s3"
+  name             = "project-dev-bsl-s3"
+  context          = "project"
+  storage_provider = "aws"
+  is_default       = false
+  region           = "us-east-1"
+  bucket_name      = "project-backup-bucket-s3"
   s3 {
     credential_type     = "secret"
     access_key          = "test-access-key-s3"
@@ -17,12 +17,12 @@ resource "spectrocloud_backup_storage_location" "bsl_s3" {
 
 // Minio Backup location with secret credential type example
 resource "spectrocloud_backup_storage_location" "bsl_minio" {
-  name              = "project-dev-minio-bsl"
-  context           = "project"
-  location_provider = "minio"
-  is_default        = false
-  region            = "us-east-2"
-  bucket_name       = "project-backup-bucket-minio"
+  name             = "project-dev-minio-bsl"
+  context          = "project"
+  storage_provider = "minio"
+  is_default       = false
+  region           = "us-east-2"
+  bucket_name      = "project-backup-bucket-minio"
   s3 {
     credential_type     = "secret"
     access_key          = "test-access-key-minio"
@@ -34,11 +34,11 @@ resource "spectrocloud_backup_storage_location" "bsl_minio" {
 
 // GCP Backup location example
 resource "spectrocloud_backup_storage_location" "bsl_gcp" {
-  name              = "project-dev-gcp"
-  context           = "project"
-  location_provider = "gcp"
-  is_default        = false
-  bucket_name       = "project-backup-bucket-gcp"
+  name             = "project-dev-gcp"
+  context          = "project"
+  storage_provider = "gcp"
+  is_default       = false
+  bucket_name      = "project-backup-bucket-gcp"
   gcp_storage_config {
     project_id           = "test-gcp-project-id"
     gcp_json_credentials = ""
@@ -47,10 +47,10 @@ resource "spectrocloud_backup_storage_location" "bsl_gcp" {
 
 // Azure Backup location example
 resource "spectrocloud_backup_storage_location" "bsl_azure" {
-  name              = "project-dev-azure-bsl"
-  context           = "project"
-  location_provider = "azure"
-  is_default        = false
+  name             = "project-dev-azure-bsl"
+  context          = "project"
+  storage_provider = "azure"
+  is_default       = false
   azure_storage_config {
     container_name      = "test-container"
     storage_name        = "test-storage"

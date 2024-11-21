@@ -48,7 +48,7 @@ func resourceBackupStorageLocation() *schema.Resource {
 					StorageProviderGCP,
 					StorageProviderAzure,
 				}, false),
-				Description: "The location provider for backup storage location. Allowed values are `aws` or `minio` or `gcp` or `azure`. " +
+				Description: "The storage location provider for backup storage. Allowed values are `aws` or `minio` or `gcp` or `azure`. " +
 					"Default value is `aws`.",
 			},
 			"context": {
