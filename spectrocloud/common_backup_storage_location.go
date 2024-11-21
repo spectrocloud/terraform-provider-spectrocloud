@@ -53,10 +53,8 @@ func S3BackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client) d
 func MinioBackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	bsl, bslCred := toMinioBackupStorageLocation(d)
-	if err := c.ValidateS3BackupStorageLocation(bslCred); err != nil {
-		return diag.FromErr(err)
-	}
+	bsl, _ := toMinioBackupStorageLocation(d)
+	// No credential validation required for minio
 	uid, err := c.CreateMinioBackupStorageLocation(bsl)
 	if err != nil {
 		return diag.FromErr(err)
@@ -333,10 +331,8 @@ func S3BackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client) d
 
 func MinioBackupStorageLocationUpdate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
 	var diags diag.Diagnostics
-	bsl, bslCred := toMinioBackupStorageLocation(d)
-	if err := c.ValidateS3BackupStorageLocation(bslCred); err != nil {
-		return diag.FromErr(err)
-	}
+	bsl, _ := toMinioBackupStorageLocation(d)
+	// No credential validation required for minio
 	err := c.UpdateMinioBackupStorageLocation(d.Id(), bsl)
 	if err != nil {
 		return diag.FromErr(err)
