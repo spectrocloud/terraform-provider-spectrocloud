@@ -60,7 +60,7 @@ resource "spectrocloud_role" "custom_role" {
 ### Optional
 
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `type` (String) The role type. Allowed values are `project` or `tenant` or `project`
+- `type` (String) The role type. Allowed values are `project` or `tenant` or `resource`
 
 ### Read-Only
 

@@ -20,16 +20,17 @@ resource "spectrocloud_role" "custom_role" {
 
 variable "perms" {
   type    = list(string)
-  default = ["App Profile", "App Deployment"]
+  default = ["API Key", "Audit", "Filter"]
 }
 
 data "spectrocloud_permission" "app_permissions" {
   for_each = toset(var.perms)
   name     = each.key
+  scope = "tenant"
 }
 
 resource "spectrocloud_role" "custom_role_permission" {
-  name        = "Test Cluster Role"
-  type        = "project"
+  name        = "Test Cluster Role With Custom Permission"
+  type        = "tenant"
   permissions = flatten([for p in data.spectrocloud_permission.app_permissions : p.permissions])
 }
