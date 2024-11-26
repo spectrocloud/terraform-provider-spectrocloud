@@ -39,7 +39,7 @@ func resourceRole() *schema.Resource {
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"project", "tenant", "resource"}, false),
-				Description:  "The role type. Allowed values are `project` or `tenant` or `project`",
+				Description:  "The role type. Allowed values are `project` or `tenant` or `resource`",
 			},
 			"permissions": {
 				Type:        schema.TypeSet,
