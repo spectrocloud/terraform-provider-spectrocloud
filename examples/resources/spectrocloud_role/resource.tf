@@ -25,7 +25,7 @@ variable "perms" {
 data "spectrocloud_permission" "app_permissions" {
   for_each = toset(var.perms)
   name     = each.key
-  scope = "tenant"
+  scope    = "tenant"
 }
 
 resource "spectrocloud_role" "custom_role_permission" {
