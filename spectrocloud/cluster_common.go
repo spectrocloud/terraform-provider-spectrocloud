@@ -30,6 +30,11 @@ var (
 	//clusterVsphereKeys = []string{"name", "context", "tags", "description", "cluster_meta_attribute", "cluster_profile", "apply_setting", "cloud_account_id", "cloud_config_id", "review_repave_state", "pause_agent_upgrades", "os_patch_on_boot", "os_patch_schedule", "os_patch_after", "kubeconfig", "admin_kube_config", "cloud_config", "machine_pool", "backup_policy", "scan_policy", "cluster_rbac_binding", "namespaces", "host_config", "location_config", "skip_completion", "force_delete", "force_delete_delay"}
 )
 
+const (
+	tenantString  = "tenant"
+	projectString = "project"
+)
+
 func toNtpServers(in map[string]interface{}) []string {
 	servers := make([]string, 0, 1)
 	if _, ok := in["ntp_servers"]; ok {
