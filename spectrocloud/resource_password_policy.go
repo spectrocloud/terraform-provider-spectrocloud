@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -15,6 +16,9 @@ func resourcePasswordPolicy() *schema.Resource {
 		ReadContext:   resourcePasswordPolicyRead,
 		UpdateContext: resourcePasswordPolicyUpdate,
 		DeleteContext: resourcePasswordPolicyDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourcePasswordPolicyImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -37,48 +41,38 @@ func resourcePasswordPolicy() *schema.Resource {
 				Optional:     true,
 				Default:      999,
 				ValidateFunc: validation.IntBetween(1, 1000),
-				Description:  "The number of days before the password expires. Must be between 1 and 1000 days. Defines how often passwords must be changed.",
+				Description:  "The number of days before the password expires. Must be between 1 and 1000 days. Defines how often passwords must be changed.  Default is `999` days for expiry.",
 			},
 			"first_reminder_days": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     5,
-				Description: "The number of days before the password expiry to send the first reminder to the user. Default is 5 days before expiry.",
+				Description: "The number of days before the password expiry to send the first reminder to the user. Default is `5` days before expiry.",
 			},
 			"min_password_length": {
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      12,
-				ValidateFunc: validation.IntAtLeast(6),
-				Description:  "The minimum length required for the password. Enforces a stronger password policy by ensuring a minimum number of characters.",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The minimum length required for the password. Enforces a stronger password policy by ensuring a minimum number of characters.  Default minimum length is `6`.",
 			},
 			"min_uppercase_letters": {
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      1,
-				ValidateFunc: validation.IntAtLeast(1),
-				Description:  "The minimum number of uppercase letters (A-Z) required in the password. Helps ensure password complexity with a mix of case-sensitive characters.",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The minimum number of uppercase letters (A-Z) required in the password. Helps ensure password complexity with a mix of case-sensitive characters. Minimum length of upper case should be `1`.",
 			},
 			"min_digits": {
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      1,
-				ValidateFunc: validation.IntAtLeast(1),
-				Description:  "The minimum number of numeric digits (0-9) required in the password. Ensures that passwords contain numerical characters.",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The minimum number of numeric digits (0-9) required in the password. Ensures that passwords contain numerical characters. Minimum length of digit should be `1`.",
 			},
 			"min_lowercase_letters": {
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      1,
-				ValidateFunc: validation.IntAtLeast(1),
-				Description:  "The minimum number of lowercase letters (a-z) required in the password. Ensures that lowercase characters are included for password complexity.",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The minimum number of lowercase letters (a-z) required in the password. Ensures that lowercase characters are included for password complexity. Minimum length of lower case should be `1`.",
 			},
 			"min_special_characters": {
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      1,
-				ValidateFunc: validation.IntAtLeast(1),
-				Description:  "The minimum number of special characters (e.g., !, @, #, $, %) required in the password. This increases the password's security level by including symbols.",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The minimum number of special characters (e.g., !, @, #, $, %) required in the password. This increases the password's security level by including symbols. Minimum special characters should be `1`.",
 			},
 		},
 	}
@@ -122,9 +116,32 @@ func toPasswordPolicyDefault(d *schema.ResourceData) (*models.V1TenantPasswordPo
 
 func flattenPasswordPolicy(passwordPolicy *models.V1TenantPasswordPolicyEntity, d *schema.ResourceData) error {
 	var err error
-	err = d.Set("password_regex", passwordPolicy.Regex)
-	if err != nil {
-		return err
+	if passwordPolicy.Regex != "" {
+		err = d.Set("password_regex", passwordPolicy.Regex)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = d.Set("min_password_length", passwordPolicy.MinLength)
+		if err != nil {
+			return err
+		}
+		err = d.Set("min_uppercase_letters", passwordPolicy.MinNumOfBlockLetters)
+		if err != nil {
+			return err
+		}
+		err = d.Set("min_digits", passwordPolicy.MinNumOfDigits)
+		if err != nil {
+			return err
+		}
+		err = d.Set("min_lowercase_letters", passwordPolicy.MinNumOfSmallLetters)
+		if err != nil {
+			return err
+		}
+		err = d.Set("min_special_characters", passwordPolicy.MinNumOfSpecialCharacters)
+		if err != nil {
+			return err
+		}
 	}
 	err = d.Set("password_expiry_days", passwordPolicy.ExpiryDurationInDays)
 	if err != nil {
@@ -134,26 +151,7 @@ func flattenPasswordPolicy(passwordPolicy *models.V1TenantPasswordPolicyEntity, 
 	if err != nil {
 		return err
 	}
-	err = d.Set("min_password_length", passwordPolicy.MinLength)
-	if err != nil {
-		return err
-	}
-	err = d.Set("min_uppercase_letters", passwordPolicy.MinNumOfBlockLetters)
-	if err != nil {
-		return err
-	}
-	err = d.Set("min_digits", passwordPolicy.MinNumOfDigits)
-	if err != nil {
-		return err
-	}
-	err = d.Set("min_lowercase_letters", passwordPolicy.MinNumOfSmallLetters)
-	if err != nil {
-		return err
-	}
-	err = d.Set("min_special_characters", passwordPolicy.MinNumOfSpecialCharacters)
-	if err != nil {
-		return err
-	}
+
 	return nil
 }
 
@@ -178,8 +176,20 @@ func resourcePasswordPolicyCreate(ctx context.Context, d *schema.ResourceData, m
 }
 
 func resourcePasswordPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	//c := getV1ClientWithResourceContext(m, tenantString)
+	c := getV1ClientWithResourceContext(m, tenantString)
 	var diags diag.Diagnostics
+	tenantUID, err := c.GetTenantUID()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	resp, err := c.GetPasswordPolicy(tenantUID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = flattenPasswordPolicy(resp, d)
+	if err != nil {
+		return nil
+	}
 	return diags
 }
 
@@ -199,7 +209,6 @@ func resourcePasswordPolicyUpdate(ctx context.Context, d *schema.ResourceData, m
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
 	return diags
 }
 
@@ -222,4 +231,22 @@ func resourcePasswordPolicyDelete(ctx context.Context, d *schema.ResourceData, m
 	}
 	d.SetId("")
 	return diags
+}
+
+func resourcePasswordPolicyImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	c := getV1ClientWithResourceContext(m, "tenant")
+	var diags diag.Diagnostics
+	givenTenantId := d.Id()
+	actualTenantId, err := c.GetTenantUID()
+	if err != nil {
+		return nil, err
+	}
+	if givenTenantId != actualTenantId {
+		return nil, fmt.Errorf("tenant id is not valid with curent user: %v", diags)
+	}
+	diags = resourcePasswordPolicyRead(ctx, d, m)
+	if diags.HasError() {
+		return nil, fmt.Errorf("could not read password policy for import: %v", diags)
+	}
+	return []*schema.ResourceData{d}, nil
 }

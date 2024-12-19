@@ -142,26 +142,46 @@ func TestFlattenPasswordPolicy(t *testing.T) {
 
 	resourceData := schema.TestResourceDataRaw(t, resourceSchema, map[string]interface{}{})
 
-	passwordPolicy := &models.V1TenantPasswordPolicyEntity{
-		Regex:                     "^[a-zA-Z0-9]+$",
-		ExpiryDurationInDays:      90,
-		FirstReminderInDays:       10,
-		MinLength:                 8,
-		MinNumOfBlockLetters:      2,
-		MinNumOfDigits:            2,
-		MinNumOfSmallLetters:      2,
-		MinNumOfSpecialCharacters: 1,
-	}
+	t.Run("with regex", func(t *testing.T) {
+		passwordPolicy := &models.V1TenantPasswordPolicyEntity{
+			Regex:                "^[a-zA-Z0-9]+$",
+			ExpiryDurationInDays: 90,
+			FirstReminderInDays:  10,
+		}
 
-	err := flattenPasswordPolicy(passwordPolicy, resourceData)
-	assert.NoError(t, err)
+		err := flattenPasswordPolicy(passwordPolicy, resourceData)
+		assert.NoError(t, err)
 
-	assert.Equal(t, "^[a-zA-Z0-9]+$", resourceData.Get("password_regex"))
-	assert.Equal(t, 90, resourceData.Get("password_expiry_days"))
-	assert.Equal(t, 10, resourceData.Get("first_reminder_days"))
-	assert.Equal(t, 8, resourceData.Get("min_password_length"))
-	assert.Equal(t, 2, resourceData.Get("min_uppercase_letters"))
-	assert.Equal(t, 2, resourceData.Get("min_digits"))
-	assert.Equal(t, 2, resourceData.Get("min_lowercase_letters"))
-	assert.Equal(t, 1, resourceData.Get("min_special_characters"))
+		assert.Equal(t, "^[a-zA-Z0-9]+$", resourceData.Get("password_regex"))
+		assert.Equal(t, 90, resourceData.Get("password_expiry_days"))
+		assert.Equal(t, 10, resourceData.Get("first_reminder_days"))
+	})
+
+	t.Run("without regex", func(t *testing.T) {
+		passwordPolicy := &models.V1TenantPasswordPolicyEntity{
+			ExpiryDurationInDays:      90,
+			FirstReminderInDays:       10,
+			MinLength:                 8,
+			MinNumOfBlockLetters:      2,
+			MinNumOfDigits:            2,
+			MinNumOfSmallLetters:      2,
+			MinNumOfSpecialCharacters: 1,
+			Regex:                     "",
+		}
+		err := resourceData.Set("password_regex", "")
+		if err != nil {
+			return
+		}
+		err = flattenPasswordPolicy(passwordPolicy, resourceData)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "", resourceData.Get("password_regex"))
+		assert.Equal(t, 90, resourceData.Get("password_expiry_days"))
+		assert.Equal(t, 10, resourceData.Get("first_reminder_days"))
+		assert.Equal(t, 8, resourceData.Get("min_password_length"))
+		assert.Equal(t, 2, resourceData.Get("min_uppercase_letters"))
+		assert.Equal(t, 2, resourceData.Get("min_digits"))
+		assert.Equal(t, 2, resourceData.Get("min_lowercase_letters"))
+		assert.Equal(t, 1, resourceData.Get("min_special_characters"))
+	})
 }
