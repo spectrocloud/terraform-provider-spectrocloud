@@ -23,10 +23,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install Terraform
+      - name: Install Terraform CLI
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.2
+          terraform_wrapper: false
 
       - name: Ensure reviewable
         run: make check-diff
