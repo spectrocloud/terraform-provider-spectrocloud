@@ -76,7 +76,7 @@ func resourceClusterProfile() *schema.Resource {
 				// Removing validation to support custom clouds
 				// ValidateFunc: validation.StringInSlice([]string{"all", "aws", "azure", "gcp", "vsphere", "openstack", "maas", "virtual", "baremetal", "eks", "aks", "edge", "edge-native", "tencent", "tke", "generic", "gke"}, false),
 				ForceNew: true,
-				Description: "Specify the infrastructure provider the cluster profile is for. Only Palette supported infrastructure providers can be used. The supported cloud types are - `all, aws, azure, gcp, vsphere, openstack, maas, virtual, baremetal, eks, aks, edge, edge-native, tencent, tke, generic, and gke` or any custom cloud provider registered in Palette, e.g., `nutanix`." +
+				Description: "Specify the infrastructure provider the cluster profile is for. Only Palette supported infrastructure providers can be used. The supported cloud types are - `all, aws, azure, gcp, vsphere, openstack, maas, virtual, baremetal, eks, aks, edge-native, tencent, tke, generic, and gke` or any custom cloud provider registered in Palette, e.g., `nutanix`." +
 					"If the value is set to `all`, then the type must be set to `add-on`. Otherwise, the cluster profile may be incompatible with other providers. Default value is `all`.",
 			},
 			"type": {
