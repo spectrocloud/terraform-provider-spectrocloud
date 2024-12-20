@@ -1,6 +1,9 @@
 package schemas
 
-import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+)
 
 func BackupPolicySchema() *schema.Schema {
 	return &schema.Schema{
@@ -41,6 +44,13 @@ func BackupPolicySchema() *schema.Schema {
 					Optional:    true,
 					Default:     true,
 					Description: "Whether to include the cluster resources in the backup. If set to false, only the cluster configuration and disks will be backed up. (Note: Starting with Palette version 4.6, the `include_cluster_resources` attribute will be changed to a string type, supporting the values `always`, `never`, and `auto`.)",
+				},
+				"include_cluster_resources_mode": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					Default:      nil,
+					Description:  "Specifies whether to include the cluster resources in the backup. Supported values are `always`, `never`, and `auto`. (Note: Starting with Palette version 4.6, the `include_cluster_resources` attribute will be changed to a string type, supporting these values.)",
+					ValidateFunc: validation.StringInSlice([]string{"always", "never", "auto"}, false),
 				},
 				"namespaces": {
 					Type:     schema.TypeSet,
