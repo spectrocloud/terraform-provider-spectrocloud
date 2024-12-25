@@ -28,30 +28,18 @@ func toBackupPolicy(d *schema.ResourceData) *models.V1ClusterBackupConfig {
 			}
 		}
 
-		//include := true
-		//if policy["include_cluster_resources"] != nil {
-		//	include = policy["include_cluster_resources"].(bool)
-		//}
-
 		// Extract and process the policy settings
-		includeClusterResourceMode := models.V1IncludeClusterResourceMode("Always") // Default value
+		includeClusterResourceMode := models.V1IncludeClusterResourceMode("Auto") // Default value
 		if policy["include_cluster_resources_mode"] != "" {
 			if v, ok := policy["include_cluster_resources_mode"].(string); ok {
-				switch strings.ToLower(v) {
-				case "always":
-					includeClusterResourceMode = models.V1IncludeClusterResourceMode("Always")
-				case "never":
-					includeClusterResourceMode = models.V1IncludeClusterResourceMode("Never")
-				case "auto":
-					includeClusterResourceMode = models.V1IncludeClusterResourceMode("Auto")
-				}
+				includeClusterResourceMode = convertIncludeResourceMode(v)
 			}
 		} else if policy["include_cluster_resources"] != nil {
 			if include, ok := policy["include_cluster_resources"].(bool); ok {
 				if include {
-					includeClusterResourceMode = models.V1IncludeClusterResourceMode("Always")
+					includeClusterResourceMode = convertIncludeResourceMode("Always")
 				} else {
-					includeClusterResourceMode = models.V1IncludeClusterResourceMode("Never")
+					includeClusterResourceMode = convertIncludeResourceMode("Never")
 				}
 			}
 		}
@@ -69,6 +57,18 @@ func toBackupPolicy(d *schema.ResourceData) *models.V1ClusterBackupConfig {
 		}
 	}
 	return nil
+}
+
+func convertIncludeResourceMode(m string) (mode models.V1IncludeClusterResourceMode) {
+	switch strings.ToLower(m) {
+	case "always":
+		return models.V1IncludeClusterResourceMode("Always")
+	case "never":
+		return models.V1IncludeClusterResourceMode("Never")
+	case "auto":
+		return models.V1IncludeClusterResourceMode("Auto")
+	}
+	return ""
 }
 
 func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
