@@ -80,10 +80,17 @@ func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
 	data["namespaces"] = policy.Namespaces
 	data["expiry_in_hour"] = policy.DurationInHours
 	data["include_disks"] = policy.IncludeAllDisks
-	data["include_cluster_resources"] = policy.IncludeClusterResources
+	data["include_cluster_resources"] = flattenIncludeResourceMode(policy.IncludeClusterResourceMode)
 	data["include_cluster_resources_mode"] = policy.IncludeClusterResourceMode
 	result = append(result, data)
 	return result
+}
+
+func flattenIncludeResourceMode(m models.V1IncludeClusterResourceMode) bool {
+	if m == models.V1IncludeClusterResourceMode("Always") {
+		return true
+	}
+	return false
 }
 
 func updateBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {

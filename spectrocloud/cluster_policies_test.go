@@ -76,13 +76,14 @@ func TestFlattenBackupPolicy(t *testing.T) {
 
 	expected := []interface{}{
 		map[string]interface{}{
-			"schedule":                  "daily",
-			"backup_location_id":        "location-123",
-			"prefix":                    "backup-prefix",
-			"namespaces":                []string{"namespace1", "namespace2"},
-			"expiry_in_hour":            int64(24),
-			"include_disks":             true,
-			"include_cluster_resources": true,
+			"schedule":                       "daily",
+			"backup_location_id":             "location-123",
+			"prefix":                         "backup-prefix",
+			"namespaces":                     []string{"namespace1", "namespace2"},
+			"expiry_in_hour":                 int64(24),
+			"include_disks":                  true,
+			"include_cluster_resources":      false,
+			"include_cluster_resources_mode": models.V1IncludeClusterResourceMode(""),
 		},
 	}
 
@@ -112,12 +113,13 @@ func TestToBackupPolicy(t *testing.T) {
 	result := toBackupPolicy(resourceData)
 
 	expected := &models.V1ClusterBackupConfig{
-		BackupLocationUID:       "location-123",
-		BackupPrefix:            "backup-prefix",
-		DurationInHours:         24,
-		IncludeAllDisks:         true,
-		IncludeClusterResources: true,
-		Namespaces:              []string{"namespace1"},
+		BackupLocationUID:          "location-123",
+		BackupPrefix:               "backup-prefix",
+		DurationInHours:            24,
+		IncludeAllDisks:            true,
+		IncludeClusterResources:    false,
+		IncludeClusterResourceMode: models.V1IncludeClusterResourceMode("Always"),
+		Namespaces:                 []string{"namespace1"},
 		Schedule: &models.V1ClusterFeatureSchedule{
 			ScheduledRunTime: "daily",
 		},
@@ -192,12 +194,13 @@ func TestToPolicies(t *testing.T) {
 
 	expected := &models.V1SpectroClusterPolicies{
 		BackupPolicy: &models.V1ClusterBackupConfig{
-			BackupLocationUID:       "location-123",
-			BackupPrefix:            "backup-prefix",
-			DurationInHours:         24,
-			IncludeAllDisks:         true,
-			IncludeClusterResources: true,
-			Namespaces:              []string{"namespace1"},
+			BackupLocationUID:          "location-123",
+			BackupPrefix:               "backup-prefix",
+			DurationInHours:            24,
+			IncludeAllDisks:            true,
+			IncludeClusterResources:    false,
+			IncludeClusterResourceMode: models.V1IncludeClusterResourceMode("Always"),
+			Namespaces:                 []string{"namespace1"},
 			Schedule: &models.V1ClusterFeatureSchedule{
 				ScheduledRunTime: "daily",
 			},
