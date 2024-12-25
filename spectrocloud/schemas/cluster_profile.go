@@ -19,7 +19,10 @@ func ClusterProfileSchema() *schema.Schema {
 				"variables": {
 					Type:        schema.TypeMap,
 					Optional:    true,
-					Description: "A map of cluster profile variables, defined as key-value pairs. Example: `priority: 5`.",
+					Description: "A map of cluster profile variables, specified as key-value pairs. For example: `priority = \"5\"`.",
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
 				},
 			},
 		},
