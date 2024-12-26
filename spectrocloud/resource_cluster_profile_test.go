@@ -204,8 +204,8 @@ func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
 	result, err := toClusterProfileVariables(mockResourceData)
 
 	// Assertions for valid profile variables
-	assert.Error(t, err)
-	assert.Len(t, result, 0)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
 
 	_ = mockResourceData.Set("cloud", "edge-native")
 	_ = mockResourceData.Set("type", "infra")
@@ -228,8 +228,8 @@ func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
 	_ = mockResourceData.Set("cloud", "aws")
 	_ = mockResourceData.Set("type", "infra")
 	result, err = toClusterProfileVariables(mockResourceData)
-	assert.Error(t, err)
-	assert.Len(t, result, 0)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
 
 	_ = mockResourceData.Set("cloud", "edge-native")
 	_ = mockResourceData.Set("type", "add-on")
@@ -462,7 +462,7 @@ func TestResourceClusterProfileCreate(t *testing.T) {
 func TestResourceClusterProfileCreateError(t *testing.T) {
 	d := prepareBaseClusterProfileTestData()
 	var ctx context.Context
-	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPINegativeClient)
 	assert.NotEmpty(t, diags)
 }
 

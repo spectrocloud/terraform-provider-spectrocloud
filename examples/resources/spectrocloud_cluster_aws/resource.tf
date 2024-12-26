@@ -26,6 +26,11 @@ resource "spectrocloud_cluster_aws" "cluster" {
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id
 
+    variables = {
+      "priority"    = "5",
+      "default_cmd" = "pwd"
+    }
+
     # To override or specify values for a cluster:
 
     # pack {

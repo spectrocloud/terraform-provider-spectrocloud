@@ -41,6 +41,7 @@ Required:
 Optional:
 
 - `pack` (Block List) For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified. (see [below for nested schema](#nestedblock--cluster_profile--pack))
+- `variables` (Map of String) A map of cluster profile variables, specified as key-value pairs. For example: `priority = "5"`.
 
 <a id="nestedblock--cluster_profile--pack"></a>
 ### Nested Schema for `cluster_profile.pack`

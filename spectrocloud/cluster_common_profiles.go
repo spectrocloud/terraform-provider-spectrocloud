@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/spectrocloud/gomi/pkg/ptr"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -53,6 +54,17 @@ func toProfilesCommon(c *client.V1Client, d *schema.ResourceData, clusterUID, co
 	if len(profiles) > 0 {
 		for _, profile := range profiles {
 			p := profile.(map[string]interface{})
+			// Profile Variables handling
+			pVars := make([]*models.V1SpectroClusterVariable, 0)
+			if pv, ok := p["variables"]; ok && pv != nil {
+				variables := p["variables"].(map[string]interface{})
+				for key, value := range variables {
+					pVars = append(pVars, &models.V1SpectroClusterVariable{
+						Name:  ptr.StringPtr(key),
+						Value: value.(string),
+					})
+				}
+			}
 
 			packValues := make([]*models.V1PackValuesEntity, 0)
 			for _, pack := range p["pack"].([]interface{}) {
@@ -62,6 +74,7 @@ func toProfilesCommon(c *client.V1Client, d *schema.ResourceData, clusterUID, co
 			resp = append(resp, &models.V1SpectroClusterProfileEntity{
 				UID:        p["id"].(string),
 				PackValues: packValues,
+				Variables:  pVars,
 			})
 		}
 	}

@@ -16,6 +16,14 @@ func ClusterProfileSchema() *schema.Schema {
 					Description: "The ID of the cluster profile.",
 				},
 				"pack": PackSchema(),
+				"variables": {
+					Type:        schema.TypeMap,
+					Optional:    true,
+					Description: "A map of cluster profile variables, specified as key-value pairs. For example: `priority = \"5\"`.",
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
 			},
 		},
 	}

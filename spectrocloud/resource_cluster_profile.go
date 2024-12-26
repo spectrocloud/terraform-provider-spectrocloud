@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/spectrocloud/gomi/pkg/ptr"
 
@@ -477,16 +476,6 @@ func getManifestUID(name string, packs []*models.V1PackRef) string {
 func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, error) {
 	var profileVariables []*models.V1Variable
 	if pVariables, ok := d.GetOk("profile_variables"); ok {
-
-		// Once the profile_Variables feature is extended to all cloud types, the following block should be removed.
-		cloudType, _ := d.Get("cloud").(string)
-		profileType, _ := d.Get("type").(string)
-		if cloudType != "edge-native" {
-			if profileType != "add-on" {
-				err := errors.New("currently, `profile_variables` is only supported for the `add-on` profile type and other profile type is supported only for edge-native cloud type")
-				return profileVariables, err
-			}
-		}
 
 		if pVariables.([]interface{})[0] != nil {
 			variables := pVariables.([]interface{})[0].(map[string]interface{})["variable"]
