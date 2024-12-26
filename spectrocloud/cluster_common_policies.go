@@ -2,10 +2,10 @@ package spectrocloud
 
 import (
 	"errors"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"strings"
 )
 
 func toPolicies(d *schema.ResourceData) *models.V1SpectroClusterPolicies {
@@ -28,24 +28,47 @@ func toBackupPolicy(d *schema.ResourceData) *models.V1ClusterBackupConfig {
 			}
 		}
 
-		include := true
-		if policy["include_cluster_resources"] != nil {
-			include = policy["include_cluster_resources"].(bool)
+		// Extract and process the policy settings
+		includeClusterResourceMode := models.V1IncludeClusterResourceMode("Auto") // Default value
+		if policy["include_cluster_resources_mode"] != "" {
+			if v, ok := policy["include_cluster_resources_mode"].(string); ok {
+				includeClusterResourceMode = convertIncludeResourceMode(v)
+			}
+		} else if policy["include_cluster_resources"] != nil {
+			if include, ok := policy["include_cluster_resources"].(bool); ok {
+				if include {
+					includeClusterResourceMode = convertIncludeResourceMode("Always")
+				} else {
+					includeClusterResourceMode = convertIncludeResourceMode("Never")
+				}
+			}
 		}
 
 		return &models.V1ClusterBackupConfig{
-			BackupLocationUID:       policy["backup_location_id"].(string),
-			BackupPrefix:            policy["prefix"].(string),
-			DurationInHours:         int64(policy["expiry_in_hour"].(int)),
-			IncludeAllDisks:         policy["include_disks"].(bool),
-			IncludeClusterResources: include,
-			Namespaces:              namespaces,
+			BackupLocationUID:          policy["backup_location_id"].(string),
+			BackupPrefix:               policy["prefix"].(string),
+			DurationInHours:            int64(policy["expiry_in_hour"].(int)),
+			IncludeAllDisks:            policy["include_disks"].(bool),
+			IncludeClusterResourceMode: includeClusterResourceMode,
+			Namespaces:                 namespaces,
 			Schedule: &models.V1ClusterFeatureSchedule{
 				ScheduledRunTime: policy["schedule"].(string),
 			},
 		}
 	}
 	return nil
+}
+
+func convertIncludeResourceMode(m string) (mode models.V1IncludeClusterResourceMode) {
+	switch strings.ToLower(m) {
+	case "always":
+		return models.V1IncludeClusterResourceMode("Always")
+	case "never":
+		return models.V1IncludeClusterResourceMode("Never")
+	case "auto":
+		return models.V1IncludeClusterResourceMode("Auto")
+	}
+	return ""
 }
 
 func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
@@ -57,9 +80,14 @@ func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
 	data["namespaces"] = policy.Namespaces
 	data["expiry_in_hour"] = policy.DurationInHours
 	data["include_disks"] = policy.IncludeAllDisks
-	data["include_cluster_resources"] = policy.IncludeClusterResources
+	data["include_cluster_resources"] = flattenIncludeResourceMode(policy.IncludeClusterResourceMode)
+	data["include_cluster_resources_mode"] = policy.IncludeClusterResourceMode
 	result = append(result, data)
 	return result
+}
+
+func flattenIncludeResourceMode(m models.V1IncludeClusterResourceMode) bool {
+	return m == models.V1IncludeClusterResourceMode("Always")
 }
 
 func updateBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {
