@@ -151,12 +151,6 @@ func prepareClusterVirtualTestData(id string) *schema.ResourceData {
 	return d
 }
 
-func prepareClusterImportTestData(id string) *schema.ResourceData {
-	d := resourceClusterImport().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
 func prepareAddonDeploymentTestData(id string) *schema.ResourceData {
 	d := resourceAddonDeployment().TestResourceData()
 	d.SetId(id)
@@ -388,11 +382,6 @@ func TestResourceClusterEdgeVsphere(t *testing.T) {
 
 func TestResourceClusterVirtual(t *testing.T) {
 	testData := prepareClusterVirtualTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceClusterImport(t *testing.T) {
-	testData := prepareClusterImportTestData("test-id")
 	assert.Equal(t, "test-id", testData.Id())
 }
 

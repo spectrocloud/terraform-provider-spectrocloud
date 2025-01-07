@@ -447,31 +447,6 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 	return diags
 }
 
-func flattenCloudConfigVsphere(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	//ClusterContext := d.Get("context").(string)
-	if err := d.Set("cloud_config_id", configUID); err != nil {
-		return diag.FromErr(err)
-	}
-	if config, err := c.GetCloudConfigVsphere(configUID); err != nil {
-		return diag.FromErr(err)
-	} else {
-		cloudConfig, err := c.GetCloudConfigVsphere(configUID)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		cloudConfigFlatten := flattenClusterConfigsVsphere(d, cloudConfig)
-		if err := d.Set("cloud_config", cloudConfigFlatten); err != nil {
-			return diag.FromErr(err)
-		}
-		mp := flattenMachinePoolConfigsVsphere(config.Spec.MachinePoolConfig)
-		if err := d.Set("machine_pool", mp); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	return diag.Diagnostics{}
-}
-
 func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1VsphereCloudConfig) interface{} {
 
 	cloudConfigFlatten := make([]interface{}, 0)
