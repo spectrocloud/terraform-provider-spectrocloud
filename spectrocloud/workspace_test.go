@@ -109,8 +109,8 @@ func TestFlattenWorkspaceBackupPolicy(t *testing.T) {
 			},
 		},
 	}
-
-	_ = flattenWorkspaceBackupPolicy(backup)
+	resourceData := resourceWorkspace().TestResourceData()
+	_ = flattenWorkspaceBackupPolicy(backup, resourceData)
 }
 
 func TestFlattenWorkspaceClusterNamespaces(t *testing.T) {

@@ -71,7 +71,7 @@ func convertIncludeResourceMode(m string) (mode models.V1IncludeClusterResourceM
 	return ""
 }
 
-func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
+func flattenBackupPolicy(policy *models.V1ClusterBackupConfig, d *schema.ResourceData) []interface{} {
 	result := make([]interface{}, 0, 1)
 	data := make(map[string]interface{})
 	data["schedule"] = policy.Schedule.ScheduledRunTime
@@ -80,8 +80,16 @@ func flattenBackupPolicy(policy *models.V1ClusterBackupConfig) []interface{} {
 	data["namespaces"] = policy.Namespaces
 	data["expiry_in_hour"] = policy.DurationInHours
 	data["include_disks"] = policy.IncludeAllDisks
-	data["include_cluster_resources"] = flattenIncludeResourceMode(policy.IncludeClusterResourceMode)
-	data["include_cluster_resources_mode"] = policy.IncludeClusterResourceMode
+
+	if policies, found := d.GetOk("backup_policy"); found {
+		bPolicy := policies.([]interface{})[0].(map[string]interface{})
+		if bPolicy["include_cluster_resources_mode"] != "" {
+			data["include_cluster_resources_mode"] = strings.ToLower(string(policy.IncludeClusterResourceMode))
+			data["include_cluster_resources"] = true
+		} else {
+			data["include_cluster_resources"] = flattenIncludeResourceMode(policy.IncludeClusterResourceMode)
+		}
+	}
 	result = append(result, data)
 	return result
 }

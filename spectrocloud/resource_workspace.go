@@ -99,7 +99,7 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("backup_policy", flattenWorkspaceBackupPolicy(backup)); err != nil {
+	if err := d.Set("backup_policy", flattenWorkspaceBackupPolicy(backup, d)); err != nil {
 		return diag.FromErr(err)
 	}
 

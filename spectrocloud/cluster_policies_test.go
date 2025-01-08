@@ -76,18 +76,16 @@ func TestFlattenBackupPolicy(t *testing.T) {
 
 	expected := []interface{}{
 		map[string]interface{}{
-			"schedule":                       "daily",
-			"backup_location_id":             "location-123",
-			"prefix":                         "backup-prefix",
-			"namespaces":                     []string{"namespace1", "namespace2"},
-			"expiry_in_hour":                 int64(24),
-			"include_disks":                  true,
-			"include_cluster_resources":      false,
-			"include_cluster_resources_mode": models.V1IncludeClusterResourceMode(""),
+			"schedule":           "daily",
+			"backup_location_id": "location-123",
+			"prefix":             "backup-prefix",
+			"namespaces":         []string{"namespace1", "namespace2"},
+			"expiry_in_hour":     int64(24),
+			"include_disks":      true,
 		},
 	}
-
-	result := flattenBackupPolicy(policy)
+	resourceData := resourceClusterAws().TestResourceData()
+	result := flattenBackupPolicy(policy, resourceData)
 	assert.Equal(t, expected, result)
 }
 
