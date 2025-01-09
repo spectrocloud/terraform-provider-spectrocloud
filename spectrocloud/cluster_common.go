@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
@@ -306,4 +307,22 @@ func flattenCommonAttributeForCustomClusterImport(c *client.V1Client, d *schema.
 		return err
 	}
 	return nil
+}
+
+func flattenCloudConfigGeneric(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
+	return diag.Diagnostics{}
+}
+
+func validateCloudType(data interface{}, path cty.Path) diag.Diagnostics {
+	var diags diag.Diagnostics
+	inCloudType := data.(string)
+	for _, cloudType := range []string{"aws", "azure", "gcp", "vsphere", "generic"} {
+		if cloudType == inCloudType {
+			return diags
+		}
+	}
+	return diag.FromErr(fmt.Errorf("cloud type '%s' is invalid. valid cloud types are %v", inCloudType, "cloud_types"))
 }
