@@ -45,7 +45,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 	if policy, err := c.GetClusterBackupConfig(d.Id()); err != nil {
 		return diag.FromErr(err), true
 	} else if policy != nil && policy.Spec.Config != nil {
-		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config)); err != nil {
+		if err := d.Set("backup_policy", flattenBackupPolicy(policy.Spec.Config, d)); err != nil {
 			return diag.FromErr(err), true
 		}
 	}
