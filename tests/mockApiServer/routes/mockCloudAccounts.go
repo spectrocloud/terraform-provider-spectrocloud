@@ -84,37 +84,6 @@ func getAccountResponse(cloud string) interface{} {
 			},
 			Listmeta: nil,
 		}
-	case "tke":
-		return &models.V1TencentAccounts{
-			Items: []*models.V1TencentAccount{
-				{
-					APIVersion: "",
-					Kind:       "",
-					Metadata: &models.V1ObjectMeta{
-						Annotations:           nil,
-						CreationTimestamp:     models.V1Time{},
-						DeletionTimestamp:     models.V1Time{},
-						Labels:                nil,
-						LastModifiedTimestamp: models.V1Time{},
-						Name:                  "test-tke-account-1",
-						UID:                   "test-tke-account-id-1",
-					},
-					Spec: &models.V1TencentCloudAccount{
-						SecretID:  ptr.StringPtr("test-secretID"),
-						SecretKey: ptr.StringPtr("test-secretKey"),
-					},
-					Status: &models.V1CloudAccountStatus{
-						State: "active",
-					},
-				},
-			},
-			Listmeta: &models.V1ListMetaData{
-				Continue: "",
-				Count:    2,
-				Limit:    10,
-				Offset:   0,
-			},
-		}
 	case "gcp":
 		return &models.V1GcpAccounts{
 			Items: []*models.V1GcpAccount{
@@ -248,37 +217,6 @@ func getAccountNegativeResponse(cloud string) interface{} {
 				},
 			},
 			Listmeta: nil,
-		}
-	case "tke":
-		return &models.V1TencentAccounts{
-			Items: []*models.V1TencentAccount{
-				{
-					APIVersion: "",
-					Kind:       "",
-					Metadata: &models.V1ObjectMeta{
-						Annotations:           nil,
-						CreationTimestamp:     models.V1Time{},
-						DeletionTimestamp:     models.V1Time{},
-						Labels:                nil,
-						LastModifiedTimestamp: models.V1Time{},
-						Name:                  "test--1",
-						UID:                   "test-id-1",
-					},
-					Spec: &models.V1TencentCloudAccount{
-						SecretID:  ptr.StringPtr("test-secretID"),
-						SecretKey: ptr.StringPtr("test-secretKey"),
-					},
-					Status: &models.V1CloudAccountStatus{
-						State: "notActive",
-					},
-				},
-			},
-			Listmeta: &models.V1ListMetaData{
-				Continue: "",
-				Count:    2,
-				Limit:    10,
-				Offset:   0,
-			},
 		}
 	case "gcp":
 		return &models.V1GcpAccounts{
@@ -672,83 +610,6 @@ func CloudAccountsRoutes() []Route {
 			},
 		},
 
-		// tke
-		{
-			Method: "GET",
-			Path:   "/v1/cloudaccounts/tencent",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload:    getAccountResponse("tke"),
-			},
-		},
-		{
-			Method: "POST",
-			Path:   "/v1/cloudaccounts/tencent",
-			Response: ResponseData{
-				StatusCode: 201,
-				Payload:    map[string]string{"UID": "test-tke-account-id-1"},
-			},
-		},
-		{
-			Method: "POST",
-			Path:   "/v1/clouds/tencent/account/validate",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
-			},
-		},
-		{
-			Method: "PUT",
-			Path:   "/v1/cloudaccounts/tencent/{uid}",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    nil,
-			},
-		},
-		{
-			Method: "DELETE",
-			Path:   "/v1/cloudaccounts/tencent/{uid}",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    nil,
-			},
-		},
-		{
-			Method: "GET",
-			Path:   "/v1/cloudaccounts/tencent/{uid}",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &models.V1TencentAccount{
-					APIVersion: "",
-					Kind:       "",
-					Metadata: &models.V1ObjectMeta{
-						Annotations:           nil,
-						CreationTimestamp:     models.V1Time{},
-						DeletionTimestamp:     models.V1Time{},
-						Labels:                nil,
-						LastModifiedTimestamp: models.V1Time{},
-						Name:                  "test-tke-account-1",
-						UID:                   "test-tke-account-id-1",
-					},
-					Spec: &models.V1TencentCloudAccount{
-						SecretID:  ptr.StringPtr("test-secretID"),
-						SecretKey: ptr.StringPtr("test-secretKey"),
-					},
-					Status: &models.V1CloudAccountStatus{
-						State: "active",
-					},
-				},
-			},
-		},
-		{
-			Method: "POST",
-			Path:   "/v1/overlords/tencent/{uid}/account/validate",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
-			},
-		},
-
 		// vsphere
 		{
 			Method: "GET",
@@ -1034,14 +895,6 @@ func CloudAccountsNegativeRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: 200,
 				Payload:    getAccountNegativeResponse("aws"),
-			},
-		},
-		{
-			Method: "GET",
-			Path:   "/v1/cloudaccounts/tencent",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload:    getAccountNegativeResponse("tke"),
 			},
 		},
 		{

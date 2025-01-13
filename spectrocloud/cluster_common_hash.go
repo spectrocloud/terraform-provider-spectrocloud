@@ -215,22 +215,6 @@ func eksLaunchTemplate(v interface{}) string {
 	return buf.String()
 }
 
-func resourceMachinePoolTkeHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
-
-	keys := make([]string, 0, len(m["az_subnets"].(map[string]interface{})))
-	for k := range m["az_subnets"].(map[string]interface{}) {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		buf.WriteString(fmt.Sprintf("%s-%s", k, m["az_subnets"].(map[string]interface{})[k].(string)))
-	}
-
-	return int(hash(buf.String()))
-}
-
 func resourceMachinePoolVsphereHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)

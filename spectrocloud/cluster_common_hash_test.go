@@ -272,36 +272,6 @@ func TestEksLaunchTemplate(t *testing.T) {
 	}
 }
 
-func TestResourceMachinePoolTkeHash(t *testing.T) {
-	testCases := []struct {
-		input    map[string]interface{}
-		expected int
-	}{
-		{
-
-			input: map[string]interface{}{
-				"az_subnets": map[string]interface{}{
-					"subnet1": "10.0.0.1",
-					"subnet2": "10.0.0.2",
-				},
-			},
-			expected: 3634270287,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run("", func(t *testing.T) {
-			// Call the function with the test input
-			result := resourceMachinePoolTkeHash(tc.input)
-
-			// Check if the result matches the expected output
-			if result != tc.expected {
-				t.Errorf("Expected: %d, Got: %d", tc.expected, result)
-			}
-		})
-	}
-}
-
 func TestResourceMachinePoolVsphereHash(t *testing.T) {
 
 	testCases := []struct {
