@@ -73,18 +73,6 @@ func prepareClusterEksTestData(id string) *schema.ResourceData {
 	return d
 }
 
-func prepareCloudAccountTencentTestData(id string) *schema.ResourceData {
-	d := resourceCloudAccountTencent().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
-func prepareClusterTkeTestData(id string) *schema.ResourceData {
-	d := resourceClusterTke().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
 func prepareCloudAccountAzureTestData(id string) *schema.ResourceData {
 	d := resourceCloudAccountAzure().TestResourceData()
 	d.SetId(id)
@@ -317,16 +305,6 @@ func TestResourceClusterMaas(t *testing.T) {
 
 func TestResourceClusterEks(t *testing.T) {
 	testData := prepareClusterEksTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceCloudAccountTencent(t *testing.T) {
-	testData := prepareCloudAccountTencentTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceClusterTke(t *testing.T) {
-	testData := prepareClusterTkeTestData("test-id")
 	assert.Equal(t, "test-id", testData.Id())
 }
 

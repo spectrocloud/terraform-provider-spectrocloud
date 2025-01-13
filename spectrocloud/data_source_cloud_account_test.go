@@ -8,39 +8,6 @@ import (
 	"testing"
 )
 
-func prepareBaseDataSourceTKEAccountSchema() *schema.ResourceData {
-	d := dataSourceCloudAccountTencent().TestResourceData()
-	return d
-}
-
-func TestReadTKEAccountFuncName(t *testing.T) {
-	d := prepareBaseDataSourceTKEAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-tke-account-1")
-	diags = dataSourceCloudAccountTencentRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadTKEAccountFuncID(t *testing.T) {
-	d := prepareBaseDataSourceTKEAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("id", "test-tke-account-id-1")
-	diags = dataSourceCloudAccountTencentRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadTKEAccountFuncNegative(t *testing.T) {
-	d := prepareBaseDataSourceTKEAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-tke-account-1")
-	diags = dataSourceCloudAccountTencentRead(ctx, d, unitTestMockAPINegativeClient)
-	assertFirstDiagMessage(t, diags, "Unable to find tencent cloud account")
-}
-
 func prepareBaseDataSourceAWSAccountSchema() *schema.ResourceData {
 	d := dataSourceCloudAccountAws().TestResourceData()
 	return d
