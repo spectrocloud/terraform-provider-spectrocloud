@@ -74,7 +74,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
-   machine_pool {
+  machine_pool {
     name          = "control-plane"
     count         = 1
     control_plane = true
