@@ -32,10 +32,7 @@ resource "spectrocloud_cluster_maas" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
   cloud_config {
-    subscription_id = "subscription-id"
-    resource_group  = "dev"
-    ssh_key         = "ssh key value"
-    region          = "centralus"
+    domain = "maas.mycompany.com"
   }
 
   cluster_profile {
@@ -77,13 +74,29 @@ resource "spectrocloud_cluster_maas" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
+   machine_pool {
+    name          = "control-plane"
+    count         = 1
+    control_plane = true
+    instance_type {
+      min_cpu       = 8
+      min_memory_mb = 16000
+    }
+    placement {
+      resource_pool = "Production-Compute-Pool-1"
+    }
+  }
+
   machine_pool {
-    name                 = "worker-basic"
-    count                = 1
-    instance_type        = "Standard_DS4"
-    disk_size_gb         = 60
-    is_system_node_pool  = true
-    storage_account_type = "Standard_LRS"
+    name      = "worker-basic"
+    count     = 1
+    instance_type {
+      min_cpu       = 8
+      min_memory_mb = 32000
+    }
+    placement {
+      resource_pool = "Production-Compute-Pool-2"
+    }
   }
 }
 ```
