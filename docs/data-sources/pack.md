@@ -61,7 +61,7 @@ data "spectrocloud_pack" "cni" {
 - `name` (String) The name of the pack to search for.
 - `registry_uid` (String) The unique identifier (UID) of the registry where the pack is located. Specify `registry_uid` to search within a specific registry.
 - `type` (String) The type of pack to search for. Supported values are `helm`, `manifest`, `container`, `operator-instance`.
-- `version` (String) The version of the pack to search for.
+- `version` (String) Specifies the version of the pack to search for. If not set, the latest available version from the specified registry will be used.
 
 ### Read-Only
 
