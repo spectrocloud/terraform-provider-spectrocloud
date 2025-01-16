@@ -3,14 +3,13 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
-	"github.com/spectrocloud/hapi/apiutil/transport"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -68,17 +67,22 @@ func resourceVirtualMachineStateRefreshFunc(c *client.V1Client, clusterUid, vmNa
 	return func() (interface{}, string, error) {
 		vm, err := c.GetVirtualMachine(clusterUid, vmNamespace, vmName)
 		if err != nil {
-			if err.(*transport.TransportError).HttpCode == 500 && strings.Contains(err.(*transport.TransportError).Payload.Message, fmt.Sprintf("Failed to get virtual machine '%s'", vmName)) {
-				emptyVM := &models.V1ClusterVirtualMachine{}
-				return emptyVM, "Deleted", nil
-			} else {
-				return nil, "", err
+			if transportErr, ok := err.(*transport.TransportError); ok {
+				if transportErr.HttpCode == 500 && strings.Contains(transportErr.Payload.Message, fmt.Sprintf("Failed to get virtual machine '%s'", vmName)) {
+					emptyVM := &models.V1ClusterVirtualMachine{}
+					return emptyVM, "Deleted", nil
+				} else {
+					return nil, "", err
+				}
 			}
+			return nil, "", err
 		}
+
 		if vm == nil {
 			emptyVM := &models.V1ClusterVirtualMachine{}
 			return emptyVM, "", nil
 		}
+
 		return vm, vm.Status.PrintableStatus, nil
 	}
 }
