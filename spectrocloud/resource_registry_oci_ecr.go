@@ -47,16 +47,23 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Required:    true,
 				Description: "Specifies whether the registry is private or public. Private registries require authentication to access.",
 			},
+			"is_synchronization": {
+				Type:        schema.TypeBool,
+				Default:     false,
+				Optional:    true,
+				Description: "Specifies whether the registry is synchronized.",
+			},
 			"endpoint": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The URL endpoint of the OCI registry. This is where the container images are hosted and accessed.",
 			},
 			"provider_type": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "helm",
-				Description: "The type of provider used for interacting with the registry. The default is 'helm'.",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "helm",
+				ValidateFunc: validation.StringInSlice([]string{"helm", "zarf", "pack"}, false),
+				Description:  "The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type=\"basic\"`  ",
 			},
 			"credentials": {
 				Type:        schema.TypeList,
@@ -107,6 +114,15 @@ func resourceRegistryOciEcr() *schema.Resource {
 				},
 			},
 		},
+		CustomizeDiff: func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			providerType := d.Get("provider_type").(string)
+			registryType := d.Get("type").(string)
+			// Validate that `provider_type` is "zarf" only if `type` is "basic"
+			if providerType == "zarf" && registryType != "basic" {
+				return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `type` is `basic`")
+			}
+			return nil
+		},
 	}
 }
 
@@ -117,6 +133,7 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 	registryType := d.Get("type").(string)
 
 	if registryType == "ecr" {
+
 		registry := toRegistryEcr(d)
 
 		uid, err := c.CreateOciEcrRegistry(registry)
@@ -261,15 +278,19 @@ func resourceRegistryEcrDelete(ctx context.Context, d *schema.ResourceData, m in
 func toRegistryEcr(d *schema.ResourceData) *models.V1EcrRegistry {
 	endpoint := d.Get("endpoint").(string)
 	isPrivate := d.Get("is_private").(bool)
+	isSynchronization := d.Get("is_synchronization").(bool)
+	providerType := d.Get("provider_type").(string)
 	s3config := d.Get("credentials").([]interface{})[0].(map[string]interface{})
 	return &models.V1EcrRegistry{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 		},
 		Spec: &models.V1EcrRegistrySpec{
-			Credentials: toRegistryAwsAccountCredential(s3config),
-			Endpoint:    &endpoint,
-			IsPrivate:   &isPrivate,
+			Credentials:     toRegistryAwsAccountCredential(s3config),
+			Endpoint:        &endpoint,
+			IsPrivate:       &isPrivate,
+			ProviderType:    &providerType,
+			IsSyncSupported: isSynchronization,
 		},
 	}
 }
@@ -277,6 +298,7 @@ func toRegistryEcr(d *schema.ResourceData) *models.V1EcrRegistry {
 func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 	endpoint := d.Get("endpoint").(string)
 	provider := d.Get("provider_type").(string)
+	isSynchronization := d.Get("is_synchronization").(bool)
 	authConfig := d.Get("credentials").([]interface{})[0].(map[string]interface{})
 
 	var username, password string
@@ -301,6 +323,7 @@ func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 					InsecureSkipVerify: false,
 				},
 			},
+			IsSyncSupported: isSynchronization,
 		},
 	}
 
