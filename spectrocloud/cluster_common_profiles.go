@@ -155,10 +155,12 @@ func setPackManifests(pack *models.V1PackValuesEntity, p map[string]interface{},
 func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	log.Printf("Updating profiles")
 	profiles, err := toAddonDeplProfiles(c, d)
+	var variableEntity []*models.V1SpectroClusterVariableUpdateEntity
 	if err != nil {
 		oldProfile, _ := d.GetChange("cluster_profile")
 		// When profile modification failed we are setting back the un applied version back to tf state
 		_ = d.Set("cluster_profile", oldProfile)
+
 		return err
 	}
 	settings, err := toSpcApplySettings(d)
@@ -183,6 +185,28 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		return err
 	}
 
+	// Profile Variable Handling
+	pVars := make([]*models.V1SpectroClusterVariable, 0)
+	_, newProfile := d.GetChange("cluster_profile")
+	p := newProfile.(map[string]interface{})
+	if pv, ok := p["variables"]; ok && pv != nil {
+		variables := p["variables"].(map[string]interface{})
+		for key, value := range variables {
+			pVars = append(pVars, &models.V1SpectroClusterVariable{
+				Name:  ptr.StringPtr(key),
+				Value: value.(string),
+			})
+		}
+	}
+	variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
+		ProfileUID: ptr.StringPtr(p["id"].(string)),
+		Variables:  pVars,
+	})
+
+	err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
