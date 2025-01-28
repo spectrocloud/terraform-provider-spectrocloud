@@ -124,6 +124,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 Optional:
 
+- `is_two_node_cluster` (Boolean) Set to `true` to enable a two-node cluster.
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
 - `overlay_cidr_range` (String) The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`
 - `ssh_keys` (Set of String) List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.
