@@ -26,7 +26,7 @@ func resourceResourceLimit() *schema.Resource {
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
 		Description:   "",
-		SchemaVersion: 1,
+		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"alert": {
 				Type:         schema.TypeInt,
