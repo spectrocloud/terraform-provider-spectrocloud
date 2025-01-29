@@ -51,7 +51,7 @@ func dataSourcePack() *schema.Resource {
 			},
 			"version": {
 				Type:        schema.TypeString,
-				Description: "Specifies the version of the pack to search for. If not set, the latest available version from the specified registry will be used.",
+				Description: "Specify the version of the pack to search for. If not set, the latest available version from the specified registry will be used.",
 				Computed:    true,
 				Optional:    true,
 			},
