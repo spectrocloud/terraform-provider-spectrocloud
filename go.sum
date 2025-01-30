@@ -597,12 +597,12 @@ github.com/smartystreets/goconvey v1.6.4/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/soheilhy/cmux v0.1.5/go.mod h1:T7TcVDs9LWfQgPlPsdngu6I6QIoyIFZDDC6sNE1GqG0=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
-github.com/spectrocloud/gomi v1.14.1-0.20240214074114-c19394812368 h1:eY0BOyEbGuNZcLtILVQrh7D7oEu+UezpLkuCzlK6Ae4=
-github.com/spectrocloud/gomi v1.14.1-0.20240214074114-c19394812368/go.mod h1:LlZ9We4kDaELYi7Is0SVmnySuDhwphJLS6ZT4wXxFIk=
+github.com/spectrocloud/gomi v1.14.1-0.20241226051628-5517f1108187 h1:P1VH0jiSo/KND6pYxDPM+wy4bPthH9uxdPu0We8kQFk=
+github.com/spectrocloud/gomi v1.14.1-0.20241226051628-5517f1108187/go.mod h1:HUKoN5t9KjBY7R2F4gj9rIBnpN8jRPEFWqe1ul+SKCA=
 github.com/spectrocloud/hapi v1.14.1-0.20240214071352-81f589b1d86d h1:OMRbHxMJ1a+G1BYzvUYuMM0wLkYJPdnEOFx16faQ/UY=
 github.com/spectrocloud/hapi v1.14.1-0.20240214071352-81f589b1d86d/go.mod h1:MktpRPnSXDTHsQrFSD+daJFQ1zMLSR+1gWOL31jVvWE=
-github.com/spectrocloud/palette-sdk-go v0.0.0-20250128174237-7ff93c608ae2 h1:dgisL6mrzj4aEUEfOfotrTPGvClYjf+m3DeiLciR1CQ=
-github.com/spectrocloud/palette-sdk-go v0.0.0-20250128174237-7ff93c608ae2/go.mod h1:Zv1+/Imw/lIOPAa+q9TzdyKiXmIzfLSwVTj11WemIZc=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20250129091228-61bad491e5e8 h1:VjJvMdivBh0TLPKJhtbZa1OYcGmbvoVIAHNN8v1cnvc=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20250129091228-61bad491e5e8/go.mod h1:Zv1+/Imw/lIOPAa+q9TzdyKiXmIzfLSwVTj11WemIZc=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
 github.com/spf13/afero v1.6.0/go.mod h1:Ai8FlHk4v/PARR026UzYexafAt9roJ7LcLMAmO6Z93I=

@@ -3,6 +3,11 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"github.com/Masterminds/semver/v3"
+	"github.com/spectrocloud/gomi/pkg/ptr"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -46,7 +51,7 @@ func dataSourcePack() *schema.Resource {
 			},
 			"version": {
 				Type:        schema.TypeString,
-				Description: "The version of the pack to search for.",
+				Description: "Specify the version of the pack to search for. If not set, the latest available version from the specified registry will be used.",
 				Computed:    true,
 				Optional:    true,
 			},
@@ -73,6 +78,7 @@ func dataSourcePack() *schema.Resource {
 
 func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
+	var packName = ""
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -115,16 +121,23 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 				and first part would be any random name to make overall pack name unique and 2nd part is actual pack name.
 				Thus, splitting pack name with '--' to get the correct pack name to find pack uuid
 			*/
+
 			if strings.Contains(v.(string), "--") {
 				v = strings.Split(v.(string), "--")[1]
 			}
+			packName = v.(string)
 			filters = append(filters, fmt.Sprintf("spec.name=%s", v.(string)))
-		}
-		if v, ok := d.GetOk("version"); ok {
-			filters = append(filters, fmt.Sprintf("spec.version=%s", v.(string)))
 		}
 		if v, ok := d.GetOk("registry_uid"); ok {
 			registryUID = v.(string)
+		}
+		if v, ok := d.GetOk("version"); ok {
+			filters = append(filters, fmt.Sprintf("spec.version=%s", v.(string)))
+		} else {
+			latestVersion := setLatestPackVersionToFilters(packName, registryUID, c)
+			if latestVersion != "" {
+				filters = append(filters, fmt.Sprintf("spec.version=%s", latestVersion))
+			}
 		}
 		if v, ok := d.GetOk("cloud"); ok {
 			clouds := expandStringList(v.(*schema.Set).List())
@@ -140,7 +153,7 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		return diag.FromErr(err)
 	}
 
-	packName := "unknown"
+	packName = "unknown"
 	if v, ok := d.GetOk("name"); ok {
 		packName = v.(string)
 	}
@@ -195,4 +208,50 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 	}
 
 	return diags
+}
+
+func setLatestPackVersionToFilters(packName string, registryUID string, c *client.V1Client) string {
+	var packLayers = []models.V1PackLayer{"addon", "csi", "cni", "os", "kernel"}
+	var packTypes = []models.V1PackType{"spectro", "helm", "manifest", "oci"}
+	var packAddOnTypes = []string{"load balancer", "ingress", "logging", "monitoring", "security", "authentication",
+		"servicemesh", "system app", "app services", "registry", "csi", "cni", "integration", ""}
+
+	newFilter := &models.V1PackFilterSpec{
+		Name: &models.V1FilterString{
+			Eq: ptr.StringPtr(packName),
+		},
+		Type:        packTypes,
+		Layer:       packLayers,
+		Environment: []string{"all"},
+		AddOnType:   packAddOnTypes,
+	}
+	if registryUID != "" {
+		newFilter.RegistryUID = []string{registryUID}
+	}
+	var newSort []*models.V1PackSortSpec
+	latestVersion := ""
+	packsResults, _ := c.SearchPacks(newFilter, newSort)
+	if len(packsResults) == 1 {
+		latestVersion, _ = getLatestVersion(packsResults[0].Spec.Registries)
+		return latestVersion
+	}
+	return ""
+}
+
+// getLatestVersion returns the latest version from a list of version strings.
+func getLatestVersion(versions []*models.V1RegistryPackMetadata) (string, error) {
+	if len(versions) == 0 {
+		return "", fmt.Errorf("no versions provided")
+	}
+	semverVersions := make([]*semver.Version, len(versions))
+	for i, v := range versions {
+		ver, err := semver.NewVersion(v.LatestVersion)
+		if err != nil {
+			return "", fmt.Errorf("invalid version %q: %w", v, err)
+		}
+		semverVersions[i] = ver
+	}
+	sort.Sort(semver.Collection(semverVersions))
+
+	return semverVersions[len(semverVersions)-1].String(), nil
 }
