@@ -154,6 +154,12 @@ func resourceClusterEdgeNative() *schema.Resource {
 							ForceNew:    true,
 							Description: "The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`",
 						},
+						"is_two_node_cluster": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Set to `true` to enable a two-node cluster.",
+						},
 						"ntp_servers": {
 							Type:     schema.TypeSet,
 							Optional: true,
@@ -419,6 +425,9 @@ func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config 
 	if config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr != "" {
 		m["overlay_cidr_range"] = config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr
 	}
+	if config.Spec.ClusterConfig != nil {
+		m["is_two_node_cluster"] = config.Spec.ClusterConfig.IsTwoNodeCluster
+	}
 
 	return []interface{}{m}
 }
@@ -614,6 +623,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroEdgeNativeClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	sshKeys, _ := toSSHKeys(cloudConfig)
+	isTwoNodeCluster := cloudConfig["is_two_node_cluster"]
 
 	clusterContext := d.Get("context").(string)
 	profiles, err := toProfiles(c, d, clusterContext)
@@ -636,6 +646,7 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 				SSHKeys:                     sshKeys,
 				ControlPlaneEndpoint:        controlPlaneEndpoint,
 				OverlayNetworkConfiguration: overlayConfig,
+				IsTwoNodeCluster:            isTwoNodeCluster.(bool),
 			},
 		},
 	}

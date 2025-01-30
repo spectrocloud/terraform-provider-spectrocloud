@@ -553,10 +553,11 @@ func TestFlattenClusterConfigsEdgeNative(t *testing.T) {
 	// Assertions for valid Cloud Config and Config
 	expectedValidResult := []interface{}{
 		map[string]interface{}{
-			"ssh_keys":           []string{"ssh-key-1", "ssh-key-2"},
-			"vip":                "192.168.1.1",
-			"ntp_servers":        []string{"ntp-server-1", "ntp-server-2"},
-			"overlay_cidr_range": "10.0.0.0/16",
+			"ssh_keys":            []string{"ssh-key-1", "ssh-key-2"},
+			"vip":                 "192.168.1.1",
+			"ntp_servers":         []string{"ntp-server-1", "ntp-server-2"},
+			"overlay_cidr_range":  "10.0.0.0/16",
+			"is_two_node_cluster": false,
 		},
 	}
 	assert.Equal(t, expectedValidResult, resultValid)
@@ -576,7 +577,7 @@ func TestFlattenClusterConfigsEdgeNative(t *testing.T) {
 	resultMissingHost := flattenClusterConfigsEdgeNative(cloudConfig, missingHostConfig)
 
 	// Assertions for missing Control Plane Endpoint Host
-	assert.Equal(t, []interface{}{map[string]interface{}{}}, resultMissingHost)
+	assert.Equal(t, []interface{}{map[string]interface{}{"is_two_node_cluster": false}}, resultMissingHost)
 
 	// Test case 3: Missing Cluster Config
 	missingConfig := &models.V1EdgeNativeCloudConfig{}
