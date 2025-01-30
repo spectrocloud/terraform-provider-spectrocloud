@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"strings"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
@@ -96,11 +97,13 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 	}
 
 	backup, err := c.GetWorkspaceBackup(uid)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "Backup not configured") {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("backup_policy", flattenWorkspaceBackupPolicy(backup, d)); err != nil {
-		return diag.FromErr(err)
+	if backup != nil {
+		if err := d.Set("backup_policy", flattenWorkspaceBackupPolicy(backup, d)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if err := d.Set("cluster_rbac_binding", flattenClusterRBAC(workspace.Spec.ClusterRbacs)); err != nil {
@@ -149,12 +152,21 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 	}
 
 	if d.HasChange("backup_policy") {
+		oldBackup, newBackup := d.GetChange("backup_policy")
 		if len(d.Get("backup_policy").([]interface{})) == 0 {
-			return diag.FromErr(errors.New("not implemented"))
+			if len(newBackup.([]interface{})) == 0 {
+				return diag.FromErr(errors.New("backup configuration cannot be removed, but the schedule can be disabled"))
+			}
+		} else if len(newBackup.([]interface{})) > len(oldBackup.([]interface{})) {
+			if err := createWorkspaceBackupPolicy(c, d); err != nil {
+				return diag.FromErr(err)
+			}
+		} else {
+			if err := updateWorkspaceBackupPolicy(c, d); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := updateWorkspaceBackupPolicy(c, d); err != nil {
-			return diag.FromErr(err)
-		}
+
 	}
 
 	resourceWorkspaceRead(ctx, d, m)
