@@ -39,7 +39,8 @@ resource "spectrocloud_registry_oci" "r1" {
 
 ### Optional
 
-- `provider_type` (String) The type of provider used for interacting with the registry. The default is 'helm'.
+- `is_synchronization` (Boolean) Specifies whether the registry is synchronized.
+- `provider_type` (String) The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type="basic"`
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
