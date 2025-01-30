@@ -187,26 +187,29 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 
 	// Profile Variable Handling
 	pVars := make([]*models.V1SpectroClusterVariable, 0)
-	_, newProfile := d.GetChange("cluster_profile")
-	p := newProfile.(map[string]interface{})
-	if pv, ok := p["variables"]; ok && pv != nil {
-		variables := p["variables"].(map[string]interface{})
-		for key, value := range variables {
-			pVars = append(pVars, &models.V1SpectroClusterVariable{
-				Name:  ptr.StringPtr(key),
-				Value: value.(string),
-			})
+	_, newProfiles := d.GetChange("cluster_profile")
+	for _, newProfile := range newProfiles.([]interface{}) {
+		p := newProfile.(map[string]interface{})
+		if pv, ok := p["variables"]; ok && pv != nil {
+			variables := p["variables"].(map[string]interface{})
+			for key, value := range variables {
+				pVars = append(pVars, &models.V1SpectroClusterVariable{
+					Name:  ptr.StringPtr(key),
+					Value: value.(string),
+				})
+			}
+		}
+		variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
+			ProfileUID: ptr.StringPtr(p["id"].(string)),
+			Variables:  pVars,
+		})
+
+		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
+		if err != nil {
+			return err
 		}
 	}
-	variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
-		ProfileUID: ptr.StringPtr(p["id"].(string)),
-		Variables:  pVars,
-	})
 
-	err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
