@@ -3,6 +3,7 @@ module github.com/spectrocloud/terraform-provider-spectrocloud
 go 1.22.5
 
 require (
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/google/go-cmp v0.6.0
 	github.com/gorilla/mux v1.8.0
@@ -12,7 +13,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/gomi v1.14.1-0.20240214074114-c19394812368
 	github.com/spectrocloud/hapi v1.14.1-0.20240214071352-81f589b1d86d
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20241227233030-cd7c351b4722
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20250129091228-61bad491e5e8
 	github.com/stretchr/testify v1.10.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.23.5
@@ -23,7 +24,6 @@ require (
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect

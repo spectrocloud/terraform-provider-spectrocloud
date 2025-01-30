@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -47,4 +48,62 @@ func TestDataSourcePacksReadHelmMultiPacks(t *testing.T) {
 	diags := dataSourcePackRead(context.Background(), d, unitTestMockAPINegativeClient)
 	assertFirstDiagMessage(t, diags, "Multiple packs returned")
 
+}
+
+func TestGetLatestVersion(t *testing.T) {
+	t.Run("valid versions", func(t *testing.T) {
+		versions := []*models.V1RegistryPackMetadata{
+			{LatestVersion: "v1.0.0"},
+			{LatestVersion: "v1.2.0"},
+			{LatestVersion: "v1.1.0"},
+		}
+		latest, err := getLatestVersion(versions)
+
+		assert.NoError(t, err, "Expected no error")
+		assert.Equal(t, "1.2.0", latest, "The latest version should be returned")
+	})
+
+	t.Run("empty versions list", func(t *testing.T) {
+		versions := []*models.V1RegistryPackMetadata{}
+		latest, err := getLatestVersion(versions)
+
+		assert.Error(t, err, "Expected an error for empty versions list")
+		assert.Equal(t, "", latest, "No version should be returned")
+		assert.Equal(t, "no versions provided", err.Error(), "Expected specific error message")
+	})
+
+	t.Run("invalid version string", func(t *testing.T) {
+		versions := []*models.V1RegistryPackMetadata{
+			{LatestVersion: "1.0.0"},
+			{LatestVersion: "invalid-version"},
+			{LatestVersion: "1.1.0"},
+		}
+		latest, err := getLatestVersion(versions)
+
+		assert.Error(t, err, "Expected an error for invalid version string")
+		assert.Equal(t, "", latest, "No version should be returned for invalid input")
+		assert.Contains(t, err.Error(), "invalid version", "Error message should indicate invalid version")
+	})
+
+	t.Run("single version", func(t *testing.T) {
+		versions := []*models.V1RegistryPackMetadata{
+			{LatestVersion: "2.0.0"},
+		}
+		latest, err := getLatestVersion(versions)
+
+		assert.NoError(t, err, "Expected no error")
+		assert.Equal(t, "2.0.0", latest, "The single version should be returned")
+	})
+
+	t.Run("pre-release versions", func(t *testing.T) {
+		versions := []*models.V1RegistryPackMetadata{
+			{LatestVersion: "1.0.0-alpha"},
+			{LatestVersion: "1.0.0-beta"},
+			{LatestVersion: "1.0.0"},
+		}
+		latest, err := getLatestVersion(versions)
+
+		assert.NoError(t, err, "Expected no error")
+		assert.Equal(t, "1.0.0", latest, "The stable version should be returned as the latest")
+	})
 }
