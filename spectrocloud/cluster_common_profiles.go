@@ -204,10 +204,11 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 			Variables:  pVars,
 		})
 
-		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
-		if err != nil {
-			return err
-		}
+	}
+	// Patching cluster profiles Variables
+	err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
+	if err != nil {
+		return err
 	}
 
 	return nil
