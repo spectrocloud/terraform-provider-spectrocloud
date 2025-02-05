@@ -25,6 +25,13 @@ func toWorkspacePolicies(d *schema.ResourceData) *models.V1WorkspacePolicies {
 	}
 }
 
+func createWorkspaceBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {
+	if policy := toWorkspaceBackupPolicy(d); policy != nil {
+		return c.CreateWorkspaceBackupConfig(d.Id(), policy)
+	}
+	return nil
+}
+
 func updateWorkspaceBackupPolicy(c *client.V1Client, d *schema.ResourceData) error {
 	if policy := toWorkspaceBackupPolicy(d); policy != nil {
 		return c.UpdateWorkspaceBackupConfig(d.Id(), policy)
