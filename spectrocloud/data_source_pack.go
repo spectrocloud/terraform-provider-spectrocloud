@@ -211,8 +211,8 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 }
 
 func setLatestPackVersionToFilters(packName string, registryUID string, c *client.V1Client) string {
-	var packLayers = []models.V1PackLayer{"addon", "csi", "cni", "os", "kernel"}
-	var packTypes = []models.V1PackType{"spectro", "helm", "manifest", "oci"}
+	var packLayers = []models.V1PackLayer{models.V1PackLayerKernel, models.V1PackLayerOs, models.V1PackLayerK8s, models.V1PackLayerCni, models.V1PackLayerCsi, models.V1PackLayerAddon}
+	var packTypes = []models.V1PackType{models.V1PackTypeSpectro, models.V1PackTypeHelm, models.V1PackTypeManifest, models.V1PackTypeOci}
 	var packAddOnTypes = []string{"load balancer", "ingress", "logging", "monitoring", "security", "authentication",
 		"servicemesh", "system app", "app services", "registry", "csi", "cni", "integration", ""}
 
@@ -253,5 +253,5 @@ func getLatestVersion(versions []*models.V1RegistryPackMetadata) (string, error)
 	}
 	sort.Sort(semver.Collection(semverVersions))
 
-	return semverVersions[len(semverVersions)-1].String(), nil
+	return semverVersions[len(semverVersions)-1].Original(), nil
 }
