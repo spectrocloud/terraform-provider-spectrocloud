@@ -53,9 +53,9 @@ func TestDataSourcePacksReadHelmMultiPacks(t *testing.T) {
 func TestGetLatestVersion(t *testing.T) {
 	t.Run("valid versions", func(t *testing.T) {
 		versions := []*models.V1RegistryPackMetadata{
-			{LatestVersion: "v1.0.0"},
-			{LatestVersion: "v1.2.0"},
-			{LatestVersion: "v1.1.0"},
+			{LatestVersion: "1.0.0"},
+			{LatestVersion: "1.2.0"},
+			{LatestVersion: "1.1.0"},
 		}
 		latest, err := getLatestVersion(versions)
 
