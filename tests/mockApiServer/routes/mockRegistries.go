@@ -117,6 +117,14 @@ func RegistriesRoutes() []Route {
 			},
 		},
 		{
+			Method: "POST",
+			Path:   "/v1/registries/oci/ecr/validate",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload:    nil,
+			},
+		},
+		{
 			Method: "GET",
 			Path:   "/v1/registries/oci/summary",
 			Response: ResponseData{
