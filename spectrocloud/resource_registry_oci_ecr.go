@@ -66,9 +66,10 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Description: "Specifies a suffix to append to the endpoint. This field is optional, but some registries (e.g., JFrog) may require it. The final registry URL is constructed by appending this suffix to the endpoint.",
 			},
 			"base_content_path": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "The relative path to the endpoint",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The relative path to the endpoint specified.",
 			},
 			"provider_type": {
 				Type:         schema.TypeString,
@@ -130,14 +131,16 @@ func resourceRegistryOciEcr() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"certificate": {
-										Type:     schema.TypeString,
-										Optional: true,
-										Default:  "",
+										Type:        schema.TypeString,
+										Optional:    true,
+										Default:     "",
+										Description: "Specifies the TLS certificate used for secure communication. Required for enabling SSL/TLS encryption.",
 									},
 									"insecure_skip_verify": {
-										Type:     schema.TypeBool,
-										Optional: true,
-										Default:  false,
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     false,
+										Description: "Disables TLS certificate verification when set to true. Use with caution as it may expose connections to security risks.",
 									},
 								},
 							},

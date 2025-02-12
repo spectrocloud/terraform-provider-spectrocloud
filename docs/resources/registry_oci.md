@@ -39,7 +39,7 @@ resource "spectrocloud_registry_oci" "r1" {
 
 ### Optional
 
-- `base_content_path` (String)
+- `base_content_path` (String) The relative path to the endpoint specified.
 - `endpoint_suffix` (String) Specifies a suffix to append to the endpoint. This field is optional, but some registries (e.g., JFrog) may require it. The final registry URL is constructed by appending this suffix to the endpoint.
 - `is_synchronization` (Boolean) Specifies whether the registry is synchronized.
 - `provider_type` (String) The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type="basic"`
@@ -71,8 +71,8 @@ Optional:
 
 Optional:
 
-- `certificate` (String)
-- `insecure_skip_verify` (Boolean)
+- `certificate` (String) Specifies the TLS certificate used for secure communication. Required for enabling SSL/TLS encryption.
+- `insecure_skip_verify` (Boolean) Disables TLS certificate verification when set to true. Use with caution as it may expose connections to security risks.
 
 
 
