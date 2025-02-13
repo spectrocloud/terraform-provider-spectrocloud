@@ -199,16 +199,19 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 				})
 			}
 		}
-		variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
-			ProfileUID: ptr.StringPtr(p["id"].(string)),
-			Variables:  pVars,
-		})
-
+		if len(pVars) != 0 {
+			variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
+				ProfileUID: ptr.StringPtr(p["id"].(string)),
+				Variables:  pVars,
+			})
+		}
 	}
 	// Patching cluster profiles Variables
-	err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
-	if err != nil {
-		return err
+	if len(variableEntity) != 0 {
+		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
