@@ -186,9 +186,9 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	}
 
 	// Profile Variable Handling
-	pVars := make([]*models.V1SpectroClusterVariable, 0)
 	_, newProfiles := d.GetChange("cluster_profile")
 	for _, newProfile := range newProfiles.([]interface{}) {
+		pVars := make([]*models.V1SpectroClusterVariable, 0)
 		p := newProfile.(map[string]interface{})
 		if pv, ok := p["variables"]; ok && pv != nil {
 			variables := p["variables"].(map[string]interface{})
