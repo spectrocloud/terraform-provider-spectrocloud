@@ -186,9 +186,9 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	}
 
 	// Profile Variable Handling
-	pVars := make([]*models.V1SpectroClusterVariable, 0)
 	_, newProfiles := d.GetChange("cluster_profile")
 	for _, newProfile := range newProfiles.([]interface{}) {
+		pVars := make([]*models.V1SpectroClusterVariable, 0)
 		p := newProfile.(map[string]interface{})
 		if pv, ok := p["variables"]; ok && pv != nil {
 			variables := p["variables"].(map[string]interface{})
@@ -199,16 +199,19 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 				})
 			}
 		}
-		variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
-			ProfileUID: ptr.StringPtr(p["id"].(string)),
-			Variables:  pVars,
-		})
-
+		if len(pVars) != 0 {
+			variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
+				ProfileUID: ptr.StringPtr(p["id"].(string)),
+				Variables:  pVars,
+			})
+		}
 	}
 	// Patching cluster profiles Variables
-	err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
-	if err != nil {
-		return err
+	if len(variableEntity) != 0 {
+		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
