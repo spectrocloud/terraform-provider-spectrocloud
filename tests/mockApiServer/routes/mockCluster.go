@@ -25,7 +25,9 @@ func ClusterRoutes() []Route {
 							Status:      nil,
 						},
 					},
-					Listmeta: nil,
+					Listmeta: &models.V1ListMetaData{
+						Continue: "",
+					},
 				},
 			},
 		},
