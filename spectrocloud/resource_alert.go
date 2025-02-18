@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -129,6 +130,7 @@ func resourceAlert() *schema.Resource {
 
 func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
+	component := d.Get("component").(string)
 	var err error
 	projectUid, err := getProjectID(d, m)
 	if err != nil {
@@ -136,9 +138,35 @@ func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 	var diags diag.Diagnostics
 	alertObj := toAlert(d)
-	uid, err := c.CreateAlert(alertObj, projectUid, d.Get("component").(string))
+	// Handling logic as per UI. In UI, it shows only top email alert but back end stores as a list. email alerts are likely to single doc per project
+	projectSpec, err := c.GetProject(projectUid)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+	if len(projectSpec.Spec.Alerts) != 0 {
+		for _, s := range projectSpec.Spec.Alerts[0].Channels {
+			if s.Type == "email" {
+				_ = c.DeleteAlert(projectUid, d.Get("component").(string), s.UID)
+			}
+		}
+	}
+
+	uid, err := c.CreateAlert(alertObj, projectUid, component)
+	if err != nil {
+		// Enabling `ClusterHealth` for alerts, basically for setting up for the first time
+		if strings.Contains(err.Error(), "Project 'ClusterHealth' alerts are not found") {
+			emptyAlert := &models.V1AlertEntity{
+				Channels: []*models.V1Channel{},
+			}
+			err = c.UpdateProjectAlerts(emptyAlert, projectUid, component)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			uid, err = c.CreateAlert(alertObj, projectUid, component)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 	d.SetId(uid)
 	return diags
