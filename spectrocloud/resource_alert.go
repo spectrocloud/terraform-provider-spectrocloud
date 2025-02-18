@@ -131,6 +131,7 @@ func resourceAlert() *schema.Resource {
 func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
 	component := d.Get("component").(string)
+	alertType := d.Get("type").(string)
 	var err error
 	projectUid, err := getProjectID(d, m)
 	if err != nil {
@@ -138,19 +139,18 @@ func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 	var diags diag.Diagnostics
 	alertObj := toAlert(d)
+
 	// Handling logic as per UI. In UI, it shows only top email alert but back end stores as a list. email alerts are likely to single doc per project
-	projectSpec, err := c.GetProject(projectUid)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if len(projectSpec.Spec.Alerts) != 0 {
-		emailAlertCount := 0
-		for _, s := range projectSpec.Spec.Alerts[0].Channels {
-			if s.Type == "email" {
-				if emailAlertCount > 0 {
+	if alertType == "email" {
+		projectSpec, err := c.GetProject(projectUid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if len(projectSpec.Spec.Alerts) != 0 {
+			for _, s := range projectSpec.Spec.Alerts[0].Channels {
+				if s.Type == "email" {
 					_ = c.DeleteAlert(projectUid, d.Get("component").(string), s.UID)
 				}
-				emailAlertCount = emailAlertCount + 1
 			}
 		}
 	}
