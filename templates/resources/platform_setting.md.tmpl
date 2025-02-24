@@ -1,0 +1,42 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+Tenant/Project administration can be achieved through platform settings such as session_timeout, agent_upgrade, login_banner, and cluster_remediation.[Platform Setting](https://docs.spectrocloud.com/clusters/cluster-management/platform-settings/) guide.
+
+~> The tenant_platform_setting resource enforces settings across projects. By default, it is configured with Palette’s default values. Users can customize settings as needed. Destroying the spectrocloud_platform_setting resource resets it to Palette defaults.
+
+## Example Usage
+
+An example of managing an developer setting in Palette.
+
+```hcl
+
+resource "spectrocloud_platform_setting" "platform_settings" {
+  context = "tenant"
+  enable_auto_remediation = true
+  session_timeout = 230
+  cluster_auto_remediation = true
+  pause_agent_upgrades = "lock"
+  login_banner {
+    title = "test"
+    message = "test"
+  }
+}
+
+## import existing platform settings
+#import {
+#  to = spectrocloud_platform_setting.platform_setting
+#  id = "{tenantUID/ProjectUID}:{tenant/project)}" // tenant-uid:tenant or project-uid:project
+#}
+
+```
+
+{{ .SchemaMarkdown | trimspace }}

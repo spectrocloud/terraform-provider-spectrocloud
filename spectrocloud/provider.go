@@ -140,6 +140,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_password_policy":   resourcePasswordPolicy(),
 				"spectrocloud_resource_limit":    resourceResourceLimit(),
 				"spectrocloud_developer_setting": resourceDeveloperSetting(),
+				"spectrocloud_platform_setting":  resourcePlatformSetting(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_permission": dataSourcePermission(),
