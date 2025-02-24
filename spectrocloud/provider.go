@@ -132,13 +132,14 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_appliance": resourceAppliance(),
 
-				"spectrocloud_workspace":       resourceWorkspace(),
-				"spectrocloud_alert":           resourceAlert(),
-				"spectrocloud_ssh_key":         resourceSSHKey(),
-				"spectrocloud_user":            resourceUser(),
-				"spectrocloud_role":            resourceRole(),
-				"spectrocloud_password_policy": resourcePasswordPolicy(),
-				"spectrocloud_resource_limit":  resourceResourceLimit(),
+				"spectrocloud_workspace":         resourceWorkspace(),
+				"spectrocloud_alert":             resourceAlert(),
+				"spectrocloud_ssh_key":           resourceSSHKey(),
+				"spectrocloud_user":              resourceUser(),
+				"spectrocloud_role":              resourceRole(),
+				"spectrocloud_password_policy":   resourcePasswordPolicy(),
+				"spectrocloud_resource_limit":    resourceResourceLimit(),
+				"spectrocloud_developer_setting": resourceDeveloperSetting(),
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"spectrocloud_permission": dataSourcePermission(),

@@ -1,0 +1,37 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+Each developer in this tenant may create up to 1 virtual clusters and will be allocated compute and storage quota across all their virtual clusters based on the configuration in developer setting [Developer Setting](https://docs.spectrocloud.com/devx/manage-dev-engine/resource-quota/#tenant-developer-user-quotas) guide.
+
+~> The developer_setting resource enforces a usage quota for developer. By default, a developer quota is configured in Palette with default values. Users can update the developer settings as per their requirements. Every new virtual cluster will consume about 3 CPU and 3 GiB memory even without any user workloads, we recommend that you allocate quota accordingly. When a spectrocloud_developer_setting resource is destroyed, the developer setting will revert to the Palette default settings.
+
+## Example Usage
+
+An example of managing an developer setting in Palette.
+
+```hcl
+resource "spectrocloud_developer_setting" "dev_setting" {
+  virtual_clusters_limit = 10
+  cpu = 20
+  memory = 100
+  storage = 100
+  hide_system_cluster_group = false
+}
+
+## import existing developer settings
+#import {
+#  to = spectrocloud_developer_setting.dev_setting
+#  id = "{tenantUID}" // tenant-uid
+#}
+
+```
+
+{{ .SchemaMarkdown | trimspace }}
