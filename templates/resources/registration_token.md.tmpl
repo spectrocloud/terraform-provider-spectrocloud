@@ -1,0 +1,35 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+Registration tokens in Palette are used to register an Edge host or pair a locally managed cluster for central management.[Registration Token](https://docs.spectrocloud.com/clusters/edge/site-deployment/site-installation/create-registration-token/) guide.
+
+## Example Usage
+
+An example of managing an developer setting in Palette.
+
+```hcl
+resource "spectrocloud_registration_token" "tf_token" {
+  name = "tf_siva"
+  description = "test token description updated"
+  expiry_date = "2025-03-25"
+  project_uid = "6514216503b"
+  status = "active"
+}
+
+## import existing registration token
+#import {
+#  to = spectrocloud_registration_token.token
+#  id = "{tokenUID}" //tokenUID
+#}
+
+```
+
+{{ .SchemaMarkdown | trimspace }}
