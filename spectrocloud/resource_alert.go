@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -9,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
 func resourceAlert() *schema.Resource {
 	return &schema.Resource{
@@ -86,7 +90,8 @@ func resourceAlert() *schema.Resource {
 				Description: "A set of unique identifiers to which the alert will be sent. This is used to target specific users or groups.",
 				Set:         schema.HashString,
 				Elem: &schema.Schema{
-					Type: schema.TypeString,
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringMatch(emailRegex, "must be a valid email address"),
 				},
 			},
 			"http": {
@@ -129,6 +134,8 @@ func resourceAlert() *schema.Resource {
 
 func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
+	component := d.Get("component").(string)
+	alertType := d.Get("type").(string)
 	var err error
 	projectUid, err := getProjectID(d, m)
 	if err != nil {
@@ -136,20 +143,50 @@ func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interfac
 	}
 	var diags diag.Diagnostics
 	alertObj := toAlert(d)
-	uid, err := c.CreateAlert(alertObj, projectUid, d.Get("component").(string))
+
+	// Handling logic as per UI. In UI, it shows only top email alert but back end stores as a list. email alerts are likely to single doc per project
+	if alertType == "email" {
+		projectSpec, err := c.GetProject(projectUid)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		if len(projectSpec.Spec.Alerts) != 0 {
+			for _, s := range projectSpec.Spec.Alerts[0].Channels {
+				if s.Type == "email" {
+					_ = c.DeleteAlert(projectUid, d.Get("component").(string), s.UID)
+				}
+			}
+		}
+	}
+
+	uid, err := c.CreateAlert(alertObj, projectUid, component)
 	if err != nil {
-		return diag.FromErr(err)
+		// Enabling `ClusterHealth` for alerts, basically for setting up for the first time
+		if strings.Contains(err.Error(), "Project 'ClusterHealth' alerts are not found") {
+			emptyAlert := &models.V1AlertEntity{
+				Channels: []*models.V1Channel{},
+			}
+			err = c.UpdateProjectAlerts(emptyAlert, projectUid, component)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			uid, err = c.CreateAlert(alertObj, projectUid, component)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 	d.SetId(uid)
 	return diags
 }
 
 func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var err error
 
 	var diags diag.Diagnostics
 	projectUid, _ := getProjectID(d, m)
+	//c = getV1ClientWithResourceContextProject(m, projectUid)
 	alertObj := toAlert(d)
 	_, err = c.UpdateAlert(alertObj, projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
@@ -195,12 +232,13 @@ func toAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
 
 func resourceAlertDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var err error
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 	projectUid, err := getProjectID(d, m)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	//c = getV1ClientWithResourceContextProject(m, projectUid)
 	err = c.DeleteAlert(projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
 		return diag.FromErr(err)
@@ -210,9 +248,10 @@ func resourceAlertDelete(ctx context.Context, d *schema.ResourceData, m interfac
 
 func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var err error
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 	projectUid, _ := getProjectID(d, m)
+	//c = getV1ClientWithResourceContextProject(m, projectUid)
 	alertPayload, err := c.GetAlert(projectUid, d.Get("component").(string), d.Id())
 	if alertPayload == nil {
 		d.SetId("")
