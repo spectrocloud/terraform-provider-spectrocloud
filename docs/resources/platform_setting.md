@@ -20,13 +20,16 @@ An example of managing an developer setting in Palette.
 ```hcl
 
 resource "spectrocloud_platform_setting" "platform_settings" {
-  context = "tenant"
-  enable_auto_remediation = true
-  session_timeout = 230
-  cluster_auto_remediation = true
-  pause_agent_upgrades = "lock"
+  context                  = "tenant"
+  enable_auto_remediation  = true
+  session_timeout          = 230
+  cluster_auto_remediation = false
+  non_fips_addon_pack = true
+  non_fips_features = true
+  non_fips_cluster_import = true
+  pause_agent_upgrades     = "lock"
   login_banner {
-    title = "test"
+    title   = "test"
     message = "test"
   }
 }
@@ -48,6 +51,9 @@ resource "spectrocloud_platform_setting" "platform_settings" {
 - `context` (String) Defines the scope of the platform setting. Valid values are `project` or `tenant`. By default, it is set to `tenant`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `enable_auto_remediation` (Boolean) Enables automatic remediation. set only with `project' context
 - `login_banner` (Block List, Max: 1) Configure a login banner that users must acknowledge before signing in. (see [below for nested schema](#nestedblock--login_banner))
+- `non_fips_addon_pack` (Boolean) Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles.
+- `non_fips_cluster_import` (Boolean) Allows users in this tenant to import clusters, but the imported clusters may not be FIPS-compliant.
+- `non_fips_features` (Boolean) Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans.
 - `pause_agent_upgrades` (String) Controls automatic upgrades for Palette components and agents in clusters deployed under a tenant or project. Setting it to `lock` disables automatic upgrades, while `unlock` (default) allows automatic upgrades.
 - `session_timeout` (Number) Specifies the duration (in minutes) of inactivity before a user is automatically logged out. The default is 240 minutes allowed in Palette
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))

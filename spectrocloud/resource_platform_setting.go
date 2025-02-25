@@ -61,6 +61,21 @@ func resourcePlatformSetting() *schema.Resource {
 				Description: "Enables automatic remediation for unhealthy nodes in Palette-provisioned clusters by replacing them with new nodes. " +
 					"Disabling this feature prevents auto-remediation. Not applicable to `EKS`, `AKS`, or `TKE` clusters.",
 			},
+			"non_fips_addon_pack": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles.",
+			},
+			"non_fips_features": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans.",
+			},
+			"non_fips_cluster_import": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Allows users in this tenant to import clusters, but the imported clusters may not be FIPS-compliant.",
+			},
 			"login_banner": {
 				Type:        schema.TypeList,
 				MaxItems:    1,
@@ -90,7 +105,7 @@ func validateContextDependencies(ctx context.Context, d *schema.ResourceDiff, me
 	contextVal := d.Get("context").(string)
 
 	if contextVal == "project" {
-		disallowedFields := []string{"session_timeout", "display_login_banner"}
+		disallowedFields := []string{"session_timeout", "display_login_banner", "non_fips_addon_pack", "non_fips_features", "non_fips_cluster_import"}
 
 		for _, field := range disallowedFields {
 			if _, exists := d.GetOk(field); exists {
@@ -153,6 +168,29 @@ func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnost
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
+		// non fip related setting
+		fipsAddonPack := "nonFipsDisabled"
+		fipsFeatures := "nonFipsDisabled"
+		fipsClusterImport := "nonFipsDisabled"
+		if v, ok := d.GetOk("non_fips_addon_pack"); ok {
+			fipsAddonPack = convertFIPSBool(v.(bool))
+		}
+		if v, ok := d.GetOk("non_fips_features"); ok {
+			fipsFeatures = convertFIPSBool(v.(bool))
+		}
+		if v, ok := d.GetOk("non_fips_cluster_import"); ok {
+			fipsClusterImport = convertFIPSBool(v.(bool))
+		}
+		err = c.UpdateFIPSPreference(tenantUID, &models.V1FipsSettings{
+			FipsClusterFeatureConfig: &models.V1NonFipsConfig{Mode: &fipsFeatures},
+			FipsClusterImportConfig:  &models.V1NonFipsConfig{Mode: &fipsClusterImport},
+			FipsPackConfig:           &models.V1NonFipsConfig{Mode: &fipsAddonPack},
+		})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
 	} else {
 		// cluster node remediation for project
 		err = c.UpdateClusterAutoRemediationForProject(ProviderInitProjectUid, remediationSettings)
@@ -168,6 +206,20 @@ func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnost
 	}
 
 	return diags
+}
+
+func convertFIPSBool(flag bool) string {
+	if flag {
+		return "nonFipsEnabled"
+	}
+	return "nonFipsDisabled"
+}
+
+func convertFIPSString(flag string) bool {
+	if flag == "nonFipsEnabled" {
+		return true
+	}
+	return false
 }
 
 func resourcePlatformSettingCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -223,6 +275,28 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		if err = d.Set("cluster_auto_remediation", respRemediation.NodesAutoRemediationSetting.DisableNodesAutoRemediation); err != nil {
 			return diag.FromErr(err)
 		}
+		// get fips settings
+		var fipsPreference *models.V1FipsSettings
+		fipsPreference, err = c.GetFIPSPreference(tenantUID)
+		if _, ok := d.GetOk("non_fips_addon_pack"); ok {
+			err := d.Set("non_fips_addon_pack", convertFIPSString(*fipsPreference.FipsPackConfig.Mode))
+			if err != nil {
+				return nil
+			}
+		}
+		if _, ok := d.GetOk("non_fips_features"); ok {
+			err := d.Set("non_fips_features", convertFIPSString(*fipsPreference.FipsClusterFeatureConfig.Mode))
+			if err != nil {
+				return nil
+			}
+		}
+		if _, ok := d.GetOk("non_fips_cluster_import"); ok {
+			err := d.Set("non_fips_cluster_import", convertFIPSString(*fipsPreference.FipsClusterImportConfig.Mode))
+			if err != nil {
+				return nil
+			}
+		}
+
 	} else {
 		// get cluster_auto_remediation project
 		var respProjectRemediation *models.V1ProjectClusterSettings
@@ -250,7 +324,106 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func resourcePlatformSettingUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	return updatePlatformSettings(d, m)
+	platformSettingContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, platformSettingContext)
+	tenantUID, err := c.GetTenantUID()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	var diags diag.Diagnostics
+
+	remediationSettings := &models.V1NodesAutoRemediationSettings{
+		DisableNodesAutoRemediation: d.Get("cluster_auto_remediation").(bool),
+		IsEnabled:                   d.Get("enable_auto_remediation").(bool), // when ever we are setting `cluster_auto_remediation` we need enable it hence set same attribute
+	}
+	if platformSettingContext == tenantString {
+		// session timeout
+		if d.HasChange("session_timeout") {
+			if sessionTime, ok := d.GetOk("session_timeout"); ok {
+				err = c.UpdateSessionTimeout(tenantUID,
+					&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(sessionTime.(int))})
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+		if d.HasChange("login_banner") {
+			loginBanner := d.Get("login_banner").([]interface{})
+			// login banner
+			if len(loginBanner) == 1 {
+				bannerData := loginBanner[0].(map[string]interface{})
+				bannerSetting := &models.V1LoginBannerSettings{
+					Message:   bannerData["message"].(string),
+					IsEnabled: true,
+					Title:     bannerData["title"].(string),
+				}
+				err = c.UpdateLoginBanner(tenantUID, bannerSetting)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			} else {
+				bannerSetting := &models.V1LoginBannerSettings{
+					Message:   "",
+					IsEnabled: false,
+					Title:     "",
+				}
+				err = c.UpdateLoginBanner(tenantUID, bannerSetting)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+		if d.HasChanges("cluster_auto_remediation", "enable_auto_remediation") {
+			// cluster node remediation for tenant
+			err = c.UpdateClusterAutoRemediationForTenant(tenantUID, remediationSettings)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+		// non fip related setting
+		fipsAddonPack := "nonFipsDisabled"
+		fipsFeatures := "nonFipsDisabled"
+		fipsClusterImport := "nonFipsDisabled"
+		if d.HasChanges("non_fips_addon_pack", "non_fips_features", "non_fips_cluster_import") {
+			if v, ok := d.GetOk("non_fips_addon_pack"); ok {
+				fipsAddonPack = convertFIPSBool(v.(bool))
+			}
+			if v, ok := d.GetOk("non_fips_features"); ok {
+				fipsFeatures = convertFIPSBool(v.(bool))
+			}
+			if v, ok := d.GetOk("non_fips_cluster_import"); ok {
+				fipsClusterImport = convertFIPSBool(v.(bool))
+			}
+			err = c.UpdateFIPSPreference(tenantUID, &models.V1FipsSettings{
+				FipsClusterFeatureConfig: &models.V1NonFipsConfig{Mode: &fipsFeatures},
+				FipsClusterImportConfig:  &models.V1NonFipsConfig{Mode: &fipsClusterImport},
+				FipsPackConfig:           &models.V1NonFipsConfig{Mode: &fipsAddonPack},
+			})
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+	} else {
+		// cluster node remediation for project
+		if d.HasChanges("cluster_auto_remediation", "enable_auto_remediation") {
+			err = c.UpdateClusterAutoRemediationForProject(ProviderInitProjectUid, remediationSettings)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+	// pause agent upgrade setting according to context
+	if d.HasChange("pause_agent_upgrades") {
+		err = c.UpdatePlatformClusterUpgradeSetting(&models.V1ClusterUpgradeSettingsEntity{
+			SpectroComponents: d.Get("pause_agent_upgrades").(string)})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	return diags
 }
 
 func updatePlatformSettingsDefault(d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -284,6 +457,18 @@ func updatePlatformSettingsDefault(d *schema.ResourceData, m interface{}) diag.D
 		}
 		// cluster node remediation for tenant
 		err = c.UpdateClusterAutoRemediationForTenant(tenantUID, remediationSettings)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		// fips setting to default
+		fipsAddonPack := "nonFipsDisabled"
+		fipsFeatures := "nonFipsDisabled"
+		fipsClusterImport := "nonFipsDisabled"
+		err = c.UpdateFIPSPreference(tenantUID, &models.V1FipsSettings{
+			FipsClusterFeatureConfig: &models.V1NonFipsConfig{Mode: &fipsFeatures},
+			FipsClusterImportConfig:  &models.V1NonFipsConfig{Mode: &fipsClusterImport},
+			FipsPackConfig:           &models.V1NonFipsConfig{Mode: &fipsAddonPack},
+		})
 		if err != nil {
 			return diag.FromErr(err)
 		}
