@@ -216,10 +216,7 @@ func convertFIPSBool(flag bool) string {
 }
 
 func convertFIPSString(flag string) bool {
-	if flag == "nonFipsEnabled" {
-		return true
-	}
-	return false
+	return flag == "nonFipsEnabled"
 }
 
 func resourcePlatformSettingCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -278,10 +275,13 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		// get fips settings
 		var fipsPreference *models.V1FipsSettings
 		fipsPreference, err = c.GetFIPSPreference(tenantUID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if _, ok := d.GetOk("non_fips_addon_pack"); ok {
 			err := d.Set("non_fips_addon_pack", convertFIPSString(*fipsPreference.FipsPackConfig.Mode))
 			if err != nil {
-				return nil
+				return diag.FromErr(err)
 			}
 		}
 		if _, ok := d.GetOk("non_fips_features"); ok {

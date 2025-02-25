@@ -107,10 +107,7 @@ func StateConvertBool(isActive bool) string {
 }
 
 func stateConvertString(state string) bool {
-	if state == "active" {
-		return true
-	}
-	return false
+	return state == "active"
 }
 
 func toRegistrationTokenCreate(d *schema.ResourceData) (*models.V1EdgeTokenEntity, error) {
@@ -247,9 +244,7 @@ func resourceRegistrationTokenDelete(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceRegistrationTokenImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-
-	var diags diag.Diagnostics
-	diags = resourceRegistrationTokenRead(ctx, d, m)
+	diags := resourceRegistrationTokenRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read regiatration token for import: %v", diags)
 	}
