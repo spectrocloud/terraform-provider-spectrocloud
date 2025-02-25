@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"regexp"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -9,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
 func resourceAlert() *schema.Resource {
 	return &schema.Resource{
@@ -86,7 +89,8 @@ func resourceAlert() *schema.Resource {
 				Description: "A set of unique identifiers to which the alert will be sent. This is used to target specific users or groups.",
 				Set:         schema.HashString,
 				Elem: &schema.Schema{
-					Type: schema.TypeString,
+					Type:         schema.TypeString,
+					ValidateFunc: validation.StringMatch(emailRegex, "must be a valid email address"),
 				},
 			},
 			"http": {
