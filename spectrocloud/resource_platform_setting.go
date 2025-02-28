@@ -64,17 +64,17 @@ func resourcePlatformSetting() *schema.Resource {
 			"non_fips_addon_pack": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles.",
+				Description: "Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles. The `non_fips_addon_pack` only supported in palette vertex environment.",
 			},
 			"non_fips_features": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans.",
+				Description: "Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans. The `non_fips_features` only supported in palette vertex environment.",
 			},
 			"non_fips_cluster_import": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to import clusters, but the imported clusters may not be FIPS-compliant.",
+				Description: "Allows users in this tenant to import clusters, but the imported clusters may not be FIPS-compliant.  The `non_fips_cluster_import` only supported in palette vertex environment.",
 			},
 			"login_banner": {
 				Type:        schema.TypeList,
@@ -173,22 +173,30 @@ func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnost
 		fipsAddonPack := "nonFipsDisabled"
 		fipsFeatures := "nonFipsDisabled"
 		fipsClusterImport := "nonFipsDisabled"
-		if v, ok := d.GetOk("non_fips_addon_pack"); ok {
-			fipsAddonPack = convertFIPSBool(v.(bool))
+
+		fp, fpOk := d.GetOk("non_fips_addon_pack")
+		ff, ffOk := d.GetOk("non_fips_features")
+		fi, fiOk := d.GetOk("non_fips_cluster_import")
+
+		if fpOk {
+			fipsAddonPack = convertFIPSBool(fp.(bool))
 		}
-		if v, ok := d.GetOk("non_fips_features"); ok {
-			fipsFeatures = convertFIPSBool(v.(bool))
+		if ffOk {
+			fipsFeatures = convertFIPSBool(ff.(bool))
 		}
-		if v, ok := d.GetOk("non_fips_cluster_import"); ok {
-			fipsClusterImport = convertFIPSBool(v.(bool))
+		if fiOk {
+			fipsClusterImport = convertFIPSBool(fi.(bool))
 		}
-		err = c.UpdateFIPSPreference(tenantUID, &models.V1FipsSettings{
-			FipsClusterFeatureConfig: &models.V1NonFipsConfig{Mode: &fipsFeatures},
-			FipsClusterImportConfig:  &models.V1NonFipsConfig{Mode: &fipsClusterImport},
-			FipsPackConfig:           &models.V1NonFipsConfig{Mode: &fipsAddonPack},
-		})
-		if err != nil {
-			return diag.FromErr(err)
+
+		if fiOk || ffOk || fpOk {
+			err = c.UpdateFIPSPreference(tenantUID, &models.V1FipsSettings{
+				FipsClusterFeatureConfig: &models.V1NonFipsConfig{Mode: &fipsFeatures},
+				FipsClusterImportConfig:  &models.V1NonFipsConfig{Mode: &fipsClusterImport},
+				FipsPackConfig:           &models.V1NonFipsConfig{Mode: &fipsAddonPack},
+			})
+			if err != nil {
+				return diag.FromErr(err)
+			}
 		}
 
 	} else {
@@ -274,26 +282,33 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		}
 		// get fips settings
 		var fipsPreference *models.V1FipsSettings
-		fipsPreference, err = c.GetFIPSPreference(tenantUID)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if _, ok := d.GetOk("non_fips_addon_pack"); ok {
-			err := d.Set("non_fips_addon_pack", convertFIPSString(*fipsPreference.FipsPackConfig.Mode))
+
+		_, fpOk := d.GetOk("non_fips_addon_pack")
+		_, ffOk := d.GetOk("non_fips_features")
+		_, fiOk := d.GetOk("non_fips_cluster_import")
+
+		if fiOk || ffOk || fpOk {
+			fipsPreference, err = c.GetFIPSPreference(tenantUID)
 			if err != nil {
 				return diag.FromErr(err)
 			}
-		}
-		if _, ok := d.GetOk("non_fips_features"); ok {
-			err := d.Set("non_fips_features", convertFIPSString(*fipsPreference.FipsClusterFeatureConfig.Mode))
-			if err != nil {
-				return nil
+			if _, ok := d.GetOk("non_fips_addon_pack"); ok {
+				err := d.Set("non_fips_addon_pack", convertFIPSString(*fipsPreference.FipsPackConfig.Mode))
+				if err != nil {
+					return diag.FromErr(err)
+				}
 			}
-		}
-		if _, ok := d.GetOk("non_fips_cluster_import"); ok {
-			err := d.Set("non_fips_cluster_import", convertFIPSString(*fipsPreference.FipsClusterImportConfig.Mode))
-			if err != nil {
-				return nil
+			if _, ok := d.GetOk("non_fips_features"); ok {
+				err := d.Set("non_fips_features", convertFIPSString(*fipsPreference.FipsClusterFeatureConfig.Mode))
+				if err != nil {
+					return nil
+				}
+			}
+			if _, ok := d.GetOk("non_fips_cluster_import"); ok {
+				err := d.Set("non_fips_cluster_import", convertFIPSString(*fipsPreference.FipsClusterImportConfig.Mode))
+				if err != nil {
+					return nil
+				}
 			}
 		}
 
@@ -461,17 +476,24 @@ func updatePlatformSettingsDefault(d *schema.ResourceData, m interface{}) diag.D
 			return diag.FromErr(err)
 		}
 		// fips setting to default
+		_, fpOk := d.GetOk("non_fips_addon_pack")
+		_, ffOk := d.GetOk("non_fips_features")
+		_, fiOk := d.GetOk("non_fips_cluster_import")
+
 		fipsAddonPack := "nonFipsDisabled"
 		fipsFeatures := "nonFipsDisabled"
 		fipsClusterImport := "nonFipsDisabled"
-		err = c.UpdateFIPSPreference(tenantUID, &models.V1FipsSettings{
-			FipsClusterFeatureConfig: &models.V1NonFipsConfig{Mode: &fipsFeatures},
-			FipsClusterImportConfig:  &models.V1NonFipsConfig{Mode: &fipsClusterImport},
-			FipsPackConfig:           &models.V1NonFipsConfig{Mode: &fipsAddonPack},
-		})
-		if err != nil {
-			return diag.FromErr(err)
+		if fiOk || ffOk || fpOk {
+			err = c.UpdateFIPSPreference(tenantUID, &models.V1FipsSettings{
+				FipsClusterFeatureConfig: &models.V1NonFipsConfig{Mode: &fipsFeatures},
+				FipsClusterImportConfig:  &models.V1NonFipsConfig{Mode: &fipsClusterImport},
+				FipsPackConfig:           &models.V1NonFipsConfig{Mode: &fipsAddonPack},
+			})
+			if err != nil {
+				return diag.FromErr(err)
+			}
 		}
+
 	} else {
 		// cluster node remediation for project
 		err = c.UpdateClusterAutoRemediationForProject(ProviderInitProjectUid, remediationSettings)
