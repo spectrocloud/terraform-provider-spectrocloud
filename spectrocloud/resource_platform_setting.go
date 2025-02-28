@@ -105,7 +105,7 @@ func validateContextDependencies(ctx context.Context, d *schema.ResourceDiff, me
 	contextVal := d.Get("context").(string)
 
 	if contextVal == "project" {
-		disallowedFields := []string{"session_timeout", "display_login_banner", "non_fips_addon_pack", "non_fips_features", "non_fips_cluster_import"}
+		disallowedFields := []string{"session_timeout", "login_banner", "non_fips_addon_pack", "non_fips_features", "non_fips_cluster_import"}
 
 		for _, field := range disallowedFields {
 			if _, exists := d.GetOk(field); exists {
