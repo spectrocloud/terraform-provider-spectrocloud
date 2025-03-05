@@ -1,5 +1,5 @@
 data "spectrocloud_appliance" "test_appliance" {
-  name = "dev_502"
+  id = "test-dec9"
 }
 
 output "same" {
