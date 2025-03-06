@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 )
 
 func getAccountResponse(cloud string) interface{} {
@@ -72,11 +72,11 @@ func getAccountResponse(cloud string) interface{} {
 						UID:  "test-azure-account-id-1",
 					},
 					Spec: &models.V1AzureCloudAccount{
-						AzureEnvironment: ptr.StringPtr("test-env"),
-						ClientID:         ptr.StringPtr("test-client-id"),
-						ClientSecret:     ptr.StringPtr("test-secret"),
+						AzureEnvironment: spectrocloud.StringPtr("test-env"),
+						ClientID:         spectrocloud.StringPtr("test-client-id"),
+						ClientSecret:     spectrocloud.StringPtr("test-secret"),
 						Settings:         nil,
-						TenantID:         ptr.StringPtr("tenant-id"),
+						TenantID:         spectrocloud.StringPtr("tenant-id"),
 						TenantName:       "test",
 					},
 					Status: nil,
@@ -138,8 +138,8 @@ func getAccountResponse(cloud string) interface{} {
 						UID:  "test-maas-account-id-1",
 					},
 					Spec: &models.V1MaasCloudAccount{
-						APIEndpoint:      ptr.StringPtr("test.end.com"),
-						APIKey:           ptr.StringPtr("testApiKey"),
+						APIEndpoint:      spectrocloud.StringPtr("test.end.com"),
+						APIKey:           spectrocloud.StringPtr("testApiKey"),
 						PreferredSubnets: []string{"subnet1"},
 					},
 				},
@@ -206,11 +206,11 @@ func getAccountNegativeResponse(cloud string) interface{} {
 						UID:  "test-azure-account-id-1-neg",
 					},
 					Spec: &models.V1AzureCloudAccount{
-						AzureEnvironment: ptr.StringPtr("test-env"),
-						ClientID:         ptr.StringPtr("test-client-id"),
-						ClientSecret:     ptr.StringPtr("test-secret"),
+						AzureEnvironment: spectrocloud.StringPtr("test-env"),
+						ClientID:         spectrocloud.StringPtr("test-client-id"),
+						ClientSecret:     spectrocloud.StringPtr("test-secret"),
 						Settings:         nil,
-						TenantID:         ptr.StringPtr("tenant-id"),
+						TenantID:         spectrocloud.StringPtr("tenant-id"),
 						TenantName:       "test",
 					},
 					Status: nil,
@@ -272,8 +272,8 @@ func getAccountNegativeResponse(cloud string) interface{} {
 						UID:  "test-maas-account-id-1-neg",
 					},
 					Spec: &models.V1MaasCloudAccount{
-						APIEndpoint:      ptr.StringPtr("test.end.com"),
-						APIKey:           ptr.StringPtr("testApiKey"),
+						APIEndpoint:      spectrocloud.StringPtr("test.end.com"),
+						APIKey:           spectrocloud.StringPtr("testApiKey"),
 						PreferredSubnets: []string{"subnet1"},
 					},
 				},
@@ -455,8 +455,8 @@ func CloudAccountsRoutes() []Route {
 						Annotations: map[string]string{"overlordUid": "test-pcg-id"},
 					},
 					Spec: &models.V1MaasCloudAccount{
-						APIEndpoint:      ptr.StringPtr("test.end.com"),
-						APIKey:           ptr.StringPtr("testApiKey"),
+						APIEndpoint:      spectrocloud.StringPtr("test.end.com"),
+						APIKey:           spectrocloud.StringPtr("testApiKey"),
 						PreferredSubnets: []string{"subnet1"},
 					},
 				},
@@ -519,13 +519,13 @@ func CloudAccountsRoutes() []Route {
 						UID:         "test-azure-account-id-1",
 					},
 					Spec: &models.V1AzureCloudAccount{
-						AzureEnvironment: ptr.StringPtr("test-env"),
-						ClientID:         ptr.StringPtr("test-client-id"),
-						ClientSecret:     ptr.StringPtr("test-secret"),
+						AzureEnvironment: spectrocloud.StringPtr("test-env"),
+						ClientID:         spectrocloud.StringPtr("test-client-id"),
+						ClientSecret:     spectrocloud.StringPtr("test-secret"),
 						Settings: &models.V1CloudAccountSettings{
 							DisablePropertiesRequest: false,
 						},
-						TenantID:   ptr.StringPtr("tenant-id"),
+						TenantID:   spectrocloud.StringPtr("tenant-id"),
 						TenantName: "test",
 					},
 					Status: nil,
@@ -664,9 +664,9 @@ func CloudAccountsRoutes() []Route {
 					},
 					Spec: &models.V1VsphereCloudAccount{
 						Insecure:      false,
-						Password:      ptr.StringPtr("test-pwd"),
-						Username:      ptr.StringPtr("test-uname"),
-						VcenterServer: ptr.StringPtr("test-uname.com"),
+						Password:      spectrocloud.StringPtr("test-pwd"),
+						Username:      spectrocloud.StringPtr("test-uname"),
+						VcenterServer: spectrocloud.StringPtr("test-uname.com"),
 					},
 					Status: &models.V1CloudAccountStatus{
 						State: "Running",
@@ -738,11 +738,11 @@ func CloudAccountsRoutes() []Route {
 						CaCert:           "testcert",
 						DefaultDomain:    "test.com",
 						DefaultProject:   "Default",
-						IdentityEndpoint: ptr.StringPtr("testtest"),
+						IdentityEndpoint: spectrocloud.StringPtr("testtest"),
 						Insecure:         false,
 						ParentRegion:     "test-region",
-						Password:         ptr.StringPtr("test-pwd"),
-						Username:         ptr.StringPtr("test-uname"),
+						Password:         spectrocloud.StringPtr("test-pwd"),
+						Username:         spectrocloud.StringPtr("test-uname"),
 					},
 					Status: &models.V1CloudAccountStatus{
 						State: "Running",
