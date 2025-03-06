@@ -125,11 +125,6 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 
 	var diags diag.Diagnostics
 
-	// if id contains colon - it's incorrect as the scope is not supported
-	if strings.Contains(d.Id(), ":") {
-		return diag.FromErr(fmt.Errorf("incorrect cluster profile id: %s, scope is not supported", d.Id()))
-	}
-
 	cp, err := c.GetClusterProfile(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
@@ -504,7 +499,6 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 	if len(pv) == 0 {
 		return make([]interface{}, 0), nil
 	}
-	configVariables := d.Get("profile_variables").([]interface{})[0].(map[string]interface{})["variable"].([]interface{}) //([]interface{}) //(*schema.Set).List()
 	var variables []interface{}
 	for _, v := range pv {
 		variable := make(map[string]interface{})
@@ -522,14 +516,20 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 	}
 	// Sorting ordering the list per configuration this reference if we need to change profile_variables to TypeList
 	var sortedVariables []interface{}
-	for _, cv := range configVariables {
-		mapV := cv.(map[string]interface{})
-		for _, va := range variables {
-			vs := va.(map[string]interface{})
-			if mapV["name"].(string) == ptr.String(vs["name"].(*string)) {
-				sortedVariables = append(sortedVariables, va)
+	var configVariables []interface{}
+	if v, ok := d.GetOk("profile_variables"); ok {
+		configVariables = v.([]interface{})[0].(map[string]interface{})["variable"].([]interface{})
+		for _, cv := range configVariables {
+			mapV := cv.(map[string]interface{})
+			for _, va := range variables {
+				vs := va.(map[string]interface{})
+				if mapV["name"].(string) == ptr.String(vs["name"].(*string)) {
+					sortedVariables = append(sortedVariables, va)
+				}
 			}
 		}
+	} else {
+		sortedVariables = variables
 	}
 
 	flattenProVariables := make([]interface{}, 1)
