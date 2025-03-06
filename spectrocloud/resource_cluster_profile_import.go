@@ -52,9 +52,7 @@ func GetCommonClusterProfile(d *schema.ResourceData, m interface{}) (*client.V1C
 
 	// Set the ID of the resource in the state. This ID is used to track the
 	// resource and must be set in the state during the import.
-	if profile != nil {
-		d.SetId(profile.Metadata.UID)
-	}
+	d.SetId(profile.Metadata.UID)
 
 	return c, nil
 }
