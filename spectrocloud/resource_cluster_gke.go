@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
@@ -414,8 +413,8 @@ func flattenClusterConfigsGke(config *models.V1GcpCloudConfig) []interface{} {
 	if config.Spec.ClusterConfig.Project != nil {
 		m["project"] = config.Spec.ClusterConfig.Project
 	}
-	if ptr.String(config.Spec.ClusterConfig.Region) != "" {
-		m["region"] = ptr.String(config.Spec.ClusterConfig.Region)
+	if String(config.Spec.ClusterConfig.Region) != "" {
+		m["region"] = String(config.Spec.ClusterConfig.Region)
 	}
 	return []interface{}{m}
 }

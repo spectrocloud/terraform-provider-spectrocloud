@@ -4,8 +4,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/spectrocloud/gomi/pkg/ptr"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 
@@ -297,10 +295,10 @@ func TestFlattenClusterConfigsAzure(t *testing.T) {
 
 		expected := []interface{}{
 			map[string]interface{}{
-				"subscription_id":            ptr.StringPtr("test-subscription-id"),
+				"subscription_id":            StringPtr("test-subscription-id"),
 				"resource_group":             "test-resource-group",
-				"region":                     ptr.StringPtr("test-location"),
-				"ssh_key":                    ptr.StringPtr("test-ssh-key"),
+				"region":                     StringPtr("test-location"),
+				"ssh_key":                    StringPtr("test-ssh-key"),
 				"storage_account_name":       "test-storage-account",
 				"container_name":             "test-container",
 				"network_resource_group":     "test-network-resource-group",
@@ -342,7 +340,7 @@ func TestFlattenClusterConfigsAzure(t *testing.T) {
 		expected := []interface{}{
 			map[string]interface{}{
 				"resource_group": "test-resource-group",
-				"region":         ptr.StringPtr("test-location"),
+				"region":         StringPtr("test-location"),
 			},
 		}
 

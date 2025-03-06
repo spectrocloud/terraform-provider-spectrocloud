@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 	"net/http"
 	"strconv"
 )
@@ -42,7 +42,7 @@ func getEdgeHostSearchSummary() models.V1EdgeHostsSearchSummary {
 		Spec: &models.V1EdgeHostsMetadataSpec{
 			ClusterProfileTemplates: profileSummary,
 			Device: &models.V1DeviceSpec{
-				ArchType: ptr.StringPtr("AMD"),
+				ArchType: spectrocloud.StringPtr("AMD"),
 				CPU: &models.V1CPU{
 					Cores: 2,
 				},
@@ -113,7 +113,7 @@ func getEdgeHostPayload() models.V1EdgeHostDevice {
 			CloudProperties:         nil,
 			ClusterProfileTemplates: nil,
 			Device: &models.V1DeviceSpec{
-				ArchType: ptr.StringPtr("amd64"),
+				ArchType: spectrocloud.StringPtr("amd64"),
 				CPU:      nil,
 				Disks:    nil,
 				Gpus:     nil,

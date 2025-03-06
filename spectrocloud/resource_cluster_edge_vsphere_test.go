@@ -1,7 +1,6 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"testing"
@@ -36,7 +35,7 @@ func TestFlattenMachinePoolConfigsEdgeVsphere(t *testing.T) {
 							Value:     "np",
 						},
 					},
-					IsControlPlane:          ptr.BoolPtr(true),
+					IsControlPlane:          BoolPtr(true),
 					NodeRepaveInterval:      30,
 					UseControlPlaneAsWorker: true,
 					Name:                    "pool1",
@@ -53,7 +52,7 @@ func TestFlattenMachinePoolConfigsEdgeVsphere(t *testing.T) {
 							ResourcePool: "resourcepool1",
 							Datastore:    "datastore1",
 							Network: &models.V1VsphereNetworkConfig{
-								NetworkName:   ptr.StringPtr("network1"),
+								NetworkName:   StringPtr("network1"),
 								ParentPoolRef: &models.V1ObjectReference{UID: "pool1"},
 							},
 						},

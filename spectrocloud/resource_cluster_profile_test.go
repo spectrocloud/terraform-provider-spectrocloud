@@ -3,7 +3,6 @@ package spectrocloud
 import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
@@ -112,8 +111,8 @@ func TestFlattenProfileVariables(t *testing.T) {
 	_ = mockResourceData.Set("profile_variables", proVar)
 
 	pv := []*models.V1Variable{
-		{Name: ptr.StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: "string", DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
-		{Name: ptr.StringPtr("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: "integer", DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
+		{Name: StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: "string", DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
+		{Name: StringPtr("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: "integer", DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
 	}
 
 	result, err := flattenProfileVariables(mockResourceData, pv)
@@ -125,7 +124,7 @@ func TestFlattenProfileVariables(t *testing.T) {
 		map[string]interface{}{
 			"variable": []interface{}{
 				map[string]interface{}{
-					"name":          ptr.StringPtr("variable_name_1"),
+					"name":          StringPtr("variable_name_1"),
 					"display_name":  "display_name_1",
 					"description":   "description_1",
 					"format":        models.V1VariableFormat("string"),
@@ -137,7 +136,7 @@ func TestFlattenProfileVariables(t *testing.T) {
 					"is_sensitive":  false,
 				},
 				map[string]interface{}{
-					"name":          ptr.StringPtr("variable_name_2"),
+					"name":          StringPtr("variable_name_2"),
 					"display_name":  "display_name_2",
 					"description":   "description_2",
 					"format":        models.V1VariableFormat("integer"),

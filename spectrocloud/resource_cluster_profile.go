@@ -3,8 +3,6 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"github.com/spectrocloud/gomi/pkg/ptr"
-
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
@@ -488,7 +486,7 @@ func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, er
 					Format:       models.V1VariableFormat(variable["format"].(string)),
 					Hidden:       variable["hidden"].(bool),
 					Immutable:    variable["immutable"].(bool),
-					Name:         ptr.StringPtr(variable["name"].(string)),
+					Name:         StringPtr(variable["name"].(string)),
 					Regex:        variable["regex"].(string),
 					IsSensitive:  variable["is_sensitive"].(bool),
 					Required:     variable["required"].(bool),
@@ -526,7 +524,7 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 		mapV := cv.(map[string]interface{})
 		for _, va := range variables {
 			vs := va.(map[string]interface{})
-			if mapV["name"].(string) == ptr.String(vs["name"].(*string)) {
+			if mapV["name"].(string) == String(vs["name"].(*string)) {
 				sortedVariables = append(sortedVariables, va)
 			}
 		}
