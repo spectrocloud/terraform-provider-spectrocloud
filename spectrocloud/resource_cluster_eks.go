@@ -543,8 +543,11 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		} else {
 			oi["azs"] = machinePool.Azs
 		}
+		eksLaunchTemplates := flattenEksLaunchTemplate(machinePool.AwsLaunchTemplate)
 
-		oi["eks_launch_template"] = flattenEksLaunchTemplate(machinePool.AwsLaunchTemplate)
+		if eksLaunchTemplates != nil {
+			oi["eks_launch_template"] = flattenEksLaunchTemplate(machinePool.AwsLaunchTemplate)
+		}
 
 		ois = append(ois, oi)
 	}
@@ -574,8 +577,15 @@ func flattenEksLaunchTemplate(launchTemplate *models.V1AwsLaunchTemplate) []inte
 		}
 		lt["additional_security_groups"] = additionalSecurityGroups
 	}
-
-	return []interface{}{lt}
+	// handling eks template flatten with this code eks template will not set back to schema
+	if lt["ami_id"].(string) != "" ||
+		lt["root_volume_type"].(string) != "" ||
+		lt["root_volume_iops"].(int64) != 0 ||
+		lt["root_volume_throughput"].(int64) != 0 ||
+		len(launchTemplate.AdditionalSecurityGroups) > 0 {
+		return []interface{}{lt}
+	}
+	return nil
 }
 
 func flattenFargateProfilesEks(fargateProfiles []*models.V1FargateProfile) []interface{} {
