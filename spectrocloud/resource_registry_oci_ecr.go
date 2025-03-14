@@ -382,8 +382,13 @@ func toRegistryEcr(d *schema.ResourceData) *models.V1EcrRegistry {
 	providerType := d.Get("provider_type").(string)
 	baseContentPath := d.Get("base_content_path").(string)
 	s3config := d.Get("credentials").([]interface{})[0].(map[string]interface{})
-	tlsCertificate := s3config["tls_config"].([]interface{})[0].(map[string]interface{})["certificate"].(string)
-	tlsSkipVerify := s3config["tls_config"].([]interface{})[0].(map[string]interface{})["insecure_skip_verify"].(bool)
+	var tlsCertificate string
+	var tlsSkipVerify bool
+	if len(s3config["tls_config"].([]interface{})) > 0 {
+		tlsCertificate = s3config["tls_config"].([]interface{})[0].(map[string]interface{})["certificate"].(string)
+		tlsSkipVerify = s3config["tls_config"].([]interface{})[0].(map[string]interface{})["insecure_skip_verify"].(bool)
+	}
+
 	return &models.V1EcrRegistry{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
