@@ -416,8 +416,12 @@ func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 	endpointSuffix := d.Get("endpoint_suffix").(string)
 	baseContentPath := d.Get("base_content_path").(string)
 	authConfig := d.Get("credentials").([]interface{})[0].(map[string]interface{})
-	tlsCertificate := authConfig["tls_config"].([]interface{})[0].(map[string]interface{})["certificate"].(string)
-	tlsSkipVerify := authConfig["tls_config"].([]interface{})[0].(map[string]interface{})["insecure_skip_verify"].(bool)
+	var tlsCertificate string
+	var tlsSkipVerify bool
+	if len(authConfig["tls_config"].([]interface{})) > 0 {
+		tlsCertificate = authConfig["tls_config"].([]interface{})[0].(map[string]interface{})["certificate"].(string)
+		tlsSkipVerify = authConfig["tls_config"].([]interface{})[0].(map[string]interface{})["insecure_skip_verify"].(bool)
+	}
 	var username, password string
 
 	username = authConfig["username"].(string)
