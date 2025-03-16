@@ -27,8 +27,7 @@ func resourceClusterProfileImport(ctx context.Context, d *schema.ResourceData, m
 }
 
 func GetCommonClusterProfile(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
-	// Use the IDs to retrieve the cluster data from the API
-	//clusterC := c.GetClusterClient()
+
 	resourceContext, profileID, err := ParseResourceID(d)
 	if err != nil {
 		return nil, err
@@ -53,6 +52,7 @@ func GetCommonClusterProfile(d *schema.ResourceData, m interface{}) (*client.V1C
 
 	// Set the ID of the resource in the state. This ID is used to track the
 	// resource and must be set in the state during the import.
-	d.SetId(d.Id())
+	d.SetId(profile.Metadata.UID)
+
 	return c, nil
 }

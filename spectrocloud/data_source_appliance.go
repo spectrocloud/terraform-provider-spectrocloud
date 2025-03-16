@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -17,9 +18,17 @@ func dataSourceAppliance() *schema.Resource {
 
 		Description: "Provides details about a single appliance used for Edge Native cluster provisioning.",
 		Schema: map[string]*schema.Schema{
+			"id": {
+				Type:         schema.TypeString,
+				Description:  "ID of the appliance registered in Palette.",
+				Optional:     true,
+				Computed:     true,
+				ForceNew:     true,
+				ExactlyOneOf: []string{"id", "name"},
+			},
 			"name": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				ForceNew:    true,
 				Description: "The name of the appliance. ",
 			},
@@ -54,11 +63,21 @@ func dataSourceApplianceRead(_ context.Context, d *schema.ResourceData, m interf
 
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
-	if name, okName := d.GetOk("name"); okName {
-		appliance, err := c.GetApplianceByName(name.(string), nil, "", "", "")
+	var err error
+	var appliance *models.V1EdgeHostDevice
+	if id, okId := d.GetOk("id"); okId {
+		appliance, err = c.GetAppliance(id.(string))
 		if err != nil {
 			return diag.FromErr(err)
 		}
+	}
+	if name, okName := d.GetOk("name"); okName {
+		appliance, err = c.GetApplianceByName(name.(string), nil, "", "", "")
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if appliance != nil {
 		d.SetId(appliance.Metadata.UID)
 		err = d.Set("name", appliance.Metadata.Name)
 		if err != nil {
