@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"regexp"
 	"time"
@@ -63,10 +62,10 @@ func toDNSMap(d *schema.ResourceData) *models.V1VsphereDNSMapping {
 			Name: d.Get("search_domain_name").(string),
 		},
 		Spec: &models.V1VsphereDNSMappingSpec{
-			Datacenter:        ptr.StringPtr(d.Get("data_center").(string)),
-			DNSName:           ptr.StringPtr(d.Get("search_domain_name").(string)),
-			Network:           ptr.StringPtr(d.Get("network").(string)),
-			PrivateGatewayUID: ptr.StringPtr(d.Get("private_cloud_gateway_id").(string)),
+			Datacenter:        StringPtr(d.Get("data_center").(string)),
+			DNSName:           StringPtr(d.Get("search_domain_name").(string)),
+			Network:           StringPtr(d.Get("network").(string)),
+			PrivateGatewayUID: StringPtr(d.Get("private_cloud_gateway_id").(string)),
 			// UI doesn't send network_url may need to enable in the future.
 			// NetworkURL:        "",
 		},

@@ -5,7 +5,6 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/require"
 	"reflect"
@@ -373,10 +372,10 @@ func prepareSpectroClusterModel() *models.V1SpectroCluster {
 						Name: "",
 						UID:  "test-host-cluster-uid",
 					},
-					IsHostCluster: ptr.BoolPtr(false),
+					IsHostCluster: BoolPtr(false),
 				},
 				LifecycleConfig: &models.V1LifecycleConfig{
-					Pause: ptr.BoolPtr(false),
+					Pause: BoolPtr(false),
 				},
 				MachineHealthConfig: &models.V1MachineHealthCheckConfig{
 					HealthCheckMaxUnhealthy:         "",
@@ -693,7 +692,7 @@ func TestToClusterHostConfigs(t *testing.T) {
 				},
 			},
 		},
-		IsHostCluster: ptr.BoolPtr(true),
+		IsHostCluster: BoolPtr(true),
 	}
 
 	assert.Equal(t, expected, result)
@@ -731,7 +730,7 @@ func TestToClusterHostConfigsNoHostConfig(t *testing.T) {
 
 	expected := &models.V1HostClusterConfig{
 		ClusterEndpoint: nil,
-		IsHostCluster:   ptr.BoolPtr(false),
+		IsHostCluster:   BoolPtr(false),
 	}
 
 	assert.Equal(t, expected, result)

@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"log"
 	"time"
 
@@ -357,8 +356,8 @@ func flattenClusterConfigsGcp(config *models.V1GcpCloudConfig) []interface{} {
 	if config.Spec.ClusterConfig.Network != "" {
 		m["network"] = config.Spec.ClusterConfig.Network
 	}
-	if ptr.String(config.Spec.ClusterConfig.Region) != "" {
-		m["region"] = ptr.String(config.Spec.ClusterConfig.Region)
+	if String(config.Spec.ClusterConfig.Region) != "" {
+		m["region"] = String(config.Spec.ClusterConfig.Region)
 	}
 	return []interface{}{m}
 }

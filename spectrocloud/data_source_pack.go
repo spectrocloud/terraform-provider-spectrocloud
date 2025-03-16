@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/Masterminds/semver/v3"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"sort"
@@ -218,7 +217,7 @@ func setLatestPackVersionToFilters(packName string, registryUID string, c *clien
 
 	newFilter := &models.V1PackFilterSpec{
 		Name: &models.V1FilterString{
-			Eq: ptr.StringPtr(packName),
+			Eq: StringPtr(packName),
 		},
 		Type:        packTypes,
 		Layer:       packLayers,
