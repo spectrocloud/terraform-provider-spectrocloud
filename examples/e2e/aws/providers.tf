@@ -1,10 +1,18 @@
 terraform {
   required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "~> 5.0"
+    }
     spectrocloud = {
       version = ">= 0.1"
       source  = "spectrocloud/spectrocloud"
     }
   }
+}
+
+provider "aws" {
+  region = var.aws_region
 }
 
 variable "sc_host" {
