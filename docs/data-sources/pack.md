@@ -55,8 +55,9 @@ data "spectrocloud_pack" "cni" {
 
 ### Optional
 
+- `advance_filters` (Block List, Max: 1) A set of advanced filters to refine the selection of packs. These filters allow users to specify criteria such as pack type, add-on type, pack layer, and environment. (see [below for nested schema](#nestedblock--advance_filters))
 - `cloud` (Set of String) Filter results by cloud type. If not provided, all cloud types are returned.
-- `filters` (String) Filters to apply when searching for a pack. This is a string of the form 'key1=value1' with 'AND', 'OR` operators. Refer to the Palette API [pack search API endpoint documentation](https://docs.spectrocloud.com/api/v1/v-1-packs-search/) for filter examples..
+- `filters` (String) Filters to apply when searching for a pack. This is a string of the form 'key1=value1' with 'AND', 'OR` operators. Refer to the Palette API [pack search API endpoint documentation](https://docs.spectrocloud.com/api/v1/v-1-packs-search/) for filter examples. The filter attribute will be deprecated soon; use `advance_filter` instead.
 - `id` (String) The UID of the pack returned.
 - `name` (String) The name of the pack to search for.
 - `registry_uid` (String) The unique identifier (UID) of the registry where the pack is located. Specify `registry_uid` to search within a specific registry.
@@ -66,3 +67,15 @@ data "spectrocloud_pack" "cni" {
 ### Read-Only
 
 - `values` (String) The YAML values of the pack returned as string.
+
+<a id="nestedblock--advance_filters"></a>
+### Nested Schema for `advance_filters`
+
+Optional:
+
+- `addon_type` (Set of String) Defines the type of add-on pack. Allowed values are `load balancer`, `ingress`, `logging`, `monitoring`, `security`, `authentication`, `servicemesh`, `system app`, `app services`, `registry`, `csi`, `cni`, and `integration`. If not specified, all options will be set by default.
+- `environment` (Set of String) Defines the environment where the pack will be deployed. Options include `all`, `aws`, `eks`, `azure`, `aks`, `gcp`, `gke`, `vsphere`, `maas`, `openstack` and `edge-native`. If not specified, all options will be set by default.
+- `is_fips` (Boolean) Indicates whether the pack is FIPS-compliant. If `true`, only FIPS-compliant components will be used.
+- `pack_layer` (Set of String) Indicates the pack layer, such as `kernel`, `os`, `k8s`, `cni`, `csi`, or `addon`. If not specified, all options will be set by default.
+- `pack_source` (Set of String) Specify the source of the pack. Allowed values are `spectrocloud` and `community`. If not specified, all options will be set by default.
+- `pack_type` (Set of String) Specify the type of pack. Allowed values are `helm`, `spectro`, `oci`, and `manifest`. If not specified, all options will be set by default.
