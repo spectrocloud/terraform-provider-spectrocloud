@@ -1,10 +1,14 @@
 data "spectrocloud_cluster" "cluster1" {
-  name = "vsphere-picard-2"
+  name = "tf-si-cluster"
 }
 
 resource "spectrocloud_workspace" "workspace" {
-  name = "wsp-tf"
-
+  name        = "wsp-tf-123"
+  description = "test123"
+  workspace_quota {
+    cpu    = 5
+    memory = 4064
+  }
   clusters {
     uid = data.spectrocloud_cluster.cluster1.id
   }
@@ -71,7 +75,7 @@ resource "spectrocloud_workspace" "workspace" {
     include_disks             = false
     include_cluster_resources = true
 
-    //namespaces = ["test5ns"]
+    namespaces           = ["test5ns"]
     include_all_clusters = true
     cluster_uids         = [data.spectrocloud_cluster.cluster1.id]
   }
@@ -79,5 +83,5 @@ resource "spectrocloud_workspace" "workspace" {
 }
 
 data "spectrocloud_backup_storage_location" "bsl" {
-  name = "backups-nikolay"
+  name = "shruthi-aws-s3"
 }
