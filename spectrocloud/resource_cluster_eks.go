@@ -278,15 +278,17 @@ func resourceClusterEks() *schema.Resource {
 							Optional: true,
 						},
 						"azs": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "Mutually exclusive with `az_subnets`.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
 						"az_subnets": {
-							Type:     schema.TypeMap,
-							Optional: true,
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -843,6 +845,13 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 				Az: k,
 				ID: val.(string),
 			})
+		}
+	}
+	if len(azs) == 0 {
+		if _, ok := m["azs"]; ok {
+			for _, az := range m["azs"].([]interface{}) {
+				azs = append(azs, az.(string))
+			}
 		}
 	}
 
