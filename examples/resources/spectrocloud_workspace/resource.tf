@@ -83,5 +83,5 @@ resource "spectrocloud_workspace" "workspace" {
 }
 
 data "spectrocloud_backup_storage_location" "bsl" {
-  name = "shruthi-aws-s3"
+  name = "test-aws-s3"
 }
