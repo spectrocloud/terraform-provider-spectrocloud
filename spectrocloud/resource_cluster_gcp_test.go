@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
@@ -110,7 +109,7 @@ func TestFlattenMachinePoolConfigsGcp(t *testing.T) {
 				{
 					AdditionalLabels:        map[string]string{"label1": "value1", "label2": "value2"},
 					Taints:                  []*models.V1Taint{{Key: "taint1", Value: "value1", Effect: "NoSchedule"}},
-					IsControlPlane:          ptr.BoolPtr(true),
+					IsControlPlane:          BoolPtr(true),
 					UseControlPlaneAsWorker: true,
 					Name:                    "machine-pool-1",
 					Size:                    int32(3),
@@ -166,15 +165,15 @@ func TestFlattenClusterConfigsGcp(t *testing.T) {
 			input: &models.V1GcpCloudConfig{
 				Spec: &models.V1GcpCloudConfigSpec{
 					ClusterConfig: &models.V1GcpClusterConfig{
-						Project: ptr.StringPtr("my-project"),
+						Project: StringPtr("my-project"),
 						Network: "my-network",
-						Region:  ptr.StringPtr("us-west1"),
+						Region:  StringPtr("us-west1"),
 					},
 				},
 			},
 			expectedOutput: []interface{}{
 				map[string]interface{}{
-					"project": ptr.StringPtr("my-project"),
+					"project": StringPtr("my-project"),
 					"network": "my-network",
 					"region":  "us-west1",
 				},

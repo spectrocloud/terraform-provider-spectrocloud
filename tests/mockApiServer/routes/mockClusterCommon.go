@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 )
 
 func ClusterCommonRoutes() []Route {
@@ -100,7 +100,7 @@ func ClusterCommonRoutes() []Route {
 									LastTransitionTime: models.V1Time{},
 									Message:            "",
 									Reason:             "",
-									Status:             ptr.StringPtr("Ready"),
+									Status:             spectrocloud.StringPtr("Ready"),
 									Type:               nil,
 								},
 								EndTime:    models.V1Time{},
