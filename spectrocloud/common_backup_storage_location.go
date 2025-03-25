@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -490,7 +489,7 @@ func toAzureBackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsL
 				Config: &models.V1AzureStorageConfig{
 					ContainerName: &containerName,
 					Credentials: &models.V1AzureAccountEntitySpec{
-						ClientCloud:    ptr.StringPtr("public"),
+						ClientCloud:    StringPtr("public"),
 						ClientID:       azClientId,
 						ClientSecret:   azClientSecret,
 						SubscriptionID: subId,
@@ -505,7 +504,7 @@ func toAzureBackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsL
 			},
 		}
 		accountCredSpec := &models.V1AzureCloudAccount{
-			AzureEnvironment: ptr.StringPtr("AzurePublicCloud"),
+			AzureEnvironment: StringPtr("AzurePublicCloud"),
 			ClientID:         &account.Spec.Config.Credentials.ClientID,
 			ClientSecret:     &account.Spec.Config.Credentials.ClientSecret,
 			Settings:         nil,

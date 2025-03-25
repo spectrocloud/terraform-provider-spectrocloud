@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/gomi/pkg/ptr"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"sort"
@@ -208,7 +208,7 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		advanceFilter := v.([]interface{})[0].(map[string]interface{})
 		advanceFilterSpec = &models.V1PackFilterSpec{
 			Name: &models.V1FilterString{
-				Eq: ptr.StringPtr(packName),
+				Eq: StringPtr(packName),
 			},
 			Type:        convertToV1PackType(advanceFilter["pack_type"].(*schema.Set)),
 			Layer:       convertToV1PackLayer(advanceFilter["pack_layer"].(*schema.Set)),
@@ -346,7 +346,7 @@ func setLatestPackVersionToFilters(packName string, registryUID string, c *clien
 
 	newFilter := &models.V1PackFilterSpec{
 		Name: &models.V1FilterString{
-			Eq: ptr.StringPtr(packName),
+			Eq: StringPtr(packName),
 		},
 		Type:        packTypes,
 		Layer:       packLayers,
