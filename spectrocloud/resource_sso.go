@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"strings"
 	"time"
 )
 
@@ -17,6 +19,9 @@ func resourceSSO() *schema.Resource {
 		ReadContext:   resourceSSORead,
 		UpdateContext: resourceSSOUpdate,
 		DeleteContext: resourceSSODelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceSSOImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -48,11 +53,11 @@ func resourceSSO() *schema.Resource {
 				Description: "A set of external authentication providers such as GitHub and Google.",
 				Elem: &schema.Schema{
 					Type:         schema.TypeString,
-					ValidateFunc: validation.StringInSlice([]string{"GitHub", "Google"}, false),
+					ValidateFunc: validation.StringInSlice([]string{"", "github", "google"}, false),
 				},
 			},
 			"oidc": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -88,12 +93,12 @@ func resourceSSO() *schema.Resource {
 						},
 						"callback_url": {
 							Type:        schema.TypeString,
-							Required:    true,
+							Computed:    true,
 							Description: "URL to which the identity provider redirects after authentication.",
 						},
 						"logout_url": {
 							Type:        schema.TypeString,
-							Required:    true,
+							Computed:    true,
 							Description: "URL used for logging out of the OIDC session.",
 						},
 						"default_team_ids": {
@@ -117,25 +122,21 @@ func resourceSSO() *schema.Resource {
 						"first_name": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Default:     "",
 							Description: "User's first name retrieved from identity provider.",
 						},
 						"last_name": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Default:     "",
 							Description: "User's last name retrieved from identity provider.",
 						},
 						"email": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Default:     "",
 							Description: "User's email address retrieved from identity provider.",
 						},
 						"spectro_team": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Default:     "",
 							Description: "The SpectroCloud team the user belongs to.",
 						},
 						"user_info_endpoint": {
@@ -147,25 +148,21 @@ func resourceSSO() *schema.Resource {
 									"first_name": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Default:     "",
 										Description: "User's first name retrieved from identity provider.",
 									},
 									"last_name": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Default:     "",
 										Description: "User's last name retrieved from identity provider.",
 									},
 									"email": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Default:     "",
 										Description: "User's email address retrieved from identity provider.",
 									},
 									"spectro_team": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Default:     "",
 										Description: "The SpectroCloud team the user belongs to.",
 									},
 								},
@@ -175,7 +172,7 @@ func resourceSSO() *schema.Resource {
 				},
 			},
 			"saml": {
-				Type:        schema.TypeSet,
+				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1,
 				Description: "Configuration for Security Assertion Markup Language (SAML) authentication.",
@@ -200,7 +197,6 @@ func resourceSSO() *schema.Resource {
 						"identity_provider_metadata": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Default:     "",
 							Description: "Metadata XML of the SAML identity provider.",
 						},
 						"default_team_ids": {
@@ -231,7 +227,6 @@ func resourceSSO() *schema.Resource {
 						"name_id_format": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Default:     "",
 							Description: "Format of the NameID attribute in SAML responses.",
 						},
 						"login_url": {
@@ -241,25 +236,25 @@ func resourceSSO() *schema.Resource {
 						},
 						"first_name": {
 							Type:        schema.TypeString,
-							Required:    true,
+							Optional:    true,
 							Default:     "FirstName",
 							Description: "User's first name retrieved from identity provider.",
 						},
 						"last_name": {
 							Type:        schema.TypeString,
-							Required:    true,
+							Optional:    true,
 							Default:     "LastName",
 							Description: "User's last name retrieved from identity provider.",
 						},
 						"email": {
 							Type:        schema.TypeString,
-							Required:    true,
+							Optional:    true,
 							Default:     "Email",
 							Description: "User's email address retrieved from identity provider.",
 						},
 						"spectro_team": {
 							Type:        schema.TypeString,
-							Required:    true,
+							Optional:    true,
 							Default:     "SpectroTeam",
 							Description: "The SpectroCloud team the user belongs to.",
 						},
@@ -276,9 +271,106 @@ func resourceSSO() *schema.Resource {
 	}
 }
 
+func resourceSSOImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	c := getV1ClientWithResourceContext(m, tenantString)
+	ssoIdParts := strings.Split(d.Id(), ":")
+
+	if len(ssoIdParts) != 2 || (ssoIdParts[1] != "saml" && ssoIdParts[1] != "oidc") {
+		return nil, fmt.Errorf("invalid sso type provided, kindly use saml/oidc")
+	}
+
+	givenTenantId, ssoType := ssoIdParts[0], ssoIdParts[1]
+
+	actualTenantId, err := c.GetTenantUID()
+	if err != nil {
+		return nil, err
+	}
+
+	if givenTenantId != actualTenantId {
+		return nil, fmt.Errorf("tenant id is not valid with current user or invalid tenant uid provided")
+	}
+
+	if err := d.Set("sso_auth_type", ssoType); err != nil {
+		return nil, err
+	}
+
+	diags := resourceSSORead(ctx, d, m)
+	if diags.HasError() {
+		return nil, fmt.Errorf("could not read sso settings for import: %v", diags)
+	}
+
+	domainsEntity, err := c.GetDomains(givenTenantId)
+	if err != nil {
+		return nil, err
+	}
+	if err := flattenDomains(domainsEntity, d); err != nil {
+		return nil, err
+	}
+
+	authEntity, err := c.GetProviders(givenTenantId)
+	if err != nil {
+		return nil, err
+	}
+	if err := flattenAuthProviders(authEntity, d); err != nil {
+		return nil, err
+	}
+
+	d.SetId("sso_settings")
+	return []*schema.ResourceData{d}, nil
+}
+
+func disableSSO(c *client.V1Client, tenantUID string) error {
+	// disable
+	samlSpec, err := c.GetSAML(tenantUID)
+	if err != nil {
+		return err
+	}
+	samlEntity := &models.V1TenantSamlRequestSpec{
+		Attributes:            samlSpec.Attributes,
+		DefaultTeams:          samlSpec.DefaultTeams,
+		FederationMetadata:    samlSpec.FederationMetadata,
+		IdentityProvider:      samlSpec.IdentityProvider,
+		IsSingleLogoutEnabled: samlSpec.IsSingleLogoutEnabled,
+		IsSsoEnabled:          false,
+		NameIDFormat:          samlSpec.NameIDFormat,
+		SyncSsoTeams:          samlSpec.SyncSsoTeams,
+	}
+
+	samlEntity.IsSsoEnabled = false
+	err = c.UpdateSAML(tenantUID, samlEntity)
+	if err != nil {
+		return err
+	}
+
+	oidcEntity, err := c.GetOIDC(tenantUID) // toOIDC(d)
+	if err != nil {
+		return err
+	}
+	oidcEntity.IsSsoEnabled = false
+	err = c.UpdateOIDC(tenantUID, oidcEntity)
+	if err != nil {
+		return err
+	}
+
+	// disable domain
+	err = c.UpdateDomain(tenantUID, toDomains([]interface{}{}))
+	if err != nil {
+		return err
+	}
+	// disable auth provider
+	authPro := toAuthProviders([]interface{}{})
+	authPro.IsEnabled = false
+	err = c.UpdateProviders(tenantUID, authPro)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
 func resourceCommonUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, tenantString)
 	var diags diag.Diagnostics
+	var err error
 	tenantUID, err := c.GetTenantUID()
 	if err != nil {
 		return diag.FromErr(err)
@@ -286,17 +378,7 @@ func resourceCommonUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 	ssoType := d.Get("sso_auth_type").(string)
 	switch ssoType {
 	case "none":
-		// disable
-		samlEntity := toSAML(d)
-		samlEntity.IsSsoEnabled = false
-		err = c.UpdateSAML(tenantUID, samlEntity)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		oidcEntity := toOIDC(d)
-		oidcEntity.IsSsoEnabled = false
-		err = c.UpdateOIDC(tenantUID, oidcEntity)
+		err = disableSSO(c, tenantUID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -314,13 +396,13 @@ func resourceCommonUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 		}
 	}
 	if v, ok := d.GetOk("domains"); ok {
-		err = c.UpdateDomain(tenantUID, toDomains(v.([]interface{})))
+		err = c.UpdateDomain(tenantUID, toDomains(v.(*schema.Set).List()))
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
 	if v, ok := d.GetOk("auth_providers"); ok {
-		err = c.UpdateProviders(tenantUID, toAuthProviders(v.([]interface{})))
+		err = c.UpdateProviders(tenantUID, toAuthProviders(v.(*schema.Set).List()))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -330,7 +412,13 @@ func resourceCommonUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceSSOCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	return resourceCommonUpdate(ctx, d, m)
+
+	diags := resourceCommonUpdate(ctx, d, m)
+	if !diags.HasError() {
+		d.SetId("sso_settings")
+	}
+
+	return diags
 }
 
 func resourceSSORead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -340,95 +428,107 @@ func resourceSSORead(ctx context.Context, d *schema.ResourceData, m interface{})
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	ssoType := d.Get("sso_auth_type").(string)
+	if ssoType == "saml" {
+		samlEntity, err := c.GetSAML(tenantUID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		err = flattenSAML(samlEntity, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if ssoType == "oidc" {
+		oidcEntity, err := c.GetOIDC(tenantUID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		err = flattenOidc(oidcEntity, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if _, ok := d.GetOk("domains"); ok {
+		domainsEntity, err := c.GetDomains(tenantUID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		err = flattenDomains(domainsEntity, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
-	samlEntity, err := c.GetSAML(tenantUID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = flattenSAML(samlEntity, d)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	oidcEntity, err := c.GetOIDC(tenantUID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = flattenOidc(oidcEntity, d)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	domainsEntity, err := c.GetDomains(tenantUID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = flattenDomains(domainsEntity, d)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	authEntity, err := c.GetProviders(tenantUID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = flattenAuthProviders(authEntity, d)
-	if err != nil {
-		return diag.FromErr(err)
+	if _, ok := d.GetOk("auth_providers"); ok {
+		authEntity, err := c.GetProviders(tenantUID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		err = flattenAuthProviders(authEntity, d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return diags
 }
 
 func resourceSSOUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	return resourceCommonUpdate(ctx, d, m)
+	c := getV1ClientWithResourceContext(m, tenantString)
+	var diags diag.Diagnostics
+	var err error
+	tenantUID, err := c.GetTenantUID()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	diags = resourceCommonUpdate(ctx, d, m)
+	if ok := d.HasChange("domains"); ok {
+		v := d.Get("domains")
+		err = c.UpdateDomain(tenantUID, toDomains(v.(*schema.Set).List()))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if ok := d.HasChange("auth_providers"); ok {
+		v := d.Get("auth_providers")
+		err = c.UpdateProviders(tenantUID, toAuthProviders(v.(*schema.Set).List()))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+	if !diags.HasError() {
+		d.SetId("sso_settings")
+	}
+	return diags
 }
 
 func resourceSSODelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, tenantString)
 	var diags diag.Diagnostics
+	var err error
 	tenantUID, err := c.GetTenantUID()
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	// disable saml
-	samlEntity := toSAML(d)
-	samlEntity.IsSsoEnabled = false
-	err = c.UpdateSAML(tenantUID, samlEntity)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	// disable oidc
-	oidcEntity := toOIDC(d)
-	oidcEntity.IsSsoEnabled = false
-	err = c.UpdateOIDC(tenantUID, oidcEntity)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	// disable domain
-	err = c.UpdateDomain(tenantUID, toDomains([]interface{}{}))
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	// disable auth provider
-	err = c.UpdateProviders(tenantUID, toAuthProviders([]interface{}{}))
+	err = disableSSO(c, tenantUID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
+	d.SetId("")
 	return diags
 }
 
-func customDiffValidation(ctx context.Context, diff *schema.ResourceDiff, v interface{}) error {
-	ssoAuthType, ok := diff.GetOk("sso_auth_type")
+func customDiffValidation(ctx context.Context, d *schema.ResourceDiff, v interface{}) error {
+	ssoAuthType, ok := d.GetOk("sso_auth_type")
 	if !ok {
 		return nil // No validation needed if not set
 	}
 
 	authType := ssoAuthType.(string)
-	samlExists := diff.Get("saml") != nil
-	oidcExists := diff.Get("oidc") != nil
+	_, samlExists := d.GetOk("saml")
+	_, oidcExists := d.GetOk("oidc")
 
 	switch authType {
 	case "none":
@@ -439,9 +539,15 @@ func customDiffValidation(ctx context.Context, diff *schema.ResourceDiff, v inte
 		if oidcExists {
 			return fmt.Errorf("sso_auth_type is set to 'saml', so 'oidc' should not be defined")
 		}
+		if !samlExists {
+			return fmt.Errorf("sso_auth_type is set to 'saml', so 'saml' should be defined")
+		}
 	case "oidc":
 		if samlExists {
 			return fmt.Errorf("sso_auth_type is set to 'oidc', so 'saml' should not be defined")
+		}
+		if !oidcExists {
+			return fmt.Errorf("sso_auth_type is set to 'oidc', so 'oidc' should be defined")
 		}
 	}
 
@@ -459,28 +565,30 @@ func toStringSlice(input []interface{}) []string {
 func toOIDC(d *schema.ResourceData) *models.V1TenantOidcClientSpec {
 	oidcSpec := &models.V1TenantOidcClientSpec{}
 
-	oidcSpec.CallbackURL = d.Get("callback_url").(string)
-	oidcSpec.ClientID = d.Get("client_id").(string)
-	oidcSpec.ClientSecret = d.Get("client_secret").(string)
-	oidcSpec.DefaultTeams = toStringSlice(d.Get("default_team_ids").([]interface{}))
+	oidc := d.Get("oidc").([]interface{})[0].(map[string]interface{})
+
+	oidcSpec.CallbackURL = oidc["callback_url"].(string)
+	oidcSpec.ClientID = oidc["client_id"].(string)
+	oidcSpec.ClientSecret = oidc["client_secret"].(string)
+	oidcSpec.DefaultTeams = toStringSlice(oidc["default_team_ids"].(*schema.Set).List())
 	oidcSpec.IsSsoEnabled = true
 	oidcSpec.IssuerTLS = &models.V1OidcIssuerTLS{
-		CaCertificateBase64: d.Get("identity_provider_ca_certificate").(string),
-		InsecureSkipVerify:  BoolPtr(d.Get("insecure_skip_tls_verify").(bool)),
+		CaCertificateBase64: oidc["identity_provider_ca_certificate"].(string),
+		InsecureSkipVerify:  BoolPtr(oidc["insecure_skip_tls_verify"].(bool)),
 	}
-	oidcSpec.IssuerURL = d.Get("issuer_url").(string)
-	oidcSpec.LogoutURL = d.Get("logout_url").(string)
+	oidcSpec.IssuerURL = oidc["issuer_url"].(string)
+	oidcSpec.LogoutURL = oidc["logout_url"].(string)
 	oidcSpec.RequiredClaims = &models.V1TenantOidcClaims{
-		Email:       d.Get("email").(string),
-		FirstName:   d.Get("first_name").(string),
-		LastName:    d.Get("last_name").(string),
-		SpectroTeam: d.Get("spectro_team").(string),
+		Email:       oidc["email"].(string),
+		FirstName:   oidc["first_name"].(string),
+		LastName:    oidc["last_name"].(string),
+		SpectroTeam: oidc["spectro_team"].(string),
 	}
-	oidcSpec.Scopes = toStringSlice(d.Get("scopes").([]interface{}))
+	oidcSpec.Scopes = toStringSlice(oidc["scopes"].(*schema.Set).List())
 	oidcSpec.ScopesDelimiter = ""
 	oidcSpec.SyncSsoTeams = true
 
-	if uie, ok := d.GetOk("user_info_endpoint"); ok {
+	if uie, ok := oidc["user_info_endpoint"]; ok {
 		oidcSpec.UserInfo = &models.V1OidcUserInfo{
 			Claims: &models.V1TenantOidcClaims{
 				Email:       uie.([]interface{})[0].(map[string]interface{})["email"].(string),
@@ -497,14 +605,15 @@ func toOIDC(d *schema.ResourceData) *models.V1TenantOidcClientSpec {
 func flattenOidc(oidcSpec *models.V1TenantOidcClientSpec, d *schema.ResourceData) error {
 	var err error
 	var oidc []interface{}
-	var spec map[string]interface{}
+	spec := make(map[string]interface{})
 
 	spec["callback_url"] = oidcSpec.CallbackURL
 	spec["client_id"] = oidcSpec.ClientID
 	spec["client_secret"] = oidcSpec.ClientSecret
 
 	spec["default_team_ids"] = oidcSpec.DefaultTeams
-	spec["identity_provider_ca_certificate"] = oidcSpec.IssuerTLS.CaCertificateBase64
+	decodeCA, _ := base64.StdEncoding.DecodeString(oidcSpec.IssuerTLS.CaCertificateBase64)
+	spec["identity_provider_ca_certificate"] = string(decodeCA)
 	spec["insecure_skip_tls_verify"] = oidcSpec.IssuerTLS.InsecureSkipVerify
 	spec["issuer_url"] = oidcSpec.IssuerURL
 	spec["logout_url"] = oidcSpec.LogoutURL
@@ -533,30 +642,30 @@ func flattenOidc(oidcSpec *models.V1TenantOidcClientSpec, d *schema.ResourceData
 
 func toSAML(d *schema.ResourceData) *models.V1TenantSamlRequestSpec {
 	samlSpec := &models.V1TenantSamlRequestSpec{}
-
+	saml := d.Get("saml").([]interface{})[0].(map[string]interface{})
 	// Attributes
 	firstNameTemplate := &models.V1TenantSamlSpecAttribute{
 		AttributeValue:  "[FIRST_NAME_OF_USER]",
-		MappedAttribute: "FirstName",
-		Name:            d.Get("first_name").(string),
+		MappedAttribute: saml["first_name"].(string),
+		Name:            "FirstName",
 		NameFormat:      "urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified",
 	}
 	lastNameTemplate := &models.V1TenantSamlSpecAttribute{
 		AttributeValue:  "[LAST_NAME_OF_USER]",
-		MappedAttribute: "LastName",
-		Name:            d.Get("last_name").(string),
+		MappedAttribute: saml["last_name"].(string),
+		Name:            "LastName",
 		NameFormat:      "urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified",
 	}
 	emailTemplate := &models.V1TenantSamlSpecAttribute{
 		AttributeValue:  "[EMAIL_OF_USER]",
-		MappedAttribute: "Email",
-		Name:            d.Get("email").(string),
+		MappedAttribute: saml["email"].(string),
+		Name:            "Email",
 		NameFormat:      "urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified",
 	}
 	spectroTeamTemplate := &models.V1TenantSamlSpecAttribute{
 		AttributeValue:  "[SPECTRO_TEAM_OF_USER]",
-		MappedAttribute: "SpectroTeam",
-		Name:            d.Get("spectro_team").(string),
+		MappedAttribute: saml["spectro_team"].(string),
+		Name:            "SpectroTeam",
 		NameFormat:      "urn:oasis:names:tc:SAML:2.0:attrname-format:unspecified",
 	}
 
@@ -567,13 +676,13 @@ func toSAML(d *schema.ResourceData) *models.V1TenantSamlRequestSpec {
 	attributes = append(attributes, spectroTeamTemplate)
 	samlSpec.Attributes = attributes
 
-	samlSpec.DefaultTeams = toStringSlice(d.Get("default_team_ids").([]interface{}))
-	samlSpec.FederationMetadata = base64.StdEncoding.EncodeToString([]byte(d.Get("identity_provider_metadata").(string)))
-	samlSpec.IdentityProvider = d.Get("service_provider").(string)
-	samlSpec.IsSingleLogoutEnabled = d.Get("enable_single_logout").(bool)
+	samlSpec.DefaultTeams = toStringSlice(saml["default_team_ids"].(*schema.Set).List())
+	samlSpec.FederationMetadata = base64.StdEncoding.EncodeToString([]byte(saml["identity_provider_metadata"].(string)))
+	samlSpec.IdentityProvider = saml["service_provider"].(string)
+	samlSpec.IsSingleLogoutEnabled = saml["enable_single_logout"].(bool)
 	samlSpec.IsSsoEnabled = true
-	samlSpec.NameIDFormat = d.Get("name_id_format").(string)
-	samlSpec.SyncSsoTeams = false
+	samlSpec.NameIDFormat = saml["name_id_format"].(string)
+	samlSpec.SyncSsoTeams = true
 
 	return samlSpec
 }
@@ -581,11 +690,12 @@ func toSAML(d *schema.ResourceData) *models.V1TenantSamlRequestSpec {
 func flattenSAML(saml *models.V1TenantSamlSpec, d *schema.ResourceData) error {
 	var err error
 	var samlData []interface{}
-	var spec map[string]interface{}
+	spec := make(map[string]interface{})
 	spec["issuer"] = saml.Issuer
 	spec["certificate"] = saml.Certificate
 	spec["service_provider"] = saml.IdentityProvider
-	spec["identity_provider_metadata"] = saml.FederationMetadata
+	decodeCA, _ := base64.StdEncoding.DecodeString(saml.FederationMetadata)
+	spec["identity_provider_metadata"] = string(decodeCA)
 	spec["default_team_ids"] = saml.DefaultTeams
 	spec["enable_single_logout"] = saml.IsSingleLogoutEnabled
 	spec["single_logout_url"] = saml.SingleLogoutURL
@@ -594,17 +704,17 @@ func flattenSAML(saml *models.V1TenantSamlSpec, d *schema.ResourceData) error {
 	spec["login_url"] = saml.AudienceURL
 	spec["service_provider_metadata"] = saml.ServiceProviderMetadata
 
-	var attribute map[string]interface{}
+	attribute := make(map[string]interface{})
 
 	for _, a := range saml.Attributes {
-		attribute[a.MappedAttribute] = a
+		attribute[a.Name] = a
 	}
-	spec["first_name"] = attribute["FirstName"].(*models.V1TenantSamlSpecAttribute).AttributeValue
-	spec["last_name"] = attribute["LastName"].(*models.V1TenantSamlSpecAttribute).AttributeValue
-	spec["email"] = attribute["Email"].(*models.V1TenantSamlSpecAttribute).AttributeValue
-	spec["spectro_team"] = attribute["SpectroTeam"].(*models.V1TenantSamlSpecAttribute).AttributeValue
+	spec["first_name"] = attribute["FirstName"].(*models.V1TenantSamlSpecAttribute).MappedAttribute
+	spec["last_name"] = attribute["LastName"].(*models.V1TenantSamlSpecAttribute).MappedAttribute
+	spec["email"] = attribute["Email"].(*models.V1TenantSamlSpecAttribute).MappedAttribute
+	spec["spectro_team"] = attribute["SpectroTeam"].(*models.V1TenantSamlSpecAttribute).MappedAttribute
 	samlData = append(samlData, spec)
-	if err = d.Set("saml", saml); err != nil {
+	if err = d.Set("saml", samlData); err != nil {
 		return err
 	}
 	return err
@@ -626,6 +736,13 @@ func flattenDomains(domains *models.V1TenantDomains, d *schema.ResourceData) err
 }
 
 func toAuthProviders(providers []interface{}) *models.V1TenantSsoAuthProvidersEntity {
+	if len(providers) == 0 {
+		authProviderSpec := &models.V1TenantSsoAuthProvidersEntity{
+			IsEnabled: false,
+			SsoLogins: []string{""},
+		}
+		return authProviderSpec
+	}
 	authProviderSpec := &models.V1TenantSsoAuthProvidersEntity{
 		IsEnabled: true,
 		SsoLogins: toStringSlice(providers),
