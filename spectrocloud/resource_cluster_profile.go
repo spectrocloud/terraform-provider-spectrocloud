@@ -521,7 +521,7 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 			mapV := cv.(map[string]interface{})
 			for _, va := range variables {
 				vs := va.(map[string]interface{})
-				if mapV["name"].(string) == ptr.String(vs["name"].(*string)) {
+				if mapV["name"].(string) == String(vs["name"].(*string)) {
 					sortedVariables = append(sortedVariables, va)
 				}
 			}
