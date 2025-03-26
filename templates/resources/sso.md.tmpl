@@ -42,7 +42,7 @@ resource "spectrocloud_sso" "sso_setting" {
 #    issuer_url = "https://login.microsoftonline.com/7fc4bd49-b7eb-410f-8ad4-11ab94561548/v2.0"
 #    identity_provider_ca_certificate = "test certificate content"
 #    insecure_skip_tls_verify = false
-#    client_id = "test"
+#    client_id = ""
 #    client_secret = "8hY8Q~-test-test-test-eQ-VyN-test-tezx.t-test-PBkK~vcl2"
 #    callback_url = "https://stage.spectrocloud.com/v1alpha1/auth/org/soak/oidc/callback"
 #    logout_url = "https://stage.spectrocloud.com/v1alpha1/auth/org/soak/oidc/logout"
