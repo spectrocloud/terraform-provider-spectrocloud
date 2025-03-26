@@ -1,4 +1,1 @@
 a8602316863d79a93f32c703943f9c6c242912b2:test.tf:gitlab-pat:12
-b31282f23ff1bc599cdc238c470b6452df449b32:resource.tf:generic-api-key:25
-b31282f23ff1bc599cdc238c470b6452df449b32:sso.md:45
-b31282f23ff1bc599cdc238c470b6452df449b32:sso.md.tmpl:generic-api-key:45
