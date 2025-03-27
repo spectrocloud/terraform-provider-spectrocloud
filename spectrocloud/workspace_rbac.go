@@ -19,10 +19,21 @@ func toWorkspaceRBACs(d *schema.ResourceData) []*models.V1ClusterRbac {
 }
 
 func toQuota(d *schema.ResourceData) *models.V1WorkspaceQuota {
+	wsQuota, ok := d.GetOk("workspace_quota")
+	if !ok || len(wsQuota.([]interface{})) == 0 {
+		return &models.V1WorkspaceQuota{
+			ResourceAllocation: &models.V1WorkspaceResourceAllocation{
+				CPUCores:  0,
+				MemoryMiB: 0,
+			},
+		}
+	}
+
+	q := wsQuota.([]interface{})[0].(map[string]interface{})
 	return &models.V1WorkspaceQuota{
 		ResourceAllocation: &models.V1WorkspaceResourceAllocation{
-			CPUCores:  0,
-			MemoryMiB: 0,
+			CPUCores:  float64(q["cpu"].(int)),
+			MemoryMiB: float64(q["memory"].(int)),
 		},
 	}
 }

@@ -37,6 +37,26 @@ func resourceWorkspace() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"workspace_quota": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Workspace quota default limits assigned to the namespace.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cpu": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "CPU that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.",
+						},
+						"memory": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Memory in Mib that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.",
+						},
+					},
+				},
+			},
 			"clusters": {
 				Type:     schema.TypeSet,
 				Required: true,
@@ -91,6 +111,10 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 		return diags
 	}
 
+	wsQuota := flattenWorkspaceQuota(workspace)
+	if err := d.Set("workspace_quota", wsQuota); err != nil {
+		return diag.FromErr(err)
+	}
 	fp := flattenWorkspaceClusters(workspace)
 	if err := d.Set("clusters", fp); err != nil {
 		return diag.FromErr(err)
@@ -117,6 +141,17 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 	return diags
 }
 
+func flattenWorkspaceQuota(workspace *models.V1Workspace) []interface{} {
+	wsq := make([]interface{}, 0)
+	if workspace.Spec.Quota.ResourceAllocation != nil {
+		wsq = append(wsq, map[string]interface{}{
+			"cpu":    workspace.Spec.Quota.ResourceAllocation.CPUCores,
+			"memory": workspace.Spec.Quota.ResourceAllocation.MemoryMiB,
+		})
+	}
+	return wsq
+}
+
 func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
 
@@ -127,7 +162,23 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 		return diag.FromErr(err)
 	}
 
-	if d.HasChange("clusters") {
+	if d.HasChange("description") || d.HasChange("tags") {
+		annotations := make(map[string]string)
+		if len(d.Get("description").(string)) > 0 {
+			annotations["description"] = d.Get("description").(string)
+		}
+		meta := &models.V1ObjectMeta{
+			Name:        d.Get("name").(string),
+			UID:         d.Id(),
+			Labels:      toTags(d),
+			Annotations: annotations,
+		}
+		if err := c.UpdateWorkspaceMetadata(workspace.Metadata.UID, meta); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("clusters") || d.HasChange("workspace_quota") {
 		// resource allocation should go first because clusters are inside.
 		namespaces := toUpdateWorkspaceNamespaces(d)
 		if err := c.UpdateWorkspaceResourceAllocation(d.Id(), namespaces); err != nil {

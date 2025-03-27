@@ -113,6 +113,7 @@ data "spectrocloud_backup_storage_location" "bsl" {
 - `description` (String)
 - `namespaces` (Block List) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
 - `tags` (Set of String)
+- `workspace_quota` (Block List, Max: 1) Workspace quota default limits assigned to the namespace. (see [below for nested schema](#nestedblock--workspace_quota))
 
 ### Read-Only
 
@@ -184,3 +185,12 @@ Required:
 Optional:
 
 - `images_blacklist` (List of String) List of images to disallow for the namespace. For example, `['nginx:latest', 'redis:latest']`
+
+
+<a id="nestedblock--workspace_quota"></a>
+### Nested Schema for `workspace_quota`
+
+Optional:
+
+- `cpu` (Number) CPU that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.
+- `memory` (Number) Memory in Mib that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.
