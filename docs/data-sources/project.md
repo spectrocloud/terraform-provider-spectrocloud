@@ -13,11 +13,19 @@ description: |-
 ## Example Usage
 
 ```terraform
-data "spectrocloud_project" "project1" {
-  name = "Default"
+# Fetch details of a specific project in SpectroCloud
+data "spectrocloud_project" "example" {
+  # Provide either `id` or `name`, but not both.
+  id = "project-12345"
+  # name = "MyProject"  # Alternative way to reference a project by name
+}
 
-  # (alternatively)
-  # id =  "5fd0ca727c411c71b55a359c"
+# Output project details for reference
+output "project_info" {
+  value = {
+    id   = data.spectrocloud_project.example.id
+    name = data.spectrocloud_project.example.name
+  }
 }
 ```
 

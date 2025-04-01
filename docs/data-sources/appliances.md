@@ -13,19 +13,20 @@ Provides details about a set of appliances used for Edge Native cluster provisio
 ## Example Usage
 
 ```terraform
-data "spectrocloud_appliances" "appliances" {
+# Data source to retrieve details of appliances based on filters
+data "spectrocloud_appliances" "filtered_appliances" {
+  context      = "project"        # Context can be "project" or "tenant"
+  status       = "ready"         # Filter by status ready, in-use, unpaired
+  health       = "healthy"        # Filter by health status
+  architecture = "amd_64"         # Filter by architecture type amd64, arm64
   tags = {
-    "env" = "dev"
+    environment = "production"    # Filter by tag key-value pairs
   }
-  status = "in-use"
-  #status = "unpaired"
-  health       = "healthy"
-  architecture = "amd64"
 }
 
-output "same" {
-  value = data.spectrocloud_appliances.appliances
-  #value = [for a in data.spectrocloud_appliance.appliances : a.name]
+# Output the list of appliance IDs that match the filters
+output "appliance_ids" {
+  value = [for a in data.spectrocloud_appliance.filtered_appliances : a.name]
 }
 ```
 

@@ -13,19 +13,23 @@ description: |-
 ## Example Usage
 
 ```terraform
-data "spectrocloud_team" "team1" {
-  name = "team2"
+# Fetch details of a specific team in SpectroCloud
+data "spectrocloud_team" "example" {
+  # Provide either `id` or `name`, but not both.
+  # Allowed values:
+  # - `id`: A unique identifier for the team (e.g., "team-12345").
+  # - `name`: The readable name of the team (e.g., "DevOps Team").
 
-  # (alternatively)
-  # id =  "5fd0ca727c411c71b55a359c"
+  id = "team-12345"
+  # name = "DevOps Team"  # Alternative way to reference a team by name
 }
 
-output "team-id" {
-  value = data.spectrocloud_team.team1.id
-}
-
-output "team-role-ids" {
-  value = data.spectrocloud_team.team1.role_ids
+output "team_info" {
+  value = {
+    id       = data.spectrocloud_team.example.id
+    name     = data.spectrocloud_team.example.name
+    role_ids = data.spectrocloud_team.example.role_ids
+  }
 }
 ```
 

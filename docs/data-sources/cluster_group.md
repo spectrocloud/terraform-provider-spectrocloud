@@ -13,31 +13,15 @@ description: |-
 ## Example Usage
 
 ```terraform
-data "spectrocloud_cluster_group" "beehive" {
-  name    = "beehive"
-  context = "system"
+# Retrieve details of a specific cluster group
+data "spectrocloud_cluster_group" "example_group" {
+  name    = "my-cluster-group"  # Specify the name of the cluster group
+  context = "system"            # Context can be "system", "tenant", or "project"
 }
 
-output "out_beehive" {
-  value = data.spectrocloud_cluster_group.beehive.id
-}
-
-data "spectrocloud_cluster_group" "tenant_cl" {
-  name    = "sanfrancisco"
-  context = "tenant"
-}
-
-output "out_tenant_cl" {
-  value = data.spectrocloud_cluster_group.tenant_cl.id
-}
-
-data "spectrocloud_cluster_group" "project_sc" {
-  name    = "cg-1"
-  context = "project"
-}
-
-output "out_project_sc" {
-  value = data.spectrocloud_cluster_group.project_sc.id
+# Output the retrieved cluster group details
+output "cluster_group_name" {
+  value = data.spectrocloud_cluster_group.example_group.name
 }
 ```
 

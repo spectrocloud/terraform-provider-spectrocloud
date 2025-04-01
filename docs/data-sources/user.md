@@ -13,11 +13,18 @@ description: |-
 ## Example Usage
 
 ```terraform
-data "spectrocloud_user" "user1" {
-  email = "abc@abc.com"
+# Fetch details of a specific user in SpectroCloud
+data "spectrocloud_user" "example" {
+  # Provide either `id` or `email`, but not both.
+  id = "user-12345"
+  # email = "user@example.com"  # Alternative way to reference a user by email
+}
 
-  # (alternatively)
-  # id =  "5fd0ca727c411c71b55a359c"
+output "user_info" {
+  value = {
+    id    = data.spectrocloud_user.example.id
+    email = data.spectrocloud_user.example.email
+  }
 }
 ```
 

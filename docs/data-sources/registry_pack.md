@@ -13,13 +13,15 @@ description: |-
 ## Example Usage
 
 ```terraform
-data "spectrocloud_registry_pack" "registry1" {
-  name = "Public Repo"
 
+# Data source to retrieve details of a specific SpectroCloud registry pack by name
+data "spectrocloud_registry_pack" "my_pack" {
+  name = "my-pack"  # Name of the registry pack to look up
 }
 
-output "test" {
-  value = data.spectrocloud_registry_pack.registry1
+# Output the ID of the retrieved registry pack
+output "registry_pack_id" {
+  value = data.spectrocloud_registry_pack.my_pack.id
 }
 ```
 
