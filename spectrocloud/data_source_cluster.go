@@ -59,7 +59,7 @@ func dataSourceClusterRead(_ context.Context, d *schema.ResourceData, m interfac
 		}
 		if cluster != nil {
 			d.SetId(cluster.Metadata.UID)
-			kubeConfig, _ := c.GetClusterKubeConfig(cluster.Metadata.UID)
+			kubeConfig, _ := c.GetClusterClientKubeConfig(cluster.Metadata.UID)
 			if err := d.Set("kube_config", kubeConfig); err != nil {
 				return diag.FromErr(err)
 			}
