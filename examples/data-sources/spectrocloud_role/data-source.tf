@@ -1,14 +1,14 @@
-data "spectrocloud_role" "role" {
-  name = "Resource Cluster Admin"
-
-  # (alternatively)
-  # id =  "66fbea622947f81fb62294ac"
+# Retrieve details of a specific role by name
+data "spectrocloud_role" "example" {
+  name = "admin-role"
 }
 
+# Output role ID
 output "role_id" {
-  value = data.spectrocloud_role.role.id
+  value = data.spectrocloud_role.example.id
 }
 
+# Output permissions associated with the role
 output "role_permissions" {
-  value = data.spectrocloud_role.role.permissions
+  value = data.spectrocloud_role.example.permissions
 }

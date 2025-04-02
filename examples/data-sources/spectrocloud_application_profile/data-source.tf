@@ -1,16 +1,9 @@
-data "spectrocloud_application_profile" "app_postgres" {
-  name    = "profile-postgres"
-  version = "1.0.0"
+# Retrieve details of a specific application profile
+data "spectrocloud_application_profile" "example_profile" {
+  name = "my-app-profile" # Specify the name of the application profile
 }
 
-data "spectrocloud_application_profile" "app_ingress" {
-  name = "profile-gamebox-ingress"
-}
-
-output "out_ingress_version" {
-  value = data.spectrocloud_application_profile.app_ingress.version
-}
-
-output "out_postgres" {
-  value = data.spectrocloud_application_profile.app_postgres.id
+# Output the retrieved application profile details
+output "application_profile_version" {
+  value = data.spectrocloud_application_profile.example_profile.version
 }
