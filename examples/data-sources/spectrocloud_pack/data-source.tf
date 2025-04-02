@@ -9,12 +9,12 @@ data "spectrocloud_pack" "filtered" {
   name = "k8sgpt-operator" # Pack name to search for
 
   advance_filters {
-    pack_type   = ["spectro"]       # Allowed: "helm", "spectro", "oci", "manifest"
-    addon_type  = ["system app"]    # Allowed: "load balancer", "ingress", "logging", "monitoring", "security", "authentication", "servicemesh", "system app", "app services", "registry", "csi", "cni", "integration"
-    pack_layer  = ["addon"]         # Allowed: "kernel", "os", "k8s", "cni", "csi", "addon"
-    environment = ["all"]           # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "openstack", "edge-native"
-    is_fips     = false             # Boolean: true (FIPS-compliant) / false (default)
-    pack_source = ["community"]      # Allowed: "spectrocloud", "community"
+    pack_type   = ["spectro"]    # Allowed: "helm", "spectro", "oci", "manifest"
+    addon_type  = ["system app"] # Allowed: "load balancer", "ingress", "logging", "monitoring", "security", "authentication", "servicemesh", "system app", "app services", "registry", "csi", "cni", "integration"
+    pack_layer  = ["addon"]      # Allowed: "kernel", "os", "k8s", "cni", "csi", "addon"
+    environment = ["all"]        # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "openstack", "edge-native"
+    is_fips     = false          # Boolean: true (FIPS-compliant) / false (default)
+    pack_source = ["community"]  # Allowed: "spectrocloud", "community"
   }
 
   registry_uid = "5ee9c5adc172449eeb9c30cf" # Unique registry identifier

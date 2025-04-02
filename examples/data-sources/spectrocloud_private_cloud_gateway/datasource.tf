@@ -1,6 +1,6 @@
 # Retrieve details of a specific Private Cloud Gateway (PCG) by name
 data "spectrocloud_private_cloud_gateway" "example_pcg" {
-  name = "my-private-cloud-gateway"  # Specify the name of the PCG
+  name = "my-private-cloud-gateway" # Specify the name of the PCG
 }
 
 # Output the retrieved PCG ID

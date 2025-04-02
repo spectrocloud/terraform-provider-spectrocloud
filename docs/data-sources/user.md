@@ -20,6 +20,7 @@ data "spectrocloud_user" "example" {
   # email = "user@example.com"  # Alternative way to reference a user by email
 }
 
+# Output user details for reference
 output "user_info" {
   value = {
     id    = data.spectrocloud_user.example.id

@@ -17,27 +17,13 @@ description: |-
 An example of how to use this data source to retrieve a specific registration token in Palette.
 
 ```hcl
-# Retrieve details of an existing registration token
-data "spectrocloud_registration_token" "example" {
-  name = "my-registration-token"  # Specify the name of the registration token
+data "spectrocloud_registration_token" "tf" {
+  name    = "ran-dev-test"
+#  id = "657ec9a27afca71b0dc98027"
 }
 
-# Output the registration token details
-output "registration_token" {
-  value     = data.spectrocloud_registration_token.example.token
-  sensitive = true
-}
-
-output "registration_token_id" {
-  value = data.spectrocloud_registration_token.example.id
-}
-
-output "registration_token_status" {
-  value = data.spectrocloud_registration_token.example.status
-}
-
-output "registration_token_expiry" {
-  value = data.spectrocloud_registration_token.example.expiry_date
+output "token" {
+  value = data.spectrocloud_registration_token.tf.token
 }
 ```
 

@@ -15,12 +15,12 @@ Provides details about a set of appliances used for Edge Native cluster provisio
 ```terraform
 # Data source to retrieve details of appliances based on filters
 data "spectrocloud_appliances" "filtered_appliances" {
-  context      = "project"        # Context can be "project" or "tenant"
-  status       = "ready"         # Filter by status ready, in-use, unpaired
-  health       = "healthy"        # Filter by health status
-  architecture = "amd_64"         # Filter by architecture type amd64, arm64
+  context      = "project" # Context can be "project" or "tenant"
+  status       = "ready"   # Filter by status ready, in-use, unpaired
+  health       = "healthy" # Filter by health status
+  architecture = "amd_64"  # Filter by architecture type amd64, arm64
   tags = {
-    environment = "production"    # Filter by tag key-value pairs
+    environment = "production" # Filter by tag key-value pairs
   }
 }
 

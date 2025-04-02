@@ -2,7 +2,7 @@
 data "spectrocloud_permission" "example" {
   # The name of the permission (Required)
   # Example: "App Deployment", "Cluster Management", "User Access"
-  name  = "App Deployment"
+  name = "App Deployment"
 
   # Scope of the permission (Optional, Defaults to "project")
   # Allowed values: "project", "tenant", "resource"

@@ -1,6 +1,6 @@
 # Retrieve details of a specific application profile
 data "spectrocloud_application_profile" "example_profile" {
-  name = "my-app-profile"  # Specify the name of the application profile
+  name = "my-app-profile" # Specify the name of the application profile
 }
 
 # Output the retrieved application profile details

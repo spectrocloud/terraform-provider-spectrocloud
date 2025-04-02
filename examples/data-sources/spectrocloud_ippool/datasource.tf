@@ -1,7 +1,7 @@
 # Retrieve details of a specific IP Pool by name
 data "spectrocloud_ippool" "example" {
-  name                      = "my-ip-pool"  # Specify the name of the IP pool
-  private_cloud_gateway_id  = "pcg-12345"   # Specify the ID of the associated Private Cloud Gateway
+  name                     = "my-ip-pool" # Specify the name of the IP pool
+  private_cloud_gateway_id = "pcg-12345"  # Specify the ID of the associated Private Cloud Gateway
 }
 
 # Output the retrieved IP Pool name

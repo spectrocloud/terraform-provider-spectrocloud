@@ -1,6 +1,6 @@
 # Retrieve details of an existing SSH key
 data "spectrocloud_ssh_key" "example" {
-  name = "my-ssh-key"  # Specify the name of the SSH key resource
+  name = "my-ssh-key" # Specify the name of the SSH key resource
 }
 
 # Output the SSH key (sensitive)

@@ -1,9 +1,9 @@
 # Retrieve details of a DNS map for a Private Cloud Gateway
 data "spectrocloud_privatecloudgateway_dns_map" "example" {
-  search_domain_name       = "example.com"  # Specify the domain name for DNS search
+  search_domain_name = "example.com" # Specify the domain name for DNS search
   # Option to filter with network, if more than one dns map in same search_domain_name.
   network                  = "VM-NETWORK2"
-  private_cloud_gateway_id = "pcg-12345"    # Specify the associated Private Cloud Gateway ID
+  private_cloud_gateway_id = "pcg-12345" # Specify the associated Private Cloud Gateway ID
 }
 
 # Output the retrieved network
