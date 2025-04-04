@@ -16,7 +16,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 	//if cluster.Metadata.Annotations["scope"] != "" {
 	//	ClusterContext = cluster.Metadata.Annotations["scope"]
 	//}
-	kubecfg, err := c.GetClusterKubeConfig(d.Id())
+	kubecfg, err := c.GetClusterClientKubeConfig(d.Id())
 	if err != nil {
 		return diag.FromErr(err), true
 	}
