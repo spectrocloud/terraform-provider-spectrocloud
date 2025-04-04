@@ -51,7 +51,7 @@ func dataSourcePack() *schema.Resource {
 				Optional:      true,
 				MaxItems:      1,
 				Description:   "A set of advanced filters to refine the selection of packs. These filters allow users to specify criteria such as pack type, add-on type, pack layer, and environment.",
-				ConflictsWith: []string{"id", "cloud", "version", "filters"},
+				ConflictsWith: []string{"id", "cloud", "filters"},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"pack_type": {
@@ -300,7 +300,28 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		}
 
 		// Exactly one registry
-		filters = []string{fmt.Sprintf("metadata.uid=%s", registries[0].LatestPackUID)}
+		if ver, ok := d.GetOk("version"); ok {
+			supportedVersionList, err := c.GetPacksByNameAndRegistry(packName, registryUID)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			for _, v := range supportedVersionList.Tags {
+				if ver == v.Version {
+					filters = []string{fmt.Sprintf("metadata.uid=%s", v.PackUID)}
+					break
+				}
+				if len(filters) == 0 {
+					return diag.Diagnostics{{
+						Severity: diag.Error,
+						Summary:  "no matching packs for advance_filters",
+						Detail:   "No packs matching criteria found",
+					}}
+				}
+			}
+		} else {
+			filters = []string{fmt.Sprintf("metadata.uid=%s", registries[0].LatestPackUID)}
+		}
+
 	}
 
 	packs, err = c.GetPacks(filters, registryUID)
