@@ -206,17 +206,21 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 			registryUID = v.(string)
 		}
 		advanceFilter := v.([]interface{})[0].(map[string]interface{})
+		var registryList []string
+		if registryUID != "" {
+			registryList = []string{registryUID}
+		}
 		advanceFilterSpec = &models.V1PackFilterSpec{
 			Name: &models.V1FilterString{
 				Eq: StringPtr(packName),
 			},
 			Type:        convertToV1PackType(advanceFilter["pack_type"].(*schema.Set)),
 			Layer:       convertToV1PackLayer(advanceFilter["pack_layer"].(*schema.Set)),
-			Environment: convertToStringSlice(advanceFilter["environment"].(*schema.Set).List(), "environment"),
-			AddOnType:   convertToStringSlice(advanceFilter["addon_type"].(*schema.Set).List(), "addon_type"),
-			RegistryUID: []string{registryUID},
+			Environment: convertToStringSlice(advanceFilter["environment"].(*schema.Set).List()),
+			AddOnType:   convertToStringSlice(advanceFilter["addon_type"].(*schema.Set).List()),
+			RegistryUID: registryList,
 			IsFips:      advanceFilter["is_fips"].(bool),
-			Source:      convertToStringSlice(advanceFilter["pack_source"].(*schema.Set).List(), "pack_source"),
+			Source:      convertToStringSlice(advanceFilter["pack_source"].(*schema.Set).List()),
 		}
 	} else {
 		if v, ok := d.GetOk("name"); ok {
@@ -258,26 +262,47 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if len(advancePacksResult[0].Spec.Registries) == 0 {
-			diags = append(diags, diag.Diagnostic{
+
+		resultCount := len(advancePacksResult)
+		if resultCount == 0 {
+			return diag.Diagnostics{{
 				Severity: diag.Error,
 				Summary:  "no matching packs for advance_filters",
 				Detail:   "No packs matching criteria found",
-			})
-			return diags
-		} else if len(advancePacksResult[0].Spec.Registries) == 1 {
-			filters = make([]string, 0)
-			filters = append(filters, fmt.Sprintf("metadata.uid=%s", advancePacksResult[0].Spec.Registries[0].LatestPackUID))
-		} else if len(advancePacksResult[0].Spec.Registries) > 1 {
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  "multiple packs returned for specified advance_filter",
-				Detail:   fmt.Sprintf("Found %d matching packs. Restrict packs criteria to a single match.", len(advancePacksResult)),
-			})
-			return diags
+			}}
 		}
 
+		if resultCount > 1 {
+			return diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  "multiple packs returned for specified advance_filter",
+				Detail:   fmt.Sprintf("Found %d matching packs. Restrict packs criteria to a single match.", resultCount),
+			}}
+		}
+
+		registries := advancePacksResult[0].Spec.Registries
+		registryCount := len(registries)
+
+		if registryCount == 0 {
+			return diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  "no matching packs for advance_filters",
+				Detail:   "No packs matching criteria found",
+			}}
+		}
+
+		if registryCount > 1 {
+			return diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  "packs available in multiple registries for given advance_filter",
+				Detail:   fmt.Sprintf("Packs found in %d registries. Restrict packs criteria to a single match.", registryCount),
+			}}
+		}
+
+		// Exactly one registry
+		filters = []string{fmt.Sprintf("metadata.uid=%s", registries[0].LatestPackUID)}
 	}
+
 	packs, err = c.GetPacks(filters, registryUID)
 	if err != nil {
 		return diag.FromErr(err)
@@ -391,9 +416,6 @@ func convertToV1PackType(set *schema.Set) []models.V1PackType {
 			result = append(result, models.V1PackType(str))
 		}
 	}
-	if len(result) == 0 {
-		result = []models.V1PackType{models.V1PackTypeSpectro, models.V1PackTypeHelm, models.V1PackTypeManifest, models.V1PackTypeOci}
-	}
 	return result
 }
 
@@ -404,28 +426,14 @@ func convertToV1PackLayer(set *schema.Set) []models.V1PackLayer {
 			result = append(result, models.V1PackLayer(str))
 		}
 	}
-	if len(result) == 0 {
-		result = []models.V1PackLayer{models.V1PackLayerKernel, models.V1PackLayerOs, models.V1PackLayerK8s, models.V1PackLayerCni, models.V1PackLayerCsi, models.V1PackLayerAddon}
-	}
 	return result
 }
 
-func convertToStringSlice(input []interface{}, filtype string) []string {
+func convertToStringSlice(input []interface{}) []string {
 	result := make([]string, len(input))
 	for i, v := range input {
 		if str, ok := v.(string); ok {
 			result[i] = str
-		}
-	}
-
-	if len(result) == 0 {
-		switch filtype {
-		case "environment":
-			result = AllowedEnvs
-		case "addon_type":
-			result = AllowedAddonType
-		case "pack_source":
-			result = []string{"spectrocloud", "community"}
 		}
 	}
 	return result
