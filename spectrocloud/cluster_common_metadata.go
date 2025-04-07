@@ -10,7 +10,7 @@ func getClusterMetadata(d *schema.ResourceData) *models.V1ObjectMeta {
 	return &models.V1ObjectMeta{
 		Name:        d.Get("name").(string),
 		UID:         d.Id(),
-		Labels:      toTags(d),
+		Labels:      toMergedTags(d),
 		Annotations: map[string]string{"description": d.Get("description").(string)},
 	}
 }
@@ -18,7 +18,7 @@ func getClusterMetadata(d *schema.ResourceData) *models.V1ObjectMeta {
 func toClusterMetadataUpdate(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
 	return &models.V1ObjectMetaInputEntity{
 		Name:        d.Get("name").(string),
-		Labels:      toTags(d),
+		Labels:      toMergedTags(d),
 		Annotations: map[string]string{"description": d.Get("description").(string)},
 	}
 }

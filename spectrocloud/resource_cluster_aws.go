@@ -58,6 +58,14 @@ func resourceClusterAws() *schema.Resource {
 				},
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
+			"tags_map": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of tags to be applied to the cluster.",
+			},
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,

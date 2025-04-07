@@ -62,6 +62,14 @@ func resourceApplicationProfile() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"tags_map": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of tags to be applied to the cluster.",
+			},
 			"description": {
 				Type:        schema.TypeString,
 				Description: "Description of the profile.",

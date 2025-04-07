@@ -2,9 +2,21 @@ package spectrocloud
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"maps"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+
+func toMergedTags(d *schema.ResourceData) map[string]string {
+	tags := toTags(d)
+	tagsMap := toTagsMap(d)
+	// copy tags_map k:v into tags, if same keys are present in both maps then tags_map value will be used
+	if tagsMap != nil {
+		maps.Copy(tags, tagsMap)
+	}
+	return tags
+}
 
 func toTags(d *schema.ResourceData) map[string]string {
 	tags := make(map[string]string)
