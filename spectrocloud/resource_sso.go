@@ -170,6 +170,7 @@ func resourceSSO() *schema.Resource {
 						"user_info_endpoint": {
 							Type:        schema.TypeList,
 							Optional:    true,
+							MaxItems:    1,
 							Description: "To allow Palette to query the OIDC userinfo endpoint using the provided Issuer URL. Palette will first attempt to retrieve role and group information from userInfo endpoint. If unavailable, Palette will fall back to using Required Claims as specified above. Use the following fields to specify what Required Claims Palette will include when querying the userinfo endpoint.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -643,14 +644,16 @@ func toOIDC(d *schema.ResourceData) *models.V1TenantOidcClientSpec {
 	oidcSpec.SyncSsoTeams = true
 
 	if uie, ok := oidc["user_info_endpoint"]; ok {
-		oidcSpec.UserInfo = &models.V1OidcUserInfo{
-			Claims: &models.V1TenantOidcClaims{
-				Email:       uie.([]interface{})[0].(map[string]interface{})["email"].(string),
-				FirstName:   uie.([]interface{})[0].(map[string]interface{})["first_name"].(string),
-				LastName:    uie.([]interface{})[0].(map[string]interface{})["last_name"].(string),
-				SpectroTeam: uie.([]interface{})[0].(map[string]interface{})["spectro_team"].(string),
-			},
-			UseUserInfo: BoolPtr(true),
+		if len(uie.([]interface{})) > 0 {
+			oidcSpec.UserInfo = &models.V1OidcUserInfo{
+				Claims: &models.V1TenantOidcClaims{
+					Email:       uie.([]interface{})[0].(map[string]interface{})["email"].(string),
+					FirstName:   uie.([]interface{})[0].(map[string]interface{})["first_name"].(string),
+					LastName:    uie.([]interface{})[0].(map[string]interface{})["last_name"].(string),
+					SpectroTeam: uie.([]interface{})[0].(map[string]interface{})["spectro_team"].(string),
+				},
+				UseUserInfo: BoolPtr(true),
+			}
 		}
 	}
 	return oidcSpec
