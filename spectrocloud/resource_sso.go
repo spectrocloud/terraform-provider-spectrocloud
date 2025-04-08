@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -84,12 +85,26 @@ func resourceSSO() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "Client ID for OIDC authentication.",
+							ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+								v := val.(string)
+								if v == "" {
+									errs = append(errs, fmt.Errorf("%q must not be empty", key))
+								}
+								return
+							},
 						},
 						"client_secret": {
 							Type:        schema.TypeString,
 							Required:    true,
 							Sensitive:   true,
 							Description: "Client secret for OIDC authentication (sensitive).",
+							ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+								v := val.(string)
+								if v == "" {
+									errs = append(errs, fmt.Errorf("%q must not be empty", key))
+								}
+								return
+							},
 						},
 						"callback_url": {
 							Type:        schema.TypeString,
@@ -133,6 +148,19 @@ func resourceSSO() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "User's email address retrieved from identity provider.",
+							ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+								v := val.(string)
+								if v == "" {
+									errs = append(errs, fmt.Errorf("%q must not be empty", key))
+									return
+								}
+								emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
+								matched, err := regexp.MatchString(emailRegex, v)
+								if err != nil || !matched {
+									errs = append(errs, fmt.Errorf("%q must be a valid email address", key))
+								}
+								return
+							},
 						},
 						"spectro_team": {
 							Type:        schema.TypeString,
@@ -159,6 +187,19 @@ func resourceSSO() *schema.Resource {
 										Type:        schema.TypeString,
 										Required:    true,
 										Description: "User's email address retrieved from identity provider.",
+										ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+											v := val.(string)
+											if v == "" {
+												errs = append(errs, fmt.Errorf("%q must not be empty", key))
+												return
+											}
+											emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
+											matched, err := regexp.MatchString(emailRegex, v)
+											if err != nil || !matched {
+												errs = append(errs, fmt.Errorf("%q must be a valid email address", key))
+											}
+											return
+										},
 									},
 									"spectro_team": {
 										Type:        schema.TypeString,
@@ -251,6 +292,19 @@ func resourceSSO() *schema.Resource {
 							Optional:    true,
 							Default:     "Email",
 							Description: "User's email address retrieved from identity provider.",
+							ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+								v := val.(string)
+								if v == "" {
+									errs = append(errs, fmt.Errorf("%q must not be empty", key))
+									return
+								}
+								emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
+								matched, err := regexp.MatchString(emailRegex, v)
+								if err != nil || !matched {
+									errs = append(errs, fmt.Errorf("%q must be a valid email address", key))
+								}
+								return
+							},
 						},
 						"spectro_team": {
 							Type:        schema.TypeString,
