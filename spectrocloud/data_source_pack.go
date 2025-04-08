@@ -300,28 +300,31 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		}
 
 		// Exactly one registry
+		//if ver, ok := d.GetOk("version"); ok {
+		supportedVersionList, err := c.GetPacksByNameAndRegistry(packName, registryUID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if ver, ok := d.GetOk("version"); ok {
-			supportedVersionList, err := c.GetPacksByNameAndRegistry(packName, registryUID)
-			if err != nil {
-				return diag.FromErr(err)
-			}
 			for _, v := range supportedVersionList.Tags {
 				if ver == v.Version {
 					filters = []string{fmt.Sprintf("metadata.uid=%s", v.PackUID)}
 					break
 				}
-				if len(filters) == 0 {
-					return diag.Diagnostics{{
-						Severity: diag.Error,
-						Summary:  "no matching packs for advance_filters",
-						Detail:   "No packs matching criteria found",
-					}}
-				}
+			}
+			if len(filters) == 0 {
+				return diag.Diagnostics{{
+					Severity: diag.Error,
+					Summary:  "no matching packs for advance_filters",
+					Detail:   "No packs matching criteria found",
+				}}
 			}
 		} else {
-			filters = []string{fmt.Sprintf("metadata.uid=%s", registries[0].LatestPackUID)}
-		}
+			if supportedVersionList != nil {
+				filters = []string{fmt.Sprintf("metadata.uid=%s", supportedVersionList.Tags[len(supportedVersionList.Tags)-1].PackUID)}
+			}
 
+		}
 	}
 
 	packs, err = c.GetPacks(filters, registryUID)
