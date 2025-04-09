@@ -3,14 +3,15 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/palette-sdk-go/client"
 	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func dataSourcePack() *schema.Resource {
@@ -211,7 +212,12 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 
 func setLatestPackVersionToFilters(packName string, registryUID string, c *client.V1Client) string {
 	var packLayers = []models.V1PackLayer{models.V1PackLayerKernel, models.V1PackLayerOs, models.V1PackLayerK8s, models.V1PackLayerCni, models.V1PackLayerCsi, models.V1PackLayerAddon}
-	var packTypes = []models.V1PackType{models.V1PackTypeSpectro, models.V1PackTypeHelm, models.V1PackTypeManifest, models.V1PackTypeOci}
+	var packTypes = []*models.V1PackType{
+		types.Ptr(models.V1PackTypeSpectro),
+		types.Ptr(models.V1PackTypeHelm),
+		types.Ptr(models.V1PackTypeManifest),
+		types.Ptr(models.V1PackTypeOci),
+	}
 	var packAddOnTypes = []string{"load balancer", "ingress", "logging", "monitoring", "security", "authentication",
 		"servicemesh", "system app", "app services", "registry", "csi", "cni", "integration", ""}
 

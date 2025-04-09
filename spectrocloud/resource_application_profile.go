@@ -176,7 +176,7 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 		p := make(map[string]interface{})
 		p["uid"] = tier.Metadata.UID
 		if isRegistryUID(diagPacks, tier.Metadata.Name) {
-			p["registry_uid"] = c.GetPackRegistry(tier.Metadata.UID, string(tier.Spec.Type))
+			p["registry_uid"] = c.GetPackRegistry(tier.Metadata.UID, string(*tier.Spec.Type))
 		}
 		p["name"] = tier.Metadata.Name
 		//p["tag"] = tier.Tag
@@ -196,10 +196,10 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 			}
 		}
 		p["properties"] = prop
-		if tier.Spec.Type == "container" {
+		if tier.Spec.Type != nil && string(*tier.Spec.Type) == "container" {
 			p["values"] = tier.Spec.Values
 		}
-		if tier.Spec.Type == "helm" || tier.Spec.Type == "manifest" {
+		if tier.Spec.Type != nil && (*tier.Spec.Type == "helm" || *tier.Spec.Type == "manifest") {
 			if len(tier.Spec.Manifests) > 0 {
 				ma := make([]interface{}, len(tier.Spec.Manifests))
 				for j, m := range tier.Spec.Manifests {
@@ -346,7 +346,7 @@ func toApplicationProfilePackCreate(pSrc interface{}) (*models.V1AppTierEntity, 
 		SourceAppTierUID: source_app_tier,
 		RegistryUID:      pRegistryUID,
 		//UID:         pUID,
-		Type: pType,
+		Type: &pType,
 		// UI strips a single newline, so we should do the same
 		Values:     strings.TrimSpace(p["values"].(string)),
 		Properties: toPropertiesTier(p),

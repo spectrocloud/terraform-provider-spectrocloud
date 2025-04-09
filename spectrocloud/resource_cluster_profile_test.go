@@ -111,8 +111,8 @@ func TestFlattenProfileVariables(t *testing.T) {
 	_ = mockResourceData.Set("profile_variables", proVar)
 
 	pv := []*models.V1Variable{
-		{Name: StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: "string", DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
-		{Name: StringPtr("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: "integer", DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
+		{Name: StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: models.NewV1VariableFormat("string"), DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
+		{Name: StringPtr("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: models.NewV1VariableFormat("integer"), DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
 	}
 
 	result, err := flattenProfileVariables(mockResourceData, pv)
@@ -262,7 +262,7 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 				Tag:         "v1.0",
 				RegistryUID: "test-registry-uid",
 				UID:         "test-uid",
-				Type:        models.V1PackTypeSpectro,
+				Type:        models.V1PackTypeSpectro.Pointer(),
 				Values:      "test-values",
 				Manifests:   []*models.V1ManifestInputEntity{},
 			},
@@ -301,7 +301,7 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 				Tag:         "",
 				RegistryUID: "",
 				UID:         "spectro-manifest-pack",
-				Type:        models.V1PackTypeManifest,
+				Type:        models.V1PackTypeManifest.Pointer(),
 				Values:      "test-values",
 				Manifests: []*models.V1ManifestInputEntity{
 					{
@@ -332,7 +332,7 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 				Tag:         "",
 				RegistryUID: "",
 				UID:         "custom-uid",
-				Type:        models.V1PackTypeManifest,
+				Type:        models.V1PackTypeManifest.Pointer(),
 				Values:      "test-values",
 				Manifests: []*models.V1ManifestInputEntity{
 					{

@@ -82,7 +82,7 @@ func RegistriesRoutes() []Route {
 						BaseContentPath: "test-path",
 						Credentials: &models.V1AwsCloudAccount{
 							AccessKey:      "test-key",
-							CredentialType: "sts",
+							CredentialType: models.V1AwsCloudAccountCredentialTypeSts.Pointer(),
 							Partition:      spectrocloud.StringPtr("test-part"),
 							PolicyARNs:     []string{"test-arns"},
 							SecretKey:      "test-secret-key",

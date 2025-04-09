@@ -193,11 +193,11 @@ func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 		account.Metadata.Annotations = ctxAnnotation
 	}
 	if len(d.Get("type").(string)) == 0 || d.Get("type").(string) == "secret" {
-		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret
+		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret.Pointer()
 		account.Spec.AccessKey = d.Get("aws_access_key").(string)
 		account.Spec.SecretKey = d.Get("aws_secret_key").(string)
 	} else if d.Get("type").(string) == "sts" {
-		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
+		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSts.Pointer()
 		account.Spec.Sts = &models.V1AwsStsCredentials{
 			Arn:        d.Get("arn").(string),
 			ExternalID: d.Get("external_id").(string),
@@ -235,7 +235,7 @@ func flattenCloudAccountAws(d *schema.ResourceData, account *models.V1AwsAccount
 	if err := d.Set("type", account.Spec.CredentialType); err != nil {
 		return diag.FromErr(err), true
 	}
-	if account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
+	if *account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 		if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
 			return diag.FromErr(err), true
 		}

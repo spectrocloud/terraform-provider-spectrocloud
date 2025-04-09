@@ -48,7 +48,7 @@ func BackupRoutes() []Route {
 							CaCert:     "test-cert",
 							Credentials: &models.V1AwsCloudAccount{
 								AccessKey:      "test-access-key",
-								CredentialType: "secret",
+								CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
 								Partition:      nil,
 								PolicyARNs:     []string{"test-arn"},
 								SecretKey:      "test-secret-key",
@@ -81,7 +81,7 @@ func BackupRoutes() []Route {
 							},
 							Spec: &models.V1UserAssetsLocationSpec{
 								IsDefault: false,
-								Storage:   "s3",
+								Storage:   models.V1LocationTypeS3.Pointer(),
 								Type:      "",
 							},
 						},

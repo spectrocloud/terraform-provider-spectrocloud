@@ -39,7 +39,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 				Name:        types.Ptr("test-pack"),
 				Tag:         "v1.0.0",
 				RegistryUID: "registry-123",
-				Type:        "Addon",
+				Type:        models.V1PackTypeOci.Pointer(),
 				Values:      "some values",
 				Manifests: []*models.V1ManifestInputEntity{
 					{
@@ -73,7 +73,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 				Name:        types.Ptr("test-pack"),
 				Tag:         "v1.0.0",
 				RegistryUID: "",
-				Type:        "Addon",
+				Type:        models.V1PackTypeOci.Pointer(),
 				Values:      "some values",
 				Manifests: []*models.V1ManifestInputEntity{
 					{
@@ -98,7 +98,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 				Name:        types.Ptr("test-pack"),
 				Tag:         "v1.0.0",
 				RegistryUID: "registry-123",
-				Type:        "Addon",
+				Type:        models.V1PackTypeOci.Pointer(),
 				Values:      "some values",
 				Manifests:   []*models.V1ManifestInputEntity{},
 			},

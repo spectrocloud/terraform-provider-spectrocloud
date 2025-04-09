@@ -107,7 +107,7 @@ func toAddonDeploymentPackCreate(pSrc interface{}) (*models.V1PackManifestEntity
 		Name:        types.Ptr(pName),
 		Tag:         pTag,
 		RegistryUID: pRegistryUID,
-		Type:        pType,
+		Type:        &pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}

@@ -252,7 +252,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
-		switch registry.Spec.Credentials.CredentialType {
+		switch *registry.Spec.Credentials.CredentialType {
 		case models.V1AwsCloudAccountCredentialTypeSts:
 			acc["arn"] = registry.Spec.Credentials.Sts.Arn
 			acc["external_id"] = registry.Spec.Credentials.Sts.ExternalID
@@ -261,7 +261,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			acc["access_key"] = registry.Spec.Credentials.AccessKey
 			acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
 		default:
-			errMsg := fmt.Sprintf("Registry type %s not implemented.", registry.Spec.Credentials.CredentialType)
+			errMsg := fmt.Sprintf("Registry type %s not implemented.", *registry.Spec.Credentials.CredentialType)
 			err = errors.New(errMsg)
 			return diag.FromErr(err)
 		}
@@ -455,11 +455,11 @@ func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 func toRegistryAwsAccountCredential(regCred map[string]interface{}) *models.V1AwsCloudAccount {
 	account := &models.V1AwsCloudAccount{}
 	if len(regCred["credential_type"].(string)) == 0 || regCred["credential_type"].(string) == "secret" {
-		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret
+		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret.Pointer()
 		account.AccessKey = regCred["access_key"].(string)
 		account.SecretKey = regCred["secret_key"].(string)
 	} else if regCred["credential_type"].(string) == "sts" {
-		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
+		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSts.Pointer()
 		account.Sts = &models.V1AwsStsCredentials{
 			Arn:        regCred["arn"].(string),
 			ExternalID: regCred["external_id"].(string),
