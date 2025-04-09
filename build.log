@@ -1,0 +1,13 @@
+bash generate_dev_provider.sh 100.100.100
+Generating spectrocloud local provider with version 100.100.100
+Downloading: random, 3.1.0, darwin_arm64
+Archive:  provider.zip
+  inflating: terraform-provider-random_v3.1.0_x5  
+Downloading: null, 3.1.0, darwin_arm64
+Archive:  provider.zip
+  inflating: terraform-provider-null_v3.1.0_x5  
+Downloading: local, 2.1.0, darwin_arm64
+Archive:  provider.zip
+  inflating: terraform-provider-local_v2.1.0_x5  
+[34m ✅ Run below command to initialize terraform with local generated provider (100.100.100):
+[31m terraform init --plugin-dir /Users/pavan/go/src/github.com/spectrocloud/terraform-provider-spectrocloud/providers/plugins
