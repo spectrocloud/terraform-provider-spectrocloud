@@ -65,8 +65,7 @@ func resourceSSO() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"issuer_url": {
 							Type:        schema.TypeString,
-							Optional:    true,
-							Default:     "https://www.spectrocloud.com",
+							Required:    true,
 							Description: "URL of the OIDC issuer.",
 						},
 						"identity_provider_ca_certificate": {
@@ -127,7 +126,7 @@ func resourceSSO() *schema.Resource {
 						},
 						"scopes": {
 							Type:     schema.TypeSet,
-							Optional: true,
+							Required: true,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,

@@ -93,7 +93,9 @@ Required:
 - `client_secret` (String, Sensitive) Client secret for OIDC authentication (sensitive).
 - `email` (String) User's email address retrieved from identity provider.
 - `first_name` (String) User's first name retrieved from identity provider.
+- `issuer_url` (String) URL of the OIDC issuer.
 - `last_name` (String) User's last name retrieved from identity provider.
+- `scopes` (Set of String) Scopes requested during OIDC authentication.
 - `spectro_team` (String) The SpectroCloud team the user belongs to.
 
 Optional:
@@ -101,8 +103,6 @@ Optional:
 - `default_team_ids` (Set of String) A set of default team IDs assigned to users.
 - `identity_provider_ca_certificate` (String) Certificate authority (CA) certificate for the identity provider.
 - `insecure_skip_tls_verify` (Boolean) Boolean to skip TLS verification for identity provider communication.
-- `issuer_url` (String) URL of the OIDC issuer.
-- `scopes` (Set of String) Scopes requested during OIDC authentication.
 - `user_info_endpoint` (Block List, Max: 1) To allow Palette to query the OIDC userinfo endpoint using the provided Issuer URL. Palette will first attempt to retrieve role and group information from userInfo endpoint. If unavailable, Palette will fall back to using Required Claims as specified above. Use the following fields to specify what Required Claims Palette will include when querying the userinfo endpoint. (see [below for nested schema](#nestedblock--oidc--user_info_endpoint))
 
 Read-Only:
