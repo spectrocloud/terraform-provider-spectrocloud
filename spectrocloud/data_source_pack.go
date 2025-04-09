@@ -66,7 +66,7 @@ func dataSourcePack() *schema.Resource {
 						"addon_type": {
 							Type:        schema.TypeSet,
 							Optional:    true,
-							Description: "Defines the type of add-on pack. Allowed values are `load balancer`, `ingress`, `logging`, `monitoring`, `security`, `authentication`, `servicemesh`, `system app`, `app services`, `registry`, `csi`, `cni`, and `integration`. If not specified, all options will be set by default.",
+							Description: "Defines the type of add-on pack. Allowed values are `load balancer`, `ingress`, `logging`, `monitoring`, `security`, `authentication`, `servicemesh`, `system app`, `app services`, `registry` and `integration`. If not specified, all options will be set by default. For `storage` and `network` addon_type set `csi` or `cni` respectively in pack_layer",
 							Elem: &schema.Schema{
 								Type:         schema.TypeString,
 								ValidateFunc: validation.StringInSlice(AllowedAddonType, false),
