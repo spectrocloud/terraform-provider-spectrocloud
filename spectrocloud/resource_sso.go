@@ -45,6 +45,21 @@ func resourceSSO() *schema.Resource {
 				Description: "A set of domains associated with the SSO configuration.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
+					ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+						v := val.(string)
+
+						if strings.TrimSpace(v) == "" {
+							errs = append(errs, fmt.Errorf("%q must not be empty", key))
+							return
+						}
+
+						// Basic domain regex (not exhaustive but covers common cases)
+						domainRegex := `^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$`
+						if matched, _ := regexp.MatchString(domainRegex, v); !matched {
+							errs = append(errs, fmt.Errorf("%q must be a valid domain name", key))
+						}
+						return
+					},
 				},
 			},
 			"auth_providers": {
