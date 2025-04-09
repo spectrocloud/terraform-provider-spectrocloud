@@ -22,7 +22,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 				"name":         "test-pack",
 				"tag":          "v1.0.0",
 				"registry_uid": "registry-123",
-				"type":         "Addon",
+				"type":         "oci",
 				"values":       "some values\n",
 				"manifest": []interface{}{
 					map[string]interface{}{
@@ -60,7 +60,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 				"name":         "test-pack",
 				"tag":          "v1.0.0",
 				"registry_uid": nil,
-				"type":         "Addon",
+				"type":         "oci",
 				"values":       "some values\n",
 				"manifest": []interface{}{
 					map[string]interface{}{
@@ -90,7 +90,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 				"name":         "test-pack",
 				"tag":          "v1.0.0",
 				"registry_uid": "registry-123",
-				"type":         "Addon",
+				"type":         "oci",
 				"values":       "some values\n",
 				"manifest":     []interface{}{},
 			},
@@ -142,7 +142,7 @@ func TestGetAddonDeploymentDiagPacks(t *testing.T) {
 						"name":         "test-pack",
 						"tag":          "v1.0",
 						"registry_uid": "uid-123",
-						"type":         "Addon",
+						"type":         "oci",
 						"values":       "some values",
 						"manifest": []interface{}{
 							map[string]interface{}{
@@ -165,7 +165,7 @@ func TestGetAddonDeploymentDiagPacks(t *testing.T) {
 		assert.Equal(t, "test-pack", *pack.Name)
 		assert.Equal(t, "v1.0", pack.Tag)
 		assert.Equal(t, "uid-123", pack.RegistryUID)
-		assert.Equal(t, models.V1PackType("Addon"), pack.Type)
+		assert.Equal(t, models.V1PackTypeOci, *pack.Type)
 		assert.Equal(t, "some values", pack.Values)
 		require.Len(t, pack.Manifests, 1)
 		assert.Equal(t, "manifest-content-1", pack.Manifests[0].Content)

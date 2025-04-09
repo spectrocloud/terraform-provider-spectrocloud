@@ -519,11 +519,11 @@ func toAzureBackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsL
 func toAwsAccountCredential(s3cred map[string]interface{}) *models.V1AwsCloudAccount {
 	account := &models.V1AwsCloudAccount{}
 	if len(s3cred["credential_type"].(string)) == 0 || s3cred["credential_type"].(string) == "secret" {
-		*account.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret
+		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret.Pointer()
 		account.AccessKey = s3cred["access_key"].(string)
 		account.SecretKey = s3cred["secret_key"].(string)
 	} else if s3cred["credential_type"].(string) == "sts" {
-		*account.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
+		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSts.Pointer()
 		account.Sts = &models.V1AwsStsCredentials{
 			Arn:        s3cred["arn"].(string),
 			ExternalID: s3cred["external_id"].(string),

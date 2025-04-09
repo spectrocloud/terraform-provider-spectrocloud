@@ -53,7 +53,7 @@ func TestToPack_PacksMerging(t *testing.T) {
 		"name":   "testPack",
 		"values": "someValues",
 		"tag":    "v1",
-		"type":   "testType",
+		"type":   "oci",
 		"manifest": []interface{}{
 			map[string]interface{}{
 				"name":    "pack1",
