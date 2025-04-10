@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/spectrocloud/palette-sdk-go/api/client/v1"
+	"github.com/spectrocloud/palette-sdk-go/api/client/version1"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -45,7 +45,7 @@ func AppProfilesRoutes() []Route {
 									Properties:       nil,
 									RegistryUID:      "test-reg-uid",
 									SourceAppTierUID: "test-source",
-									Type:             "manifest",
+									Type:             models.NewV1AppTierType("manifest"),
 									Values:           "test-values",
 									Version:          "1.0.0",
 								},
@@ -90,7 +90,7 @@ func AppProfilesRoutes() []Route {
 							AppTiers: []*models.V1AppTierRef{
 								{
 									Name:    "test-tier-1",
-									Type:    "manifest",
+									Type:    models.NewV1AppTierType("manifest"),
 									UID:     "tes-uid",
 									Version: "1.0.0",
 								},
@@ -114,7 +114,7 @@ func AppProfilesRoutes() []Route {
 			Path:   "/v1/appProfiles/{uid}",
 			Response: ResponseData{
 				StatusCode: 204,
-				Payload:    &v1.V1AppProfilesUIDDeleteNoContent{},
+				Payload:    &version1.V1AppProfilesUIDDeleteNoContent{},
 			},
 		},
 	}

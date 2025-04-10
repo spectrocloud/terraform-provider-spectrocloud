@@ -333,14 +333,14 @@ func GetClusterGroupConfig(clusterGroupLimitConfig *models.V1ClusterGroupLimitCo
 			LimitConfig:          clusterGroupLimitConfig,
 			HostClustersConfig:   hostClusterConfig,
 			Values:               values,
-			KubernetesDistroType: models.V1ClusterKubernetesDistroType(k8Distro),
+			KubernetesDistroType: models.V1ClusterKubernetesDistroType(k8Distro).Pointer(),
 		}
 	} else {
 		return &models.V1ClusterGroupClustersConfig{
 			EndpointType:         endpointType,
 			LimitConfig:          clusterGroupLimitConfig,
 			HostClustersConfig:   hostClusterConfig,
-			KubernetesDistroType: models.V1ClusterKubernetesDistroType(k8Distro),
+			KubernetesDistroType: models.V1ClusterKubernetesDistroType(k8Distro).Pointer(),
 		}
 	}
 }

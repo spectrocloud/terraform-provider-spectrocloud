@@ -304,7 +304,7 @@ func toClusterProfileBasic(d *schema.ResourceData) *models.V1ClusterProfileEntit
 		Spec: &models.V1ClusterProfileEntitySpec{
 			Template: &models.V1ClusterProfileTemplateDraft{
 				CloudType: d.Get("cloud").(string),
-				Type:      models.V1ProfileType(d.Get("type").(string)),
+				Type:      types.Ptr(models.V1ProfileType(d.Get("type").(string))),
 			},
 			Version: d.Get("version").(string),
 		},
@@ -340,7 +340,7 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 		Tag:         p["tag"].(string),
 		RegistryUID: pRegistryUID,
 		UID:         pUID,
-		Type:        pType,
+		Type:        &pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}
@@ -368,7 +368,7 @@ func toClusterProfileUpdate(d *schema.ResourceData, cluster *models.V1ClusterPro
 		},
 		Spec: &models.V1ClusterProfileUpdateEntitySpec{
 			Template: &models.V1ClusterProfileTemplateUpdate{
-				Type: models.V1ProfileType(d.Get("type").(string)),
+				Type: types.Ptr(models.V1ProfileType(d.Get("type").(string))),
 			},
 			Version: d.Get("version").(string),
 		},
@@ -435,7 +435,7 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 		Tag:         p["tag"].(string),
 		RegistryUID: pRegistryUID,
 		UID:         pUID,
-		Type:        pType,
+		Type:        &pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}
@@ -478,7 +478,7 @@ func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, er
 					DefaultValue: variable["default_value"].(string),
 					Description:  variable["description"].(string),
 					DisplayName:  variable["display_name"].(string), // revisit
-					Format:       models.V1VariableFormat(variable["format"].(string)),
+					Format:       types.Ptr(models.V1VariableFormat(variable["format"].(string))),
 					Hidden:       variable["hidden"].(bool),
 					Immutable:    variable["immutable"].(bool),
 					Name:         StringPtr(variable["name"].(string)),

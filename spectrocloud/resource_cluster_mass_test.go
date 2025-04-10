@@ -38,7 +38,7 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 			IsControlPlane: false,
 			Labels:         []string{"Masslabel1", "Masslabel2"},
 			MachinePoolProperties: &models.V1MachinePoolProperties{
-				ArchType: models.V1ArchType("amd64"),
+				ArchType: models.V1ArchTypeAmd64.Pointer(),
 			},
 			MaxSize:            3,
 			MinSize:            2,

@@ -22,7 +22,7 @@ func getAccountResponse(cloud string) interface{} {
 					},
 					Spec: &models.V1AwsCloudAccount{
 						AccessKey:      "test-access-key",
-						CredentialType: "secret",
+						CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
 						Partition:      nil,
 						PolicyARNs:     nil,
 						SecretKey:      "test-crt",
@@ -42,7 +42,7 @@ func getAccountResponse(cloud string) interface{} {
 					},
 					Spec: &models.V1AwsCloudAccount{
 						AccessKey:      "test-access-key",
-						CredentialType: "secret",
+						CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
 						Partition:      nil,
 						PolicyARNs:     nil,
 						SecretKey:      "test-crt",
@@ -176,7 +176,7 @@ func getAccountNegativeResponse(cloud string) interface{} {
 					},
 					Spec: &models.V1AwsCloudAccount{
 						AccessKey:      "test-access-key",
-						CredentialType: "secret",
+						CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
 						Partition:      nil,
 						PolicyARNs:     nil,
 						SecretKey:      "test-crt",
@@ -596,7 +596,7 @@ func CloudAccountsRoutes() []Route {
 					},
 					Spec: &models.V1AwsCloudAccount{
 						AccessKey:      "test-access-key",
-						CredentialType: "secret",
+						CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
 						Partition:      nil,
 						PolicyARNs:     nil,
 						SecretKey:      "test-crt",
@@ -783,7 +783,7 @@ func CloudAccountsRoutes() []Route {
 				Payload: &models.V1CustomCloudTypes{
 					CloudTypes: []*models.V1CustomCloudType{
 						{
-							CloudCategory: "test",
+							CloudCategory: models.V1CloudCategoryCloud.Pointer(),
 							CloudFamily:   "",
 							DisplayName:   "test-cloud",
 							IsCustom:      true,

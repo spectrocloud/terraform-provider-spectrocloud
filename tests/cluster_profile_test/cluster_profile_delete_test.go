@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	clusterC "github.com/spectrocloud/palette-sdk-go/api/client/v1"
+	clusterC "github.com/spectrocloud/palette-sdk-go/api/client/version1"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mock"
 )

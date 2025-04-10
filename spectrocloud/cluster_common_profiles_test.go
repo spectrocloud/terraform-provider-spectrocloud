@@ -53,7 +53,7 @@ func TestToPack_PacksMerging(t *testing.T) {
 		"name":   "testPack",
 		"values": "someValues",
 		"tag":    "v1",
-		"type":   "testType",
+		"type":   "oci",
 		"manifest": []interface{}{
 			map[string]interface{}{
 				"name":    "pack1",
@@ -70,7 +70,7 @@ func TestToPack_PacksMerging(t *testing.T) {
 		Name:   types.Ptr("testPack"),
 		Values: "someValues",
 		Tag:    "v1",
-		Type:   models.V1PackType("testType"),
+		Type:   models.V1PackTypeOci.Pointer(),
 		Manifests: []*models.V1ManifestRefUpdateEntity{
 			{
 				Name:    types.Ptr("pack1"),

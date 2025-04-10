@@ -25,7 +25,7 @@ func TestToAwsAccountCTXProjectSecret(t *testing.T) {
 	assert.Equal(t, rd.Get("aws_access_key"), acc.Spec.AccessKey)
 	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
 	assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(acc.Spec.CredentialType))
+	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
 }
 
 func TestToAwsAccountCTXTenantSecret(t *testing.T) {
@@ -43,7 +43,7 @@ func TestToAwsAccountCTXTenantSecret(t *testing.T) {
 	assert.Equal(t, rd.Get("aws_access_key"), acc.Spec.AccessKey)
 	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
 	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(acc.Spec.CredentialType))
+	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
 	assert.Equal(t, rd.Get("partition"), *acc.Spec.Partition)
 }
 
@@ -61,7 +61,7 @@ func TestToAwsAccountCTXProjectSTS(t *testing.T) {
 	assert.Equal(t, rd.Get("arn"), acc.Spec.Sts.Arn)
 	assert.Equal(t, rd.Get("external_id"), acc.Spec.Sts.ExternalID)
 	assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(acc.Spec.CredentialType))
+	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
 }
 
 func TestToAwsAccountCTXTenantSTS(t *testing.T) {
@@ -78,7 +78,7 @@ func TestToAwsAccountCTXTenantSTS(t *testing.T) {
 	assert.Equal(t, rd.Get("arn"), acc.Spec.Sts.Arn)
 	assert.Equal(t, rd.Get("external_id"), acc.Spec.Sts.ExternalID)
 	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(acc.Spec.CredentialType))
+	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
 }
 
 func TestFlattenCloudAccountAwsSTS(t *testing.T) {
@@ -94,7 +94,7 @@ func TestFlattenCloudAccountAwsSTS(t *testing.T) {
 			},
 		},
 		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypeSts,
+			CredentialType: models.V1AwsCloudAccountCredentialTypeSts.Pointer(),
 			Sts:            &models.V1AwsStsCredentials{Arn: "test_arn"},
 			Partition:      types.Ptr("test_partition"),
 			PolicyARNs:     []string{"arn:aws:test_policy1", "arn:aws:test_policy2"},
@@ -139,7 +139,7 @@ func TestFlattenCloudAccountAws_NonStsType(t *testing.T) {
 			},
 		},
 		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret,
+			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
 			AccessKey:      "test_access_key_secret",
 			Partition:      types.Ptr("test_partition_secret"),
 			PolicyARNs:     []string{"arn:aws:test_policy_secret1", "arn:aws:test_policy_secret2"},

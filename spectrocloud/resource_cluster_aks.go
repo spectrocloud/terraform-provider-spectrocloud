@@ -702,7 +702,7 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 				ManagedDisk: &models.V1ManagedDisk{
 					StorageAccountType: m["storage_account_type"].(string),
 				},
-				OsType: "",
+				OsType: models.NewV1OsType(""), // TODO: PA1-SIVA fix a right type
 			},
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},

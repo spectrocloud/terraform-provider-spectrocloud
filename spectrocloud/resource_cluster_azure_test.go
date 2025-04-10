@@ -208,7 +208,7 @@ func TestToMachinePoolAzure(t *testing.T) {
 	assert.Equal(t, machinePool["control_plane"], result.PoolConfig.IsControlPlane)
 	assert.Equal(t, machinePool["control_plane_as_worker"], result.PoolConfig.UseControlPlaneAsWorker)
 	assert.Equal(t, machinePool["instance_type"], result.CloudConfig.InstanceType)
-	assert.Equal(t, machinePool["os_type"], string(result.CloudConfig.OsDisk.OsType))
+	assert.Equal(t, machinePool["os_type"], string(*result.CloudConfig.OsDisk.OsType))
 	assert.Equal(t, machinePool["is_system_node_pool"], result.CloudConfig.IsSystemNodePool)
 	assert.Equal(t, machinePool["node_repave_interval"], int(result.PoolConfig.NodeRepaveInterval))
 	assert.Equal(t, machinePool["count"], int(*result.PoolConfig.Size))
@@ -240,9 +240,9 @@ func TestFlattenMachinePoolConfigsAzure(t *testing.T) {
 			OsDisk: &models.V1AzureOSDisk{
 				DiskSizeGB:  50,
 				ManagedDisk: &models.V1ManagedDisk{StorageAccountType: "test"},
-				OsType:      "Linux",
+				OsType:      models.V1OsTypeLinux.Pointer(),
 			},
-			OsType:                  "Linux",
+			OsType:                  models.V1OsTypeLinux.Pointer(),
 			Size:                    5,
 			SpotVMOptions:           nil,
 			Taints:                  nil,

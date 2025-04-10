@@ -1,6 +1,6 @@
 package mock
 
-import clusterC "github.com/spectrocloud/palette-sdk-go/api/client/v1"
+import clusterC "github.com/spectrocloud/palette-sdk-go/api/client/version1"
 
 type ClusterClientMock struct {
 	clusterC.ClientService

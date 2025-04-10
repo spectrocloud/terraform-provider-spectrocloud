@@ -62,7 +62,7 @@ func TestToAwsAccountCredential(t *testing.T) {
 				"secret_key":      "test-secret-key",
 			},
 			expected: &models.V1AwsCloudAccount{
-				CredentialType: models.V1AwsCloudAccountCredentialTypeSecret,
+				CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
 				AccessKey:      "test-access-key",
 				SecretKey:      "test-secret-key",
 			},
@@ -75,7 +75,7 @@ func TestToAwsAccountCredential(t *testing.T) {
 				"external_id":     "test-external-id",
 			},
 			expected: &models.V1AwsCloudAccount{
-				CredentialType: models.V1AwsCloudAccountCredentialTypeSts,
+				CredentialType: models.V1AwsCloudAccountCredentialTypeSts.Pointer(),
 				Sts: &models.V1AwsStsCredentials{
 					Arn:        "test-arn",
 					ExternalID: "test-external-id",
@@ -90,7 +90,7 @@ func TestToAwsAccountCredential(t *testing.T) {
 				"secret_key":      "test-secret-key",
 			},
 			expected: &models.V1AwsCloudAccount{
-				CredentialType: models.V1AwsCloudAccountCredentialTypeSecret,
+				CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
 				AccessKey:      "test-access-key",
 				SecretKey:      "test-secret-key",
 			},

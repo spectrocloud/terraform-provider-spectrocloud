@@ -729,7 +729,7 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 				ManagedDisk: &models.V1ManagedDisk{
 					StorageAccountType: diskType,
 				},
-				OsType: osType,
+				OsType: &osType,
 			},
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
