@@ -2,16 +2,16 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"	
+	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-  "github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -210,11 +210,16 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		if registryUID != "" {
 			registryList = []string{registryUID}
 		}
+		packTypeValues := convertToV1PackType(advanceFilter["pack_type"].(*schema.Set)) // returns []models.V1PackType
+		var packTypePtr []*models.V1PackType
+		for i := range packTypeValues {
+			packTypePtr = append(packTypePtr, &packTypeValues[i])
+		}
 		advanceFilterSpec = &models.V1PackFilterSpec{
 			Name: &models.V1FilterString{
 				Eq: StringPtr(packName),
 			},
-			Type:        convertToV1PackType(advanceFilter["pack_type"].(*schema.Set)),
+			Type:        packTypePtr,
 			Layer:       convertToV1PackLayer(advanceFilter["pack_layer"].(*schema.Set)),
 			Environment: convertToStringSlice(advanceFilter["environment"].(*schema.Set).List()),
 			AddOnType:   convertToStringSlice(advanceFilter["addon_type"].(*schema.Set).List()),
@@ -398,8 +403,6 @@ func setLatestPackVersionToFilters(packName string, registryUID string, c *clien
 		types.Ptr(models.V1PackTypeManifest),
 		types.Ptr(models.V1PackTypeOci),
 	}
-	var packAddOnTypes = []string{"load balancer", "ingress", "logging", "monitoring", "security", "authentication",
-		"servicemesh", "system app", "app services", "registry", "csi", "cni", "integration", ""}
 
 	newFilter := &models.V1PackFilterSpec{
 		Name: &models.V1FilterString{
