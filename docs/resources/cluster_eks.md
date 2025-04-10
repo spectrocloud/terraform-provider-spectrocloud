@@ -162,8 +162,8 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
-- `az_subnets` (Map of String)
-- `azs` (List of String)
+- `az_subnets` (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
+- `azs` (List of String) Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
 - `eks_launch_template` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--eks_launch_template))
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.

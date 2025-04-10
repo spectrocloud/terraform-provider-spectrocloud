@@ -13,12 +13,14 @@ description: |-
 ## Example Usage
 
 ```terraform
-data "spectrocloud_workspace" "workspace" {
-  name = "wsp-tf"
+# Retrieve details of a specific workspace
+data "spectrocloud_workspace" "example_workspace" {
+  name = "my-workspace" # Specify the name of the workspace
 }
 
-output "same" {
-  value = data.spectrocloud_workspace.workspace
+# Output the retrieved workspace id
+output "workspace_name" {
+  value = data.spectrocloud_workspace.example_workspace.id
 }
 ```
 

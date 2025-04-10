@@ -1,5 +1,16 @@
+# Retrieve details of a specific filter by name
 data "spectrocloud_filter" "example" {
-  name = "resourcefilter2"
+  name = "example-filter"
+}
+
+# Output filter metadata for reference
+output "filter_metadata" {
+  value = data.spectrocloud_filter.example.metadata
+}
+
+# Output filter spec details
+output "filter_spec" {
+  value = data.spectrocloud_filter.example.spec
 }
 
 output "filter_name" {

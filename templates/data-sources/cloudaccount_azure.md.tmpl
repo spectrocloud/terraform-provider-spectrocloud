@@ -15,17 +15,26 @@ description: |-
 You can retrieve the details of an Azure cloud registered in Palette by specifying the ID of the cloud account.
 
 ```hcl
-data "spectrocloud_cloudaccount_azure" "azure_account" {
-  id = "45bddf48b8fc3ea6c1774886"
-}
-```
+# Retrieve details of an Azure cloud account using name
 
-Alternatively, you specify the ID of the cloud account to retrieve the details of the Azure cloud account.
-
-```hcl
-data "spectrocloud_cloudaccount_azure" "azure_account" {
-   name = "primary-azure-account"
+data "spectrocloud_cloud_account_azure" "example" {
+  name    = "example-azure-account"  # Required if 'id' is not provided
+  context = "project"                # Optional: Allowed values are "project", "tenant", or "" (default)
 }
+
+# Consolidated output as a map
+output "azure_account_details" {
+  value = {
+    id                        = data.spectrocloud_cloud_account_azure.example.id
+    name                      = data.spectrocloud_cloud_account_azure.example.name
+    azure_tenant_id           = data.spectrocloud_cloud_account_azure.example.azure_tenant_id
+    azure_client_id           = data.spectrocloud_cloud_account_azure.example.azure_client_id
+    tenant_name               = data.spectrocloud_cloud_account_azure.example.tenant_name
+    disable_properties_request = data.spectrocloud_cloud_account_azure.example.disable_properties_request
+    context                   = data.spectrocloud_cloud_account_azure.example.context
+  }
+}
+
 ```
 
 {{ .SchemaMarkdown | trimspace }}
