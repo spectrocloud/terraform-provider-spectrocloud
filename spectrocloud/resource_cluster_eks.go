@@ -572,7 +572,7 @@ func flattenEksLaunchTemplate(launchTemplate *models.V1AwsLaunchTemplate) []inte
 		lt["root_volume_iops"] = launchTemplate.RootVolume.Iops
 		lt["root_volume_throughput"] = launchTemplate.RootVolume.Throughput
 	}
-	if launchTemplate.AdditionalSecurityGroups != nil && len(launchTemplate.AdditionalSecurityGroups) > 0 {
+	if len(launchTemplate.AdditionalSecurityGroups) > 0 {
 		var additionalSecurityGroups []string
 		for _, sg := range launchTemplate.AdditionalSecurityGroups {
 			additionalSecurityGroups = append(additionalSecurityGroups, sg.ID)

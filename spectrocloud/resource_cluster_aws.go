@@ -460,7 +460,7 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 			oi["azs"] = machinePool.Azs
 		}
 
-		if machinePool.AdditionalSecurityGroups != nil && len(machinePool.AdditionalSecurityGroups) > 0 {
+		if len(machinePool.AdditionalSecurityGroups) > 0 {
 			additionalSecuritygroup := make([]string, 0)
 			for _, sg := range machinePool.AdditionalSecurityGroups {
 				additionalSecuritygroup = append(additionalSecuritygroup, sg.ID)
