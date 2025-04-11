@@ -206,6 +206,22 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
+	if d.HasChanges("profile_variables") {
+		pvs, err := toClusterProfileVariables(d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		mVars := &models.V1Variables{
+			Variables: pvs,
+		}
+		err = c.UpdateProfileVariables(mVars, d.Id())
+		if err != nil {
+			oldVariables, _ := d.GetChange("profile_variables")
+			_ = d.Set("profile_variables", oldVariables)
+			return diag.FromErr(err)
+		}
+	}
+
 	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
@@ -229,22 +245,6 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 			return diag.FromErr(err)
 		}
 		if err := c.PublishClusterProfile(cluster.Metadata.UID); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChanges("profile_variables") {
-		pvs, err := toClusterProfileVariables(d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		mVars := &models.V1Variables{
-			Variables: pvs,
-		}
-		err = c.UpdateProfileVariables(mVars, d.Id())
-		if err != nil {
-			oldVariables, _ := d.GetChange("profile_variables")
-			_ = d.Set("profile_variables", oldVariables)
 			return diag.FromErr(err)
 		}
 	}
