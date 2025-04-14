@@ -15,8 +15,9 @@ description: |-
 
 ## Example Usage
 
-
 An example of how to use this data source to retrieve a specific pack from the community registry.
+
+~> For certain packs such as vm-migration-assistant, virtual-machine-orchestrator, vm-migration-assistant-pack, spectro-k8s-dashboard, and spectro-vm-dashboard, the `addon_type` is considered as `integration`.
 
 ```hcl
 # Retrieve details of a specific pack using name and version
