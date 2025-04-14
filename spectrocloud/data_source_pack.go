@@ -222,7 +222,7 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 			Type:        packTypePtr,
 			Layer:       convertToV1PackLayer(advanceFilter["pack_layer"].(*schema.Set)),
 			Environment: convertToStringSlice(advanceFilter["environment"].(*schema.Set).List()),
-			AddOnType:   convertToStringSlice(advanceFilter["addon_type"].(*schema.Set).List()),
+			AddOnType:   convertToAddOnType(advanceFilter["addon_type"].(*schema.Set).List(), advanceFilter["pack_layer"].(*schema.Set)),
 			RegistryUID: registryList,
 			IsFips:      advanceFilter["is_fips"].(bool),
 			Source:      convertToStringSlice(advanceFilter["pack_source"].(*schema.Set).List()),
@@ -459,6 +459,24 @@ func convertToV1PackLayer(set *schema.Set) []models.V1PackLayer {
 	for _, v := range set.List() {
 		if str, ok := v.(string); ok {
 			result = append(result, models.V1PackLayer(str))
+		}
+	}
+	return result
+}
+
+func convertToAddOnType(input []interface{}, packLayer *schema.Set) []string {
+	result := make([]string, len(input))
+	for i, v := range input {
+		if str, ok := v.(string); ok {
+			result[i] = str
+		}
+	}
+	if len(result) == 0 {
+		pl := convertToV1PackLayer(packLayer)
+		for _, v := range pl {
+			if v == "addon" {
+				result = AllowedAddonType
+			}
 		}
 	}
 	return result
