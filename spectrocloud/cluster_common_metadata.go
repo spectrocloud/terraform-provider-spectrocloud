@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -15,12 +16,27 @@ func getClusterMetadata(d *schema.ResourceData) *models.V1ObjectMeta {
 	}
 }
 
+func safeGetOk(d *schema.ResourceData, key string) (interface{}, bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("[safeGetOk] recovered from panic for key:", key)
+		}
+	}()
+	return d.GetOk(key)
+}
+
 func toClusterMetadataUpdate(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
-	return &models.V1ObjectMetaInputEntity{
+
+	cMetadata := &models.V1ObjectMetaInputEntity{
 		Name:        d.Get("name").(string),
 		Labels:      toTags(d),
 		Annotations: map[string]string{"description": d.Get("description").(string)},
 	}
+	if _, ok := safeGetOk(d, "tags_map"); ok {
+		tagMaps := toTagsMap(d)
+		cMetadata.Labels = tagMaps
+	}
+	return cMetadata
 }
 
 func updateClusterMetadata(c *client.V1Client, d *schema.ResourceData) error {

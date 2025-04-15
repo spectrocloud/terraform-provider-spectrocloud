@@ -57,7 +57,16 @@ func resourceClusterEks() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`. The `tags` attribute will soon be deprecated. It is recommended to use `tags_map` instead.",
+			},
+			"tags_map": {
+				Type:          schema.TypeMap,
+				Optional:      true,
+				ConflictsWith: []string{"tags"},
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive — only one should be used at a time",
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -453,6 +462,17 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	diagnostics, done := readCommonFields(c, d, cluster)
+
+	// handling flatten tags_map for aws  cluster
+	if _, ok := d.GetOk("tags_map"); ok {
+		// setting to empty since tags_map is present
+		_ = d.Set("tags", []string{})
+		tagMaps := flattenTagsMap(cluster.Metadata.Labels)
+		if err := d.Set("tags_map", tagMaps); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	if done {
 		return diagnostics
 	}
@@ -763,6 +783,12 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 				EncryptionConfig: encryptionConfig,
 			},
 		},
+	}
+
+	// handling to tags_map for eks cluster
+	if _, ok := d.GetOk("tags_maps"); ok {
+		tagMaps := toTagsMap(d)
+		cluster.Metadata.Labels = tagMaps
 	}
 
 	access := &models.V1EksClusterConfigEndpointAccess{}

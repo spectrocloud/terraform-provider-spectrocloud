@@ -119,7 +119,8 @@ resource "spectrocloud_cluster_eks" "cluster" {
 - `review_repave_state` (String) To authorize the cluster repave, set the value to `Approved` for approval and `""` to decline. Default value is `""`.
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
-- `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
+- `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`. The `tags` attribute will soon be deprecated. It is recommended to use `tags_map` instead.
+- `tags_map` (Map of String) A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive — only one should be used at a time
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
