@@ -326,7 +326,13 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 			}
 		} else {
 			if supportedVersionList != nil {
-				filters = []string{fmt.Sprintf("metadata.uid=%s", supportedVersionList.Tags[len(supportedVersionList.Tags)-1].PackUID)}
+				latest, _ := GetLatestPackTag(supportedVersionList.Tags)
+				if latest != nil {
+					filters = []string{fmt.Sprintf("metadata.uid=%s", latest.PackUID)}
+				} else {
+					filters = []string{fmt.Sprintf("metadata.uid=%s", supportedVersionList.Tags[len(supportedVersionList.Tags)-1].PackUID)}
+				}
+
 			}
 
 		}
@@ -490,4 +496,31 @@ func convertToStringSlice(input []interface{}) []string {
 		}
 	}
 	return result
+}
+
+func GetLatestPackTag(tags []*models.V1PackTags) (*models.V1PackTags, error) {
+	var latest *models.V1PackTags
+	var latestVersion *semver.Version
+
+	for _, tag := range tags {
+		if tag == nil || tag.Version == "" {
+			continue
+		}
+
+		v, err := semver.NewVersion(tag.Version)
+		if err != nil {
+			return nil, fmt.Errorf("invalid version: %s (%v)", tag.Version, err)
+		}
+
+		if latestVersion == nil || v.GreaterThan(latestVersion) {
+			latest = tag
+			latestVersion = v
+		}
+	}
+
+	if latest == nil {
+		return nil, fmt.Errorf("no valid versions found")
+	}
+
+	return latest, nil
 }
