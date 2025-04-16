@@ -786,7 +786,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	}
 
 	// handling to tags_map for eks cluster
-	if _, ok := d.GetOk("tags_maps"); ok {
+	if _, ok := d.GetOk("tags_map"); ok {
 		tagMaps := toTagsMap(d)
 		cluster.Metadata.Labels = tagMaps
 	}
