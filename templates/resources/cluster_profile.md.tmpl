@@ -138,9 +138,6 @@ resource "spectrocloud_cluster_profile" "this" {
 
 An example of a cluster profile with profile variables. Refer to the [Profile Variables](#nested-schema-for-profile_variablesvariable) section for more information on the nested schema for profile variables.
 
-~> Profile variables are currently under Tech Preview and only available for Edge clusters. Refer to the [Define and Manage Profile Variables](https://docs.spectrocloud.com/profiles/cluster-profiles/create-cluster-profiles/define-profile-variables/) documentation for more information on how to use profile variables.
-
-
 ```terraform
 resource "spectrocloud_cluster_profile" "profile" {
   name        = "vsphere-picard-4"
@@ -183,7 +180,7 @@ resource "spectrocloud_cluster_profile" "profile" {
       name = "default_password"
       display_name = "Default Password"
       format = "string"
-      hidden = true // For sensitive variables like passwords, setting hidden to true will mask the variable value.
+      is_sensitive = true // For sensitive variables like passwords, setting hidden to true will mask the variable value.
     }
     variable {
       name = "default_version"

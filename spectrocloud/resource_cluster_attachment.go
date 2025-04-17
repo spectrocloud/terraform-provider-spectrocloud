@@ -182,8 +182,8 @@ func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interf
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if addonDeployment.Profiles == nil || len(addonDeployment.Profiles) == 0 {
-		return diag.FromErr(errors.New("Cannot convert addon deployment: zero profiles found"))
+	if len(addonDeployment.Profiles) == 0 {
+		return diag.FromErr(errors.New("cannot convert addon deployment: zero profiles found"))
 	}
 
 	newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)

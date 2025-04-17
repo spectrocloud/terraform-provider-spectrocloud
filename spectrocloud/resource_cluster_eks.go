@@ -57,7 +57,16 @@ func resourceClusterEks() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`. The `tags` attribute will soon be deprecated. It is recommended to use `tags_map` instead.",
+			},
+			"tags_map": {
+				Type:          schema.TypeMap,
+				Optional:      true,
+				ConflictsWith: []string{"tags"},
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive — only one should be used at a time",
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -278,15 +287,17 @@ func resourceClusterEks() *schema.Resource {
 							Optional: true,
 						},
 						"azs": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "Mutually exclusive with `az_subnets`.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
 						"az_subnets": {
-							Type:     schema.TypeMap,
-							Optional: true,
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -451,6 +462,17 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	}
 
 	diagnostics, done := readCommonFields(c, d, cluster)
+
+	// handling flatten tags_map for aws  cluster
+	if _, ok := d.GetOk("tags_map"); ok {
+		// setting to empty since tags_map is present
+		_ = d.Set("tags", []string{})
+		tagMaps := flattenTagsMap(cluster.Metadata.Labels)
+		if err := d.Set("tags_map", tagMaps); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	if done {
 		return diagnostics
 	}
@@ -570,7 +592,7 @@ func flattenEksLaunchTemplate(launchTemplate *models.V1AwsLaunchTemplate) []inte
 		lt["root_volume_iops"] = launchTemplate.RootVolume.Iops
 		lt["root_volume_throughput"] = launchTemplate.RootVolume.Throughput
 	}
-	if launchTemplate.AdditionalSecurityGroups != nil && len(launchTemplate.AdditionalSecurityGroups) > 0 {
+	if len(launchTemplate.AdditionalSecurityGroups) > 0 {
 		var additionalSecurityGroups []string
 		for _, sg := range launchTemplate.AdditionalSecurityGroups {
 			additionalSecurityGroups = append(additionalSecurityGroups, sg.ID)
@@ -763,6 +785,12 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		},
 	}
 
+	// handling to tags_map for eks cluster
+	if _, ok := d.GetOk("tags_map"); ok {
+		tagMaps := toTagsMap(d)
+		cluster.Metadata.Labels = tagMaps
+	}
+
 	access := &models.V1EksClusterConfigEndpointAccess{}
 	switch cloudConfig["endpoint_access"].(string) {
 	case "public":
@@ -843,6 +871,13 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 				Az: k,
 				ID: val.(string),
 			})
+		}
+	}
+	if len(azs) == 0 {
+		if _, ok := m["azs"]; ok {
+			for _, az := range m["azs"].([]interface{}) {
+				azs = append(azs, az.(string))
+			}
 		}
 	}
 

@@ -135,7 +135,7 @@ func getSpectroComponentsUpgrade(cluster *models.V1SpectroCluster) string {
 
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
 func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
-	if d.HasChanges("name", "tags", "description") {
+	if d.HasChanges("name", "tags", "description", "tags_map") {
 		if err := updateClusterMetadata(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
@@ -214,32 +214,35 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 	if cluster == nil {
 		return nil
 	}
-	if cluster.Status.Repave.State == "Pending" {
-		if approveClusterRepave == "Approved" {
-			err := c.ApproveClusterRepave(d.Id())
-			if err != nil {
-				return err
-			}
-			cluster, err := c.GetCluster(d.Id())
-			if err != nil {
-				return err
-			}
-			if cluster.Status.Repave.State == "Approved" {
-				return nil
-			} else {
-				err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `review_repave_state` to `Approved` to approve the repave operation on the cluster")
-				return err
-			}
+	if cluster.Status.Repave.State != nil {
+		if *cluster.Status.Repave.State == models.V1ClusterRepaveStatePending {
+			if approveClusterRepave == "Approved" {
+				err := c.ApproveClusterRepave(d.Id())
+				if err != nil {
+					return err
+				}
+				cluster, err := c.GetCluster(d.Id())
+				if err != nil {
+					return err
+				}
+				if *cluster.Status.Repave.State == models.V1ClusterRepaveStateApproved {
+					return nil
+				} else {
+					err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `review_repave_state` to `Approved` to approve the repave operation on the cluster")
+					return err
+				}
 
-		} else {
-			reasons, err := c.GetRepaveReasons(d.Id())
-			if err != nil {
+			} else {
+				reasons, err := c.GetRepaveReasons(d.Id())
+				if err != nil {
+					return err
+				}
+				err = errors.New("cluster repave state is pending. \nDue to the following reasons -  \n" + strings.Join(reasons, "\n") + "\nKindly verify the cluster and set `review_repave_state` to `Approved` to continue the repave operation and day 2 operation on the cluster.")
 				return err
 			}
-			err = errors.New("cluster repave state is pending. \nDue to the following reasons -  \n" + strings.Join(reasons, "\n") + "\nKindly verify the cluster and set `review_repave_state` to `Approved` to continue the repave operation and day 2 operation on the cluster.")
-			return err
 		}
 	}
+
 	return nil
 }
 

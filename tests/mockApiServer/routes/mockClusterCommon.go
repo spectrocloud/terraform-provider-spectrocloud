@@ -77,7 +77,7 @@ func ClusterCommonRoutes() []Route {
 								AppTiers: []*models.V1AppTierRef{
 									{
 										Name:    "test-app-tier-name",
-										Type:    "test",
+										Type:    models.V1AppTierTypeHelm.Pointer(),
 										UID:     "test-app-id",
 										Version: "1.0.0",
 									},

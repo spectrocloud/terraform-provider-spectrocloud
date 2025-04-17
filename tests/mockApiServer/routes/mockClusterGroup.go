@@ -81,7 +81,7 @@ func ClusterGroupRoutes() []Route {
 									},
 								},
 							},
-							KubernetesDistroType: "k8",
+							KubernetesDistroType: models.V1ClusterKubernetesDistroTypeCncfK8s.Pointer(),
 							LimitConfig:          nil,
 							Values:               "test-values",
 						},

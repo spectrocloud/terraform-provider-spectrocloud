@@ -206,6 +206,22 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
+	if d.HasChanges("profile_variables") {
+		pvs, err := toClusterProfileVariables(d)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		mVars := &models.V1Variables{
+			Variables: pvs,
+		}
+		err = c.UpdateProfileVariables(mVars, d.Id())
+		if err != nil {
+			oldVariables, _ := d.GetChange("profile_variables")
+			_ = d.Set("profile_variables", oldVariables)
+			return diag.FromErr(err)
+		}
+	}
+
 	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
@@ -229,22 +245,6 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 			return diag.FromErr(err)
 		}
 		if err := c.PublishClusterProfile(cluster.Metadata.UID); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
-	if d.HasChanges("profile_variables") {
-		pvs, err := toClusterProfileVariables(d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		mVars := &models.V1Variables{
-			Variables: pvs,
-		}
-		err = c.UpdateProfileVariables(mVars, d.Id())
-		if err != nil {
-			oldVariables, _ := d.GetChange("profile_variables")
-			_ = d.Set("profile_variables", oldVariables)
 			return diag.FromErr(err)
 		}
 	}
@@ -304,7 +304,7 @@ func toClusterProfileBasic(d *schema.ResourceData) *models.V1ClusterProfileEntit
 		Spec: &models.V1ClusterProfileEntitySpec{
 			Template: &models.V1ClusterProfileTemplateDraft{
 				CloudType: d.Get("cloud").(string),
-				Type:      models.V1ProfileType(d.Get("type").(string)),
+				Type:      types.Ptr(models.V1ProfileType(d.Get("type").(string))),
 			},
 			Version: d.Get("version").(string),
 		},
@@ -340,7 +340,7 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 		Tag:         p["tag"].(string),
 		RegistryUID: pRegistryUID,
 		UID:         pUID,
-		Type:        pType,
+		Type:        &pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}
@@ -368,7 +368,7 @@ func toClusterProfileUpdate(d *schema.ResourceData, cluster *models.V1ClusterPro
 		},
 		Spec: &models.V1ClusterProfileUpdateEntitySpec{
 			Template: &models.V1ClusterProfileTemplateUpdate{
-				Type: models.V1ProfileType(d.Get("type").(string)),
+				Type: types.Ptr(models.V1ProfileType(d.Get("type").(string))),
 			},
 			Version: d.Get("version").(string),
 		},
@@ -435,7 +435,7 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 		Tag:         p["tag"].(string),
 		RegistryUID: pRegistryUID,
 		UID:         pUID,
-		Type:        pType,
+		Type:        &pType,
 		// UI strips a single newline, so we should do the same
 		Values: strings.TrimSpace(p["values"].(string)),
 	}
@@ -478,7 +478,7 @@ func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, er
 					DefaultValue: variable["default_value"].(string),
 					Description:  variable["description"].(string),
 					DisplayName:  variable["display_name"].(string), // revisit
-					Format:       models.V1VariableFormat(variable["format"].(string)),
+					Format:       types.Ptr(models.V1VariableFormat(variable["format"].(string))),
 					Hidden:       variable["hidden"].(bool),
 					Immutable:    variable["immutable"].(bool),
 					Name:         StringPtr(variable["name"].(string)),

@@ -34,10 +34,10 @@ linters:
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
     - cyclop
     - gocognit
+    - typecheck
 
 issues:
   max-issues-per-linter: 0

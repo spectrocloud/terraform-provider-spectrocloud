@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
@@ -116,7 +117,7 @@ func S3BackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) dia
 		return diag.FromErr(err)
 	}
 
-	if bsl.Spec.Storage == "s3" {
+	if *bsl.Spec.Storage == models.V1LocationTypeS3 {
 		s3Bsl, err := c.GetS3BackupStorageLocation(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
@@ -145,8 +146,8 @@ func S3BackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) dia
 		if s3Bsl.Spec.Config.S3ForcePathStyle != nil {
 			s3["s3_force_path_style"] = *s3Bsl.Spec.Config.S3ForcePathStyle
 		}
-		s3["credential_type"] = string(s3Bsl.Spec.Config.Credentials.CredentialType)
-		if s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
+		s3["credential_type"] = string(*s3Bsl.Spec.Config.Credentials.CredentialType)
+		if *s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
 			s3["secret_key"] = s3Bsl.Spec.Config.Credentials.SecretKey
 		} else {
@@ -184,7 +185,7 @@ func MinioBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 		return diag.FromErr(err)
 	}
 
-	if bsl.Spec.Storage == StorageProviderMinio {
+	if *bsl.Spec.Storage == models.V1LocationTypeMinio {
 		s3Bsl, err := c.GetMinioBackupStorageLocation(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
@@ -214,8 +215,8 @@ func MinioBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 			s3["s3_force_path_style"] = *s3Bsl.Spec.Config.S3ForcePathStyle
 		}
 		// Minio only supports secret type credentials
-		s3["credential_type"] = string(s3Bsl.Spec.Config.Credentials.CredentialType)
-		if s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
+		s3["credential_type"] = string(*s3Bsl.Spec.Config.Credentials.CredentialType)
+		if *s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
 			s3["secret_key"] = s3Bsl.Spec.Config.Credentials.SecretKey
 		}
@@ -246,7 +247,7 @@ func GcpBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) di
 	if err := d.Set("is_default", bsl.Spec.IsDefault); err != nil {
 		return diag.FromErr(err)
 	}
-	if bsl.Spec.Storage == StorageProviderGCP {
+	if *bsl.Spec.Storage == models.V1LocationTypeGcp {
 		gcpBsl, err := c.GetGCPBackupStorageLocation(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
@@ -518,11 +519,11 @@ func toAzureBackupStorageLocation(d *schema.ResourceData) (*models.V1UserAssetsL
 func toAwsAccountCredential(s3cred map[string]interface{}) *models.V1AwsCloudAccount {
 	account := &models.V1AwsCloudAccount{}
 	if len(s3cred["credential_type"].(string)) == 0 || s3cred["credential_type"].(string) == "secret" {
-		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret
+		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret.Pointer()
 		account.AccessKey = s3cred["access_key"].(string)
 		account.SecretKey = s3cred["secret_key"].(string)
 	} else if s3cred["credential_type"].(string) == "sts" {
-		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSts
+		account.CredentialType = models.V1AwsCloudAccountCredentialTypeSts.Pointer()
 		account.Sts = &models.V1AwsStsCredentials{
 			Arn:        s3cred["arn"].(string),
 			ExternalID: s3cred["external_id"].(string),

@@ -58,7 +58,7 @@ func TestToApplicationProfilePackCreateWithPack(t *testing.T) {
 	assert.Equal(t, packOne["name"].(string), *profileEntity.Name)
 	assert.Equal(t, packOne["source_app_tier"].(string), profileEntity.SourceAppTierUID)
 	assert.Equal(t, packOne["values"].(string), profileEntity.Values)
-	assert.Equal(t, packOne["type"], string(profileEntity.Type))
+	assert.Equal(t, packOne["type"], string(*profileEntity.Type))
 	for _, v := range profileEntity.Properties {
 		assert.Equal(t, prop[v.Name], v.Value)
 	}
@@ -88,7 +88,7 @@ func TestToApplicationProfilePackCreateWithManifest(t *testing.T) {
 	assert.Equal(t, packOne["name"].(string), *profileEntity.Name)
 	assert.Equal(t, packOne["source_app_tier"].(string), profileEntity.SourceAppTierUID)
 	assert.Equal(t, packOne["values"].(string), profileEntity.Values)
-	assert.Equal(t, packOne["type"], string(profileEntity.Type))
+	assert.Equal(t, packOne["type"], string(*profileEntity.Type))
 	for _, v := range profileEntity.Manifests {
 		assert.Equal(t, v.Content, strings.TrimSpace(manifest[0].(map[string]interface{})["content"].(string)))
 		assert.Equal(t, v.Name, manifest[0].(map[string]interface{})["name"].(string))
@@ -123,7 +123,7 @@ func TestToApplicationProfilePackCreateWithPackManifest(t *testing.T) {
 	assert.Equal(t, packOne["name"].(string), *profileEntity.Name)
 	assert.Equal(t, packOne["source_app_tier"].(string), profileEntity.SourceAppTierUID)
 	assert.Equal(t, packOne["values"].(string), profileEntity.Values)
-	assert.Equal(t, packOne["type"], string(profileEntity.Type))
+	assert.Equal(t, packOne["type"], string(*profileEntity.Type))
 	for _, v := range profileEntity.Properties {
 		assert.Equal(t, prop[v.Name], v.Value)
 	}
@@ -260,7 +260,7 @@ func TestToApplicationProfileCreate(t *testing.T) {
 	})
 	_ = d.Set("pack", p)
 	cp, _ := toApplicationProfileCreate(d)
-	assert.Equal(t, p[0]["type"], string(cp.Spec.Template.AppTiers[0].Type))
+	assert.Equal(t, p[0]["type"], string(*cp.Spec.Template.AppTiers[0].Type))
 	assert.Equal(t, p[0]["source_app_tier"], cp.Spec.Template.AppTiers[0].SourceAppTierUID)
 	assert.Equal(t, p[0]["registry_uid"], cp.Spec.Template.AppTiers[0].RegistryUID)
 	assert.Equal(t, "dbname", string(cp.Spec.Template.AppTiers[0].Properties[0].Name))

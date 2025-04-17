@@ -288,9 +288,6 @@ resource "spectrocloud_cluster_profile" "this" {
 
 An example of a cluster profile with profile variables. Refer to the [Profile Variables](#nested-schema-for-profile_variablesvariable) section for more information on the nested schema for profile variables.
 
-~> Profile variables are currently under Tech Preview and only available for Edge clusters. Refer to the [Define and Manage Profile Variables](https://docs.spectrocloud.com/profiles/cluster-profiles/create-cluster-profiles/define-profile-variables/) documentation for more information on how to use profile variables.
-
-
 ```terraform
 resource "spectrocloud_cluster_profile" "profile" {
   name        = "vsphere-picard-4"
@@ -333,7 +330,7 @@ resource "spectrocloud_cluster_profile" "profile" {
       name = "default_password"
       display_name = "Default Password"
       format = "string"
-      hidden = true // For sensitive variables like passwords, setting hidden to true will mask the variable value.
+      is_sensitive = true // For sensitive variables like passwords, setting hidden to true will mask the variable value.
     }
     variable {
       name = "default_version"
@@ -383,7 +380,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `context` (String) The context of the cluster profile. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String)
 - `pack` (Block List) For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified. (see [below for nested schema](#nestedblock--pack))
-- `profile_variables` (Block List, Max: 1) List of variables for the cluster profile. Note: This is a preview feature and is currently only supported for the `edge_native` cloud type and general `add-on` profiles. (see [below for nested schema](#nestedblock--profile_variables))
+- `profile_variables` (Block List, Max: 1) List of variables for the cluster profile. (see [below for nested schema](#nestedblock--profile_variables))
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `type` (String) Specify the cluster profile type to use. Allowed values are `cluster`, `infra`, `add-on`, and `system`. These values map to the following User Interface (UI) labels. Use the value ' cluster ' for a **Full** cluster profile.For an Infrastructure cluster profile, use the value `infra`; for an Add-on cluster profile, use the value `add-on`.System cluster profiles can be specified using the value `system`. To learn more about cluster profiles, refer to the [Cluster Profile](https://docs.spectrocloud.com/cluster-profiles) documentation. Default value is `add-on`.

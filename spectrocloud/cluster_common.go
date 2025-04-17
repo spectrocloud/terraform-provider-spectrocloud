@@ -325,3 +325,32 @@ func validateCloudType(data interface{}, path cty.Path) diag.Diagnostics {
 	}
 	return diag.FromErr(fmt.Errorf("cloud type '%s' is invalid. valid cloud types are %v", inCloudType, "cloud_types"))
 }
+
+func toTagsMap(d *schema.ResourceData) map[string]string {
+	tags := make(map[string]string)
+	if d.Get("tags_map") != nil {
+		for k, v := range d.Get("tags_map").(map[string]interface{}) {
+			vStr := v.(string)
+			if v != "" {
+				tags[k] = vStr
+			} else {
+				tags[k] = "spectro__tag"
+			}
+		}
+		return tags
+	} else {
+		return nil
+	}
+}
+
+func flattenTagsMap(labels map[string]string) map[string]string {
+	tags := make(map[string]string)
+	if len(labels) > 0 {
+		for k, v := range labels {
+			tags[k] = v
+		}
+		return tags
+	} else {
+		return nil
+	}
+}

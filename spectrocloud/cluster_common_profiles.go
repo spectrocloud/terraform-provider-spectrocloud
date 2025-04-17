@@ -123,7 +123,7 @@ func setPackTag(pack *models.V1PackValuesEntity, p map[string]interface{}) {
 
 func setPackType(pack *models.V1PackValuesEntity, p map[string]interface{}) {
 	if val, found := p["type"]; found && len(val.(string)) > 0 {
-		pack.Type = models.V1PackType(val.(string))
+		pack.Type = types.Ptr(models.V1PackType(val.(string)))
 	}
 }
 
