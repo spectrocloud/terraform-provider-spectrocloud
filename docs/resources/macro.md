@@ -2,12 +2,12 @@
 page_title: "spectrocloud_macro Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  A resource for creating and managing service output variables and macro.
+  A resource for creating and managing service output variables and macro. (Deprecated)
 ---
 
-# spectrocloud_macro (Resource)
+# spectrocloud_macro (Resource, Deprecated)
 
-  A resource for creating and managing service output variables and macro.
+  A resource for creating and managing service output variables and macro. (Deprecated)
 
 ## Example Usage
 
