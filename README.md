@@ -22,8 +22,10 @@ Detailed documentation on supported data sources and resources are available on 
 [Terraform Spectro Cloud Provider Documentation](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs).
 
 ## Develop
-
-- Hack away
+- Ensure you have goreleaser installed.
+- Make changes to the provider.
+- Run `make dev-provider` at the root of the repo.  This will build the provider and this development provider can be used for testing by incorporating into an example in `examples/` directory.
+- Navigate to your development directory (ie: `examples/e2e/aws`).  If exists delete `.terraform` directory and `.terraform.lock.hcl` file.
 - Make sure to run `go generate` after your final commit
 - Send in a PR
 
