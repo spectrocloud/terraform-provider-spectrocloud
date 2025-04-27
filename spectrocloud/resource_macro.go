@@ -2,8 +2,9 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/spectrocloud/palette-sdk-go/client/apiutil"
 	"time"
+
+	"github.com/spectrocloud/palette-sdk-go/client/apiutil"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 
@@ -17,7 +18,7 @@ func resourceMacro() *schema.Resource {
 		ReadContext:   resourceMacroRead,
 		UpdateContext: resourceMacroUpdate,
 		DeleteContext: resourceMacroDelete,
-		Description:   "A resource for creating and managing service output variables and macro.",
+		Description:   "A resource for creating and managing service output variables and macro. (Deprecated)",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
