@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -35,30 +36,28 @@ func resourceMacros() *schema.Resource {
 				},
 				Description: "The key-value mapping includes the macro name and its corresponding value, representing either a macro or a service variable output.",
 			},
-			"project": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				ForceNew:    true,
-				Default:     "",
-				Description: "The Spectro Cloud project name.",
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "tenant",
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Description: "The context of the cluster profile. Allowed values are `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 		},
 	}
 }
 
 func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
+	macrosContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
-	uid := ""
+	contextUid := ""
 	var err error
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-		uid, err = c.GetProjectUID(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
+	if macrosContext == "project" {
+		contextUid = ProviderInitProjectUid
 	}
-	macroUID, err := c.CreateMacros(uid, toMacros(d))
+	macroUID, err := c.CreateMacros(contextUid, toMacros(d))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -67,20 +66,16 @@ func resourceMacrosCreate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
+	macrosContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 	var macros []*models.V1Macro
 	var err error
-	uid := ""
-
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-		uid, err = c.GetProjectUID(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
+	contextUid := ""
+	if macrosContext == "project" {
+		contextUid = ProviderInitProjectUid
 	}
-	macros, err = c.GetTFMacrosV2(d.Get("macros").(map[string]interface{}), uid)
+	macros, err = c.GetTFMacrosV2(d.Get("macros").(map[string]interface{}), contextUid)
 	if err != nil {
 		return diag.FromErr(err)
 	} else if len(macros) == 0 {
@@ -88,7 +83,7 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 		d.SetId("")
 		return diags
 	}
-	macrosId, err := GetMacrosId(c, uid)
+	macrosId, err := GetMacrosId(c, contextUid)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -108,20 +103,18 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	macrosContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 	var err error
-	uid := ""
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-		uid, err = c.GetProjectUID(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
+	contextUid := ""
+	if macrosContext == "project" {
+		contextUid = ProviderInitProjectUid
 	}
 	if d.HasChange("macros") {
 		oldMacros, _ := d.GetChange("macros")
-		existMacros, _ := c.GetExistMacros(oldMacros.(map[string]interface{}), uid)
-		err = c.UpdateMacros(uid, mergeExistingMacros(d, existMacros))
+		existMacros, _ := c.GetExistMacros(oldMacros.(map[string]interface{}), contextUid)
+		err = c.UpdateMacros(contextUid, mergeExistingMacros(d, existMacros))
 		if err != nil {
 			var e *transport.TransportError
 			if errors.As(err, &e) && e.HttpCode == 422 {
@@ -138,18 +131,15 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceMacrosDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	macrosContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 	var err error
-	uid := ""
-
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
-		uid, err = c.GetProjectUID(v.(string))
-		if err != nil {
-			return diag.FromErr(err)
-		}
+	contextUid := ""
+	if macrosContext == "project" {
+		contextUid = ProviderInitProjectUid
 	}
-	err = c.DeleteMacros(uid, toMacros(d))
+	err = c.DeleteMacros(contextUid, toMacros(d))
 	if err != nil {
 		return diag.FromErr(err)
 	}
