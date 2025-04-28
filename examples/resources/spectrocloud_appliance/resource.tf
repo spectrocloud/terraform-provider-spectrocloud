@@ -3,5 +3,7 @@ resource "spectrocloud_appliance" "appliance" {
   tags = {
     "name" = "appliance_name"
   }
-  wait = true
+  wait                        = true
+  remote_shell                = "disabled"
+  temporary_shell_credentials = "disabled"
 }

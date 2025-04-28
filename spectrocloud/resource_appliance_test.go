@@ -123,6 +123,8 @@ func prepareApplianceBaseData() *schema.ResourceData {
 	d := resourceAppliance().TestResourceData()
 	_ = d.Set("uid", "test-edge-host-id")
 	_ = d.Set("wait", false)
+	_ = d.Set("remote_shell", "enabled")
+	_ = d.Set("temporary_shell_credentials", "enabled")
 	d.SetId("test-idz")
 	return d
 }

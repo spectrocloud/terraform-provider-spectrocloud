@@ -2,7 +2,11 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/go-openapi/strfmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 	"log"
 	"time"
 
@@ -51,12 +55,36 @@ func resourceAppliance() *schema.Resource {
 				Optional:    true,
 				Description: "The pairing key used for appliance pairing.",
 			},
+			"remote_shell": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "disabled",
+				ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+				Description:  "Activate remote shell access to troubleshoot edge hosts by initiating an SSH connection from Palette using the configured username and password credentials. https://docs.spectrocloud.com/clusters/edge/cluster-management/remote-shell/",
+			},
+			"temporary_shell_credentials": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "disabled",
+				ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+				Description:  "Enable the creation of a temporary user on the edge host with sudo privileges for SSH access from Palette. These credentials will be embedded in the SSH connection string for auto login, and the temporary user is deleted upon deactivation.",
+			},
 			"wait": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				ForceNew:    true,
 				Description: "If set to `true`, the resource creation will wait for the appliance provisioning process to complete before returning. Defaults to `false`.",
 			},
+		},
+		CustomizeDiff: func(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			remoteShell := d.Get("remote_shell").(string)
+			temporaryCreds := d.Get("temporary_shell_credentials").(string)
+
+			if temporaryCreds == "enabled" && remoteShell == "disabled" {
+				return fmt.Errorf("temporary_shell_credentials can only be set to 'enabled' when remote_shell is also enabled")
+			}
+
+			return nil
 		},
 	}
 }
@@ -74,9 +102,17 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 	appliance := toApplianceEntity(d)
 	uid, err := c.CreateAppliance(appliance)
+
 	if err != nil {
-		return diag.FromErr(err)
+		var e *transport.TransportError
+		if errors.As(err, &e) && e.Payload.Code == "AlreadyRegisteredEdgeHostDevice" {
+			uid = d.Get("uid").(string)
+			d.SetId(uid)
+		} else {
+			return diag.FromErr(err)
+		}
 	}
+
 	d.SetId(uid)
 
 	// Wait, catching any errors
@@ -95,6 +131,7 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 			return diag.FromErr(err)
 		}
 	}
+	diags = commonApplianceUpdate(ctx, d, c)
 
 	return diags
 }
@@ -127,6 +164,17 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 			return diags
 		}
 		d.SetId(appliance.Metadata.UID)
+		if appliance.Spec.TunnelConfig != nil {
+			err = d.Set("remote_shell", appliance.Spec.TunnelConfig.RemoteSSH)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			err = d.Set("temporary_shell_credentials", appliance.Spec.TunnelConfig.RemoteSSHTempUser)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
 		/*err = d.Set("name", appliance.Metadata.Name)
 		if err != nil {
 			return diag.FromErr(err)
@@ -135,10 +183,10 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 	return diags
 }
 
-func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+func commonApplianceUpdate(ctx context.Context, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+
 	var diags diag.Diagnostics
-	// Currently, we only support updating tags during day 2 operations in the appliance, which will be handled via UpdateApplianceMeta (above code snippet).
+
 	if d.HasChange("tags") {
 		applianceMeta := toApplianceMeta(d)
 		err := c.UpdateApplianceMeta(d.Id(), applianceMeta)
@@ -147,6 +195,20 @@ func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 		}
 	}
 
+	if d.HasChange("remote_shell") || d.HasChange("temporary_shell_credentials") {
+		err := c.UpdateEdgeHostTunnelConfig(d.Id(), d.Get("remote_shell").(string), d.Get("temporary_shell_credentials").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	return diags
+}
+
+func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	c := getV1ClientWithResourceContext(m, "")
+	var diags diag.Diagnostics
+	commonApplianceUpdate(ctx, d, c)
 	return diags
 }
 
