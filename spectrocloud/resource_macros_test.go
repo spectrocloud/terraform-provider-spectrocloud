@@ -134,7 +134,7 @@ func prepareBaseProjectMacrosSchema() *schema.ResourceData {
 		panic(err) // Handle the error as appropriate in your test setup
 	}
 
-	err = d.Set("project", "Default")
+	err = d.Set("context", "project")
 	if err != nil {
 		panic(err) // Handle the error as appropriate in your test setup
 	}
