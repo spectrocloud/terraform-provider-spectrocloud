@@ -129,7 +129,7 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid str
 
 	stateConf := &retry.StateChangeConf{
 		Pending:    resourceClusterCreatePendingStates,
-		Target:     []string{"Running"},
+		Target:     []string{"Running-Healthy"},
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
@@ -167,7 +167,7 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope, id s
 
 func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetCluster(id)
+		cluster, err := c.GetClusterSummary(id)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {
@@ -175,6 +175,10 @@ func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateR
 		}
 
 		state := cluster.Status.State
+		if cluster.Status.State == "Running" && cluster.Status.Health != nil && cluster.Status.Health.State != "" {
+			state += "-" + cluster.Status.Health.State
+		}
+
 		log.Printf("Cluster state (%s): %s", id, state)
 
 		return cluster, state, nil
