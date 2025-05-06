@@ -142,13 +142,25 @@ func flattenScanPolicy(driverSpec map[string]models.V1ComplianceScanDriverSpec) 
 	data := make(map[string]interface{})
 
 	if v, found := driverSpec["kube-bench"]; found {
-		data["configuration_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
+		if v.Config.Schedule.ScheduledRunTime == "" {
+			data["configuration_scan_schedule"] = ""
+		} else {
+			data["configuration_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
+		}
 	}
 	if v, found := driverSpec["kube-hunter"]; found {
-		data["penetration_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
+		if v.Config.Schedule.ScheduledRunTime == "" {
+			data["penetration_scan_schedule"] = ""
+		} else {
+			data["penetration_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
+		}
 	}
 	if v, found := driverSpec["sonobuoy"]; found {
-		data["conformance_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
+		if v.Config.Schedule.ScheduledRunTime == "" {
+			data["conformance_scan_schedule"] = ""
+		} else {
+			data["conformance_scan_schedule"] = v.Config.Schedule.ScheduledRunTime
+		}
 	}
 	if data["configuration_scan_schedule"] == "" && data["penetration_scan_schedule"] == "" && data["conformance_scan_schedule"] == "" {
 		return result
