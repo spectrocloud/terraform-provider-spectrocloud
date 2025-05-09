@@ -1,6 +1,7 @@
 .idea/
 .vscode/
 .DS_Store
+terraform-provider-spectrocloud.code-workspace
 
 bin
 __debug_bin*

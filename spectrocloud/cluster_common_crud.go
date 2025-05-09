@@ -26,6 +26,7 @@ var resourceClusterDeletePendingStates = []string{
 var resourceClusterCreatePendingStates = []string{
 	"Unknown",
 	"Pending",
+	"Running",
 	"Provisioning",
 	"Importing",
 }
@@ -167,7 +168,7 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope, id s
 
 func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		cluster, err := c.GetClusterSummary(id)
+		cluster, err := c.GetCluster(id)
 		if err != nil {
 			return nil, "", err
 		} else if cluster == nil {
@@ -175,8 +176,14 @@ func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateR
 		}
 
 		state := cluster.Status.State
-		if cluster.Status.State == "Running" && cluster.Status.Health != nil && cluster.Status.Health.State != "" {
-			state += "-" + cluster.Status.Health.State
+		if cluster.Status.State == "Running" {
+			clusterSummary, _ := c.GetClusterOverview(id)
+			if clusterSummary.Status.Health != nil && clusterSummary.Status.Health.State != "" {
+				if clusterSummary.Status.Health.State == "Healthy" {
+					state += "-" + clusterSummary.Status.Health.State
+				}
+			}
+
 		}
 
 		log.Printf("Cluster state (%s): %s", id, state)
