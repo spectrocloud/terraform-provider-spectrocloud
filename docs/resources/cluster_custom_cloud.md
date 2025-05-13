@@ -11,7 +11,6 @@ description: |-
 
 ## Example Usage
 
-
 ```terraform
     data "spectrocloud_cloudaccount_custom" "nutanix_account" {
       name  = "test-tf-demo"
@@ -118,7 +117,6 @@ description: |-
       skip_completion   = true
       force_delete      = true
     }
-```
 ```
 
 ## Import
