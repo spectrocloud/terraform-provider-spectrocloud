@@ -251,13 +251,18 @@ func setWorkspaceRoles(c *client.V1Client, d *schema.ResourceData) error {
 				for _, role := range workspace.Roles {
 					roles = append(roles, role.UID)
 				}
-				workspaceMap["id"] = workspace.UID
-				workspaceMap["roles"] = roles
-				workspaces = append(workspaces, workspaceMap)
+				if len(roles) > 0 {
+					workspaceMap["id"] = workspace.UID
+					workspaceMap["roles"] = roles
+					workspaces = append(workspaces, workspaceMap)
+				}
 			}
-			projectMap["id"] = project.UID
-			projectMap["workspace"] = workspaces
-			projects = append(projects, projectMap)
+			if len(workspaces) > 0 {
+				projectMap["id"] = project.UID
+				projectMap["workspace"] = workspaces
+				projects = append(projects, projectMap)
+			}
+
 		}
 		if err := d.Set("workspace_role_mapping", projects); err != nil {
 			return err
@@ -367,28 +372,61 @@ func toTeamTenantRoleMapping(d *schema.ResourceData) *models.V1TeamTenantRolesUp
 }
 
 func toTeamWorkspaceRoleMapping(d *schema.ResourceData) *models.V1WorkspacesRolesPatch {
-	workspaces := make([]*models.V1WorkspaceRolesPatch, 0)
-	workspaceRoleMappings := d.Get("workspace_role_mapping").(*schema.Set).List()
+	oldWS, newWS := d.GetChange("workspace_role_mapping")
 
-	for _, mapping := range workspaceRoleMappings {
-		data := mapping.(map[string]interface{})
+	oldList := oldWS.(*schema.Set).List()
+	newList := newWS.(*schema.Set).List()
 
-		// flatten the workspace roles
-		for _, workspace := range data["workspace"].(*schema.Set).List() {
+	// Map keyed by "projectID::workspaceID"
+	workspaceMap := make(map[string]*models.V1WorkspaceRolesPatch)
+	seenNew := make(map[string]struct{})
+
+	// Step 1: Process OLD config (initialize map)
+	for _, mapping := range oldList {
+		mappingData := mapping.(map[string]interface{})
+		projectID := mappingData["id"].(string)
+
+		for _, workspace := range mappingData["workspace"].(*schema.Set).List() {
 			workspaceData := workspace.(map[string]interface{})
+			workspaceID := workspaceData["id"].(string)
+			key := fmt.Sprintf("%s::%s", projectID, workspaceID)
+
+			workspaceMap[key] = &models.V1WorkspaceRolesPatch{
+				UID:   workspaceID,
+				Roles: []string{}, // Assume removed unless new overrides
+			}
+		}
+	}
+
+	// Step 2: Process NEW config (override old or populate fresh)
+	for _, mapping := range newList {
+		mappingData := mapping.(map[string]interface{})
+		projectID := mappingData["id"].(string)
+
+		for _, workspace := range mappingData["workspace"].(*schema.Set).List() {
+			workspaceData := workspace.(map[string]interface{})
+			workspaceID := workspaceData["id"].(string)
+			key := fmt.Sprintf("%s::%s", projectID, workspaceID)
+			seenNew[key] = struct{}{}
+
 			roles := make([]string, 0)
-			if workspaceData["roles"] != nil {
-				for _, role := range workspaceData["roles"].(*schema.Set).List() {
+			if v, ok := workspaceData["roles"]; ok && v != nil {
+				for _, role := range v.(*schema.Set).List() {
 					roles = append(roles, role.(string))
 				}
 			}
 
-			workspaces = append(workspaces, &models.V1WorkspaceRolesPatch{
-				UID:   workspaceData["id"].(string),
+			workspaceMap[key] = &models.V1WorkspaceRolesPatch{
+				UID:   workspaceID,
 				Roles: roles,
-			})
+			}
 		}
+	}
 
+	// Step 3: Finalize list
+	workspaces := make([]*models.V1WorkspaceRolesPatch, 0, len(workspaceMap))
+	for _, w := range workspaceMap {
+		workspaces = append(workspaces, w)
 	}
 
 	return &models.V1WorkspacesRolesPatch{
