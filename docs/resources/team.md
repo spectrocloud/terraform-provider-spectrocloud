@@ -111,7 +111,4 @@ Optional:
 Required:
 
 - `id` (String) Workspace id to be associated with the team.
-
-Optional:
-
 - `roles` (Set of String) List of workspace roles to be associated with the team.

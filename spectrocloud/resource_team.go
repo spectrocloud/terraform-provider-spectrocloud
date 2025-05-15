@@ -103,7 +103,7 @@ func resourceTeam() *schema.Resource {
 									"roles": {
 										Type:     schema.TypeSet,
 										Set:      schema.HashString,
-										Optional: true,
+										Required: true,
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
