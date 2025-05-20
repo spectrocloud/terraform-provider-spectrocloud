@@ -28,14 +28,6 @@ func dataSourceMacros() *schema.Resource {
 				},
 				Description: "The key-value mapping of macros to look up.",
 			},
-			"macro_ids": {
-				Type:     schema.TypeMap,
-				Computed: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Description: "A map of macro names to their import IDs (which are just the macro names).",
-			},
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
