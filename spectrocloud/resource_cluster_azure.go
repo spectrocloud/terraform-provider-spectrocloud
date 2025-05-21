@@ -723,12 +723,15 @@ func toStaticPlacement(c *models.V1SpectroAzureClusterEntity, cloudConfig map[st
 			privateApiServer := v.([]interface{})
 			if len(privateApiServer) > 0 {
 				privateApiServerConfig := privateApiServer[0].(map[string]interface{})
-				c.Spec.CloudConfig.InfraLBConfig.APIServerLB = &models.V1LoadBalancerSpec{
+				apiServerLB := &models.V1LoadBalancerSpec{
 					PrivateDNSZoneResourceGroup: privateApiServerConfig["resource_group"].(string),
 					PrivateDNSName:              privateApiServerConfig["private_dns_zone"].(string),
 					APIServerLBStaticIP:         privateApiServerConfig["static_ip"].(string),
 					IPAllocationMethod:          chooseIPMethod(privateApiServerConfig["static_ip"].(string)),
 					Type:                        StringPtr("Internal"),
+				}
+				c.Spec.CloudConfig.InfraLBConfig = &models.V1InfraLBConfig{
+					APIServerLB: apiServerLB,
 				}
 			}
 		} else {
