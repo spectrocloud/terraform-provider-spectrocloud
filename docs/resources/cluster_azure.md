@@ -32,6 +32,26 @@ resource "spectrocloud_cluster_azure" "cluster" {
     resource_group  = var.azure_resource_group
     region          = var.azure_region
     ssh_key         = var.cluster_ssh_public_key
+
+     //Static placement config
+        #    network_resource_group = "test-resource-group"
+        #    virtual_network_name = "test-network-name"
+        #    virtual_network_cidr_block = "10.0.0.9/10"
+        #    control_plane_subnet {
+        #      name="cp_subnet_name"
+        #      cidr_block="10.0.0.9/16"
+        #      security_group_name="cp_subnet_security_name"
+        #    }
+        #    worker_node_subnet {
+        #      name="worker_subnet_name"
+        #      cidr_block="10.0.0.9/16"
+        #      security_group_name="worker_subnet_security_name"
+        #    }
+        #    private_api_server {
+        #      resource_group = "test-resource-group"
+        #      private_dns_zone = "test-private-dns-zone"
+        #      static_ip = "10.11.12.51"
+        #    }
   }
 
   cluster_profile {

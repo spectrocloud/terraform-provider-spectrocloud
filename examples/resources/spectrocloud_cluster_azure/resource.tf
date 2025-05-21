@@ -33,6 +33,11 @@ resource "spectrocloud_cluster_azure" "cluster" {
     #      cidr_block="10.0.0.9/16"
     #      security_group_name="worker_subnet_security_name"
     #    }
+    #    private_api_server {
+    #      resource_group = "test-resource-group"
+    #      private_dns_zone = "test-private-dns-zone"
+    #      static_ip = "10.11.12.51"
+    #    }
 
   }
 
