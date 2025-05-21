@@ -157,6 +157,7 @@ Optional:
 - `container_name` (String) Container name within your azure storage account.
 - `control_plane_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--control_plane_subnet))
 - `network_resource_group` (String) Azure network resource group in which the cluster is to be provisioned.
+- `private_api_server` (Block List, Max: 1) Custom private DNS zone for your cluster's API server. For more details, refer to the https://docs.spectrocloud.com/clusters/public-cloud/azure/create-azure-cluster/#private-api-server-lb-settings (see [below for nested schema](#nestedblock--cloud_config--private_api_server))
 - `storage_account_name` (String) Azure storage account name.
 - `virtual_network_cidr_block` (String) Azure virtual network cidr block in which the cluster is to be provisioned.
 - `virtual_network_name` (String) Azure virtual network in which the cluster is to be provisioned.
@@ -173,6 +174,19 @@ Required:
 Optional:
 
 - `security_group_name` (String) Network Security Group(NSG) to be attached to subnet.
+
+
+<a id="nestedblock--cloud_config--private_api_server"></a>
+### Nested Schema for `cloud_config.private_api_server`
+
+Required:
+
+- `resource_group` (String) The resource group of the private DNS zone.
+
+Optional:
+
+- `private_dns_zone` (String) The private DNS zone for the cluster. This is optional. If not provided, a new private DNS zone will be created.
+- `static_ip` (String) Static IP address for the private API server load balancer. This is optional. If not provided, Dynamic IP allocation will be used.
 
 
 <a id="nestedblock--cloud_config--worker_node_subnet"></a>
