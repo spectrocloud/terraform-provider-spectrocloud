@@ -12,3 +12,12 @@ resource "spectrocloud_macros" "tenant_macro" {
     "tenant_macro_2" = "tenant_val2",
   }
 }
+
+resource "spectrocloud_macros" "imported_macros" {
+    
+}
+
+
+resource "spectrocloud_macros" "imported_macros_project" {
+    
+}

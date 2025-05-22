@@ -22,6 +22,12 @@ resource "spectrocloud_macro" "tenant_macro" {
   name  = "tenant1"
   value = "tenant_val1"
 }
+resource "spectrocloud_macros" "imported_macros" {
+    
+}
+resource "spectrocloud_macros" "imported_macros_project" {
+    
+}
 ```
 
 
@@ -50,3 +56,28 @@ Optional:
 - `create` (String)
 - `delete` (String)
 - `update` (String)
+- `import` (String)
+
+To retrieve a list of macros without managing them directly in Terraform, you can use a data source in conjunction with your .tfvars:
+##Example
+data "spectrocloud_macros" "project" {
+  project = "Default"
+}
+
+output "available_macros_project" {
+  value = data.spectrocloud_macros.project.macros
+}
+
+data "spectrocloud_macros" "tenant" {
+
+}
+output "available_macros_tenant" {
+  value = data.spectrocloud_macros.tenant.macros
+}
+#terraform apply -auto-approve -var-file="terraform.template.tfvars"
+
+You can import existing macros into Terraform’s state by specifying their scope and ID.
+terraform import spectrocloud_macros.imported_macros_project project-macros-<project-Name>
+terraform import spectrocloud_macros.imported_macros_tenant tenant-macros
+After import, inspect the imported data using:
+terraform state show spectrocloud_macros.imported_macros_project
