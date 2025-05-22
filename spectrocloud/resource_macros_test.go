@@ -395,7 +395,7 @@ func TestResourceProjectMacrosImportState(t *testing.T) {
 	resourceData := prepareBaseProjectMacrosSchema()
 
 	// Set a test ID that matches the format from GetMacrosId
-	resourceData.SetId("project-macros-<test-project-id>")
+	resourceData.SetId("project-macros-<project-name>")
 
 	// Call the import function
 	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
@@ -404,7 +404,7 @@ func TestResourceProjectMacrosImportState(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, importedData)
 	assert.Equal(t, 1, len(importedData))
-	assert.Equal(t, "project-macros-<test-project-id>", importedData[0].Id())
+	assert.Equal(t, "project-macros-<project-name>", importedData[0].Id())
 	assert.NotEmpty(t, importedData[0].Get("macros"))
 	assert.Equal(t, "project", importedData[0].Get("context"))
 }
