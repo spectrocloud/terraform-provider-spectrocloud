@@ -193,6 +193,32 @@ func resourceClusterAzure() *schema.Resource {
 						},
 						"control_plane_subnet": schemas.SubnetSchema(),
 						"worker_node_subnet":   schemas.SubnetSchema(),
+						"private_api_server": {
+							Type:         schema.TypeList,
+							Optional:     true,
+							MaxItems:     1,
+							RequiredWith: []string{"cloud_config.0.network_resource_group", "cloud_config.0.virtual_network_name", "cloud_config.0.virtual_network_cidr_block"},
+							Description:  "Custom private DNS zone for your cluster's API server. For more details, refer to the https://docs.spectrocloud.com/clusters/public-cloud/azure/create-azure-cluster/#private-api-server-lb-settings",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"resource_group": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The resource group of the private DNS zone.",
+									},
+									"private_dns_zone": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The private DNS zone for the cluster. This is optional. If not provided, a new private DNS zone will be created.",
+									},
+									"static_ip": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "Static IP address for the private API server load balancer. This is optional. If not provided, Dynamic IP allocation will be used.",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -452,6 +478,15 @@ func flattenClusterConfigsAzure(config *models.V1AzureCloudConfig) []interface{}
 			}
 			m["worker_node_subnet"] = []interface{}{workerSubnet}
 		}
+		if config.Spec.ClusterConfig.InfraLBConfig != nil {
+			if config.Spec.ClusterConfig.InfraLBConfig.APIServerLB != nil {
+				m["private_api_server"] = []interface{}{map[string]interface{}{
+					"resource_group":   config.Spec.ClusterConfig.InfraLBConfig.APIServerLB.PrivateDNSZoneResourceGroup,
+					"private_dns_zone": config.Spec.ClusterConfig.InfraLBConfig.APIServerLB.PrivateDNSName,
+					"static_ip":        config.Spec.ClusterConfig.InfraLBConfig.APIServerLB.APIServerLBStaticIP,
+				}}
+			}
+		}
 	}
 
 	return []interface{}{m}
@@ -683,7 +718,44 @@ func toStaticPlacement(c *models.V1SpectroAzureClusterEntity, cloudConfig map[st
 			Name:              workerSubnet["name"].(string),
 			SecurityGroupName: workerSubnet["security_group_name"].(string),
 		}
+
+		if v, ok := cloudConfig["private_api_server"]; ok {
+			privateApiServer := v.([]interface{})
+			if len(privateApiServer) > 0 {
+				privateApiServerConfig := privateApiServer[0].(map[string]interface{})
+				apiServerLB := &models.V1LoadBalancerSpec{
+					PrivateDNSZoneResourceGroup: privateApiServerConfig["resource_group"].(string),
+					PrivateDNSName:              privateApiServerConfig["private_dns_zone"].(string),
+					APIServerLBStaticIP:         privateApiServerConfig["static_ip"].(string),
+					IPAllocationMethod:          chooseIPMethod(privateApiServerConfig["static_ip"].(string)),
+					Type:                        StringPtr("Internal"),
+				}
+				c.Spec.CloudConfig.InfraLBConfig = &models.V1InfraLBConfig{
+					APIServerLB: apiServerLB,
+				}
+			}
+		} else {
+			apiServerLB := &models.V1LoadBalancerSpec{
+				IPAllocationMethod:          chooseIPMethod(""),
+				Type:                        StringPtr("Public"),
+				PrivateDNSZoneResourceGroup: "",
+				PrivateDNSName:              "",
+				APIServerLBStaticIP:         "",
+			}
+			c.Spec.CloudConfig.InfraLBConfig = &models.V1InfraLBConfig{
+				APIServerLB: apiServerLB,
+			}
+
+		}
+
 	}
+}
+
+func chooseIPMethod(ip string) *string {
+	if ip == "" {
+		return StringPtr("Dynamic")
+	}
+	return StringPtr("Static")
 }
 
 func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConfigEntity, error) {
