@@ -2,10 +2,11 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestToMacros(t *testing.T) {
@@ -369,4 +370,56 @@ func TestResourceTenantMacrosDeleteNegative(t *testing.T) {
 	if assert.NotEmpty(t, diags) { // Check that diags is not empty
 		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
 	}
+}
+
+func TestResourceTenantMacrosImportState(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+
+	// Set a test ID that matches the format from GetMacrosId
+	resourceData.SetId("tenant-macros")
+
+	// Call the import function
+	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.NoError(t, err)
+	assert.NotNil(t, importedData)
+	assert.Equal(t, 1, len(importedData))
+	assert.Equal(t, "tenant-macros", importedData[0].Id())
+	assert.NotEmpty(t, importedData[0].Get("macros"))
+}
+
+func TestResourceProjectMacrosImportState(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseProjectMacrosSchema()
+
+	// Set a test ID that matches the format from GetMacrosId
+	resourceData.SetId("project-macros-<test-project-id>")
+
+	// Call the import function
+	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.NoError(t, err)
+	assert.NotNil(t, importedData)
+	assert.Equal(t, 1, len(importedData))
+	assert.Equal(t, "project-macros-<test-project-id>", importedData[0].Id())
+	assert.NotEmpty(t, importedData[0].Get("macros"))
+	assert.Equal(t, "project", importedData[0].Get("context"))
+}
+
+func TestResourceMacrosImportStateInvalidID(t *testing.T) {
+	ctx := context.Background()
+	resourceData := prepareBaseTenantMacrosSchema()
+
+	// Set an invalid ID
+	resourceData.SetId("invalid-id")
+
+	// Call the import function
+	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
+
+	// Assertions
+	assert.Error(t, err)
+	assert.Nil(t, importedData)
 }

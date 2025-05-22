@@ -4,13 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"time"
+)
+
+const (
+	projectPrefix = "project-macros-" // keep the trailing dash!
+	tenantPrefix  = "tenant-macros"   // no dash because the whole string is the ID
 )
 
 func resourceMacros() *schema.Resource {
@@ -19,7 +27,10 @@ func resourceMacros() *schema.Resource {
 		ReadContext:   resourceMacrosRead,
 		UpdateContext: resourceMacrosUpdate,
 		DeleteContext: resourceMacrosDelete,
-		Description:   "A resource for creating and managing service output variables and macros.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceMacrosImport,
+		},
+		Description: "A resource for creating and managing service output variables and macros.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -195,4 +206,130 @@ func GetMacrosId(c *client.V1Client, uid string) (string, error) {
 		hashId = fmt.Sprintf("%s-%s-%s", "tenant", "macros", tenantID)
 	}
 	return hashId, nil
+}
+
+func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	log.Printf("[DEBUG] ===== Starting resourceMacrosImport =====")
+	log.Printf("[DEBUG] Input ID: %s", d.Id())
+
+	c := getV1ClientWithResourceContext(m, "")
+	log.Printf("[DEBUG] Got client with context: %+v", c)
+
+	rawID := d.Id()
+	log.Printf("[DEBUG] Raw ID to process: %s", rawID)
+
+	var contextUID string
+	var err error
+
+	switch {
+	// -------------------  Project macros  -------------------
+	case strings.HasPrefix(rawID, projectPrefix):
+		log.Printf("[DEBUG] Processing project macros import")
+		// Everything after the prefix is treated as the *literal* project name.
+		projectName := rawID[len(projectPrefix):] // safe even if the name contains dashes
+		log.Printf("[DEBUG] Extracted project name: %s", projectName)
+
+		if projectName == "" {
+			log.Printf("[ERROR] Project name is empty")
+			return nil, fmt.Errorf("project name cannot be empty in %q", rawID)
+		}
+
+		if err = d.Set("context", "project"); err != nil {
+			log.Printf("[ERROR] Failed to set context to project: %v", err)
+			return nil, err
+		}
+		log.Printf("[DEBUG] Set context to project")
+
+		// Translate project name → UID
+		log.Printf("[DEBUG] Converting project name to UID: %s", projectName)
+		contextUID, err = c.GetProjectUID(projectName)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get project UID: %v", err)
+			return nil, fmt.Errorf("project %q not found: %w", projectName, err)
+		}
+		log.Printf("[DEBUG] Got project UID: %s", contextUID)
+
+		ProviderInitProjectUid = contextUID
+		log.Printf("[DEBUG] Set ProviderInitProjectUid to: %s", contextUID)
+
+		// Get the macros using the project UID
+		log.Printf("[DEBUG] Fetching macros for project UID: %s", contextUID)
+		macros, err := c.GetMacrosV2(contextUID)
+		if err != nil {
+			log.Printf("[ERROR] Failed to get macros: %v", err)
+			return nil, fmt.Errorf("error getting macros: %w", err)
+		}
+		log.Printf("[DEBUG] Retrieved %d macros", len(macros))
+
+		// Set the ID using the project UID
+		resourceID := fmt.Sprintf("%s-%s-%s", "project", "macros", contextUID)
+		log.Printf("[DEBUG] Setting resource ID to: %s", resourceID)
+		d.SetId(resourceID)
+
+		// Set the macros in the resource data
+		retMacros := make(map[string]interface{}, len(macros))
+		for _, v := range macros {
+			retMacros[v.Name] = v.Value
+			log.Printf("[DEBUG] Processing macro: %s = %s", v.Name, v.Value)
+		}
+		log.Printf("[DEBUG] Setting macros in resource data: %+v", retMacros)
+		if err := d.Set("macros", retMacros); err != nil {
+			log.Printf("[ERROR] Failed to set macros: %v", err)
+			return nil, fmt.Errorf("error setting macros: %w", err)
+		}
+
+	// -------------------  Tenant macros  --------------------
+	case rawID == tenantPrefix:
+		log.Printf("[DEBUG] Processing tenant macros import")
+		if err = d.Set("context", "tenant"); err != nil {
+			log.Printf("[ERROR] Failed to set context to tenant: %v", err)
+			return nil, err
+		}
+		log.Printf("[DEBUG] Set context to tenant")
+
+		log.Printf("[DEBUG] Getting tenant UID")
+		contextUID, err = c.GetTenantUID()
+		if err != nil {
+			log.Printf("[ERROR] Failed to get tenant UID: %v", err)
+			return nil, fmt.Errorf("cannot determine tenant UID: %w", err)
+		}
+		log.Printf("[DEBUG] Got tenant UID: %s", contextUID)
+
+		// Get the macros using the tenant UID
+		log.Printf("[DEBUG] Fetching macros for tenant UID: %s", contextUID)
+		macros, err := c.GetMacrosV2("")
+		if err != nil {
+			log.Printf("[ERROR] Failed to get macros: %v", err)
+			return nil, fmt.Errorf("error getting macros: %w", err)
+		}
+		log.Printf("[DEBUG] Retrieved %d macros", len(macros))
+
+		// Set the ID using the tenant UID
+		resourceID := fmt.Sprintf("%s-%s-%s", "tenant", "macros", contextUID)
+		log.Printf("[DEBUG] Setting resource ID to: %s", resourceID)
+		d.SetId(resourceID)
+
+		// Set the macros in the resource data
+		retMacros := make(map[string]interface{}, len(macros))
+		for _, v := range macros {
+			retMacros[v.Name] = v.Value
+			log.Printf("[DEBUG] Processing macro: %s = %s", v.Name, v.Value)
+		}
+		log.Printf("[DEBUG] Setting macros in resource data: %+v", retMacros)
+		if err := d.Set("macros", retMacros); err != nil {
+			log.Printf("[ERROR] Failed to set macros: %v", err)
+			return nil, fmt.Errorf("error setting macros: %w", err)
+		}
+
+	// -------------------  Invalid format  -------------------
+	default:
+		log.Printf("[ERROR] Invalid import ID format: %s", rawID)
+		return nil, fmt.Errorf(
+			`import ID must be either %q<PROJECT-NAME> or exactly %q`,
+			projectPrefix, tenantPrefix,
+		)
+	}
+
+	log.Printf("[DEBUG] ===== Import completed successfully =====")
+	return []*schema.ResourceData{d}, nil
 }
