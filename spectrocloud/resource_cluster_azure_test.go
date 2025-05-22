@@ -123,6 +123,15 @@ func TestToStaticPlacement(t *testing.T) {
 					Name:              "worker_subnet",
 					SecurityGroupName: "worker_sg",
 				},
+				InfraLBConfig: &models.V1InfraLBConfig{
+					APIServerLB: &models.V1LoadBalancerSpec{
+						IPAllocationMethod:          types.Ptr("Dynamic"),
+						PrivateDNSName:              "",
+						PrivateDNSZoneResourceGroup: "",
+						APIServerLBStaticIP:         "",
+						Type:                        types.Ptr("Public"),
+					},
+				},
 			},
 		},
 	}
