@@ -98,7 +98,7 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 
 	registry, err := c.GetHelmRegistry(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if registry == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

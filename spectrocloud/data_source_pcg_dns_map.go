@@ -48,11 +48,11 @@ func dataSourceDNSMapRead(_ context.Context, d *schema.ResourceData, m interface
 
 	DNSMappings, err := c.GetVsphereDNSMappingsByPCGId(pcgUID)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	if len(DNSMappings.Items) == 0 {
-		err := fmt.Errorf("error: No DNS Mapping identified in private_cloud_gateway_id - `%s`", name)
-		return diag.FromErr(err)
+		err := fmt.Errorf("ResourceNotFound: No DNS Mapping identified in private_cloud_gateway_id - `%s`", name)
+		return handleReadError(d, err, diags)
 	}
 	matchDNSMap := &models.V1VsphereDNSMappings{}
 	for _, dnsMap := range DNSMappings.Items {

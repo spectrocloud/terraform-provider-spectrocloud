@@ -102,12 +102,12 @@ func dataSourceFilterRead(ctx context.Context, d *schema.ResourceData, m interfa
 	name := d.Get("name").(string)
 	filter, err := c.GetTagFilterByName(name)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	FilterSummary, err := c.GetTagFilter(filter.Metadata.UID)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	d.SetId(FilterSummary.Metadata.UID)

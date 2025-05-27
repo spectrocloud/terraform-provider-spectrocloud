@@ -48,7 +48,7 @@ func dataSourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData
 
 	accounts, err := c.GetCloudAccountsVsphere()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	var account *models.V1VsphereAccount

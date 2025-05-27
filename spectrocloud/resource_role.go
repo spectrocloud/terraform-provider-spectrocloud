@@ -68,7 +68,7 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}
 	var diags diag.Diagnostics
 	role, err := c.GetRoleByID(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	err = flattenRole(d, role)
 	if err != nil {

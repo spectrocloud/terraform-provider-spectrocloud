@@ -38,7 +38,7 @@ func dataSourcePCGRead(_ context.Context, d *schema.ResourceData, m interface{})
 		namePointer := &name
 		uid, err := c.GetPCGId(namePointer)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		d.SetId(uid)
 		if err := d.Set("name", v.(string)); err != nil {

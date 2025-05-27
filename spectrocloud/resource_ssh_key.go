@@ -94,7 +94,7 @@ func resourceSSHKeyRead(ctx context.Context, d *schema.ResourceData, m interface
 
 	sshKey, err := c.GetSSHKey(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if sshKey == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

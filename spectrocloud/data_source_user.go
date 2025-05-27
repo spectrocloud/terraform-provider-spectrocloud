@@ -35,7 +35,7 @@ func dataSourceUserRead(_ context.Context, d *schema.ResourceData, m interface{}
 	if v, ok := d.GetOk("email"); ok {
 		user, err := c.GetUserByEmail(v.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		d.SetId(user.Metadata.UID)
 		if err := d.Set("email", user.Spec.EmailID); err != nil {

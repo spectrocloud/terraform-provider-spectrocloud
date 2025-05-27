@@ -27,7 +27,7 @@ func dataSourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interf
 	if name, okName := d.GetOk("name"); okName {
 		workspace, err := c.GetWorkspaceByName(name.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if workspace != nil {
 			d.SetId(workspace.Metadata.UID)
