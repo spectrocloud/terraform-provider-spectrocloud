@@ -77,7 +77,7 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 	}
 	macros, err = c.GetTFMacrosV2(d.Get("macros").(map[string]interface{}), contextUid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if len(macros) == 0 {
 		// Deleted - Terraform will recreate it
 		d.SetId("")
@@ -85,7 +85,7 @@ func resourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface
 	}
 	macrosId, err := GetMacrosId(c, contextUid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	d.SetId(macrosId)
 

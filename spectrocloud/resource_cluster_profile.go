@@ -125,7 +125,7 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 
 	cp, err := c.GetClusterProfile(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if cp == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

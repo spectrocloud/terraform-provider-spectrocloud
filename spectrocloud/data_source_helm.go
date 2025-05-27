@@ -32,7 +32,7 @@ func dataSourceRegistryHelmRead(_ context.Context, d *schema.ResourceData, m int
 	if v, ok := d.GetOk("name"); ok {
 		registry, err := c.GetHelmRegistryByName(v.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		d.SetId(registry.Metadata.UID)
 		if err := d.Set("name", registry.Metadata.Name); err != nil {

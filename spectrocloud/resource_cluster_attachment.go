@@ -144,7 +144,7 @@ func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m in
 	clusterUid := d.Get("cluster_uid").(string)
 	cluster, err := c.GetCluster(clusterUid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	diagnostics, done := readAddonDeployment(c, d, cluster)

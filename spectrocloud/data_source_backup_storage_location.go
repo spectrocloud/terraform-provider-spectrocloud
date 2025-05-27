@@ -40,7 +40,7 @@ func dataSourceBackupStorageLocationRead(_ context.Context, d *schema.ResourceDa
 
 	bsls, err := c.ListBackupStorageLocation()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	var bsl *models.V1UserAssetsLocation

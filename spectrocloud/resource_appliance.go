@@ -158,7 +158,7 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 	if id, okId := d.GetOk("uid"); okId {
 		appliance, err := c.GetAppliance(id.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		} else if appliance == nil {
 			d.SetId("")
 			return diags

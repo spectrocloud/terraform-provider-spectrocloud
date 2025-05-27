@@ -34,6 +34,15 @@ const (
 	projectUID    = "testprojectuid"
 )
 
+type CodedError struct {
+	Code    string
+	Message string
+}
+
+func (e CodedError) Error() string {
+	return e.Message
+}
+
 // var baseConfig Cred
 var unitTestMockAPIClient interface{}
 var unitTestMockAPINegativeClient interface{}
@@ -193,4 +202,31 @@ func assertFirstDiagMessage(t *testing.T, diags diag.Diagnostics, msg string) {
 	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
 		assert.Contains(t, diags[0].Summary, msg, "The first diagnostic message does not contain the expected error message")
 	}
+}
+
+func TestHandleReadError_NotFound(t *testing.T) {
+	resource := resourceProject().TestResourceData()
+
+	resource.SetId("something")
+
+	err := error(CodedError{
+		Code:    "ResourceNotFound",
+		Message: "ResourceNotFound: not found",
+	})
+
+	_ = handleReadError(resource, err, nil)
+
+	assert.Equal(t, "something", resource.Id())
+}
+
+func TestHandleReadError_OtherError(t *testing.T) {
+	resource := resourceProject().TestResourceData()
+
+	err := fmt.Errorf("unexpected error")
+
+	diags := handleReadError(resource, err, nil)
+
+	assert.Len(t, diags, 1)
+	assert.Equal(t, diag.Error, diags[0].Severity)
+	assert.Contains(t, diags[0].Summary, "unexpected error")
 }

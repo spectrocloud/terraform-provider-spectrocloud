@@ -73,7 +73,7 @@ func dataSourcePackReadSimple(_ context.Context, d *schema.ResourceData, m inter
 				registryUID = regUID.(string)
 				registry, err := c.GetHelmRegistry(regUID.(string))
 				if err != nil {
-					return diag.FromErr(err)
+					return handleReadError(d, err, diags)
 				}
 				if registry.Spec.IsPrivate {
 					return diags
@@ -104,7 +104,7 @@ func dataSourcePackReadSimple(_ context.Context, d *schema.ResourceData, m inter
 
 	pack, err := c.GetPacksByNameAndRegistry(packName, registryUID)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	version := "1.0.0"

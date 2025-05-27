@@ -495,13 +495,13 @@ func resourceSSORead(ctx context.Context, d *schema.ResourceData, m interface{})
 	var diags diag.Diagnostics
 	tenantUID, err := c.GetTenantUID()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	ssoType := d.Get("sso_auth_type").(string)
 	if ssoType == "saml" {
 		samlEntity, err := c.GetSAML(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		err = flattenSAML(samlEntity, d)
 		if err != nil {
@@ -511,7 +511,7 @@ func resourceSSORead(ctx context.Context, d *schema.ResourceData, m interface{})
 	if ssoType == "oidc" {
 		oidcEntity, err := c.GetOIDC(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		err = flattenOidc(oidcEntity, d)
 		if err != nil {
@@ -521,7 +521,7 @@ func resourceSSORead(ctx context.Context, d *schema.ResourceData, m interface{})
 	if _, ok := d.GetOk("domains"); ok {
 		domainsEntity, err := c.GetDomains(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		err = flattenDomains(domainsEntity, d)
 		if err != nil {
@@ -532,7 +532,7 @@ func resourceSSORead(ctx context.Context, d *schema.ResourceData, m interface{})
 	if _, ok := d.GetOk("auth_providers"); ok {
 		authEntity, err := c.GetProviders(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		err = flattenAuthProviders(authEntity, d)
 		if err != nil {

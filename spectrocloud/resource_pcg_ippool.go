@@ -124,7 +124,7 @@ func resourceIpPoolRead(ctx context.Context, d *schema.ResourceData, m interface
 
 	pool, err := c.GetIPPool(pcgUID, d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if pool == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

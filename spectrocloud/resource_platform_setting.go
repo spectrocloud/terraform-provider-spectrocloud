@@ -241,7 +241,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 	var diags diag.Diagnostics
 	tenantUID, err := c.GetTenantUID()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	if platformSettingContext == tenantString {
@@ -249,7 +249,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		var respSessionTimeout *models.V1AuthTokenSettings
 		respSessionTimeout, err = c.GetSessionTimeout(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if err = d.Set("session_timeout", respSessionTimeout.ExpiryTimeMinutes); err != nil {
 			return diag.FromErr(err)
@@ -258,7 +258,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		var respLoginBanner *models.V1LoginBannerSettings
 		respLoginBanner, err = c.GetLoginBanner(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if respLoginBanner.Title != "" && respLoginBanner.Message != "" {
 			bannerDetails := make([]interface{}, 0)
@@ -275,7 +275,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		var respRemediation *models.V1TenantClusterSettings
 		respRemediation, err = c.GetClusterAutoRemediationForTenant(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if err = d.Set("cluster_auto_remediation", respRemediation.NodesAutoRemediationSetting.DisableNodesAutoRemediation); err != nil {
 			return diag.FromErr(err)
@@ -290,7 +290,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		if fiOk || ffOk || fpOk {
 			fipsPreference, err = c.GetFIPSPreference(tenantUID)
 			if err != nil {
-				return diag.FromErr(err)
+				return handleReadError(d, err, diags)
 			}
 			if _, ok := d.GetOk("non_fips_addon_pack"); ok {
 				err := d.Set("non_fips_addon_pack", convertFIPSString(*fipsPreference.FipsPackConfig.Mode))
@@ -317,7 +317,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		var respProjectRemediation *models.V1ProjectClusterSettings
 		respProjectRemediation, err = c.GetClusterAutoRemediationForProject(ProviderInitProjectUid)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if err = d.Set("cluster_auto_remediation", respProjectRemediation.NodesAutoRemediationSetting.DisableNodesAutoRemediation); err != nil {
 			return diag.FromErr(err)
@@ -330,7 +330,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 	var upgradeSetting *models.V1ClusterUpgradeSettingsEntity
 	upgradeSetting, err = c.GetPlatformClustersUpgradeSetting()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	if err = d.Set("pause_agent_upgrades", upgradeSetting.SpectroComponents); err != nil {
 		return diag.FromErr(err)

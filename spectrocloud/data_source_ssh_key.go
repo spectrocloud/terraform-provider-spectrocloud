@@ -56,8 +56,14 @@ func dataSourceSSHKeyRead(ctx context.Context, d *schema.ResourceData, m interfa
 	var err error
 	if id != "" {
 		sshKey, err = c.GetSSHKey(d.Id())
+		if err != nil {
+			return handleReadError(d, err, diags)
+		}
 	} else if name != "" {
 		sshKey, err = c.GetSSHKeyByName(name)
+		if err != nil {
+			return handleReadError(d, err, diags)
+		}
 	}
 	if err != nil {
 		return diag.FromErr(err)
