@@ -43,13 +43,13 @@ func dataSourceTeamRead(_ context.Context, d *schema.ResourceData, m interface{}
 	if v, ok := d.GetOk("name"); ok {
 		team, err = c.GetTeamWithName(v.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 	} else {
 		if val, okay := d.GetOk("id"); okay && val != "" {
 			team, err = c.GetTeam(val.(string))
 			if err != nil {
-				return diag.FromErr(err)
+				return handleReadError(d, err, diags)
 			}
 		}
 	}

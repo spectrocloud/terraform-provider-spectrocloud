@@ -136,7 +136,7 @@ func resourcePCGDNSMapRead(ctx context.Context, d *schema.ResourceData, m interf
 	var diags diag.Diagnostics
 	dnsMap, err := c.GetVsphereDNSMap(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	err = flattenDNSMap(dnsMap, d)
 	if err != nil {

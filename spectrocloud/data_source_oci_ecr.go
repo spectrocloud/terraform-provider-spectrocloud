@@ -34,7 +34,7 @@ func dataSourceRegistryOciRead(_ context.Context, d *schema.ResourceData, m inte
 	if v, ok := d.GetOk("name"); ok {
 		registry, err := c.GetOciRegistryByName(v.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		d.SetId(registry.Metadata.UID)
 		err = d.Set("name", registry.Metadata.Name)

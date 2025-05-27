@@ -52,7 +52,7 @@ func dataSourcePermissionRead(_ context.Context, d *schema.ResourceData, m inter
 	if v, ok := d.GetOk("name"); ok {
 		permission, err := c.GetPermissionByName(v.(string), client.PermissionScope(scope))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if permission != nil && len(permission.Permissions) > 0 {
 			d.SetId(strings.Trim(permission.Name, " "))

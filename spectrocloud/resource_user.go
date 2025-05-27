@@ -235,7 +235,7 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 	email := d.Get("email").(string)
 	user, err := c.GetUserSummaryByEmail(email)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if user == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

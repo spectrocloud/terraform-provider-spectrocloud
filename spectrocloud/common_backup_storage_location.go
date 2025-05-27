@@ -103,7 +103,7 @@ func S3BackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) dia
 
 	bsl, err := c.GetBackupStorageLocation(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if bsl == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")
@@ -171,7 +171,7 @@ func MinioBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 
 	bsl, err := c.GetBackupStorageLocation(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if bsl == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")
@@ -235,7 +235,7 @@ func GcpBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) di
 
 	bsl, err := c.GetBackupStorageLocation(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if bsl == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")
@@ -279,7 +279,7 @@ func AzureBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 
 	bsl, err := c.GetBackupStorageLocation(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if bsl == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

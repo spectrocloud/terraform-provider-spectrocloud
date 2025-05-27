@@ -113,7 +113,7 @@ func resourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, m 
 
 	account, err := c.GetCloudAccountAzure(uid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if account == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

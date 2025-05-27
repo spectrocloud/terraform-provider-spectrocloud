@@ -55,7 +55,7 @@ func dataSourceClusterRead(_ context.Context, d *schema.ResourceData, m interfac
 
 		cluster, err := c.GetClusterByName(name.(string), d.Get("virtual").(bool))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if cluster != nil {
 			d.SetId(cluster.Metadata.UID)
