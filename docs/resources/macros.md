@@ -34,7 +34,7 @@ data "spectrocloud_macros" "macros" {
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
-to import the resource spectrocloud_cluster_aks by using its `id` with the Palette `context` separated by a colon. For example:
+to import the resource spectrocloud_macros by using its `id` with the Palette `context` separated by a colon. For example:
 
 ```terraform
 import {
@@ -60,7 +60,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Optional
 
-- `context` (String) The context of the cluster profile. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+- `context` (String) The context of the cluster profile. Allowed values are `project` or `tenant`. Default value is `tenant`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
