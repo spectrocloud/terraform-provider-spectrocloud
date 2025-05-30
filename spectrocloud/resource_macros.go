@@ -4,13 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"time"
 )
 
 func resourceMacros() *schema.Resource {
@@ -19,7 +21,10 @@ func resourceMacros() *schema.Resource {
 		ReadContext:   resourceMacrosRead,
 		UpdateContext: resourceMacrosUpdate,
 		DeleteContext: resourceMacrosDelete,
-		Description:   "A resource for creating and managing service output variables and macros.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceMacrosImport,
+		},
+		Description: "A resource for creating and managing service output variables and macros.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -195,4 +200,50 @@ func GetMacrosId(c *client.V1Client, uid string) (string, error) {
 		hashId = fmt.Sprintf("%s-%s-%s", "tenant", "macros", tenantID)
 	}
 	return hashId, nil
+}
+
+func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	rawID := d.Id()
+	parts := strings.Split(rawID, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("import ID must be in the format 'id:context' where context is either 'project' or 'tenant'")
+	}
+
+	actualID := parts[0]
+	context := parts[1]
+
+	if context != "project" && context != "tenant" {
+		return nil, fmt.Errorf("context must be either 'project' or 'tenant', got: %s", context)
+	}
+
+	if err := d.Set("context", context); err != nil {
+		return nil, fmt.Errorf("failed to set context: %w", err)
+	}
+
+	d.SetId(actualID)
+
+	c := getV1ClientWithResourceContext(m, "")
+	contextUid := ""
+	if context == "project" {
+		contextUid = ProviderInitProjectUid
+	}
+	macros, err := c.GetMacrosV2(contextUid)
+	if err != nil {
+		return nil, fmt.Errorf("could not get macros: %w", err)
+	}
+
+	if len(macros) == 0 {
+		return nil, fmt.Errorf("no macros found to import for context '%s' with ID '%s'", context, actualID)
+	}
+
+	retMacros := map[string]interface{}{}
+	for _, v := range macros {
+		retMacros[v.Name] = v.Value
+	}
+
+	if err := d.Set("macros", retMacros); err != nil {
+		return nil, fmt.Errorf("failed to set macros: %w", err)
+	}
+	return []*schema.ResourceData{d}, nil
 }

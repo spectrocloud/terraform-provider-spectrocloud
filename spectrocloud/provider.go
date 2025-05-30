@@ -188,6 +188,7 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_privatecloudgateway_dns_map": dataSourcePrivateCloudGatewayDNSMap(),
 				"spectrocloud_ssh_key":                     dataSourceSSHKey(),
 				"spectrocloud_registration_token":          dataSourceRegistrationToken(),
+				"spectrocloud_macros":                      dataSourceMacros(),
 			},
 			ConfigureContextFunc: providerConfigure,
 		}
