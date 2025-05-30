@@ -2,10 +2,11 @@ package spectrocloud
 
 import (
 	"context"
-	"log"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -15,10 +16,12 @@ func dataSourceMacros() *schema.Resource {
 		Description: "Use this data source to get the ID of a macros resource for use with terraform import.",
 
 		Schema: map[string]*schema.Schema{
-			"project": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The Spectro Cloud project name. If not specified, macros will be looked up at tenant level.",
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "tenant",
+				Description:  "The context to retrieve macros from. Valid values are `project` or `tenant`. Defaults to `tenant`.",
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
 			},
 			"macros": {
 				Type:     schema.TypeMap,
@@ -26,94 +29,65 @@ func dataSourceMacros() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "The key-value mapping of macros to look up.",
+				Description: "Map of macro names to their values",
 			},
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The ID of the macros resource that can be used with terraform import.",
+				Description: "The UID of the macros resource.",
 			},
 		},
 	}
 }
 
 func dataSourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[DEBUG] ===== Starting dataSourceMacrosRead =====")
-
 	c := getV1ClientWithResourceContext(m, "")
-	log.Printf("[DEBUG] Got client with context")
-
 	var diags diag.Diagnostics
 	var err error
 
-	var projectName string
 	var uid string
-	var importID string
 	var macros []*models.V1Macro
 
-	if v, ok := d.GetOk("project"); ok && v.(string) != "" {
-		projectName = v.(string)
-		log.Printf("[DEBUG] Project name specified: %s", projectName)
-
-		// Get project UID
-		log.Printf("[DEBUG] Getting project UID for project: %s", projectName)
-		uid, err = c.GetProjectUID(projectName)
-		if err != nil {
-			log.Printf("[ERROR] Failed to get project UID: %v", err)
-			return diag.FromErr(err)
+	context := d.Get("context").(string)
+	if context == "project" {
+		uid = ProviderInitProjectUid
+		if uid == "" {
+			return diag.FromErr(fmt.Errorf("no project context found in provider configuration"))
 		}
-		log.Printf("[DEBUG] Got project UID: %s", uid)
-		ProviderInitProjectUid = uid
-		log.Printf("[DEBUG] Set ProviderInitProjectUid to: %s", uid)
-		importID = "project-macros-" + projectName
-		log.Printf("[DEBUG] Set importID to: %s", importID)
+
 		macros, err = c.GetMacrosV2(uid)
 		if err != nil {
-			log.Printf("[ERROR] Failed to get project macros: %v", err)
-			return diag.FromErr(err)
+			return diag.FromErr(fmt.Errorf("failed to get macros for project: %w", err))
 		}
-		log.Printf("[DEBUG] Retrieved %d project macros", len(macros))
 	} else {
-		log.Printf("[DEBUG] No project specified, getting tenant macros")
 		ProviderInitProjectUid = ""
-		log.Printf("[DEBUG] Reset ProviderInitProjectUid to empty string")
-
-		// Tenant
-		log.Printf("[DEBUG] Getting tenant UID")
 		uid, err = c.GetTenantUID()
 		if err != nil {
-			log.Printf("[ERROR] Failed to get tenant UID: %v", err)
-			return diag.FromErr(err)
+			return diag.FromErr(fmt.Errorf("failed to get tenant UID: %w", err))
 		}
-		log.Printf("[DEBUG] Got tenant UID: %s", uid)
-		importID = "tenant-macros"
-		log.Printf("[DEBUG] Set importID to: %s", importID)
+
 		macros, err = c.GetMacrosV2("")
 		if err != nil {
-			log.Printf("[ERROR] Failed to get tenant macros: %v", err)
-			return diag.FromErr(err)
+			return diag.FromErr(fmt.Errorf("failed to get tenant macros: %w", err))
 		}
-		log.Printf("[DEBUG] Retrieved %d tenant macros", len(macros))
 	}
 
-	// ✅ Build map[string]interface{} to return
-	out := make(map[string]interface{}, len(macros))
-	macroIDs := make(map[string]interface{}, len(macros))
+	if len(macros) == 0 {
+		return diag.FromErr(fmt.Errorf("no macros found for context '%s'", context))
+	}
+
+	// Convert macros to map
+	macroMap := make(map[string]interface{})
 	for _, macro := range macros {
-		out[macro.Name] = macro.Value
-		macroIDs[macro.Name] = macro.Name
-		log.Printf("[DEBUG] Processing macro: %s = %s", macro.Name, macro.Value)
+		macroMap[macro.Name] = macro.Value
 	}
 
-	log.Printf("[DEBUG] Setting macros in state: %+v", out)
-	_ = d.Set("macros", out)
+	if err := d.Set("macros", macroMap); err != nil {
+		return diag.FromErr(fmt.Errorf("failed to set macros: %w", err))
+	}
 
-	log.Printf("[DEBUG] Setting macro_ids in state: %+v", macroIDs)
-	_ = d.Set("macro_ids", macroIDs)
+	// Use the UID as the ID
+	d.SetId(uid)
 
-	log.Printf("[DEBUG] Setting resource ID to: %s", importID)
-	d.SetId(importID)
-
-	log.Printf("[DEBUG] ===== dataSourceMacrosRead completed successfully =====")
 	return diags
 }

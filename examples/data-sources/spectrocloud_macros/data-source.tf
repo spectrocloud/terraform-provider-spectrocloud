@@ -1,14 +1,9 @@
-data "spectrocloud_macros" "project" {
-  project = "Default"
+data "spectrocloud_macros" "macros" {
+  context = "tenant"
 }
 
-output "available_macros_project" {
-  value = data.spectrocloud_macros.project.macros
+output "macros" {
+  value = data.spectrocloud_macros.macros.macros
+  description = "Available macros"
 }
 
-data "spectrocloud_macros" "tenant" {
-
-}
-output "available_macros_tenant" {
-  value = data.spectrocloud_macros.tenant.macros
-}

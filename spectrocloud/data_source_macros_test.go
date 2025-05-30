@@ -10,10 +10,7 @@ import (
 
 func prepareMacrosTestData() *schema.ResourceData {
 	d := dataSourceMacros().TestResourceData()
-	d.Set("macros", map[string]interface{}{
-		"macro1": "value1",
-		"macro2": "value2",
-	})
+	d.Set("context", "tenant")
 	return d
 }
 
@@ -27,12 +24,19 @@ func TestDataSourceMacrosRead(t *testing.T) {
 	// Assertions
 	assert.Equal(t, 0, len(diags))
 	assert.NotEmpty(t, resourceData.Id())
+
+	// Verify macros are set
+	macros, ok := resourceData.GetOk("macros")
+	assert.True(t, ok)
+	macroMap, ok := macros.(map[string]interface{})
+	assert.True(t, ok)
+	assert.NotEmpty(t, macroMap)
 }
 
 func TestDataSourceProjectMacrosRead(t *testing.T) {
 	ctx := context.Background()
 	resourceData := prepareMacrosTestData()
-	resourceData.Set("project", "Default")
+	resourceData.Set("context", "project")
 
 	// Call the function
 	diags := dataSourceMacrosRead(ctx, resourceData, unitTestMockAPIClient)
@@ -40,4 +44,11 @@ func TestDataSourceProjectMacrosRead(t *testing.T) {
 	// Assertions
 	assert.Equal(t, 0, len(diags))
 	assert.NotEmpty(t, resourceData.Id())
+
+	// Verify macros are set
+	macros, ok := resourceData.GetOk("macros")
+	assert.True(t, ok)
+	macroMap, ok := macros.(map[string]interface{})
+	assert.True(t, ok)
+	assert.NotEmpty(t, macroMap)
 }
