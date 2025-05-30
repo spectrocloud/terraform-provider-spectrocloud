@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -14,11 +13,6 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-)
-
-const (
-	projectPrefix = "project-macros-" // keep the trailing dash!
-	tenantPrefix  = "tenant-macros"   // no dash because the whole string is the ID
 )
 
 func resourceMacros() *schema.Resource {
@@ -209,127 +203,47 @@ func GetMacrosId(c *client.V1Client, uid string) (string, error) {
 }
 
 func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	log.Printf("[DEBUG] ===== Starting resourceMacrosImport =====")
-	log.Printf("[DEBUG] Input ID: %s", d.Id())
-
-	c := getV1ClientWithResourceContext(m, "")
-	log.Printf("[DEBUG] Got client with context: %+v", c)
 
 	rawID := d.Id()
-	log.Printf("[DEBUG] Raw ID to process: %s", rawID)
-
-	var contextUID string
-	var err error
-
-	switch {
-	// -------------------  Project macros  -------------------
-	case strings.HasPrefix(rawID, projectPrefix):
-		log.Printf("[DEBUG] Processing project macros import")
-		// Everything after the prefix is treated as the *literal* project name.
-		projectName := rawID[len(projectPrefix):] // safe even if the name contains dashes
-		log.Printf("[DEBUG] Extracted project name: %s", projectName)
-
-		if projectName == "" {
-			log.Printf("[ERROR] Project name is empty")
-			return nil, fmt.Errorf("project name cannot be empty in %q", rawID)
-		}
-
-		if err = d.Set("context", "project"); err != nil {
-			log.Printf("[ERROR] Failed to set context to project: %v", err)
-			return nil, err
-		}
-		log.Printf("[DEBUG] Set context to project")
-
-		// Translate project name → UID
-		log.Printf("[DEBUG] Converting project name to UID: %s", projectName)
-		contextUID, err = c.GetProjectUID(projectName)
-		if err != nil {
-			log.Printf("[ERROR] Failed to get project UID: %v", err)
-			return nil, fmt.Errorf("project %q not found: %w", projectName, err)
-		}
-		log.Printf("[DEBUG] Got project UID: %s", contextUID)
-
-		ProviderInitProjectUid = contextUID
-		log.Printf("[DEBUG] Set ProviderInitProjectUid to: %s", contextUID)
-
-		// Get the macros using the project UID
-		log.Printf("[DEBUG] Fetching macros for project UID: %s", contextUID)
-		macros, err := c.GetMacrosV2(contextUID)
-		if err != nil {
-			log.Printf("[ERROR] Failed to get macros: %v", err)
-			return nil, fmt.Errorf("error getting macros: %w", err)
-		}
-		log.Printf("[DEBUG] Retrieved %d macros", len(macros))
-
-		// Set the ID using the project UID
-		resourceID := fmt.Sprintf("%s-%s-%s", "project", "macros", contextUID)
-		log.Printf("[DEBUG] Setting resource ID to: %s", resourceID)
-		d.SetId(resourceID)
-
-		// Set the macros in the resource data
-		retMacros := make(map[string]interface{}, len(macros))
-		for _, v := range macros {
-			retMacros[v.Name] = v.Value
-			log.Printf("[DEBUG] Processing macro: %s = %s", v.Name, v.Value)
-		}
-		log.Printf("[DEBUG] Setting macros in resource data: %+v", retMacros)
-		if err := d.Set("macros", retMacros); err != nil {
-			log.Printf("[ERROR] Failed to set macros: %v", err)
-			return nil, fmt.Errorf("error setting macros: %w", err)
-		}
-
-	// -------------------  Tenant macros  --------------------
-	case rawID == tenantPrefix:
-		log.Printf("[DEBUG] Processing tenant macros import")
-		if err = d.Set("context", "tenant"); err != nil {
-			log.Printf("[ERROR] Failed to set context to tenant: %v", err)
-			return nil, err
-		}
-		log.Printf("[DEBUG] Set context to tenant")
-
-		log.Printf("[DEBUG] Getting tenant UID")
-		contextUID, err = c.GetTenantUID()
-		if err != nil {
-			log.Printf("[ERROR] Failed to get tenant UID: %v", err)
-			return nil, fmt.Errorf("cannot determine tenant UID: %w", err)
-		}
-		log.Printf("[DEBUG] Got tenant UID: %s", contextUID)
-
-		// Get the macros using the tenant UID
-		log.Printf("[DEBUG] Fetching macros for tenant UID: %s", contextUID)
-		macros, err := c.GetMacrosV2("")
-		if err != nil {
-			log.Printf("[ERROR] Failed to get macros: %v", err)
-			return nil, fmt.Errorf("error getting macros: %w", err)
-		}
-		log.Printf("[DEBUG] Retrieved %d macros", len(macros))
-
-		// Set the ID using the tenant UID
-		resourceID := fmt.Sprintf("%s-%s-%s", "tenant", "macros", contextUID)
-		log.Printf("[DEBUG] Setting resource ID to: %s", resourceID)
-		d.SetId(resourceID)
-
-		// Set the macros in the resource data
-		retMacros := make(map[string]interface{}, len(macros))
-		for _, v := range macros {
-			retMacros[v.Name] = v.Value
-			log.Printf("[DEBUG] Processing macro: %s = %s", v.Name, v.Value)
-		}
-		log.Printf("[DEBUG] Setting macros in resource data: %+v", retMacros)
-		if err := d.Set("macros", retMacros); err != nil {
-			log.Printf("[ERROR] Failed to set macros: %v", err)
-			return nil, fmt.Errorf("error setting macros: %w", err)
-		}
-
-	// -------------------  Invalid format  -------------------
-	default:
-		log.Printf("[ERROR] Invalid import ID format: %s", rawID)
-		return nil, fmt.Errorf(
-			`import ID must be either %q<PROJECT-NAME> or exactly %q`,
-			projectPrefix, tenantPrefix,
-		)
+	parts := strings.Split(rawID, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("import ID must be in the format 'id:context' where context is either 'project' or 'tenant'")
 	}
 
-	log.Printf("[DEBUG] ===== Import completed successfully =====")
+	actualID := parts[0]
+	context := parts[1]
+
+	if context != "project" && context != "tenant" {
+		return nil, fmt.Errorf("context must be either 'project' or 'tenant', got: %s", context)
+	}
+
+	if err := d.Set("context", context); err != nil {
+		return nil, fmt.Errorf("failed to set context: %w", err)
+	}
+
+	d.SetId(actualID)
+
+	c := getV1ClientWithResourceContext(m, "")
+	contextUid := ""
+	if context == "project" {
+		contextUid = ProviderInitProjectUid
+	}
+	macros, err := c.GetMacrosV2(contextUid)
+	if err != nil {
+		return nil, fmt.Errorf("could not get macros: %w", err)
+	}
+
+	if len(macros) == 0 {
+		return nil, fmt.Errorf("no macros found to import for context '%s' with ID '%s'", context, actualID)
+	}
+
+	retMacros := map[string]interface{}{}
+	for _, v := range macros {
+		retMacros[v.Name] = v.Value
+	}
+
+	if err := d.Set("macros", retMacros); err != nil {
+		return nil, fmt.Errorf("failed to set macros: %w", err)
+	}
 	return []*schema.ResourceData{d}, nil
 }
