@@ -15,12 +15,12 @@ resource "spectrocloud_macros" "tenant_macro" {
 
 
 #Sample id id = "63d48658fsga0c92a6f230112:tenant"
-import {
-  to = spectrocloud_macros.imported_macros_tenant
-  id = "63d48062b3a0c92a6f230112:tenant"
-}
-import {
-  to = spectrocloud_macros.imported_macros_project
-  id = "63d48065b3a0c92a791fa3d8:project"
-}
+#import {
+#  to = spectrocloud_macros.imported_macros_tenant
+#  id = "63d48062b3a0c92a6f230112:tenant"
+#}
+#import {
+#  to = spectrocloud_macros.imported_macros_project
+#  id = "67a8e0e3dc76532bf3d8af3c:project"
+#}
 

@@ -204,46 +204,56 @@ func GetMacrosId(c *client.V1Client, uid string) (string, error) {
 
 func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 
-	rawID := d.Id()
-	parts := strings.Split(rawID, ":")
+	var diags diag.Diagnostics
+
+	rawIDContext := d.Id()
+	parts := strings.Split(rawIDContext, ":")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("import ID must be in the format 'id:context' where context is either 'project' or 'tenant'")
+		return nil, fmt.Errorf("import ID must be in the format '{projectUID/tenanatUID}:{project/tenant}'")
 	}
 
-	actualID := parts[0]
-	context := parts[1]
-
-	if context != "project" && context != "tenant" {
-		return nil, fmt.Errorf("context must be either 'project' or 'tenant', got: %s", context)
-	}
-
-	if err := d.Set("context", context); err != nil {
-		return nil, fmt.Errorf("failed to set context: %w", err)
-	}
-
-	d.SetId(actualID)
-
-	c := getV1ClientWithResourceContext(m, "")
-	contextUid := ""
-	if context == "project" {
-		contextUid = ProviderInitProjectUid
-	}
-	macros, err := c.GetMacrosV2(contextUid)
+	contextID := parts[0]
+	macrosContext := parts[1]
+	err := ValidateContext(macrosContext)
 	if err != nil {
-		return nil, fmt.Errorf("could not get macros: %w", err)
+		return nil, err
+	}
+	err = d.Set("context", macrosContext)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(macros) == 0 {
-		return nil, fmt.Errorf("no macros found to import for context '%s' with ID '%s'", context, actualID)
+	c := getV1ClientWithResourceContext(m, macrosContext)
+	var macros []*models.V1Macro
+
+	if macrosContext == "project" {
+		if contextID != ProviderInitProjectUid {
+			return nil, fmt.Errorf("invalid import: given project UID {%s} and provider project UID {%s} are different — cross-project resource imports are not allowed; project UID must match the provider configuration", contextID, ProviderInitProjectUid)
+		}
+		macros, err = c.GetMacros(ProviderInitProjectUid)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		actualTenantId, _ := c.GetTenantUID()
+		if contextID != actualTenantId {
+			return nil, fmt.Errorf("invalid import: tenant UID {%s} does not match your authorized tenant UID {%s}", contextID, actualTenantId)
+		}
+		macros, err = c.GetMacros("")
 	}
 
-	retMacros := map[string]interface{}{}
+	existingMacros := map[string]interface{}{}
 	for _, v := range macros {
-		retMacros[v.Name] = v.Value
+		existingMacros[v.Name] = v.Value
+	}
+	err = d.Set("macros", existingMacros)
+	if err != nil {
+		return nil, err
 	}
 
-	if err := d.Set("macros", retMacros); err != nil {
-		return nil, fmt.Errorf("failed to set macros: %w", err)
+	if diags.HasError() {
+		return nil, fmt.Errorf("could not read password policy for import: %v", diags)
 	}
 	return []*schema.ResourceData{d}, nil
 }
