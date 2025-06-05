@@ -23,24 +23,35 @@ func dataSourceMacros() *schema.Resource {
 				Description:  "The context to retrieve macros from. Valid values are `project` or `tenant`. Defaults to `tenant`.",
 				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
 			},
-			"macros": {
+			"macros_map": {
 				Type:     schema.TypeMap,
 				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "Map of macro names to their values",
+				Description: "Map of macros where the key is the macro name and the value is the macro value. ",
+			},
+			"macro_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The name of the macros resource. If specified, the data source will return the macros with this name.",
+			},
+			"macro_value": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The value of the macros resource. This will be set if `macro_name` is specified.",
 			},
 			"id": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The UID of the macros resource.",
+				Description: "unique identifier for the macros resource, which is the UID of the project or tenant.",
 			},
 		},
 	}
 }
 
 func dataSourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	macroContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 	var err error
@@ -48,45 +59,45 @@ func dataSourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interfa
 	var uid string
 	var macros []*models.V1Macro
 
-	context := d.Get("context").(string)
-	if context == "project" {
+	if macroContext == "project" {
 		uid = ProviderInitProjectUid
-		if uid == "" {
-			return diag.FromErr(fmt.Errorf("no project context found in provider configuration"))
-		}
-
-		macros, err = c.GetMacrosV2(uid)
+		macros, err = c.GetMacros(uid)
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("failed to get macros for project: %w", err))
+			return diag.FromErr(err)
 		}
 	} else {
-		ProviderInitProjectUid = ""
-		uid, err = c.GetTenantUID()
+		uid, _ = c.GetTenantUID()
+		macros, err = c.GetMacros(uid)
 		if err != nil {
-			return diag.FromErr(fmt.Errorf("failed to get tenant UID: %w", err))
-		}
-
-		macros, err = c.GetMacrosV2("")
-		if err != nil {
-			return diag.FromErr(fmt.Errorf("failed to get tenant macros: %w", err))
+			return diag.FromErr(err)
 		}
 	}
 
 	if len(macros) == 0 {
-		return diag.FromErr(fmt.Errorf("no macros found for context '%s'", context))
+		return diag.FromErr(fmt.Errorf("no macros found for context '%s'", macroContext))
 	}
 
 	// Convert macros to map
+	macroName := d.Get("macro_name").(string)
 	macroMap := make(map[string]interface{})
 	for _, macro := range macros {
 		macroMap[macro.Name] = macro.Value
+		if macroName != "" && macro.Name == macroName {
+			err := d.Set("macro_value", macro.Value)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+	if macroName != "" && macroMap[macroName] == nil {
+		return diag.FromErr(fmt.Errorf("macro with name '%s' not found", macroName))
 	}
 
-	if err := d.Set("macros", macroMap); err != nil {
-		return diag.FromErr(fmt.Errorf("failed to set macros: %w", err))
+	if err := d.Set("macros_map", macroMap); err != nil {
+		return diag.FromErr(err)
 	}
-
 	// Use the UID as the ID
+	uid, _ = c.GetMacrosID(uid)
 	d.SetId(uid)
 
 	return diags

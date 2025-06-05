@@ -241,6 +241,9 @@ func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interfa
 			return nil, fmt.Errorf("invalid import: tenant UID {%s} does not match your authorized tenant UID {%s}", contextID, actualTenantId)
 		}
 		macros, err = c.GetMacros("")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	existingMacros := map[string]interface{}{}

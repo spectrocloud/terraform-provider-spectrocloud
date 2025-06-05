@@ -1,9 +1,12 @@
 data "spectrocloud_macros" "macros" {
-  context = "tenant"
+  context = "project"
+  #  macro_name = "MACRO_PROJECT_PODCIDR"
 }
 
-output "macros" {
-  value = data.spectrocloud_macros.macros.macros
-  description = "Available macros"
+output "macro_eg_name" {
+  value = data.spectrocloud_macros.macros.macro_value
 }
 
+output "macros_map" {
+  value = data.spectrocloud_macros.macros.macros_map
+}

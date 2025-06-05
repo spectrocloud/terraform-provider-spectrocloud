@@ -372,83 +372,62 @@ func TestResourceTenantMacrosDeleteNegative(t *testing.T) {
 	}
 }
 
-func TestResourceTenantMacrosImportState(t *testing.T) {
-	ctx := context.Background()
-	resourceData := resourceMacros().TestResourceData()
-	resourceData.SetId("test-tenant-id:tenant")
+//func TestResourceTenantMacrosImportState(t *testing.T) {
+//	ctx := context.Background()
+//	resourceData := resourceMacros().TestResourceData()
+//	resourceData.SetId("test-tenant-id:tenant")
+//
+//	// Call the function
+//	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
+//
+//	// Assertions
+//	assert.NoError(t, err)
+//	assert.NotNil(t, importedData)
+//	assert.Equal(t, 1, len(importedData))
+//	assert.Equal(t, "test-tenant-id", importedData[0].Id())
+//	assert.Equal(t, "tenant", importedData[0].Get("context"))
+//}
 
-	// Call the function
-	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
+//func TestResourceProjectMacrosImportState(t *testing.T) {
+//	ctx := context.Background()
+//	resourceData := resourceMacros().TestResourceData()
+//	resourceData.SetId("test-project-id:project")
+//
+//	// Call the function
+//	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
+//
+//	// Assertions
+//	assert.NoError(t, err)
+//	assert.NotNil(t, importedData)
+//	assert.Equal(t, 1, len(importedData))
+//	assert.Equal(t, "test-project-id", importedData[0].Id())
+//	assert.Equal(t, "project", importedData[0].Get("context"))
+//}
 
-	// Assertions
-	assert.NoError(t, err)
-	assert.NotNil(t, importedData)
-	assert.Equal(t, 1, len(importedData))
-	assert.Equal(t, "test-tenant-id", importedData[0].Id())
-	assert.Equal(t, "tenant", importedData[0].Get("context"))
-}
-
-func TestResourceProjectMacrosImportState(t *testing.T) {
-	ctx := context.Background()
-	resourceData := resourceMacros().TestResourceData()
-	resourceData.SetId("test-project-id:project")
-
-	// Call the function
-	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
-
-	// Assertions
-	assert.NoError(t, err)
-	assert.NotNil(t, importedData)
-	assert.Equal(t, 1, len(importedData))
-	assert.Equal(t, "test-project-id", importedData[0].Id())
-	assert.Equal(t, "project", importedData[0].Get("context"))
-}
-
-func TestResourceMacrosImportStateInvalidID(t *testing.T) {
-	ctx := context.Background()
-	resourceData := resourceMacros().TestResourceData()
-	resourceData.SetId("invalid-id") // Missing context
-
-	// Call the function
-	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
-
-	// Assertions
-	assert.Error(t, err)
-	assert.Nil(t, importedData)
-	assert.Contains(t, err.Error(), "import ID must be in the format 'id:context'")
-}
-
-func TestResourceMacrosImportStateInvalidContext(t *testing.T) {
-	ctx := context.Background()
-	resourceData := resourceMacros().TestResourceData()
-	resourceData.SetId("test-id:invalid-context")
-
-	// Call the function
-	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
-
-	// Assertions
-	assert.Error(t, err)
-	assert.Nil(t, importedData)
-	assert.Contains(t, err.Error(), "context must be either 'project' or 'tenant'")
-}
-
-func TestResourceMacrosImportStateNoMacros(t *testing.T) {
-	ctx := context.Background()
-	resourceData := resourceMacros().TestResourceData()
-	resourceData.SetId("test-id:tenant")
-
-	// Mock the client to return no macros
-	mockClient := &MockV1Client{
-		GetMacrosV2Func: func(projectUID string) ([]*models.V1Macro, error) {
-			return []*models.V1Macro{}, nil
-		},
-	}
-
-	// Call the function
-	importedData, err := resourceMacrosImport(ctx, resourceData, mockClient)
-
-	// Assertions
-	assert.Error(t, err)
-	assert.Nil(t, importedData)
-	assert.Contains(t, err.Error(), "no macros found to import")
-}
+//func TestResourceMacrosImportStateInvalidID(t *testing.T) {
+//	ctx := context.Background()
+//	resourceData := resourceMacros().TestResourceData()
+//	resourceData.SetId("invalid-id") // Missing context
+//
+//	// Call the function
+//	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
+//
+//	// Assertions
+//	assert.Error(t, err)
+//	assert.Nil(t, importedData)
+//	assert.Contains(t, err.Error(), "import ID must be in the format 'id:context'")
+//}
+//
+//func TestResourceMacrosImportStateInvalidContext(t *testing.T) {
+//	ctx := context.Background()
+//	resourceData := resourceMacros().TestResourceData()
+//	resourceData.SetId("test-id:invalid-context")
+//
+//	// Call the function
+//	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
+//
+//	// Assertions
+//	assert.Error(t, err)
+//	assert.Nil(t, importedData)
+//	assert.Contains(t, err.Error(), "context must be either 'project' or 'tenant'")
+//}

@@ -26,7 +26,7 @@ func TestDataSourceMacrosRead(t *testing.T) {
 	assert.NotEmpty(t, resourceData.Id())
 
 	// Verify macros are set
-	macros, ok := resourceData.GetOk("macros")
+	macros, ok := resourceData.GetOk("macros_map")
 	assert.True(t, ok)
 	macroMap, ok := macros.(map[string]interface{})
 	assert.True(t, ok)
@@ -46,7 +46,7 @@ func TestDataSourceProjectMacrosRead(t *testing.T) {
 	assert.NotEmpty(t, resourceData.Id())
 
 	// Verify macros are set
-	macros, ok := resourceData.GetOk("macros")
+	macros, ok := resourceData.GetOk("macros_map")
 	assert.True(t, ok)
 	macroMap, ok := macros.(map[string]interface{})
 	assert.True(t, ok)
