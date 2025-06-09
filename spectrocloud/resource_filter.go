@@ -125,12 +125,12 @@ func resourceFilterCreate(ctx context.Context, d *schema.ResourceData, m interfa
 
 func resourceFilterRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
-
+	var diags diag.Diagnostics
 	uid := d.Id()
 
 	tagFilterSummary, err := c.GetTagFilter(uid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	if err := d.Set("metadata", flattenMetadata(tagFilterSummary.Metadata)); err != nil {

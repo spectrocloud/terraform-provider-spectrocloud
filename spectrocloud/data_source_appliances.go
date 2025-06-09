@@ -59,6 +59,7 @@ func dataSourceAppliances() *schema.Resource {
 
 func dataSourcesApplianceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
+	var diags diag.Diagnostics
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	// Initialize tags if present
@@ -74,7 +75,7 @@ func dataSourcesApplianceRead(ctx context.Context, d *schema.ResourceData, m int
 	// Read appliances using the new GetAppliances method
 	appliances, err := c.GetAppliances(tags, status, health, architecture)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	// Extract appliance IDs

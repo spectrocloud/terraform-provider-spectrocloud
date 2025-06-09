@@ -80,13 +80,13 @@ func resourceMacroRead(ctx context.Context, d *schema.ResourceData, m interface{
 	if v, ok := d.GetOk("project"); ok && v.(string) != "" { //if project name is set it's a project scope
 		uid, err = c.GetProjectUID(v.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 	}
 
 	macro, err = c.GetMacro(d.Get("name").(string), uid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if macro == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

@@ -180,11 +180,17 @@ func resourcePasswordPolicyRead(ctx context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 	tenantUID, err := c.GetTenantUID()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	resp, err := c.GetPasswordPolicy(tenantUID)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
+	}
+	// handling case for cross-plane for singleton resource
+	if d.Id() != "default-password-policy-id" {
+		// If we are not reading the default password policy, we should not set the ID
+		d.SetId("")
+		return diags
 	}
 	err = flattenPasswordPolicy(resp, d)
 	if err != nil {

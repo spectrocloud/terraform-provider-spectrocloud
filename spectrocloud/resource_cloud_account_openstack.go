@@ -110,7 +110,7 @@ func resourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceData
 	uid := d.Id()
 	account, err := c.GetCloudAccountOpenStack(uid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if account == nil {
 		d.SetId("")
 		return diags

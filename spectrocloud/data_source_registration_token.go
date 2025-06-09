@@ -61,12 +61,12 @@ func dataSourceRegistrationTokenRead(_ context.Context, d *schema.ResourceData, 
 	if name, okName := d.GetOk("name"); okName {
 		tokenEntity, err = c.GetRegistrationTokenByName(name.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 	} else if id, okId := d.GetOk("id"); okId {
 		tokenEntity, err = c.GetRegistrationTokenByUID(id.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 	}
 	if tokenEntity != nil {

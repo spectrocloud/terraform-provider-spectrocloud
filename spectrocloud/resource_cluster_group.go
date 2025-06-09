@@ -159,7 +159,7 @@ func resourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m inter
 	uid := d.Id()
 	clusterGroup, err := c.GetClusterGroup(uid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if clusterGroup == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

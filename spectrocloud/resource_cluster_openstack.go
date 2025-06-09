@@ -377,7 +377,7 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 
 	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if cluster == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

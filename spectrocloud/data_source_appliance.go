@@ -68,13 +68,13 @@ func dataSourceApplianceRead(_ context.Context, d *schema.ResourceData, m interf
 	if id, okId := d.GetOk("id"); okId {
 		appliance, err = c.GetAppliance(id.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 	}
 	if name, okName := d.GetOk("name"); okName {
 		appliance, err = c.GetApplianceByName(name.(string), nil, "", "", "")
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 	}
 	if appliance != nil {

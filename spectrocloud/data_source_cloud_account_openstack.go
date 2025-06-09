@@ -48,7 +48,7 @@ func dataSourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceDa
 
 	accounts, err := c.GetCloudAccountsOpenStack()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	var account *models.V1OpenStackAccount
