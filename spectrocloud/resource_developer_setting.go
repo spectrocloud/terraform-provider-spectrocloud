@@ -145,6 +145,11 @@ func resourceDeveloperSettingRead(ctx context.Context, d *schema.ResourceData, m
 	if err != nil {
 		return handleReadError(d, err, diags)
 	}
+	// handling case for cross-plane for singleton resource
+	if d.Id() != "default-dev-setting-id" {
+		d.SetId("")
+		return diags
+	}
 	err = flattenDeveloperSetting(respDevSettings, respSysClusterGroupPref, d)
 	if err != nil {
 		return diag.FromErr(err)

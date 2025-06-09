@@ -243,6 +243,11 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 	if err != nil {
 		return handleReadError(d, err, diags)
 	}
+	// handling case for cross-plane for singleton resource
+	if d.Id() != fmt.Sprintf("default-platform-setting-%s", platformSettingContext) {
+		d.SetId("")
+		return diags
+	}
 
 	if platformSettingContext == tenantString {
 		// read session timeout

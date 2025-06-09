@@ -8,6 +8,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
@@ -235,7 +236,12 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 	email := d.Get("email").(string)
 	user, err := c.GetUserSummaryByEmail(email)
 	if err != nil {
-		return handleReadError(d, err, diags)
+		if strings.Contains(err.Error(), "user not found for email") {
+			d.SetId("")
+			return diags
+		} else {
+			return diag.FromErr(err)
+		}
 	} else if user == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

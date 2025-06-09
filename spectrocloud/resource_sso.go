@@ -497,6 +497,11 @@ func resourceSSORead(ctx context.Context, d *schema.ResourceData, m interface{})
 	if err != nil {
 		return handleReadError(d, err, diags)
 	}
+	// handling case for cross-plane for singleton resource
+	if d.Id() != "sso_settings" {
+		d.SetId("")
+		return diags
+	}
 	ssoType := d.Get("sso_auth_type").(string)
 	if ssoType == "saml" {
 		samlEntity, err := c.GetSAML(tenantUID)
