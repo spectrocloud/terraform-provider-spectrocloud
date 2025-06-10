@@ -67,7 +67,7 @@ func dataSourceMacrosRead(ctx context.Context, d *schema.ResourceData, m interfa
 		}
 	} else {
 		uid, _ = c.GetTenantUID()
-		macros, err = c.GetMacros(uid)
+		macros, err = c.GetMacros("")
 		if err != nil {
 			return diag.FromErr(err)
 		}
