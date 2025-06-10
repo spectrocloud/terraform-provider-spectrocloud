@@ -129,6 +129,7 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 				e.Payload.Message = e.Payload.Message + "\n Kindly verify if any of the specified macro names already exist in the system."
 				return diag.FromErr(e)
 			}
+			_ = d.Set("macros", oldMacros)
 			return diag.FromErr(err)
 		}
 	}
@@ -254,6 +255,11 @@ func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interfa
 	if err != nil {
 		return nil, err
 	}
+	macrosId, err := GetMacrosId(c, contextID)
+	if err != nil {
+		return nil, err
+	}
+	d.SetId(macrosId)
 
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read password policy for import: %v", diags)
