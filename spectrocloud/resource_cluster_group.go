@@ -243,7 +243,7 @@ func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m i
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 	// if there are changes in the name of  cluster group, update it using UpdateClusterGroupMeta()
-	if d.HasChanges("name", "tags") {
+	if d.HasChanges("name", "tags", "description") {
 		clusterGroup := toClusterGroup(c, d)
 		err := c.UpdateClusterGroupMeta(clusterGroup)
 		if err != nil {
