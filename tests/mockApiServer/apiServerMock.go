@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/gorilla/mux"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 )
 
 // API key for authentication
