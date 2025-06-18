@@ -3,20 +3,20 @@ resource "spectrocloud_cluster_group" "cg" {
   context     = "tenant"
   description = "Cluster Group description updated"
   tags        = ["qa:dev"]
-  
+
   config {
-    host_endpoint_type      = "Ingress"
-    cpu_millicore          = 12000
-    memory_in_mb          = 16384
-    storage_in_gb         = 12
+    host_endpoint_type       = "Ingress"
+    cpu_millicore            = 12000
+    memory_in_mb             = 16384
+    storage_in_gb            = 12
     oversubscription_percent = 120
-    values                = ""
-    k8s_distribution      = "k3s"
+    values                   = ""
+    k8s_distribution         = "k3s"
   }
 
   clusters {
-      cluster_uid = "684fba868619ff5e691f0741"
-      host_dns    = "*.dev.spectrocloud.com"
-    }
+    cluster_uid = "684fba868619ff5e691f0741"
+    host_dns    = "*.dev.spectrocloud.com"
+  }
 
 }
