@@ -257,7 +257,7 @@ func resourceClusterCustomCloudRead(ctx context.Context, d *schema.ResourceData,
 
 	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if cluster == nil {
 		d.SetId("")
 		return diags

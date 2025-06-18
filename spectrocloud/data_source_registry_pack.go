@@ -32,7 +32,7 @@ func dataSourceRegistryPackRead(_ context.Context, d *schema.ResourceData, m int
 	if v, ok := d.GetOk("name"); ok {
 		registry, err := c.GetPackRegistryCommonByName(v.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		d.SetId(registry.UID)
 		if err := d.Set("name", registry.Name); err != nil {

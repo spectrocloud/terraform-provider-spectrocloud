@@ -162,7 +162,7 @@ func resourceTeamRead(ctx context.Context, d *schema.ResourceData, m interface{}
 
 	team, err := c.GetTeam(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if team == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

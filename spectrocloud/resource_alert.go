@@ -253,7 +253,15 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 	projectUid, _ := getProjectID(d, m)
 	//c = getV1ClientWithResourceContextProject(m, projectUid)
 	alertPayload, err := c.GetAlert(projectUid, d.Get("component").(string), d.Id())
-	if alertPayload == nil {
+	if err != nil {
+		if strings.Contains(err.Error(), "is not found") { // This is a special case where the alert is not found, we set the ID to empty
+			d.SetId("")
+			return diags
+		} else {
+			return diag.FromErr(err)
+		}
+		//return handleReadError(d, err, diags)
+	} else if alertPayload == nil {
 		d.SetId("")
 		return diag.FromErr(err)
 

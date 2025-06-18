@@ -105,7 +105,7 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 
 	workspace, err := c.GetWorkspace(uid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if workspace == nil {
 		d.SetId("")
 		return diags

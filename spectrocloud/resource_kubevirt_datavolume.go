@@ -85,19 +85,20 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, d *schema.ResourceDat
 
 func resourceKubevirtDataVolumeRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	ClusterContext := d.Get("cluster_context").(string)
+	var diags diag.Diagnostics
+
 	c := getV1ClientWithResourceContext(m, ClusterContext)
 
 	_, clusterUid, namespace, vm_name, _, err := utils.IdPartsDV(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	log.Printf("[INFO] Reading virtual machine %s", vm_name)
 
 	hapiVM, err := c.GetVirtualMachine(clusterUid, namespace, vm_name)
 	if err != nil {
-		log.Printf("[DEBUG] Received error: %#v", err)
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	if hapiVM == nil {
 		return diag.FromErr(fmt.Errorf("virtual machine not found %s, %s, %s to read data volume", clusterUid, namespace, vm_name))

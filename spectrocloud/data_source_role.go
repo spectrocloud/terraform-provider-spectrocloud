@@ -45,13 +45,13 @@ func dataSourceRoleRead(_ context.Context, d *schema.ResourceData, m interface{}
 	if i, ok := d.GetOk("id"); ok {
 		role, err = c.GetRoleByID(i.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 	}
 	if v, ok := d.GetOk("name"); ok {
 		role, err = c.GetRole(v.(string))
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 	}
 	if role != nil {

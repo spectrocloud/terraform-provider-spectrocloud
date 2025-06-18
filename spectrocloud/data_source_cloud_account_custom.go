@@ -52,7 +52,7 @@ func dataSourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData,
 
 	accounts, err := c.GetCustomCloudAccountList(cloudType)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	var account *models.V1CustomAccount
 	filteredAccounts := make([]*models.V1CustomAccount, 0)

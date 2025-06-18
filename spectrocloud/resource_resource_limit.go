@@ -282,11 +282,16 @@ func resourceResourceLimitsRead(ctx context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 	tenantUID, err := c.GetTenantUID()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	resp, err := c.GetResourceLimits(tenantUID)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
+	}
+	// handling case for cross-plane for singleton resource
+	if d.Id() != "default-resource-limit-id" {
+		d.SetId("")
+		return diags
 	}
 	err = flattenResourceLimits(resp, d)
 	if err != nil {

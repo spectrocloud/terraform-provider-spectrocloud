@@ -35,7 +35,7 @@ func dataSourceIpPoolRead(_ context.Context, d *schema.ResourceData, m interface
 
 	pool, err := c.GetIPPoolByName(pcgUID, name)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	d.SetId(pool.Metadata.UID)

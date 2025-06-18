@@ -14,10 +14,68 @@ func ClusterGroupRoutes() []Route {
 		},
 		{
 			Method: "PUT",
-			Path:   "/v1/clustergroups/{uid}",
+			Path:   "/v1/clustergroups/{uid}/meta",
 			Response: ResponseData{
 				StatusCode: 204,
-				Payload:    nil,
+				Payload: &models.V1ClusterGroup{
+					Metadata: &models.V1ObjectMeta{
+						Annotations: nil,
+						Labels: map[string]string{
+							"test":    "dev",
+							"updated": "true",
+						},
+						Name: "test-cg",
+						UID:  "{uid}",
+					},
+					Spec: &models.V1ClusterGroupSpec{
+						ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
+							{
+								CloudType:        "aws",
+								Name:             "temp1",
+								PackServerRefs:   nil,
+								PackServerSecret: "test-secret",
+								Packs:            nil,
+								ProfileVersion:   "1.0.0",
+								RelatedObject:    nil,
+								Type:             "cluster",
+								UID:              "test-uid",
+								Version:          0,
+							},
+						},
+						ClusterRefs: []*models.V1ClusterGroupClusterRef{
+							{
+								ClusterName: "test-cluster",
+								ClusterUID:  "test-cluster-id",
+							},
+						},
+						ClustersConfig: &models.V1ClusterGroupClustersConfig{
+							EndpointType: "test-end",
+							HostClustersConfig: []*models.V1ClusterGroupHostClusterConfig{
+								{
+									ClusterUID: "test-cluster-id",
+									EndpointConfig: &models.V1HostClusterEndpointConfig{
+										IngressConfig: &models.V1IngressConfig{
+											Host: "121.0.0.1",
+											Port: 1001,
+										},
+										LoadBalancerConfig: &models.V1LoadBalancerConfig{
+											ExternalIPs:              []string{"0.0.0.0"},
+											ExternalTrafficPolicy:    "policy",
+											LoadBalancerSourceRanges: []string{"0.0.0.1"},
+										},
+									},
+								},
+							},
+							KubernetesDistroType: models.V1ClusterKubernetesDistroTypeCncfK8s.Pointer(),
+							LimitConfig:          nil,
+							Values:               "test-values",
+						},
+						Type: "",
+					},
+					Status: &models.V1ClusterGroupStatus{
+						IsActive: true,
+					},
+				},
 			},
 		},
 		{
@@ -91,6 +149,27 @@ func ClusterGroupRoutes() []Route {
 						IsActive: true,
 					},
 				},
+			},
+		},
+	}
+}
+
+func ClusterGroupNegativeRoutes() []Route {
+	return []Route{
+		{
+			Method: "PUT",
+			Path:   "/v1/clustergroups/{uid}",
+			Response: ResponseData{
+				StatusCode: 400,
+				Payload:    getError("BAD_REQUEST", "Invalid cluster group update request"),
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/clustergroups/not-found",
+			Response: ResponseData{
+				StatusCode: 404,
+				Payload:    getError("NOT_FOUND", "Cluster group not found"),
 			},
 		},
 	}

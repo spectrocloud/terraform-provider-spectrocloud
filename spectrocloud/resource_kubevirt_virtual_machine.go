@@ -109,19 +109,19 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 
 func resourceKubevirtVirtualMachineRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	ClusterContext := d.Get("cluster_context").(string)
+	var diags diag.Diagnostics
 	c := getV1ClientWithResourceContext(m, ClusterContext)
 
 	_, clusterUid, namespace, name, err := utils.IdParts(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	log.Printf("[INFO] Reading virtual machine %s", name)
 
 	hapiVM, err := c.GetVirtualMachine(clusterUid, namespace, name)
 	if err != nil {
-		log.Printf("[DEBUG] Received error: %#v", err)
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	vm, err := convert.ToKubevirtVM(hapiVM)
 	if err != nil {
