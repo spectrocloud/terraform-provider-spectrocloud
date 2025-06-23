@@ -3,11 +3,12 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"time"
 )
 
 func resourcePlatformSetting() *schema.Resource {
@@ -38,7 +39,7 @@ func resourcePlatformSetting() *schema.Resource {
 			"session_timeout": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "Specifies the duration (in minutes) of inactivity before a user is automatically logged out. The default is 240 minutes allowed in Palette",
+				Description: "Specifies the duration (in minutes) of inactivity before a user is automatically logged out. The default is 240 minutes allowed in Palette. Allowed only for `tenant` context",
 			},
 			"pause_agent_upgrades": {
 				Type:         schema.TypeString,
@@ -64,23 +65,23 @@ func resourcePlatformSetting() *schema.Resource {
 			"non_fips_addon_pack": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles. The `non_fips_addon_pack` only supported in palette vertex environment.",
+				Description: "Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles. The `non_fips_addon_pack` only supported in palette vertex environment. Allowed only for `tenant` context",
 			},
 			"non_fips_features": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans. The `non_fips_features` only supported in palette vertex environment.",
+				Description: "Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans. The `non_fips_features` only supported in palette vertex environment. Allowed only for `tenant` context",
 			},
 			"non_fips_cluster_import": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to import clusters, but the imported clusters may not be FIPS-compliant.  The `non_fips_cluster_import` only supported in palette vertex environment.",
+				Description: "Allows users in this tenant to import clusters, but the imported clusters may not be FIPS-compliant.  The `non_fips_cluster_import` only supported in palette vertex environment. Allowed only for `tenant` context",
 			},
 			"login_banner": {
 				Type:        schema.TypeList,
 				MaxItems:    1,
 				Optional:    true,
-				Description: "Configure a login banner that users must acknowledge before signing in.",
+				Description: "Configure a login banner that users must acknowledge before signing in. Allowed only for `tenant` context",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"title": {
@@ -97,24 +98,25 @@ func resourcePlatformSetting() *schema.Resource {
 				},
 			},
 		},
-		CustomizeDiff: validateContextDependencies,
+		// CustomizeDiff: validateContextDependencies,
 	}
 }
 
-func validateContextDependencies(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	contextVal := d.Get("context").(string)
+// disabled for now as it is not working as expected in crossplane
+// func validateContextDependencies(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+// 	contextVal := d.Get("context").(string)
 
-	if contextVal == "project" {
-		disallowedFields := []string{"session_timeout", "login_banner", "non_fips_addon_pack", "non_fips_features", "non_fips_cluster_import"}
+// 	if contextVal == "project" {
+// 		disallowedFields := []string{"session_timeout", "login_banner", "non_fips_addon_pack", "non_fips_features", "non_fips_cluster_import"}
 
-		for _, field := range disallowedFields {
-			if _, exists := d.GetOk(field); exists {
-				return fmt.Errorf("attribute %q is not allowed when context is set to 'project'", field)
-			}
-		}
-	}
-	return nil
-}
+// 		for _, field := range disallowedFields {
+// 			if _, exists := d.GetOk(field); exists {
+// 				return fmt.Errorf("attribute %q is not allowed when context is set to 'project'", field)
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }
 
 func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	platformSettingContext := d.Get("context").(string)

@@ -48,7 +48,7 @@ resource "spectrocloud_password_policy" "policy_regex" {
 - `min_password_length` (Number) The minimum length required for the password. Enforces a stronger password policy by ensuring a minimum number of characters.  Default minimum length is `6`.
 - `min_special_characters` (Number) The minimum number of special characters (e.g., !, @, #, $, %) required in the password. This increases the password's security level by including symbols. Minimum special characters should be `1`.
 - `min_uppercase_letters` (Number) The minimum number of uppercase letters (A-Z) required in the password. Helps ensure password complexity with a mix of case-sensitive characters. Minimum length of upper case should be `1`.
-- `password_expiry_days` (Number) The number of days before the password expires. Must be between 1 and 1000 days. Defines how often passwords must be changed.  Default is `999` days for expiry.
+- `password_expiry_days` (Number) The number of days before the password expires. Must be between 1 and 1000 days. Defines how often passwords must be changed.  Default is `999` days for expiry. Conflicts with `min_password_length`, `min_uppercase_letters`, `min_digits`, `min_lowercase_letters`, `min_special_characters`
 - `password_regex` (String) A regular expression (regex) to define custom password patterns, such as enforcing specific characters or sequences in the password.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
