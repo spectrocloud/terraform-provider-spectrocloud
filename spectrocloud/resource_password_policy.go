@@ -20,7 +20,7 @@ func resourcePasswordPolicy() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcePasswordPolicyImport,
 		},
-		// CustomizeDiff: resourcePasswordPolicyCustomizeDiff,
+		CustomizeDiff: resourcePasswordPolicyCustomizeDiff,
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -77,37 +77,36 @@ func resourcePasswordPolicy() *schema.Resource {
 	}
 }
 
-// enable validation in later part of the code
-// func resourcePasswordPolicyCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, v interface{}) error {
-// 	passwordRegex := diff.Get("password_regex").(string)
+func resourcePasswordPolicyCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, v interface{}) error {
+	passwordRegex := diff.Get("password_regex").(string)
 
-// 	// If password_regex is set, check that the individual password requirements are not set
-// 	if passwordRegex != "" {
-// 		conflictingFields := []string{
-// 			"min_password_length",
-// 			"min_uppercase_letters",
-// 			"min_digits",
-// 			"min_lowercase_letters",
-// 			"min_special_characters",
-// 		}
+	// If password_regex is set, check that the individual password requirements are not set
+	if passwordRegex != "" {
+		conflictingFields := []string{
+			"min_password_length",
+			"min_uppercase_letters",
+			"min_digits",
+			"min_lowercase_letters",
+			"min_special_characters",
+		}
 
-// 		for _, field := range conflictingFields {
-// 			if val := diff.Get(field); val != nil && val != 0 {
-// 				return fmt.Errorf("password_regex cannot be used together with %s. Use either password_regex for custom patterns or the individual minimum requirements", field)
-// 			}
-// 		}
+		for _, field := range conflictingFields {
+			if val := diff.Get(field); val != nil && val != 0 {
+				return fmt.Errorf("password_regex cannot be used together with %s. Use either password_regex for custom patterns or the individual minimum requirements", field)
+			}
+		}
 
-// 		// When using password_regex, password_expiry_days and first_reminder_days are required
-// 		if diff.Get("password_expiry_days").(int) == 0 {
-// 			return fmt.Errorf("password_expiry_days is required when using password_regex")
-// 		}
-// 		if diff.Get("first_reminder_days").(int) == 0 {
-// 			return fmt.Errorf("first_reminder_days is required when using password_regex")
-// 		}
-// 	}
+		// When using password_regex, password_expiry_days and first_reminder_days are required
+		if diff.Get("password_expiry_days").(int) == 0 {
+			return fmt.Errorf("password_expiry_days is required when using password_regex")
+		}
+		if diff.Get("first_reminder_days").(int) == 0 {
+			return fmt.Errorf("first_reminder_days is required when using password_regex")
+		}
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 func toPasswordPolicy(d *schema.ResourceData) (*models.V1TenantPasswordPolicyEntity, error) {
 	if d.Get("password_regex").(string) != "" {

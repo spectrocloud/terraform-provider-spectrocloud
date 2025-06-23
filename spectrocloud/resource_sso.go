@@ -337,7 +337,7 @@ func resourceSSO() *schema.Resource {
 				},
 			},
 		},
-		// CustomizeDiff: customDiffValidation,
+		CustomizeDiff: customDiffValidation,
 	}
 }
 
@@ -595,40 +595,39 @@ func resourceSSODelete(ctx context.Context, d *schema.ResourceData, m interface{
 	return diags
 }
 
-// disabled for now as it is not working as expected in crossplane
-// func customDiffValidation(ctx context.Context, d *schema.ResourceDiff, v interface{}) error {
-// 	ssoAuthType, ok := d.GetOk("sso_auth_type")
-// 	if !ok {
-// 		return nil // No validation needed if not set
-// 	}
+func customDiffValidation(ctx context.Context, d *schema.ResourceDiff, v interface{}) error {
+	ssoAuthType, ok := d.GetOk("sso_auth_type")
+	if !ok {
+		return nil // No validation needed if not set
+	}
 
-// 	authType := ssoAuthType.(string)
-// 	_, samlExists := d.GetOk("saml")
-// 	_, oidcExists := d.GetOk("oidc")
+	authType := ssoAuthType.(string)
+	_, samlExists := d.GetOk("saml")
+	_, oidcExists := d.GetOk("oidc")
 
-// 	switch authType {
-// 	case "none":
-// 		if samlExists || oidcExists {
-// 			return fmt.Errorf("sso_auth_type is set to 'none', so 'saml' and 'oidc' should not be defined")
-// 		}
-// 	case "saml":
-// 		if oidcExists {
-// 			return fmt.Errorf("sso_auth_type is set to 'saml', so 'oidc' should not be defined")
-// 		}
-// 		if !samlExists {
-// 			return fmt.Errorf("sso_auth_type is set to 'saml', so 'saml' should be defined")
-// 		}
-// 	case "oidc":
-// 		if samlExists {
-// 			return fmt.Errorf("sso_auth_type is set to 'oidc', so 'saml' should not be defined")
-// 		}
-// 		if !oidcExists {
-// 			return fmt.Errorf("sso_auth_type is set to 'oidc', so 'oidc' should be defined")
-// 		}
-// 	}
+	switch authType {
+	case "none":
+		if samlExists || oidcExists {
+			return fmt.Errorf("sso_auth_type is set to 'none', so 'saml' and 'oidc' should not be defined")
+		}
+	case "saml":
+		if oidcExists {
+			return fmt.Errorf("sso_auth_type is set to 'saml', so 'oidc' should not be defined")
+		}
+		if !samlExists {
+			return fmt.Errorf("sso_auth_type is set to 'saml', so 'saml' should be defined")
+		}
+	case "oidc":
+		if samlExists {
+			return fmt.Errorf("sso_auth_type is set to 'oidc', so 'saml' should not be defined")
+		}
+		if !oidcExists {
+			return fmt.Errorf("sso_auth_type is set to 'oidc', so 'oidc' should be defined")
+		}
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 func toStringSlice(input []interface{}) []string {
 	result := make([]string, len(input))

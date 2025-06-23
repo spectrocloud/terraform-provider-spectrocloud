@@ -98,25 +98,24 @@ func resourcePlatformSetting() *schema.Resource {
 				},
 			},
 		},
-		// CustomizeDiff: validateContextDependencies,
+		CustomizeDiff: validateContextDependencies,
 	}
 }
 
-// disabled for now as it is not working as expected in crossplane
-// func validateContextDependencies(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
-// 	contextVal := d.Get("context").(string)
+func validateContextDependencies(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	contextVal := d.Get("context").(string)
 
-// 	if contextVal == "project" {
-// 		disallowedFields := []string{"session_timeout", "login_banner", "non_fips_addon_pack", "non_fips_features", "non_fips_cluster_import"}
+	if contextVal == "project" {
+		disallowedFields := []string{"session_timeout", "login_banner", "non_fips_addon_pack", "non_fips_features", "non_fips_cluster_import"}
 
-// 		for _, field := range disallowedFields {
-// 			if _, exists := d.GetOk(field); exists {
-// 				return fmt.Errorf("attribute %q is not allowed when context is set to 'project'", field)
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
+		for _, field := range disallowedFields {
+			if _, exists := d.GetOk(field); exists {
+				return fmt.Errorf("attribute %q is not allowed when context is set to 'project'", field)
+			}
+		}
+	}
+	return nil
+}
 
 func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	platformSettingContext := d.Get("context").(string)
