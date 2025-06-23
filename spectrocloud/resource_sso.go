@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"regexp"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"regexp"
-	"strings"
-	"time"
 )
 
 func resourceSSO() *schema.Resource {

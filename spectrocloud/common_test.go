@@ -26,7 +26,7 @@ import (
 
 const (
 	negativeHost  = "127.0.0.1:8888"
-	host          = "127.0.0.1:8080"
+	host          = "127.0.0.1:8088"
 	trace         = false
 	retryAttempts = 10
 	apiKey        = "12345"
@@ -127,7 +127,7 @@ func checkMockServerHealth() error {
 
 	for i := 0; i < maxRetries; i++ {
 		// Create a new HTTP request
-		req, err := http.NewRequest("GET", "https://127.0.0.1:8080/v1/health", nil)
+		req, err := http.NewRequest("GET", "https://127.0.0.1:8088/v1/health", nil)
 		if err != nil {
 			return err
 		}
@@ -172,7 +172,7 @@ func setup() error {
 		return err
 	}
 
-	fmt.Printf("\033[1;36m%s\033[0m", "> Started Mock Api Server at https://127.0.0.1:8080 & https://127.0.0.1:8888 \n")
+	fmt.Printf("\033[1;36m%s\033[0m", "> Started Mock Api Server at https://127.0.0.1:8088 & https://127.0.0.1:8888 \n")
 	unitTestMockAPIClient, _ = unitTestProviderConfigure(ctx)
 	unitTestMockAPINegativeClient, _ = unitTestNegativeCaseProviderConfigure(ctx)
 	fmt.Printf("\033[1;36m%s\033[0m", "> Setup completed \n")
