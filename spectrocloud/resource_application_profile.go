@@ -110,7 +110,7 @@ func resourceApplicationProfileRead(ctx context.Context, d *schema.ResourceData,
 
 	cp, err := c.GetApplicationProfile(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if cp == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

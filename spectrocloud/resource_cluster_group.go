@@ -159,7 +159,7 @@ func resourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m inter
 	uid := d.Id()
 	clusterGroup, err := c.GetClusterGroup(uid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if clusterGroup == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")
@@ -243,12 +243,10 @@ func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m i
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 	// if there are changes in the name of  cluster group, update it using UpdateClusterGroupMeta()
-	if d.HasChanges("name", "tags") {
-		clusterGroup := toClusterGroup(c, d)
-		err := c.UpdateClusterGroupMeta(clusterGroup)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+	clusterGroup := toClusterGroup(c, d)
+	err := c.UpdateClusterGroupMeta(clusterGroup)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 	if d.HasChanges("config", "clusters") {
 		clusterGroup := toClusterGroup(c, d)

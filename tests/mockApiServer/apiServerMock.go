@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/gorilla/mux"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 )
 
 // API key for authentication
@@ -32,27 +33,27 @@ func apiKeyAuthMiddleware(next http.Handler) http.Handler {
 
 func main() {
 	// Create routers for different ports
-	router8080 := mux.NewRouter()
+	router8088 := mux.NewRouter()
 	router8888 := mux.NewRouter()
 
-	// Set up routes for port 8080
-	setupRoutes(router8080, allRoutesPositive)
+	// Set up routes for port 8088
+	setupRoutes(router8088, allRoutesPositive)
 
 	// Set up routes for port 8888
 	setupRoutes(router8888, allRoutesNegative)
 
 	// Start servers on different ports
 	go func() {
-		log.Println("Starting server on :8080...")
-		if err := http.ListenAndServeTLS(":8080", "mock_server.crt", "mock_server.key", router8080); err != nil {
-			log.Fatalf("Server failed to start on port 8080: %v", err)
+		log.Println("Starting server on :8088...")
+		if err := http.ListenAndServeTLS(":8088", "mock_server.crt", "mock_server.key", router8088); err != nil {
+			log.Fatalf("Server failed to start on port 8088: %v", err)
 		}
 	}()
 
 	log.Println("Starting server on :8888...")
 
 	if err := http.ListenAndServeTLS(":8888", "mock_server.crt", "mock_server.key", router8888); err != nil {
-		log.Fatalf("Server failed to start on port 8080: %v", err)
+		log.Fatalf("Server failed to start on port 8088: %v", err)
 	}
 }
 
@@ -87,7 +88,7 @@ func aggregateRoutes(routeFuncs ...func() []routes.Route) []routes.Route {
 }
 
 func init() {
-	// Initialize routes for port 8080
+	// Initialize routes for port 8088
 	allRoutesPositive = aggregateRoutes(
 		routes.CommonProjectRoutes,
 		routes.ProjectRoutes,

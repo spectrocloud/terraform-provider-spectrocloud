@@ -3,11 +3,12 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"time"
 )
 
 func resourcePasswordPolicy() *schema.Resource {
@@ -19,6 +20,7 @@ func resourcePasswordPolicy() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourcePasswordPolicyImport,
 		},
+		CustomizeDiff: resourcePasswordPolicyCustomizeDiff,
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -28,20 +30,17 @@ func resourcePasswordPolicy() *schema.Resource {
 		SchemaVersion: 2,
 		Schema: map[string]*schema.Schema{
 			"password_regex": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "",
-				ConflictsWith: []string{"min_password_length", "min_uppercase_letters",
-					"min_digits", "min_lowercase_letters", "min_special_characters"},
-				RequiredWith: []string{"password_expiry_days", "first_reminder_days"},
-				Description:  "A regular expression (regex) to define custom password patterns, such as enforcing specific characters or sequences in the password.",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "A regular expression (regex) to define custom password patterns, such as enforcing specific characters or sequences in the password.",
 			},
 			"password_expiry_days": {
 				Type:         schema.TypeInt,
 				Optional:     true,
 				Default:      999,
 				ValidateFunc: validation.IntBetween(1, 1000),
-				Description:  "The number of days before the password expires. Must be between 1 and 1000 days. Defines how often passwords must be changed.  Default is `999` days for expiry.",
+				Description:  "The number of days before the password expires. Must be between 1 and 1000 days. Defines how often passwords must be changed.  Default is `999` days for expiry. Conflicts with `min_password_length`, `min_uppercase_letters`, `min_digits`, `min_lowercase_letters`, `min_special_characters`",
 			},
 			"first_reminder_days": {
 				Type:        schema.TypeInt,
@@ -76,6 +75,37 @@ func resourcePasswordPolicy() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourcePasswordPolicyCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, v interface{}) error {
+	passwordRegex := diff.Get("password_regex").(string)
+
+	// If password_regex is set, check that the individual password requirements are not set
+	if passwordRegex != "" {
+		conflictingFields := []string{
+			"min_password_length",
+			"min_uppercase_letters",
+			"min_digits",
+			"min_lowercase_letters",
+			"min_special_characters",
+		}
+
+		for _, field := range conflictingFields {
+			if val := diff.Get(field); val != nil && val != 0 {
+				return fmt.Errorf("password_regex cannot be used together with %s. Use either password_regex for custom patterns or the individual minimum requirements", field)
+			}
+		}
+
+		// When using password_regex, password_expiry_days and first_reminder_days are required
+		if diff.Get("password_expiry_days").(int) == 0 {
+			return fmt.Errorf("password_expiry_days is required when using password_regex")
+		}
+		if diff.Get("first_reminder_days").(int) == 0 {
+			return fmt.Errorf("first_reminder_days is required when using password_regex")
+		}
+	}
+
+	return nil
 }
 
 func toPasswordPolicy(d *schema.ResourceData) (*models.V1TenantPasswordPolicyEntity, error) {
@@ -180,11 +210,17 @@ func resourcePasswordPolicyRead(ctx context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 	tenantUID, err := c.GetTenantUID()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	resp, err := c.GetPasswordPolicy(tenantUID)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
+	}
+	// handling case for cross-plane for singleton resource
+	if d.Id() != "default-password-policy-id" {
+		// If we are not reading the default password policy, we should not set the ID
+		d.SetId("")
+		return diags
 	}
 	err = flattenPasswordPolicy(resp, d)
 	if err != nil {

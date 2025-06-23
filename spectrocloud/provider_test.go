@@ -63,7 +63,7 @@ func prepareBaseProviderConfig() *schema.ResourceData {
 	}
 
 	d := basSchema.TestResourceData()
-	_ = d.Set("host", "127.0.0.1:8080")
+	_ = d.Set("host", "127.0.0.1:8088")
 	_ = d.Set("project_name", "Default")
 	_ = d.Set("ignore_insecure_tls_error", true)
 	_ = d.Set("api_key", "12345")

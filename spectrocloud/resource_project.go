@@ -4,11 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/palette-sdk-go/client/herr"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 func resourceProject() *schema.Resource {
@@ -71,11 +69,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 
 	project, err := c.GetProject(d.Id())
 	if err != nil {
-		if herr.IsNotFound(err) {
-			d.SetId("")
-			return diags
-		}
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if project == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

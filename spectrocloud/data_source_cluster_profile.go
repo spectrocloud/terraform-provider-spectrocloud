@@ -131,7 +131,7 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 	var diags diag.Diagnostics
 	profiles, err := c.GetClusterProfiles()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	version := "1.0.0" //default
@@ -141,7 +141,7 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 
 	profile, err := getProfile(profiles, d, version, ProjectContext, c)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	if profile == nil || profile.Metadata == nil {

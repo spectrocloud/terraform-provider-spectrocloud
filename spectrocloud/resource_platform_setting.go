@@ -3,11 +3,12 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"time"
 )
 
 func resourcePlatformSetting() *schema.Resource {
@@ -38,7 +39,7 @@ func resourcePlatformSetting() *schema.Resource {
 			"session_timeout": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "Specifies the duration (in minutes) of inactivity before a user is automatically logged out. The default is 240 minutes allowed in Palette",
+				Description: "Specifies the duration (in minutes) of inactivity before a user is automatically logged out. The default is 240 minutes allowed in Palette. Allowed only for `tenant` context",
 			},
 			"pause_agent_upgrades": {
 				Type:         schema.TypeString,
@@ -64,23 +65,23 @@ func resourcePlatformSetting() *schema.Resource {
 			"non_fips_addon_pack": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles. The `non_fips_addon_pack` only supported in palette vertex environment.",
+				Description: "Allows users in this tenant to use non-FIPS-compliant addon packs when creating cluster profiles. The `non_fips_addon_pack` only supported in palette vertex environment. Allowed only for `tenant` context",
 			},
 			"non_fips_features": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans. The `non_fips_features` only supported in palette vertex environment.",
+				Description: "Allows users in this tenant to access non-FIPS-compliant features such as backup, restore, and scans. The `non_fips_features` only supported in palette vertex environment. Allowed only for `tenant` context",
 			},
 			"non_fips_cluster_import": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Allows users in this tenant to import clusters, but the imported clusters may not be FIPS-compliant.  The `non_fips_cluster_import` only supported in palette vertex environment.",
+				Description: "Allows users in this tenant to import clusters, but the imported clusters may not be FIPS-compliant.  The `non_fips_cluster_import` only supported in palette vertex environment. Allowed only for `tenant` context",
 			},
 			"login_banner": {
 				Type:        schema.TypeList,
 				MaxItems:    1,
 				Optional:    true,
-				Description: "Configure a login banner that users must acknowledge before signing in.",
+				Description: "Configure a login banner that users must acknowledge before signing in. Allowed only for `tenant` context",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"title": {
@@ -241,7 +242,12 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 	var diags diag.Diagnostics
 	tenantUID, err := c.GetTenantUID()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
+	}
+	// handling case for cross-plane for singleton resource
+	if d.Id() != fmt.Sprintf("default-platform-setting-%s", platformSettingContext) {
+		d.SetId("")
+		return diags
 	}
 
 	if platformSettingContext == tenantString {
@@ -249,7 +255,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		var respSessionTimeout *models.V1AuthTokenSettings
 		respSessionTimeout, err = c.GetSessionTimeout(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if err = d.Set("session_timeout", respSessionTimeout.ExpiryTimeMinutes); err != nil {
 			return diag.FromErr(err)
@@ -258,7 +264,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		var respLoginBanner *models.V1LoginBannerSettings
 		respLoginBanner, err = c.GetLoginBanner(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if respLoginBanner.Title != "" && respLoginBanner.Message != "" {
 			bannerDetails := make([]interface{}, 0)
@@ -275,7 +281,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		var respRemediation *models.V1TenantClusterSettings
 		respRemediation, err = c.GetClusterAutoRemediationForTenant(tenantUID)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if err = d.Set("cluster_auto_remediation", respRemediation.NodesAutoRemediationSetting.DisableNodesAutoRemediation); err != nil {
 			return diag.FromErr(err)
@@ -290,7 +296,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		if fiOk || ffOk || fpOk {
 			fipsPreference, err = c.GetFIPSPreference(tenantUID)
 			if err != nil {
-				return diag.FromErr(err)
+				return handleReadError(d, err, diags)
 			}
 			if _, ok := d.GetOk("non_fips_addon_pack"); ok {
 				err := d.Set("non_fips_addon_pack", convertFIPSString(*fipsPreference.FipsPackConfig.Mode))
@@ -317,7 +323,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		var respProjectRemediation *models.V1ProjectClusterSettings
 		respProjectRemediation, err = c.GetClusterAutoRemediationForProject(ProviderInitProjectUid)
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		}
 		if err = d.Set("cluster_auto_remediation", respProjectRemediation.NodesAutoRemediationSetting.DisableNodesAutoRemediation); err != nil {
 			return diag.FromErr(err)
@@ -330,7 +336,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 	var upgradeSetting *models.V1ClusterUpgradeSettingsEntity
 	upgradeSetting, err = c.GetPlatformClustersUpgradeSetting()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	if err = d.Set("pause_agent_upgrades", upgradeSetting.SpectroComponents); err != nil {
 		return diag.FromErr(err)

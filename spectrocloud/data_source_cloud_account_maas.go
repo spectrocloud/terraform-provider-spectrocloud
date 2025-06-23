@@ -58,7 +58,7 @@ func dataSourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m
 
 	accounts, err := c.GetCloudAccountsMaas()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	var account *models.V1MaasAccount

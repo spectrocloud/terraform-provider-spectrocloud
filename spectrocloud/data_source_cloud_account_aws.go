@@ -54,7 +54,7 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 
 	accounts, err := c.GetCloudAccountsAws()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	var fAccount *models.V1AwsAccount
 	filteredAccounts := make([]*models.V1AwsAccount, 0)

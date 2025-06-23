@@ -199,7 +199,7 @@ func resourceRegistrationTokenRead(ctx context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 	regToken, err := c.GetRegistrationTokenByUID(d.Id())
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 	err = flattenRegistrationToken(d, regToken)
 	if err != nil {

@@ -26,13 +26,22 @@ import (
 
 const (
 	negativeHost  = "127.0.0.1:8888"
-	host          = "127.0.0.1:8080"
+	host          = "127.0.0.1:8088"
 	trace         = false
 	retryAttempts = 10
 	apiKey        = "12345"
 	projectName   = "unittest"
 	projectUID    = "testprojectuid"
 )
+
+type CodedError struct {
+	Code    string
+	Message string
+}
+
+func (e CodedError) Error() string {
+	return e.Message
+}
 
 // var baseConfig Cred
 var unitTestMockAPIClient interface{}
@@ -118,7 +127,7 @@ func checkMockServerHealth() error {
 
 	for i := 0; i < maxRetries; i++ {
 		// Create a new HTTP request
-		req, err := http.NewRequest("GET", "https://127.0.0.1:8080/v1/health", nil)
+		req, err := http.NewRequest("GET", "https://127.0.0.1:8088/v1/health", nil)
 		if err != nil {
 			return err
 		}
@@ -163,7 +172,7 @@ func setup() error {
 		return err
 	}
 
-	fmt.Printf("\033[1;36m%s\033[0m", "> Started Mock Api Server at https://127.0.0.1:8080 & https://127.0.0.1:8888 \n")
+	fmt.Printf("\033[1;36m%s\033[0m", "> Started Mock Api Server at https://127.0.0.1:8088 & https://127.0.0.1:8888 \n")
 	unitTestMockAPIClient, _ = unitTestProviderConfigure(ctx)
 	unitTestMockAPINegativeClient, _ = unitTestNegativeCaseProviderConfigure(ctx)
 	fmt.Printf("\033[1;36m%s\033[0m", "> Setup completed \n")
@@ -193,4 +202,31 @@ func assertFirstDiagMessage(t *testing.T, diags diag.Diagnostics, msg string) {
 	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
 		assert.Contains(t, diags[0].Summary, msg, "The first diagnostic message does not contain the expected error message")
 	}
+}
+
+func TestHandleReadError_NotFound(t *testing.T) {
+	resource := resourceProject().TestResourceData()
+
+	resource.SetId("something")
+
+	err := error(CodedError{
+		Code:    "ResourceNotFound",
+		Message: "ResourceNotFound: not found",
+	})
+
+	_ = handleReadError(resource, err, nil)
+
+	assert.Equal(t, "something", resource.Id())
+}
+
+func TestHandleReadError_OtherError(t *testing.T) {
+	resource := resourceProject().TestResourceData()
+
+	err := fmt.Errorf("unexpected error")
+
+	diags := handleReadError(resource, err, nil)
+
+	assert.Len(t, diags, 1)
+	assert.Equal(t, diag.Error, diags[0].Severity)
+	assert.Contains(t, diags[0].Summary, "unexpected error")
 }

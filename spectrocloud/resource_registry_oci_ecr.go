@@ -231,7 +231,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 	if registryType == "ecr" {
 		registry, err := c.GetOciEcrRegistry(d.Id())
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		} else if registry == nil {
 			// Deleted - Terraform will recreate it
 			d.SetId("")
@@ -282,7 +282,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 	} else if registryType == "basic" {
 		registry, err := c.GetOciBasicRegistry(d.Id())
 		if err != nil {
-			return diag.FromErr(err)
+			return handleReadError(d, err, diags)
 		} else if registry == nil {
 			// Deleted - Terraform will recreate it
 			d.SetId("")

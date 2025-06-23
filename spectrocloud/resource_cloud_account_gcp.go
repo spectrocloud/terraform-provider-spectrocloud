@@ -71,7 +71,7 @@ func resourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m in
 	uid := d.Id()
 	account, err := c.GetCloudAccountGcp(uid)
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	} else if account == nil {
 		// Deleted - Terraform will recreate it
 		d.SetId("")

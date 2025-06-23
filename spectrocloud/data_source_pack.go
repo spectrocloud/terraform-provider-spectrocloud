@@ -175,7 +175,7 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 			if regUID, ok := d.GetOk("registry_uid"); ok {
 				registry, err := c.GetHelmRegistry(regUID.(string))
 				if err != nil {
-					return diag.FromErr(err)
+					return handleReadError(d, err, diags)
 				}
 				if registry.Spec.IsPrivate {
 					return diags

@@ -49,7 +49,7 @@ func dataSourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m 
 
 	accounts, err := c.GetCloudAccountsGcp()
 	if err != nil {
-		return diag.FromErr(err)
+		return handleReadError(d, err, diags)
 	}
 
 	var account *models.V1GcpAccount

@@ -142,6 +142,11 @@ func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	clusterUid := d.Get("cluster_uid").(string)
+	if !strings.Contains(d.Id(), clusterUid) {
+		d.SetId("")
+		return diags
+	}
+
 	cluster, err := c.GetCluster(clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
