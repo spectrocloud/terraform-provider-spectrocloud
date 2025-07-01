@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceClusterProfile() *schema.Resource {
@@ -97,7 +99,7 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	clusterProfile, err := toClusterProfileCreate(d)
+	clusterProfile, err := toClusterProfileCreateWithResolution(d, c)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -228,7 +230,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		cluster, err := toClusterProfileUpdate(d, cp)
+		cluster, err := toClusterProfileUpdateWithResolution(d, cp, c)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -287,6 +289,26 @@ func toClusterProfileCreate(d *schema.ResourceData) (*models.V1ClusterProfileEnt
 	return cp, nil
 }
 
+func toClusterProfileCreateWithResolution(d *schema.ResourceData, c *client.V1Client) (*models.V1ClusterProfileEntity, error) {
+	cp := toClusterProfileBasic(d)
+
+	packs := make([]*models.V1PackManifestEntity, 0)
+	for _, pack := range d.Get("pack").([]interface{}) {
+		if p, e := toClusterProfilePackCreateWithResolution(pack, c); e != nil {
+			return nil, e
+		} else {
+			packs = append(packs, p)
+		}
+	}
+	cp.Spec.Template.Packs = packs
+	if profileVariable, err := toClusterProfileVariables(d); err == nil {
+		cp.Spec.Variables = profileVariable
+	} else {
+		return cp, err
+	}
+	return cp, nil
+}
+
 func toClusterProfileBasic(d *schema.ResourceData) *models.V1ClusterProfileEntity {
 	description := ""
 	if d.Get("description") != nil {
@@ -324,10 +346,88 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 	}
 	pType := models.V1PackType(p["type"].(string))
 
+	// Validate pack UID or resolution fields
+	if err := schemas.ValidatePackUIDOrResolutionFields(p); err != nil {
+		return nil, err
+	}
+
 	switch pType {
 	case models.V1PackTypeSpectro:
-		if pTag == "" || pUID == "" {
-			return nil, fmt.Errorf("pack %s needs to specify tag and/or uid", pName)
+		if pUID == "" {
+			// UID not provided, validation already passed, so we have all resolution fields
+			// This path should not be reached if validation is working correctly
+			if pTag == "" || pRegistryUID == "" {
+				return nil, fmt.Errorf("pack %s: internal error - validation should have caught missing resolution fields", pName)
+			}
+		}
+	case models.V1PackTypeManifest:
+		if pUID == "" {
+			pUID = "spectro-manifest-pack"
+		}
+	}
+
+	pack := &models.V1PackManifestEntity{
+		Name:        types.Ptr(pName),
+		Tag:         p["tag"].(string),
+		RegistryUID: pRegistryUID,
+		UID:         pUID,
+		Type:        &pType,
+		// UI strips a single newline, so we should do the same
+		Values: strings.TrimSpace(p["values"].(string)),
+	}
+
+	manifests := make([]*models.V1ManifestInputEntity, 0)
+	if len(p["manifest"].([]interface{})) > 0 {
+		for _, manifest := range p["manifest"].([]interface{}) {
+			m := manifest.(map[string]interface{})
+			manifests = append(manifests, &models.V1ManifestInputEntity{
+				Content: strings.TrimSpace(m["content"].(string)),
+				Name:    m["name"].(string),
+			})
+		}
+	}
+	pack.Manifests = manifests
+
+	return pack, nil
+}
+
+func toClusterProfilePackCreateWithResolution(pSrc interface{}, c *client.V1Client) (*models.V1PackManifestEntity, error) {
+	p := pSrc.(map[string]interface{})
+
+	pName := p["name"].(string)
+	pTag := p["tag"].(string)
+	pUID := p["uid"].(string)
+	pRegistryUID := ""
+	if p["registry_uid"] != nil {
+		pRegistryUID = p["registry_uid"].(string)
+	}
+	pType := models.V1PackType(p["type"].(string))
+
+	// Validate pack UID or resolution fields
+	if err := schemas.ValidatePackUIDOrResolutionFields(p); err != nil {
+		return nil, err
+	}
+
+	switch pType {
+	case models.V1PackTypeSpectro:
+		if pUID == "" {
+			// UID not provided, validation already passed, so we have all resolution fields
+			// Resolve the pack UID
+			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			}
+			pUID = resolvedUID
+		}
+	case models.V1PackTypeHelm:
+		if pUID == "" {
+			// UID not provided, validation already passed, so we have all resolution fields
+			// Resolve the pack UID
+			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			}
+			pUID = resolvedUID
 		}
 	case models.V1PackTypeManifest:
 		if pUID == "" {
@@ -386,6 +486,32 @@ func toClusterProfileUpdate(d *schema.ResourceData, cluster *models.V1ClusterPro
 	return cp, nil
 }
 
+func toClusterProfileUpdateWithResolution(d *schema.ResourceData, cluster *models.V1ClusterProfile, c *client.V1Client) (*models.V1ClusterProfileUpdateEntity, error) {
+	cp := &models.V1ClusterProfileUpdateEntity{
+		Metadata: &models.V1ObjectMeta{
+			Name: d.Get("name").(string),
+			UID:  d.Id(),
+		},
+		Spec: &models.V1ClusterProfileUpdateEntitySpec{
+			Template: &models.V1ClusterProfileTemplateUpdate{
+				Type: types.Ptr(models.V1ProfileType(d.Get("type").(string))),
+			},
+			Version: d.Get("version").(string),
+		},
+	}
+	packs := make([]*models.V1PackManifestUpdateEntity, 0)
+	for _, pack := range d.Get("pack").([]interface{}) {
+		if p, e := toClusterProfilePackUpdateWithResolution(pack, cluster.Spec.Published.Packs, c); e != nil {
+			return nil, e
+		} else {
+			packs = append(packs, p)
+		}
+	}
+	cp.Spec.Template.Packs = packs
+
+	return cp, nil
+}
+
 func toClusterProfilePatch(d *schema.ResourceData) (*models.V1ProfileMetaEntity, error) {
 	description := ""
 	if d.Get("description") != nil {
@@ -411,6 +537,60 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 	p := pSrc.(map[string]interface{})
 
 	pName := p["name"].(string)
+	pUID := p["uid"].(string)
+
+	pRegistryUID := ""
+	if p["registry_uid"] != nil {
+		pRegistryUID = p["registry_uid"].(string)
+	}
+	pType := models.V1PackType(p["type"].(string))
+
+	// Validate pack UID or resolution fields
+	if err := schemas.ValidatePackUIDOrResolutionFields(p); err != nil {
+		return nil, err
+	}
+
+	switch pType {
+	case models.V1PackTypeSpectro:
+		if pUID == "" {
+			// UID not provided, validation already passed, so we have all resolution fields
+			// Note: For updates, we can't resolve here without client access
+			// This should be handled at a higher level
+			return nil, fmt.Errorf("pack %s: pack resolution during update requires client access - this should be handled at resource level", pName)
+		}
+	case models.V1PackTypeManifest:
+		pUID = "spectro-manifest-pack"
+	}
+
+	pack := &models.V1PackManifestUpdateEntity{
+		//Layer:  p["layer"].(string),
+		Name:        types.Ptr(pName),
+		Tag:         p["tag"].(string),
+		RegistryUID: pRegistryUID,
+		UID:         pUID,
+		Type:        &pType,
+		// UI strips a single newline, so we should do the same
+		Values: strings.TrimSpace(p["values"].(string)),
+	}
+
+	manifests := make([]*models.V1ManifestRefUpdateEntity, 0)
+	for _, manifest := range p["manifest"].([]interface{}) {
+		m := manifest.(map[string]interface{})
+		manifests = append(manifests, &models.V1ManifestRefUpdateEntity{
+			Content: strings.TrimSpace(m["content"].(string)),
+			Name:    types.Ptr(m["name"].(string)),
+			UID:     getManifestUID(m["name"].(string), packs),
+		})
+	}
+	pack.Manifests = manifests
+
+	return pack, nil
+}
+
+func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.V1PackRef, c *client.V1Client) (*models.V1PackManifestUpdateEntity, error) {
+	p := pSrc.(map[string]interface{})
+
+	pName := p["name"].(string)
 	pTag := p["tag"].(string)
 	pUID := p["uid"].(string)
 
@@ -420,10 +600,31 @@ func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*m
 	}
 	pType := models.V1PackType(p["type"].(string))
 
+	// Validate pack UID or resolution fields
+	if err := schemas.ValidatePackUIDOrResolutionFields(p); err != nil {
+		return nil, err
+	}
+
 	switch pType {
 	case models.V1PackTypeSpectro:
-		if pTag == "" || pUID == "" {
-			return nil, fmt.Errorf("pack %s needs to specify tag", pName)
+		if pUID == "" {
+			// UID not provided, validation already passed, so we have all resolution fields
+			// Resolve the pack UID
+			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			}
+			pUID = resolvedUID
+		}
+	case models.V1PackTypeHelm:
+		if pUID == "" {
+			// UID not provided, validation already passed, so we have all resolution fields
+			// Resolve the pack UID
+			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			}
+			pUID = resolvedUID
 		}
 	case models.V1PackTypeManifest:
 		pUID = "spectro-manifest-pack"
@@ -535,4 +736,30 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 		"variable": sortedVariables,
 	}
 	return flattenProVariables, nil
+}
+
+// resolvePackUID resolves the pack UID based on name, tag, and registry_uid
+func resolvePackUID(c *client.V1Client, name, tag, registryUID string) (string, error) {
+	if name == "" || tag == "" || registryUID == "" {
+		return "", fmt.Errorf("name, tag, and registry_uid are all required for pack resolution")
+	}
+
+	// Get pack versions by name and registry
+	packVersions, err := c.GetPacksByNameAndRegistry(name, registryUID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get pack versions for name %s in registry %s: %w", name, registryUID, err)
+	}
+
+	if packVersions == nil || len(packVersions.Tags) == 0 {
+		return "", fmt.Errorf("no pack found with name %s in registry %s", name, registryUID)
+	}
+
+	// Find the pack with matching tag/version
+	for _, packTag := range packVersions.Tags {
+		if packTag.Version == tag {
+			return packTag.PackUID, nil
+		}
+	}
+
+	return "", fmt.Errorf("no pack found with name %s, tag %s in registry %s", name, tag, registryUID)
 }

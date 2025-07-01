@@ -113,6 +113,80 @@ resource "spectrocloud_cluster_profile" "aws-profile" {
 }
 ```
 
+### Example using Pack UID Resolution
+
+This example demonstrates how to use automatic pack UID resolution without needing to explicitly look up pack UIDs. When `uid` is not provided, the system will automatically resolve the pack UID using the `name`, `tag`, and `registry_uid`.
+
+```terraform
+data "spectrocloud_registry" "public_registry" {
+  name = "Public Repo"
+}
+
+resource "spectrocloud_cluster_profile" "profile_with_resolution" {
+  name        = "aws-profile-with-resolution"
+  description = "A cluster profile using automatic pack UID resolution"
+  tags        = ["dev", "auto-resolution"]
+  cloud       = "aws"
+  type        = "cluster"
+  version     = "1.0.0"
+
+  # Pack with automatic UID resolution - no need to specify uid
+  pack {
+    name         = "ubuntu-aws"
+    tag          = "22.04"
+    registry_uid = data.spectrocloud_registry.public_registry.id
+    values       = "timezone: UTC"
+  }
+
+  # Pack with automatic UID resolution
+  pack {
+    name         = "kubernetes"
+    tag          = "1.27.5"
+    registry_uid = data.spectrocloud_registry.public_registry.id
+    values       = <<-EOT
+      kubeadmconfig:
+        apiServer:
+          extraArgs:
+            audit-log-maxage: "30"
+    EOT
+  }
+
+  # Pack with automatic UID resolution
+  pack {
+    name         = "cni-calico"
+    tag          = "3.26.1"
+    registry_uid = data.spectrocloud_registry.public_registry.id
+    values       = <<-EOT
+      manifests:
+        calico:
+          contents: |
+            # Custom Calico configuration
+    EOT
+  }
+
+  # Pack with automatic UID resolution
+  pack {
+    name         = "csi-aws-ebs"
+    tag          = "1.22.0"
+    registry_uid = data.spectrocloud_registry.public_registry.id
+    values       = data.spectrocloud_pack.aws_csi.values
+  }
+
+  # You can still mix resolution with explicit UIDs if needed
+  pack {
+    name   = "hello-universe"
+    type   = "manifest"
+    tag    = "1.0.0"
+    uid    = "explicit-manifest-uid"  # Explicit UID provided
+    values = ""
+    manifest {
+      name    = "hello-universe"
+      content = file("manifests/hello-universe.yaml")
+    }
+  }
+}
+```
+
 ### Inline YAML Example
 
 An example of a cluster profile using inline YAML.
