@@ -275,6 +275,11 @@ func resourceClusterEks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"ami_type": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "AMI type is the type of AMI to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.",
+						},
 						"capacity_type": {
 							Type:         schema.TypeString,
 							Default:      "on-demand",
@@ -553,6 +558,7 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
+		oi["ami_type"] = machinePool.AmiType
 		if machinePool.CapacityType != nil {
 			oi["capacity_type"] = machinePool.CapacityType
 		}
@@ -900,6 +906,10 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 	if val, ok := m["instance_type"]; ok {
 		instanceType = val.(string)
 	}
+	amiType := ""
+	if val, ok := m["ami_type"]; ok {
+		amiType = val.(string)
+	}
 	diskSizeGb := int64(0)
 	if dVal, ok := m["disk_size_gb"]; ok {
 		diskSizeGb = int64(dVal.(int))
@@ -911,6 +921,7 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			CapacityType:   &capacityType,
 			Azs:            azs,
 			Subnets:        subnets,
+			AmiType:        amiType,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
