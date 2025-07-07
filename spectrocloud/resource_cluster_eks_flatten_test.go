@@ -89,6 +89,7 @@ func TestFlattenMachinePoolConfigsEks(t *testing.T) {
 					MaxSize:        5,
 					InstanceType:   "t2.micro",
 					RootDeviceSize: 8,
+					AmiType:        "AL2_x86_64",
 					SubnetIds:      map[string]string{"us-west-2d": "subnet-87654321"},
 				},
 			},
@@ -96,6 +97,7 @@ func TestFlattenMachinePoolConfigsEks(t *testing.T) {
 				map[string]interface{}{
 					"name":                "pool1",
 					"additional_labels":   map[string]any{},
+					"ami_type":            "AL2_x86_64",
 					"eks_launch_template": []any{},
 					"count":               3,
 					"min":                 1,
