@@ -278,6 +278,7 @@ func resourceClusterEks() *schema.Resource {
 						"ami_type": {
 							Type:        schema.TypeString,
 							Optional:    true,
+							Default:     "AL2_x86_64",
 							Description: "AMI type is the type of AMI to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.",
 						},
 						"capacity_type": {

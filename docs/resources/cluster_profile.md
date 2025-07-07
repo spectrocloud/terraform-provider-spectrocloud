@@ -113,80 +113,6 @@ resource "spectrocloud_cluster_profile" "aws-profile" {
 }
 ```
 
-### Example using Pack UID Resolution
-
-This example demonstrates how to use automatic pack UID resolution without needing to explicitly look up pack UIDs. When `uid` is not provided, the system will automatically resolve the pack UID using the `name`, `tag`, and `registry_uid`.
-
-```terraform
-data "spectrocloud_registry" "public_registry" {
-  name = "Public Repo"
-}
-
-resource "spectrocloud_cluster_profile" "profile_with_resolution" {
-  name        = "aws-profile-with-resolution"
-  description = "A cluster profile using automatic pack UID resolution"
-  tags        = ["dev", "auto-resolution"]
-  cloud       = "aws"
-  type        = "cluster"
-  version     = "1.0.0"
-
-  # Pack with automatic UID resolution - no need to specify uid
-  pack {
-    name         = "ubuntu-aws"
-    tag          = "22.04"
-    registry_uid = data.spectrocloud_registry.public_registry.id
-    values       = "timezone: UTC"
-  }
-
-  # Pack with automatic UID resolution
-  pack {
-    name         = "kubernetes"
-    tag          = "1.27.5"
-    registry_uid = data.spectrocloud_registry.public_registry.id
-    values       = <<-EOT
-      kubeadmconfig:
-        apiServer:
-          extraArgs:
-            audit-log-maxage: "30"
-    EOT
-  }
-
-  # Pack with automatic UID resolution
-  pack {
-    name         = "cni-calico"
-    tag          = "3.26.1"
-    registry_uid = data.spectrocloud_registry.public_registry.id
-    values       = <<-EOT
-      manifests:
-        calico:
-          contents: |
-            # Custom Calico configuration
-    EOT
-  }
-
-  # Pack with automatic UID resolution
-  pack {
-    name         = "csi-aws-ebs"
-    tag          = "1.22.0"
-    registry_uid = data.spectrocloud_registry.public_registry.id
-    values       = data.spectrocloud_pack.aws_csi.values
-  }
-
-  # You can still mix resolution with explicit UIDs if needed
-  pack {
-    name   = "hello-universe"
-    type   = "manifest"
-    tag    = "1.0.0"
-    uid    = "explicit-manifest-uid"  # Explicit UID provided
-    values = ""
-    manifest {
-      name    = "hello-universe"
-      content = file("manifests/hello-universe.yaml")
-    }
-  }
-}
-```
-
 ### Inline YAML Example
 
 An example of a cluster profile using inline YAML.
@@ -474,10 +400,10 @@ Required:
 Optional:
 
 - `manifest` (Block List) (see [below for nested schema](#nestedblock--pack--manifest))
-- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name.
-- `tag` (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`.
+- `registry_uid` (String) The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name. If `uid` is not provided, this field is required along with `name` and `tag` to resolve the pack UID internally.
+- `tag` (String) The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`. If `uid` is not provided, this field is required along with `name` and `registry_uid` to resolve the pack UID internally.
 - `type` (String) The type of the pack. Allowed values are `spectro`, `manifest`, `helm`, or `oci`. The default value is spectro. If using an OCI registry for pack, set the type to `oci`.
-- `uid` (String) The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro` and for `helm` if the chart is from a public helm registry.
+- `uid` (String) The unique identifier of the pack. The value can be looked up using the [`spectrocloud_pack`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs/data-sources/pack) data source. This value is required if the pack type is `spectro` and for `helm` if the chart is from a public helm registry. If not provided, all of `name`, `tag`, and `registry_uid` must be specified to resolve the pack UID internally.
 - `values` (String) The values of the pack. The values are the configuration values of the pack. The values are specified in YAML format.
 
 <a id="nestedblock--pack--manifest"></a>
