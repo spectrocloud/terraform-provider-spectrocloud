@@ -40,21 +40,23 @@ data "spectrocloud_pack" "ubuntu" {
   version  = "1.0.0"
 }
 
-resource "spectrocloud_cluster_profile" "profile" {
+resource "spectrocloud_application_profile" "profile" {
   name        = "gcp-picard-2"
   description = "basic cp"
-  cloud       = "gcp"
-  type        = "cluster"
+  version     = "1.0.0"
+  context     = "tenant"
+  cloud       = "all"
 
   pack {
-    name   = "spectro-byo-manifest"
-    tag    = "1.0.x"
-    uid    = data.spectrocloud_pack.byom.id
+    name            = "manifest-1"
+    tag             = "1.0.0"
+    type            = "manifest"
+    source_app_tier = "spectro-manifest-pack"
+
     values = <<-EOT
       manifests:
         byo-manifest:
           contents: |
-            # Add manifests here
             apiVersion: v1
             kind: Namespace
             metadata:
@@ -64,39 +66,7 @@ resource "spectrocloud_cluster_profile" "profile" {
               name: wordpress
     EOT
   }
-
-  pack {
-    name   = "csi-gcp"
-    tag    = "1.0.x"
-    uid    = data.spectrocloud_pack.csi.id
-    values = data.spectrocloud_pack.csi.values
-  }
-
-  pack {
-    name   = "csi-gcp"
-    tag    = "1.0.x"
-    uid    = data.spectrocloud_pack.csi.id
-    values = data.spectrocloud_pack.csi.values
-  }
-
-  pack {
-    name   = "cni-calico"
-    tag    = "3.16.x"
-    uid    = data.spectrocloud_pack.cni.id
-    values = data.spectrocloud_pack.cni.values
-  }
-
-  pack {
-    name   = "kubernetes"
-    tag    = "1.18.x"
-    uid    = data.spectrocloud_pack.k8s.id
-    values = data.spectrocloud_pack.k8s.values
-  }
-
-  pack {
-    name   = "ubuntu-gcp"
-    tag    = "LTS__18.4.x"
-    uid    = data.spectrocloud_pack.ubuntu.id
+}
    
 ```
 

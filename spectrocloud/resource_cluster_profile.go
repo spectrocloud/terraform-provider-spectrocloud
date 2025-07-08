@@ -269,27 +269,6 @@ func resourceClusterProfileDelete(_ context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-// need remove this after 4.7.0 testing
-// func toClusterProfileCreate(d *schema.ResourceData) (*models.V1ClusterProfileEntity, error) {
-// 	cp := toClusterProfileBasic(d)
-
-// 	packs := make([]*models.V1PackManifestEntity, 0)
-// 	for _, pack := range d.Get("pack").([]interface{}) {
-// 		if p, e := toClusterProfilePackCreate(pack); e != nil {
-// 			return nil, e
-// 		} else {
-// 			packs = append(packs, p)
-// 		}
-// 	}
-// 	cp.Spec.Template.Packs = packs
-// 	if profileVariable, err := toClusterProfileVariables(d); err == nil {
-// 		cp.Spec.Variables = profileVariable
-// 	} else {
-// 		return cp, err
-// 	}
-// 	return cp, nil
-// }
-
 func toClusterProfileCreateWithResolution(d *schema.ResourceData, c *client.V1Client) (*models.V1ClusterProfileEntity, error) {
 	cp := toClusterProfileBasic(d)
 
@@ -461,33 +440,6 @@ func toClusterProfilePackCreateWithResolution(pSrc interface{}, c *client.V1Clie
 	return pack, nil
 }
 
-// need remove this after 4.7.0 testing
-// func toClusterProfileUpdate(d *schema.ResourceData, cluster *models.V1ClusterProfile) (*models.V1ClusterProfileUpdateEntity, error) {
-// 	cp := &models.V1ClusterProfileUpdateEntity{
-// 		Metadata: &models.V1ObjectMeta{
-// 			Name: d.Get("name").(string),
-// 			UID:  d.Id(),
-// 		},
-// 		Spec: &models.V1ClusterProfileUpdateEntitySpec{
-// 			Template: &models.V1ClusterProfileTemplateUpdate{
-// 				Type: types.Ptr(models.V1ProfileType(d.Get("type").(string))),
-// 			},
-// 			Version: d.Get("version").(string),
-// 		},
-// 	}
-// 	packs := make([]*models.V1PackManifestUpdateEntity, 0)
-// 	for _, pack := range d.Get("pack").([]interface{}) {
-// 		if p, e := toClusterProfilePackUpdate(pack, cluster.Spec.Published.Packs); e != nil {
-// 			return nil, e
-// 		} else {
-// 			packs = append(packs, p)
-// 		}
-// 	}
-// 	cp.Spec.Template.Packs = packs
-
-// 	return cp, nil
-// }
-
 func toClusterProfileUpdateWithResolution(d *schema.ResourceData, cluster *models.V1ClusterProfile, c *client.V1Client) (*models.V1ClusterProfileUpdateEntity, error) {
 	cp := &models.V1ClusterProfileUpdateEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -534,61 +486,6 @@ func toClusterProfilePatch(d *schema.ResourceData) (*models.V1ProfileMetaEntity,
 
 	return metadata, nil
 }
-
-// need remove this after 4.7.0 testing
-// func toClusterProfilePackUpdate(pSrc interface{}, packs []*models.V1PackRef) (*models.V1PackManifestUpdateEntity, error) {
-// 	p := pSrc.(map[string]interface{})
-
-// 	pName := p["name"].(string)
-// 	pUID := p["uid"].(string)
-
-// 	pRegistryUID := ""
-// 	if p["registry_uid"] != nil {
-// 		pRegistryUID = p["registry_uid"].(string)
-// 	}
-// 	pType := models.V1PackType(p["type"].(string))
-
-// 	// Validate pack UID or resolution fields
-// 	if err := schemas.ValidatePackUIDOrResolutionFields(p); err != nil {
-// 		return nil, err
-// 	}
-
-// 	switch pType {
-// 	case models.V1PackTypeSpectro:
-// 		if pUID == "" {
-// 			// UID not provided, validation already passed, so we have all resolution fields
-// 			// Note: For updates, we can't resolve here without client access
-// 			// This should be handled at a higher level
-// 			return nil, fmt.Errorf("pack %s: pack resolution during update requires client access - this should be handled at resource level", pName)
-// 		}
-// 	case models.V1PackTypeManifest:
-// 		pUID = "spectro-manifest-pack"
-// 	}
-
-// 	pack := &models.V1PackManifestUpdateEntity{
-// 		//Layer:  p["layer"].(string),
-// 		Name:        types.Ptr(pName),
-// 		Tag:         p["tag"].(string),
-// 		RegistryUID: pRegistryUID,
-// 		UID:         pUID,
-// 		Type:        &pType,
-// 		// UI strips a single newline, so we should do the same
-// 		Values: strings.TrimSpace(p["values"].(string)),
-// 	}
-
-// 	manifests := make([]*models.V1ManifestRefUpdateEntity, 0)
-// 	for _, manifest := range p["manifest"].([]interface{}) {
-// 		m := manifest.(map[string]interface{})
-// 		manifests = append(manifests, &models.V1ManifestRefUpdateEntity{
-// 			Content: strings.TrimSpace(m["content"].(string)),
-// 			Name:    types.Ptr(m["name"].(string)),
-// 			UID:     getManifestUID(m["name"].(string), packs),
-// 		})
-// 	}
-// 	pack.Manifests = manifests
-
-// 	return pack, nil
-// }
 
 func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.V1PackRef, c *client.V1Client) (*models.V1PackManifestUpdateEntity, error) {
 	p := pSrc.(map[string]interface{})
