@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -14,6 +16,9 @@ func resourceCloudAccountCustom() *schema.Resource {
 		ReadContext:   resourceCloudAccountCustomRead,
 		UpdateContext: resourceCloudAccountCustomUpdate,
 		DeleteContext: resourceCloudAccountCustomDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceAccountCustomImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -179,4 +184,24 @@ func flattenCloudAccountCustom(d *schema.ResourceData, account *models.V1CustomA
 	// We are not setting credentials because they are masked and considered sensitive.
 
 	return nil, false
+}
+
+func resourceAccountCustomImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
+
+	err := GetCommonAccount(d, c)
+	if err != nil {
+		return nil, err
+	}
+
+	diags := resourceCloudAccountCustomRead(ctx, d, m)
+	if diags.HasError() {
+		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
+	}
+
+	// Return the resource data. In most cases, this method is only used to
+	// import one resource at a time, so you should return the resource data
+	// in a slice with a single element.
+	return []*schema.ResourceData{d}, nil
 }

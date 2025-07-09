@@ -2,6 +2,9 @@ package spectrocloud
 
 import (
 	"context"
+	"log"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -9,8 +12,6 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"log"
-	"time"
 )
 
 func resourceClusterGke() *schema.Resource {
