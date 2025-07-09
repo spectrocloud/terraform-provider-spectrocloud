@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -199,13 +200,14 @@ func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnost
 				return diag.FromErr(err)
 			}
 		}
-
+		d.SetId(fmt.Sprintf("platformsetting-%s", tenantUID))
 	} else {
 		// cluster node remediation for project
 		err = c.UpdateClusterAutoRemediationForProject(ProviderInitProjectUid, remediationSettings)
 		if err != nil {
 			return diag.FromErr(err)
 		}
+		d.SetId(fmt.Sprintf("platformsetting-%s", ProviderInitProjectUid))
 	}
 	// pause agent upgrade setting according to context
 	err = c.UpdatePlatformClusterUpgradeSetting(&models.V1ClusterUpgradeSettingsEntity{
@@ -229,10 +231,7 @@ func convertFIPSString(flag string) bool {
 }
 
 func resourcePlatformSettingCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	var diags diag.Diagnostics
-	platformSettingContext := d.Get("context").(string)
-	diags = updatePlatformSettings(d, m)
-	d.SetId(fmt.Sprintf("default-platform-setting-%s", platformSettingContext))
+	diags := updatePlatformSettings(d, m)
 	return diags
 }
 
@@ -245,7 +244,7 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		return handleReadError(d, err, diags)
 	}
 	// handling case for cross-plane for singleton resource
-	if d.Id() != fmt.Sprintf("default-platform-setting-%s", platformSettingContext) {
+	if d.Id() == "" {
 		d.SetId("")
 		return diags
 	}
@@ -534,7 +533,7 @@ func resourcePlatformSettingImport(ctx context.Context, d *schema.ResourceData, 
 	var diags diag.Diagnostics
 
 	if platformContext == tenantString {
-		givenTenantId := uid
+		givenTenantId := strings.TrimPrefix(uid, "platformsetting-")
 		actualTenantId, err := c.GetTenantUID()
 		if err != nil {
 			return nil, err
@@ -545,8 +544,9 @@ func resourcePlatformSettingImport(ctx context.Context, d *schema.ResourceData, 
 		if err = d.Set("context", tenantString); err != nil {
 			return nil, err
 		}
+		d.SetId(fmt.Sprintf("platformsetting-%s", actualTenantId))
 	} else {
-		givenProjectId := uid
+		givenProjectId := strings.TrimPrefix(uid, "platformsetting-")
 		actualProjectId := ProviderInitProjectUid
 		if givenProjectId != actualProjectId {
 			return nil, fmt.Errorf("project id is not valid with provider initialization: %v", diags)
@@ -554,6 +554,7 @@ func resourcePlatformSettingImport(ctx context.Context, d *schema.ResourceData, 
 		if err = d.Set("context", tenantString); err != nil {
 			return nil, err
 		}
+		d.SetId(fmt.Sprintf("platformsetting-%s", actualProjectId))
 	}
 	diags = resourcePlatformSettingRead(ctx, d, m)
 	if diags.HasError() {
