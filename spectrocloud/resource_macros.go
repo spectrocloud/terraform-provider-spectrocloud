@@ -4,13 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"time"
 )
 
 func resourceMacros() *schema.Resource {
@@ -19,7 +21,10 @@ func resourceMacros() *schema.Resource {
 		ReadContext:   resourceMacrosRead,
 		UpdateContext: resourceMacrosUpdate,
 		DeleteContext: resourceMacrosDelete,
-		Description:   "A resource for creating and managing service output variables and macros.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceMacrosImport,
+		},
+		Description: "A resource for creating and managing service output variables and macros.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -124,6 +129,7 @@ func resourceMacrosUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 				e.Payload.Message = e.Payload.Message + "\n Kindly verify if any of the specified macro names already exist in the system."
 				return diag.FromErr(e)
 			}
+			_ = d.Set("macros", oldMacros)
 			return diag.FromErr(err)
 		}
 	}
@@ -195,4 +201,68 @@ func GetMacrosId(c *client.V1Client, uid string) (string, error) {
 		hashId = fmt.Sprintf("%s-%s-%s", "tenant", "macros", tenantID)
 	}
 	return hashId, nil
+}
+
+func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	var diags diag.Diagnostics
+
+	rawIDContext := d.Id()
+	parts := strings.Split(rawIDContext, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("import ID must be in the format '{projectUID/tenanatUID}:{project/tenant}'")
+	}
+
+	contextID := parts[0]
+	macrosContext := parts[1]
+	err := ValidateContext(macrosContext)
+	if err != nil {
+		return nil, err
+	}
+	err = d.Set("context", macrosContext)
+	if err != nil {
+		return nil, err
+	}
+
+	c := getV1ClientWithResourceContext(m, macrosContext)
+	var macros []*models.V1Macro
+
+	if macrosContext == "project" {
+		if contextID != ProviderInitProjectUid {
+			return nil, fmt.Errorf("invalid import: given project UID {%s} and provider project UID {%s} are different — cross-project resource imports are not allowed; project UID must match the provider configuration", contextID, ProviderInitProjectUid)
+		}
+		macros, err = c.GetMacros(ProviderInitProjectUid)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		actualTenantId, _ := c.GetTenantUID()
+		if contextID != actualTenantId {
+			return nil, fmt.Errorf("invalid import: tenant UID {%s} does not match your authorized tenant UID {%s}", contextID, actualTenantId)
+		}
+		macros, err = c.GetMacros("")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	existingMacros := map[string]interface{}{}
+	for _, v := range macros {
+		existingMacros[v.Name] = v.Value
+	}
+	err = d.Set("macros", existingMacros)
+	if err != nil {
+		return nil, err
+	}
+	macrosId, err := GetMacrosId(c, contextID)
+	if err != nil {
+		return nil, err
+	}
+	d.SetId(macrosId)
+
+	if diags.HasError() {
+		return nil, fmt.Errorf("could not read password policy for import: %v", diags)
+	}
+	return []*schema.ResourceData{d}, nil
 }

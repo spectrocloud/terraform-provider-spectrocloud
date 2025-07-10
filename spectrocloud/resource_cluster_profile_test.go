@@ -2,11 +2,15 @@ package spectrocloud
 
 import (
 	"context"
+	"strings"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestToClusterProfileVariables(t *testing.T) {
@@ -268,7 +272,7 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 			},
 		},
 		{
-			name: "Spectro Pack Missing UID",
+			name: "Spectro Pack Missing UID and registry_uid",
 			input: map[string]interface{}{
 				"name":     "test-pack",
 				"type":     "spectro",
@@ -277,7 +281,7 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 				"values":   "test-values",
 				"manifest": []interface{}{},
 			},
-			expectedError: "pack test-pack needs to specify tag and/or uid",
+			expectedError: "pack test-pack: either 'uid' must be provided, or all of the following fields must be specified for pack resolution: name, tag, registry_uid. Missing: registry_uid",
 			expectedPack:  nil,
 		},
 		{
@@ -486,4 +490,161 @@ func TestResourceClusterProfileDelete(t *testing.T) {
 	var ctx context.Context
 	diags := resourceClusterProfileDelete(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
+}
+
+func TestValidatePackUIDOrResolutionFields(t *testing.T) {
+	tests := []struct {
+		name        string
+		packData    map[string]interface{}
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "valid with uid provided",
+			packData: map[string]interface{}{
+				"name":         "test-pack",
+				"tag":          "1.0.0",
+				"registry_uid": "registry-123",
+				"uid":          "pack-uid-123",
+				"type":         "spectro",
+			},
+			expectError: false,
+		},
+		{
+			name: "valid with all resolution fields provided",
+			packData: map[string]interface{}{
+				"name":         "test-pack",
+				"tag":          "1.0.0",
+				"registry_uid": "registry-123",
+				"uid":          "",
+				"type":         "spectro",
+			},
+			expectError: false,
+		},
+		{
+			name: "manifest type should pass validation",
+			packData: map[string]interface{}{
+				"name":         "test-manifest",
+				"tag":          "",
+				"registry_uid": "",
+				"uid":          "",
+				"type":         "manifest",
+			},
+			expectError: false,
+		},
+		{
+			name: "missing tag without uid should fail",
+			packData: map[string]interface{}{
+				"name":         "test-pack",
+				"tag":          "",
+				"registry_uid": "registry-123",
+				"uid":          "",
+				"type":         "spectro",
+			},
+			expectError: true,
+			errorMsg:    "either 'uid' must be provided, or all of the following fields must be specified for pack resolution",
+		},
+		{
+			name: "missing registry_uid without uid should fail",
+			packData: map[string]interface{}{
+				"name":         "test-pack",
+				"tag":          "1.0.0",
+				"registry_uid": "",
+				"uid":          "",
+				"type":         "spectro",
+			},
+			expectError: true,
+			errorMsg:    "either 'uid' must be provided, or all of the following fields must be specified for pack resolution",
+		},
+		{
+			name: "missing all resolution fields without uid should fail",
+			packData: map[string]interface{}{
+				"name":         "test-pack",
+				"tag":          "",
+				"registry_uid": "",
+				"uid":          "",
+				"type":         "spectro",
+			},
+			expectError: true,
+			errorMsg:    "either 'uid' must be provided, or all of the following fields must be specified for pack resolution",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := schemas.ValidatePackUIDOrResolutionFields(tt.packData)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				} else if !strings.Contains(err.Error(), tt.errorMsg) {
+					t.Errorf("expected error message to contain '%s', got '%s'", tt.errorMsg, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error but got: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestResolvePackUID(t *testing.T) {
+	// This test would require mocking the client
+	// For now, we'll test the validation logic of the function inputs
+	c := &client.V1Client{} // Mock client - in real tests this would be properly mocked
+
+	tests := []struct {
+		name        string
+		packName    string
+		tag         string
+		registryUID string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "empty name should fail",
+			packName:    "",
+			tag:         "1.0.0",
+			registryUID: "registry-123",
+			expectError: true,
+			errorMsg:    "name, tag, and registry_uid are all required for pack resolution",
+		},
+		{
+			name:        "empty tag should fail",
+			packName:    "test-pack",
+			tag:         "",
+			registryUID: "registry-123",
+			expectError: true,
+			errorMsg:    "name, tag, and registry_uid are all required for pack resolution",
+		},
+		{
+			name:        "empty registry_uid should fail",
+			packName:    "test-pack",
+			tag:         "1.0.0",
+			registryUID: "",
+			expectError: true,
+			errorMsg:    "name, tag, and registry_uid are all required for pack resolution",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := resolvePackUID(c, tt.packName, tt.tag, tt.registryUID)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				} else if !strings.Contains(err.Error(), tt.errorMsg) {
+					t.Errorf("expected error message to contain '%s', got '%s'", tt.errorMsg, err.Error())
+				}
+			} else {
+				// Note: These tests would require proper mocking to test successful resolution
+				// For now, we just test the input validation
+				if err != nil && strings.Contains(err.Error(), "name, tag, and registry_uid are all required") {
+					t.Errorf("unexpected validation error: %v", err)
+				}
+			}
+		})
+	}
 }
