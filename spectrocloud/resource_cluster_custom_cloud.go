@@ -148,6 +148,7 @@ func resourceClusterCustomCloud() *schema.Resource {
 							Computed:    true,
 							Description: "Number of nodes in the machine pool. This will be derived from the replica value in the 'node_pool_config'.",
 						},
+						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
 							Type:        schema.TypeBool,
 							Optional:    true,
@@ -1355,6 +1356,7 @@ func toMachinePoolCustomCloud(machinePool interface{}) *models.V1CustomMachinePo
 		Values: nodePoolConfigYaml,
 	}
 	mp.PoolConfig = &models.V1CustomMachinePoolBaseConfigEntity{
+		Taints:                  toClusterTaints(node),
 		IsControlPlane:          controlPlane,
 		UseControlPlaneAsWorker: controlPlaneAsWorker,
 	}
@@ -1369,6 +1371,11 @@ func flattenMachinePoolConfigsCustomCloud(machinePools []*models.V1CustomMachine
 
 	for i, machinePool := range machinePools {
 		mp := make(map[string]interface{})
+
+		taints := flattenClusterTaints(machinePool.Taints)
+		if len(taints) > 0 {
+			mp["taints"] = taints
+		}
 		mp["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		mp["control_plane"] = machinePool.IsControlPlane
 		mp["node_pool_config"] = machinePool.Values
@@ -1401,6 +1408,11 @@ func flattenMachinePoolConfigsCustomCloudWithOverrides(machinePools []*models.V1
 
 	for i, machinePool := range machinePools {
 		mp := make(map[string]interface{})
+
+		taints := flattenClusterTaints(machinePool.Taints)
+		if len(taints) > 0 {
+			mp["taints"] = taints
+		}
 		mp["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		mp["control_plane"] = machinePool.IsControlPlane
 		mp["name"] = machinePool.Name

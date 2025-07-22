@@ -619,8 +619,7 @@ func TestResourceMachinePoolCustomCloudHash(t *testing.T) {
 				"name":                    "custom-cloud",
 				"count":                   3,
 				"control_plane":           true,
-				"control_plane_as_worker": false, //comment this for fail test
-				"additional_labels":       map[string]string{"env": "prod"},
+				"control_plane_as_worker": false,
 				"taints":                  []interface{}{"key1=value1", "key2=value2"},
 				"node_pool_config":        "standard",
 			},
@@ -631,7 +630,7 @@ func TestResourceMachinePoolCustomCloudHash(t *testing.T) {
 			input: map[string]interface{}{
 				"name":             "test-pool",
 				"count":            3,
-				"node_pool_config": "standard", //comment this for fail test
+				"node_pool_config": "standard",
 			},
 			expected: 1525978111,
 		},
