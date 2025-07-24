@@ -341,16 +341,19 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 	}
 
 	if d.HasChange("machine_pool") {
+		log.Printf("[DEBUG] === MACHINE POOL CHANGE DETECTED ===")
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
-			oraw = new(schema.Set)
+			oraw = make([]interface{}, 0)
 		}
 		if nraw == nil {
-			nraw = new(schema.Set)
+			nraw = make([]interface{}, 0)
 		}
 
 		os := oraw.([]interface{})
 		ns := nraw.([]interface{})
+
+		log.Printf("[DEBUG] Old machine pools count: %d, New machine pools count: %d", len(os), len(ns))
 
 		osMap := make(map[string]interface{})
 		for _, mp := range os {
@@ -359,11 +362,16 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 		}
 
 		nsMap := make(map[string]interface{})
-		for _, mp := range ns {
+		for i, mp := range ns {
 			machinePoolResource := mp.(map[string]interface{})
-			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
-			if machinePoolResource["name"].(string) != "" {
-				name := machinePoolResource["name"].(string)
+			log.Printf("[DEBUG] Processing machine pool %d: %+v", i, machinePoolResource)
+
+			// Extract name from YAML first
+			name := extractMachinePoolNameFromYAML(machinePoolResource)
+			log.Printf("[DEBUG] Extracted machine pool name: '%s'", name)
+
+			nsMap[name] = machinePoolResource
+			if name != "" {
 				newHash := resourceMachinePoolCustomCloudHash(machinePoolResource)
 				var err error
 				machinePool := toMachinePoolCustomCloud(mp)
@@ -386,6 +394,8 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 				}
 				// Processed (if exists)
 				delete(osMap, name)
+			} else {
+				log.Printf("[DEBUG] WARNING: Machine pool %d has empty name!", i)
 			}
 		}
 		// Deleted old machine pools
@@ -1300,6 +1310,49 @@ func toCustomClusterConfig(d *schema.ResourceData) *models.V1CustomClusterConfig
 	return customClusterConfig
 }
 
+// extractMachinePoolNameFromYAML extracts the machine pool name from YAML content
+func extractMachinePoolNameFromYAML(machinePoolResource map[string]interface{}) string {
+	nodePoolConfigYaml, ok := machinePoolResource["node_pool_config"].(string)
+	if !ok || nodePoolConfigYaml == "" {
+		log.Printf("[DEBUG] No node_pool_config found in machine pool resource")
+		return ""
+	}
+
+	// Parse multi-document YAML to find the machine pool name
+	decoder := yaml.NewDecoder(strings.NewReader(nodePoolConfigYaml))
+
+	for {
+		var doc map[string]interface{}
+		if err := decoder.Decode(&doc); err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			log.Printf("[DEBUG] Failed to parse YAML document: %v", err)
+			continue
+		}
+
+		// Look for metadata.name in each document
+		if metadata, ok := doc["metadata"].(map[string]interface{}); ok {
+			if name, ok := metadata["name"].(string); ok && name != "" {
+				// Check if this is the main MachineDeployment (has spec.replicas or spec.template)
+				if spec, hasSpec := doc["spec"].(map[string]interface{}); hasSpec {
+					if _, hasReplicas := spec["replicas"]; hasReplicas {
+						log.Printf("[DEBUG] Found machine pool name '%s' from MachineDeployment", name)
+						return name
+					}
+					if _, hasTemplate := spec["template"]; hasTemplate {
+						log.Printf("[DEBUG] Found machine pool name '%s' from document with template", name)
+						return name
+					}
+				}
+			}
+		}
+	}
+
+	log.Printf("[DEBUG] Could not extract machine pool name from YAML")
+	return ""
+}
+
 func toMachinePoolCustomCloud(machinePool interface{}) *models.V1CustomMachinePoolConfigEntity {
 	mp := &models.V1CustomMachinePoolConfigEntity{}
 	node := machinePool.(map[string]interface{})
@@ -1485,10 +1538,57 @@ func flattenMachinePoolConfigsCustomCloudWithOverrides(machinePools []*models.V1
 				}
 			}
 		} else {
-			// New machine pool or not found in current state - use normalized API config
-			nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
-			mp["node_pool_config"] = nodeConfig
-			if isMultiLineYAML(nodeConfig) {
+			// New machine pool or not found in current state - check if it has overrides in current config
+			log.Printf("[DEBUG] Machine pool '%s' not found in previous state, checking current config for overrides", machinePool.Name)
+
+			// Check current configuration for this machine pool's overrides
+			currentConfigMPs := d.Get("machine_pool").([]interface{})
+			var foundConfigMP map[string]interface{}
+
+			for _, configMP := range currentConfigMPs {
+				if configMPMap, ok := configMP.(map[string]interface{}); ok {
+					// Extract name from this config machine pool to match
+					configMPName := extractMachinePoolNameFromYAML(configMPMap)
+					if configMPName == machinePool.Name {
+						foundConfigMP = configMPMap
+						break
+					}
+				}
+			}
+
+			if foundConfigMP != nil {
+				if overrides, hasOverrides := foundConfigMP["overrides"]; hasOverrides {
+					if overridesMap, ok := overrides.(map[string]interface{}); ok && len(overridesMap) > 0 {
+						// This machine pool has overrides in config - preserve original template variables
+						log.Printf("[DEBUG] Machine pool '%s' has overrides in config, preserving template variables", machinePool.Name)
+						if originalConfig, hasConfig := foundConfigMP["node_pool_config"]; hasConfig {
+							nodeConfig := NormalizeYamlContent(originalConfig.(string))
+							mp["node_pool_config"] = nodeConfig
+							mp["overrides"] = overrides
+							log.Printf("[DEBUG] Preserved template variables and %d overrides for machine pool '%s'", len(overridesMap), machinePool.Name)
+						} else {
+							// Fallback to API config if original not found
+							nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
+							mp["node_pool_config"] = nodeConfig
+						}
+					} else {
+						// No overrides, use API config
+						nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
+						mp["node_pool_config"] = nodeConfig
+					}
+				} else {
+					// No overrides, use API config
+					nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
+					mp["node_pool_config"] = nodeConfig
+				}
+			} else {
+				// Machine pool not found in config, use normalized API config
+				log.Printf("[DEBUG] Machine pool '%s' not found in current config, using API response", machinePool.Name)
+				nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
+				mp["node_pool_config"] = nodeConfig
+			}
+
+			if isMultiLineYAML(mp["node_pool_config"].(string)) {
 				log.Printf("[INFO] Machine pool '%s' contains multi-line YAML. Consider using heredoc syntax (<<EOT...EOT) for better readability after import.", machinePool.Name)
 			}
 		}
