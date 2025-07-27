@@ -290,26 +290,38 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 }
 
 func resourceClusterCustomCloudRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	log.Printf("[ERROR] !!!!!!! DEBUG SESSION TEST - CUSTOM CLOUD READ CALLED !!!!!!!")
+	log.Printf("[ERROR] ======= CUSTOM CLOUD READ START =======")
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
+	log.Printf("[ERROR] About to call resourceClusterRead")
 	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
+		log.Printf("[ERROR] resourceClusterRead failed: %v", err)
 		return handleReadError(d, err, diags)
 	} else if cluster == nil {
+		log.Printf("[ERROR] cluster is nil, setting ID to empty")
 		d.SetId("")
 		return diags
 	}
+	log.Printf("[ERROR] resourceClusterRead succeeded")
+
 	diagnostics, hasError := readCommonFields(c, d, cluster)
 	if hasError {
+		log.Printf("[ERROR] readCommonFields failed")
 		return diagnostics
 	}
+	log.Printf("[ERROR] About to call flattenCloudConfigCustom")
 	diagnostics, hasError = flattenCloudConfigCustom(cluster.Spec.CloudConfigRef.UID, d, c)
 	if hasError {
+		log.Printf("[ERROR] flattenCloudConfigCustom failed")
 		return diagnostics
 	}
+	log.Printf("[ERROR] flattenCloudConfigCustom succeeded")
+	log.Printf("[ERROR] ======= CUSTOM CLOUD READ END =======")
 
 	return diags
 }
@@ -768,21 +780,21 @@ func applyPatternToMap(data map[string]interface{}, patternParts []string, value
 	return false
 }
 
-// separateTemplateAndPathOverrides separates template variables from path-based overrides and field name searches
-func separateTemplateAndPathOverrides(overrides map[string]interface{}) (map[string]interface{}, map[string]interface{}) {
-	templateVars := make(map[string]interface{})
-	pathOverrides := make(map[string]interface{})
+// // separateTemplateAndPathOverrides separates template variables from path-based overrides and field name searches
+// func separateTemplateAndPathOverrides(overrides map[string]interface{}) (map[string]interface{}, map[string]interface{}) {
+// 	templateVars := make(map[string]interface{})
+// 	pathOverrides := make(map[string]interface{})
 
-	for key, value := range overrides {
-		if isTemplateVariable(key) {
-			templateVars[key] = value
-		} else {
-			pathOverrides[key] = value
-		}
-	}
+// 	for key, value := range overrides {
+// 		if isTemplateVariable(key) {
+// 			templateVars[key] = value
+// 		} else {
+// 			pathOverrides[key] = value
+// 		}
+// 	}
 
-	return templateVars, pathOverrides
-}
+// 	return templateVars, pathOverrides
+// }
 
 // separateOverrideTypes separates overrides into template variables, wildcard patterns, field pattern searches, and path-based overrides
 func separateOverrideTypes(yamlContent string, overrides map[string]interface{}) (map[string]interface{}, map[string]interface{}, map[string]interface{}, map[string]interface{}) {
@@ -875,36 +887,36 @@ func isFieldPattern(key string) bool {
 	return len(key) > 0
 }
 
-// isTemplateVariable determines if a key represents a template variable
-// Template variables are simple identifiers without dots, colons, or uppercase prefixes
-func isTemplateVariable(key string) bool {
-	// Must not contain dots (path separators)
-	if strings.Contains(key, ".") {
-		return false
-	}
+// // isTemplateVariable determines if a key represents a template variable
+// // Template variables are simple identifiers without dots, colons, or uppercase prefixes
+// func isTemplateVariable(key string) bool {
+// 	// Must not contain dots (path separators)
+// 	if strings.Contains(key, ".") {
+// 		return false
+// 	}
 
-	// Must not contain array notation
-	if strings.Contains(key, "[") || strings.Contains(key, "]") {
-		return false
-	}
+// 	// Must not contain array notation
+// 	if strings.Contains(key, "[") || strings.Contains(key, "]") {
+// 		return false
+// 	}
 
-	// Must not start with uppercase (Kind prefixes)
-	if len(key) > 0 && key[0] >= 'A' && key[0] <= 'Z' {
-		return false
-	}
+// 	// Must not start with uppercase (Kind prefixes)
+// 	if len(key) > 0 && key[0] >= 'A' && key[0] <= 'Z' {
+// 		return false
+// 	}
 
-	// Must be a valid identifier (letters, numbers, underscore, hyphen)
-	for _, char := range key {
-		if !((char >= 'a' && char <= 'z') ||
-			(char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') ||
-			char == '_' || char == '-') {
-			return false
-		}
-	}
+// 	// Must be a valid identifier (letters, numbers, underscore, hyphen)
+// 	for _, char := range key {
+// 		if !((char >= 'a' && char <= 'z') ||
+// 			(char >= 'A' && char <= 'Z') ||
+// 			(char >= '0' && char <= '9') ||
+// 			char == '_' || char == '-') {
+// 			return false
+// 		}
+// 	}
 
-	return len(key) > 0
-}
+// 	return len(key) > 0
+// }
 
 // isWildcardPattern determines if a key represents a wildcard pattern (starts with *)
 func isWildcardPattern(key string) bool {
@@ -1129,10 +1141,10 @@ func applyOverrideToDocumentWithKind(data *interface{}, path string, value inter
 	return setValueAtPath(data, pathParts, convertedValue)
 }
 
-// applyOverrideToDocument applies a single override to a YAML document (legacy function for backward compatibility)
-func applyOverrideToDocument(data *interface{}, path string, value interface{}) bool {
-	return applyOverrideToDocumentWithKind(data, path, value, "")
-}
+// // applyOverrideToDocument applies a single override to a YAML document (legacy function for backward compatibility)
+// func applyOverrideToDocument(data *interface{}, path string, value interface{}) bool {
+// 	return applyOverrideToDocumentWithKind(data, path, value, "")
+// }
 
 // parsePath splits a dot-notation path into components, handling array indices
 func parsePath(path string) []string {
@@ -1150,23 +1162,23 @@ func parsePath(path string) []string {
 	return result
 }
 
-// convertOverrideValueFromInterface handles values that come as interface{} from Terraform
-func convertOverrideValueFromInterface(value interface{}) interface{} {
-	switch v := value.(type) {
-	case string:
-		// If it's a string, try to parse it as JSON for complex types
-		return convertStringToAppropriateType(v)
-	case bool, int, int64, float64:
-		// Native types are returned as-is
-		return v
-	case []interface{}, map[string]interface{}:
-		// Complex types are returned as-is
-		return v
-	default:
-		// Fallback to string representation
-		return fmt.Sprintf("%v", v)
-	}
-}
+// // convertOverrideValueFromInterface handles values that come as interface{} from Terraform
+// func convertOverrideValueFromInterface(value interface{}) interface{} {
+// 	switch v := value.(type) {
+// 	case string:
+// 		// If it's a string, try to parse it as JSON for complex types
+// 		return convertStringToAppropriateType(v)
+// 	case bool, int, int64, float64:
+// 		// Native types are returned as-is
+// 		return v
+// 	case []interface{}, map[string]interface{}:
+// 		// Complex types are returned as-is
+// 		return v
+// 	default:
+// 		// Fallback to string representation
+// 		return fmt.Sprintf("%v", v)
+// 	}
+// }
 
 // convertStringToAppropriateType tries to convert a string to a more appropriate type
 func convertStringToAppropriateType(value string) interface{} {
@@ -1197,10 +1209,10 @@ func convertStringToAppropriateType(value string) interface{} {
 	return value
 }
 
-// convertOverrideValue converts a string value to its appropriate type (kept for backward compatibility)
-func convertOverrideValue(value string) (interface{}, error) {
-	return convertStringToAppropriateType(value), nil
-}
+// // convertOverrideValue converts a string value to its appropriate type (kept for backward compatibility)
+// func convertOverrideValue(value string) (interface{}, error) {
+// 	return convertStringToAppropriateType(value), nil
+// }
 
 // setValueAtPath sets a value at the specified path in a nested structure
 func setValueAtPath(data *interface{}, pathParts []string, value interface{}) bool {
@@ -1366,6 +1378,28 @@ func toMachinePoolCustomCloud(machinePool interface{}) *models.V1CustomMachinePo
 	log.Printf("[DEBUG] Original node pool config YAML length: %d", len(nodePoolConfigYaml))
 	log.Printf("[DEBUG] Original YAML preview: %s", nodePoolConfigYaml[:min(300, len(nodePoolConfigYaml))])
 
+	// Inject taints into YAML first if they exist
+	log.Printf("[ERROR] === TAINT INJECTION DEBUG === Checking for taints in config")
+	if terraformTaints, hasTaints := node["taints"]; hasTaints && terraformTaints != nil {
+		if taintList, ok := terraformTaints.([]interface{}); ok && len(taintList) > 0 {
+			log.Printf("[ERROR] Found %d taints to inject into node pool config YAML (control_plane: %t)", len(taintList), controlPlane)
+			for i, taint := range taintList {
+				log.Printf("[ERROR] Config taint %d: %+v", i, taint)
+			}
+			processedYaml, err := injectTaintsIntoYaml(nodePoolConfigYaml, taintList, controlPlane)
+			if err != nil {
+				log.Printf("[ERROR] Failed to inject taints into YAML: %v", err)
+			} else {
+				log.Printf("[ERROR] Successfully injected taints into YAML")
+				nodePoolConfigYaml = processedYaml
+			}
+		} else {
+			log.Printf("[ERROR] Taints exist but failed to cast to []interface{} or empty list")
+		}
+	} else {
+		log.Printf("[ERROR] No taints found in config for this machine pool")
+	}
+
 	// Check if overrides exist in the node map
 	log.Printf("[DEBUG] Checking for overrides in node map. Keys: %v", getMapKeys(node))
 	if overrideValue, exists := node["overrides"]; exists {
@@ -1416,6 +1450,263 @@ func toMachinePoolCustomCloud(machinePool interface{}) *models.V1CustomMachinePo
 	return mp
 }
 
+// injectTaintsIntoYaml injects taints into the node_pool_config YAML at the specific Kubernetes paths
+func injectTaintsIntoYaml(yamlContent string, terraformTaints []interface{}, controlPlane bool) (string, error) {
+	log.Printf("[DEBUG] Starting taint injection into multi-document YAML (control_plane: %t)", controlPlane)
+
+	// Convert Terraform taints to the format expected in Kubernetes YAML
+	taintsData := make([]interface{}, 0)
+	for _, taintInterface := range terraformTaints {
+		if taintMap, ok := taintInterface.(map[string]interface{}); ok {
+			taintData := map[string]interface{}{
+				"key":    taintMap["key"],
+				"value":  taintMap["value"],
+				"effect": taintMap["effect"],
+			}
+			taintsData = append(taintsData, taintData)
+		}
+	}
+
+	if len(taintsData) == 0 {
+		log.Printf("[DEBUG] No valid taints to inject")
+		return yamlContent, nil
+	}
+
+	log.Printf("[DEBUG] Converting %d taints for injection", len(taintsData))
+
+	// Split multi-document YAML by ---
+	documents := strings.Split(yamlContent, "---")
+	var processedDocs []string
+	injectedCount := 0
+
+	for docIndex, doc := range documents {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			processedDocs = append(processedDocs, "")
+			continue
+		}
+
+		log.Printf("[DEBUG] Processing document %d", docIndex)
+
+		// Parse YAML document
+		var yamlData interface{}
+		if err := yaml.Unmarshal([]byte(doc), &yamlData); err != nil {
+			log.Printf("[DEBUG] Failed to parse YAML document %d: %v", docIndex, err)
+			processedDocs = append(processedDocs, doc)
+			continue
+		}
+
+		// Try to inject taints into this document
+		if injectTaintsIntoYamlData(&yamlData, taintsData, controlPlane) {
+			injectedCount++
+			log.Printf("[DEBUG] Successfully injected taints into document %d", docIndex)
+
+			// Convert back to YAML
+			processedYaml, err := yaml.Marshal(yamlData)
+			if err != nil {
+				log.Printf("[DEBUG] Failed to marshal document %d back to YAML: %v", docIndex, err)
+				processedDocs = append(processedDocs, doc)
+				continue
+			}
+			processedDocs = append(processedDocs, strings.TrimSpace(string(processedYaml)))
+		} else {
+			// No injection needed for this document
+			processedDocs = append(processedDocs, doc)
+		}
+	}
+
+	log.Printf("[DEBUG] Injected taints into %d document(s)", injectedCount)
+
+	if injectedCount == 0 {
+		if controlPlane {
+			log.Printf("[DEBUG] No KubeadmControlPlane documents with spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration path found - taints not injected into YAML")
+		} else {
+			log.Printf("[DEBUG] No KubeadmConfigTemplate documents with spec.template.spec.joinConfiguration.nodeRegistration path found - taints not injected into YAML")
+		}
+	}
+
+	return strings.Join(processedDocs, "\n---\n"), nil
+}
+
+// injectTaintsIntoYamlData recursively searches for and injects taints at specific Kubernetes paths
+func injectTaintsIntoYamlData(data *interface{}, taintsData []interface{}, controlPlane bool) bool {
+	modified := false
+
+	switch currentData := (*data).(type) {
+	case map[string]interface{}:
+		if controlPlane {
+			// For control plane nodes: inject into KubeadmControlPlane
+			if kind, hasKind := currentData["kind"]; hasKind && kind == "KubeadmControlPlane" {
+				log.Printf("[DEBUG] Found KubeadmControlPlane for control plane node, checking if injection path exists")
+				targetPath := []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "nodeRegistration", "taints"}
+				if injectTaintsAtPath(currentData, targetPath, taintsData) {
+					log.Printf("[DEBUG] Successfully injected taints into KubeadmControlPlane.spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration.taints")
+					modified = true
+				} else {
+					log.Printf("[DEBUG] KubeadmControlPlane found but path spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration does not exist - skipping taint injection")
+				}
+			}
+		} else {
+			// For worker nodes: inject into KubeadmConfigTemplate
+			if kind, hasKind := currentData["kind"]; hasKind && kind == "KubeadmConfigTemplate" {
+				log.Printf("[DEBUG] Found KubeadmConfigTemplate for worker node, checking if injection path exists")
+				targetPath := []string{"spec", "template", "spec", "joinConfiguration", "nodeRegistration", "taints"}
+				if injectTaintsAtPath(currentData, targetPath, taintsData) {
+					log.Printf("[DEBUG] Successfully injected taints into KubeadmConfigTemplate.spec.template.spec.joinConfiguration.nodeRegistration.taints")
+					modified = true
+				} else {
+					log.Printf("[DEBUG] KubeadmConfigTemplate found but path spec.template.spec.joinConfiguration.nodeRegistration does not exist - skipping taint injection")
+				}
+			}
+		}
+
+		// Recursively search nested structures
+		for key, value := range currentData {
+			if injectTaintsIntoYamlData(&value, taintsData, controlPlane) {
+				currentData[key] = value
+				modified = true
+			}
+		}
+
+	case map[interface{}]interface{}:
+		// Convert to string keys for easier handling
+		stringMap := make(map[string]interface{})
+		for k, v := range currentData {
+			if keyStr, ok := k.(string); ok {
+				stringMap[keyStr] = v
+			}
+		}
+
+		if controlPlane {
+			// For control plane nodes: inject into KubeadmControlPlane
+			if kind, hasKind := stringMap["kind"]; hasKind && kind == "KubeadmControlPlane" {
+				log.Printf("[DEBUG] Found KubeadmControlPlane for control plane node (interface{} keys), checking if injection path exists")
+				targetPath := []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "nodeRegistration", "taints"}
+				if injectTaintsAtPath(stringMap, targetPath, taintsData) {
+					log.Printf("[DEBUG] Successfully injected taints into KubeadmControlPlane.spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration.taints")
+					*data = stringMap
+					modified = true
+				} else {
+					log.Printf("[DEBUG] KubeadmControlPlane found but path spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration does not exist - skipping taint injection")
+				}
+			}
+		} else {
+			// For worker nodes: inject into KubeadmConfigTemplate
+			if kind, hasKind := stringMap["kind"]; hasKind && kind == "KubeadmConfigTemplate" {
+				log.Printf("[DEBUG] Found KubeadmConfigTemplate for worker node (interface{} keys), checking if injection path exists")
+				targetPath := []string{"spec", "template", "spec", "joinConfiguration", "nodeRegistration", "taints"}
+				if injectTaintsAtPath(stringMap, targetPath, taintsData) {
+					log.Printf("[DEBUG] Successfully injected taints into KubeadmConfigTemplate.spec.template.spec.joinConfiguration.nodeRegistration.taints")
+					*data = stringMap
+					modified = true
+				} else {
+					log.Printf("[DEBUG] KubeadmConfigTemplate found but path spec.template.spec.joinConfiguration.nodeRegistration does not exist - skipping taint injection")
+				}
+			}
+		}
+
+		// Recursively search nested structures
+		for key, value := range stringMap {
+			if injectTaintsIntoYamlData(&value, taintsData, controlPlane) {
+				stringMap[key] = value
+				*data = stringMap
+				modified = true
+			}
+		}
+
+	case []interface{}:
+		// Search in array elements
+		for i := range currentData {
+			if injectTaintsIntoYamlData(&currentData[i], taintsData, controlPlane) {
+				modified = true
+			}
+		}
+	}
+
+	return modified
+}
+
+// injectTaintsAtPath injects taints at a specific path in a map, creating intermediate maps if necessary
+func injectTaintsAtPath(data map[string]interface{}, path []string, taintsData []interface{}) bool {
+	if len(path) == 0 {
+		return false
+	}
+
+	// First check if the full path exists before attempting injection
+	if !pathExists(data, path[:len(path)-1]) {
+		log.Printf("[DEBUG] Path %s does not exist, skipping taint injection", strings.Join(path[:len(path)-1], "."))
+		return false
+	}
+
+	current := data
+
+	// Navigate to the parent of the target field
+	for i, part := range path[:len(path)-1] {
+		if value, exists := current[part]; exists {
+			if nextMap, ok := value.(map[string]interface{}); ok {
+				current = nextMap
+			} else if nextMapInterface, ok := value.(map[interface{}]interface{}); ok {
+				// Convert interface{} keys to string keys
+				stringMap := make(map[string]interface{})
+				for k, v := range nextMapInterface {
+					if keyStr, ok := k.(string); ok {
+						stringMap[keyStr] = v
+					}
+				}
+				current[part] = stringMap
+				current = stringMap
+			} else {
+				log.Printf("[DEBUG] Path part '%s' at index %d is not a map (type: %T), skipping taint injection", part, i, value)
+				return false
+			}
+		} else {
+			log.Printf("[DEBUG] Path part '%s' at index %d does not exist, skipping taint injection", part, i)
+			return false
+		}
+	}
+
+	// Set the taints at the final path
+	finalKey := path[len(path)-1]
+	log.Printf("[DEBUG] Setting taints at final key '%s'", finalKey)
+	current[finalKey] = taintsData
+
+	return true
+}
+
+// pathExists checks if a path exists in a nested map structure
+func pathExists(data map[string]interface{}, path []string) bool {
+	if len(path) == 0 {
+		return true
+	}
+
+	current := data
+
+	for _, part := range path {
+		if value, exists := current[part]; exists {
+			if nextMap, ok := value.(map[string]interface{}); ok {
+				current = nextMap
+			} else if nextMapInterface, ok := value.(map[interface{}]interface{}); ok {
+				// Convert interface{} keys to string keys for checking
+				stringMap := make(map[string]interface{})
+				for k, v := range nextMapInterface {
+					if keyStr, ok := k.(string); ok {
+						stringMap[keyStr] = v
+					}
+				}
+				current = stringMap
+			} else {
+				// Path part exists but is not a map, path doesn't fully exist
+				return false
+			}
+		} else {
+			// Path part doesn't exist
+			return false
+		}
+	}
+
+	return true
+}
+
 func flattenMachinePoolConfigsCustomCloud(machinePools []*models.V1CustomMachinePoolConfig) []interface{} {
 	if len(machinePools) == 0 {
 		return make([]interface{}, 0)
@@ -1425,10 +1716,31 @@ func flattenMachinePoolConfigsCustomCloud(machinePools []*models.V1CustomMachine
 	for i, machinePool := range machinePools {
 		mp := make(map[string]interface{})
 
-		taints := flattenClusterTaints(machinePool.Taints)
-		if len(taints) > 0 {
-			mp["taints"] = taints
+		// Get the raw YAML from the API
+		rawYaml := machinePool.Values
+
+		// Extract taints from processed YAML (we don't have access to overrides here, so use raw YAML)
+		// Note: This is a limitation - we can only extract taints from the raw YAML structure
+		controlPlane := machinePool.IsControlPlane != nil && *machinePool.IsControlPlane
+		yamlTaints := extractTaintsFromYaml(rawYaml, controlPlane)
+
+		// Also get taints from API model for fallback/comparison
+		apiTaints := flattenClusterTaints(machinePool.Taints)
+
+		// Prioritize YAML taints since they are the canonical source after injection
+		var finalTaints []interface{}
+		if len(yamlTaints) > 0 {
+			log.Printf("[DEBUG] Using %d taints from YAML for machine pool '%s'", len(yamlTaints), machinePool.Name)
+			finalTaints = yamlTaints
+		} else if len(apiTaints) > 0 {
+			log.Printf("[DEBUG] Using %d taints from API model for machine pool '%s' (no YAML taints found)", len(apiTaints), machinePool.Name)
+			finalTaints = apiTaints
 		}
+
+		if len(finalTaints) > 0 {
+			mp["taints"] = finalTaints
+		}
+
 		mp["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		mp["control_plane"] = machinePool.IsControlPlane
 		mp["node_pool_config"] = machinePool.Values
@@ -1462,23 +1774,11 @@ func flattenMachinePoolConfigsCustomCloudWithOverrides(machinePools []*models.V1
 	for i, machinePool := range machinePools {
 		mp := make(map[string]interface{})
 
-		taints := flattenClusterTaints(machinePool.Taints)
-		if len(taints) > 0 {
-			mp["taints"] = taints
-		}
-		mp["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
-		mp["control_plane"] = machinePool.IsControlPlane
-		mp["name"] = machinePool.Name
-		mp["count"] = machinePool.Size
+		// Get current configuration for this machine pool from Terraform state
+		var currentNodePoolConfig string
+		var currentOverrides map[string]interface{}
 
-		// Handle node_pool_config with override reconciliation
-		apiNodePoolConfig := machinePool.Values
-
-		// Get current configuration for this machine pool
 		if currentMP, exists := currentMPMap[machinePool.Name]; exists {
-			var currentNodePoolConfig string
-			var currentOverrides map[string]interface{}
-
 			if config, exists := currentMP["node_pool_config"]; exists {
 				currentNodePoolConfig = config.(string)
 			}
@@ -1487,109 +1787,150 @@ func flattenMachinePoolConfigsCustomCloudWithOverrides(machinePools []*models.V1
 					currentOverrides = overridesMap
 				}
 			}
+		}
 
-			if currentNodePoolConfig != "" && len(currentOverrides) > 0 {
-				// Apply current overrides to current config to get expected result
-				expectedConfig, err := applyYamlOverridesWithTemplates(currentNodePoolConfig, currentOverrides)
-				if err != nil {
-					log.Printf("[DEBUG] Failed to apply overrides for machine pool state comparison: %v", err)
-					nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
-					mp["node_pool_config"] = nodeConfig
-					if isMultiLineYAML(nodeConfig) {
-						log.Printf("[INFO] Machine pool '%s' contains multi-line YAML. Consider using heredoc syntax (<<EOT...EOT) for better readability after import.", machinePool.Name)
-					}
-				} else {
-					// Normalize both for comparison
-					expectedNormalized := NormalizeYamlContent(expectedConfig)
-					apiNormalized := NormalizeYamlContent(apiNodePoolConfig)
+		// Extract taints from API response YAML (this contains the actual injected taints)
+		controlPlane := machinePool.IsControlPlane != nil && *machinePool.IsControlPlane
+		log.Printf("[ERROR] === TAINT EXTRACTION DEBUG === Machine pool '%s' (control_plane: %t)", machinePool.Name, controlPlane)
+		log.Printf("[ERROR] API YAML length: %d", len(machinePool.Values))
+		log.Printf("[ERROR] API YAML preview: %s", machinePool.Values[:min(500, len(machinePool.Values))])
 
-					if expectedNormalized == apiNormalized {
-						// No drift detected - use normalized original config (before overrides)
-						log.Printf("[DEBUG] No drift detected for machine pool %s, preserving original configuration", machinePool.Name)
-						nodeConfig := NormalizeYamlContent(currentNodePoolConfig)
-						mp["node_pool_config"] = nodeConfig
-						if isMultiLineYAML(nodeConfig) {
-							log.Printf("[INFO] Machine pool '%s' contains multi-line YAML. Consider using heredoc syntax (<<EOT...EOT) for better readability after import.", machinePool.Name)
-						}
-					} else {
-						// Drift detected - use normalized API config
-						log.Printf("[DEBUG] Drift detected for machine pool %s, using API config", machinePool.Name)
-						nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
-						mp["node_pool_config"] = nodeConfig
-						if isMultiLineYAML(nodeConfig) {
-							log.Printf("[INFO] Machine pool '%s' contains multi-line YAML. Consider using heredoc syntax (<<EOT...EOT) for better readability after import.", machinePool.Name)
-						}
-					}
-				}
+		yamlTaints := extractTaintsFromYaml(machinePool.Values, controlPlane)
+		log.Printf("[ERROR] YAML taints extracted: %d taints", len(yamlTaints))
+		for j, taint := range yamlTaints {
+			log.Printf("[ERROR] YAML taint %d: %+v", j, taint)
+		}
 
-				// Always preserve overrides from current state
-				mp["overrides"] = currentOverrides
-			} else {
-				// No overrides, use normalized API config directly
+		// Also get taints from API model for fallback/comparison
+		apiTaints := flattenClusterTaints(machinePool.Taints)
+		log.Printf("[ERROR] API model taints: %d taints", len(apiTaints))
+		for j, taint := range apiTaints {
+			log.Printf("[ERROR] API model taint %d: %+v", j, taint)
+		}
+
+		// Prioritize YAML taints since they are the canonical source after injection
+		var finalTaints []interface{}
+		if len(yamlTaints) > 0 {
+			log.Printf("[ERROR] Using %d taints from API YAML for machine pool '%s'", len(yamlTaints), machinePool.Name)
+			finalTaints = yamlTaints
+		} else if len(apiTaints) > 0 {
+			log.Printf("[ERROR] Using %d taints from API model for machine pool '%s' (no YAML taints found)", len(apiTaints), machinePool.Name)
+			finalTaints = apiTaints
+		}
+
+		log.Printf("[ERROR] Final taints for machine pool '%s': %d taints", machinePool.Name, len(finalTaints))
+		for j, taint := range finalTaints {
+			log.Printf("[ERROR] Final taint %d: %+v", j, taint)
+		}
+
+		if len(finalTaints) > 0 {
+			mp["taints"] = finalTaints
+		}
+
+		mp["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
+		mp["control_plane"] = machinePool.IsControlPlane
+		mp["name"] = machinePool.Name
+		mp["count"] = machinePool.Size
+
+		// Handle node_pool_config with override reconciliation (existing logic)
+		apiNodePoolConfig := machinePool.Values
+
+		if currentNodePoolConfig != "" && len(currentOverrides) > 0 {
+			// Apply current overrides to current config to get expected result
+			expectedConfig, err := applyYamlOverridesWithTemplates(currentNodePoolConfig, currentOverrides)
+			if err != nil {
+				log.Printf("[DEBUG] Failed to apply overrides for machine pool state comparison: %v", err)
 				nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
 				mp["node_pool_config"] = nodeConfig
 				if isMultiLineYAML(nodeConfig) {
 					log.Printf("[INFO] Machine pool '%s' contains multi-line YAML. Consider using heredoc syntax (<<EOT...EOT) for better readability after import.", machinePool.Name)
 				}
+			} else {
+				// Check if Terraform taints match API taints
+				terraformTaints := finalTaints // This contains the taints we extracted from API/YAML in this function
+				configTaints := []interface{}{}
 
-				// Preserve any existing overrides from state
+				// Get taints from current Terraform configuration
+				if currentMP, exists := currentMPMap[machinePool.Name]; exists {
+					if taintsConfig, exists := currentMP["taints"]; exists {
+						if taintsList, ok := taintsConfig.([]interface{}); ok {
+							configTaints = taintsList
+						}
+					}
+				}
+
+				log.Printf("[DEBUG] Machine pool %s: Terraform config has %d taints, API has %d taints", machinePool.Name, len(configTaints), len(terraformTaints))
+
+				// If taints match, strip them from YAML comparison to avoid drift from YAML formatting differences
+				// If taints don't match, allow normal comparison so the change gets detected
+				taintsMatch := len(configTaints) == len(terraformTaints)
+				if taintsMatch {
+					// Do a deeper comparison of taint contents
+					for i, configTaint := range configTaints {
+						if i >= len(terraformTaints) {
+							taintsMatch = false
+							break
+						}
+						configMap := configTaint.(map[string]interface{})
+						terraformMap := terraformTaints[i].(map[string]interface{})
+						if configMap["key"] != terraformMap["key"] ||
+							configMap["value"] != terraformMap["value"] ||
+							configMap["effect"] != terraformMap["effect"] {
+							taintsMatch = false
+							break
+						}
+					}
+				}
+
+				var expectedNormalized, apiNormalized string
+				if taintsMatch {
+					// Taints match - strip them from YAML comparison to avoid drift from formatting differences
+					log.Printf("[DEBUG] Taints match between config and API, stripping from YAML comparison for machine pool %s", machinePool.Name)
+					expectedStripped := stripTaintsFromYaml(expectedConfig, controlPlane)
+					apiStripped := stripTaintsFromYaml(apiNodePoolConfig, controlPlane)
+					expectedNormalized = NormalizeYamlContent(expectedStripped)
+					apiNormalized = NormalizeYamlContent(apiStripped)
+				} else {
+					// Taints don't match - do normal comparison so the change gets detected
+					log.Printf("[DEBUG] Taints differ between config and API, allowing normal YAML comparison for machine pool %s", machinePool.Name)
+					expectedNormalized = NormalizeYamlContent(expectedConfig)
+					apiNormalized = NormalizeYamlContent(apiNodePoolConfig)
+				}
+
+				if expectedNormalized == apiNormalized {
+					// No drift detected - use normalized original config (before overrides)
+					log.Printf("[DEBUG] No drift detected for machine pool %s, preserving original configuration", machinePool.Name)
+					nodeConfig := NormalizeYamlContent(currentNodePoolConfig)
+					mp["node_pool_config"] = nodeConfig
+					if isMultiLineYAML(nodeConfig) {
+						log.Printf("[INFO] Machine pool '%s' contains multi-line YAML. Consider using heredoc syntax (<<EOT...EOT) for better readability after import.", machinePool.Name)
+					}
+				} else {
+					// Drift detected - use normalized API config
+					log.Printf("[DEBUG] Drift detected for machine pool %s, using API config", machinePool.Name)
+					nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
+					mp["node_pool_config"] = nodeConfig
+					if isMultiLineYAML(nodeConfig) {
+						log.Printf("[INFO] Machine pool '%s' contains multi-line YAML. Consider using heredoc syntax (<<EOT...EOT) for better readability after import.", machinePool.Name)
+					}
+				}
+			}
+
+			// Always preserve overrides from current state
+			mp["overrides"] = currentOverrides
+		} else {
+			// No overrides, use normalized API config directly
+			nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
+			mp["node_pool_config"] = nodeConfig
+			if isMultiLineYAML(nodeConfig) {
+				log.Printf("[INFO] Machine pool '%s' contains multi-line YAML. Consider using heredoc syntax (<<EOT...EOT) for better readability after import.", machinePool.Name)
+			}
+
+			// Preserve any existing overrides from state
+			if currentMP, exists := currentMPMap[machinePool.Name]; exists {
 				if overrides, exists := currentMP["overrides"]; exists {
 					mp["overrides"] = overrides
 				}
-			}
-		} else {
-			// New machine pool or not found in current state - check if it has overrides in current config
-			log.Printf("[DEBUG] Machine pool '%s' not found in previous state, checking current config for overrides", machinePool.Name)
-
-			// Check current configuration for this machine pool's overrides
-			currentConfigMPs := d.Get("machine_pool").([]interface{})
-			var foundConfigMP map[string]interface{}
-
-			for _, configMP := range currentConfigMPs {
-				if configMPMap, ok := configMP.(map[string]interface{}); ok {
-					// Extract name from this config machine pool to match
-					configMPName := extractMachinePoolNameFromYAML(configMPMap)
-					if configMPName == machinePool.Name {
-						foundConfigMP = configMPMap
-						break
-					}
-				}
-			}
-
-			if foundConfigMP != nil {
-				if overrides, hasOverrides := foundConfigMP["overrides"]; hasOverrides {
-					if overridesMap, ok := overrides.(map[string]interface{}); ok && len(overridesMap) > 0 {
-						// This machine pool has overrides in config - preserve original template variables
-						log.Printf("[DEBUG] Machine pool '%s' has overrides in config, preserving template variables", machinePool.Name)
-						if originalConfig, hasConfig := foundConfigMP["node_pool_config"]; hasConfig {
-							nodeConfig := NormalizeYamlContent(originalConfig.(string))
-							mp["node_pool_config"] = nodeConfig
-							mp["overrides"] = overrides
-							log.Printf("[DEBUG] Preserved template variables and %d overrides for machine pool '%s'", len(overridesMap), machinePool.Name)
-						} else {
-							// Fallback to API config if original not found
-							nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
-							mp["node_pool_config"] = nodeConfig
-						}
-					} else {
-						// No overrides, use API config
-						nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
-						mp["node_pool_config"] = nodeConfig
-					}
-				} else {
-					// No overrides, use API config
-					nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
-					mp["node_pool_config"] = nodeConfig
-				}
-			} else {
-				// Machine pool not found in config, use normalized API config
-				log.Printf("[DEBUG] Machine pool '%s' not found in current config, using API response", machinePool.Name)
-				nodeConfig := NormalizeYamlContent(apiNodePoolConfig)
-				mp["node_pool_config"] = nodeConfig
-			}
-
-			if isMultiLineYAML(mp["node_pool_config"].(string)) {
-				log.Printf("[INFO] Machine pool '%s' contains multi-line YAML. Consider using heredoc syntax (<<EOT...EOT) for better readability after import.", machinePool.Name)
 			}
 		}
 
@@ -1600,29 +1941,41 @@ func flattenMachinePoolConfigsCustomCloudWithOverrides(machinePools []*models.V1
 }
 
 func flattenCloudConfigCustom(configUID string, d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
+	log.Printf("[ERROR] ======= FLATTEN CLOUD CONFIG CUSTOM START =======")
 	cloudType := d.Get("cloud").(string)
 	if err := d.Set("cloud_config_id", configUID); err != nil {
+		log.Printf("[ERROR] Failed to set cloud_config_id: %v", err)
 		return diag.FromErr(err), true
 	}
 
 	if err := ReadCommonAttributes(d); err != nil {
+		log.Printf("[ERROR] ReadCommonAttributes failed: %v", err)
 		return diag.FromErr(err), true
 	}
+	log.Printf("[ERROR] About to call GetCloudConfigCustomCloud")
 	if config, err := c.GetCloudConfigCustomCloud(configUID, cloudType); err != nil {
+		log.Printf("[ERROR] GetCloudConfigCustomCloud failed: %v", err)
 		return diag.FromErr(err), true
 	} else {
+		log.Printf("[ERROR] GetCloudConfigCustomCloud succeeded, config has %d machine pools", len(config.Spec.MachinePoolConfig))
 		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
 			if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+				log.Printf("[ERROR] Failed to set cloud_account_id: %v", err)
 				return diag.FromErr(err), true
 			}
 		}
 		if err := d.Set("cloud_config", flattenCloudConfigsValuesCustomCloudWithOverrides(config, d)); err != nil {
+			log.Printf("[ERROR] Failed to set cloud_config: %v", err)
 			return diag.FromErr(err), true
 		}
+		log.Printf("[ERROR] About to call flattenMachinePoolConfigsCustomCloudWithOverrides")
 		if err := d.Set("machine_pool", flattenMachinePoolConfigsCustomCloudWithOverrides(config.Spec.MachinePoolConfig, d)); err != nil {
+			log.Printf("[ERROR] Failed to set machine_pool: %v", err)
 			return diag.FromErr(err), true
 		}
+		log.Printf("[ERROR] Successfully set machine_pool")
 	}
+	log.Printf("[ERROR] ======= FLATTEN CLOUD CONFIG CUSTOM END =======")
 
 	return nil, false
 }
@@ -1744,4 +2097,416 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// extractTaintsFromYaml extracts taints from the node_pool_config YAML at the specific Kubernetes paths
+func extractTaintsFromYaml(yamlContent string, controlPlane bool) []interface{} {
+	log.Printf("[ERROR] === EXTRACT TAINTS FROM YAML START === (control_plane: %t)", controlPlane)
+
+	if strings.TrimSpace(yamlContent) == "" {
+		log.Printf("[ERROR] Empty YAML content, no taints to extract")
+		return make([]interface{}, 0)
+	}
+
+	// Split multi-document YAML by ---
+	documents := strings.Split(yamlContent, "---")
+	var allTaints []interface{}
+
+	log.Printf("[ERROR] Split YAML into %d documents", len(documents))
+
+	for docIndex, doc := range documents {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			log.Printf("[ERROR] Document %d is empty, skipping", docIndex)
+			continue
+		}
+
+		log.Printf("[ERROR] Processing document %d for taint extraction (length: %d)", docIndex, len(doc))
+
+		// Parse YAML document
+		var yamlData interface{}
+		if err := yaml.Unmarshal([]byte(doc), &yamlData); err != nil {
+			log.Printf("[ERROR] Failed to parse YAML document %d: %v", docIndex, err)
+			continue
+		}
+
+		// Try to extract taints from this document
+		log.Printf("[ERROR] About to call extractTaintsFromYamlData for document %d", docIndex)
+		if extractedTaints := extractTaintsFromYamlData(&yamlData, controlPlane); len(extractedTaints) > 0 {
+			log.Printf("[ERROR] Successfully extracted %d taints from document %d", len(extractedTaints), docIndex)
+			for j, taint := range extractedTaints {
+				log.Printf("[ERROR] Document %d taint %d: %+v", docIndex, j, taint)
+			}
+			allTaints = append(allTaints, extractedTaints...)
+		} else {
+			log.Printf("[ERROR] No taints extracted from document %d", docIndex)
+		}
+	}
+
+	log.Printf("[ERROR] Total taints extracted from all documents: %d", len(allTaints))
+	if len(allTaints) == 0 {
+		log.Printf("[ERROR] No taints found in YAML")
+	} else {
+		for j, taint := range allTaints {
+			log.Printf("[ERROR] Final result taint %d: %+v", j, taint)
+		}
+	}
+
+	log.Printf("[ERROR] === EXTRACT TAINTS FROM YAML END ===")
+	return allTaints
+}
+
+// extractTaintsFromYamlData recursively searches for and extracts taints from specific Kubernetes paths
+func extractTaintsFromYamlData(data *interface{}, controlPlane bool) []interface{} {
+	var allTaints []interface{}
+
+	switch currentData := (*data).(type) {
+	case map[string]interface{}:
+		if controlPlane {
+			// For control plane nodes: extract from KubeadmControlPlane
+			if kind, hasKind := currentData["kind"]; hasKind && kind == "KubeadmControlPlane" {
+				log.Printf("[DEBUG] Found KubeadmControlPlane for control plane node, checking for taints")
+				targetPath := []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "nodeRegistration", "taints"}
+				if extractedTaints := extractTaintsFromPath(currentData, targetPath); len(extractedTaints) > 0 {
+					log.Printf("[DEBUG] Extracted %d taints from KubeadmControlPlane.spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration.taints", len(extractedTaints))
+					allTaints = append(allTaints, extractedTaints...)
+				}
+			}
+		} else {
+			// For worker nodes: extract from KubeadmConfigTemplate
+			if kind, hasKind := currentData["kind"]; hasKind && kind == "KubeadmConfigTemplate" {
+				log.Printf("[DEBUG] Found KubeadmConfigTemplate for worker node, checking for taints")
+				targetPath := []string{"spec", "template", "spec", "joinConfiguration", "nodeRegistration", "taints"}
+				if extractedTaints := extractTaintsFromPath(currentData, targetPath); len(extractedTaints) > 0 {
+					log.Printf("[DEBUG] Extracted %d taints from KubeadmConfigTemplate.spec.template.spec.joinConfiguration.nodeRegistration.taints", len(extractedTaints))
+					allTaints = append(allTaints, extractedTaints...)
+				}
+			}
+		}
+
+		// Recursively search nested structures
+		for _, value := range currentData {
+			if extractedTaints := extractTaintsFromYamlData(&value, controlPlane); len(extractedTaints) > 0 {
+				allTaints = append(allTaints, extractedTaints...)
+			}
+		}
+
+	case map[interface{}]interface{}:
+		// Convert to string keys for easier handling
+		stringMap := make(map[string]interface{})
+		for k, v := range currentData {
+			if keyStr, ok := k.(string); ok {
+				stringMap[keyStr] = v
+			}
+		}
+
+		if controlPlane {
+			// For control plane nodes: extract from KubeadmControlPlane
+			if kind, hasKind := stringMap["kind"]; hasKind && kind == "KubeadmControlPlane" {
+				log.Printf("[DEBUG] Found KubeadmControlPlane for control plane node (interface{} keys), checking for taints")
+				targetPath := []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "nodeRegistration", "taints"}
+				if extractedTaints := extractTaintsFromPath(stringMap, targetPath); len(extractedTaints) > 0 {
+					log.Printf("[DEBUG] Extracted %d taints from KubeadmControlPlane.spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration.taints", len(extractedTaints))
+					allTaints = append(allTaints, extractedTaints...)
+				}
+			}
+		} else {
+			// For worker nodes: extract from KubeadmConfigTemplate
+			if kind, hasKind := stringMap["kind"]; hasKind && kind == "KubeadmConfigTemplate" {
+				log.Printf("[DEBUG] Found KubeadmConfigTemplate for worker node (interface{} keys), checking for taints")
+				targetPath := []string{"spec", "template", "spec", "joinConfiguration", "nodeRegistration", "taints"}
+				if extractedTaints := extractTaintsFromPath(stringMap, targetPath); len(extractedTaints) > 0 {
+					log.Printf("[DEBUG] Extracted %d taints from KubeadmConfigTemplate.spec.template.spec.joinConfiguration.nodeRegistration.taints", len(extractedTaints))
+					allTaints = append(allTaints, extractedTaints...)
+				}
+			}
+		}
+
+		// Recursively search nested structures
+		for _, value := range stringMap {
+			if extractedTaints := extractTaintsFromYamlData(&value, controlPlane); len(extractedTaints) > 0 {
+				allTaints = append(allTaints, extractedTaints...)
+			}
+		}
+
+	case []interface{}:
+		// Search in array elements
+		for i := range currentData {
+			if extractedTaints := extractTaintsFromYamlData(&currentData[i], controlPlane); len(extractedTaints) > 0 {
+				allTaints = append(allTaints, extractedTaints...)
+			}
+		}
+	}
+
+	return allTaints
+}
+
+// extractTaintsFromPath extracts taints from a specific path in a map
+func extractTaintsFromPath(data map[string]interface{}, path []string) []interface{} {
+	if len(path) == 0 {
+		return make([]interface{}, 0)
+	}
+
+	// Check if the path exists
+	if !pathExists(data, path[:len(path)-1]) {
+		log.Printf("[DEBUG] Path %s does not exist, no taints to extract", strings.Join(path[:len(path)-1], "."))
+		return make([]interface{}, 0)
+	}
+
+	current := data
+
+	// Navigate to the parent of the target field
+	for i, part := range path[:len(path)-1] {
+		if value, exists := current[part]; exists {
+			if nextMap, ok := value.(map[string]interface{}); ok {
+				current = nextMap
+			} else if nextMapInterface, ok := value.(map[interface{}]interface{}); ok {
+				// Convert interface{} keys to string keys
+				stringMap := make(map[string]interface{})
+				for k, v := range nextMapInterface {
+					if keyStr, ok := k.(string); ok {
+						stringMap[keyStr] = v
+					}
+				}
+				current = stringMap
+			} else {
+				log.Printf("[DEBUG] Path part '%s' at index %d is not a map (type: %T), cannot extract taints", part, i, value)
+				return make([]interface{}, 0)
+			}
+		} else {
+			log.Printf("[DEBUG] Path part '%s' at index %d does not exist, cannot extract taints", part, i)
+			return make([]interface{}, 0)
+		}
+	}
+
+	// Get the taints from the final path
+	finalKey := path[len(path)-1]
+	if taintsData, exists := current[finalKey]; exists {
+		if taintsList, ok := taintsData.([]interface{}); ok {
+			log.Printf("[DEBUG] Found %d taints at path %s", len(taintsList), strings.Join(path, "."))
+
+			// Convert Kubernetes taint format to Terraform format
+			terraformTaints := make([]interface{}, 0)
+			for _, taintInterface := range taintsList {
+				if taintMap, ok := taintInterface.(map[string]interface{}); ok {
+					terraformTaint := map[string]interface{}{
+						"key":    taintMap["key"],
+						"value":  taintMap["value"],
+						"effect": taintMap["effect"],
+					}
+					terraformTaints = append(terraformTaints, terraformTaint)
+				} else if taintMapInterface, ok := taintInterface.(map[interface{}]interface{}); ok {
+					// Handle interface{} keys
+					terraformTaint := make(map[string]interface{})
+					for k, v := range taintMapInterface {
+						if keyStr, ok := k.(string); ok {
+							terraformTaint[keyStr] = v
+						}
+					}
+					if len(terraformTaint) == 3 { // key, value, effect
+						terraformTaints = append(terraformTaints, terraformTaint)
+					}
+				}
+			}
+
+			log.Printf("[DEBUG] Converted %d taints to Terraform format", len(terraformTaints))
+			return terraformTaints
+		} else {
+			log.Printf("[DEBUG] Taints field exists but is not a list (type: %T)", taintsData)
+		}
+	} else {
+		log.Printf("[DEBUG] No taints field found at path %s", strings.Join(path, "."))
+	}
+
+	return make([]interface{}, 0)
+}
+
+// Helper function to strip taints from YAML for comparison purposes
+// This allows taints to be managed purely via Terraform schema, not YAML content
+func stripTaintsFromYaml(yamlContent string, controlPlane bool) string {
+	if strings.TrimSpace(yamlContent) == "" {
+		return yamlContent
+	}
+
+	log.Printf("[DEBUG] Stripping taints from YAML for comparison (control_plane: %t)", controlPlane)
+
+	// Split multi-document YAML by ---
+	documents := strings.Split(yamlContent, "---")
+	var processedDocs []string
+
+	for _, doc := range documents {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			processedDocs = append(processedDocs, "")
+			continue
+		}
+
+		// Parse YAML document
+		var yamlData interface{}
+		if err := yaml.Unmarshal([]byte(doc), &yamlData); err != nil {
+			// If parsing fails, keep original document
+			processedDocs = append(processedDocs, doc)
+			continue
+		}
+
+		// Remove taints from this document
+		if removeTaintsFromYamlData(&yamlData, controlPlane) {
+			// Convert back to YAML
+			processedYaml, err := yaml.Marshal(yamlData)
+			if err != nil {
+				processedDocs = append(processedDocs, doc)
+				continue
+			}
+			processedDocs = append(processedDocs, strings.TrimSpace(string(processedYaml)))
+		} else {
+			// No taints removed
+			processedDocs = append(processedDocs, doc)
+		}
+	}
+
+	return strings.Join(processedDocs, "\n---\n")
+}
+
+// removeTaintsFromYamlData removes taints from YAML data structures
+func removeTaintsFromYamlData(data *interface{}, controlPlane bool) bool {
+	modified := false
+
+	switch currentData := (*data).(type) {
+	case map[string]interface{}:
+		if controlPlane {
+			// For control plane nodes: remove from KubeadmControlPlane
+			if kind, hasKind := currentData["kind"]; hasKind && kind == "KubeadmControlPlane" {
+				log.Printf("[DEBUG] Found KubeadmControlPlane, removing taints from path: spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration.taints")
+				targetPath := []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "nodeRegistration", "taints"}
+				if removeTaintsAtPath(currentData, targetPath) {
+					log.Printf("[DEBUG] Successfully removed taints from KubeadmControlPlane")
+					modified = true
+				} else {
+					log.Printf("[DEBUG] No taints found to remove from KubeadmControlPlane")
+				}
+			}
+		} else {
+			// For worker nodes: remove from KubeadmConfigTemplate
+			if kind, hasKind := currentData["kind"]; hasKind && kind == "KubeadmConfigTemplate" {
+				log.Printf("[DEBUG] Found KubeadmConfigTemplate, removing taints from path: spec.template.spec.joinConfiguration.nodeRegistration.taints")
+				targetPath := []string{"spec", "template", "spec", "joinConfiguration", "nodeRegistration", "taints"}
+				if removeTaintsAtPath(currentData, targetPath) {
+					log.Printf("[DEBUG] Successfully removed taints from KubeadmConfigTemplate")
+					modified = true
+				} else {
+					log.Printf("[DEBUG] No taints found to remove from KubeadmConfigTemplate")
+				}
+			}
+		}
+
+		// Recursively process nested structures
+		for key, value := range currentData {
+			if removeTaintsFromYamlData(&value, controlPlane) {
+				currentData[key] = value
+				modified = true
+			}
+		}
+
+	case map[interface{}]interface{}:
+		// Convert to string keys for easier handling
+		stringMap := make(map[string]interface{})
+		for k, v := range currentData {
+			if keyStr, ok := k.(string); ok {
+				stringMap[keyStr] = v
+			}
+		}
+
+		if controlPlane {
+			// For control plane nodes: remove from KubeadmControlPlane
+			if kind, hasKind := stringMap["kind"]; hasKind && kind == "KubeadmControlPlane" {
+				log.Printf("[DEBUG] Found KubeadmControlPlane (interface{} keys), removing taints from path: spec.kubeadmConfigSpec.joinConfiguration.nodeRegistration.taints")
+				targetPath := []string{"spec", "kubeadmConfigSpec", "joinConfiguration", "nodeRegistration", "taints"}
+				if removeTaintsAtPath(stringMap, targetPath) {
+					log.Printf("[DEBUG] Successfully removed taints from KubeadmControlPlane (interface{} keys)")
+					*data = stringMap
+					modified = true
+				} else {
+					log.Printf("[DEBUG] No taints found to remove from KubeadmControlPlane (interface{} keys)")
+				}
+			}
+		} else {
+			// For worker nodes: remove from KubeadmConfigTemplate
+			if kind, hasKind := stringMap["kind"]; hasKind && kind == "KubeadmConfigTemplate" {
+				log.Printf("[DEBUG] Found KubeadmConfigTemplate (interface{} keys), removing taints from path: spec.template.spec.joinConfiguration.nodeRegistration.taints")
+				targetPath := []string{"spec", "template", "spec", "joinConfiguration", "nodeRegistration", "taints"}
+				if removeTaintsAtPath(stringMap, targetPath) {
+					log.Printf("[DEBUG] Successfully removed taints from KubeadmConfigTemplate (interface{} keys)")
+					*data = stringMap
+					modified = true
+				} else {
+					log.Printf("[DEBUG] No taints found to remove from KubeadmConfigTemplate (interface{} keys)")
+				}
+			}
+		}
+
+		// Recursively process nested structures
+		for key, value := range stringMap {
+			if removeTaintsFromYamlData(&value, controlPlane) {
+				stringMap[key] = value
+				*data = stringMap
+				modified = true
+			}
+		}
+
+	case []interface{}:
+		// Process array elements
+		for i := range currentData {
+			if removeTaintsFromYamlData(&currentData[i], controlPlane) {
+				modified = true
+			}
+		}
+	}
+
+	return modified
+}
+
+// removeTaintsAtPath removes taints at a specific path in a map
+func removeTaintsAtPath(data map[string]interface{}, path []string) bool {
+	if len(path) == 0 {
+		return false
+	}
+
+	// Check if the path exists before attempting removal
+	if !pathExists(data, path[:len(path)-1]) {
+		return false
+	}
+
+	current := data
+
+	// Navigate to the parent of the target field
+	for _, part := range path[:len(path)-1] {
+		if value, exists := current[part]; exists {
+			if nextMap, ok := value.(map[string]interface{}); ok {
+				current = nextMap
+			} else if nextMapInterface, ok := value.(map[interface{}]interface{}); ok {
+				// Convert interface{} keys to string keys
+				stringMap := make(map[string]interface{})
+				for k, v := range nextMapInterface {
+					if keyStr, ok := k.(string); ok {
+						stringMap[keyStr] = v
+					}
+				}
+				current[part] = stringMap
+				current = stringMap
+			} else {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+
+	// Remove the taints at the final path if they exist
+	finalKey := path[len(path)-1]
+	if _, exists := current[finalKey]; exists {
+		delete(current, finalKey)
+		return true
+	}
+
+	return false
 }
