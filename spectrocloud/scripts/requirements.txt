@@ -1,0 +1,25 @@
+# Requirements for Spectro Terraform Formatter (spectro-tf-format)
+# 
+# Install with: pip install -r requirements.txt
+# or: python3 -m pip install -r requirements.txt
+
+# YAML parsing and generation
+PyYAML>=6.0.0,<7.0.0
+
+# Optional dependencies for enhanced functionality
+# (uncomment if needed for future features)
+
+# For advanced JSON processing
+# jsonschema>=4.0.0,<5.0.0
+
+# For enhanced regex and text processing  
+# regex>=2023.0.0
+
+# For rich console output and progress bars
+# rich>=13.0.0,<14.0.0
+
+# For configuration validation
+# pydantic>=2.0.0,<3.0.0
+
+# For file watching and auto-processing
+# watchdog>=3.0.0,<4.0.0 

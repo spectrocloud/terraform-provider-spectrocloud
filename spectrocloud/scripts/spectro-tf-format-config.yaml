@@ -1,0 +1,27 @@
+# Complete Templating Configuration - Extract from both documents
+rules: ['yaml-format']
+output_dir: "cluster_configs_yaml"
+backup: true
+
+yaml_config:
+  "cloud_config.values":
+    filename: "{resource_name}_cloud_config.yaml"
+    templating:
+      - path: "Cluster.spec.infrastructureRef.name"
+        variable: "INFRA_REF_NAME"
+      - path: "Cluster.spec.clusterNetwork.pods.cidrBlocks[0]"
+        variable: "POD_CIDR_0"
+  
+  "machine_pool.node_pool_config":
+    filename: "{resource_name}_{pool_name}_config.yaml"
+    templating:
+      - path: "KubeadmControlPlane.spec.replicas"
+        variable: "REPLICAS"
+      - path: "KubeadmControlPlane.spec.machineTemplate.infrastructureRef.name"
+        variable: "MACHINE_TEMPLATE_NAME"
+      - path: "AWSMachineTemplate.spec.template.spec.ami.id"
+        variable: "AMI_ID"
+      - path: "AWSMachineTemplate.spec.template.spec.instanceType"
+        variable: "INSTANCE_TYPE"
+      - path: "AWSMachineTemplate.spec.template.spec.rootVolume.size"
+        variable: "ROOT_VOLUME_SIZE"

@@ -185,6 +185,18 @@ Required:
 
 - `values` (String) The values of the cloud config. The values are specified in YAML format.
 
+Optional:
+
+- `overrides` (Map of String) Key-value pairs to override specific values in the YAML. Supports template variables, wildcard patterns, field pattern search, document-specific and global overrides.
+
+Template variables: Simple identifiers that replace ${var}, {{var}}, or $var patterns in YAML (e.g., 'cluster_name' replaces ${cluster_name})
+Wildcard patterns: Patterns starting with '*' that match field names containing the specified substring (e.g., '*cluster-api-autoscaler-node-group-max-size' matches any field containing 'cluster-api-autoscaler-node-group-max-size')
+Field pattern search: Patterns that find and update ALL matching nested fields anywhere in YAML (e.g., 'replicas' updates any 'replicas' field, 'rootVolume.size' updates any 'rootVolume.size' pattern)
+Document-specific syntax: 'Kind.path' (e.g., 'Cluster.metadata.labels', 'AWSCluster.spec.region')
+Global path syntax: 'path' (e.g., 'metadata.name', 'spec.region')
+
+Processing order: 1) Template substitution, 2) Wildcard patterns, 3) Field pattern search, 4) Path-based overrides. Supports dot notation for nested paths and array indexing with [index]. Values are strings but support JSON syntax for arrays/objects.
+
 
 <a id="nestedblock--machine_pool"></a>
 ### Nested Schema for `machine_pool`
@@ -197,11 +209,31 @@ Optional:
 
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
+- `overrides` (Map of String) Key-value pairs to override specific values in the node pool config YAML. Supports template variables, wildcard patterns, field pattern search, document-specific and global overrides.
+
+Template variables: Simple identifiers that replace ${var}, {{var}}, or $var patterns in YAML (e.g., 'node_count' replaces ${node_count})
+Wildcard patterns: Patterns starting with '*' that match field names containing the specified substring (e.g., '*cluster-api-autoscaler-node-group-max-size' matches any field containing 'cluster-api-autoscaler-node-group-max-size')
+Field pattern search: Patterns that find and update ALL matching nested fields anywhere in YAML (e.g., 'replicas' updates any 'replicas' field, 'rootVolume.size' updates any 'rootVolume.size' pattern)
+Document-specific syntax: 'Kind.path' (e.g., 'AWSMachineTemplate.spec.template.spec.instanceType')
+Global path syntax: 'path' (e.g., 'metadata.name', 'spec.instanceType')
+
+Processing order: 1) Template substitution, 2) Wildcard patterns, 3) Field pattern search, 4) Path-based overrides. Supports dot notation for nested paths and array indexing with [index]. Values are strings but support JSON syntax for arrays/objects.
+- `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 
 Read-Only:
 
 - `count` (Number) Number of nodes in the machine pool. This will be derived from the replica value in the 'node_pool_config'.
 - `name` (String) The name of the machine pool. This will be derived from the name value in the `node_pool_config`.
+
+<a id="nestedblock--machine_pool--taints"></a>
+### Nested Schema for `machine_pool.taints`
+
+Required:
+
+- `effect` (String) The effect of the taint. Allowed values are: `NoSchedule`, `PreferNoSchedule` or `NoExecute`.
+- `key` (String) The key of the taint.
+- `value` (String) The value of the taint.
+
 
 
 <a id="nestedblock--backup_policy"></a>

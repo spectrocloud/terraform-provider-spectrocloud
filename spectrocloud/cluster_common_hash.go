@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"gopkg.in/yaml.v3"
 )
 
 func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
@@ -263,6 +264,12 @@ func resourceMachinePoolCustomCloudHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
 	}
 	buf.WriteString(fmt.Sprintf("%s-", m["node_pool_config"].(string)))
+
+	// Include overrides in hash calculation for change detection
+	if overrides, ok := m["overrides"]; ok {
+		buf.WriteString(HashStringMap(overrides))
+	}
+
 	return int(hash(buf.String()))
 }
 
@@ -454,4 +461,136 @@ func hash(s string) uint32 {
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(s))
 	return h.Sum32()
+}
+
+// YamlContentHash creates a hash based on YAML semantic content, ignoring formatting
+func YamlContentHash(yamlContent string) string {
+	canonicalContent := yamlContentToCanonicalString(yamlContent)
+	h := fnv.New64a()
+	h.Write([]byte(canonicalContent))
+	return fmt.Sprintf("%x", h.Sum64())
+}
+
+// yamlContentToCanonicalString converts YAML content to a canonical string for hashing
+func yamlContentToCanonicalString(yamlContent string) string {
+	if strings.TrimSpace(yamlContent) == "" {
+		return ""
+	}
+
+	// Split multi-document YAML
+	documents := strings.Split(yamlContent, "---")
+	var canonicalDocs []string
+
+	for _, doc := range documents {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			continue
+		}
+
+		// Parse YAML document
+		var yamlData interface{}
+		if err := yaml.Unmarshal([]byte(doc), &yamlData); err != nil {
+			// If parsing fails, use original doc for canonical form
+			canonicalDocs = append(canonicalDocs, doc)
+			continue
+		}
+
+		// Convert to canonical string representation
+		canonical := toCanonicalString(yamlData)
+		canonicalDocs = append(canonicalDocs, canonical)
+	}
+
+	if len(canonicalDocs) == 0 {
+		return ""
+	}
+
+	return strings.Join(canonicalDocs, "|||") // Use ||| as document separator
+}
+
+// toCanonicalString converts a YAML structure to a deterministic string representation
+func toCanonicalString(data interface{}) string {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		// Sort keys for deterministic output
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		var parts []string
+		for _, k := range keys {
+			value := toCanonicalString(v[k])
+			parts = append(parts, fmt.Sprintf("%s:%s", k, value))
+		}
+		return "{" + strings.Join(parts, ",") + "}"
+
+	case map[interface{}]interface{}:
+		// Convert to string map and recurse
+		stringMap := make(map[string]interface{})
+		for key, value := range v {
+			if keyStr, ok := key.(string); ok {
+				stringMap[keyStr] = value
+			}
+		}
+		return toCanonicalString(stringMap)
+
+	case []interface{}:
+		var parts []string
+		for _, item := range v {
+			parts = append(parts, toCanonicalString(item))
+		}
+		return "[" + strings.Join(parts, ",") + "]"
+
+	case string:
+		return fmt.Sprintf("\"%s\"", v)
+	case int, int64, float64, bool:
+		return fmt.Sprintf("%v", v)
+	case nil:
+		return "null"
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+// NormalizeYamlContent parses YAML and re-serializes it in a consistent format for StateFunc
+func NormalizeYamlContent(yamlContent string) string {
+	if strings.TrimSpace(yamlContent) == "" {
+		return ""
+	}
+
+	// Split multi-document YAML
+	documents := strings.Split(yamlContent, "---")
+	var normalizedDocs []string
+
+	for _, doc := range documents {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			continue
+		}
+
+		// Parse YAML document
+		var yamlData interface{}
+		if err := yaml.Unmarshal([]byte(doc), &yamlData); err != nil {
+			// If parsing fails, return original (trimmed)
+			normalizedDocs = append(normalizedDocs, doc)
+			continue
+		}
+
+		// Re-serialize in consistent format
+		normalizedYaml, err := yaml.Marshal(yamlData)
+		if err != nil {
+			// If marshaling fails, return original (trimmed)
+			normalizedDocs = append(normalizedDocs, doc)
+			continue
+		}
+
+		normalizedDocs = append(normalizedDocs, strings.TrimSpace(string(normalizedYaml)))
+	}
+
+	if len(normalizedDocs) == 0 {
+		return ""
+	}
+
+	return strings.Join(normalizedDocs, "\n---\n")
 }

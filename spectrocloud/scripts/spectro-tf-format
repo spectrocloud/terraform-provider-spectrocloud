@@ -1,0 +1,760 @@
+#!/usr/bin/env python3
+"""
+Spectro Terraform Formatter
+Automatically formats generated Terraform files by extracting YAML content
+and creating templated configuration files.
+
+Usage: spectro-tf-format [options] <terraform_file>
+"""
+
+import subprocess
+import sys
+import argparse
+from pathlib import Path
+import yaml
+import os
+import re
+import shutil
+from typing import Dict, List, Any, Tuple, Optional
+
+
+# Built-in templating configuration for Spectro Cloud
+BUILTIN_TEMPLATING_CONFIG = {
+    # Script configuration defaults
+    "rules": ["yaml-format"],
+    "output_dir": "cluster_configs_yaml",
+    "backup": False,
+    
+    # YAML processing configuration
+    "cloud_config.values": {
+        "filename": "{resource_name}_cloud_config.yaml",
+        "templating": [
+            {"path": "Cluster.spec.infrastructureRef.name", "variable": "CLUSTER_NAME"},
+            {"path": "AWSCluster.metadata.name", "variable": "CLUSTER_NAME"},
+        ]
+    },
+    "machine_pool.node_pool_config": {
+        "filename": "{resource_name}_{pool_name}_config.yaml",
+        "templating": [
+            # Control plane paths
+            {"path": "KubeadmControlPlane.spec.replicas", "variable": "REPLICAS"},
+            {"path": "KubeadmControlPlane.spec.machineTemplate.infrastructureRef.name", "variable": "MACHINE_TEMPLATE_NAME"},
+            {"path": "AWSMachineTemplate.spec.template.metadata.name", "variable": "MACHINE_TEMPLATE_NAME"},
+            # Worker pool paths (alternative paths for MachineDeployment)
+            {"path": "MachineDeployment.spec.template.spec.infrastructureRef.name", "variable": "MACHINE_TEMPLATE_NAME"},
+            {"path": "AWSMachineTemplate.metadata.name", "variable": "MACHINE_TEMPLATE_NAME"},
+            {"path": "MachineDeployment.spec.template.spec.bootstrap.configRef.name", "variable": "KC_TEMPLATE_NAME"},
+            {"path": "KubeadmConfigTemplate.metadata.name", "variable": "KC_TEMPLATE_NAME"},
+            # Common paths (works for both)
+            {"path": "MachineDeployment.spec.replicas", "variable": "REPLICAS"},
+            {"path": "AWSMachineTemplate.spec.template.spec.ami.id", "variable": "AMI_ID"},
+            {"path": "AWSMachineTemplate.spec.template.spec.instanceType", "variable": "INSTANCE_TYPE"},
+            {"path": "AWSMachineTemplate.spec.template.spec.rootVolume.size", "variable": "ROOT_VOLUME_SIZE"}
+        ]
+    }
+}
+
+
+class YAMLTemplater:
+    """Handles YAML templating and variable extraction"""
+    
+    def process_yaml(self, yaml_content: str, templating_config: List[Dict[str, str]]) -> Tuple[str, Dict[str, Any]]:
+        """Process YAML content and extract variables according to templating config."""
+        documents = self._split_yaml_documents(yaml_content)
+        extracted_vars = {}
+        
+        for template_config in templating_config:
+            doc_type, actual_path = self._parse_document_path(template_config["path"])
+            
+            for i, doc in enumerate(documents):
+                # If document type is specified, only process matching documents
+                if doc_type:
+                    if not isinstance(doc, dict) or doc.get('kind') != doc_type:
+                        continue
+                        
+                try:
+                    value = self._extract_value_from_path(doc, actual_path)
+                    if value is not None:
+                        extracted_vars[template_config["variable"]] = value
+                        self._replace_value_in_doc(doc, actual_path, f"${{{template_config['variable']}}}")
+                        print(f"    ✓ Found {template_config['variable']} = {value} at path {template_config['path']}")
+                        break  # Stop after first match
+                except Exception as e:
+                    continue
+            else:
+                print(f"    ✗ Path {template_config['path']} not found in any document")
+        
+        # Reconstruct YAML
+        modified_content = yaml.dump_all(documents, default_flow_style=False, sort_keys=False)
+        return modified_content, extracted_vars
+
+    def _split_yaml_documents(self, yaml_content: str) -> List[Dict]:
+        """Split multi-document YAML content into individual parsed documents."""
+        try:
+            # Use yaml.safe_load_all to properly parse multi-document YAML
+            documents = list(yaml.safe_load_all(yaml_content))
+            # Filter out None documents
+            return [doc for doc in documents if doc is not None]
+        except yaml.YAMLError as e:
+            print(f"    Warning: Could not parse YAML: {e}")
+            return []
+    
+    def _extract_value_from_path(self, doc: Dict, path: str) -> Any:
+        """Extract value from nested dictionary using dot notation path."""
+        try:
+            # Handle array access like "cidrBlocks[0]"
+            parts = self._parse_path(path)
+            current = doc
+            
+            for part in parts:
+                if isinstance(part, tuple):  # Array access
+                    key, index = part
+                    if key in current and isinstance(current[key], list):
+                        if index < len(current[key]):
+                            current = current[key][index]
+                        else:
+                            return None
+                    else:
+                        return None
+                else:  # Regular key access
+                    if isinstance(current, dict) and part in current:
+                        current = current[part]
+                    else:
+                        return None
+            
+            return current
+        except Exception:
+            return None
+    
+    def _replace_value_in_doc(self, doc: Dict, path: str, new_value: str) -> None:
+        """Replace value in nested dictionary using dot notation path."""
+        try:
+            parts = self._parse_path(path)
+            current = doc
+            
+            # Navigate to the parent of the target
+            for part in parts[:-1]:
+                if isinstance(part, tuple):  # Array access
+                    key, index = part
+                    current = current[key][index]
+                else:  # Regular key access
+                    current = current[part]
+            
+            # Set the final value
+            final_part = parts[-1]
+            if isinstance(final_part, tuple):  # Array access
+                key, index = final_part
+                current[key][index] = new_value
+            else:  # Regular key access
+                current[final_part] = new_value
+        except Exception:
+            pass  # Ignore errors in replacement
+    
+    def _parse_path(self, path: str) -> List:
+        """Parse a path like 'spec.cidrBlocks[0].name' into navigable parts."""
+        parts = []
+        segments = path.split('.')
+        
+        for segment in segments:
+            # Check if this segment has array access
+            if '[' in segment and ']' in segment:
+                key = segment[:segment.index('[')]
+                index_str = segment[segment.index('[') + 1:segment.index(']')]
+                try:
+                    index = int(index_str)
+                    parts.append((key, index))
+                except ValueError:
+                    parts.append(segment)  # Invalid index, treat as regular key
+            else:
+                parts.append(segment)
+        
+        return parts
+
+    def _parse_document_path(self, path: str) -> Tuple[Optional[str], str]:
+        """Parse a path like 'Cluster.spec.infrastructureRef.name' into document type and actual path."""
+        parts = path.split('.', 1)
+        if len(parts) == 2:
+            # Check if first part looks like a document type (capitalized)
+            potential_doc_type = parts[0]
+            if potential_doc_type and potential_doc_type[0].isupper():
+                return potential_doc_type, parts[1]
+        
+        # No document type specified, return the whole path
+        return None, path
+
+
+class SpectroTerraformFormatter:
+    """Spectro Terraform Formatter - Built-in YAML processing for Spectro Cloud"""
+    
+    def __init__(self, output_dir: str = None, backup: bool = None, format_tf: bool = True):
+        self.output_dir = output_dir or BUILTIN_TEMPLATING_CONFIG["output_dir"]
+        self.backup = backup if backup is not None else BUILTIN_TEMPLATING_CONFIG["backup"]
+        self.format_tf = format_tf
+    
+    def process_file(self, tf_file_path: str) -> None:
+        """Process a Terraform file with built-in Spectro Cloud configuration"""
+        tf_file_path = Path(tf_file_path)
+        
+        if not tf_file_path.exists():
+            raise FileNotFoundError(f"Terraform file not found: {tf_file_path}")
+        
+        print(f"Processing Terraform file: {tf_file_path}")
+        
+        # Read the Terraform file
+        with open(tf_file_path, 'r', encoding='utf-8') as f:
+            tf_content = f.read()
+        
+        # Create backup if requested
+        if self.backup:
+            backup_path = tf_file_path.with_suffix(tf_file_path.suffix + '.backup')
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                f.write(tf_content)
+            print(f"Created backup: {backup_path}")
+        
+        # Apply built-in YAML processing
+        modified_content, created_files = self._apply_yaml_extraction(tf_content, tf_file_path)
+        
+        # Write the modified content back
+        if modified_content != tf_content:
+            with open(tf_file_path, 'w', encoding='utf-8') as f:
+                f.write(modified_content)
+            print(f"✓ Updated Terraform file: {tf_file_path}")
+            
+            # Format the Terraform file if requested
+            if self.format_tf:
+                self._format_terraform_file(tf_file_path)
+        
+        if created_files:
+            print(f"\n✅ Successfully processed {len(created_files)} configurations")
+            print("\nNext steps:")
+            print("1. Review the generated configuration files")
+            print("2. Modify as needed") 
+            print("3. Run 'terraform plan' to verify changes")
+            print("4. Commit files to version control")
+        else:
+            print("No configurations were processed")
+    
+    def _cleanup_output_dir(self, output_dir: Path) -> None:
+        """Clean up and recreate the output directory for a fresh start"""
+        if output_dir.exists():
+            print(f"🧹 Cleaning up existing directory: {output_dir}")
+            shutil.rmtree(output_dir)
+        
+        print(f"📁 Creating output directory: {output_dir}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+    
+    def _apply_yaml_extraction(self, tf_content: str, tf_file_path: Path) -> Tuple[str, List[str]]:
+        """Extract YAML content from Terraform file using built-in configuration"""
+        output_dir = Path(tf_file_path.parent / self.output_dir)
+        self._cleanup_output_dir(output_dir)
+        
+        modified_content = tf_content
+        created_files = []
+        all_overrides = {}
+        
+        print(f"Applying built-in YAML extraction...")
+        
+        # Process each configured field (skip script configuration)
+        script_config_keys = {"rules", "output_dir", "backup"}
+        
+        for field_path, field_config in BUILTIN_TEMPLATING_CONFIG.items():
+            # Skip script configuration fields
+            if field_path in script_config_keys:
+                continue
+                
+            print(f"Processing field: {field_path}")
+            
+            if field_path == "cloud_config.values":
+                # Extract cloud_config values
+                extractions = self._extract_cloud_config_values(tf_content)
+                for resource_name, original_values, yaml_content in extractions:
+                    yaml_file = output_dir / field_config["filename"].format(resource_name=resource_name)
+                    
+                    # Process templating if configured
+                    final_yaml_content = yaml_content
+                    resource_overrides = {}
+                    
+                    if field_config.get("templating"):
+                        templater = YAMLTemplater()
+                        final_yaml_content, resource_overrides = templater.process_yaml(yaml_content, field_config["templating"])
+                        print(f"    → Extracted {len(resource_overrides)} variables: {list(resource_overrides.keys())}")
+                    
+                    self._write_yaml_file(yaml_file, final_yaml_content)
+                    created_files.append(str(yaml_file))
+                    
+                    # Create file reference
+                    relative_path = os.path.relpath(yaml_file, tf_file_path.parent)
+                    file_reference = f'file("{relative_path}")'
+                    
+                    # Replace the values assignment
+                    modified_content = self._replace_attribute_value(
+                        modified_content, "values", original_values, file_reference
+                    )
+                    
+                    # Store overrides for injection
+                    if resource_overrides:
+                        all_overrides[f"cloud_config_{resource_name}"] = resource_overrides
+                    
+                    print(f"    → Replaced cloud_config.values with {file_reference}")
+                    
+            elif field_path == "machine_pool.node_pool_config":
+                # Extract machine_pool configs
+                extractions = self._extract_machine_pool_configs(tf_content)
+                for resource_name, pool_name, original_config, yaml_content in extractions:
+                    yaml_file = output_dir / field_config["filename"].format(resource_name=resource_name, pool_name=pool_name)
+                    
+                    # Process templating if configured
+                    final_yaml_content = yaml_content
+                    resource_overrides = {}
+                    
+                    if field_config.get("templating"):
+                        templater = YAMLTemplater()
+                        final_yaml_content, resource_overrides = templater.process_yaml(yaml_content, field_config["templating"])
+                        print(f"    → Extracted {len(resource_overrides)} variables: {list(resource_overrides.keys())}")
+                    
+                    self._write_yaml_file(yaml_file, final_yaml_content)
+                    created_files.append(str(yaml_file))
+                    
+                    # Create file reference
+                    relative_path = os.path.relpath(yaml_file, tf_file_path.parent)
+                    file_reference = f'file("{relative_path}")'
+                    
+                    # Replace the node_pool_config assignment
+                    modified_content = self._replace_attribute_value(
+                        modified_content, "node_pool_config", original_config, file_reference
+                    )
+                    
+                    # Store overrides for injection
+                    if resource_overrides:
+                        all_overrides[f"machine_pool_{resource_name}_{pool_name}"] = resource_overrides
+                    
+                    print(f"    → Replaced machine_pool.node_pool_config with {file_reference}")
+        
+        # Inject overrides into terraform file
+        if all_overrides:
+            modified_content = self._inject_overrides(modified_content, all_overrides)
+        
+        return modified_content, created_files
+    
+    def _extract_block_content(self, content: str, start_pos: int) -> str:
+        """Extract block content from start_pos to matching closing brace"""
+        brace_count = 1  # We start after the opening brace
+        i = start_pos
+        
+        while i < len(content) and brace_count > 0:
+            char = content[i]
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+            i += 1
+        
+        if brace_count == 0:
+            return content[start_pos:i-1]  # Exclude the closing brace
+        else:
+            return content[start_pos:]  # Return everything if no matching brace found
+
+    def _extract_cloud_config_values(self, tf_content: str) -> List[Tuple[str, str, str]]:
+        """Extract cloud_config values from Terraform content"""
+        extractions = []
+        
+        # Find all cloud_config blocks - need to handle nested braces properly
+        cloud_config_pattern = r'cloud_config\s*\{'
+        
+        for cloud_match in re.finditer(cloud_config_pattern, tf_content, re.DOTALL):
+            # Extract the block content manually by finding matching closing brace
+            start_pos = cloud_match.end()  # Position after opening {
+            cloud_block = self._extract_block_content(tf_content, start_pos)
+            
+            # Look for values attribute within this cloud_config block
+            values_pattern = r'values\s*=\s*'
+            values_match = re.search(values_pattern, cloud_block, re.DOTALL)
+            
+            if values_match:
+                # Extract the quoted string starting from after the = sign
+                quote_start = values_match.end()
+                quoted_string = self._extract_complete_quoted_string(cloud_block, quote_start)
+                
+                # Skip if already using file() function
+                if 'file(' in quoted_string:
+                    print(f"    Skipping already processed cloud_config.values: {quoted_string[:50]}...")
+                    continue
+                
+                # Find the resource name by looking backwards
+                before_cloud_config = tf_content[:cloud_match.start()]
+                resource_pattern = r'resource\s+"[^"]+"\s+"([^"]+)"\s*\{'
+                resource_matches = list(re.finditer(resource_pattern, before_cloud_config, re.DOTALL))
+                
+                if resource_matches:
+                    resource_name = resource_matches[-1].group(1)
+                    # Unescape the string to get actual YAML content
+                    yaml_content = self._unescape_terraform_string(quoted_string)
+                    print(f"  Found cloud_config.values for resource: {resource_name} (length: {len(quoted_string)} chars)")
+                    extractions.append((resource_name, quoted_string, yaml_content))
+                else:
+                    print(f"    Could not find resource name for cloud_config.values")
+        
+        return extractions
+    
+    def _extract_machine_pool_configs(self, tf_content: str) -> List[Tuple[str, str, str, str]]:
+        """Extract machine_pool configurations from Terraform content"""
+        extractions = []
+        
+        # Find all machine_pool blocks - need to handle nested braces properly
+        machine_pool_pattern = r'machine_pool\s*\{'
+        
+        for pool_match in re.finditer(machine_pool_pattern, tf_content, re.DOTALL):
+            # Extract the block content manually by finding matching closing brace
+            start_pos = pool_match.end()  # Position after opening {
+            pool_block = self._extract_block_content(tf_content, start_pos)
+            
+            # Look for node_pool_config attribute within this machine_pool block
+            config_pattern = r'node_pool_config\s*=\s*'
+            config_match = re.search(config_pattern, pool_block, re.DOTALL)
+            
+            if config_match:
+                # Extract the quoted string starting from after the = sign
+                quote_start = config_match.end()
+                quoted_string = self._extract_complete_quoted_string(pool_block, quote_start)
+                
+                # Skip if already using file() function
+                if 'file(' in quoted_string:
+                    print(f"    Skipping already processed machine_pool config: {quoted_string[:50]}...")
+                    continue
+                
+                # Find the resource name by looking backwards
+                before_machine_pool = tf_content[:pool_match.start()]
+                resource_pattern = r'resource\s+"[^"]+"\s+"([^"]+)"\s*\{'
+                resource_matches = list(re.finditer(resource_pattern, before_machine_pool, re.DOTALL))
+                
+                if resource_matches:
+                    resource_name = resource_matches[-1].group(1)
+                    
+                    # Determine pool type and name
+                    if 'control_plane = true' in pool_block:
+                        pool_name = "control-plane-pool"
+                    else:
+                        pool_name = "worker-pool"
+                    
+                    # Unescape the string to get actual YAML content
+                    yaml_content = self._unescape_terraform_string(quoted_string)
+                    
+                    # Try to extract actual name from YAML content for better naming
+                    if 'name:' in yaml_content:
+                        name_match = re.search(r'name:\s*([^\n\r]+)', yaml_content)
+                        if name_match:
+                            extracted_name = name_match.group(1).strip()
+                            # Clean up template variables and use as pool name if valid
+                            cleaned_name = re.sub(r'\s*\{\{.*?\}\}', '', extracted_name).strip()
+                            if cleaned_name and not cleaned_name.startswith('${'):
+                                pool_name = cleaned_name
+                    
+                    print(f"  Found machine_pool.node_pool_config for resource: {resource_name}, pool: {pool_name} (length: {len(quoted_string)} chars)")
+                    extractions.append((resource_name, pool_name, quoted_string, yaml_content))
+                else:
+                    print(f"    Could not find resource name for machine_pool.node_pool_config")
+        
+        return extractions
+    
+    def _extract_complete_quoted_string(self, content: str, start_pos: int) -> str:
+        """Extract a complete quoted string starting from start_pos"""
+        # Skip whitespace to find the opening quote
+        pos = start_pos
+        while pos < len(content) and content[pos].isspace():
+            pos += 1
+        
+        if pos >= len(content) or content[pos] != '"':
+            return ""
+        
+        # Start after the opening quote
+        result = []
+        pos += 1
+        
+        while pos < len(content):
+            char = content[pos]
+            
+            if char == '"':
+                # Check if it's escaped
+                if pos > 0 and content[pos - 1] == '\\':
+                    # Count consecutive backslashes
+                    num_backslashes = 0
+                    check_pos = pos - 1
+                    while check_pos >= 0 and content[check_pos] == '\\':
+                        num_backslashes += 1
+                        check_pos -= 1
+                    
+                    # If odd number of backslashes, quote is escaped
+                    if num_backslashes % 2 == 1:
+                        result.append(char)
+                        pos += 1
+                        continue
+                
+                # Found closing quote
+                return '"' + ''.join(result) + '"'
+            else:
+                result.append(char)
+            
+            pos += 1
+        
+        # If we reach here, no closing quote found
+        return ""
+    
+    def _unescape_terraform_string(self, quoted_string: str) -> str:
+        """Convert Terraform escaped string to actual content"""
+        # Remove outer quotes
+        if quoted_string.startswith('"') and quoted_string.endswith('"'):
+            content = quoted_string[1:-1]
+        else:
+            content = quoted_string
+        
+        # Unescape common terraform escapes
+        content = content.replace('\\"', '"')
+        content = content.replace('\\n', '\n')
+        content = content.replace('\\r', '\r')
+        content = content.replace('\\t', '\t')
+        content = content.replace('\\\\', '\\')
+        
+        return content
+    
+    def _write_yaml_file(self, yaml_file: Path, content: str) -> None:
+        """Write YAML content to file"""
+        with open(yaml_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+    
+    def _replace_attribute_value(self, content: str, attribute_name: str, original_value: str, new_value: str) -> str:
+        """Replace an attribute value in terraform content"""
+        # More robust regex-based replacement that finds the exact attribute assignment
+        # This handles cases where the same quoted string might appear elsewhere
+        
+        # First, try to find the attribute assignment specifically
+        # Pattern: attribute_name = "quoted_string"
+        escaped_original = re.escape(original_value)
+        pattern = f'({attribute_name}\\s*=\\s*){escaped_original}'
+        
+        replacement = f'\\1{new_value}'
+        modified_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+        
+        # Check if replacement was successful
+        if modified_content != content:
+            print(f"      ✓ Successfully replaced {attribute_name} using regex pattern")
+            return modified_content
+        
+        # Fallback: try direct string replacement if regex didn't work
+        if original_value in content:
+            print(f"      ✓ Successfully replaced {attribute_name} using direct string replacement")
+            return content.replace(original_value, new_value)
+        
+        # If both methods failed, log the issue but continue
+        print(f"      ⚠️  Could not replace {attribute_name} = {original_value[:50]}...")
+        return content
+    
+    def _inject_overrides(self, tf_content: str, all_overrides: Dict[str, Dict[str, Any]]) -> str:
+        """Inject overrides blocks into terraform configuration"""
+        if not all_overrides:
+            return tf_content
+            
+        modified_content = tf_content
+        
+        # Process each resource's overrides separately 
+        for key, overrides in all_overrides.items():
+            if key.startswith('cloud_config_'):
+                resource_name = key.replace('cloud_config_', '')
+                modified_content = self._inject_cloud_config_overrides_for_resource(modified_content, overrides, resource_name)
+            elif key.startswith('machine_pool_'):
+                # Extract resource name and pool name from key like "machine_pool_capi_cluster_worker-pool"
+                parts = key.replace('machine_pool_', '').split('_', 1)
+                if len(parts) >= 2:
+                    resource_name = parts[0]
+                    pool_name = parts[1]
+                    modified_content = self._inject_machine_pool_overrides_for_resource(modified_content, overrides, resource_name, pool_name)
+        
+        return modified_content
+    
+    def _inject_cloud_config_overrides_for_resource(self, tf_content: str, overrides: Dict[str, Any], resource_name: str) -> str:
+        """Inject overrides into cloud_config block for a specific resource"""
+        if not overrides:
+            return tf_content
+            
+        # Format overrides
+        overrides_lines = []
+        for key, value in overrides.items():
+            if isinstance(value, str):
+                overrides_lines.append(f'      {key} = "{value}"')
+            else:
+                overrides_lines.append(f'      {key} = {value}')
+        
+        new_overrides_block = "overrides = {\n" + "\n".join(overrides_lines) + "\n    }"
+        
+        # Use a more targeted approach - find cloud_config blocks that contain file() references
+        # and replace their overrides
+        def replace_cloud_config_overrides(match):
+            full_block = match.group(0)
+            cloud_block = match.group(1)
+            
+            # Only process blocks that have file() reference (were processed)
+            if 'file(' not in cloud_block:
+                return full_block
+            
+            # Replace existing overrides or add new ones
+            if 'overrides = {}' in cloud_block:
+                # Replace empty overrides
+                updated_cloud_block = cloud_block.replace('overrides = {}', new_overrides_block)
+            elif re.search(r'overrides\s*=\s*\{[^}]*\}', cloud_block):
+                # Replace existing non-empty overrides
+                updated_cloud_block = re.sub(r'overrides\s*=\s*\{[^}]*\}', new_overrides_block, cloud_block, flags=re.DOTALL)
+            else:
+                # Add overrides at the beginning of the cloud_config block
+                updated_cloud_block = f"\n    {new_overrides_block}\n{cloud_block}"
+            
+            return f"cloud_config {{{updated_cloud_block}}}"
+        
+        # Apply the replacement to cloud_config blocks that contain file() references
+        # Use the same block extraction method we use elsewhere for robustness
+        cloud_config_pattern = r'cloud_config\s*\{'
+        
+        modified_content = tf_content
+        for cloud_match in re.finditer(cloud_config_pattern, tf_content, re.DOTALL):
+            start_pos = cloud_match.end()
+            cloud_block = self._extract_block_content(tf_content, start_pos)
+            
+            # Only process blocks that have file() reference (were processed)
+            if 'file(' in cloud_block:
+                # Replace existing overrides or add new ones
+                if 'overrides = {}' in cloud_block:
+                    updated_cloud_block = cloud_block.replace('overrides = {}', new_overrides_block)
+                elif re.search(r'overrides\s*=\s*\{[^}]*\}', cloud_block):
+                    updated_cloud_block = re.sub(r'overrides\s*=\s*\{[^}]*\}', new_overrides_block, cloud_block, flags=re.DOTALL)
+                else:
+                    updated_cloud_block = f"\n    {new_overrides_block}\n{cloud_block}"
+                
+                # Replace in the content
+                full_original = f"cloud_config {{{cloud_block}}}"
+                full_updated = f"cloud_config {{{updated_cloud_block}}}"
+                modified_content = modified_content.replace(full_original, full_updated)
+        
+        return modified_content
+    
+    def _inject_machine_pool_overrides_for_resource(self, tf_content: str, overrides: Dict[str, Any], resource_name: str, pool_name: str) -> str:
+        """Inject overrides into machine_pool block for a specific resource and pool"""
+        if not overrides:
+            return tf_content
+            
+        # Format overrides
+        overrides_lines = []
+        for key, value in overrides.items():
+            if isinstance(value, str):
+                overrides_lines.append(f'      {key} = "{value}"')
+            else:
+                overrides_lines.append(f'      {key} = {value}')
+        
+        new_overrides_block = "overrides = {\n" + "\n".join(overrides_lines) + "\n    }"
+        
+        # Expected file reference for this specific pool
+        expected_file_ref = f'{resource_name}_{pool_name}_config.yaml'
+        
+        # Apply the replacement to machine_pool blocks that contain the specific file reference
+        machine_pool_pattern = r'machine_pool\s*\{'
+        
+        modified_content = tf_content
+        for pool_match in re.finditer(machine_pool_pattern, tf_content, re.DOTALL):
+            start_pos = pool_match.end()
+            pool_block = self._extract_block_content(tf_content, start_pos)
+            
+            # Only process the specific block that has this pool's file reference
+            if expected_file_ref in pool_block:
+                # Replace existing overrides or add new ones
+                if 'overrides = {}' in pool_block:
+                    updated_pool_block = pool_block.replace('overrides = {}', new_overrides_block)
+                elif re.search(r'overrides\s*=\s*\{[^}]*\}', pool_block):
+                    updated_pool_block = re.sub(r'overrides\s*=\s*\{[^}]*\}', new_overrides_block, pool_block, flags=re.DOTALL)
+                else:
+                    updated_pool_block = f"\n    {new_overrides_block}\n{pool_block}"
+                
+                # Replace in the content
+                full_original = f"machine_pool {{{pool_block}}}"
+                full_updated = f"machine_pool {{{updated_pool_block}}}"
+                modified_content = modified_content.replace(full_original, full_updated)
+                break  # Only process the matching pool
+        
+        return modified_content
+    
+    def _format_terraform_file(self, tf_path: Path) -> None:
+        """Format the Terraform file using terraform fmt"""
+        try:
+            print(f"📝 Formatting Terraform file...")
+            result = subprocess.run(
+                ['terraform', 'fmt', str(tf_path)],
+                cwd=tf_path.parent,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                print("✅ Terraform file formatted successfully")
+            else:
+                print(f"⚠️  Terraform fmt warning: {result.stderr.strip()}")
+                
+        except subprocess.TimeoutExpired:
+            print("⚠️  Terraform fmt timed out")
+        except FileNotFoundError:
+            print("⚠️  terraform command not found - skipping formatting")
+        except Exception as e:
+            print(f"⚠️  Could not format Terraform file: {e}")
+
+
+def main():
+    """Main entry point"""
+    parser = argparse.ArgumentParser(
+        description='Spectro Terraform Formatter - Built-in YAML processing for Spectro Cloud',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"""
+Examples:
+  # Process terraform file with built-in defaults
+  spectro-tf-format generated.tf
+  
+  # Use custom output directory (default: {BUILTIN_TEMPLATING_CONFIG["output_dir"]})
+  spectro-tf-format --output-dir=cluster_configs_yaml generated.tf
+  
+  # Skip backup creation (default: backup={BUILTIN_TEMPLATING_CONFIG["backup"]})
+  spectro-tf-format --no-backup generated.tf
+  
+  # Skip terraform formatting
+  spectro-tf-format --no-format generated.tf
+
+Built-in Defaults:
+  Output Directory: {BUILTIN_TEMPLATING_CONFIG["output_dir"]}
+  Backup Files: {BUILTIN_TEMPLATING_CONFIG["backup"]}
+  Rules: {', '.join(BUILTIN_TEMPLATING_CONFIG["rules"])}
+        """
+    )
+    
+    parser.add_argument('terraform_file', help='Terraform file to process')
+    parser.add_argument('--output-dir', '-o', default=BUILTIN_TEMPLATING_CONFIG["output_dir"], help=f'Output directory for generated files (default: {BUILTIN_TEMPLATING_CONFIG["output_dir"]})')
+    parser.add_argument('--no-backup', action='store_true', help='Skip creating backup file')
+    parser.add_argument('--no-format', action='store_true', help='Skip automatic terraform fmt formatting')
+    
+    args = parser.parse_args()
+    
+    if not args.terraform_file:
+        print("Error: Terraform file is required", file=sys.stderr)
+        parser.print_help()
+        sys.exit(1)
+    
+    try:
+        # Use built-in defaults if not overridden
+        backup = not args.no_backup if args.no_backup else BUILTIN_TEMPLATING_CONFIG["backup"]
+        
+        formatter = SpectroTerraformFormatter(
+            output_dir=args.output_dir,
+            backup=backup,
+            format_tf=not args.no_format
+        )
+        formatter.process_file(args.terraform_file)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main() 
