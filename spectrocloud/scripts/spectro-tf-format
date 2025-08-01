@@ -23,14 +23,14 @@ BUILTIN_TEMPLATING_CONFIG = {
     # Script configuration defaults
     "rules": ["yaml-format"],
     "output_dir": "cluster_configs_yaml",
-    "backup": False,
+    "backup": True,
     
     # YAML processing configuration
     "cloud_config.values": {
         "filename": "{resource_name}_cloud_config.yaml",
         "templating": [
-            {"path": "Cluster.spec.infrastructureRef.name", "variable": "CLUSTER_NAME"},
-            {"path": "AWSCluster.metadata.name", "variable": "CLUSTER_NAME"},
+            # {"path": "Cluster.spec.infrastructureRef.name", "variable": "CLUSTER_NAME"},
+            # {"path": "AWSCluster.metadata.name", "variable": "CLUSTER_NAME"},
         ]
     },
     "machine_pool.node_pool_config": {
@@ -39,13 +39,18 @@ BUILTIN_TEMPLATING_CONFIG = {
             # Control plane paths
             {"path": "KubeadmControlPlane.spec.replicas", "variable": "REPLICAS"},
             {"path": "KubeadmControlPlane.spec.machineTemplate.infrastructureRef.name", "variable": "MACHINE_TEMPLATE_NAME"},
-            {"path": "AWSMachineTemplate.spec.template.metadata.name", "variable": "MACHINE_TEMPLATE_NAME"},
+            
             # Worker pool paths (alternative paths for MachineDeployment)
             {"path": "MachineDeployment.spec.template.spec.infrastructureRef.name", "variable": "MACHINE_TEMPLATE_NAME"},
-            {"path": "AWSMachineTemplate.metadata.name", "variable": "MACHINE_TEMPLATE_NAME"},
             {"path": "MachineDeployment.spec.template.spec.bootstrap.configRef.name", "variable": "KC_TEMPLATE_NAME"},
             {"path": "KubeadmConfigTemplate.metadata.name", "variable": "KC_TEMPLATE_NAME"},
+
+            
+            {"path": "MachineDeployment.metadata.name", "variable": "NODE_POOL_NAME", "condition": "MachineDeployment.metadata.name != AWSMachineTemplate.metadata.name"},
+            {"path": "MachineDeployment.metadata.name", "variable": "MACHINE_TEMPLATE_NAME", "condition": "MachineDeployment.metadata.name == AWSMachineTemplate.metadata.name"},
+
             # Common paths (works for both)
+            {"path": "AWSMachineTemplate.metadata.name", "variable": "MACHINE_TEMPLATE_NAME"},
             {"path": "MachineDeployment.spec.replicas", "variable": "REPLICAS"},
             {"path": "AWSMachineTemplate.spec.template.spec.ami.id", "variable": "AMI_ID"},
             {"path": "AWSMachineTemplate.spec.template.spec.instanceType", "variable": "INSTANCE_TYPE"},
@@ -60,11 +65,36 @@ class YAMLTemplater:
     
     def process_yaml(self, yaml_content: str, templating_config: List[Dict[str, str]]) -> Tuple[str, Dict[str, Any]]:
         """Process YAML content and extract variables according to templating config."""
-        documents = self._split_yaml_documents(yaml_content)
+        documents, original_raw_documents = self._split_yaml_documents_with_raw(yaml_content)
         extracted_vars = {}
         
+        if not documents:
+            print(f"    ⚠️  No valid YAML documents found - returning original content")
+            return yaml_content, extracted_vars
+        
+        print(f"    📄 Processing {len(documents)} parsed documents + {len(original_raw_documents) - len(documents)} raw documents")
+        
+        # Log document types for debugging
+        doc_types = []
+        for i, doc in enumerate(documents):
+            if isinstance(doc, dict) and 'kind' in doc:
+                doc_types.append(f"{doc['kind']}")
+            else:
+                doc_types.append("unknown")
+        print(f"    📋 Document types found: {', '.join(doc_types)}")
+        
         for template_config in templating_config:
+            # Check if this rule has a condition that needs to be evaluated
+            if "condition" in template_config:
+                condition_result = self._evaluate_condition(documents, template_config["condition"])
+                if not condition_result:
+                    print(f"    ⏭️  Skipping {template_config['path']} - condition '{template_config['condition']}' is False")
+                    continue
+                else:
+                    print(f"    ✅ Condition '{template_config['condition']}' is True - applying rule")
+            
             doc_type, actual_path = self._parse_document_path(template_config["path"])
+            found = False
             
             for i, doc in enumerate(documents):
                 # If document type is specified, only process matching documents
@@ -78,15 +108,261 @@ class YAMLTemplater:
                         extracted_vars[template_config["variable"]] = value
                         self._replace_value_in_doc(doc, actual_path, f"${{{template_config['variable']}}}")
                         print(f"    ✓ Found {template_config['variable']} = {value} at path {template_config['path']}")
+                        found = True
                         break  # Stop after first match
                 except Exception as e:
                     continue
-            else:
+            
+            if not found:
                 print(f"    ✗ Path {template_config['path']} not found in any document")
         
-        # Reconstruct YAML
-        modified_content = yaml.dump_all(documents, default_flow_style=False, sort_keys=False)
+        # Reconstruct YAML preserving original structure
+        try:
+            modified_content = self._reconstruct_yaml_with_fallback(documents, original_raw_documents, extracted_vars)
+        except Exception as e:
+            print(f"    ⚠️  Error reconstructing YAML: {e} - returning original content")
+            return yaml_content, extracted_vars
+            
         return modified_content, extracted_vars
+
+    def _evaluate_condition(self, documents: List[Dict], condition: str) -> bool:
+        """Evaluate a condition string against the documents."""
+        try:
+            # Parse condition like "MachineDeployment.metadata.name != AWSMachineTemplate.metadata.name"
+            condition = condition.strip()
+            
+            # Support operators: !=, ==, <, >, <=, >=
+            operators = ['!=', '==', '<=', '>=', '<', '>']
+            operator = None
+            left_path = None
+            right_path = None
+            
+            for op in operators:
+                if op in condition:
+                    parts = condition.split(op, 1)
+                    if len(parts) == 2:
+                        operator = op
+                        left_path = parts[0].strip()
+                        right_path = parts[1].strip()
+                        break
+            
+            if not operator or not left_path or not right_path:
+                print(f"    ⚠️  Invalid condition syntax: '{condition}'")
+                return False
+            
+            # Extract values from documents using the paths
+            left_value = None
+            right_value = None
+            
+            for doc in documents:
+                if not isinstance(doc, dict):
+                    continue
+                
+                # Extract left value
+                if left_value is None:
+                    left_doc_type, left_actual_path = self._parse_document_path(left_path)
+                    if not left_doc_type or doc.get('kind') == left_doc_type:
+                        left_value = self._extract_value_from_path(doc, left_actual_path)
+                
+                # Extract right value
+                if right_value is None:
+                    right_doc_type, right_actual_path = self._parse_document_path(right_path)
+                    if not right_doc_type or doc.get('kind') == right_doc_type:
+                        right_value = self._extract_value_from_path(doc, right_actual_path)
+            
+            # Both values must be found
+            if left_value is None or right_value is None:
+                print(f"    ⚠️  Could not extract values: left='{left_value}', right='{right_value}'")
+                return False
+            
+            # Apply the operator
+            if operator == '==':
+                result = left_value == right_value
+            elif operator == '!=':
+                result = left_value != right_value
+            elif operator == '<':
+                result = left_value < right_value
+            elif operator == '>':
+                result = left_value > right_value
+            elif operator == '<=':
+                result = left_value <= right_value
+            elif operator == '>=':
+                result = left_value >= right_value
+            else:
+                print(f"    ⚠️  Unsupported operator: '{operator}'")
+                return False
+            
+            print(f"    🔍 Condition evaluation: '{left_value}' {operator} '{right_value}' = {result}")
+            return result
+            
+        except Exception as e:
+            print(f"    ⚠️  Error evaluating condition '{condition}': {e}")
+            return False
+
+    def _split_yaml_documents_with_raw(self, yaml_content: str) -> Tuple[List[Dict], List[str]]:
+        """Split YAML content into parsed documents and original raw document strings."""
+        # First split into raw document strings
+        raw_documents = yaml_content.split('---')
+        raw_documents = [doc.strip() for doc in raw_documents if doc.strip()]
+        
+        # Try to parse each document
+        parsed_documents = []
+        
+        for i, raw_doc in enumerate(raw_documents):
+            try:
+                parsed_doc = yaml.safe_load(raw_doc)
+                if parsed_doc is not None and isinstance(parsed_doc, dict):
+                    parsed_documents.append(parsed_doc)
+                    print(f"    ✓ Successfully parsed raw document {i+1}")
+                else:
+                    print(f"    ✗ Raw document {i+1} parsed but is not a valid dict")
+            except yaml.YAMLError as e:
+                print(f"    ✗ Could not parse raw document {i+1}: {e}")
+                # We'll keep this as a raw document in the fallback reconstruction
+                continue
+            except Exception as e:
+                print(f"    ✗ Unexpected error parsing raw document {i+1}: {e}")
+                continue
+        
+        return parsed_documents, raw_documents
+
+    def _reconstruct_yaml_with_fallback(self, parsed_docs: List[Dict], raw_docs: List[str], extracted_vars: Dict[str, Any]) -> str:
+        """Reconstruct YAML preserving unparseable documents in original form."""
+        result_parts = []
+        
+        # Track which raw documents were successfully parsed
+        parsed_count = 0
+        
+        for i, raw_doc in enumerate(raw_docs):
+            try:
+                # Try to parse this raw document
+                test_parsed = yaml.safe_load(raw_doc)
+                if test_parsed is not None and isinstance(test_parsed, dict):
+                    # This document was successfully parsed, use the processed version
+                    if parsed_count < len(parsed_docs):
+                        processed_yaml = yaml.dump(parsed_docs[parsed_count], default_flow_style=False, sort_keys=False)
+                        result_parts.append(processed_yaml.strip())
+                        parsed_count += 1
+                    else:
+                        # Fallback to raw if we somehow don't have a parsed version
+                        result_parts.append(raw_doc)
+                else:
+                    # Document didn't parse to a valid dict, use raw
+                    result_parts.append(raw_doc)
+            except:
+                # Document failed to parse, preserve it as-is but try to apply variable substitution manually
+                print(f"    📝 Preserving unparseable document {i+1} with manual variable substitution")
+                substituted_doc = self._apply_manual_variable_substitution(raw_doc, extracted_vars)
+                result_parts.append(substituted_doc)
+        
+        # Join with document separators
+        return '---\n' + '\n---\n'.join(result_parts)
+
+    def _apply_manual_variable_substitution(self, raw_content: str, extracted_vars: Dict[str, Any]) -> str:
+        """Apply variable substitution to raw YAML content that couldn't be parsed."""
+        result = raw_content
+        
+        # First, fix multi-line string formatting issues that cause YAML parsing failures
+        result = self._fix_multiline_yaml_strings(result)
+        
+        # Apply simple string replacements for known patterns
+        # This is a basic approach for common cases
+        for var_name, var_value in extracted_vars.items():
+            # Look for specific patterns that might need replacement
+            if var_name == 'MACHINE_TEMPLATE_NAME':
+                # Replace machine template name references - only in specific contexts
+                # Target infrastructureRef.name specifically (handles nested infrastructureRef)
+                result = re.sub(r'(infrastructureRef:\s*\n(?:.*\n)*?\s*name:\s+)[^\s\n]+', 
+                               f'\\1${{{var_name}}}', result)
+                # Target AWSMachineTemplate metadata.name
+                result = re.sub(r'(AWSMachineTemplate\s*\n.*?metadata:\s*\n.*?name:\s+)[^\s\n]+', 
+                               f'\\1${{{var_name}}}', result, flags=re.DOTALL)
+                # Target MachineDeployment metadata.name (conditional - only when names match)
+                result = re.sub(r'(MachineDeployment\s*\n.*?metadata:\s*\n.*?name:\s+)[^\s\n]+', 
+                               f'\\1${{{var_name}}}', result, flags=re.DOTALL)
+            elif var_name == 'NODE_POOL_NAME':
+                # Replace MachineDeployment metadata.name specifically
+                result = re.sub(r'(MachineDeployment\s*\n.*?metadata:\s*\n.*?name:\s+)[^\s\n]+', 
+                               f'\\1${{{var_name}}}', result, flags=re.DOTALL)
+            elif var_name == 'REPLICAS':
+                # Replace replica counts
+                result = re.sub(r'(replicas:\s+)\d+', f'\\1${{{var_name}}}', result)
+        
+        return result
+    
+    def _fix_multiline_yaml_strings(self, yaml_content: str) -> str:
+        """Fix common multi-line string formatting issues in YAML."""
+        lines = yaml_content.split('\n')
+        fixed_lines = []
+        i = 0
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            # Check for lines ending with backslash (shell line continuation)
+            if line.rstrip().endswith('\\') and ('echo -e' in line or 'sudo echo' in line):
+                # Found a multi-line shell command with backslashes
+                # Get the original indentation and YAML list marker
+                stripped_line = line.lstrip()
+                original_indent = len(line) - len(stripped_line)
+                
+                # Extract the command part (everything after the YAML list marker)
+                if stripped_line.startswith('- '):
+                    command_start = stripped_line[2:].rstrip()[:-1]  # Remove '- ' and trailing backslash
+                else:
+                    command_start = stripped_line.rstrip()[:-1]  # Just remove backslash
+                
+                # Collect all parts of the command
+                command_parts = [command_start.strip()]
+                i += 1
+                
+                # Collect continuation lines
+                while i < len(lines):
+                    current_line = lines[i]
+                    if current_line.strip().endswith('\\'):
+                        # This is a continuation line
+                        command_parts.append(current_line.strip()[:-1])  # Remove backslash
+                        i += 1
+                    else:
+                        # This is the final line of the command
+                        command_parts.append(current_line.strip())
+                        i += 1
+                        break
+                
+                # Join the command parts with actual newlines
+                # This preserves the original shell command structure  
+                full_command = '\\n'.join(command_parts)
+                
+                # Escape double quotes within the command for proper YAML formatting
+                escaped_command = full_command.replace('"', '\\"')
+                
+                # Reconstruct the YAML list item with proper indentation
+                indent = ' ' * original_indent
+                
+                # Check if this is a multi-line command that would benefit from literal block format
+                if '\\n' in escaped_command:
+                    # Use YAML literal block scalar for multi-line commands (more readable)
+                    unescaped_command = escaped_command.replace('\\n', '\n').replace('\\"', '"')
+                    
+                    # Add literal block scalar
+                    fixed_lines.append(f'{indent}- |')
+                    
+                    # Add each line of the command with proper indentation
+                    command_lines = unescaped_command.split('\n')
+                    for cmd_line in command_lines:
+                        fixed_lines.append(f'{indent}  {cmd_line}')
+                elif (':' in escaped_command or escaped_command.startswith('#') or 
+                      escaped_command.strip() != escaped_command):
+                    # Use quotes for commands that need them
+                    fixed_lines.append(f'{indent}- "{escaped_command}"')
+                else:
+                    # No quotes needed, use original-style format
+                    fixed_lines.append(f'{indent}- {escaped_command}')
+            else:
+                fixed_lines.append(line)
+                i += 1
+        
+        return '\n'.join(fixed_lines)
 
     def _split_yaml_documents(self, yaml_content: str) -> List[Dict]:
         """Split multi-document YAML content into individual parsed documents."""
@@ -94,10 +370,169 @@ class YAMLTemplater:
             # Use yaml.safe_load_all to properly parse multi-document YAML
             documents = list(yaml.safe_load_all(yaml_content))
             # Filter out None documents
-            return [doc for doc in documents if doc is not None]
+            valid_docs = [doc for doc in documents if doc is not None and isinstance(doc, dict)]
+            if not valid_docs:
+                print(f"    Warning: No valid YAML documents found in content with standard parser")
+                # Try individual parsing as fallback
+                return self._parse_yaml_documents_individually(yaml_content)
+            return valid_docs
         except yaml.YAMLError as e:
-            print(f"    Warning: Could not parse YAML: {e}")
-            return []
+            print(f"    Warning: Could not parse YAML with standard parser: {e}")
+            # Always try individual document parsing as fallback
+            return self._parse_yaml_documents_individually(yaml_content)
+    
+    def _parse_yaml_documents_individually(self, yaml_content: str) -> List[Dict]:
+        """Try to parse YAML documents individually with multiple strategies."""
+        valid_docs = []
+        
+        # Split on document separators
+        yaml_docs = yaml_content.split('---')
+        
+        for i, doc_content in enumerate(yaml_docs):
+            doc_content = doc_content.strip()
+            if not doc_content:
+                continue
+                
+            parsed_doc = None
+            parsing_method = "unknown"
+            
+            # Strategy 1: Regular YAML parsing
+            try:
+                parsed_doc = yaml.safe_load(doc_content)
+                if parsed_doc is not None and isinstance(parsed_doc, dict):
+                    parsing_method = "standard"
+                else:
+                    parsed_doc = None
+            except yaml.YAMLError:
+                parsed_doc = None
+            
+            # Strategy 2: Try with custom YAML loader that's more permissive
+            if parsed_doc is None:
+                try:
+                    from yaml import SafeLoader
+                    class PermissiveLoader(SafeLoader):
+                        pass
+                    
+                    # Add custom handling for problematic constructs
+                    def construct_undefined(loader, node):
+                        if isinstance(node, yaml.ScalarNode):
+                            return loader.construct_scalar(node)
+                        elif isinstance(node, yaml.SequenceNode):
+                            return loader.construct_sequence(node)
+                        elif isinstance(node, yaml.MappingNode):
+                            return loader.construct_mapping(node)
+                        return None
+                    
+                    PermissiveLoader.add_constructor(None, construct_undefined)
+                    
+                    parsed_doc = yaml.load(doc_content, Loader=PermissiveLoader)
+                    if parsed_doc is not None and isinstance(parsed_doc, dict):
+                        parsing_method = "permissive"
+                    else:
+                        parsed_doc = None
+                except Exception:
+                    parsed_doc = None
+            
+            # Strategy 3: Try with line-by-line reconstruction for common issues
+            if parsed_doc is None:
+                try:
+                    cleaned_content = self._clean_yaml_content(doc_content)
+                    parsed_doc = yaml.safe_load(cleaned_content)
+                    if parsed_doc is not None and isinstance(parsed_doc, dict):
+                        parsing_method = "cleaned"
+                    else:
+                        parsed_doc = None
+                except Exception:
+                    parsed_doc = None
+            
+            if parsed_doc is not None:
+                valid_docs.append(parsed_doc)
+                print(f"    ✓ Successfully parsed YAML document {i+1} using {parsing_method} method")
+            else:
+                print(f"    ✗ Could not parse YAML document {i+1} with any method")
+                # Show a snippet for debugging
+                lines = doc_content.split('\n')
+                if len(lines) > 10:
+                    snippet = '\n'.join(lines[:5]) + '\n  ... (' + str(len(lines)-10) + ' more lines) ...\n' + '\n'.join(lines[-5:])
+                else:
+                    snippet = doc_content
+                print(f"      Content snippet:\n{snippet}")
+        
+        print(f"    → Successfully parsed {len(valid_docs)} out of {len([d for d in yaml_docs if d.strip()])} documents")
+        return valid_docs
+    
+    def _clean_yaml_content(self, yaml_content: str) -> str:
+        """Clean YAML content to fix common structural issues."""
+        lines = yaml_content.split('\n')
+        cleaned_lines = []
+        
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            
+            # Skip empty lines
+            if not stripped:
+                cleaned_lines.append(line)
+                continue
+            
+            # Check for lines that look like standalone values without proper YAML structure
+            # This often happens with IP addresses or hostnames in configuration files
+            if ':' not in stripped and not stripped.startswith('-') and not stripped.startswith('#'):
+                # Check if this looks like a problematic line pattern
+                if (re.match(r'^\d+\.\d+\.\d+\.\d+\s+', stripped) or 
+                    re.match(r'^[a-zA-Z0-9\-\.]+\s+[a-zA-Z0-9\-\.]+\s*$', stripped)):
+                    
+                    # Preserve leading whitespace but comment out the problematic line
+                    leading_spaces = len(line) - len(line.lstrip())
+                    if leading_spaces > 0:
+                        # If it has indentation, it might be part of a multiline string - keep it
+                        cleaned_lines.append(line)
+                    else:
+                        # Top-level problematic line - comment it out
+                        cleaned_lines.append(f"# {line}")
+                    continue
+            
+            # Keep all other lines as-is
+            cleaned_lines.append(line)
+        
+        return '\n'.join(cleaned_lines)
+    
+    def _preprocess_yaml_content(self, yaml_content: str) -> str:
+        """Preprocess YAML content to fix common parsing issues."""
+        lines = yaml_content.split('\n')
+        processed_lines = []
+        
+        in_multiline_string = False
+        current_indent = 0
+        
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            
+            # Skip empty lines
+            if not stripped:
+                processed_lines.append(line)
+                continue
+            
+            # Check if this looks like a problematic line (IP address or hostname without proper YAML structure)
+            if (re.match(r'^\d+\.\d+\.\d+\.\d+\s+', stripped) or 
+                re.match(r'^[a-zA-Z0-9\-\.]+\s+[a-zA-Z0-9\-\.]+', stripped)) and ':' not in stripped:
+                
+                # This looks like a hosts file entry or similar - quote it as a string
+                # Check if we're inside a multiline string context
+                leading_spaces = len(line) - len(line.lstrip())
+                
+                # If this line doesn't have proper YAML structure, treat it as content
+                if leading_spaces > 0:
+                    # Preserve the line as-is if it's properly indented (likely part of a multiline string)
+                    processed_lines.append(line)
+                else:
+                    # This is a top-level line that doesn't look like YAML - skip or comment it out
+                    processed_lines.append(f"# {line}")
+                continue
+            
+            # For all other lines, keep them as-is
+            processed_lines.append(line)
+        
+        return '\n'.join(processed_lines)
     
     def _extract_value_from_path(self, doc: Dict, path: str) -> Any:
         """Extract value from nested dictionary using dot notation path."""
@@ -430,16 +865,16 @@ class SpectroTerraformFormatter:
                 if resource_matches:
                     resource_name = resource_matches[-1].group(1)
                     
-                    # Determine pool type and name
+                    # Start with a basic fallback name (will be overridden by YAML extraction if available)
                     if 'control_plane = true' in pool_block:
-                        pool_name = "control-plane-pool"
+                        pool_name = f"{resource_name}-cp"  # Fallback for control plane
                     else:
-                        pool_name = "worker-pool"
+                        pool_name = f"{resource_name}-worker"  # Fallback for worker
                     
                     # Unescape the string to get actual YAML content
                     yaml_content = self._unescape_terraform_string(quoted_string)
                     
-                    # Try to extract actual name from YAML content for better naming
+                    # Try to extract actual name from YAML content for better naming (but ensure uniqueness)
                     if 'name:' in yaml_content:
                         name_match = re.search(r'name:\s*([^\n\r]+)', yaml_content)
                         if name_match:
@@ -447,7 +882,16 @@ class SpectroTerraformFormatter:
                             # Clean up template variables and use as pool name if valid
                             cleaned_name = re.sub(r'\s*\{\{.*?\}\}', '', extracted_name).strip()
                             if cleaned_name and not cleaned_name.startswith('${'):
-                                pool_name = cleaned_name
+                                # Check if this name is already used and add counter if needed
+                                already_used_names = [name for _, name, _, _ in extractions]
+                                if cleaned_name not in already_used_names:
+                                    pool_name = cleaned_name  # Use extracted name if unique
+                                else:
+                                    # Name already exists, add counter
+                                    counter = 2
+                                    while f"{cleaned_name}_{counter}" in already_used_names:
+                                        counter += 1
+                                    pool_name = f"{cleaned_name}_{counter}"
                     
                     print(f"  Found machine_pool.node_pool_config for resource: {resource_name}, pool: {pool_name} (length: {len(quoted_string)} chars)")
                     extractions.append((resource_name, pool_name, quoted_string, yaml_content))
