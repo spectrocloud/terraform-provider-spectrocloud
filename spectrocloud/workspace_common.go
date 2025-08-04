@@ -3,9 +3,10 @@ package spectrocloud
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
-func flattenWorkspaceClusters(workspace *models.V1Workspace) []interface{} {
+func flattenWorkspaceClusters(workspace *models.V1Workspace, c *client.V1Client) []interface{} {
 	clusters := workspace.Spec.ClusterRefs
 
 	if len(clusters) > 0 {
@@ -15,6 +16,19 @@ func flattenWorkspaceClusters(workspace *models.V1Workspace) []interface{} {
 			wsp_cluster := make(map[string]interface{})
 
 			wsp_cluster["uid"] = cluster.ClusterUID
+
+			// Fetch cluster name using the API (if client is available)
+			if c != nil {
+				if clusterDetails, err := c.GetCluster(cluster.ClusterUID); err == nil && clusterDetails != nil {
+					wsp_cluster["cluster_name"] = clusterDetails.Metadata.Name
+				} else {
+					// If we can't fetch the cluster name, set it to empty string
+					wsp_cluster["cluster_name"] = ""
+				}
+			} else {
+				// For tests or when client is not available
+				wsp_cluster["cluster_name"] = ""
+			}
 
 			wsp_clusters = append(wsp_clusters, wsp_cluster)
 		}

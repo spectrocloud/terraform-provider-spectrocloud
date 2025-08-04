@@ -30,10 +30,21 @@ func toQuota(d *schema.ResourceData) *models.V1WorkspaceQuota {
 	}
 
 	q := wsQuota.([]interface{})[0].(map[string]interface{})
+	resourceAllocation := &models.V1WorkspaceResourceAllocation{
+		CPUCores:  float64(q["cpu"].(int)),
+		MemoryMiB: float64(q["memory"].(int)),
+	}
+
+	// Handle GPU configuration if specified
+	if gpuVal, exists := q["gpu"]; exists && gpuVal.(int) > 0 {
+		provider := "nvidia" // Default to nvidia as it's the only supported provider
+		resourceAllocation.GpuConfig = &models.V1GpuConfig{
+			Limit:    int32(gpuVal.(int)),
+			Provider: &provider,
+		}
+	}
+
 	return &models.V1WorkspaceQuota{
-		ResourceAllocation: &models.V1WorkspaceResourceAllocation{
-			CPUCores:  float64(q["cpu"].(int)),
-			MemoryMiB: float64(q["memory"].(int)),
-		},
+		ResourceAllocation: resourceAllocation,
 	}
 }

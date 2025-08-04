@@ -1,13 +1,51 @@
 package spectrocloud
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"math"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
+
+// Helper function to create V1WorkspaceResourceAllocation from resource allocation map
+func toWorkspaceResourceAllocation(resourceAllocation map[string]interface{}) (*models.V1WorkspaceResourceAllocation, error) {
+	cpu_cores, err := strconv.ParseFloat(resourceAllocation["cpu_cores"].(string), 64)
+	if err != nil {
+		return nil, err
+	}
+
+	memory_MiB, err := strconv.ParseFloat(resourceAllocation["memory_MiB"].(string), 64)
+	if err != nil {
+		return nil, err
+	}
+
+	resource_alloc := &models.V1WorkspaceResourceAllocation{
+		CPUCores:  cpu_cores,
+		MemoryMiB: memory_MiB,
+	}
+
+	// Handle GPU configuration if specified
+	if gpuLimit, exists := resourceAllocation["gpu_limit"]; exists && gpuLimit.(string) != "" {
+		gpuVal, err := strconv.Atoi(gpuLimit.(string))
+		if err == nil && gpuVal > 0 {
+			provider := "nvidia" // Default provider for cluster allocations
+			// gpu_provider is optional - mainly used for default resource allocations
+			if gpuProvider, providerExists := resourceAllocation["gpu_provider"]; providerExists && gpuProvider.(string) != "" {
+				provider = gpuProvider.(string)
+			}
+			resource_alloc.GpuConfig = &models.V1GpuConfig{
+				Limit:    int32(gpuVal),
+				Provider: &provider,
+			}
+		}
+	}
+
+	return resource_alloc, nil
+}
 
 func toWorkspaceNamespaces(d *schema.ResourceData) []*models.V1WorkspaceClusterNamespace {
 	workspaceNamespaces := make([]*models.V1WorkspaceClusterNamespace, 0)
@@ -22,26 +60,38 @@ func toWorkspaceNamespaces(d *schema.ResourceData) []*models.V1WorkspaceClusterN
 	return workspaceNamespaces
 }
 
-func toWorkspaceNamespace(clusterRbacBinding interface{}) *models.V1WorkspaceClusterNamespace {
-	m := clusterRbacBinding.(map[string]interface{})
+func toWorkspaceNamespace(clusterNamespaceConfig interface{}) *models.V1WorkspaceClusterNamespace {
+	m := clusterNamespaceConfig.(map[string]interface{})
 
+	// Handle default resource allocation
 	resourceAllocation, _ := m["resource_allocation"].(map[string]interface{})
-
-	cpu_cores, err := strconv.ParseFloat(resourceAllocation["cpu_cores"].(string), 64)
+	defaultResourceAlloc, err := toWorkspaceResourceAllocation(resourceAllocation)
 	if err != nil {
 		return nil
 	}
 
-	memory_MiB, err := strconv.ParseFloat(resourceAllocation["memory_MiB"].(string), 64)
-	if err != nil {
-		return nil
+	// Handle cluster resource allocations
+	var clusterResourceAllocations []*models.V1ClusterResourceAllocation
+	if clusterAllocationsData, exists := m["cluster_resource_allocations"]; exists {
+		clusterAllocations := clusterAllocationsData.([]interface{})
+		for _, clusterAlloc := range clusterAllocations {
+			clusterAllocMap := clusterAlloc.(map[string]interface{})
+			uid := clusterAllocMap["uid"].(string)
+			clusterResourceAllocation := clusterAllocMap["resource_allocation"].(map[string]interface{})
+
+			resourceAlloc, err := toWorkspaceResourceAllocation(clusterResourceAllocation)
+			if err != nil {
+				continue // Skip invalid allocations
+			}
+
+			clusterResourceAllocations = append(clusterResourceAllocations, &models.V1ClusterResourceAllocation{
+				ClusterUID:         uid,
+				ResourceAllocation: resourceAlloc,
+			})
+		}
 	}
 
-	resource_alloc := &models.V1WorkspaceResourceAllocation{
-		CPUCores:  cpu_cores,
-		MemoryMiB: memory_MiB,
-	}
-
+	// Handle images blacklist
 	images, _ := m["images_blacklist"].([]interface{})
 	blacklist := make([]string, 0)
 	for _, image := range images {
@@ -58,8 +108,8 @@ func toWorkspaceNamespace(clusterRbacBinding interface{}) *models.V1WorkspaceClu
 		Name:    name,
 		IsRegex: IsRegex,
 		NamespaceResourceAllocation: &models.V1WorkspaceNamespaceResourceAllocation{
-			ClusterResourceAllocations: nil,
-			DefaultResourceAllocation:  resource_alloc,
+			ClusterResourceAllocations: clusterResourceAllocations,
+			DefaultResourceAllocation:  defaultResourceAlloc,
 		},
 	}
 
@@ -90,12 +140,41 @@ func IsRegex(name string) bool {
 
 }
 
-func toUpdateWorkspaceNamespaces(d *schema.ResourceData) *models.V1WorkspaceClusterNamespacesEntity {
+func toUpdateWorkspaceNamespaces(d *schema.ResourceData, c *client.V1Client) *models.V1WorkspaceClusterNamespacesEntity {
 	return &models.V1WorkspaceClusterNamespacesEntity{
 		ClusterNamespaces: toWorkspaceNamespaces(d),
-		ClusterRefs:       toClusterRefs(d),
+		ClusterRefs:       toClusterRefs(d, c),
 		Quota:             toQuota(d),
 	}
+}
+
+// Helper function to flatten V1WorkspaceResourceAllocation to resource allocation map
+// includeProvider controls whether to include gpu_provider field (true for default allocations, false for cluster allocations)
+func flattenWorkspaceResourceAllocation(resourceAlloc *models.V1WorkspaceResourceAllocation, includeProvider bool) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	result["cpu_cores"] = strconv.Itoa(int(math.Round(resourceAlloc.CPUCores)))
+	result["memory_MiB"] = strconv.Itoa(int(math.Round(resourceAlloc.MemoryMiB)))
+
+	// Handle GPU configuration if present
+	if resourceAlloc.GpuConfig != nil {
+		result["gpu_limit"] = strconv.Itoa(int(resourceAlloc.GpuConfig.Limit))
+		// Only include gpu_provider for default resource allocations, not cluster-specific ones
+		if includeProvider {
+			if resourceAlloc.GpuConfig.Provider != nil {
+				result["gpu_provider"] = *resourceAlloc.GpuConfig.Provider
+			} else {
+				result["gpu_provider"] = "nvidia" // Default provider
+			}
+		}
+	} else {
+		result["gpu_limit"] = "0"
+		if includeProvider {
+			result["gpu_provider"] = ""
+		}
+	}
+
+	return result
 }
 
 func flattenWorkspaceClusterNamespaces(items []*models.V1WorkspaceClusterNamespace) []interface{} {
@@ -104,16 +183,31 @@ func flattenWorkspaceClusterNamespaces(items []*models.V1WorkspaceClusterNamespa
 		flattenNamespace := make(map[string]interface{})
 		flattenNamespace["name"] = namespace.Name
 
-		flattenResourceAllocation := make(map[string]interface{})
-		defaultAllocation := namespace.NamespaceResourceAllocation.DefaultResourceAllocation
-		flattenResourceAllocation["cpu_cores"] = strconv.Itoa(int(math.Round(defaultAllocation.CPUCores)))
-		flattenResourceAllocation["memory_MiB"] = strconv.Itoa(int(math.Round(defaultAllocation.MemoryMiB)))
+		// Flatten default resource allocation using helper (include gpu_provider)
+		if namespace.NamespaceResourceAllocation != nil && namespace.NamespaceResourceAllocation.DefaultResourceAllocation != nil {
+			flattenNamespace["resource_allocation"] = flattenWorkspaceResourceAllocation(namespace.NamespaceResourceAllocation.DefaultResourceAllocation, true)
+		}
 
-		flattenNamespace["resource_allocation"] = flattenResourceAllocation
+		// Flatten cluster resource allocations (exclude gpu_provider)
+		if namespace.NamespaceResourceAllocation != nil && len(namespace.NamespaceResourceAllocation.ClusterResourceAllocations) > 0 {
+			clusterAllocations := make([]interface{}, 0)
+			for _, clusterAlloc := range namespace.NamespaceResourceAllocation.ClusterResourceAllocations {
+				clusterAllocMap := map[string]interface{}{
+					"uid": clusterAlloc.ClusterUID,
+				}
+				if clusterAlloc.ResourceAllocation != nil {
+					clusterAllocMap["resource_allocation"] = flattenWorkspaceResourceAllocation(clusterAlloc.ResourceAllocation, false)
+				}
+				clusterAllocations = append(clusterAllocations, clusterAllocMap)
+			}
+			flattenNamespace["cluster_resource_allocations"] = clusterAllocations
+		}
 
+		// Handle images blacklist
 		if namespace.Image != nil {
 			flattenNamespace["images_blacklist"] = namespace.Image.BlackListedImages
 		}
+
 		result = append(result, flattenNamespace)
 	}
 	return result
