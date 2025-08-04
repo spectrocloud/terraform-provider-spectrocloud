@@ -175,6 +175,7 @@ Required:
 
 Required:
 
+- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String) Name of the machine pool.
@@ -183,7 +184,6 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
-- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
