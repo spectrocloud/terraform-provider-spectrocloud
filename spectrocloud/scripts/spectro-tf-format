@@ -23,14 +23,14 @@ BUILTIN_TEMPLATING_CONFIG = {
     # Script configuration defaults
     "rules": ["yaml-format"],
     "output_dir": "cluster_configs_yaml",
-    "backup": False,
+    "backup": True,
     
     # YAML processing configuration
     "cloud_config.values": {
         "filename": "{resource_name}_cloud_config.yaml",
         "templating": [
-            {"path": "Cluster.spec.infrastructureRef.name", "variable": "CLUSTER_NAME"},
-            {"path": "AWSCluster.metadata.name", "variable": "CLUSTER_NAME"},
+            # {"path": "Cluster.spec.infrastructureRef.name", "variable": "CLUSTER_NAME"},
+            # {"path": "AWSCluster.metadata.name", "variable": "CLUSTER_NAME"},
         ]
     },
     "machine_pool.node_pool_config": {
@@ -39,13 +39,16 @@ BUILTIN_TEMPLATING_CONFIG = {
             # Control plane paths
             {"path": "KubeadmControlPlane.spec.replicas", "variable": "REPLICAS"},
             {"path": "KubeadmControlPlane.spec.machineTemplate.infrastructureRef.name", "variable": "MACHINE_TEMPLATE_NAME"},
-            {"path": "AWSMachineTemplate.spec.template.metadata.name", "variable": "MACHINE_TEMPLATE_NAME"},
+            
             # Worker pool paths (alternative paths for MachineDeployment)
             {"path": "MachineDeployment.spec.template.spec.infrastructureRef.name", "variable": "MACHINE_TEMPLATE_NAME"},
-            {"path": "AWSMachineTemplate.metadata.name", "variable": "MACHINE_TEMPLATE_NAME"},
             {"path": "MachineDeployment.spec.template.spec.bootstrap.configRef.name", "variable": "KC_TEMPLATE_NAME"},
             {"path": "KubeadmConfigTemplate.metadata.name", "variable": "KC_TEMPLATE_NAME"},
+
+            # {"path": "MachineDeployment.metadata.name", "variable": "POOL_NAME"},
+
             # Common paths (works for both)
+            {"path": "AWSMachineTemplate.metadata.name", "variable": "MACHINE_TEMPLATE_NAME"},
             {"path": "MachineDeployment.spec.replicas", "variable": "REPLICAS"},
             {"path": "AWSMachineTemplate.spec.template.spec.ami.id", "variable": "AMI_ID"},
             {"path": "AWSMachineTemplate.spec.template.spec.instanceType", "variable": "INSTANCE_TYPE"},
@@ -60,11 +63,30 @@ class YAMLTemplater:
     
     def process_yaml(self, yaml_content: str, templating_config: List[Dict[str, str]]) -> Tuple[str, Dict[str, Any]]:
         """Process YAML content and extract variables according to templating config."""
-        documents = self._split_yaml_documents(yaml_content)
+        documents, original_raw_documents = self._split_yaml_documents_with_raw(yaml_content)
         extracted_vars = {}
         
-        for template_config in templating_config:
+        if not documents:
+            print(f"    ⚠️  No valid YAML documents found - returning original content")
+            return yaml_content, extracted_vars
+        
+        print(f"    📄 Processing {len(documents)} parsed documents + {len(original_raw_documents) - len(documents)} raw documents")
+        
+        # Log document types for debugging
+        doc_types = []
+        for i, doc in enumerate(documents):
+            if isinstance(doc, dict) and 'kind' in doc:
+                doc_types.append(f"{doc['kind']}")
+            else:
+                doc_types.append("unknown")
+        print(f"    📋 Document types found: {', '.join(doc_types)}")
+        
+        # Apply conditional logic for worker pools
+        enhanced_templating_config = self._apply_conditional_worker_logic(documents, templating_config)
+        
+        for template_config in enhanced_templating_config:
             doc_type, actual_path = self._parse_document_path(template_config["path"])
+            found = False
             
             for i, doc in enumerate(documents):
                 # If document type is specified, only process matching documents
@@ -78,15 +100,208 @@ class YAMLTemplater:
                         extracted_vars[template_config["variable"]] = value
                         self._replace_value_in_doc(doc, actual_path, f"${{{template_config['variable']}}}")
                         print(f"    ✓ Found {template_config['variable']} = {value} at path {template_config['path']}")
+                        found = True
                         break  # Stop after first match
                 except Exception as e:
                     continue
-            else:
+            
+            if not found:
                 print(f"    ✗ Path {template_config['path']} not found in any document")
         
-        # Reconstruct YAML
-        modified_content = yaml.dump_all(documents, default_flow_style=False, sort_keys=False)
+        # Reconstruct YAML preserving original structure
+        try:
+            modified_content = self._reconstruct_yaml_with_fallback(documents, original_raw_documents, extracted_vars)
+        except Exception as e:
+            print(f"    ⚠️  Error reconstructing YAML: {e} - returning original content")
+            return yaml_content, extracted_vars
+            
         return modified_content, extracted_vars
+
+    def _apply_conditional_worker_logic(self, documents: List[Dict], templating_config: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """Apply conditional logic for worker pools based on name matching."""
+        enhanced_config = templating_config.copy()
+        
+        # Find MachineDeployment and AWSMachineTemplate documents
+        machine_deployment_doc = None
+        aws_machine_template_doc = None
+        
+        for doc in documents:
+            if isinstance(doc, dict) and doc.get('kind') == 'MachineDeployment':
+                machine_deployment_doc = doc
+            elif isinstance(doc, dict) and doc.get('kind') == 'AWSMachineTemplate':
+                aws_machine_template_doc = doc
+        
+        # Only apply logic if both documents exist (indicating this is a worker pool)
+        if machine_deployment_doc and aws_machine_template_doc:
+            # Extract metadata.name from both documents
+            md_name = self._extract_value_from_path(machine_deployment_doc, "metadata.name")
+            aws_template_name = self._extract_value_from_path(aws_machine_template_doc, "metadata.name")
+            
+            print(f"    🔍 Worker pool detected: MachineDeployment.name='{md_name}', AWSMachineTemplate.name='{aws_template_name}'")
+            
+            # Find the variable used for AWSMachineTemplate.metadata.name
+            aws_template_variable = None
+            for config in templating_config:
+                if config.get("path") == "AWSMachineTemplate.metadata.name":
+                    aws_template_variable = config.get("variable")
+                    break
+            
+            if md_name and aws_template_name and aws_template_variable:
+                if md_name == aws_template_name:
+                    # Names match - add conditional rule for MachineDeployment.metadata.name
+                    conditional_rule = {
+                        "path": "MachineDeployment.metadata.name", 
+                        "variable": aws_template_variable
+                    }
+                    enhanced_config.append(conditional_rule)
+                    print(f"    ✅ Names match! Added rule: MachineDeployment.metadata.name → {aws_template_variable}")
+                else:
+                    # Names don't match - don't template MachineDeployment.metadata.name
+                    print(f"    ❌ Names don't match. MachineDeployment.metadata.name will NOT be templated")
+        
+        return enhanced_config
+
+    def _split_yaml_documents_with_raw(self, yaml_content: str) -> Tuple[List[Dict], List[str]]:
+        """Split YAML content into parsed documents and original raw document strings."""
+        # First split into raw document strings
+        raw_documents = yaml_content.split('---')
+        raw_documents = [doc.strip() for doc in raw_documents if doc.strip()]
+        
+        # Try to parse each document
+        parsed_documents = []
+        
+        for i, raw_doc in enumerate(raw_documents):
+            try:
+                parsed_doc = yaml.safe_load(raw_doc)
+                if parsed_doc is not None and isinstance(parsed_doc, dict):
+                    parsed_documents.append(parsed_doc)
+                    print(f"    ✓ Successfully parsed raw document {i+1}")
+                else:
+                    print(f"    ✗ Raw document {i+1} parsed but is not a valid dict")
+            except yaml.YAMLError as e:
+                print(f"    ✗ Could not parse raw document {i+1}: {e}")
+                # We'll keep this as a raw document in the fallback reconstruction
+                continue
+            except Exception as e:
+                print(f"    ✗ Unexpected error parsing raw document {i+1}: {e}")
+                continue
+        
+        return parsed_documents, raw_documents
+
+    def _reconstruct_yaml_with_fallback(self, parsed_docs: List[Dict], raw_docs: List[str], extracted_vars: Dict[str, Any]) -> str:
+        """Reconstruct YAML preserving unparseable documents in original form."""
+        result_parts = []
+        
+        # Track which raw documents were successfully parsed
+        parsed_count = 0
+        
+        for i, raw_doc in enumerate(raw_docs):
+            try:
+                # Try to parse this raw document
+                test_parsed = yaml.safe_load(raw_doc)
+                if test_parsed is not None and isinstance(test_parsed, dict):
+                    # This document was successfully parsed, use the processed version
+                    if parsed_count < len(parsed_docs):
+                        processed_yaml = yaml.dump(parsed_docs[parsed_count], default_flow_style=False, sort_keys=False)
+                        result_parts.append(processed_yaml.strip())
+                        parsed_count += 1
+                    else:
+                        # Fallback to raw if we somehow don't have a parsed version
+                        result_parts.append(raw_doc)
+                else:
+                    # Document didn't parse to a valid dict, use raw
+                    result_parts.append(raw_doc)
+            except:
+                # Document failed to parse, preserve it as-is but try to apply variable substitution manually
+                print(f"    📝 Preserving unparseable document {i+1} with manual variable substitution")
+                substituted_doc = self._apply_manual_variable_substitution(raw_doc, extracted_vars)
+                result_parts.append(substituted_doc)
+        
+        # Join with document separators
+        return '---\n' + '\n---\n'.join(result_parts)
+
+    def _apply_manual_variable_substitution(self, raw_content: str, extracted_vars: Dict[str, Any]) -> str:
+        """Apply variable substitution to raw YAML content that couldn't be parsed."""
+        result = raw_content
+        
+        # First, fix multi-line string formatting issues that cause YAML parsing failures
+        result = self._fix_multiline_yaml_strings(result)
+        
+        # Apply simple string replacements for known patterns
+        # This is a basic approach for common cases
+        for var_name, var_value in extracted_vars.items():
+            # Look for specific patterns that might need replacement
+            if var_name == 'MACHINE_TEMPLATE_NAME':
+                # Replace machine template name references - only in specific contexts
+                # Target infrastructureRef.name specifically (handles nested infrastructureRef)
+                result = re.sub(r'(infrastructureRef:\s*\n(?:.*\n)*?\s*name:\s+)[^\s\n]+', 
+                               f'\\1${{{var_name}}}', result)
+                # Target AWSMachineTemplate metadata.name
+                result = re.sub(r'(AWSMachineTemplate\s*\n.*?metadata:\s*\n.*?name:\s+)[^\s\n]+', 
+                               f'\\1${{{var_name}}}', result, flags=re.DOTALL)
+                # Target MachineDeployment metadata.name (conditional - only when names match)
+                result = re.sub(r'(MachineDeployment\s*\n.*?metadata:\s*\n.*?name:\s+)[^\s\n]+', 
+                               f'\\1${{{var_name}}}', result, flags=re.DOTALL)
+            elif var_name == 'REPLICAS':
+                # Replace replica counts
+                result = re.sub(r'(replicas:\s+)\d+', f'\\1${{{var_name}}}', result)
+        
+        return result
+    
+    def _fix_multiline_yaml_strings(self, yaml_content: str) -> str:
+        """Fix common multi-line string formatting issues in YAML."""
+        lines = yaml_content.split('\n')
+        fixed_lines = []
+        i = 0
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            # Check for lines ending with backslash (shell line continuation)
+            if line.rstrip().endswith('\\'):
+                # Found a multi-line shell command with backslashes
+                # Get the original indentation and YAML list marker
+                stripped_line = line.lstrip()
+                original_indent = len(line) - len(stripped_line)
+                
+                # Extract the command part (everything after the YAML list marker)
+                if stripped_line.startswith('- '):
+                    command_start = stripped_line[2:].rstrip()[:-1]  # Remove '- ' and trailing backslash
+                else:
+                    command_start = stripped_line.rstrip()[:-1]  # Just remove backslash
+                
+                # Collect all parts of the command
+                command_parts = [command_start.strip()]
+                i += 1
+                
+                # Collect continuation lines
+                while i < len(lines):
+                    current_line = lines[i]
+                    if current_line.strip().endswith('\\'):
+                        # This is a continuation line
+                        command_parts.append(current_line.strip()[:-1])  # Remove backslash
+                        i += 1
+                    else:
+                        # This is the final line of the command
+                        command_parts.append(current_line.strip())
+                        i += 1
+                        break
+                
+                # Join the command parts with actual newlines
+                # This preserves the original shell command structure  
+                full_command = '\\n'.join(command_parts)
+                
+                # Escape double quotes within the command for proper YAML formatting
+                escaped_command = full_command.replace('"', '\\"')
+                
+                # Reconstruct the YAML list item with proper indentation
+                indent = ' ' * original_indent
+                fixed_lines.append(f'{indent}- "{escaped_command}"')
+            else:
+                fixed_lines.append(line)
+                i += 1
+        
+        return '\n'.join(fixed_lines)
 
     def _split_yaml_documents(self, yaml_content: str) -> List[Dict]:
         """Split multi-document YAML content into individual parsed documents."""
@@ -94,10 +309,169 @@ class YAMLTemplater:
             # Use yaml.safe_load_all to properly parse multi-document YAML
             documents = list(yaml.safe_load_all(yaml_content))
             # Filter out None documents
-            return [doc for doc in documents if doc is not None]
+            valid_docs = [doc for doc in documents if doc is not None and isinstance(doc, dict)]
+            if not valid_docs:
+                print(f"    Warning: No valid YAML documents found in content with standard parser")
+                # Try individual parsing as fallback
+                return self._parse_yaml_documents_individually(yaml_content)
+            return valid_docs
         except yaml.YAMLError as e:
-            print(f"    Warning: Could not parse YAML: {e}")
-            return []
+            print(f"    Warning: Could not parse YAML with standard parser: {e}")
+            # Always try individual document parsing as fallback
+            return self._parse_yaml_documents_individually(yaml_content)
+    
+    def _parse_yaml_documents_individually(self, yaml_content: str) -> List[Dict]:
+        """Try to parse YAML documents individually with multiple strategies."""
+        valid_docs = []
+        
+        # Split on document separators
+        yaml_docs = yaml_content.split('---')
+        
+        for i, doc_content in enumerate(yaml_docs):
+            doc_content = doc_content.strip()
+            if not doc_content:
+                continue
+                
+            parsed_doc = None
+            parsing_method = "unknown"
+            
+            # Strategy 1: Regular YAML parsing
+            try:
+                parsed_doc = yaml.safe_load(doc_content)
+                if parsed_doc is not None and isinstance(parsed_doc, dict):
+                    parsing_method = "standard"
+                else:
+                    parsed_doc = None
+            except yaml.YAMLError:
+                parsed_doc = None
+            
+            # Strategy 2: Try with custom YAML loader that's more permissive
+            if parsed_doc is None:
+                try:
+                    from yaml import SafeLoader
+                    class PermissiveLoader(SafeLoader):
+                        pass
+                    
+                    # Add custom handling for problematic constructs
+                    def construct_undefined(loader, node):
+                        if isinstance(node, yaml.ScalarNode):
+                            return loader.construct_scalar(node)
+                        elif isinstance(node, yaml.SequenceNode):
+                            return loader.construct_sequence(node)
+                        elif isinstance(node, yaml.MappingNode):
+                            return loader.construct_mapping(node)
+                        return None
+                    
+                    PermissiveLoader.add_constructor(None, construct_undefined)
+                    
+                    parsed_doc = yaml.load(doc_content, Loader=PermissiveLoader)
+                    if parsed_doc is not None and isinstance(parsed_doc, dict):
+                        parsing_method = "permissive"
+                    else:
+                        parsed_doc = None
+                except Exception:
+                    parsed_doc = None
+            
+            # Strategy 3: Try with line-by-line reconstruction for common issues
+            if parsed_doc is None:
+                try:
+                    cleaned_content = self._clean_yaml_content(doc_content)
+                    parsed_doc = yaml.safe_load(cleaned_content)
+                    if parsed_doc is not None and isinstance(parsed_doc, dict):
+                        parsing_method = "cleaned"
+                    else:
+                        parsed_doc = None
+                except Exception:
+                    parsed_doc = None
+            
+            if parsed_doc is not None:
+                valid_docs.append(parsed_doc)
+                print(f"    ✓ Successfully parsed YAML document {i+1} using {parsing_method} method")
+            else:
+                print(f"    ✗ Could not parse YAML document {i+1} with any method")
+                # Show a snippet for debugging
+                lines = doc_content.split('\n')
+                if len(lines) > 10:
+                    snippet = '\n'.join(lines[:5]) + '\n  ... (' + str(len(lines)-10) + ' more lines) ...\n' + '\n'.join(lines[-5:])
+                else:
+                    snippet = doc_content
+                print(f"      Content snippet:\n{snippet}")
+        
+        print(f"    → Successfully parsed {len(valid_docs)} out of {len([d for d in yaml_docs if d.strip()])} documents")
+        return valid_docs
+    
+    def _clean_yaml_content(self, yaml_content: str) -> str:
+        """Clean YAML content to fix common structural issues."""
+        lines = yaml_content.split('\n')
+        cleaned_lines = []
+        
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            
+            # Skip empty lines
+            if not stripped:
+                cleaned_lines.append(line)
+                continue
+            
+            # Check for lines that look like standalone values without proper YAML structure
+            # This often happens with IP addresses or hostnames in configuration files
+            if ':' not in stripped and not stripped.startswith('-') and not stripped.startswith('#'):
+                # Check if this looks like a problematic line pattern
+                if (re.match(r'^\d+\.\d+\.\d+\.\d+\s+', stripped) or 
+                    re.match(r'^[a-zA-Z0-9\-\.]+\s+[a-zA-Z0-9\-\.]+\s*$', stripped)):
+                    
+                    # Preserve leading whitespace but comment out the problematic line
+                    leading_spaces = len(line) - len(line.lstrip())
+                    if leading_spaces > 0:
+                        # If it has indentation, it might be part of a multiline string - keep it
+                        cleaned_lines.append(line)
+                    else:
+                        # Top-level problematic line - comment it out
+                        cleaned_lines.append(f"# {line}")
+                    continue
+            
+            # Keep all other lines as-is
+            cleaned_lines.append(line)
+        
+        return '\n'.join(cleaned_lines)
+    
+    def _preprocess_yaml_content(self, yaml_content: str) -> str:
+        """Preprocess YAML content to fix common parsing issues."""
+        lines = yaml_content.split('\n')
+        processed_lines = []
+        
+        in_multiline_string = False
+        current_indent = 0
+        
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            
+            # Skip empty lines
+            if not stripped:
+                processed_lines.append(line)
+                continue
+            
+            # Check if this looks like a problematic line (IP address or hostname without proper YAML structure)
+            if (re.match(r'^\d+\.\d+\.\d+\.\d+\s+', stripped) or 
+                re.match(r'^[a-zA-Z0-9\-\.]+\s+[a-zA-Z0-9\-\.]+', stripped)) and ':' not in stripped:
+                
+                # This looks like a hosts file entry or similar - quote it as a string
+                # Check if we're inside a multiline string context
+                leading_spaces = len(line) - len(line.lstrip())
+                
+                # If this line doesn't have proper YAML structure, treat it as content
+                if leading_spaces > 0:
+                    # Preserve the line as-is if it's properly indented (likely part of a multiline string)
+                    processed_lines.append(line)
+                else:
+                    # This is a top-level line that doesn't look like YAML - skip or comment it out
+                    processed_lines.append(f"# {line}")
+                continue
+            
+            # For all other lines, keep them as-is
+            processed_lines.append(line)
+        
+        return '\n'.join(processed_lines)
     
     def _extract_value_from_path(self, doc: Dict, path: str) -> Any:
         """Extract value from nested dictionary using dot notation path."""
@@ -186,10 +560,11 @@ class YAMLTemplater:
 class SpectroTerraformFormatter:
     """Spectro Terraform Formatter - Built-in YAML processing for Spectro Cloud"""
     
-    def __init__(self, output_dir: str = None, backup: bool = None, format_tf: bool = True):
+    def __init__(self, output_dir: str = None, backup: bool = None, format_tf: bool = True, only_yaml_format: bool = True):
         self.output_dir = output_dir or BUILTIN_TEMPLATING_CONFIG["output_dir"]
         self.backup = backup if backup is not None else BUILTIN_TEMPLATING_CONFIG["backup"]
         self.format_tf = format_tf
+        self.only_yaml_format = only_yaml_format
     
     def process_file(self, tf_file_path: str) -> None:
         """Process a Terraform file with built-in Spectro Cloud configuration"""
@@ -257,6 +632,9 @@ class SpectroTerraformFormatter:
         # Process each configured field (skip script configuration)
         script_config_keys = {"rules", "output_dir", "backup"}
         
+        # Check if we should skip templating (only extract YAML)
+        only_yaml_format = self.only_yaml_format
+        
         for field_path, field_config in BUILTIN_TEMPLATING_CONFIG.items():
             # Skip script configuration fields
             if field_path in script_config_keys:
@@ -270,14 +648,18 @@ class SpectroTerraformFormatter:
                 for resource_name, original_values, yaml_content in extractions:
                     yaml_file = output_dir / field_config["filename"].format(resource_name=resource_name)
                     
-                    # Process templating if configured
+                    # Process templating if configured and not in only_yaml_format mode
                     final_yaml_content = yaml_content
                     resource_overrides = {}
                     
-                    if field_config.get("templating"):
+                    if not only_yaml_format and field_config.get("templating"):
                         templater = YAMLTemplater()
                         final_yaml_content, resource_overrides = templater.process_yaml(yaml_content, field_config["templating"])
                         print(f"    → Extracted {len(resource_overrides)} variables: {list(resource_overrides.keys())}")
+                    elif only_yaml_format:
+                        # In only_yaml_format mode, preserve the content exactly as-is
+                        final_yaml_content = yaml_content
+                        print(f"    → Skipping templating and preserving original format (only_yaml_format=True)")
                     
                     self._write_yaml_file(yaml_file, final_yaml_content)
                     created_files.append(str(yaml_file))
@@ -291,8 +673,8 @@ class SpectroTerraformFormatter:
                         modified_content, "values", original_values, file_reference
                     )
                     
-                    # Store overrides for injection
-                    if resource_overrides:
+                    # Store overrides for injection (only if not in only_yaml_format mode)
+                    if not only_yaml_format and resource_overrides:
                         all_overrides[f"cloud_config_{resource_name}"] = resource_overrides
                     
                     print(f"    → Replaced cloud_config.values with {file_reference}")
@@ -303,14 +685,18 @@ class SpectroTerraformFormatter:
                 for resource_name, pool_name, original_config, yaml_content in extractions:
                     yaml_file = output_dir / field_config["filename"].format(resource_name=resource_name, pool_name=pool_name)
                     
-                    # Process templating if configured
+                    # Process templating if configured and not in only_yaml_format mode
                     final_yaml_content = yaml_content
                     resource_overrides = {}
                     
-                    if field_config.get("templating"):
+                    if not only_yaml_format and field_config.get("templating"):
                         templater = YAMLTemplater()
                         final_yaml_content, resource_overrides = templater.process_yaml(yaml_content, field_config["templating"])
                         print(f"    → Extracted {len(resource_overrides)} variables: {list(resource_overrides.keys())}")
+                    elif only_yaml_format:
+                        # In only_yaml_format mode, preserve the content exactly as-is
+                        final_yaml_content = yaml_content
+                        print(f"    → Skipping templating and preserving original format (only_yaml_format=True)")
                     
                     self._write_yaml_file(yaml_file, final_yaml_content)
                     created_files.append(str(yaml_file))
@@ -324,17 +710,120 @@ class SpectroTerraformFormatter:
                         modified_content, "node_pool_config", original_config, file_reference
                     )
                     
-                    # Store overrides for injection
-                    if resource_overrides:
+                    # Store overrides for injection (only if not in only_yaml_format mode)
+                    if not only_yaml_format and resource_overrides:
                         all_overrides[f"machine_pool_{resource_name}_{pool_name}"] = resource_overrides
                     
                     print(f"    → Replaced machine_pool.node_pool_config with {file_reference}")
         
-        # Inject overrides into terraform file
-        if all_overrides:
+        # Inject overrides into terraform file (only if not in only_yaml_format mode)
+        if not only_yaml_format and all_overrides:
             modified_content = self._inject_overrides(modified_content, all_overrides)
+            print(f"    → Injected {len(all_overrides)} override blocks")
+        elif only_yaml_format:
+            print(f"    → Skipping overrides injection (only_yaml_format=True)")
+        
+        # Post-process YAML files to fix preKubeadmCommands formatting
+        if created_files:
+            self._fix_prekubeadm_commands(created_files)
         
         return modified_content, created_files
+    
+    def _fix_prekubeadm_commands(self, created_files: List[str]) -> None:
+        """Fix preKubeadmCommands formatting to use single-line echo commands with \n sequences"""
+        print(f"\n🔧 Fixing preKubeadmCommands formatting in {len(created_files)} files...")
+        
+        fixed_count = 0
+        for file_path in created_files:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                original_content = content
+                
+                # Process the content line by line
+                lines = content.split('\n')
+                fixed_lines = []
+                i = 0
+                in_prekubeadm_section = False
+                
+                while i < len(lines):
+                    line = lines[i]
+                    
+                    # Check if we're entering or leaving preKubeadmCommands section
+                    if 'preKubeadmCommands:' in line:
+                        in_prekubeadm_section = True
+                        fixed_lines.append(line)
+                        i += 1
+                        continue
+                    elif in_prekubeadm_section and line.strip() and not line.strip().startswith('-') and not line.startswith('    '):
+                        # We've left the preKubeadmCommands section
+                        in_prekubeadm_section = False
+                    
+                    # If we're in preKubeadmCommands section and find a multi-line echo command
+                    if (in_prekubeadm_section and 
+                        line.strip().startswith('- sudo echo -e "') and 
+                        line.rstrip().endswith('\\')):
+                        
+                        # This is a multi-line echo command that needs fixing
+                        echo_parts = []
+                        
+                        # Extract the first part (remove the leading format and trailing backslash)
+                        first_part = line.strip()[len('- sudo echo -e "'):-1]  # Remove '- sudo echo -e "' and '\'
+                        echo_parts.append(first_part)
+                        i += 1
+                        
+                        # Collect all continuation lines
+                        while i < len(lines) and lines[i].rstrip().endswith('\\'):
+                            continuation = lines[i].strip()[:-1]  # Remove trailing backslash
+                            echo_parts.append(continuation)
+                            i += 1
+                        
+                        # Get the final line (without backslash but with closing quote and redirect)
+                        if i < len(lines):
+                            final_line = lines[i].strip()
+                            if final_line.endswith('" >> /etc/hosts'):
+                                final_part = final_line[:-len('" >> /etc/hosts')]
+                                echo_parts.append(final_part)
+                                i += 1
+                            else:
+                                # Fallback: take the whole final line and adjust
+                                echo_parts.append(final_line.rstrip('"'))
+                                i += 1
+                        
+                        # Reconstruct as single line with \n sequences
+                        full_echo_content = '\\n'.join(echo_parts)
+                        
+                        # Get the original indentation
+                        original_indent = len(line) - len(line.lstrip())
+                        indent = ' ' * original_indent
+                        
+                        # Create the fixed single-line command
+                        fixed_line = f'{indent}- sudo echo -e "{full_echo_content}" >> /etc/hosts'
+                        fixed_lines.append(fixed_line)
+                        
+                    else:
+                        # Regular line, keep as-is
+                        fixed_lines.append(line)
+                        i += 1
+                
+                # Join the fixed lines
+                fixed_content = '\n'.join(fixed_lines)
+                
+                # Only write if content changed
+                if fixed_content != original_content:
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(fixed_content)
+                    fixed_count += 1
+                    print(f"    ✅ Fixed preKubeadmCommands in {Path(file_path).name}")
+                
+            except Exception as e:
+                print(f"    ❌ Error processing {Path(file_path).name}: {e}")
+        
+        if fixed_count > 0:
+            print(f"    → Fixed preKubeadmCommands formatting in {fixed_count} files")
+        else:
+            print(f"    → No preKubeadmCommands fixes needed")
     
     def _extract_block_content(self, content: str, start_pos: int) -> str:
         """Extract block content from start_pos to matching closing brace"""
@@ -430,16 +919,16 @@ class SpectroTerraformFormatter:
                 if resource_matches:
                     resource_name = resource_matches[-1].group(1)
                     
-                    # Determine pool type and name
+                    # Start with a basic fallback name (will be overridden by YAML extraction if available)
                     if 'control_plane = true' in pool_block:
-                        pool_name = "control-plane-pool"
+                        pool_name = f"{resource_name}-cp"  # Fallback for control plane
                     else:
-                        pool_name = "worker-pool"
+                        pool_name = f"{resource_name}-worker"  # Fallback for worker
                     
                     # Unescape the string to get actual YAML content
                     yaml_content = self._unescape_terraform_string(quoted_string)
                     
-                    # Try to extract actual name from YAML content for better naming
+                    # Try to extract actual name from YAML content for better naming (but ensure uniqueness)
                     if 'name:' in yaml_content:
                         name_match = re.search(r'name:\s*([^\n\r]+)', yaml_content)
                         if name_match:
@@ -447,7 +936,16 @@ class SpectroTerraformFormatter:
                             # Clean up template variables and use as pool name if valid
                             cleaned_name = re.sub(r'\s*\{\{.*?\}\}', '', extracted_name).strip()
                             if cleaned_name and not cleaned_name.startswith('${'):
-                                pool_name = cleaned_name
+                                # Check if this name is already used and add counter if needed
+                                already_used_names = [name for _, name, _, _ in extractions]
+                                if cleaned_name not in already_used_names:
+                                    pool_name = cleaned_name  # Use extracted name if unique
+                                else:
+                                    # Name already exists, add counter
+                                    counter = 2
+                                    while f"{cleaned_name}_{counter}" in already_used_names:
+                                        counter += 1
+                                    pool_name = f"{cleaned_name}_{counter}"
                     
                     print(f"  Found machine_pool.node_pool_config for resource: {resource_name}, pool: {pool_name} (length: {len(quoted_string)} chars)")
                     extractions.append((resource_name, pool_name, quoted_string, yaml_content))
@@ -507,7 +1005,7 @@ class SpectroTerraformFormatter:
         else:
             content = quoted_string
         
-        # Unescape common terraform escapes
+        # For normal content, do standard unescaping
         content = content.replace('\\"', '"')
         content = content.replace('\\n', '\n')
         content = content.replace('\\r', '\r')
@@ -710,8 +1208,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 Examples:
-  # Process terraform file with built-in defaults
+  # Process terraform file with defaults (YAML extraction only)
   spectro-tf-format generated.tf
+  
+  # Enable templating and overrides processing
+  spectro-tf-format --with-templating generated.tf
+  
+  # Explicit YAML-only mode (same as default)
+  spectro-tf-format --only-yaml-format generated.tf
   
   # Use custom output directory (default: {BUILTIN_TEMPLATING_CONFIG["output_dir"]})
   spectro-tf-format --output-dir=cluster_configs_yaml generated.tf
@@ -723,6 +1227,7 @@ Examples:
   spectro-tf-format --no-format generated.tf
 
 Built-in Defaults:
+  Mode: YAML extraction only (use --with-templating for full processing)
   Output Directory: {BUILTIN_TEMPLATING_CONFIG["output_dir"]}
   Backup Files: {BUILTIN_TEMPLATING_CONFIG["backup"]}
   Rules: {', '.join(BUILTIN_TEMPLATING_CONFIG["rules"])}
@@ -733,6 +1238,8 @@ Built-in Defaults:
     parser.add_argument('--output-dir', '-o', default=BUILTIN_TEMPLATING_CONFIG["output_dir"], help=f'Output directory for generated files (default: {BUILTIN_TEMPLATING_CONFIG["output_dir"]})')
     parser.add_argument('--no-backup', action='store_true', help='Skip creating backup file')
     parser.add_argument('--no-format', action='store_true', help='Skip automatic terraform fmt formatting')
+    parser.add_argument('--only-yaml-format', action='store_true', help='Only extract YAML to files without templating or overrides (DEFAULT)')
+    parser.add_argument('--with-templating', action='store_true', help='Enable templating and overrides processing')
     
     args = parser.parse_args()
     
@@ -745,10 +1252,20 @@ Built-in Defaults:
         # Use built-in defaults if not overridden
         backup = not args.no_backup if args.no_backup else BUILTIN_TEMPLATING_CONFIG["backup"]
         
+        # Determine only_yaml_format based on flags
+        if args.with_templating and args.only_yaml_format:
+            print("Error: Cannot specify both --with-templating and --only-yaml-format", file=sys.stderr)
+            sys.exit(1)
+        elif args.with_templating:
+            only_yaml_format = False  # Enable templating
+        else:
+            only_yaml_format = True   # Default: YAML-only mode
+        
         formatter = SpectroTerraformFormatter(
             output_dir=args.output_dir,
             backup=backup,
-            format_tf=not args.no_format
+            format_tf=not args.no_format,
+            only_yaml_format=only_yaml_format
         )
         formatter.process_file(args.terraform_file)
     except Exception as e:
