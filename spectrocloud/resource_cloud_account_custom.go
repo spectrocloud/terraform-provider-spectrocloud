@@ -48,7 +48,7 @@ func resourceCloudAccountCustom() *schema.Resource {
 			},
 			"credentials": {
 				Type:        schema.TypeMap,
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
 				Description: "The credentials required for accessing the cloud.",
 				Elem: &schema.Schema{
@@ -148,10 +148,28 @@ func toCloudAccountCustom(d *schema.ResourceData) (*models.V1CustomAccountEntity
 	var overlayID string
 	credentials := make(map[string]string)
 	overlayID = d.Get("private_cloud_gateway_id").(string)
-	credInterface := d.Get("credentials").(map[string]interface{})
 
-	for k, v := range credInterface {
-		credentials[k] = v.(string)
+	// Validate that credentials are provided for create/update operations
+	credInterface, ok := d.GetOk("credentials")
+	if !ok || credInterface == nil {
+		return nil, fmt.Errorf("credentials are required for custom cloud account operations")
+	}
+
+	credMap, ok := credInterface.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("credentials must be a map of string values")
+	}
+
+	if len(credMap) == 0 {
+		return nil, fmt.Errorf("credentials cannot be empty - at least one credential key-value pair is required")
+	}
+
+	for k, v := range credMap {
+		if vStr, ok := v.(string); ok {
+			credentials[k] = vStr
+		} else {
+			return nil, fmt.Errorf("credential value for key '%s' must be a string", k)
+		}
 	}
 
 	account := &models.V1CustomAccountEntity{
@@ -181,16 +199,21 @@ func flattenCloudAccountCustom(d *schema.ResourceData, account *models.V1CustomA
 	if err := d.Set("cloud", account.Kind); err != nil {
 		return diag.FromErr(err), true
 	}
-	// We are not setting credentials because they are masked and considered sensitive.
 
 	return nil, false
 }
 
 func resourceAccountCustomImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	resourceContext := d.Get("context").(string)
-	c := getV1ClientWithResourceContext(m, resourceContext)
+	cloudAccountID, scope, customCloudName, err := ParseResourceCustomCloudImportID(d)
+	if err != nil {
+		return nil, err
+	}
+	d.SetId(cloudAccountID + ":" + scope)
+	_ = d.Set("context", scope)
+	_ = d.Set("cloud", customCloudName)
+	c := getV1ClientWithResourceContext(m, scope)
 
-	err := GetCommonAccount(d, c)
+	err = GetCommonAccount(d, c)
 	if err != nil {
 		return nil, err
 	}
@@ -200,8 +223,5 @@ func resourceAccountCustomImport(ctx context.Context, d *schema.ResourceData, m 
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
 
-	// Return the resource data. In most cases, this method is only used to
-	// import one resource at a time, so you should return the resource data
-	// in a slice with a single element.
 	return []*schema.ResourceData{d}, nil
 }
