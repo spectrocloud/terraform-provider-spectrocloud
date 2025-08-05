@@ -1,16 +1,20 @@
+# Example demonstrating workspace with GPU support, cluster-specific resource allocations, and cluster names
+
 data "spectrocloud_cluster" "cluster1" {
-  name = "tf-si-cluster"
+  name = "api-aks-cazfl"
 }
 
 resource "spectrocloud_workspace" "workspace" {
   name        = "wsp-tf-123"
   description = "test123"
   workspace_quota {
-    cpu    = 5
-    memory = 4064
+    cpu    = 16
+    memory = 32768
+    gpu    = 4
   }
   clusters {
     uid = data.spectrocloud_cluster.cluster1.id
+    # cluster_name is computed automatically by fetching cluster details from the API
   }
 
   cluster_rbac_binding {
@@ -35,53 +39,43 @@ resource "spectrocloud_workspace" "workspace" {
     }
   }
 
-  cluster_rbac_binding {
-    type      = "RoleBinding"
-    namespace = "test5ns"
-    role = {
-      kind = "Role"
-      name = "testrolefromns3"
-    }
-    subjects {
-      type = "User"
-      name = "testUserRoleFromNS3"
-    }
-    subjects {
-      type = "Group"
-      name = "testGroupFromNS3"
-    }
-    subjects {
-      type      = "ServiceAccount"
-      name      = "testrolesubject3"
-      namespace = "testrolenamespace"
-    }
-  }
-
   namespaces {
-    name = "test5ns"
+    name = "multi-cluster-ns"
     resource_allocation = {
-      cpu_cores  = "2"
-      memory_MiB = "2048"
+      cpu_cores    = "8"
+      memory_MiB   = "8192"
+      gpu_limit    = "2"
+      gpu_provider = "nvidia"
     }
 
-    images_blacklist = ["1", "2", "3"]
+    # Cluster-specific resource allocations
+    cluster_resource_allocations {
+      uid = data.spectrocloud_cluster.cluster1.id
+      resource_allocation = {
+        cpu_cores  = "4"
+        memory_MiB = "4096"
+        gpu_limit  = "1"
+      }
+    }
+
+    images_blacklist = ["nginx:latest", "redis:latest"]
   }
 
-  backup_policy {
-    schedule                  = "0 0 * * SUN"
-    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
-    prefix                    = "prod-backup"
-    expiry_in_hour            = 7200
-    include_disks             = false
-    include_cluster_resources = true
+  # backup_policy {
+  #   schedule                  = "0 0 * * SUN"
+  #   backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+  #   prefix                    = "prod-backup"
+  #   expiry_in_hour            = 7200
+  #   include_disks             = false
+  #   include_cluster_resources = true
 
-    namespaces           = ["test5ns"]
-    include_all_clusters = true
-    cluster_uids         = [data.spectrocloud_cluster.cluster1.id]
-  }
+  #   namespaces           = ["test5ns", "multi-cluster-ns"]
+  #   include_all_clusters = true
+  #   cluster_uids         = [data.spectrocloud_cluster.cluster1.id]
+  # }
 
 }
 
-data "spectrocloud_backup_storage_location" "bsl" {
-  name = "test-aws-s3"
-}
+# data "spectrocloud_backup_storage_location" "bsl" {
+#   name = "test-aws-s3"
+# }
