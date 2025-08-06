@@ -3,9 +3,10 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestResourceCustomCloudAccount(t *testing.T) {
@@ -145,8 +146,15 @@ func TestResourceCustomCloudAccountUpdate(t *testing.T) {
 	d := resourceCloudAccountCustom().TestResourceData()
 
 	d.SetId("existing-id")
+	_ = d.Set("name", "test-name")
 	_ = d.Set("context", "updated-context")
 	_ = d.Set("cloud", "updated-cloud")
+	_ = d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
+	cred := map[string]interface{}{
+		"username": "test-username",
+		"password": "test-password",
+	}
+	_ = d.Set("credentials", cred)
 	diags := resourceCloudAccountCustomUpdate(ctx, d, unitTestMockAPIClient)
 
 	assert.Len(t, diags, 0)
