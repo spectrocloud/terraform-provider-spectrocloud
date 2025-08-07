@@ -79,7 +79,11 @@ func flattenClusterNamespaces(items []*models.V1ClusterNamespaceResource) []inte
 		flattenResourceAllocation["cpu_cores"] = strconv.Itoa(int(math.Round(namespace.Spec.ResourceAllocation.CPUCores)))
 		flattenResourceAllocation["memory_MiB"] = strconv.Itoa(int(math.Round(namespace.Spec.ResourceAllocation.MemoryMiB)))
 		flattenResourceAllocation["gpu_limit"] = strconv.Itoa(int(namespace.Spec.ResourceAllocation.GpuConfig.Limit))
-		flattenResourceAllocation["gpu_provider"] = namespace.Spec.ResourceAllocation.GpuConfig.Provider
+		if namespace.Spec.ResourceAllocation.GpuConfig.Provider != nil {
+			flattenResourceAllocation["gpu_provider"] = *namespace.Spec.ResourceAllocation.GpuConfig.Provider
+		} else {
+			flattenResourceAllocation["gpu_provider"] = "nvidia"
+		}
 
 		flattenNamespace["resource_allocation"] = flattenResourceAllocation
 		result = append(result, flattenNamespace)
