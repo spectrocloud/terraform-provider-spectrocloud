@@ -86,7 +86,7 @@ func resourceWorkspace() *schema.Resource {
 			},
 			"backup_policy":        schemas.BackupPolicySchema(),
 			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
-			"namespaces":           schemas.ClusterNamespacesSchema(),
+			"namespaces":           schemas.WorkspaceNamespacesSchema(),
 		},
 	}
 }
