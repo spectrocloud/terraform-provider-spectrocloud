@@ -37,9 +37,22 @@ func toClusterNamespace(clusterRbacBinding interface{}) *models.V1ClusterNamespa
 		return nil
 	}
 
+	gpu_limit, err := strconv.ParseInt(resourceAllocation["gpu_limit"].(string), 10, 32)
+	if err != nil {
+		return nil
+	}
+	gpu_provider := "nvidia"
+	if provider, exists := resourceAllocation["gpu_provider"]; exists {
+		gpu_provider = provider.(string)
+	}
+
 	resource_alloc := &models.V1ClusterNamespaceResourceAllocation{
 		CPUCores:  cpu_cores,
 		MemoryMiB: memory_MiB,
+		GpuConfig: &models.V1GpuConfig{
+			Limit:    int32(gpu_limit),
+			Provider: &gpu_provider,
+		},
 	}
 
 	ns := &models.V1ClusterNamespaceResourceInputEntity{
@@ -65,6 +78,12 @@ func flattenClusterNamespaces(items []*models.V1ClusterNamespaceResource) []inte
 		flattenResourceAllocation := make(map[string]interface{})
 		flattenResourceAllocation["cpu_cores"] = strconv.Itoa(int(math.Round(namespace.Spec.ResourceAllocation.CPUCores)))
 		flattenResourceAllocation["memory_MiB"] = strconv.Itoa(int(math.Round(namespace.Spec.ResourceAllocation.MemoryMiB)))
+		flattenResourceAllocation["gpu_limit"] = strconv.Itoa(int(namespace.Spec.ResourceAllocation.GpuConfig.Limit))
+		if namespace.Spec.ResourceAllocation.GpuConfig.Provider != nil {
+			flattenResourceAllocation["gpu_provider"] = *namespace.Spec.ResourceAllocation.GpuConfig.Provider
+		} else {
+			flattenResourceAllocation["gpu_provider"] = "nvidia"
+		}
 
 		flattenNamespace["resource_allocation"] = flattenResourceAllocation
 		result = append(result, flattenNamespace)
