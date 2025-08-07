@@ -47,6 +47,7 @@ resource "spectrocloud_platform_setting" "platform_settings" {
 
 ### Optional
 
+- `automatic_cluster_role_binding` (Boolean) Enables automatic cluster role binding for clusters deployed under a tenant or project. Setting it to `false` disables automatic cluster role binding.
 - `cluster_auto_remediation` (Boolean) Enables automatic remediation for unhealthy nodes in Palette-provisioned clusters by replacing them with new nodes. Disabling this feature prevents auto-remediation. Not applicable to `EKS`, `AKS`, or `TKE` clusters.
 - `context` (String) Defines the scope of the platform setting. Valid values are `project` or `tenant`. By default, it is set to `tenant`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `enable_auto_remediation` (Boolean) Enables automatic remediation. set only with `project' context
