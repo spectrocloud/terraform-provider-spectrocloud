@@ -5,3 +5,4 @@ b31282f23ff1bc599cdc238c470b6452df449b32:examples/resources/spectrocloud_sso/res
 ae07c957c6f25eca1eb1843aa8c304365ab18768:examples/resources/spectrocloud_cluster_profile_import/profile_import.json:private-key:1
 ae07c957c6f25eca1eb1843aa8c304365ab18768:examples/resources/spectrocloud_cluster_profile_import/profile_import.json:private-key:1
 1f348b293deabf1ac8314cff0a0ab8f4b7734eb8:examples/e2e/libvirt_konvoy_gpu/resource_clusterprofile.tf:generic-api-key:126
+e45d8fb6759bf34144900f82c480d4f20c37fba2:examples/e2e/maas/resource_clusterprofile.tf:generic-api-key:24
