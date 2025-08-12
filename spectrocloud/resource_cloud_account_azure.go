@@ -71,16 +71,16 @@ func resourceCloudAccountAzure() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "AzurePublicCloud",
-				ValidateFunc: validation.StringInSlice([]string{"AzurePublicCloud", "AzureUSGovernmentCloud", "AzureUSSecretCloud"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"AzurePublicCloud", "AzureUSGovernmentCloud"}, false), // need to add support for "AzureUSSecretCloud"
 				Description: `The Azure partition in which the cloud account is located. 
-Can be 'AzurePublicCloud' for standard Azure regions or 'AzureUSGovernmentCloud' for Azure GovCloud (US) regions or 'AzureUSSecretCloud' for Azure Secret Cloud regions.
+Can be 'AzurePublicCloud' for standard Azure regions or 'AzureUSGovernmentCloud' for Azure GovCloud (US) regions.
 Default is 'AzurePublicCloud'.`,
 			},
-			"tls_cert": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "TLS certificate for authentication. This field is only allowed when cloud is set to 'AzureUSSecretCloud'.",
-			},
+			// "tls_cert": {
+			// 	Type:        schema.TypeString,
+			// 	Optional:    true,
+			// 	Description: "TLS certificate for authentication. This field is only allowed when cloud is set to 'AzureUSSecretCloud'.",
+			// },
 		},
 	}
 }
@@ -93,9 +93,9 @@ func resourceCloudAccountAzureCreate(ctx context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	// Validate tls_cert is only used with AzureUSSecretCloud
-	if err := validateTlsCertConfiguration(d); err != nil {
-		return diag.FromErr(err)
-	}
+	// if err := validateTlsCertConfiguration(d); err != nil {
+	// 	return diag.FromErr(err)
+	// }
 
 	account := toAzureAccount(d)
 
@@ -163,11 +163,11 @@ func flattenCloudAccountAzure(d *schema.ResourceData, account *models.V1AzureAcc
 			return diag.FromErr(err), true
 		}
 	}
-	if account.Spec.TLS != nil && account.Spec.TLS.Cert != "" {
-		if err := d.Set("tls_cert", account.Spec.TLS.Cert); err != nil {
-			return diag.FromErr(err), true
-		}
-	}
+	// if account.Spec.TLS != nil && account.Spec.TLS.Cert != "" {
+	// 	if err := d.Set("tls_cert", account.Spec.TLS.Cert); err != nil {
+	// 		return diag.FromErr(err), true
+	// 	}
+	// }
 	return nil, false
 }
 
@@ -179,9 +179,9 @@ func resourceCloudAccountAzureUpdate(ctx context.Context, d *schema.ResourceData
 	var diags diag.Diagnostics
 
 	// Validate tls_cert is only used with AzureUSSecretCloud
-	if err := validateTlsCertConfiguration(d); err != nil {
-		return diag.FromErr(err)
-	}
+	// if err := validateTlsCertConfiguration(d); err != nil {
+	// 	return diag.FromErr(err)
+	// }
 
 	account := toAzureAccount(d)
 
@@ -241,26 +241,26 @@ func toAzureAccount(d *schema.ResourceData) *models.V1AzureAccount {
 	}
 
 	// add TLS configuration if tls_cert is provided
-	if tlsCert, ok := d.GetOk("tls_cert"); ok && tlsCert.(string) != "" {
-		account.Spec.TLS = &models.V1AzureSecretTLSConfig{
-			Cert: tlsCert.(string),
-		}
-	}
+	// if tlsCert, ok := d.GetOk("tls_cert"); ok && tlsCert.(string) != "" {
+	// 	account.Spec.TLS = &models.V1AzureSecretTLSConfig{
+	// 		Cert: tlsCert.(string),
+	// 	}
+	// }
 
 	return account
 }
 
-func validateTlsCertConfiguration(d *schema.ResourceData) error {
-	cloud := d.Get("cloud").(string)
-	tlsCert := d.Get("tls_cert").(string)
+// func validateTlsCertConfiguration(d *schema.ResourceData) error {
+// 	cloud := d.Get("cloud").(string)
+// 	tlsCert := d.Get("tls_cert").(string)
 
-	// If tls_cert is provided but cloud is not AzureUSSecretCloud, return an error
-	if tlsCert != "" && cloud != "AzureUSSecretCloud" {
-		return fmt.Errorf("tls_cert can only be set when cloud is 'AzureUSSecretCloud', but cloud is set to '%s'", cloud)
-	}
+// 	// If tls_cert is provided but cloud is not AzureUSSecretCloud, return an error
+// 	if tlsCert != "" && cloud != "AzureUSSecretCloud" {
+// 		return fmt.Errorf("tls_cert can only be set when cloud is 'AzureUSSecretCloud', but cloud is set to '%s'", cloud)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func resourceAccountAzureImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	resourceContext := d.Get("context").(string)

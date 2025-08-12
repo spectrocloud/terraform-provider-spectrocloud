@@ -31,19 +31,3 @@ resource "spectrocloud_cloudaccount_azure" "azure_government" {
   cloud   = "AzureUSGovernmentCloud"
   context = "project"
 }
-
-# Example 3: Azure US Secret Cloud account with TLS certificate
-resource "spectrocloud_cloudaccount_azure" "azure_secret" {
-  name                = "azure-secret-account"
-  azure_tenant_id     = var.azure_secret_tenant_id
-  azure_client_id     = var.azure_secret_client_id
-  azure_client_secret = var.azure_secret_client_secret
-
-  cloud   = "AzureUSSecretCloud"
-  context = "project"
-
-  # TLS certificate is only allowed when cloud is set to "AzureUSSecretCloud"
-  tls_cert = var.azure_secret_tls_cert
-
-  tenant_name = "Secret Cloud Tenant"
-}
