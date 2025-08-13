@@ -3,11 +3,13 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"strings"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
@@ -20,6 +22,9 @@ func resourceWorkspace() *schema.Resource {
 		DeleteContext: resourceWorkspaceDelete,
 
 		SchemaVersion: 2,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceWorkspaceImport,
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -54,6 +59,11 @@ func resourceWorkspace() *schema.Resource {
 							Optional:    true,
 							Description: "Memory in Mib that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.",
 						},
+						"gpu": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "GPU that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.",
+						},
 					},
 				},
 			},
@@ -67,12 +77,16 @@ func resourceWorkspace() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"cluster_name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
 					},
 				},
 			},
 			"backup_policy":        schemas.BackupPolicySchema(),
 			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
-			"namespaces":           schemas.ClusterNamespacesSchema(),
+			"namespaces":           schemas.WorkspaceNamespacesSchema(),
 		},
 	}
 }
@@ -82,7 +96,7 @@ func resourceWorkspaceCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 	var diags diag.Diagnostics
 
-	workspace := toWorkspace(d)
+	workspace := toWorkspace(d, c)
 
 	uid, err := c.CreateWorkspace(workspace)
 	if err != nil {
@@ -115,7 +129,7 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 	if err := d.Set("workspace_quota", wsQuota); err != nil {
 		return diag.FromErr(err)
 	}
-	fp := flattenWorkspaceClusters(workspace)
+	fp := flattenWorkspaceClusters(workspace, c)
 	if err := d.Set("clusters", fp); err != nil {
 		return diag.FromErr(err)
 	}
@@ -144,10 +158,19 @@ func resourceWorkspaceRead(_ context.Context, d *schema.ResourceData, m interfac
 func flattenWorkspaceQuota(workspace *models.V1Workspace) []interface{} {
 	wsq := make([]interface{}, 0)
 	if workspace.Spec.Quota.ResourceAllocation != nil {
-		wsq = append(wsq, map[string]interface{}{
+		quota := map[string]interface{}{
 			"cpu":    workspace.Spec.Quota.ResourceAllocation.CPUCores,
 			"memory": workspace.Spec.Quota.ResourceAllocation.MemoryMiB,
-		})
+		}
+
+		// Handle GPU configuration if present
+		if workspace.Spec.Quota.ResourceAllocation.GpuConfig != nil {
+			quota["gpu"] = int(workspace.Spec.Quota.ResourceAllocation.GpuConfig.Limit)
+		} else {
+			quota["gpu"] = 0
+		}
+
+		wsq = append(wsq, quota)
 	}
 	return wsq
 }
@@ -180,7 +203,7 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 
 	if d.HasChange("clusters") || d.HasChange("workspace_quota") {
 		// resource allocation should go first because clusters are inside.
-		namespaces := toUpdateWorkspaceNamespaces(d)
+		namespaces := toUpdateWorkspaceNamespaces(d, c)
 		if err := c.UpdateWorkspaceResourceAllocation(d.Id(), namespaces); err != nil {
 			return diag.FromErr(err)
 		}
@@ -196,7 +219,7 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 			}
 		}
 		if d.HasChange("namespaces") {
-			if err := c.UpdateWorkspaceResourceAllocation(d.Id(), toUpdateWorkspaceNamespaces(d)); err != nil {
+			if err := c.UpdateWorkspaceResourceAllocation(d.Id(), toUpdateWorkspaceNamespaces(d, c)); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -246,7 +269,7 @@ func resourceWorkspaceDelete(ctx context.Context, d *schema.ResourceData, m inte
 	return diags
 }
 
-func toWorkspace(d *schema.ResourceData) *models.V1WorkspaceEntity {
+func toWorkspace(d *schema.ResourceData, c *client.V1Client) *models.V1WorkspaceEntity {
 	annotations := make(map[string]string)
 	if len(d.Get("description").(string)) > 0 {
 		annotations["description"] = d.Get("description").(string)
@@ -262,11 +285,40 @@ func toWorkspace(d *schema.ResourceData) *models.V1WorkspaceEntity {
 		Spec: &models.V1WorkspaceSpec{
 			ClusterNamespaces: toWorkspaceNamespaces(d),
 			ClusterRbacs:      toWorkspaceRBACs(d),
-			ClusterRefs:       toClusterRefs(d),
+			ClusterRefs:       toClusterRefs(d, c),
 			Policies:          toWorkspacePolicies(d),
 			Quota:             toQuota(d),
 		},
 	}
 
 	return workspace
+}
+
+func resourceWorkspaceImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	c := getV1ClientWithResourceContext(m, "")
+
+	// The import ID should be the workspace UID
+	workspaceUID := d.Id()
+
+	// Validate that the workspace exists and we can access it
+	workspace, err := c.GetWorkspace(workspaceUID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve workspace for import: %s", err)
+	}
+	if workspace == nil {
+		return nil, fmt.Errorf("workspace with ID %s not found", workspaceUID)
+	}
+
+	// Set the workspace name from the retrieved workspace
+	if err := d.Set("name", workspace.Metadata.Name); err != nil {
+		return nil, err
+	}
+
+	// Read all workspace data to populate the state
+	diags := resourceWorkspaceRead(ctx, d, m)
+	if diags.HasError() {
+		return nil, fmt.Errorf("could not read workspace for import: %v", diags)
+	}
+
+	return []*schema.ResourceData{d}, nil
 }

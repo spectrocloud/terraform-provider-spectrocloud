@@ -2,15 +2,16 @@ package spectrocloud
 
 import (
 	"fmt"
+	"reflect"
+	"sort"
+	"testing"
+	"time"
+
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/require"
-	"reflect"
-	"sort"
-	"testing"
-	"time"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
@@ -1039,6 +1040,10 @@ func TestFlattenClusterNamespaces(t *testing.T) {
 				ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
 					CPUCores:  2,
 					MemoryMiB: 1024,
+					GpuConfig: &models.V1GpuConfig{
+						Limit:    1,
+						Provider: StringPtr("nvidia"),
+					},
 				},
 			},
 		},
@@ -1050,6 +1055,10 @@ func TestFlattenClusterNamespaces(t *testing.T) {
 				ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
 					CPUCores:  4,
 					MemoryMiB: 2048,
+					GpuConfig: &models.V1GpuConfig{
+						Limit:    2,
+						Provider: StringPtr("amd"),
+					},
 				},
 			},
 		},
@@ -1059,15 +1068,19 @@ func TestFlattenClusterNamespaces(t *testing.T) {
 		map[string]interface{}{
 			"name": "namespace1",
 			"resource_allocation": map[string]interface{}{
-				"cpu_cores":  "2",
-				"memory_MiB": "1024",
+				"cpu_cores":    "2",
+				"memory_MiB":   "1024",
+				"gpu_limit":    "1",
+				"gpu_provider": "nvidia",
 			},
 		},
 		map[string]interface{}{
 			"name": "namespace2",
 			"resource_allocation": map[string]interface{}{
-				"cpu_cores":  "4",
-				"memory_MiB": "2048",
+				"cpu_cores":    "4",
+				"memory_MiB":   "2048",
+				"gpu_limit":    "2",
+				"gpu_provider": "amd",
 			},
 		},
 	}
@@ -1081,8 +1094,10 @@ func TestToClusterNamespace(t *testing.T) {
 	clusterRbacBinding := map[string]interface{}{
 		"name": "namespace1",
 		"resource_allocation": map[string]interface{}{
-			"cpu_cores":  "2",
-			"memory_MiB": "1024",
+			"cpu_cores":    "2",
+			"memory_MiB":   "1024",
+			"gpu_limit":    "1",
+			"gpu_provider": "nvidia",
 		},
 	}
 
@@ -1095,6 +1110,10 @@ func TestToClusterNamespace(t *testing.T) {
 			ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
 				CPUCores:  2,
 				MemoryMiB: 1024,
+				GpuConfig: &models.V1GpuConfig{
+					Limit:    1,
+					Provider: StringPtr("nvidia"),
+				},
 			},
 		},
 	}
@@ -1110,15 +1129,19 @@ func TestToClusterNamespaces(t *testing.T) {
 	ns = append(ns, map[string]interface{}{
 		"name": "namespace1",
 		"resource_allocation": map[string]interface{}{
-			"cpu_cores":  "2",
-			"memory_MiB": "1024",
+			"cpu_cores":    "2",
+			"memory_MiB":   "1024",
+			"gpu_limit":    "1",
+			"gpu_provider": "nvidia",
 		},
 	})
 	ns = append(ns, map[string]interface{}{
 		"name": "namespace2",
 		"resource_allocation": map[string]interface{}{
-			"cpu_cores":  "4",
-			"memory_MiB": "2048",
+			"cpu_cores":    "4",
+			"memory_MiB":   "2048",
+			"gpu_limit":    "2",
+			"gpu_provider": "amd",
 		},
 	})
 	_ = resourceData.Set("namespaces", ns)
@@ -1132,6 +1155,10 @@ func TestToClusterNamespaces(t *testing.T) {
 				ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
 					CPUCores:  2,
 					MemoryMiB: 1024,
+					GpuConfig: &models.V1GpuConfig{
+						Limit:    1,
+						Provider: StringPtr("nvidia"),
+					},
 				},
 			},
 		},
@@ -1144,6 +1171,10 @@ func TestToClusterNamespaces(t *testing.T) {
 				ResourceAllocation: &models.V1ClusterNamespaceResourceAllocation{
 					CPUCores:  4,
 					MemoryMiB: 2048,
+					GpuConfig: &models.V1GpuConfig{
+						Limit:    2,
+						Provider: StringPtr("amd"),
+					},
 				},
 			},
 		},

@@ -175,6 +175,7 @@ Required:
 
 Required:
 
+- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String) Name of the machine pool.
@@ -183,7 +184,6 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
-- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
@@ -358,11 +358,7 @@ Optional:
 Required:
 
 - `name` (String) Name of the namespace. This is the name of the Kubernetes namespace in the cluster.
-- `resource_allocation` (Map of String) Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048'}`
-
-Optional:
-
-- `images_blacklist` (List of String) List of images to disallow for the namespace. For example, `['nginx:latest', 'redis:latest']`
+- `resource_allocation` (Map of String) Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu_limit: '1', gpu_provider: 'nvidia'}`
 
 
 <a id="nestedblock--scan_policy"></a>

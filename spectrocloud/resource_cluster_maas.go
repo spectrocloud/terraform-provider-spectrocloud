@@ -233,7 +233,7 @@ func resourceClusterMaas() *schema.Resource {
 						},
 						"azs": {
 							Type:     schema.TypeSet,
-							Optional: true,
+							Required: true,
 							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,

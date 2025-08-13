@@ -63,6 +63,12 @@ func resourcePlatformSetting() *schema.Resource {
 				Description: "Enables automatic remediation for unhealthy nodes in Palette-provisioned clusters by replacing them with new nodes. " +
 					"Disabling this feature prevents auto-remediation. Not applicable to `EKS`, `AKS`, or `TKE` clusters.",
 			},
+			"automatic_cluster_role_binding": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Enables automatic cluster role binding for clusters deployed under a tenant or project. Setting it to `false` disables automatic cluster role binding.",
+			},
 			"non_fips_addon_pack": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -136,6 +142,20 @@ func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnost
 		if sessionTime, ok := d.GetOk("session_timeout"); ok {
 			err = c.UpdateSessionTimeout(tenantUID,
 				&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(sessionTime.(int))})
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+		if automaticClusterRoleBinding, ok := d.GetOk("automatic_cluster_role_binding"); ok {
+			var bindingMode string
+			if automaticClusterRoleBinding.(bool) {
+				bindingMode = "enabled"
+			} else {
+				bindingMode = "disabled"
+			}
+			err = c.UpdateAutomaticClusterRoleBinding(tenantUID,
+				&models.V1TenantClusterRbacSettings{AutomaticClusterRoleBinding: &bindingMode})
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -259,6 +279,17 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 		if err = d.Set("session_timeout", respSessionTimeout.ExpiryTimeMinutes); err != nil {
 			return diag.FromErr(err)
 		}
+
+		// read automatic cluster role binding
+		var respAutomaticClusterRoleBinding *models.V1TenantClusterRbacSettings
+		respAutomaticClusterRoleBinding, err = c.GetAutomaticClusterRoleBinding(tenantUID)
+		if err != nil {
+			return handleReadError(d, err, diags)
+		}
+		if err = d.Set("automatic_cluster_role_binding", respAutomaticClusterRoleBinding.AutomaticClusterRoleBinding != nil && *respAutomaticClusterRoleBinding.AutomaticClusterRoleBinding == "enabled"); err != nil {
+			return diag.FromErr(err)
+		}
+
 		// read login banner
 		var respLoginBanner *models.V1LoginBannerSettings
 		respLoginBanner, err = c.GetLoginBanner(tenantUID)
@@ -367,6 +398,22 @@ func resourcePlatformSettingUpdate(ctx context.Context, d *schema.ResourceData, 
 				}
 			}
 		}
+
+		if ok := d.HasChange("automatic_cluster_role_binding"); ok {
+			automaticClusterRoleBinding := d.Get("automatic_cluster_role_binding")
+			var bindingMode string
+			if automaticClusterRoleBinding.(bool) {
+				bindingMode = "enabled"
+			} else {
+				bindingMode = "disabled"
+			}
+			err = c.UpdateAutomaticClusterRoleBinding(tenantUID,
+				&models.V1TenantClusterRbacSettings{AutomaticClusterRoleBinding: &bindingMode})
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
 		if d.HasChange("login_banner") {
 			loginBanner := d.Get("login_banner").([]interface{})
 			// login banner
@@ -462,6 +509,13 @@ func updatePlatformSettingsDefault(d *schema.ResourceData, m interface{}) diag.D
 		// session timeout
 		err = c.UpdateSessionTimeout(tenantUID,
 			&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(240)})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		bindingMode := "disabled"
+		err = c.UpdateAutomaticClusterRoleBinding(tenantUID,
+			&models.V1TenantClusterRbacSettings{AutomaticClusterRoleBinding: &bindingMode})
 		if err != nil {
 			return diag.FromErr(err)
 		}

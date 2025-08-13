@@ -1,10 +1,11 @@
 package spectrocloud
 
 import (
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestToWorkspacePolicies(t *testing.T) {
@@ -65,10 +66,10 @@ func TestFlattenWorkspaceClusters(t *testing.T) {
 		},
 	}
 
-	result := flattenWorkspaceClusters(workspace)
+	result := flattenWorkspaceClusters(workspace, nil) // nil client for unit test
 	expected := []interface{}{
-		map[string]interface{}{"uid": "cluster-1"},
-		map[string]interface{}{"uid": "cluster-2"},
+		map[string]interface{}{"uid": "cluster-1", "cluster_name": ""},
+		map[string]interface{}{"uid": "cluster-2", "cluster_name": ""},
 	}
 
 	assert.Equal(t, expected, result)
@@ -81,7 +82,7 @@ func TestFlattenWorkspaceClusters_Empty(t *testing.T) {
 		},
 	}
 
-	result := flattenWorkspaceClusters(workspace)
+	result := flattenWorkspaceClusters(workspace, nil) // nil client for unit test
 
 	assert.Equal(t, 0, len(result))
 }
