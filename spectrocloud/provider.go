@@ -206,7 +206,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	insecure := d.Get("ignore_insecure_tls_error").(bool)
 
 	if insecure {
-		//nolint:gosec
+		// #nosec G402
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 

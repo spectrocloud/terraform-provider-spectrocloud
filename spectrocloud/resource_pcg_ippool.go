@@ -211,7 +211,7 @@ func toIpPool(d *schema.ResourceData) *models.V1IPPoolInputEntity {
 	pool := &models.V1Pool{
 		Gateway:    d.Get("gateway").(string),
 		Nameserver: &models.V1Nameserver{},
-		Prefix:     int32(prefixInt),
+		Prefix:     SafeInt32(prefixInt),
 	}
 
 	if d.Get("network_type").(string) == "range" {

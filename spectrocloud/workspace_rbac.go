@@ -46,7 +46,7 @@ func toQuota(d *schema.ResourceData) (*models.V1WorkspaceQuota, error) {
 		}
 		provider := "nvidia" // Default to nvidia as it's the only supported provider
 		resourceAllocation.GpuConfig = &models.V1GpuConfig{
-			Limit:    int32(gpuInt),
+			Limit:    SafeInt32(gpuInt),
 			Provider: &provider,
 		}
 	}

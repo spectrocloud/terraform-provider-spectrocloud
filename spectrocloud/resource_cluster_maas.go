@@ -603,15 +603,15 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 	InstanceType := m["instance_type"].([]interface{})[0].(map[string]interface{})
 	log.Printf("Create machine pool %s", InstanceType)
 
-	min := int32(m["count"].(int))
-	max := int32(m["count"].(int))
+	min := SafeInt32(m["count"].(int))
+	max := SafeInt32(m["count"].(int))
 
 	if m["min"] != nil {
-		min = int32(m["min"].(int))
+		min = SafeInt32(m["min"].(int))
 	}
 
 	if m["max"] != nil {
-		max = int32(m["max"].(int))
+		max = SafeInt32(m["max"].(int))
 	}
 	var nodePoolTags []string
 	for _, nt := range m["node_tags"].(*schema.Set).List() {
@@ -622,8 +622,8 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 		CloudConfig: &models.V1MaasMachinePoolCloudConfigEntity{
 			Azs: azs,
 			InstanceType: &models.V1MaasInstanceType{
-				MinCPU:     int32(InstanceType["min_cpu"].(int)),
-				MinMemInMB: int32(InstanceType["min_memory_mb"].(int)),
+				MinCPU:     SafeInt32(InstanceType["min_cpu"].(int)),
+				MinMemInMB: SafeInt32(InstanceType["min_memory_mb"].(int)),
 			},
 			Tags: nodePoolTags,
 		},
@@ -633,7 +633,7 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Size:             types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -655,7 +655,7 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 		if m["node_repave_interval"] != nil {
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
-		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+		mp.PoolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
 	} else {
 		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
 		if err != nil {

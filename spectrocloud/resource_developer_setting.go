@@ -87,10 +87,10 @@ func toDeveloperSetting(d *schema.ResourceData) (*models.V1DeveloperCredit, *mod
 	}
 
 	devCredit := &models.V1DeveloperCredit{
-		CPU:                  int32(cpuInt),
-		MemoryGiB:            int32(memoryInt),
-		StorageGiB:           int32(storageInt),
-		VirtualClustersLimit: int32(virtualClustersLimitInt),
+		CPU:                  SafeInt32(cpuInt),
+		MemoryGiB:            SafeInt32(memoryInt),
+		StorageGiB:           SafeInt32(storageInt),
+		VirtualClustersLimit: SafeInt32(virtualClustersLimitInt),
 	}
 	sysClusterGroupPref := &models.V1TenantEnableClusterGroup{
 		HideSystemClusterGroups: d.Get("hide_system_cluster_group").(bool),

@@ -146,7 +146,7 @@ func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnost
 				return diag.FromErr(fmt.Errorf("session_timeout value %d is out of range for int32", sessionTimeInt))
 			}
 			err = c.UpdateSessionTimeout(tenantUID,
-				&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(sessionTimeInt)})
+				&models.V1AuthTokenSettings{ExpiryTimeMinutes: SafeInt32(sessionTimeInt)})
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -401,7 +401,7 @@ func resourcePlatformSettingUpdate(ctx context.Context, d *schema.ResourceData, 
 					return diag.FromErr(fmt.Errorf("session_timeout value %d is out of range for int32", sessionTimeInt))
 				}
 				err = c.UpdateSessionTimeout(tenantUID,
-					&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(sessionTimeInt)})
+					&models.V1AuthTokenSettings{ExpiryTimeMinutes: SafeInt32(sessionTimeInt)})
 				if err != nil {
 					return diag.FromErr(err)
 				}
@@ -517,7 +517,7 @@ func updatePlatformSettingsDefault(d *schema.ResourceData, m interface{}) diag.D
 	if platformSettingContext == tenantString {
 		// session timeout
 		err = c.UpdateSessionTimeout(tenantUID,
-			&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(240)})
+			&models.V1AuthTokenSettings{ExpiryTimeMinutes: SafeInt32(240)})
 		if err != nil {
 			return diag.FromErr(err)
 		}

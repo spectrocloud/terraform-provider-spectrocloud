@@ -42,7 +42,7 @@ func toWorkspaceResourceAllocation(resourceAllocation map[string]interface{}) (*
 			provider = gpuProvider.(string)
 		}
 		resource_alloc.GpuConfig = &models.V1GpuConfig{
-			Limit:    int32(gpuInt),
+			Limit:    SafeInt32(gpuInt),
 			Provider: &provider,
 		}
 	}

@@ -860,9 +860,9 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 	}
 
 	instanceType := models.V1VsphereInstanceType{
-		DiskGiB:   types.Ptr(int32(diskSizeInt)),
-		MemoryMiB: types.Ptr(int64(memoryInt)),
-		NumCPUs:   types.Ptr(int32(cpuInt)),
+		DiskGiB:   types.Ptr(SafeInt32(diskSizeInt)),
+		MemoryMiB: types.Ptr(SafeInt64(memoryInt)),
+		NumCPUs:   types.Ptr(SafeInt32(cpuInt)),
 	}
 
 	countInt := m["count"].(int)
@@ -870,15 +870,15 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		return nil, fmt.Errorf("count value %d is out of range for int32", countInt)
 	}
 
-	min := int32(countInt)
-	max := int32(countInt)
+	min := SafeInt32(countInt)
+	max := SafeInt32(countInt)
 
 	if m["min"] != nil {
 		minInt := m["min"].(int)
 		if minInt > constants.Int32MaxValue {
 			return nil, fmt.Errorf("min value %d is out of range for int32", minInt)
 		}
-		min = int32(minInt)
+		min = SafeInt32(minInt)
 	}
 
 	if m["max"] != nil {
@@ -886,7 +886,7 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		if maxInt > constants.Int32MaxValue {
 			return nil, fmt.Errorf("max value %d is out of range for int32", maxInt)
 		}
-		max = int32(maxInt)
+		max = SafeInt32(maxInt)
 	}
 
 	mp := &models.V1VsphereMachinePoolConfigEntity{
@@ -900,7 +900,7 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Size:             types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -918,7 +918,7 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		if nodeRepaveInterval > constants.Int32MaxValue {
 			return nil, fmt.Errorf("node_repave_interval value %d is out of range for int32", nodeRepaveInterval)
 		}
-		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+		mp.PoolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
 	} else {
 		nodeRepaveInterval := m["node_repave_interval"].(int)
 		if nodeRepaveInterval > constants.Int32MaxValue {
