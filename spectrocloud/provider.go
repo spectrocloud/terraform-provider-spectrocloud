@@ -60,7 +60,7 @@ func New(_ string) func() *schema.Provider {
 				"ignore_insecure_tls_error": {
 					Type:        schema.TypeBool,
 					Optional:    true,
-					Description: "Ignore insecure TLS errors for Spectro Cloud API endpoints. Defaults to false.",
+					Description: "Ignore insecure TLS errors for Spectro Cloud API endpoints. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this in development/testing environments or when connecting to self-signed certificates in trusted networks. Defaults to false.",
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
@@ -204,7 +204,9 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	projectName := d.Get("project_name").(string)
 
 	insecure := d.Get("ignore_insecure_tls_error").(bool)
+
 	if insecure {
+		// #nosec G402
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 

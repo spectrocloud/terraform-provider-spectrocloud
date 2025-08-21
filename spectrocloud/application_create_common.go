@@ -51,9 +51,9 @@ func toAppDeploymentTargetClusterLimits(d *schema.ResourceData) *models.V1AppDep
 				limits := config["limits"].([]interface{})[i].(map[string]interface{})
 				if limits["cpu"] != nil && limits["memory"] != nil {
 					return &models.V1AppDeploymentTargetClusterLimits{
-						CPU:        int32(limits["cpu"].(int)),
-						MemoryMiB:  int32(limits["memory"].(int)),
-						StorageGiB: int32(limits["storage"].(int)),
+						CPU:        SafeInt32(limits["cpu"].(int)),
+						MemoryMiB:  SafeInt32(limits["memory"].(int)),
+						StorageGiB: SafeInt32(limits["storage"].(int)),
 					}
 				}
 			}

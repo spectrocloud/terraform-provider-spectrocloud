@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"gopkg.in/yaml.v3"
@@ -467,7 +468,10 @@ func hash(s string) uint32 {
 func YamlContentHash(yamlContent string) string {
 	canonicalContent := yamlContentToCanonicalString(yamlContent)
 	h := fnv.New64a()
-	h.Write([]byte(canonicalContent))
+	if _, err := h.Write([]byte(canonicalContent)); err != nil {
+		// If hash writing fails, return a fallback hash
+		return fmt.Sprintf("error_hash_%d", time.Now().UnixNano())
+	}
 	return fmt.Sprintf("%x", h.Sum64())
 }
 

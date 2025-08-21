@@ -896,15 +896,15 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 		capacityType = m["capacity_type"].(string)
 	}
 
-	min := int32(m["count"].(int))
-	max := int32(m["count"].(int))
+	min := SafeInt32(m["count"].(int))
+	max := SafeInt32(m["count"].(int))
 
 	if m["min"] != nil {
-		min = int32(m["min"].(int))
+		min = SafeInt32(m["min"].(int))
 	}
 
 	if m["max"] != nil {
-		max = int32(m["max"].(int))
+		max = SafeInt32(m["max"].(int))
 	}
 	instanceType := ""
 	if val, ok := m["instance_type"]; ok {
@@ -914,9 +914,9 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 	if val, ok := m["ami_type"]; ok {
 		amiType = val.(string)
 	}
-	diskSizeGb := int64(0)
+	diskSizeGb := SafeInt64(0)
 	if dVal, ok := m["disk_size_gb"]; ok {
-		diskSizeGb = int64(dVal.(int))
+		diskSizeGb = SafeInt64(dVal.(int))
 	}
 	mp := &models.V1EksMachinePoolConfigEntity{
 		CloudConfig: &models.V1EksMachineCloudConfigEntity{
@@ -933,7 +933,7 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Size:             types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
