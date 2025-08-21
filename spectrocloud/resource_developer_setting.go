@@ -3,11 +3,13 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"time"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/constants"
 )
 
 func resourceDeveloperSetting() *schema.Resource {
@@ -66,17 +68,34 @@ func resourceDeveloperSetting() *schema.Resource {
 }
 
 func toDeveloperSetting(d *schema.ResourceData) (*models.V1DeveloperCredit, *models.V1TenantEnableClusterGroup) {
+	cpuInt := d.Get("cpu").(int)
+	memoryInt := d.Get("memory").(int)
+	storageInt := d.Get("storage").(int)
+	virtualClustersLimitInt := d.Get("virtual_clusters_limit").(int)
+
+	// Check bounds for int32 conversion
+	if cpuInt > constants.Int32MaxValue || memoryInt > constants.Int32MaxValue || storageInt > constants.Int32MaxValue || virtualClustersLimitInt > constants.Int32MaxValue {
+		// Return default values if any value is out of range
+		return &models.V1DeveloperCredit{
+				CPU:                  12,
+				MemoryGiB:            16,
+				StorageGiB:           20,
+				VirtualClustersLimit: 2,
+			}, &models.V1TenantEnableClusterGroup{
+				HideSystemClusterGroups: false,
+			}
+	}
+
 	devCredit := &models.V1DeveloperCredit{
-		CPU:                  int32(d.Get("cpu").(int)),
-		MemoryGiB:            int32(d.Get("memory").(int)),
-		StorageGiB:           int32(d.Get("storage").(int)),
-		VirtualClustersLimit: int32(d.Get("virtual_clusters_limit").(int)),
+		CPU:                  int32(cpuInt),
+		MemoryGiB:            int32(memoryInt),
+		StorageGiB:           int32(storageInt),
+		VirtualClustersLimit: int32(virtualClustersLimitInt),
 	}
 	sysClusterGroupPref := &models.V1TenantEnableClusterGroup{
 		HideSystemClusterGroups: d.Get("hide_system_cluster_group").(bool),
 	}
 	return devCredit, sysClusterGroupPref
-
 }
 
 func toDeveloperSettingDefault(d *schema.ResourceData) (*models.V1DeveloperCredit, *models.V1TenantEnableClusterGroup) {

@@ -1,8 +1,11 @@
 package spectrocloud
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/constants"
 )
 
 func toWorkspaceRBACs(d *schema.ResourceData) []*models.V1ClusterRbac {
@@ -18,7 +21,7 @@ func toWorkspaceRBACs(d *schema.ResourceData) []*models.V1ClusterRbac {
 	return workspace_rbacs
 }
 
-func toQuota(d *schema.ResourceData) *models.V1WorkspaceQuota {
+func toQuota(d *schema.ResourceData) (*models.V1WorkspaceQuota, error) {
 	wsQuota, ok := d.GetOk("workspace_quota")
 	if !ok || len(wsQuota.([]interface{})) == 0 {
 		return &models.V1WorkspaceQuota{
@@ -26,7 +29,7 @@ func toQuota(d *schema.ResourceData) *models.V1WorkspaceQuota {
 				CPUCores:  0,
 				MemoryMiB: 0,
 			},
-		}
+		}, nil
 	}
 
 	q := wsQuota.([]interface{})[0].(map[string]interface{})
@@ -37,14 +40,18 @@ func toQuota(d *schema.ResourceData) *models.V1WorkspaceQuota {
 
 	// Handle GPU configuration if specified
 	if gpuVal, exists := q["gpu"]; exists && gpuVal.(int) > 0 {
+		gpuInt := gpuVal.(int)
+		if gpuInt > constants.Int32MaxValue {
+			return nil, fmt.Errorf("gpu value %d is out of range for int32", gpuInt)
+		}
 		provider := "nvidia" // Default to nvidia as it's the only supported provider
 		resourceAllocation.GpuConfig = &models.V1GpuConfig{
-			Limit:    int32(gpuVal.(int)),
+			Limit:    int32(gpuInt),
 			Provider: &provider,
 		}
 	}
 
 	return &models.V1WorkspaceQuota{
 		ResourceAllocation: resourceAllocation,
-	}
+	}, nil
 }

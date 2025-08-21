@@ -15,6 +15,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/constants"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
@@ -848,20 +849,44 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 	}
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
-	instanceType := models.V1VsphereInstanceType{
-		DiskGiB:   types.Ptr(int32(ins["disk_size_gb"].(int))),
-		MemoryMiB: types.Ptr(int64(ins["memory_mb"].(int))),
-		NumCPUs:   types.Ptr(int32(ins["cpu"].(int))),
+
+	// Check bounds before conversion
+	diskSizeInt := ins["disk_size_gb"].(int)
+	memoryInt := ins["memory_mb"].(int)
+	cpuInt := ins["cpu"].(int)
+
+	if diskSizeInt > constants.Int32MaxValue || memoryInt > constants.Int64MaxValue || cpuInt > constants.Int32MaxValue {
+		return nil, fmt.Errorf("instance type values out of range: disk_size_gb=%d, memory_mb=%d, cpu=%d", diskSizeInt, memoryInt, cpuInt)
 	}
-	min := int32(m["count"].(int))
-	max := int32(m["count"].(int))
+
+	instanceType := models.V1VsphereInstanceType{
+		DiskGiB:   types.Ptr(int32(diskSizeInt)),
+		MemoryMiB: types.Ptr(int64(memoryInt)),
+		NumCPUs:   types.Ptr(int32(cpuInt)),
+	}
+
+	countInt := m["count"].(int)
+	if countInt > constants.Int32MaxValue {
+		return nil, fmt.Errorf("count value %d is out of range for int32", countInt)
+	}
+
+	min := int32(countInt)
+	max := int32(countInt)
 
 	if m["min"] != nil {
-		min = int32(m["min"].(int))
+		minInt := m["min"].(int)
+		if minInt > constants.Int32MaxValue {
+			return nil, fmt.Errorf("min value %d is out of range for int32", minInt)
+		}
+		min = int32(minInt)
 	}
 
 	if m["max"] != nil {
-		max = int32(m["max"].(int))
+		maxInt := m["max"].(int)
+		if maxInt > constants.Int32MaxValue {
+			return nil, fmt.Errorf("max value %d is out of range for int32", maxInt)
+		}
+		max = int32(maxInt)
 	}
 
 	mp := &models.V1VsphereMachinePoolConfigEntity{
@@ -890,9 +915,16 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		if m["node_repave_interval"] != nil {
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
+		if nodeRepaveInterval > constants.Int32MaxValue {
+			return nil, fmt.Errorf("node_repave_interval value %d is out of range for int32", nodeRepaveInterval)
+		}
 		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
 	} else {
-		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
+		nodeRepaveInterval := m["node_repave_interval"].(int)
+		if nodeRepaveInterval > constants.Int32MaxValue {
+			return nil, fmt.Errorf("node_repave_interval value %d is out of range for int32", nodeRepaveInterval)
+		}
+		err := ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval)
 		if err != nil {
 			return mp, err
 		}

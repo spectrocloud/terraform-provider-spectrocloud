@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/constants"
 )
 
 func resourcePlatformSetting() *schema.Resource {
@@ -140,8 +141,12 @@ func updatePlatformSettings(d *schema.ResourceData, m interface{}) diag.Diagnost
 	if platformSettingContext == tenantString {
 		// session timeout
 		if sessionTime, ok := d.GetOk("session_timeout"); ok {
+			sessionTimeInt := sessionTime.(int)
+			if sessionTimeInt > constants.Int32MaxValue {
+				return diag.FromErr(fmt.Errorf("session_timeout value %d is out of range for int32", sessionTimeInt))
+			}
 			err = c.UpdateSessionTimeout(tenantUID,
-				&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(sessionTime.(int))})
+				&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(sessionTimeInt)})
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -391,8 +396,12 @@ func resourcePlatformSettingUpdate(ctx context.Context, d *schema.ResourceData, 
 		// session timeout
 		if d.HasChange("session_timeout") {
 			if sessionTime, ok := d.GetOk("session_timeout"); ok {
+				sessionTimeInt := sessionTime.(int)
+				if sessionTimeInt > constants.Int32MaxValue {
+					return diag.FromErr(fmt.Errorf("session_timeout value %d is out of range for int32", sessionTimeInt))
+				}
 				err = c.UpdateSessionTimeout(tenantUID,
-					&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(sessionTime.(int))})
+					&models.V1AuthTokenSettings{ExpiryTimeMinutes: int32(sessionTimeInt)})
 				if err != nil {
 					return diag.FromErr(err)
 				}
