@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -94,18 +95,73 @@ func TestToEksCluster(t *testing.T) {
 		},
 	})
 
-	//client := &client.V1Client{}
-	//
-	//cluster, err := toEksCluster(client, d)
-	//
-	//assert.NoError(t, err, "Expected no error from toEksCluster")
-	//assert.Equal(t, "test-cluster", cluster.Metadata.Name, "Unexpected cluster name")
-	//
-	//assert.NotNil(t, cluster.Spec.Machinepoolconfig, "Expected MachinePools to be non-nil")
-	//assert.Equal(t, 2, len(cluster.Spec.Machinepoolconfig), "Expected one machine pool in the cluster")
-	//
-	//assert.Equal(t, "test-pool", *cluster.Spec.Machinepoolconfig[1].PoolConfig.Name, "Unexpected machine pool name")
-	//assert.Equal(t, int64(10), cluster.Spec.Machinepoolconfig[1].CloudConfig.RootDeviceSize, "Unexpected disk size")
+	client := &client.V1Client{}
+
+	cluster, err := toEksCluster(client, d)
+
+	assert.NoError(t, err, "Expected no error from toEksCluster")
+	assert.Equal(t, "test-cluster", cluster.Metadata.Name, "Unexpected cluster name")
+
+	assert.NotNil(t, cluster.Spec.Machinepoolconfig, "Expected MachinePools to be non-nil")
+	// Without az_subnets, no cp-pool should be added
+	assert.Equal(t, 1, len(cluster.Spec.Machinepoolconfig), "Expected one machine pool in the cluster (no cp-pool)")
+
+	assert.Equal(t, "test-pool", *cluster.Spec.Machinepoolconfig[0].PoolConfig.Name, "Unexpected machine pool name")
+	assert.Equal(t, int64(10), cluster.Spec.Machinepoolconfig[0].CloudConfig.RootDeviceSize, "Unexpected disk size")
+}
+
+func TestToEksClusterWithAzSubnets(t *testing.T) {
+	// Setup a dummy ResourceData for testing with az_subnets
+	d := resourceClusterEks().TestResourceData()
+
+	/* set the values of the ResourceData */
+	d.Set("name", "test-cluster-az")
+	d.Set("context", "project")
+	d.Set("tags", []interface{}{"tag1:value1", "tag2:value2"})
+	d.Set("cloud_account_id", "test-cloud-id")
+	d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":          "test-ssh-key",
+			"region":                "us-west-1",
+			"vpc_id":                "test-vpc-id",
+			"endpoint_access":       "public",
+			"public_access_cidrs":   []interface{}{"0.0.0.0/0"},
+			"encryption_config_arn": "arn:test:encryption",
+			"az_subnets": map[string]interface{}{
+				"us-west-1a": "subnet-12345",
+				"us-west-1b": "subnet-67890",
+			},
+		},
+	})
+	d.Set("machine_pool", []interface{}{
+		map[string]interface{}{
+			"name":            "test-pool",
+			"disk_size_gb":    10,
+			"count":           2,
+			"instance_type":   "t2.micro",
+			"capacity_type":   "on-demand",
+			"update_strategy": "RollingUpdateScaleOut",
+		},
+	})
+
+	client := &client.V1Client{}
+
+	cluster, err := toEksCluster(client, d)
+
+	assert.NoError(t, err, "Expected no error from toEksCluster")
+	assert.Equal(t, "test-cluster-az", cluster.Metadata.Name, "Unexpected cluster name")
+
+	assert.NotNil(t, cluster.Spec.Machinepoolconfig, "Expected MachinePools to be non-nil")
+	// With az_subnets having more than one element, cp-pool should be added
+	assert.Equal(t, 2, len(cluster.Spec.Machinepoolconfig), "Expected two machine pools in the cluster (cp-pool + test-pool)")
+
+	// Check that cp-pool is the first one
+	assert.Equal(t, "cp-pool", *cluster.Spec.Machinepoolconfig[0].PoolConfig.Name, "Expected first machine pool to be cp-pool")
+	assert.True(t, cluster.Spec.Machinepoolconfig[0].PoolConfig.IsControlPlane, "Expected first machine pool to be control plane")
+
+	// Check that test-pool is the second one
+	assert.Equal(t, "test-pool", *cluster.Spec.Machinepoolconfig[1].PoolConfig.Name, "Expected second machine pool to be test-pool")
+	assert.Equal(t, int64(10), cluster.Spec.Machinepoolconfig[1].CloudConfig.RootDeviceSize, "Unexpected disk size")
 }
 
 func TestToMachinePoolEks(t *testing.T) {

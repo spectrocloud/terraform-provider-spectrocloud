@@ -152,27 +152,22 @@ func resourceSSO() *schema.Resource {
 						"first_name": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "User's first name retrieved from identity provider.",
+							Description: "The name of the claim that returns the user's first name from the identity provider.",
 						},
 						"last_name": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "User's last name retrieved from identity provider.",
+							Description: "The name of the claim that returns the user's last name from the identity provider.",
 						},
 						"email": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "User's email address retrieved from identity provider.",
+							Description: "The name of the claim that returns the user's email address from the identity provider.",
 							ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
 								v := val.(string)
 								if v == "" {
 									errs = append(errs, fmt.Errorf("%q must not be empty", key))
 									return
-								}
-								emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
-								matched, err := regexp.MatchString(emailRegex, v)
-								if err != nil || !matched {
-									errs = append(errs, fmt.Errorf("%q must be a valid email address", key))
 								}
 								return
 							},
@@ -180,7 +175,7 @@ func resourceSSO() *schema.Resource {
 						"spectro_team": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "The SpectroCloud team the user belongs to.",
+							Description: "The name of the claim that returns the user's group memberships from the Identity Provider. The values of this claim will map to SpectroCloud teams.",
 						},
 						"user_info_endpoint": {
 							Type:        schema.TypeList,
@@ -192,27 +187,22 @@ func resourceSSO() *schema.Resource {
 									"first_name": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "User's first name retrieved from identity provider.",
+										Description: "The name of the claim that returns the user's first name from the identity provider.",
 									},
 									"last_name": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "User's last name retrieved from identity provider.",
+										Description: "The name of the claim that returns the user's last name from the identity provider.",
 									},
 									"email": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "User's email address retrieved from identity provider.",
+										Description: "The name of the claim that returns the user's email address from the identity provider.",
 										ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
 											v := val.(string)
 											if v == "" {
 												errs = append(errs, fmt.Errorf("%q must not be empty", key))
 												return
-											}
-											emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
-											matched, err := regexp.MatchString(emailRegex, v)
-											if err != nil || !matched {
-												errs = append(errs, fmt.Errorf("%q must be a valid email address", key))
 											}
 											return
 										},
@@ -220,7 +210,7 @@ func resourceSSO() *schema.Resource {
 									"spectro_team": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "The SpectroCloud team the user belongs to.",
+										Description: "The name of the claim that returns the user's group memberships from the Identity Provider. The values of this claim will map to SpectroCloud teams.",
 									},
 								},
 							},
@@ -313,11 +303,6 @@ func resourceSSO() *schema.Resource {
 								if v == "" {
 									errs = append(errs, fmt.Errorf("%q must not be empty", key))
 									return
-								}
-								emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
-								matched, err := regexp.MatchString(emailRegex, v)
-								if err != nil || !matched {
-									errs = append(errs, fmt.Errorf("%q must be a valid email address", key))
 								}
 								return
 							},

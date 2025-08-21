@@ -91,12 +91,12 @@ Required:
 
 - `client_id` (String) Client ID for OIDC authentication.
 - `client_secret` (String, Sensitive) Client secret for OIDC authentication (sensitive).
-- `email` (String) User's email address retrieved from identity provider.
-- `first_name` (String) User's first name retrieved from identity provider.
+- `email` (String) The name of the claim that returns the user's email address from the identity provider.
+- `first_name` (String) The name of the claim that returns the user's first name from the identity provider.
 - `issuer_url` (String) URL of the OIDC issuer.
-- `last_name` (String) User's last name retrieved from identity provider.
+- `last_name` (String) The name of the claim that returns the user's last name from the identity provider.
 - `scopes` (Set of String) Scopes requested during OIDC authentication.
-- `spectro_team` (String) The SpectroCloud team the user belongs to.
+- `spectro_team` (String) The name of the claim that returns the user's group memberships from the Identity Provider. The values of this claim will map to SpectroCloud teams.
 
 Optional:
 
@@ -115,10 +115,10 @@ Read-Only:
 
 Required:
 
-- `email` (String) User's email address retrieved from identity provider.
-- `first_name` (String) User's first name retrieved from identity provider.
-- `last_name` (String) User's last name retrieved from identity provider.
-- `spectro_team` (String) The SpectroCloud team the user belongs to.
+- `email` (String) The name of the claim that returns the user's email address from the identity provider.
+- `first_name` (String) The name of the claim that returns the user's first name from the identity provider.
+- `last_name` (String) The name of the claim that returns the user's last name from the identity provider.
+- `spectro_team` (String) The name of the claim that returns the user's group memberships from the Identity Provider. The values of this claim will map to SpectroCloud teams.
 
 
 

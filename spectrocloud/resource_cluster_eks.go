@@ -830,15 +830,18 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
-	// Following same logic as UI for setting up control plane for managed cluster
-	cpPool := map[string]interface{}{
-		"control_plane": true,
-		"name":          "cp-pool",
-		"az_subnets":    cloudConfig["az_subnets"],
-		"capacity_type": "spot",
-		"count":         0,
+	// Following same logic as UI for setting up control plane for static cluster
+	// Only add cp-pool for dynamic cluster provisioning when az_subnets is not empty and has more than one element
+	if cloudConfig["az_subnets"] != nil && len(cloudConfig["az_subnets"].(map[string]interface{})) > 0 {
+		cpPool := map[string]interface{}{
+			"control_plane": true,
+			"name":          "cp-pool",
+			"az_subnets":    cloudConfig["az_subnets"],
+			"capacity_type": "spot",
+			"count":         0,
+		}
+		machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	}
-	machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
