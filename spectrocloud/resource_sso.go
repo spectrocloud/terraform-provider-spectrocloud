@@ -304,11 +304,6 @@ func resourceSSO() *schema.Resource {
 									errs = append(errs, fmt.Errorf("%q must not be empty", key))
 									return
 								}
-								emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
-								matched, err := regexp.MatchString(emailRegex, v)
-								if err != nil || !matched {
-									errs = append(errs, fmt.Errorf("%q must be a valid email address", key))
-								}
 								return
 							},
 						},
