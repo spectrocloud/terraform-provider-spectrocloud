@@ -72,7 +72,7 @@ Optional:
 Optional:
 
 - `certificate` (String) Specifies the TLS certificate used for secure communication. Required for enabling SSL/TLS encryption.
-- `insecure_skip_verify` (Boolean) Disables TLS certificate verification when set to true. Use with caution as it may expose connections to security risks.
+- `insecure_skip_verify` (Boolean) Disables TLS certificate verification when set to true. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this when connecting to registries with self-signed certificates in trusted networks.
 
 
 

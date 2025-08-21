@@ -161,12 +161,34 @@ func toUpdateWorkspaceNamespaces(d *schema.ResourceData, c *client.V1Client) (*m
 func flattenWorkspaceResourceAllocation(resourceAlloc *models.V1WorkspaceResourceAllocation, includeProvider bool) map[string]interface{} {
 	result := make(map[string]interface{})
 
-	result["cpu_cores"] = strconv.Itoa(int(math.Round(resourceAlloc.CPUCores)))
-	result["memory_MiB"] = strconv.Itoa(int(math.Round(resourceAlloc.MemoryMiB)))
+	// Convert CPU cores with bounds checking to prevent integer overflow
+	cpuCoresRounded := math.Round(resourceAlloc.CPUCores)
+	if cpuCoresRounded > math.MaxInt || cpuCoresRounded < math.MinInt {
+		// Fallback to string representation if out of int range
+		result["cpu_cores"] = fmt.Sprintf("%.0f", cpuCoresRounded)
+	} else {
+		result["cpu_cores"] = strconv.Itoa(int(cpuCoresRounded))
+	}
+
+	// Convert memory with bounds checking to prevent integer overflow
+	memoryMiBRounded := math.Round(resourceAlloc.MemoryMiB)
+	if memoryMiBRounded > math.MaxInt || memoryMiBRounded < math.MinInt {
+		// Fallback to string representation if out of int range
+		result["memory_MiB"] = fmt.Sprintf("%.0f", memoryMiBRounded)
+	} else {
+		result["memory_MiB"] = strconv.Itoa(int(memoryMiBRounded))
+	}
 
 	// Handle GPU configuration if present
 	if resourceAlloc.GpuConfig != nil {
-		result["gpu_limit"] = strconv.Itoa(int(resourceAlloc.GpuConfig.Limit))
+		// Convert GPU limit with bounds checking to prevent integer overflow
+		gpuLimit := int64(resourceAlloc.GpuConfig.Limit)
+		if gpuLimit > math.MaxInt || gpuLimit < math.MinInt {
+			// Fallback to string representation if out of int range
+			result["gpu_limit"] = fmt.Sprintf("%d", gpuLimit)
+		} else {
+			result["gpu_limit"] = strconv.Itoa(int(gpuLimit))
+		}
 		// Only include gpu_provider for default resource allocations, not cluster-specific ones
 		if includeProvider {
 			if resourceAlloc.GpuConfig.Provider != nil {
