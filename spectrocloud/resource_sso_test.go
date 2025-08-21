@@ -51,17 +51,17 @@ func TestToOIDC(t *testing.T) {
 				"insecure_skip_tls_verify":         true,
 				"issuer_url":                       "https://issuer.com",
 				"logout_url":                       "https://example.com/logout",
-				"email":                            "user@example.com",
-				"first_name":                       "John",
-				"last_name":                        "Doe",
-				"spectro_team":                     "devops",
+				"email":                            "email",
+				"first_name":                       "given_name",
+				"last_name":                        "family_name",
+				"spectro_team":                     "groups",
 				"scopes":                           schema.NewSet(schema.HashString, []interface{}{"openid", "profile"}),
 				"user_info_endpoint": []interface{}{
 					map[string]interface{}{
-						"email":        "user@example.com",
-						"first_name":   "John",
-						"last_name":    "Doe",
-						"spectro_team": "devops",
+						"email":        "email",
+						"first_name":   "given_name",
+						"last_name":    "family_name",
+						"spectro_team": "groups",
 					},
 				},
 			},
@@ -83,14 +83,14 @@ func TestToOIDC(t *testing.T) {
 	assert.Equal(t, true, *result.IssuerTLS.InsecureSkipVerify)
 	assert.Equal(t, "https://issuer.com", result.IssuerURL)
 	assert.Equal(t, "https://example.com/logout", result.LogoutURL)
-	assert.Equal(t, "user@example.com", result.RequiredClaims.Email)
-	assert.Equal(t, "John", result.RequiredClaims.FirstName)
-	assert.Equal(t, "Doe", result.RequiredClaims.LastName)
-	assert.Equal(t, "devops", result.RequiredClaims.SpectroTeam)
-	assert.Equal(t, "user@example.com", result.UserInfo.Claims.Email)
-	assert.Equal(t, "John", result.UserInfo.Claims.FirstName)
-	assert.Equal(t, "Doe", result.UserInfo.Claims.LastName)
-	assert.Equal(t, "devops", result.UserInfo.Claims.SpectroTeam)
+	assert.Equal(t, "email", result.RequiredClaims.Email)
+	assert.Equal(t, "given_name", result.RequiredClaims.FirstName)
+	assert.Equal(t, "family_name", result.RequiredClaims.LastName)
+	assert.Equal(t, "groups", result.RequiredClaims.SpectroTeam)
+	assert.Equal(t, "email", result.UserInfo.Claims.Email)
+	assert.Equal(t, "given_name", result.UserInfo.Claims.FirstName)
+	assert.Equal(t, "family_name", result.UserInfo.Claims.LastName)
+	assert.Equal(t, "groups", result.UserInfo.Claims.SpectroTeam)
 	assert.Equal(t, true, *result.UserInfo.UseUserInfo)
 }
 
@@ -146,18 +146,18 @@ func TestFlattenOidc(t *testing.T) {
 		IssuerURL: "https://issuer.com",
 		LogoutURL: "https://example.com/logout",
 		RequiredClaims: &models.V1TenantOidcClaims{
-			Email:       "user@example.com",
-			FirstName:   "John",
-			LastName:    "Doe",
-			SpectroTeam: "devops",
+			Email:       "email",
+			FirstName:   "given_name",
+			LastName:    "family_name",
+			SpectroTeam: "groups",
 		},
 		Scopes: []string{"openid", "profile"},
 		UserInfo: &models.V1OidcUserInfo{
 			Claims: &models.V1TenantOidcClaims{
-				Email:       "user@example.com",
-				FirstName:   "John",
-				LastName:    "Doe",
-				SpectroTeam: "devops",
+				Email:       "email",
+				FirstName:   "given_name",
+				LastName:    "family_name",
+				SpectroTeam: "groups",
 			},
 		},
 	}
@@ -174,17 +174,17 @@ func TestFlattenOidc(t *testing.T) {
 	assert.Equal(t, true, flattened["insecure_skip_tls_verify"])
 	assert.Equal(t, "https://issuer.com", flattened["issuer_url"])
 	assert.Equal(t, "https://example.com/logout", flattened["logout_url"])
-	assert.Equal(t, "user@example.com", flattened["email"])
-	assert.Equal(t, "John", flattened["first_name"])
-	assert.Equal(t, "Doe", flattened["last_name"])
-	assert.Equal(t, "devops", flattened["spectro_team"])
+	assert.Equal(t, "email", flattened["email"])
+	assert.Equal(t, "given_name", flattened["first_name"])
+	assert.Equal(t, "family_name", flattened["last_name"])
+	assert.Equal(t, "groups", flattened["spectro_team"])
 	assert.Equal(t, []interface{}{"openid", "profile"}, flattened["scopes"])
 
 	userInfo := flattened["user_info_endpoint"].([]interface{})[0].(map[string]interface{})
-	assert.Equal(t, "user@example.com", userInfo["email"])
-	assert.Equal(t, "John", userInfo["first_name"])
-	assert.Equal(t, "Doe", userInfo["last_name"])
-	assert.Equal(t, "devops", userInfo["spectro_team"])
+	assert.Equal(t, "email", userInfo["email"])
+	assert.Equal(t, "given_name", userInfo["first_name"])
+	assert.Equal(t, "family_name", userInfo["last_name"])
+	assert.Equal(t, "groups", userInfo["spectro_team"])
 }
 
 func TestToSAML(t *testing.T) {
