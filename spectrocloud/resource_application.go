@@ -16,6 +16,9 @@ func resourceApplication() *schema.Resource {
 		ReadContext:   resourceApplicationRead,
 		UpdateContext: resourceApplicationUpdate,
 		DeleteContext: resourceApplicationDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceApplicationImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),

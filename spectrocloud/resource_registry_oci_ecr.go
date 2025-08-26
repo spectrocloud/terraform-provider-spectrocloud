@@ -22,6 +22,9 @@ func resourceRegistryOciEcr() *schema.Resource {
 		ReadContext:   resourceRegistryEcrRead,
 		UpdateContext: resourceRegistryEcrUpdate,
 		DeleteContext: resourceRegistryEcrDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceRegistryOciImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

@@ -20,6 +20,9 @@ func resourceClusterGroup() *schema.Resource {
 		ReadContext:   resourceClusterGroupRead,
 		UpdateContext: resourceClusterGroupUpdate,
 		DeleteContext: resourceClusterGroupDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterGroupImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
