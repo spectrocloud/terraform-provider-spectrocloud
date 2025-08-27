@@ -145,6 +145,12 @@ func resourceClusterMaas() *schema.Resource {
 							Required:    true,
 							Description: "Domain name in which the cluster to be provisioned.",
 						},
+						"enable_lxd_vm": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether to enable LXD VM. Default is `false`.",
+						},
 					},
 				},
 			},
@@ -264,6 +270,37 @@ func resourceClusterMaas() *schema.Resource {
 										Type:        schema.TypeString,
 										Required:    true,
 										Description: "The name of the resource pool in the Maas cloud.",
+									},
+								},
+							},
+						},
+						"use_lxd_vm": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether to use LXD VM. Default is `false`.",
+						},
+						"network": {
+							Type:     schema.TypeList,
+							Required: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"network_name": {
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "The name of the network in which VMs are created/located.",
+									},
+									"parent_pool_uid": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The UID of the parent pool which allocates IPs for this IPPool.",
+									},
+									"static_ip": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     false,
+										Description: "Whether to use static IP. Default is `false`.",
 									},
 								},
 							},
@@ -401,6 +438,9 @@ func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
 	if config.Spec.ClusterConfig.Domain != nil {
 		m["domain"] = *config.Spec.ClusterConfig.Domain
 	}
+	if config.Spec.ClusterConfig.EnableLxdVM {
+		m["enable_lxd_vm"] = true
+	}
 
 	return []interface{}{m}
 }
@@ -444,6 +484,16 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 			}
 		}
 		oi["node_tags"] = machinePool.Tags
+		oi["use_lxd_vm"] = machinePool.UseLxdVM
+
+		if machinePool.Network != nil {
+			network := make(map[string]interface{})
+			network["network_name"] = *machinePool.Network.NetworkName
+			network["parent_pool_uid"] = machinePool.Network.ParentPoolRef.UID
+			network["static_ip"] = machinePool.Network.StaticIP
+			oi["network"] = []interface{}{network}
+		}
+
 		ois[i] = oi
 	}
 
@@ -562,7 +612,8 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 			Profiles:        profiles,
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
-				Domain: &DomainVal,
+				Domain:      &DomainVal,
+				EnableLxdVM: d.Get("enable_lxd_vm").(bool),
 			},
 		},
 	}
@@ -625,7 +676,8 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 				MinCPU:     SafeInt32(InstanceType["min_cpu"].(int)),
 				MinMemInMB: SafeInt32(InstanceType["min_memory_mb"].(int)),
 			},
-			Tags: nodePoolTags,
+			Tags:     nodePoolTags,
+			UseLxdVM: m["use_lxd_vm"].(bool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
@@ -642,6 +694,17 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 			MaxSize:                 max,
 		},
 	}
+
+	if len(m["network"].([]interface{})) > 0 {
+		network := m["network"].([]interface{})[0].(map[string]interface{})
+		net := &models.V1MaasNetworkConfigEntity{
+			NetworkName:   types.Ptr(network["network_name"].(string)),
+			StaticIP:      network["static_ip"].(bool),
+			ParentPoolUID: network["parent_pool_uid"].(string),
+		}
+		mp.CloudConfig.Network = net
+	}
+
 	if len(m["placement"].([]interface{})) > 0 {
 		Placement := m["placement"].([]interface{})[0].(map[string]interface{})
 		mp.CloudConfig.ResourcePool = types.Ptr(Placement["resource_pool"].(string))
