@@ -598,8 +598,6 @@ github.com/smartystreets/goconvey v1.6.4/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/soheilhy/cmux v0.1.5/go.mod h1:T7TcVDs9LWfQgPlPsdngu6I6QIoyIFZDDC6sNE1GqG0=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
-github.com/spectrocloud/palette-sdk-go v0.0.0-20250813031623-91ef23e78e8f h1:KAEMjdoWEQ9FlHIVybcLDILngTmuhD7BqsNve4z8W5E=
-github.com/spectrocloud/palette-sdk-go v0.0.0-20250813031623-91ef23e78e8f/go.mod h1:wIt8g7I7cmcQvTo5ktwhSF0/bWq6uRdxGBs9dwTpleU=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20250826051324-b2ea90bf151b h1:Xhup+ut+6exZDTKu2SYTFHrAM/PZ625/w+X5DRwirG4=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20250826051324-b2ea90bf151b/go.mod h1:wIt8g7I7cmcQvTo5ktwhSF0/bWq6uRdxGBs9dwTpleU=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
