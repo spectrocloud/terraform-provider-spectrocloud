@@ -334,9 +334,9 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 		return diagnostics
 	}
 
-	diags = resourceClusterEdgeNativeRead(ctx, d, m)
+	resourceClusterEdgeNativeRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 //goland:noinspection GoUnhandledErrorResult

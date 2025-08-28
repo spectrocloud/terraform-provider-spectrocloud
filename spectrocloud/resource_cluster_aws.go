@@ -346,7 +346,7 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	resourceClusterAwsRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 //goland:noinspection GoUnhandledErrorResult

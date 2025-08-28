@@ -279,7 +279,7 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	resourceClusterGcpRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 //goland:noinspection GoUnhandledErrorResult

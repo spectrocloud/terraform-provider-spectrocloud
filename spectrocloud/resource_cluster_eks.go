@@ -411,7 +411,7 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	resourceClusterEksRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

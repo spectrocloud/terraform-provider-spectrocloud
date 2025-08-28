@@ -234,7 +234,7 @@ func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m
 
 	resourceClusterVirtualRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 //goland:noinspection GoUnhandledErrorResult

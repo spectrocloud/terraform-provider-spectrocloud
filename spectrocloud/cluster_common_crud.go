@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -140,9 +142,38 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid str
 	// Wait, catching any errors
 	_, err := stateConf.WaitForStateContext(ctx)
 	if err != nil {
+		// Check if this is a timeout error
+		var timeoutErr *retry.TimeoutError
+		if errors.As(err, &timeoutErr) {
+			// Get current cluster state for warning message
+			cluster, stateErr := c.GetCluster(d.Id())
+			currentState := timeoutErr.LastState
+			if currentState == "" {
+				currentState = "Unknown"
+			}
+			if stateErr == nil && cluster != nil && cluster.Status != nil {
+				currentState = cluster.Status.State
+				if cluster.Status.State == "Running" {
+					if clusterSummary, _ := c.GetClusterOverview(d.Id()); clusterSummary != nil && clusterSummary.Status.Health != nil {
+						if clusterSummary.Status.Health.State != "" && clusterSummary.Status.Health.State != "Healthy" {
+							currentState += "-" + clusterSummary.Status.Health.State
+						}
+					}
+				}
+			}
+
+			// Return warning instead of error
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "Cluster creation timeout",
+				Detail:   fmt.Sprintf("Cluster creation timed out after waiting for %v. Current cluster state is '%s'. The cluster may still be provisioning in the background and will eventually reach the 'Running-Healthy' state.", d.Timeout(schema.TimeoutCreate)-1*time.Minute, currentState),
+			})
+			return diags, false
+		}
+		// For non-timeout errors, still return the error
 		return diag.FromErr(err), true
 	}
-	return nil, false
+	return diags, false
 }
 
 //	var resourceClusterUpdatePendingStates = []string{

@@ -334,7 +334,7 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	resourceClusterAksRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 //goland:noinspection GoUnhandledErrorResult
