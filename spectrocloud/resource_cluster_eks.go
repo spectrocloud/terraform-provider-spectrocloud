@@ -26,7 +26,9 @@ func resourceClusterEks() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterEksImport,
 		},
-		Description: "Resource for managing EKS clusters in Spectro Cloud through Palette.",
+		Description: "Resource for managing EKS clusters in Spectro Cloud through Palette. " +
+			"Includes automatic timeout reconciliation - if cluster creation times out in Terraform but the cluster is actually healthy, " +
+			"the provider will automatically synchronize the state instead of attempting to destroy and recreate the cluster.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -404,14 +406,17 @@ func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	diagnostics, isError := waitForClusterCreationWithReconciliation(ctx, d, uid, diags, c, true, resourceClusterEksRead, m)
 	if isError {
 		return diagnostics
 	}
 
-	resourceClusterEksRead(ctx, d, m)
+	// If reconciliation succeeded, the read was already called, otherwise call it normally
+	if !isTimeoutError(diagnostics) {
+		resourceClusterEksRead(ctx, d, m)
+	}
 
-	return diags
+	return diagnostics
 }
 
 func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
