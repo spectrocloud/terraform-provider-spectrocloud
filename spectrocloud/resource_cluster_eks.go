@@ -838,21 +838,17 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
 
-	// Add cp-pool when az_subnets (static) or azs (dynamic) are present with more than 1 element
-	var cpPool map[string]interface{}
-	if cloudConfig["az_subnets"] != nil {
-		azSubnets := cloudConfig["az_subnets"].(map[string]interface{})
-		if len(azSubnets) > 1 {
-			cpPool = map[string]interface{}{
-				"control_plane": true,
-				"name":          "cp-pool",
-				"az_subnets":    cloudConfig["az_subnets"],
-				"capacity_type": "spot",
-				"count":         0,
-				"azs":           []interface{}{},
-			}
-			machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
+	// Following same logic as UI for setting up control plane for static cluster
+	// Only add cp-pool for dynamic cluster provisioning when az_subnets is not empty and has more than one element
+	if cloudConfig["az_subnets"] != nil && len(cloudConfig["az_subnets"].(map[string]interface{})) > 0 {
+		cpPool := map[string]interface{}{
+			"control_plane": true,
+			"name":          "cp-pool",
+			"az_subnets":    cloudConfig["az_subnets"],
+			"capacity_type": "spot",
+			"count":         0,
 		}
+		machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	}
 
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
