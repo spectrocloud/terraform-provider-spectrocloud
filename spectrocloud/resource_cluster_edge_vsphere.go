@@ -334,7 +334,7 @@ func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceDat
 
 	resourceClusterEdgeVsphereRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 func resourceClusterEdgeVsphereRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

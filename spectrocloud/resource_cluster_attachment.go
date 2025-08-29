@@ -105,7 +105,7 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 
 	resourceAddonDeploymentRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 func getAddonDeploymentId(clusterUid string, clusterProfile *models.V1ClusterProfile) string {

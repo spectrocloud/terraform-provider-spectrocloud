@@ -399,7 +399,7 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	resourceClusterAzureRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 //goland:noinspection GoUnhandledErrorResult

@@ -391,7 +391,7 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 
 	resourceClusterVsphereRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 //goland:noinspection GoUnhandledErrorResult
