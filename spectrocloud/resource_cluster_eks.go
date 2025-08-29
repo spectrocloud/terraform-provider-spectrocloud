@@ -145,7 +145,6 @@ func resourceClusterEks() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:        schema.TypeList,
-				ForceNew:    true,
 				Required:    true,
 				MaxItems:    1,
 				Description: "The AWS environment configuration settings such as network parameters and encryption parameters that apply to this cluster.",
@@ -200,7 +199,6 @@ func resourceClusterEks() *schema.Resource {
 						"public_access_cidrs": {
 							Type:        schema.TypeSet,
 							Optional:    true,
-							ForceNew:    true,
 							Set:         schema.HashString,
 							Description: "List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.",
 							Elem: &schema.Schema{
@@ -210,7 +208,6 @@ func resourceClusterEks() *schema.Resource {
 						"private_access_cidrs": {
 							Type:        schema.TypeSet,
 							Optional:    true,
-							ForceNew:    true,
 							Set:         schema.HashString,
 							Description: "List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.",
 							Elem: &schema.Schema{
