@@ -145,7 +145,6 @@ func resourceClusterEks() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:        schema.TypeList,
-				ForceNew:    true,
 				Required:    true,
 				MaxItems:    1,
 				Description: "The AWS environment configuration settings such as network parameters and encryption parameters that apply to this cluster.",
@@ -200,7 +199,6 @@ func resourceClusterEks() *schema.Resource {
 						"public_access_cidrs": {
 							Type:        schema.TypeSet,
 							Optional:    true,
-							ForceNew:    true,
 							Set:         schema.HashString,
 							Description: "List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.",
 							Elem: &schema.Schema{
@@ -210,7 +208,6 @@ func resourceClusterEks() *schema.Resource {
 						"private_access_cidrs": {
 							Type:        schema.TypeSet,
 							Optional:    true,
-							ForceNew:    true,
 							Set:         schema.HashString,
 							Description: "List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.",
 							Elem: &schema.Schema{
@@ -511,6 +508,7 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 		if pool.Name == "cp-pool" {
 			ret["az_subnets"] = pool.SubnetIds
 		}
+
 	}
 
 	if cloudConfig.Spec.ClusterConfig.EncryptionConfig != nil && cloudConfig.Spec.ClusterConfig.EncryptionConfig.IsEnabled {
@@ -658,6 +656,15 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
+
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		cloudConfigEntity := toCloudConfigEks(cloudConfig)
+		err := c.UpdateCloudConfigEks(cloudConfigId, cloudConfigEntity)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	CloudConfig, err := c.GetCloudConfigEks(cloudConfigId)
 	if err != nil {
@@ -830,6 +837,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
+
 	// Following same logic as UI for setting up control plane for static cluster
 	// Only add cp-pool for dynamic cluster provisioning when az_subnets is not empty and has more than one element
 	if cloudConfig["az_subnets"] != nil && len(cloudConfig["az_subnets"].(map[string]interface{})) > 0 {
@@ -842,6 +850,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		}
 		machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	}
+
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
@@ -1049,4 +1058,56 @@ func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {
 	}
 
 	return f
+}
+
+func toCloudConfigEks(cloudConfig map[string]interface{}) *models.V1EksCloudClusterConfigEntity {
+	var encryptionConfig *models.V1EncryptionConfig
+	if cloudConfig["encryption_config_arn"] != nil && cloudConfig["encryption_config_arn"].(string) != "" {
+		encryptionConfig = &models.V1EncryptionConfig{
+			IsEnabled: true,
+			Provider:  cloudConfig["encryption_config_arn"].(string),
+		}
+	}
+
+	access := &models.V1EksClusterConfigEndpointAccess{}
+	switch cloudConfig["endpoint_access"].(string) {
+	case "public":
+		access.Public = true
+		access.Private = false
+	case "private":
+		access.Public = false
+		access.Private = true
+	case "private_and_public":
+		access.Public = true
+		access.Private = true
+	}
+
+	if cloudConfig["public_access_cidrs"] != nil {
+		cidrs := make([]string, 0)
+		for _, cidr := range cloudConfig["public_access_cidrs"].(*schema.Set).List() {
+			cidrs = append(cidrs, cidr.(string))
+		}
+		access.PublicCIDRs = cidrs
+	}
+
+	if cloudConfig["private_access_cidrs"] != nil {
+		cidrs := make([]string, 0)
+		for _, cidr := range cloudConfig["private_access_cidrs"].(*schema.Set).List() {
+			cidrs = append(cidrs, cidr.(string))
+		}
+		access.PrivateCIDRs = cidrs
+	}
+
+	clusterConfigEntity := &models.V1EksCloudClusterConfigEntity{
+		ClusterConfig: &models.V1EksClusterConfig{
+			BastionDisabled:  true,
+			VpcID:            cloudConfig["vpc_id"].(string),
+			Region:           types.Ptr(cloudConfig["region"].(string)),
+			SSHKeyName:       cloudConfig["ssh_key_name"].(string),
+			EncryptionConfig: encryptionConfig,
+			EndpointAccess:   access,
+		},
+	}
+
+	return clusterConfigEntity
 }
