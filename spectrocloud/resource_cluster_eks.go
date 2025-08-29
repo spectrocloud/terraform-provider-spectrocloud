@@ -507,7 +507,6 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	for _, pool := range cloudConfig.Spec.MachinePoolConfig {
 		if pool.Name == "cp-pool" {
 			ret["az_subnets"] = pool.SubnetIds
-			ret["azs"] = pool.Azs
 		}
 
 	}
@@ -840,27 +839,10 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
 
 	// Add cp-pool when az_subnets (static) or azs (dynamic) are present with more than 1 element
-	var shouldAddCpPool bool
 	var cpPool map[string]interface{}
-
-	if cloudConfig["azs"] != nil {
-		azs := cloudConfig["azs"].([]interface{})
-		if len(azs) > 1 {
-			shouldAddCpPool = true
-			cpPool = map[string]interface{}{
-				"control_plane": true,
-				"name":          "cp-pool",
-				"azs":           cloudConfig["azs"],
-				"capacity_type": "spot",
-				"count":         0,
-				"az_subnets":    map[string]interface{}{},
-			}
-		}
-	}
 	if cloudConfig["az_subnets"] != nil {
 		azSubnets := cloudConfig["az_subnets"].(map[string]interface{})
 		if len(azSubnets) > 1 {
-			shouldAddCpPool = true
 			cpPool = map[string]interface{}{
 				"control_plane": true,
 				"name":          "cp-pool",
@@ -869,12 +851,10 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 				"count":         0,
 				"azs":           []interface{}{},
 			}
+			machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 		}
 	}
 
-	if shouldAddCpPool {
-		machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
-	}
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
