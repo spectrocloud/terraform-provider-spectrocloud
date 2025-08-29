@@ -507,7 +507,9 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	for _, pool := range cloudConfig.Spec.MachinePoolConfig {
 		if pool.Name == "cp-pool" {
 			ret["az_subnets"] = pool.SubnetIds
+			ret["azs"] = pool.Azs
 		}
+
 	}
 
 	if cloudConfig.Spec.ClusterConfig.EncryptionConfig != nil && cloudConfig.Spec.ClusterConfig.EncryptionConfig.IsEnabled {
@@ -841,6 +843,20 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	var shouldAddCpPool bool
 	var cpPool map[string]interface{}
 
+	if cloudConfig["azs"] != nil {
+		azs := cloudConfig["azs"].([]interface{})
+		if len(azs) > 1 {
+			shouldAddCpPool = true
+			cpPool = map[string]interface{}{
+				"control_plane": true,
+				"name":          "cp-pool",
+				"azs":           cloudConfig["azs"],
+				"capacity_type": "spot",
+				"count":         0,
+				"az_subnets":    map[string]interface{}{},
+			}
+		}
+	}
 	if cloudConfig["az_subnets"] != nil {
 		azSubnets := cloudConfig["az_subnets"].(map[string]interface{})
 		if len(azSubnets) > 1 {
@@ -851,18 +867,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 				"az_subnets":    cloudConfig["az_subnets"],
 				"capacity_type": "spot",
 				"count":         0,
-			}
-		}
-	} else if cloudConfig["azs"] != nil {
-		azs := cloudConfig["azs"].([]interface{})
-		if len(azs) > 1 {
-			shouldAddCpPool = true
-			cpPool = map[string]interface{}{
-				"control_plane": true,
-				"name":          "cp-pool",
-				"azs":           cloudConfig["azs"],
-				"capacity_type": "spot",
-				"count":         0,
+				"azs":           []interface{}{},
 			}
 		}
 	}
