@@ -16,7 +16,10 @@ func resourceSSHKey() *schema.Resource {
 		ReadContext:   resourceSSHKeyRead,
 		UpdateContext: resourceSSHKeyUpdate,
 		DeleteContext: resourceSSHKeyDelete,
-		Description:   "The SSH key resource allows you to manage SSH keys in Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceSSHKeyImport,
+		},
+		Description: "The SSH key resource allows you to manage SSH keys in Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

@@ -15,7 +15,10 @@ func resourceProject() *schema.Resource {
 		ReadContext:   resourceProjectRead,
 		UpdateContext: resourceProjectUpdate,
 		DeleteContext: resourceProjectDelete,
-		Description:   "Create and manage projects in Palette.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceProjectImport,
+		},
+		Description: "Create and manage projects in Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

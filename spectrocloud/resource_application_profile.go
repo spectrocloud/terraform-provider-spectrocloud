@@ -24,6 +24,9 @@ func resourceApplicationProfile() *schema.Resource {
 		ReadContext:   resourceApplicationProfileRead,
 		UpdateContext: resourceApplicationProfileUpdate,
 		DeleteContext: resourceApplicationProfileDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceApplicationProfileImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(20 * time.Second),

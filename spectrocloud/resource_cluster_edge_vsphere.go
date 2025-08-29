@@ -22,6 +22,9 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 		ReadContext:   resourceClusterEdgeVsphereRead,
 		UpdateContext: resourceClusterEdgeVsphereUpdate,
 		DeleteContext: resourceClusterDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterEdgeVsphereImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
