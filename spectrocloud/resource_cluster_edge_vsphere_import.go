@@ -8,36 +8,24 @@ import (
 )
 
 func resourceClusterEdgeVsphereImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	// Edge vsphere clusters have a context, default to "project"
-	c := getV1ClientWithResourceContext(m, "project")
-
-	// The import ID should be the cluster UID
-	clusterUID := d.Id()
-
-	// Validate that the cluster exists and we can access it
-	cluster, err := c.GetCluster(clusterUID)
+	c, err := GetCommonCluster(d, m)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve cluster for import: %s", err)
-	}
-	if cluster == nil {
-		return nil, fmt.Errorf("cluster with ID %s not found", clusterUID)
-	}
-
-	// Set the cluster name from the retrieved cluster
-	if err := d.Set("name", cluster.Metadata.Name); err != nil {
 		return nil, err
 	}
 
-	// Set the context to project as default for import
-	if err := d.Set("context", "project"); err != nil {
-		return nil, err
-	}
-
-	// Read all cluster data to populate the state
 	diags := resourceClusterEdgeVsphereRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
 
+	// cluster profile and common default cluster attribute is get set here
+	err = flattenCommonAttributeForClusterImport(c, d)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the resource data. In most cases, this method is only used to
+	// import one resource at a time, so you should return the resource data
+	// in a slice with a single element.
 	return []*schema.ResourceData{d}, nil
 }

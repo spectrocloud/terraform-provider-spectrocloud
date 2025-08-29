@@ -12,15 +12,15 @@ func resourceClusterVirtualImport(ctx context.Context, d *schema.ResourceData, m
 	c := getV1ClientWithResourceContext(m, "project")
 
 	// The import ID should be the cluster UID
-	clusterUID := d.Id()
+	virtualClusterUID := d.Id()
 
 	// Validate that the cluster exists and we can access it
-	cluster, err := c.GetCluster(clusterUID)
+	cluster, err := c.GetCluster(virtualClusterUID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve virtual cluster for import: %s", err)
 	}
 	if cluster == nil {
-		return nil, fmt.Errorf("virtual cluster with ID %s not found", clusterUID)
+		return nil, fmt.Errorf("virtual cluster with ID %s not found", virtualClusterUID)
 	}
 
 	// Set the cluster name from the retrieved cluster
