@@ -656,6 +656,15 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		cloudConfigEntity := toCloudConfigEks(cloudConfig)
+		err := c.UpdateCloudConfigEks(cloudConfigId, cloudConfigEntity)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	CloudConfig, err := c.GetCloudConfigEks(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -827,16 +836,38 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.CloudConfig.EndpointAccess = access
 
 	machinePoolConfigs := make([]*models.V1EksMachinePoolConfigEntity, 0)
-	// Following same logic as UI for setting up control plane for static cluster
-	// Only add cp-pool for dynamic cluster provisioning when az_subnets is not empty and has more than one element
-	if cloudConfig["az_subnets"] != nil && len(cloudConfig["az_subnets"].(map[string]interface{})) > 0 {
-		cpPool := map[string]interface{}{
-			"control_plane": true,
-			"name":          "cp-pool",
-			"az_subnets":    cloudConfig["az_subnets"],
-			"capacity_type": "spot",
-			"count":         0,
+
+	// Add cp-pool when az_subnets (static) or azs (dynamic) are present with more than 1 element
+	var shouldAddCpPool bool
+	var cpPool map[string]interface{}
+
+	if cloudConfig["az_subnets"] != nil {
+		azSubnets := cloudConfig["az_subnets"].(map[string]interface{})
+		if len(azSubnets) > 1 {
+			shouldAddCpPool = true
+			cpPool = map[string]interface{}{
+				"control_plane": true,
+				"name":          "cp-pool",
+				"az_subnets":    cloudConfig["az_subnets"],
+				"capacity_type": "spot",
+				"count":         0,
+			}
 		}
+	} else if cloudConfig["azs"] != nil {
+		azs := cloudConfig["azs"].([]interface{})
+		if len(azs) > 1 {
+			shouldAddCpPool = true
+			cpPool = map[string]interface{}{
+				"control_plane": true,
+				"name":          "cp-pool",
+				"azs":           cloudConfig["azs"],
+				"capacity_type": "spot",
+				"count":         0,
+			}
+		}
+	}
+
+	if shouldAddCpPool {
 		machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	}
 	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
@@ -1046,4 +1077,56 @@ func toFargateProfileEks(fargateProfile interface{}) *models.V1FargateProfile {
 	}
 
 	return f
+}
+
+func toCloudConfigEks(cloudConfig map[string]interface{}) *models.V1EksCloudClusterConfigEntity {
+	var encryptionConfig *models.V1EncryptionConfig
+	if cloudConfig["encryption_config_arn"] != nil && cloudConfig["encryption_config_arn"].(string) != "" {
+		encryptionConfig = &models.V1EncryptionConfig{
+			IsEnabled: true,
+			Provider:  cloudConfig["encryption_config_arn"].(string),
+		}
+	}
+
+	access := &models.V1EksClusterConfigEndpointAccess{}
+	switch cloudConfig["endpoint_access"].(string) {
+	case "public":
+		access.Public = true
+		access.Private = false
+	case "private":
+		access.Public = false
+		access.Private = true
+	case "private_and_public":
+		access.Public = true
+		access.Private = true
+	}
+
+	if cloudConfig["public_access_cidrs"] != nil {
+		cidrs := make([]string, 0)
+		for _, cidr := range cloudConfig["public_access_cidrs"].(*schema.Set).List() {
+			cidrs = append(cidrs, cidr.(string))
+		}
+		access.PublicCIDRs = cidrs
+	}
+
+	if cloudConfig["private_access_cidrs"] != nil {
+		cidrs := make([]string, 0)
+		for _, cidr := range cloudConfig["private_access_cidrs"].(*schema.Set).List() {
+			cidrs = append(cidrs, cidr.(string))
+		}
+		access.PrivateCIDRs = cidrs
+	}
+
+	clusterConfigEntity := &models.V1EksCloudClusterConfigEntity{
+		ClusterConfig: &models.V1EksClusterConfig{
+			BastionDisabled:  true,
+			VpcID:            cloudConfig["vpc_id"].(string),
+			Region:           types.Ptr(cloudConfig["region"].(string)),
+			SSHKeyName:       cloudConfig["ssh_key_name"].(string),
+			EncryptionConfig: encryptionConfig,
+			EndpointAccess:   access,
+		},
+	}
+
+	return clusterConfigEntity
 }
