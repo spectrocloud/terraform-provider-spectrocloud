@@ -11,93 +11,25 @@ description: |-
 
 ## Example Usage
 
-### Application deployment into Cluster Group (New Sandbox Cluster)
+
+### Application deployment into Cluster Group.
 
 ```hcl
-data "spectrocloud_application_profile" "profile" {
-  # id = "63444eb70807dc2c14a8ad59"
-  name    = "nginx-profile"
-  version = "1.0.0"
-}
-
-data "spectrocloud_cluster_group" "cluster_group" {
-  name    = "beehive-team"
-  context = "project"
-}
-
-resource "spectrocloud_application" "app_cluster_group" {
-  name                    = "nginx-app-cluster-group"
-  application_profile_uid = data.spectrocloud_application_profile.profile.id
-  
-  tags = ["production", "nginx"]
+resource "spectrocloud_application" "application" {
+  name                    = "app-beru-whitesun-lars"
+  application_profile_uid = data.spectrocloud_application_profile.id
 
   config {
-    cluster_context   = "project"
-    cluster_name      = "nginx-sandbox"
-    cluster_group_uid = data.spectrocloud_cluster_group.cluster_group.id
+    cluster_name      = "sandbox-scorpius"
+    cluster_group_uid = "6358d799fad5aa39fa26a8c2" # or data.spectrocloud_cluster_group.id
     limits {
-      cpu     = 2000  # CPU in millicores
-      memory  = 4096  # Memory in MB
-      storage = 10    # Storage in GB
+      cpu     = 2
+      memory  = 4096
+      storage = 10
     }
   }
 }
-```
-
-### Application deployment into Existing Virtual Cluster
-
-```hcl
-data "spectrocloud_application_profile" "profile" {
-  # id = "63444eb70807dc2c14a8ad59" 
-  name    = "redis-profile"
-  version = "1.0.0"
-}
-
-data "spectrocloud_cluster" "cluster" {
-  name    = "existing-virtual-cluster"
-  context = "project"
-}
-
-resource "spectrocloud_application" "app_virtual_cluster" {
-  name                    = "redis-app"
-  application_profile_uid = data.spectrocloud_application_profile.profile.id
-  
-  tags = ["cache", "redis"]
-
-  config {
-    cluster_context = "project"
-    cluster_uid     = data.spectrocloud_cluster.cluster.id
-    cluster_name    = "redis-cluster"
-  }
-}
-```
-
-### Application deployment with Tenant Context
-
-```hcl
-data "spectrocloud_application_profile" "profile" {
-  name    = "monitoring-profile"
-  version = "2.0.0"
-  context = "tenant"
-}
-
-resource "spectrocloud_application" "app_tenant" {
-  name                    = "monitoring-app"
-  application_profile_uid = data.spectrocloud_application_profile.profile.id
-  
-  tags = ["monitoring", "observability"]
-
-  config {
-    cluster_context   = "tenant"
-    cluster_group_uid = "64a1b2c3d4e5f6789abcdef0"
-    cluster_name      = "monitoring-sandbox"
-    limits {
-      cpu     = 4000
-      memory  = 8192
-      storage = 50
-    }
-  }
-}
+   
 ```
 
 ## Import
