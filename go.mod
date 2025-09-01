@@ -7,7 +7,7 @@ toolchain go1.24.0
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/go-openapi/strfmt v0.23.0
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320
 	github.com/hashicorp/terraform-plugin-docs v0.16.0
