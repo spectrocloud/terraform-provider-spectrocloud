@@ -20,7 +20,10 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 		ReadContext:   resourceIpPoolRead,
 		UpdateContext: resourceIpPoolUpdate,
 		DeleteContext: resourceIpPoolDelete,
-		Description:   "A Resource to manage IP pools for Private Cloud Gateway.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourcePrivateCloudGatewayIpPoolImport,
+		},
+		Description: "A Resource to manage IP pools for Private Cloud Gateway.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

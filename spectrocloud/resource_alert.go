@@ -20,6 +20,9 @@ func resourceAlert() *schema.Resource {
 		ReadContext:   resourceAlertRead,
 		UpdateContext: resourceAlertUpdate,
 		DeleteContext: resourceAlertDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceAlertImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
