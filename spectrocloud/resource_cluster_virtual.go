@@ -63,9 +63,9 @@ func resourceClusterVirtual() *schema.Resource {
 				Description: "The description of the cluster. Default value is empty string.",
 			},
 			"host_cluster_uid": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				ExactlyOneOf: []string{"host_cluster_uid", "cluster_group_uid"},
+				Type:     schema.TypeString,
+				Optional: true,
+				// ExactlyOneOf: []string{"host_cluster_uid", "cluster_group_uid"},
 				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
 			},
 			"cluster_group_uid": {

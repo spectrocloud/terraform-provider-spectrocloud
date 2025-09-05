@@ -33,6 +33,33 @@ func resourceClusterVirtualImport(ctx context.Context, d *schema.ResourceData, m
 		return nil, err
 	}
 
+	if err := d.Set("cluster_group_uid", cluster.Spec.ClusterConfig.HostClusterConfig.ClusterGroup.UID); err != nil {
+		return nil, err
+	}
+
+	// setting up default settings for import
+	if err := d.Set("host_cluster_uid", cluster.Spec.ClusterConfig.HostClusterConfig.HostCluster.UID); err != nil {
+		return nil, err
+	}
+	if err := d.Set("apply_setting", "DownloadAndInstall"); err != nil {
+		return nil, err
+	}
+	if err := d.Set("force_delete", false); err != nil {
+		return nil, err
+	}
+	if err := d.Set("force_delete_delay", 20); err != nil {
+		return nil, err
+	}
+	if err := d.Set("skip_completion", false); err != nil {
+		return nil, err
+	}
+	if err := d.Set("os_patch_on_boot", false); err != nil {
+		return nil, err
+	}
+	if err := d.Set("pause_cluster", false); err != nil {
+		return nil, err
+	}
+
 	// Read all cluster data to populate the state
 	diags := resourceClusterVirtualRead(ctx, d, m)
 	if diags.HasError() {

@@ -89,12 +89,10 @@ func GetCommonSSHKey(d *schema.ResourceData, m interface{}) (*client.V1Client, e
 		return nil, err
 	}
 
-	// Set the SSH key value (this is required)
-	if sshKey.Spec != nil && sshKey.Spec.PublicKey != "" {
-		if err := d.Set("ssh_key", sshKey.Spec.PublicKey); err != nil {
-			return nil, err
-		}
-	}
+	// Note: We don't set the 'ssh_key' field during import because it's marked as sensitive.
+	// This follows the same pattern as other sensitive fields (like credentials in cloud accounts).
+	// The user will need to provide the ssh_key value in their Terraform configuration after import.
+	// This is a security best practice to prevent sensitive data from being stored in state during import.
 
 	// Set the ID to the SSH key ID
 	d.SetId(sshKeyID)
