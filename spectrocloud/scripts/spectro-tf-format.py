@@ -15,7 +15,12 @@ import yaml
 import os
 import re
 import shutil
+import platform
 from typing import Dict, List, Any, Tuple, Optional
+
+# Platform detection for cross-platform compatibility
+IS_WINDOWS = platform.system() == 'Windows'
+IS_POSIX = os.name == 'posix'
 
 
 # Built-in templating configuration for Spectro Cloud
@@ -664,8 +669,10 @@ class SpectroTerraformFormatter:
                     self._write_yaml_file(yaml_file, final_yaml_content)
                     created_files.append(str(yaml_file))
                     
-                    # Create file reference
+                    # Create file reference (ensure forward slashes for Terraform compatibility)
                     relative_path = os.path.relpath(yaml_file, tf_file_path.parent)
+                    if IS_WINDOWS:
+                        relative_path = relative_path.replace('\\', '/')
                     file_reference = f'file("{relative_path}")'
                     
                     # Replace the values assignment
@@ -701,8 +708,10 @@ class SpectroTerraformFormatter:
                     self._write_yaml_file(yaml_file, final_yaml_content)
                     created_files.append(str(yaml_file))
                     
-                    # Create file reference
+                    # Create file reference (ensure forward slashes for Terraform compatibility)
                     relative_path = os.path.relpath(yaml_file, tf_file_path.parent)
+                    if IS_WINDOWS:
+                        relative_path = relative_path.replace('\\', '/')
                     file_reference = f'file("{relative_path}")'
                     
                     # Replace the node_pool_config assignment
@@ -1176,38 +1185,85 @@ class SpectroTerraformFormatter:
         
         return modified_content
     
+    def _get_terraform_commands(self) -> List[str]:
+        """Get list of terraform commands to try for the current platform"""
+        if IS_WINDOWS:
+            return ['terraform.exe', 'terraform']
+        else:
+            return ['terraform']
+    
     def _format_terraform_file(self, tf_path: Path) -> None:
-        """Format the Terraform file using terraform fmt"""
-        try:
-            print(f"📝 Formatting Terraform file...")
-            result = subprocess.run(
-                ['terraform', 'fmt', str(tf_path)],
-                cwd=tf_path.parent,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if result.returncode == 0:
-                print("✅ Terraform file formatted successfully")
-            else:
-                print(f"⚠️  Terraform fmt warning: {result.stderr.strip()}")
+        """Format the Terraform file using terraform fmt (cross-platform)"""
+        print(f"📝 Formatting Terraform file...")
+        
+        commands_to_try = self._get_terraform_commands()
+        
+        for terraform_cmd in commands_to_try:
+            try:
+                result = subprocess.run(
+                    [terraform_cmd, 'fmt', str(tf_path)],
+                    cwd=tf_path.parent,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    shell=IS_WINDOWS  # Use shell on Windows for better PATH resolution
+                )
                 
-        except subprocess.TimeoutExpired:
-            print("⚠️  Terraform fmt timed out")
-        except FileNotFoundError:
+                if result.returncode == 0:
+                    print("✅ Terraform file formatted successfully")
+                    return
+                else:
+                    print(f"⚠️  Terraform fmt warning: {result.stderr.strip()}")
+                    return
+                    
+            except subprocess.TimeoutExpired:
+                print(f"⚠️  Terraform fmt timed out with command: {terraform_cmd}")
+                return
+            except FileNotFoundError:
+                # Try next command in the list
+                continue
+            except Exception as e:
+                print(f"⚠️  Error running {terraform_cmd}: {e}")
+                continue
+        
+        # If we get here, none of the commands worked
+        if IS_WINDOWS:
+            print("⚠️  terraform command not found - ensure terraform.exe is in your PATH")
+            print("    Download from: https://www.terraform.io/downloads.html")
+        else:
             print("⚠️  terraform command not found - skipping formatting")
-        except Exception as e:
-            print(f"⚠️  Could not format Terraform file: {e}")
 
 
 def main():
     """Main entry point"""
+    # Platform-specific examples
+    if IS_WINDOWS:
+        platform_examples = """
+Windows Examples:
+  # Using batch wrapper (recommended)
+  spectro-tf-format.bat generated.tf
+  
+  # Using PowerShell wrapper
+  .\\spectro-tf-format.ps1 generated.tf
+  
+  # Direct Python execution
+  python spectro-tf-format generated.tf"""
+    else:
+        platform_examples = """
+Unix/Linux Examples:
+  # Make executable first
+  chmod +x spectro-tf-format
+  
+  # Run directly
+  ./spectro-tf-format generated.tf"""
+
     parser = argparse.ArgumentParser(
-        description='Spectro Terraform Formatter - Built-in YAML processing for Spectro Cloud',
+        description='Spectro Terraform Formatter - Built-in YAML processing for Spectro Cloud (Cross-Platform)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
-Examples:
+{platform_examples}
+
+General Examples:
   # Process terraform file with defaults (YAML extraction only)
   spectro-tf-format generated.tf
   
@@ -1231,6 +1287,7 @@ Built-in Defaults:
   Output Directory: {BUILTIN_TEMPLATING_CONFIG["output_dir"]}
   Backup Files: {BUILTIN_TEMPLATING_CONFIG["backup"]}
   Rules: {', '.join(BUILTIN_TEMPLATING_CONFIG["rules"])}
+  Platform: {platform.system()} ({platform.machine()})
         """
     )
     

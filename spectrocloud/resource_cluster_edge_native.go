@@ -690,7 +690,7 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(len(cloudConfig.EdgeHosts))),
+			Size:             types.Ptr(SafeInt32(len(cloudConfig.EdgeHosts))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -703,7 +703,7 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 		nodeRepaveInterval = m["node_repave_interval"].(int)
 	}
 	if !controlPlane {
-		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+		mp.PoolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
 	} else {
 		err := ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval)
 		if err != nil {

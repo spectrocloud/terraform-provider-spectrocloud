@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
@@ -57,6 +59,11 @@ func resourceClusterProfileImportFeatureCreate(ctx context.Context, d *schema.Re
 func toClusterProfileImportCreate(d *schema.ResourceData) (*os.File, error) {
 	importFilePath := d.Get("import_file").(string)
 
+	// Validate file path to prevent directory traversal attacks
+	if !isValidFilePath(importFilePath) {
+		return nil, fmt.Errorf("invalid file path: %s", importFilePath)
+	}
+	// #nosec G304
 	importFile, err := os.Open(importFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening import file: %s", err)
@@ -69,6 +76,28 @@ func toClusterProfileImportCreate(d *schema.ResourceData) (*os.File, error) {
 	}(importFile)*/
 
 	return importFile, nil
+}
+
+// isValidFilePath checks if the file path is safe and doesn't contain directory traversal attempts
+func isValidFilePath(filePath string) bool {
+	// Check for directory traversal patterns
+	if strings.Contains(filePath, "..") || strings.Contains(filePath, "//") {
+		return false
+	}
+
+	// Ensure the path is absolute or relative to current directory
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return false
+	}
+
+	// Check if the resolved path is within the current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		return false
+	}
+
+	return strings.HasPrefix(absPath, cwd)
 }
 
 func resourceClusterProfileImportFeatureRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

@@ -22,6 +22,9 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 		ReadContext:   resourceClusterEdgeVsphereRead,
 		UpdateContext: resourceClusterEdgeVsphereUpdate,
 		DeleteContext: resourceClusterDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterEdgeVsphereImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
@@ -622,9 +625,9 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachine
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
 	instanceType := models.V1VsphereInstanceType{
-		DiskGiB:   types.Ptr(int32(ins["disk_size_gb"].(int))),
-		MemoryMiB: types.Ptr(int64(ins["memory_mb"].(int))),
-		NumCPUs:   types.Ptr(int32(ins["cpu"].(int))),
+		DiskGiB:   types.Ptr(SafeInt32(ins["disk_size_gb"].(int))),
+		MemoryMiB: types.Ptr(SafeInt64(ins["memory_mb"].(int))),
+		NumCPUs:   types.Ptr(SafeInt32(ins["cpu"].(int))),
 	}
 
 	mp := &models.V1VsphereMachinePoolConfigEntity{
@@ -638,7 +641,7 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachine
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Size:             types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -651,7 +654,7 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachine
 		if m["node_repave_interval"] != nil {
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
-		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+		mp.PoolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
 	} else {
 		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
 		if err != nil {

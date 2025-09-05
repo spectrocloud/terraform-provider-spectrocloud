@@ -1,11 +1,14 @@
 package virtualmachineinstance
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"k8s.io/apimachinery/pkg/api/resource"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/constants"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
@@ -286,12 +289,21 @@ func expandCPU(cpu map[string]interface{}) (kubevirtapiv1.CPU, error) {
 	}
 
 	if v, ok := cpu["cores"].(int); ok {
+		if v < 0 || v > constants.UInt32MaxValue {
+			return result, fmt.Errorf("cores value %d is out of range for uint32", v)
+		}
 		result.Cores = uint32(v)
 	}
 	if v, ok := cpu["sockets"].(int); ok {
+		if v < 0 || v > constants.UInt32MaxValue {
+			return result, fmt.Errorf("sockets value %d is out of range for uint32", v)
+		}
 		result.Sockets = uint32(v)
 	}
 	if v, ok := cpu["threads"].(int); ok {
+		if v < 0 || v > constants.UInt32MaxValue {
+			return result, fmt.Errorf("threads value %d is out of range for uint32", v)
+		}
 		result.Threads = uint32(v)
 	}
 
