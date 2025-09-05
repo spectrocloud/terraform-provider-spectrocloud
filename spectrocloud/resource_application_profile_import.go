@@ -27,7 +27,14 @@ func resourceApplicationProfileImport(ctx context.Context, d *schema.ResourceDat
 	if err := d.Set("name", appProfile.Metadata.Name); err != nil {
 		return nil, err
 	}
-
+	// Set the application profile version from the retrieved profile
+	if err := d.Set("version", appProfile.Spec.Version); err != nil {
+		return nil, err
+	}
+	// Set the cloud to all as default for import
+	if err := d.Set("cloud", "all"); err != nil {
+		return nil, err
+	}
 	// Set the context to project as default for import
 	if err := d.Set("context", "project"); err != nil {
 		return nil, err
