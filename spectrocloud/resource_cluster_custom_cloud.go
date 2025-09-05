@@ -286,7 +286,7 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 
 	resourceClusterCustomCloudRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 func resourceClusterCustomCloudRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
