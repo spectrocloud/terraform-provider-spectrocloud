@@ -52,6 +52,7 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 				Type: "RollingUpdateScaleOut",
 			},
 			UseControlPlaneAsWorker: true,
+			UseLxdVM:                false,
 		}
 		mockMachinePools = append(mockMachinePools, mp)
 		config := &models.V1MaasClusterConfig{
@@ -77,8 +78,9 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 						"min_cpu":       2,
 					},
 				},
-				"azs":       []string{"zone1", "zone2"},
-				"node_tags": []string{"test"},
+				"azs":        []string{"zone1", "zone2"},
+				"node_tags":  []string{"test"},
+				"use_lxd_vm": false,
 				"placement": []interface{}{
 					map[string]interface{}{
 						"resource_pool": "maas_resource_pool",
@@ -121,8 +123,16 @@ func TestToMachinePoolMaas(t *testing.T) {
 				"resource_pool": "test_resource_pool",
 			},
 		},
-		"azs":       schema.NewSet(schema.HashString, []interface{}{"zone1", "zone2"}),
-		"node_tags": schema.NewSet(schema.HashString, []interface{}{"test"}),
+		"azs":        schema.NewSet(schema.HashString, []interface{}{"zone1", "zone2"}),
+		"node_tags":  schema.NewSet(schema.HashString, []interface{}{"test"}),
+		"use_lxd_vm": false,
+		"network": []interface{}{
+			map[string]interface{}{
+				"network_name":    "test_network",
+				"parent_pool_uid": "test_pool_uid",
+				"static_ip":       false,
+			},
+		},
 	}
 	rp := "test_resource_pool"
 	size := int32(2)
@@ -133,6 +143,12 @@ func TestToMachinePoolMaas(t *testing.T) {
 			InstanceType: &models.V1MaasInstanceType{MinCPU: 2, MinMemInMB: 500},
 			ResourcePool: &rp,
 			Tags:         []string{"test"},
+			UseLxdVM:     false,
+			Network: &models.V1MaasNetworkConfigEntity{
+				NetworkName:   types.Ptr("test_network"),
+				ParentPoolUID: "test_pool_uid",
+				StaticIP:      false,
+			},
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:        map[string]string{"TF": "test_label"},

@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
-	"log"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
@@ -25,6 +26,9 @@ func resourceAppliance() *schema.Resource {
 		ReadContext:   resourceApplianceRead,
 		UpdateContext: resourceApplianceUpdate,
 		DeleteContext: resourceApplianceDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceApplianceImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(20 * time.Minute),

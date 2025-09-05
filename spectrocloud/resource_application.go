@@ -16,6 +16,9 @@ func resourceApplication() *schema.Resource {
 		ReadContext:   resourceApplicationRead,
 		UpdateContext: resourceApplicationUpdate,
 		DeleteContext: resourceApplicationDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceApplicationImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -174,21 +177,90 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceApplicationRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	/*c := m.(*client.V1Client)
+	// Get the resource context from existing configuration, default to project
+	resourceContext := "project"
+	configList := d.Get("config")
+	if configList != nil && len(configList.([]interface{})) > 0 && configList.([]interface{})[0] != nil {
+		config := configList.([]interface{})[0].(map[string]interface{})
+		if clusterContext, ok := config["cluster_context"].(string); ok && clusterContext != "" {
+			resourceContext = clusterContext
+		}
+	}
 
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
 
-	uid := d.Get("cluster_uid").(string)
-	cluster, err := c.GetCluster(uid)
+	// Get the application deployment by ID
+	appDeployment, err := c.GetApplication(d.Id())
 	if err != nil {
+		// If not found in current context, try the other context
+		if resourceContext == "project" {
+			c = getV1ClientWithResourceContext(m, "tenant")
+			appDeployment, err = c.GetApplication(d.Id())
+			if err == nil && appDeployment != nil {
+				resourceContext = "tenant"
+			}
+		} else {
+			c = getV1ClientWithResourceContext(m, "project")
+			appDeployment, err = c.GetApplication(d.Id())
+			if err == nil && appDeployment != nil {
+				resourceContext = "project"
+			}
+		}
+
+		if err != nil {
+			return handleReadError(d, err, diags)
+		}
+	}
+
+	if appDeployment == nil {
+		// Deleted - Terraform will recreate it
+		d.SetId("")
+		return diags
+	}
+
+	// Set basic fields
+	if err := d.Set("name", appDeployment.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
 
-	diagnostics, done := readCommonFields(c, d, cluster)
-	if done {
-		return diagnostics
-	}*/
-	var diags diag.Diagnostics
+	if err := d.Set("tags", flattenTags(appDeployment.Metadata.Labels)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Set application profile UID
+	if appDeployment.Spec != nil && appDeployment.Spec.Profile != nil && appDeployment.Spec.Profile.Metadata != nil {
+		if err := d.Set("application_profile_uid", appDeployment.Spec.Profile.Metadata.UID); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	// Set config based on deployment type
+	if appDeployment.Spec != nil && appDeployment.Spec.Config != nil && appDeployment.Spec.Config.Target != nil {
+		config := make(map[string]interface{})
+		config["cluster_context"] = resourceContext
+
+		// Check cluster reference
+		if clusterRef := appDeployment.Spec.Config.Target.ClusterRef; clusterRef != nil {
+			// Set cluster UID and name based on the available information
+			if clusterRef.UID != "" {
+				config["cluster_uid"] = clusterRef.UID
+			}
+			if clusterRef.Name != "" {
+				config["cluster_name"] = clusterRef.Name
+			}
+		}
+
+		// Check environment reference for cluster group information
+		// if envRef := appDeployment.Spec.Config.Target.EnvRef; envRef != nil {
+		// 	// Environment references might contain cluster group information
+		// 	// This would need to be mapped based on the actual API response structure
+		// }
+
+		if err := d.Set("config", []interface{}{config}); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	return diags
 }
