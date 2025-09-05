@@ -665,7 +665,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw != nil && nraw != nil {
 			if ok, err := ValidateMachinePoolChange(oraw, nraw); ok {
-				return diag.Errorf(err.Error())
+				return diag.Errorf("%s", err.Error())
 			}
 		}
 		if oraw == nil {
