@@ -527,7 +527,9 @@ func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.
 			pUID = resolvedUID
 		}
 	case models.V1PackTypeManifest:
-		pUID = "spectro-manifest-pack"
+		if pUID == "" {
+			pUID = "spectro-manifest-pack"
+		}
 	}
 
 	pack := &models.V1PackManifestUpdateEntity{
