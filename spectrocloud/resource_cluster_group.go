@@ -20,6 +20,9 @@ func resourceClusterGroup() *schema.Resource {
 		ReadContext:   resourceClusterGroupRead,
 		UpdateContext: resourceClusterGroupUpdate,
 		DeleteContext: resourceClusterGroupDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterGroupImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -387,10 +390,10 @@ func toClusterGroupLimitConfig(resources map[string]interface{}) *models.V1Clust
 
 	ret := &models.V1ClusterGroupLimitConfig{
 
-		CPUMilliCore:     int32(cpu_milli),
-		MemoryMiB:        int32(mem_in_mb),
-		StorageGiB:       int32(storage_in_gb),
-		OverSubscription: int32(oversubscription),
+		CPUMilliCore:     SafeInt32(cpu_milli),
+		MemoryMiB:        SafeInt32(mem_in_mb),
+		StorageGiB:       SafeInt32(storage_in_gb),
+		OverSubscription: SafeInt32(oversubscription),
 	}
 
 	return ret
