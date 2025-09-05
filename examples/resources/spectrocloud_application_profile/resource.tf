@@ -192,3 +192,15 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
     }
   }
 }
+
+# Import example:
+# terraform import spectrocloud_application_profile.app_profile_all_tiers "profile_uid_here"
+# 
+# Where:
+# - profile_uid_here is the unique identifier of the application profile
+#
+# To import using import block:
+# import {
+#   to = spectrocloud_application_profile.app_profile_all_tiers
+#   id = "profile_uid_here"
+# }

@@ -37,7 +37,7 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 		},
 		PVC: &corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-			Resources: k8sv1.ResourceRequirements{
+			Resources: k8sv1.VolumeResourceRequirements{
 				Requests: k8sv1.ResourceList{
 					"storage": requestStorage,
 				},

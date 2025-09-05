@@ -696,15 +696,15 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 			azs = append(azs, az.(string))
 		}
 	}
-	min := int32(m["count"].(int))
-	max := int32(m["count"].(int))
+	min := SafeInt32(m["count"].(int))
+	max := SafeInt32(m["count"].(int))
 
 	if m["min"] != nil {
-		min = int32(m["min"].(int))
+		min = SafeInt32(m["min"].(int))
 	}
 
 	if m["max"] != nil {
-		max = int32(m["max"].(int))
+		max = SafeInt32(m["max"].(int))
 	}
 
 	mp := &models.V1AwsMachinePoolConfigEntity{
@@ -712,7 +712,7 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 			Azs:            azs,
 			InstanceType:   types.Ptr(m["instance_type"].(string)),
 			CapacityType:   &capacityType,
-			RootDeviceSize: int64(m["disk_size_gb"].(int)),
+			RootDeviceSize: SafeInt64(m["disk_size_gb"].(int)),
 			Subnets:        azSubnetsConfigs,
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
@@ -721,7 +721,7 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Size:             types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -736,7 +736,7 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 		if m["node_repave_interval"] != nil {
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
-		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+		mp.PoolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
 	} else {
 		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
 		if err != nil {

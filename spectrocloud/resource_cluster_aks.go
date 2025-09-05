@@ -683,22 +683,22 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		labels = append(labels, "worker")
 	}
 
-	min := int32(m["count"].(int))
-	max := int32(m["count"].(int))
+	min := SafeInt32(m["count"].(int))
+	max := SafeInt32(m["count"].(int))
 
 	if m["min"] != nil {
-		min = int32(m["min"].(int))
+		min = SafeInt32(m["min"].(int))
 	}
 
 	if m["max"] != nil {
-		max = int32(m["max"].(int))
+		max = SafeInt32(m["max"].(int))
 	}
 
 	mp := &models.V1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			InstanceType: m["instance_type"].(string),
 			OsDisk: &models.V1AzureOSDisk{
-				DiskSizeGB: int32(m["disk_size_gb"].(int)),
+				DiskSizeGB: SafeInt32(m["disk_size_gb"].(int)),
 				ManagedDisk: &models.V1ManagedDisk{
 					StorageAccountType: m["storage_account_type"].(string),
 				},
@@ -715,7 +715,7 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Size:             types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

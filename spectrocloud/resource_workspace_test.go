@@ -91,7 +91,8 @@ func TestToWorkspace(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Initialize resource data with input
 			d := schema.TestResourceDataRaw(t, resourceWorkspace().Schema, tt.input)
-			result := toWorkspace(d, nil) // nil client for unit test
+			result, err := toWorkspace(d, nil) // nil client for unit test
+			assert.NoError(t, err)
 
 			// Compare the expected and actual result
 			assert.Equal(t, tt.expected.Metadata.Name, result.Metadata.Name)

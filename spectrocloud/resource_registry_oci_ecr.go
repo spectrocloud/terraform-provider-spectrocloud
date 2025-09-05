@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/spectrocloud/palette-sdk-go/client"
 	"time"
+
+	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -21,6 +22,9 @@ func resourceRegistryOciEcr() *schema.Resource {
 		ReadContext:   resourceRegistryEcrRead,
 		UpdateContext: resourceRegistryEcrUpdate,
 		DeleteContext: resourceRegistryEcrDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceRegistryOciImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -140,7 +144,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 										Type:        schema.TypeBool,
 										Optional:    true,
 										Default:     false,
-										Description: "Disables TLS certificate verification when set to true. Use with caution as it may expose connections to security risks.",
+										Description: "Disables TLS certificate verification when set to true. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this when connecting to registries with self-signed certificates in trusted networks.",
 									},
 								},
 							},

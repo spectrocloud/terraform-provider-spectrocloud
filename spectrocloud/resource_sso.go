@@ -94,7 +94,7 @@ func resourceSSO() *schema.Resource {
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Default:     false,
-							Description: "Boolean to skip TLS verification for identity provider communication.",
+							Description: "Boolean to skip TLS verification for identity provider communication. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this when connecting to identity providers with self-signed certificates in trusted networks.",
 						},
 						"client_id": {
 							Type:        schema.TypeString,

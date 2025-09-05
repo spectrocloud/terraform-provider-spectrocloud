@@ -102,7 +102,10 @@ func PersistentVolumeClaimSpecSchema() *schema.Schema {
 func FlattenPersistentVolumeClaimSpec(in v1.PersistentVolumeClaimSpec) []interface{} {
 	att := make(map[string]interface{})
 	att["access_modes"] = flattenPersistentVolumeAccessModes(in.AccessModes)
-	att["resources"] = flattenResourceRequirements(in.Resources)
+	att["resources"] = flattenResourceRequirements(v1.ResourceRequirements{
+		Limits:   in.Resources.Limits,
+		Requests: in.Resources.Requests,
+	})
 	if in.Selector != nil {
 		att["selector"] = flattenLabelSelector(in.Selector)
 	}
@@ -142,7 +145,10 @@ func ExpandPersistentVolumeClaimSpec(l []interface{}) (*v1.PersistentVolumeClaim
 		return nil, err
 	}
 	obj.AccessModes = expandPersistentVolumeAccessModes(in["access_modes"].(*schema.Set).List())
-	obj.Resources = *resourceRequirements
+	obj.Resources = v1.VolumeResourceRequirements{
+		Limits:   resourceRequirements.Limits,
+		Requests: resourceRequirements.Requests,
+	}
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
 		obj.Selector = expandLabelSelector(v)
 	}

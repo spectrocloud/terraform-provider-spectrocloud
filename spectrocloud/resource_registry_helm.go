@@ -19,6 +19,9 @@ func resourceRegistryHelm() *schema.Resource {
 		ReadContext:   resourceRegistryHelmRead,
 		UpdateContext: resourceRegistryHelmUpdate,
 		DeleteContext: resourceRegistryHelmDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceRegistryHelmImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

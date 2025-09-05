@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
@@ -45,15 +46,29 @@ func main() {
 	// Start servers on different ports
 	go func() {
 		log.Println("Starting server on :8088...")
-		if err := http.ListenAndServeTLS(":8088", "mock_server.crt", "mock_server.key", router8088); err != nil {
+		server := &http.Server{
+			Addr:         ":8088",
+			Handler:      router8088,
+			ReadTimeout:  15 * time.Second,
+			WriteTimeout: 15 * time.Second,
+			IdleTimeout:  60 * time.Second,
+		}
+		if err := server.ListenAndServeTLS("mock_server.crt", "mock_server.key"); err != nil {
 			log.Fatalf("Server failed to start on port 8088: %v", err)
 		}
 	}()
 
 	log.Println("Starting server on :8888...")
 
-	if err := http.ListenAndServeTLS(":8888", "mock_server.crt", "mock_server.key", router8888); err != nil {
-		log.Fatalf("Server failed to start on port 8088: %v", err)
+	server := &http.Server{
+		Addr:         ":8888",
+		Handler:      router8888,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	if err := server.ListenAndServeTLS("mock_server.crt", "mock_server.key"); err != nil {
+		log.Fatalf("Server failed to start on port 8888: %v", err)
 	}
 }
 

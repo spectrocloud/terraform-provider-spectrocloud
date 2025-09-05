@@ -16,7 +16,10 @@ func resourceFilter() *schema.Resource {
 		ReadContext:   resourceFilterRead,
 		UpdateContext: resourceFilterUpdate,
 		DeleteContext: resourceFilterDelete,
-		Description:   "A resource for creating and managing filters.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceFilterImport,
+		},
+		Description: "A resource for creating and managing filters.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

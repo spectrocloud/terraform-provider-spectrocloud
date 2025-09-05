@@ -28,3 +28,10 @@ resource "spectrocloud_alert" "alert_http" {
   type            = "http"
   alert_all_users = true
 }
+
+# Import example:
+# terraform import spectrocloud_alert.alert_email "alertUid:ClusterHealth"
+# 
+# Where:
+# - alertUid is the unique identifier of the alert
+# - ClusterHealth is the component type

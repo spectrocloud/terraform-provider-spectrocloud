@@ -376,8 +376,7 @@ func CloudAccountsRoutes() []Route {
 						UID:                   "test-gcp-account-id-1",
 					},
 					Spec: &models.V1GcpAccountSpec{
-						JSONCredentials:         "test-json-cred",
-						JSONCredentialsFileName: "test-json",
+						JSONCredentials: "test-json-cred",
 					},
 					Status: &models.V1CloudAccountStatus{
 						State: "Running",

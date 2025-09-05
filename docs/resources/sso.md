@@ -102,7 +102,7 @@ Optional:
 
 - `default_team_ids` (Set of String) A set of default team IDs assigned to users.
 - `identity_provider_ca_certificate` (String) Certificate authority (CA) certificate for the identity provider.
-- `insecure_skip_tls_verify` (Boolean) Boolean to skip TLS verification for identity provider communication.
+- `insecure_skip_tls_verify` (Boolean) Boolean to skip TLS verification for identity provider communication. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this when connecting to identity providers with self-signed certificates in trusted networks.
 - `user_info_endpoint` (Block List, Max: 1) To allow Palette to query the OIDC userinfo endpoint using the provided Issuer URL. Palette will first attempt to retrieve role and group information from userInfo endpoint. If unavailable, Palette will fall back to using Required Claims as specified above. Use the following fields to specify what Required Claims Palette will include when querying the userinfo endpoint. (see [below for nested schema](#nestedblock--oidc--user_info_endpoint))
 
 Read-Only:

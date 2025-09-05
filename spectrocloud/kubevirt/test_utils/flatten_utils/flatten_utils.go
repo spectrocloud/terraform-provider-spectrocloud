@@ -37,7 +37,7 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 			AccessModes: []k8sv1.PersistentVolumeAccessMode{
 				"ReadWriteOnce",
 			},
-			Resources: k8sv1.ResourceRequirements{
+			Resources: k8sv1.VolumeResourceRequirements{
 				Requests: k8sv1.ResourceList{
 					"storage": (func() resource.Quantity { res, _ := resource.ParseQuantity("10Gi"); return res })(),
 				},
@@ -305,7 +305,6 @@ func GetBaseOutputForVirtualMachine() interface{} {
 						"labels":           map[string]any(nil),
 						"name":             string(""),
 						"resource_version": string(""),
-						"self_link":        string(""),
 						"uid":              string(""),
 					},
 				},

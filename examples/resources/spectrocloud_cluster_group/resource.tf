@@ -20,3 +20,11 @@ resource "spectrocloud_cluster_group" "cg" {
   }
 
 }
+
+# terraform import spectrocloud_cluster_group.cg "cluster_group_id:tenant"
+
+# Or using the import block (Terraform 1.5+):
+# import {
+#   to = spectrocloud_cluster_group.cg
+#   id = "cluster_group_id:context"
+# }

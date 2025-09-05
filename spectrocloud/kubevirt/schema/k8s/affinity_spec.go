@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"math"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -10,6 +11,17 @@ import (
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
+
+// safeInt32 converts int to int32 with bounds checking to prevent overflow
+func safeInt32(value int) int32 {
+	if value > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if value < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(value)
+}
 
 func affinityFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
@@ -437,7 +449,7 @@ func expandPreferredSchedulingTerms(t []interface{}) []v1.PreferredSchedulingTer
 	for i, n := range t {
 		in := n.(map[string]interface{})
 		if v, ok := in["weight"].(int); ok {
-			obj[i].Weight = int32(v)
+			obj[i].Weight = safeInt32(v)
 		}
 		if v, ok := in["preference"].([]interface{}); ok && len(v) > 0 {
 			obj[i].Preference = *expandNodeSelectorTerm(v)
@@ -474,7 +486,7 @@ func expandWeightedPodAffinityTerms(t []interface{}) []v1.WeightedPodAffinityTer
 	for i, n := range t {
 		in := n.(map[string]interface{})
 		if v, ok := in["weight"].(int); ok {
-			obj[i].Weight = int32(v)
+			obj[i].Weight = safeInt32(v)
 		}
 		if v, ok := in["pod_affinity_term"].([]interface{}); ok && len(v) > 0 {
 			obj[i].PodAffinityTerm = expandPodAffinityTerms(v)[0]

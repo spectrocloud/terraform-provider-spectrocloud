@@ -68,3 +68,10 @@ variable "azure_secret_client_secret" {
   default     = ""
   sensitive   = true
 }
+
+variable "azure_secret_tls_cert" {
+  description = "TLS certificate for Azure US Secret Cloud authentication"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

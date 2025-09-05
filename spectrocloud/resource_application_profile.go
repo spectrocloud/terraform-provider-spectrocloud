@@ -24,6 +24,9 @@ func resourceApplicationProfile() *schema.Resource {
 		ReadContext:   resourceApplicationProfileRead,
 		UpdateContext: resourceApplicationProfileUpdate,
 		DeleteContext: resourceApplicationProfileDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceApplicationProfileImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(20 * time.Second),
@@ -189,8 +192,10 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 				if pt.Value != "********" {
 					prop[pt.Name] = pt.Value
 				} else {
-					ogProp := d.Get("pack").([]interface{})[i].(map[string]interface{})["properties"]
-					prop[pt.Name] = getValueInProperties(ogProp.(map[string]interface{}), pt.Name)
+					if _, ok := d.GetOk("pack"); ok {
+						ogProp := d.Get("pack").([]interface{})[i].(map[string]interface{})["properties"]
+						prop[pt.Name] = getValueInProperties(ogProp.(map[string]interface{}), pt.Name)
+					}
 				}
 
 			}

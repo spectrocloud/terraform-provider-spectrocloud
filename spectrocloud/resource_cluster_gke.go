@@ -488,13 +488,13 @@ func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEn
 	mp := &models.V1GcpMachinePoolConfigEntity{
 		CloudConfig: &models.V1GcpMachinePoolCloudConfigEntity{
 			InstanceType:   types.Ptr(m["instance_type"].(string)),
-			RootDeviceSize: int64(m["disk_size_gb"].(int)),
+			RootDeviceSize: SafeInt64(m["disk_size_gb"].(int)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels: toAdditionalNodePoolLabels(m),
 			Taints:           toClusterTaints(m),
 			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Size:             types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},

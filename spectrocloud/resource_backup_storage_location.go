@@ -23,6 +23,9 @@ func resourceBackupStorageLocation() *schema.Resource {
 		ReadContext:   resourceBackupStorageLocationRead,
 		UpdateContext: resourceBackupStorageLocationUpdate,
 		DeleteContext: resourceBackupStorageLocationDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceBackupStorageLocationImport,
+		},
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

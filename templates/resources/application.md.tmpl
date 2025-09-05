@@ -32,5 +32,15 @@ resource "spectrocloud_application" "application" {
    
 ```
 
+## Import
+
+Applications can be imported using their UID. The import will automatically detect the cluster context.
+
+```bash
+terraform import spectrocloud_application.example 63444eb70807dc2c14a8ad59
+```
+
+Note: During import, the application's configuration will be automatically populated from the Spectro Cloud API, including the correct cluster context.
+
 
 {{ .SchemaMarkdown | trimspace }}
