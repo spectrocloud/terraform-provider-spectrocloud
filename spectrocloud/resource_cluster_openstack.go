@@ -299,7 +299,7 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 
 	resourceClusterOpenStackRead(ctx, d, m)
 
-	return diags
+	return diagnostics
 }
 
 func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroOpenStackClusterEntity, error) {
