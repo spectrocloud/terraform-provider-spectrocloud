@@ -224,7 +224,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") {
+	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
 		if err != nil {
@@ -527,7 +527,9 @@ func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.
 			pUID = resolvedUID
 		}
 	case models.V1PackTypeManifest:
-		pUID = "spectro-manifest-pack"
+		if pUID == "" {
+			pUID = "spectro-manifest-pack"
+		}
 	}
 
 	pack := &models.V1PackManifestUpdateEntity{

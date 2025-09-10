@@ -2,12 +2,13 @@ package spectrocloud
 
 import (
 	"context"
+	"regexp"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"regexp"
-	"time"
 )
 
 func resourcePrivateCloudGatewayDNSMap() *schema.Resource {
@@ -16,7 +17,10 @@ func resourcePrivateCloudGatewayDNSMap() *schema.Resource {
 		ReadContext:   resourcePCGDNSMapRead,
 		UpdateContext: resourcePCGDNSMapUpdate,
 		DeleteContext: resourcePCGDNSMapDelete,
-		Description:   "This resource allows for the management of DNS mappings for private cloud gateways. This helps ensure proper DNS resolution for resources within the private cloud environment.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourcePrivateCloudGatewayDNSMapImport,
+		},
+		Description: "This resource allows for the management of DNS mappings for private cloud gateways. This helps ensure proper DNS resolution for resources within the private cloud environment.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

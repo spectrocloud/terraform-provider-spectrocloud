@@ -1,6 +1,37 @@
 package spectrocloud
 
-import "time"
+import (
+	"math"
+	"time"
+)
+
+// SafeInt32 converts int to int32 with bounds checking to prevent overflow
+func SafeInt32(value int) int32 {
+	if value > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if value < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(value)
+}
+
+// SafeInt64 converts int to int64 with bounds checking to prevent overflow
+func SafeInt64(value int) int64 {
+
+	return int64(value)
+}
+
+// SafeUint32 converts int to uint32 with bounds checking to prevent overflow
+func SafeUint32(value int) uint32 {
+	if value < 0 {
+		return 0
+	}
+	if value > math.MaxUint32 {
+		return math.MaxUint32
+	}
+	return uint32(value)
+}
 
 func expandStringList(configured []interface{}) []string {
 	vs := make([]string, 0)

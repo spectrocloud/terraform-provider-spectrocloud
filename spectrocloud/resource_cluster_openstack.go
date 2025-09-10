@@ -612,7 +612,7 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 			IsControlPlane:   controlPlane,
 			Labels:           labels,
 			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(int32(m["count"].(int))),
+			Size:             types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -625,7 +625,7 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 		if m["node_repave_interval"] != nil {
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
-		mp.PoolConfig.NodeRepaveInterval = int32(nodeRepaveInterval)
+		mp.PoolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
 	} else {
 		err := ValidationNodeRepaveIntervalForControlPlane(m["node_repave_interval"].(int))
 		if err != nil {

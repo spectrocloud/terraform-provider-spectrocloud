@@ -19,12 +19,6 @@ func prepareProjectTestData(id string) *schema.ResourceData {
 	return d
 }
 
-func prepareMacroTestData(id string) *schema.ResourceData {
-	d := resourceMacro().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
 func prepareApplicationProfileTestData(id string) *schema.ResourceData {
 	d := resourceApplicationProfile().TestResourceData()
 	d.SetId(id)
@@ -260,11 +254,6 @@ func TestResourceTeam(t *testing.T) {
 
 func TestResourceProject(t *testing.T) {
 	testData := prepareProjectTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceMacro(t *testing.T) {
-	testData := prepareMacroTestData("test-id")
 	assert.Equal(t, "test-id", testData.Id())
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/constants"
 )
 
 func resourcePrivateCloudGatewayIpPool() *schema.Resource {
@@ -19,7 +20,10 @@ func resourcePrivateCloudGatewayIpPool() *schema.Resource {
 		ReadContext:   resourceIpPoolRead,
 		UpdateContext: resourceIpPoolUpdate,
 		DeleteContext: resourceIpPoolDelete,
-		Description:   "A Resource to manage IP pools for Private Cloud Gateway.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourcePrivateCloudGatewayIpPoolImport,
+		},
+		Description: "A Resource to manage IP pools for Private Cloud Gateway.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -201,10 +205,16 @@ func resourceIpPoolDelete(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func toIpPool(d *schema.ResourceData) *models.V1IPPoolInputEntity {
+	prefixInt := d.Get("prefix").(int)
+	if prefixInt > constants.Int32MaxValue {
+		// This should not happen in practice as prefix is typically 0-32 for CIDR notation
+		prefixInt = 24 // Default to /24 if out of range
+	}
+
 	pool := &models.V1Pool{
 		Gateway:    d.Get("gateway").(string),
 		Nameserver: &models.V1Nameserver{},
-		Prefix:     int32(d.Get("prefix").(int)),
+		Prefix:     SafeInt32(prefixInt),
 	}
 
 	if d.Get("network_type").(string) == "range" {

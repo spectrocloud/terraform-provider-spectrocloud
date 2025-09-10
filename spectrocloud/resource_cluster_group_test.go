@@ -252,7 +252,7 @@ func TestFlattenClusterGroup(t *testing.T) {
 func TestToClusterRef(t *testing.T) {
 	d, err := prepareClusterGroupTestData()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	cluster := d.Get("clusters").([]interface{})[0].(map[string]interface{})
 	ret := toClusterRef(cluster)
@@ -262,7 +262,7 @@ func TestToClusterRef(t *testing.T) {
 func TestToHostClusterConfigs(t *testing.T) {
 	d, err := prepareClusterGroupTestData()
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Errorf("%s", err.Error())
 	}
 	hostConfigs := d.Get("clusters").([]interface{})
 	clusterUid := hostConfigs[0].(map[string]interface{})["cluster_uid"]

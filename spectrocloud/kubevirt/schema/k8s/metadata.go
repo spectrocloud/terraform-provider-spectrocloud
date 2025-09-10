@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
@@ -42,11 +43,6 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 		"resource_version": {
 			Type:        schema.TypeString,
 			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
-			Computed:    true,
-		},
-		"self_link": {
-			Type:        schema.TypeString,
-			Description: fmt.Sprintf("A URL representing this %s.", objectName),
 			Computed:    true,
 		},
 		"uid": {
@@ -164,7 +160,6 @@ func FlattenMetadataDataVolume(meta metav1.ObjectMeta) []interface{} {
 	m["labels"] = utils.FlattenStringMap(meta.Labels)
 	m["name"] = meta.Name
 	m["resource_version"] = meta.ResourceVersion
-	m["self_link"] = meta.SelfLink
 	m["uid"] = fmt.Sprintf("%v", meta.UID)
 	m["generation"] = meta.Generation
 
@@ -190,9 +185,6 @@ func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) 
 		return err
 	}
 	if err = resourceData.Set("resource_version", meta.ResourceVersion); err != nil {
-		return err
-	}
-	if err = resourceData.Set("self_link", meta.SelfLink); err != nil {
 		return err
 	}
 	if err = resourceData.Set("uid", fmt.Sprintf("%v", meta.UID)); err != nil {

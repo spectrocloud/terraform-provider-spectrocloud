@@ -21,7 +21,10 @@ func resourceClusterVirtual() *schema.Resource {
 		ReadContext:   resourceClusterVirtualRead,
 		UpdateContext: resourceClusterVirtualUpdate,
 		DeleteContext: resourceClusterDelete,
-		Description:   "A resource to manage a Palette Virtual Cluster.",
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterVirtualImport,
+		},
+		Description: "A resource to manage a Palette Virtual Cluster.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -60,9 +63,9 @@ func resourceClusterVirtual() *schema.Resource {
 				Description: "The description of the cluster. Default value is empty string.",
 			},
 			"host_cluster_uid": {
-				Type:         schema.TypeString,
-				Optional:     true,
-				ExactlyOneOf: []string{"host_cluster_uid", "cluster_group_uid"},
+				Type:     schema.TypeString,
+				Optional: true,
+				// ExactlyOneOf: []string{"host_cluster_uid", "cluster_group_uid"},
 				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
 			},
 			"cluster_group_uid": {
@@ -463,12 +466,12 @@ func toMachinePoolVirtual(resources map[string]interface{}) *models.V1VirtualMac
 	mp := &models.V1VirtualMachinePoolConfigEntity{
 		CloudConfig: &models.V1VirtualMachinePoolCloudConfigEntity{
 			InstanceType: &models.V1VirtualInstanceType{
-				MaxCPU:        int32(maxCpu),
-				MaxMemInMiB:   int32(maxMemInMb),
-				MaxStorageGiB: int32(maxStorageInGb),
-				MinCPU:        int32(minCpu),
-				MinMemInMiB:   int32(minMemInMb),
-				MinStorageGiB: int32(minStorageInGb),
+				MaxCPU:        SafeInt32(maxCpu),
+				MaxMemInMiB:   SafeInt32(maxMemInMb),
+				MaxStorageGiB: SafeInt32(maxStorageInGb),
+				MinCPU:        SafeInt32(minCpu),
+				MinMemInMiB:   SafeInt32(minMemInMb),
+				MinStorageGiB: SafeInt32(minStorageInGb),
 			},
 		},
 	}
@@ -485,12 +488,12 @@ func toVirtualClusterResize(resources map[string]interface{}) *models.V1VirtualC
 	minStorageInGb := resources["min_storage_in_gb"].(int)
 	VCResize := &models.V1VirtualClusterResize{
 		InstanceType: &models.V1VirtualInstanceType{
-			MaxCPU:        int32(maxCpu),
-			MaxMemInMiB:   int32(maxMemInMb),
-			MaxStorageGiB: int32(maxStorageInGb),
-			MinCPU:        int32(minCpu),
-			MinMemInMiB:   int32(minMemInMb),
-			MinStorageGiB: int32(minStorageInGb),
+			MaxCPU:        SafeInt32(maxCpu),
+			MaxMemInMiB:   SafeInt32(maxMemInMb),
+			MaxStorageGiB: SafeInt32(maxStorageInGb),
+			MinCPU:        SafeInt32(minCpu),
+			MinMemInMiB:   SafeInt32(minMemInMb),
+			MinStorageGiB: SafeInt32(minStorageInGb),
 		},
 	}
 	return VCResize

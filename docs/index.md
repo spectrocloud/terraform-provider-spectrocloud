@@ -174,7 +174,7 @@ For questions or issues with the provider, open up an issue in the provider GitH
 
 - `api_key` (String, Sensitive) The Spectro Cloud API key. Can also be set with the `SPECTROCLOUD_APIKEY` environment variable.
 - `host` (String) The Spectro Cloud API host url. Can also be set with the `SPECTROCLOUD_HOST` environment variable. Defaults to https://api.spectrocloud.com
-- `ignore_insecure_tls_error` (Boolean) Ignore insecure TLS errors for Spectro Cloud API endpoints. Defaults to false.
+- `ignore_insecure_tls_error` (Boolean) Ignore insecure TLS errors for Spectro Cloud API endpoints. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this in development/testing environments or when connecting to self-signed certificates in trusted networks. Defaults to false.
 - `project_name` (String) The Palette project the provider will target. If no value is provided, the `Default` Palette project is used. The default value is `Default`.
 - `retry_attempts` (Number) Number of retry attempts. Can also be set with the `SPECTROCLOUD_RETRY_ATTEMPTS` environment variable. Defaults to 10.
 - `trace` (Boolean) Enable HTTP request tracing. Can also be set with the `SPECTROCLOUD_TRACE` environment variable. To enable Terraform debug logging, set `TF_LOG=DEBUG`. Visit the Terraform documentation to learn more about Terraform [debugging](https://developer.hashicorp.com/terraform/plugin/log/managing).

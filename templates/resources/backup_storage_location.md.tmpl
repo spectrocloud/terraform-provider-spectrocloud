@@ -44,6 +44,33 @@ resource "spectrocloud_backup_storage_location" "bsl2" {
 }
 ```
 
+## Import
+
+Backup Storage Locations can be imported using either a simple ID format or with explicit context specification. This resource supports both project and tenant contexts.
+
+### Simple Import (defaults to project context)
+
+```bash
+terraform import spectrocloud_backup_storage_location.example <bsl_id>:project
+```
+
+### Context-specific Import
+
+```bash
+terraform import spectrocloud_backup_storage_location.example <bsl_id>:project
+terraform import spectrocloud_backup_storage_location.example <bsl_id>:tenant
+```
+
+Where:
+- `<bsl_id>` is the Backup Storage Location ID
+- `project` or `tenant` specifies the context where the backup storage location exists
+
+**Import behavior:**
+- If no context is specified, it defaults to `project` context
+- If the resource is not found in the specified context, the import will automatically try the other context
+- The import will automatically populate all configuration fields from the Spectro Cloud API, including the correct context, storage provider, and all provider-specific settings
+
+After import, you can run `terraform plan` to see the current configuration and make any necessary adjustments.
 
 
 {{ .SchemaMarkdown | trimspace }}

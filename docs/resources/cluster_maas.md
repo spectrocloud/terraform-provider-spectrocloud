@@ -169,6 +169,10 @@ Required:
 
 - `domain` (String) Domain name in which the cluster to be provisioned.
 
+Optional:
+
+- `enable_lxd_vm` (Boolean) Whether to enable LXD VM. Default is `false`.
+
 
 <a id="nestedblock--machine_pool"></a>
 ### Nested Schema for `machine_pool`
@@ -179,6 +183,7 @@ Required:
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String) Name of the machine pool.
+- `network` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--network))
 - `placement` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
@@ -193,6 +198,7 @@ Optional:
 - `node_tags` (Set of String) Node tags to dynamically place nodes in a pool by using MAAS automatic tags. Specify the tag values that you want to apply to all nodes in the node pool.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
+- `use_lxd_vm` (Boolean) Whether to use LXD VM. Default is `false`.
 
 <a id="nestedblock--machine_pool--instance_type"></a>
 ### Nested Schema for `machine_pool.instance_type`
@@ -201,6 +207,19 @@ Required:
 
 - `min_cpu` (Number) Minimum number of CPU required for the machine pool node.
 - `min_memory_mb` (Number) Minimum memory in MB required for the machine pool node.
+
+
+<a id="nestedblock--machine_pool--network"></a>
+### Nested Schema for `machine_pool.network`
+
+Required:
+
+- `network_name` (String) The name of the network in which VMs are created/located.
+
+Optional:
+
+- `parent_pool_uid` (String) The UID of the parent pool which allocates IPs for this IPPool.
+- `static_ip` (Boolean) Whether to use static IP. Default is `false`.
 
 
 <a id="nestedblock--machine_pool--placement"></a>

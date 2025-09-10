@@ -96,7 +96,10 @@ func resourceWorkspaceCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 	var diags diag.Diagnostics
 
-	workspace := toWorkspace(d, c)
+	workspace, err := toWorkspace(d, c)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	uid, err := c.CreateWorkspace(workspace)
 	if err != nil {
@@ -203,7 +206,10 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 
 	if d.HasChange("clusters") || d.HasChange("workspace_quota") {
 		// resource allocation should go first because clusters are inside.
-		namespaces := toUpdateWorkspaceNamespaces(d, c)
+		namespaces, err := toUpdateWorkspaceNamespaces(d, c)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 		if err := c.UpdateWorkspaceResourceAllocation(d.Id(), namespaces); err != nil {
 			return diag.FromErr(err)
 		}
@@ -219,7 +225,11 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 			}
 		}
 		if d.HasChange("namespaces") {
-			if err := c.UpdateWorkspaceResourceAllocation(d.Id(), toUpdateWorkspaceNamespaces(d, c)); err != nil {
+			namespaces, err := toUpdateWorkspaceNamespaces(d, c)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			if err := c.UpdateWorkspaceResourceAllocation(d.Id(), namespaces); err != nil {
 				return diag.FromErr(err)
 			}
 		}
@@ -269,10 +279,15 @@ func resourceWorkspaceDelete(ctx context.Context, d *schema.ResourceData, m inte
 	return diags
 }
 
-func toWorkspace(d *schema.ResourceData, c *client.V1Client) *models.V1WorkspaceEntity {
+func toWorkspace(d *schema.ResourceData, c *client.V1Client) (*models.V1WorkspaceEntity, error) {
 	annotations := make(map[string]string)
 	if len(d.Get("description").(string)) > 0 {
 		annotations["description"] = d.Get("description").(string)
+	}
+
+	quota, err := toQuota(d)
+	if err != nil {
+		return nil, err
 	}
 
 	workspace := &models.V1WorkspaceEntity{
@@ -287,11 +302,11 @@ func toWorkspace(d *schema.ResourceData, c *client.V1Client) *models.V1Workspace
 			ClusterRbacs:      toWorkspaceRBACs(d),
 			ClusterRefs:       toClusterRefs(d, c),
 			Policies:          toWorkspacePolicies(d),
-			Quota:             toQuota(d),
+			Quota:             quota,
 		},
 	}
 
-	return workspace
+	return workspace, nil
 }
 
 func resourceWorkspaceImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {

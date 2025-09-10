@@ -819,7 +819,6 @@ Read-Only:
 
 - `generation` (Number) A sequence number representing a specific generation of the desired state.
 - `resource_version` (String) An opaque value that represents the internal version of this DataVolume that can be used by clients to determine when DataVolume has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-- `self_link` (String) A URL representing this DataVolume.
 - `uid` (String) The unique in time and space value for this DataVolume. More info: http://kubernetes.io/docs/user-guide/identifiers#uids
 
 
