@@ -613,7 +613,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
 				Domain:      &DomainVal,
-				EnableLxdVM: d.Get("enable_lxd_vm").(bool),
+				EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
 			},
 		},
 	}
