@@ -183,7 +183,6 @@ Required:
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String) Name of the machine pool.
-- `network` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--network))
 - `placement` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
@@ -193,6 +192,7 @@ Optional:
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
+- `network` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--network))
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `node_tags` (Set of String) Node tags to dynamically place nodes in a pool by using MAAS automatic tags. Specify the tag values that you want to apply to all nodes in the node pool.
@@ -209,6 +209,18 @@ Required:
 - `min_memory_mb` (Number) Minimum memory in MB required for the machine pool node.
 
 
+<a id="nestedblock--machine_pool--placement"></a>
+### Nested Schema for `machine_pool.placement`
+
+Required:
+
+- `resource_pool` (String) The name of the resource pool in the Maas cloud.
+
+Read-Only:
+
+- `id` (String) This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.
+
+
 <a id="nestedblock--machine_pool--network"></a>
 ### Nested Schema for `machine_pool.network`
 
@@ -220,18 +232,6 @@ Optional:
 
 - `parent_pool_uid` (String) The UID of the parent pool which allocates IPs for this IPPool.
 - `static_ip` (Boolean) Whether to use static IP. Default is `false`.
-
-
-<a id="nestedblock--machine_pool--placement"></a>
-### Nested Schema for `machine_pool.placement`
-
-Required:
-
-- `resource_pool` (String) The name of the resource pool in the Maas cloud.
-
-Read-Only:
-
-- `id` (String) This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.
 
 
 <a id="nestedblock--machine_pool--node"></a>

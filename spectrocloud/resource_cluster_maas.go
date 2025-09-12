@@ -282,7 +282,7 @@ func resourceClusterMaas() *schema.Resource {
 						},
 						"network": {
 							Type:     schema.TypeList,
-							Required: true,
+							Optional: true,
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
