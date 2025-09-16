@@ -431,7 +431,7 @@ func expandInterfaceBindingMethod(interfaceBindingMethod string) kubevirtapiv1.I
 	case "InterfaceBridge":
 		result.Bridge = &kubevirtapiv1.InterfaceBridge{}
 	case "InterfaceSlirp":
-		result.Slirp = &kubevirtapiv1.InterfaceSlirp{}
+		result.DeprecatedSlirp = &kubevirtapiv1.DeprecatedInterfaceSlirp{}
 	case "InterfaceMasquerade":
 		result.Masquerade = &kubevirtapiv1.InterfaceMasquerade{}
 	case "InterfaceSRIOV":
@@ -561,7 +561,7 @@ func flattenInterfaceBindingMethod(in kubevirtapiv1.InterfaceBindingMethod) stri
 	if in.Bridge != nil {
 		return "InterfaceBridge"
 	}
-	if in.Slirp != nil {
+	if in.DeprecatedSlirp != nil {
 		return "InterfaceSlirp"
 	}
 	if in.Masquerade != nil {
