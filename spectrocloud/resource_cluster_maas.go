@@ -261,11 +261,6 @@ func resourceClusterMaas() *schema.Resource {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"id": {
-										Type:        schema.TypeString,
-										Computed:    true,
-										Description: "This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.",
-									},
 									"resource_pool": {
 										Type:        schema.TypeString,
 										Required:    true,
