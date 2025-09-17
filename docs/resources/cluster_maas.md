@@ -216,10 +216,6 @@ Required:
 
 - `resource_pool` (String) The name of the resource pool in the Maas cloud.
 
-Read-Only:
-
-- `id` (String) This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.
-
 
 <a id="nestedblock--machine_pool--network"></a>
 ### Nested Schema for `machine_pool.network`

@@ -261,11 +261,6 @@ func resourceClusterMaas() *schema.Resource {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
-									"id": {
-										Type:        schema.TypeString,
-										Computed:    true,
-										Description: "This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.",
-									},
 									"resource_pool": {
 										Type:        schema.TypeString,
 										Required:    true,
@@ -613,7 +608,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
 				Domain:      &DomainVal,
-				EnableLxdVM: d.Get("enable_lxd_vm").(bool),
+				EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
 			},
 		},
 	}
