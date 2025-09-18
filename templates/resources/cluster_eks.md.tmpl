@@ -9,6 +9,9 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
+~> When creating a **Palette EKS cluster** with `machine_pool.eks_launch_template`: If you do **not set** `machine_pool.eks_launch_template.ami_id`, Palette will automatically perform **EKS AMI updates**. This will trigger a **cluster repave**, since the system replaces the underlying AMI as part of the update process. To avoid unexpected repaves, explicitly set the `ami_id` in the launch template when defining the `machine_pool`.
+
+
 ## Example Usage
 
 ```terraform

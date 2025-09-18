@@ -9,6 +9,9 @@ description: |-
 
   Resource for managing EKS clusters in Spectro Cloud through Palette.
 
+~> When creating a **Palette EKS cluster** with `machine_pool.eks_launch_template`: If you do **not set** `machine_pool.eks_launch_template.ami_id`, Palette will automatically perform **EKS AMI updates**. This will trigger a **cluster repave**, since the system replaces the underlying AMI as part of the update process. To avoid unexpected repaves, explicitly set the `ami_id` in the launch template when defining the `machine_pool`.
+
+
 ## Example Usage
 
 ```terraform
@@ -199,7 +202,7 @@ Optional:
 Optional:
 
 - `additional_security_groups` (Set of String) Additional security groups to attach to the instance.
-- `ami_id` (String) The ID of the custom Amazon Machine Image (AMI).
+- `ami_id` (String) The ID of the custom Amazon Machine Image (AMI). If you do not set an `ami_id`, Palette will repave the cluster when it automatically updates the EKS AMI.
 - `root_volume_iops` (Number) The number of input/output operations per second (IOPS) for the root volume.
 - `root_volume_throughput` (Number) The throughput of the root volume in MiB/s.
 - `root_volume_type` (String) The type of the root volume.
