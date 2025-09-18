@@ -202,7 +202,7 @@ Optional:
 Optional:
 
 - `additional_security_groups` (Set of String) Additional security groups to attach to the instance.
-- `ami_id` (String) The ID of the custom Amazon Machine Image (AMI). If you do not set am_id then Palette will repave the cluster since it is doing automatic EKS AMI updates
+- `ami_id` (String) The ID of the custom Amazon Machine Image (AMI). If you do not set an `ami_id`, Palette will repave the cluster when it automatically updates the EKS AMI.
 - `root_volume_iops` (Number) The number of input/output operations per second (IOPS) for the root volume.
 - `root_volume_throughput` (Number) The throughput of the root volume in MiB/s.
 - `root_volume_type` (String) The type of the root volume.
