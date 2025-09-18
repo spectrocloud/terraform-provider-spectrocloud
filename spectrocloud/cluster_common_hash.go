@@ -304,8 +304,46 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 			buf.WriteString(fmt.Sprintf("%d-", ins["min_memory_mb"].(int)))
 		}
 	}
-	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
-	buf.WriteString(fmt.Sprintf("%s-", m["node_tags"].(*schema.Set).GoString()))
+	if azs, ok := m["azs"]; ok && azs != nil {
+		buf.WriteString(fmt.Sprintf("%s-", azs.(*schema.Set).GoString()))
+	}
+	if nodeTags, ok := m["node_tags"]; ok && nodeTags != nil {
+		buf.WriteString(fmt.Sprintf("%s-", nodeTags.(*schema.Set).GoString()))
+	}
+
+	// Include placement fields if present
+	if placementRaw, ok := m["placement"]; ok {
+		placementList := placementRaw.([]interface{})
+		if len(placementList) > 0 {
+			place := placementList[0].(map[string]interface{})
+			if rp, ok := place["resource_pool"]; ok && rp != nil {
+				buf.WriteString(fmt.Sprintf("%s-", rp.(string)))
+			}
+		}
+	}
+
+	// Include use_lxd_vm flag
+	if v, ok := m["use_lxd_vm"]; ok {
+		buf.WriteString(fmt.Sprintf("%t-", v.(bool)))
+	}
+
+	// Include network settings if present
+	if networkRaw, ok := m["network"]; ok {
+		networkList := networkRaw.([]interface{})
+		if len(networkList) > 0 {
+			net := networkList[0].(map[string]interface{})
+			if name, ok := net["network_name"]; ok && name != nil {
+				buf.WriteString(fmt.Sprintf("%s-", name.(string)))
+			}
+			if parent, ok := net["parent_pool_uid"]; ok && parent != nil {
+				buf.WriteString(fmt.Sprintf("%s-", parent.(string)))
+			}
+			if staticIP, ok := net["static_ip"]; ok {
+				buf.WriteString(fmt.Sprintf("%t-", staticIP.(bool)))
+			}
+		}
+	}
+
 	return int(hash(buf.String()))
 }
 

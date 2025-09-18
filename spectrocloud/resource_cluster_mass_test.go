@@ -83,7 +83,7 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 				"use_lxd_vm": false,
 				"placement": []interface{}{
 					map[string]interface{}{
-						"resource_pool": "maas_resource_pool",
+						"resource_pool": "maas_resource",
 					},
 				},
 			},
