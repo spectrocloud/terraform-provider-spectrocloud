@@ -12,7 +12,7 @@ func AwsLaunchTemplate() *schema.Schema {
 				"ami_id": {
 					Type:        schema.TypeString,
 					Optional:    true,
-					Description: "The ID of the custom Amazon Machine Image (AMI).",
+					Description: "The ID of the custom Amazon Machine Image (AMI). If you do not set am_id then Palette will repave the cluster since it is doing automatic EKS AMI updates",
 				},
 				"root_volume_type": {
 					Type:        schema.TypeString,
