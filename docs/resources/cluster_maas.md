@@ -171,7 +171,7 @@ Required:
 
 Optional:
 
-- `enable_lxd_vm` (Boolean) Whether to enable LXD VM. Default is `false`.
+- `enable_lxd_vm` (Boolean) Whether to enable LXD VM. Default is `false`. Available once **Palette with LXD support** is released.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -192,13 +192,13 @@ Optional:
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
-- `network` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--network))
+- `network` (Block List, Max: 1) Network configuration for the machine pool. Available once **Palette with LXD support** is released. (see [below for nested schema](#nestedblock--machine_pool--network))
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `node_tags` (Set of String) Node tags to dynamically place nodes in a pool by using MAAS automatic tags. Specify the tag values that you want to apply to all nodes in the node pool.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
-- `use_lxd_vm` (Boolean) Whether to use LXD VM. Default is `false`.
+- `use_lxd_vm` (Boolean) Whether to use LXD VM. Default is `false`. Available once **Palette with LXD support** is released.
 
 <a id="nestedblock--machine_pool--instance_type"></a>
 ### Nested Schema for `machine_pool.instance_type`

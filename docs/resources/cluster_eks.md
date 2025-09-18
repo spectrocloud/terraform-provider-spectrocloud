@@ -181,7 +181,7 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
-- `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Available from Palette **v4.7.0**. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.
+- `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.
 - `az_subnets` (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
 - `azs` (List of String) Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
