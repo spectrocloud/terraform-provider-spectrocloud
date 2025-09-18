@@ -204,11 +204,13 @@ func resourceClusterMaas() *schema.Resource {
 						"min": {
 							Type:        schema.TypeInt,
 							Optional:    true,
+							Default:     0,
 							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"max": {
 							Type:        schema.TypeInt,
 							Optional:    true,
+							Default:     0,
 							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"instance_type": {
@@ -261,6 +263,11 @@ func resourceClusterMaas() *schema.Resource {
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"id": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "This is a computed(read-only) ID of the placement that is used to connect to the Maas cloud.",
+									},
 									"resource_pool": {
 										Type:        schema.TypeString,
 										Required:    true,
@@ -474,8 +481,8 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		oi["azs"] = machinePool.Azs
 		if config != nil {
 			placement := make(map[string]interface{})
-			if config.Domain != nil {
-				placement["resource_pool"] = *config.Domain
+			if machinePool.ResourcePool != "" {
+				placement["resource_pool"] = machinePool.ResourcePool
 				oi["placement"] = []interface{}{placement}
 			}
 		}
