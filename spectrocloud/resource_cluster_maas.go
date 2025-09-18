@@ -149,7 +149,7 @@ func resourceClusterMaas() *schema.Resource {
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Default:     false,
-							Description: "Whether to enable LXD VM. Default is `false`.",
+							Description: "Whether to enable LXD VM. Default is `false`. Available once **Palette with LXD support** is released.",
 						},
 					},
 				},
@@ -273,12 +273,13 @@ func resourceClusterMaas() *schema.Resource {
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Default:     false,
-							Description: "Whether to use LXD VM. Default is `false`.",
+							Description: "Whether to use LXD VM. Default is `false`. Available once **Palette with LXD support** is released.",
 						},
 						"network": {
-							Type:     schema.TypeList,
-							Optional: true,
-							MaxItems: 1,
+							Type:        schema.TypeList,
+							Optional:    true,
+							MaxItems:    1,
+							Description: "Network configuration for the machine pool. Available once **Palette with LXD support** is released.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"network_name": {

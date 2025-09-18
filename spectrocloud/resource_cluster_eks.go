@@ -276,7 +276,7 @@ func resourceClusterEks() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Default:     "AL2_x86_64",
-							Description: "Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Available from Palette **v4.7.0**. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.",
+							Description: "Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.",
 						},
 						"capacity_type": {
 							Type:         schema.TypeString,
