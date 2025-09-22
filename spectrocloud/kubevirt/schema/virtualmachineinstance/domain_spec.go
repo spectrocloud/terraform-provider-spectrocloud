@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/common"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
@@ -295,7 +296,7 @@ func expandCPU(cpu map[string]interface{}) (kubevirtapiv1.CPU, error) {
 		if v > math.MaxInt { // Cap to max representable int on this architecture
 			return result, fmt.Errorf("cores value %d is out of range for uint32", v)
 		}
-		result.Cores = uint32(v)
+		result.Cores = common.SafeUint32(v)
 	}
 	if v, ok := cpu["sockets"].(int); ok {
 		if v < 0 {
@@ -304,7 +305,7 @@ func expandCPU(cpu map[string]interface{}) (kubevirtapiv1.CPU, error) {
 		if v > math.MaxInt { // Cap to max representable int on this architecture
 			return result, fmt.Errorf("sockets value %d is out of range for uint32", v)
 		}
-		result.Sockets = uint32(v)
+		result.Sockets = common.SafeUint32(v)
 	}
 	if v, ok := cpu["threads"].(int); ok {
 		if v < 0 {
@@ -313,7 +314,7 @@ func expandCPU(cpu map[string]interface{}) (kubevirtapiv1.CPU, error) {
 		if v > math.MaxInt { // Cap to max representable int on this architecture
 			return result, fmt.Errorf("threads value %d is out of range for uint32", v)
 		}
-		result.Threads = uint32(v)
+		result.Threads = common.SafeUint32(v)
 	}
 
 	return result, nil
