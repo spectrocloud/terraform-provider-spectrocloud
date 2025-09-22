@@ -18,7 +18,7 @@ import (
 )
 
 func resourceClusterEks() *schema.Resource {
-	return &schema.Resource{
+	r := &schema.Resource{
 		CreateContext: resourceClusterEksCreate,
 		ReadContext:   resourceClusterEksRead,
 		UpdateContext: resourceClusterEksUpdate,
@@ -34,7 +34,7 @@ func resourceClusterEks() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -224,15 +224,15 @@ func resourceClusterEks() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Required:    true,
+				Set:         resourceMachinePoolEksKeyHash,
 				Description: "The machine pool configuration for the cluster.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
 							Type:     schema.TypeString,
 							Required: true,
-							//ForceNew: true,
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -382,6 +382,19 @@ func resourceClusterEks() *schema.Resource {
 			},
 		},
 	}
+
+	// No-op state upgrader to move from version 2 -> 3 (TypeList -> TypeSet for machine_pool)
+	r.StateUpgraders = []schema.StateUpgrader{
+		{
+			Version: 2,
+			Type:    r.CoreConfigSchema().ImpliedType(),
+			Upgrade: func(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+				return rawState, nil
+			},
+		},
+	}
+
+	return r
 }
 
 func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -699,8 +712,24 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.([]interface{})
-		ns := nraw.([]interface{})
+		var os []interface{}
+		var ns []interface{}
+		switch v := oraw.(type) {
+		case *schema.Set:
+			os = v.List()
+		case []interface{}:
+			os = v
+		default:
+			os = []interface{}{}
+		}
+		switch v := nraw.(type) {
+		case *schema.Set:
+			ns = v.List()
+		case []interface{}:
+			ns = v
+		default:
+			ns = []interface{}{}
+		}
 
 		osMap := make(map[string]interface{})
 		for _, mp := range os {
@@ -851,7 +880,15 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		machinePoolConfigs = append(machinePoolConfigs, toMachinePoolEks(cpPool))
 	}
 
-	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
+	var machinePools []interface{}
+	if v := d.Get("machine_pool"); v != nil {
+		if set, ok := v.(*schema.Set); ok {
+			machinePools = set.List()
+		} else if list, ok := v.([]interface{}); ok {
+			machinePools = list
+		}
+	}
+	for _, machinePool := range machinePools {
 		mp := toMachinePoolEks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
