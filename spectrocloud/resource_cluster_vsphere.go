@@ -855,7 +855,10 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 	memoryInt := ins["memory_mb"].(int)
 	cpuInt := ins["cpu"].(int)
 
-	if uint64(diskSizeInt) > math.MaxInt32 || uint64(memoryInt) > math.MaxInt64 || uint64(cpuInt) > math.MaxInt32 {
+	if diskSizeInt < 0 || memoryInt < 0 || cpuInt < 0 {
+		return nil, fmt.Errorf("instance type values cannot be negative: disk_size_gb=%d, memory_mb=%d, cpu=%d", diskSizeInt, memoryInt, cpuInt)
+	}
+	if diskSizeInt > math.MaxInt32 || cpuInt > math.MaxInt32 {
 		return nil, fmt.Errorf("instance type values out of range: disk_size_gb=%d, memory_mb=%d, cpu=%d", diskSizeInt, memoryInt, cpuInt)
 	}
 
@@ -866,7 +869,10 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 	}
 
 	countInt := m["count"].(int)
-	if uint64(countInt) > math.MaxInt32 {
+	if countInt < 0 {
+		return nil, fmt.Errorf("count value %d cannot be negative", countInt)
+	}
+	if countInt > math.MaxInt32 {
 		return nil, fmt.Errorf("count value %d is out of range for int32", countInt)
 	}
 
@@ -875,7 +881,10 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 
 	if m["min"] != nil {
 		minInt := m["min"].(int)
-		if uint64(minInt) > math.MaxInt32 {
+		if minInt < 0 {
+			return nil, fmt.Errorf("min value %d cannot be negative", minInt)
+		}
+		if minInt > math.MaxInt32 {
 			return nil, fmt.Errorf("min value %d is out of range for int32", minInt)
 		}
 		min = SafeInt32(minInt)
@@ -883,7 +892,10 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 
 	if m["max"] != nil {
 		maxInt := m["max"].(int)
-		if uint64(maxInt) > math.MaxInt32 {
+		if maxInt < 0 {
+			return nil, fmt.Errorf("max value %d cannot be negative", maxInt)
+		}
+		if maxInt > math.MaxInt32 {
 			return nil, fmt.Errorf("max value %d is out of range for int32", maxInt)
 		}
 		max = SafeInt32(maxInt)
@@ -915,13 +927,19 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		if m["node_repave_interval"] != nil {
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
-		if uint64(nodeRepaveInterval) > math.MaxInt32 {
+		if nodeRepaveInterval < 0 {
+			return nil, fmt.Errorf("node_repave_interval value %d cannot be negative", nodeRepaveInterval)
+		}
+		if nodeRepaveInterval > math.MaxInt32 {
 			return nil, fmt.Errorf("node_repave_interval value %d is out of range for int32", nodeRepaveInterval)
 		}
 		mp.PoolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
 	} else {
 		nodeRepaveInterval := m["node_repave_interval"].(int)
-		if uint64(nodeRepaveInterval) > math.MaxInt32 {
+		if nodeRepaveInterval < 0 {
+			return nil, fmt.Errorf("node_repave_interval value %d cannot be negative", nodeRepaveInterval)
+		}
+		if nodeRepaveInterval > math.MaxInt32 {
 			return nil, fmt.Errorf("node_repave_interval value %d is out of range for int32", nodeRepaveInterval)
 		}
 		err := ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval)

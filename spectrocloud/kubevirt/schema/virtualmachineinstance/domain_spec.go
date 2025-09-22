@@ -289,19 +289,28 @@ func expandCPU(cpu map[string]interface{}) (kubevirtapiv1.CPU, error) {
 	}
 
 	if v, ok := cpu["cores"].(int); ok {
-		if v < 0 || uint64(v) > math.MaxUint32 {
+		if v < 0 {
+			return result, fmt.Errorf("cores value %d cannot be negative", v)
+		}
+		if v > math.MaxInt { // Cap to max representable int on this architecture
 			return result, fmt.Errorf("cores value %d is out of range for uint32", v)
 		}
 		result.Cores = uint32(v)
 	}
 	if v, ok := cpu["sockets"].(int); ok {
-		if v < 0 || uint64(v) > math.MaxUint32 {
+		if v < 0 {
+			return result, fmt.Errorf("sockets value %d cannot be negative", v)
+		}
+		if v > math.MaxInt { // Cap to max representable int on this architecture
 			return result, fmt.Errorf("sockets value %d is out of range for uint32", v)
 		}
 		result.Sockets = uint32(v)
 	}
 	if v, ok := cpu["threads"].(int); ok {
-		if v < 0 || uint64(v) > math.MaxUint32 {
+		if v < 0 {
+			return result, fmt.Errorf("threads value %d cannot be negative", v)
+		}
+		if v > math.MaxInt { // Cap to max representable int on this architecture
 			return result, fmt.Errorf("threads value %d is out of range for uint32", v)
 		}
 		result.Threads = uint32(v)
