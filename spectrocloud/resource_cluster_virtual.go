@@ -240,6 +240,9 @@ func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m
 	if isError {
 		return diagnostics
 	}
+	if len(diagnostics) > 0 {
+		diags = append(diags, diagnostics...)
+	}
 
 	resourceClusterVirtualRead(ctx, d, m)
 

@@ -394,6 +394,9 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 	if isError {
 		return diagnostics
 	}
+	if len(diagnostics) > 0 {
+		diags = append(diags, diagnostics...)
+	}
 
 	resourceClusterVsphereRead(ctx, d, m)
 

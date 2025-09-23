@@ -349,6 +349,9 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 	if isError {
 		return diagnostics
 	}
+	if len(diagnostics) > 0 {
+		diags = append(diags, diagnostics...)
+	}
 
 	resourceClusterAwsRead(ctx, d, m)
 

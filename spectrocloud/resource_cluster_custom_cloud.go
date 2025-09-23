@@ -289,6 +289,9 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 	if isError && diagnostics != nil {
 		return diagnostics
 	}
+	if len(diagnostics) > 0 {
+		diags = append(diags, diagnostics...)
+	}
 
 	resourceClusterCustomCloudRead(ctx, d, m)
 

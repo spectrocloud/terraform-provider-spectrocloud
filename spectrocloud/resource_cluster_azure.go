@@ -402,6 +402,9 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 	if isError {
 		return diagnostics
 	}
+	if len(diagnostics) > 0 {
+		diags = append(diags, diagnostics...)
+	}
 
 	resourceClusterAzureRead(ctx, d, m)
 

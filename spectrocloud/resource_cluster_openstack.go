@@ -302,6 +302,9 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	if isError {
 		return diagnostics
 	}
+	if len(diagnostics) > 0 {
+		diags = append(diags, diagnostics...)
+	}
 
 	resourceClusterOpenStackRead(ctx, d, m)
 
