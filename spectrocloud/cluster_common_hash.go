@@ -22,10 +22,28 @@ func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
 		buf.WriteString(HashStringMapList(nodePool["taints"]))
 	}
 	if val, ok := nodePool["control_plane"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := nodePool["control_plane_as_worker"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := nodePool["name"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
@@ -66,7 +84,16 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 	if val, ok := m["is_system_node_pool"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := m["os_type"]; ok && val != "" {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
@@ -86,7 +113,16 @@ func resourceMachinePoolAksHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
 	if val, ok := m["is_system_node_pool"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := m["storage_account_type"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
@@ -259,10 +295,28 @@ func resourceMachinePoolCustomCloudHash(v interface{}) int {
 		buf.WriteString(HashStringMapList(m["taints"]))
 	}
 	if val, ok := m["control_plane"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := m["control_plane_as_worker"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	buf.WriteString(fmt.Sprintf("%s-", m["node_pool_config"].(string)))
 
