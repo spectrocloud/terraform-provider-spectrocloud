@@ -153,137 +153,41 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
 
-	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
-	if m["min"] != nil {
-		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
+	// Include EKS-specific fields following MAAS pattern
+	if val, ok := m["disk_size_gb"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
-	if m["max"] != nil {
-		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
+	if val, ok := m["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
-	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
-
-	keys := make([]string, 0, len(m["az_subnets"].(map[string]interface{})))
-	for k := range m["az_subnets"].(map[string]interface{}) {
-		keys = append(keys, k)
+	if val, ok := m["capacity_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		buf.WriteString(fmt.Sprintf("%s-%s", k, m["az_subnets"].(map[string]interface{})[k].(string)))
+	if val, ok := m["max_price"]; ok && val != nil {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := m["ami_type"]; ok && val != nil {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 
+	// Include AZ configuration
+	if azSubnets, ok := m["az_subnets"].(map[string]interface{}); ok && len(azSubnets) > 0 {
+		buf.WriteString(HashStringMap(azSubnets))
+	}
+	if azs, ok := m["azs"]; ok && azs != nil {
+		azsList := azs.([]interface{})
+		azsListStr := make([]string, len(azsList))
+		for i, v := range azsList {
+			azsListStr[i] = v.(string)
+		}
+		sort.Strings(azsListStr)
+		azsStr := strings.Join(azsListStr, "-")
+		buf.WriteString(fmt.Sprintf("%s-", azsStr))
+	}
+
+	// Include EKS launch template configuration
 	if m["eks_launch_template"] != nil {
 		buf.WriteString(eksLaunchTemplate(m["eks_launch_template"]))
-	}
-
-	return int(hash(buf.String()))
-}
-
-// resourceMachinePoolEksKeyHash returns a stable hash for EKS machine pool set identity.
-// This hash should include fields that uniquely identify a machine pool but exclude
-// fields that can change during updates (like count, min, max) to avoid element re-keying.
-func resourceMachinePoolEksKeyHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	var buf bytes.Buffer
-
-	// Always include name as the primary identifier
-	if val, ok := m["name"].(string); ok && val != "" {
-		buf.WriteString(fmt.Sprintf("name:%s-", val))
-	}
-
-	// Include structural/immutable fields that define the pool identity
-	if val, ok := m["instance_type"].(string); ok && val != "" {
-		buf.WriteString(fmt.Sprintf("instance_type:%s-", val))
-	}
-
-	if val, ok := m["ami_type"].(string); ok && val != "" {
-		buf.WriteString(fmt.Sprintf("ami_type:%s-", val))
-	}
-
-	if val, ok := m["capacity_type"].(string); ok && val != "" {
-		buf.WriteString(fmt.Sprintf("capacity_type:%s-", val))
-	}
-
-	// Include AZ configuration (structural)
-	if azs, ok := m["azs"].([]interface{}); ok && len(azs) > 0 {
-		azsStrs := make([]string, len(azs))
-		for i, az := range azs {
-			if azStr, ok := az.(string); ok {
-				azsStrs[i] = azStr
-			}
-		}
-		sort.Strings(azsStrs)
-		buf.WriteString(fmt.Sprintf("azs:%s-", strings.Join(azsStrs, ",")))
-	}
-
-	if azSubnets, ok := m["az_subnets"].(map[string]interface{}); ok && len(azSubnets) > 0 {
-		keys := make([]string, 0, len(azSubnets))
-		for k := range azSubnets {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		var subnets []string
-		for _, k := range keys {
-			if val, ok := azSubnets[k].(string); ok {
-				subnets = append(subnets, fmt.Sprintf("%s:%s", k, val))
-			}
-		}
-		buf.WriteString(fmt.Sprintf("az_subnets:%s-", strings.Join(subnets, ",")))
-	}
-
-	// Include launch template configuration (structural)
-	if lt, ok := m["eks_launch_template"].([]interface{}); ok && len(lt) > 0 {
-		if ltMap, ok := lt[0].(map[string]interface{}); ok {
-			if ami, ok := ltMap["ami_id"].(string); ok && ami != "" {
-				buf.WriteString(fmt.Sprintf("ami_id:%s-", ami))
-			}
-			if volType, ok := ltMap["root_volume_type"].(string); ok && volType != "" {
-				buf.WriteString(fmt.Sprintf("root_volume_type:%s-", volType))
-			}
-			if iops, ok := ltMap["root_volume_iops"].(int); ok && iops > 0 {
-				buf.WriteString(fmt.Sprintf("root_volume_iops:%d-", iops))
-			}
-			if throughput, ok := ltMap["root_volume_throughput"].(int); ok && throughput > 0 {
-				buf.WriteString(fmt.Sprintf("root_volume_throughput:%d-", throughput))
-			}
-			if sgs, ok := ltMap["additional_security_groups"].(*schema.Set); ok && sgs.Len() > 0 {
-				sgList := sgs.List()
-				sgStrs := make([]string, len(sgList))
-				for i, sg := range sgList {
-					if sgStr, ok := sg.(string); ok {
-						sgStrs[i] = sgStr
-					}
-				}
-				sort.Strings(sgStrs)
-				buf.WriteString(fmt.Sprintf("security_groups:%s-", strings.Join(sgStrs, ",")))
-			}
-		}
-	}
-
-	// Include disk size (semi-structural - changes are less common)
-	if val, ok := m["disk_size_gb"].(int); ok {
-		buf.WriteString(fmt.Sprintf("disk_size_gb:%d-", val))
-	}
-
-	// Include additional labels and taints (structural identity)
-	if labels, ok := m["additional_labels"].(map[string]interface{}); ok && len(labels) > 0 {
-		buf.WriteString(fmt.Sprintf("additional_labels:%s-", HashStringMap(labels)))
-	}
-
-	if taints, ok := m["taints"].([]interface{}); ok && len(taints) > 0 {
-		buf.WriteString(fmt.Sprintf("taints:%s-", HashStringMapList(taints)))
-	}
-
-	// Exclude frequently changing fields like count, min, max, max_price, update_strategy
-	// These should not affect set identity
-
-	if buf.Len() == 0 {
-		// Fallback to name-only hash if nothing else is available
-		if name, ok := m["name"].(string); ok {
-			return schema.HashString(name)
-		}
-		return 0
 	}
 
 	return int(hash(buf.String()))

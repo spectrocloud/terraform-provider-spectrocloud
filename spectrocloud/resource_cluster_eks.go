@@ -226,7 +226,7 @@ func resourceClusterEks() *schema.Resource {
 			"machine_pool": {
 				Type:        schema.TypeSet,
 				Required:    true,
-				Set:         resourceMachinePoolEksKeyHash,
+				Set:         resourceMachinePoolEksHash,
 				Description: "The machine pool configuration for the cluster.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -261,11 +261,13 @@ func resourceClusterEks() *schema.Resource {
 						"min": {
 							Type:        schema.TypeInt,
 							Optional:    true,
+							Default:     0,
 							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"max": {
 							Type:        schema.TypeInt,
 							Optional:    true,
+							Default:     0,
 							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"instance_type": {
