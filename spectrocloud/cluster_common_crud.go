@@ -51,8 +51,29 @@ func waitForClusterReady(ctx context.Context, d *schema.ResourceData, uid string
 	}
 
 	// Wait, catching any errors
-	_, err := stateConf.WaitForStateContext(ctx)
+	result, err := stateConf.WaitForStateContext(ctx)
 	if err != nil {
+		// Check if graceful_creation_timeout is enabled
+		if gracefulCreationTimeout, ok := d.GetOk("graceful_creation_timeout"); ok && gracefulCreationTimeout.(bool) {
+			// Get current state for warning message
+			currentState := "Unknown"
+			if result != nil {
+				if cluster, ok := result.(*models.V1SpectroCluster); ok && cluster.Status != nil {
+					currentState = cluster.Status.State
+				}
+			}
+
+			// Return warning instead of error for the Ready phase
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "Cluster creation timeout (Ready phase)",
+				Detail: fmt.Sprintf(
+					"Cluster creation timed out after waiting for %v while waiting for cluster to become Ready. Current cluster state is '%s'. "+
+						"The cluster may still be provisioning in the background and could eventually reach the 'Ready' and 'Running-Healthy' states.",
+					d.Timeout(schema.TimeoutCreate)-1*time.Minute, currentState),
+			})
+			return diags, false
+		}
 		return diag.FromErr(err), true
 	}
 	return nil, false
