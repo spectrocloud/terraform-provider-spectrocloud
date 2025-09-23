@@ -386,15 +386,15 @@ func resourceClusterEks() *schema.Resource {
 	}
 
 	// No-op state upgrader to move from version 2 -> 3 (TypeList -> TypeSet for machine_pool)
-	r.StateUpgraders = []schema.StateUpgrader{
-		{
-			Version: 2,
-			Type:    r.CoreConfigSchema().ImpliedType(),
-			Upgrade: func(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
-				return rawState, nil
-			},
-		},
-	}
+	// r.StateUpgraders = []schema.StateUpgrader{
+	// 	{
+	// 		Version: 2,
+	// 		Type:    r.CoreConfigSchema().ImpliedType(),
+	// 		Upgrade: func(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	// 			return rawState, nil
+	// 		},
+	// 	},
+	// }
 
 	return r
 }
@@ -573,22 +573,42 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
 		oi["ami_type"] = machinePool.AmiType
+
+		// Always set capacity_type (with schema default if nil)
 		if machinePool.CapacityType != nil {
-			oi["capacity_type"] = machinePool.CapacityType
+			oi["capacity_type"] = *machinePool.CapacityType
+		} else {
+			oi["capacity_type"] = "on-demand" // matches schema default
 		}
+
+		// Always set max_price (empty string if not spot)
 		if machinePool.SpotMarketOptions != nil {
 			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
+		} else {
+			oi["max_price"] = ""
 		}
+
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
+
+		// Always set both azs and az_subnets (one populated, other empty)
 		if len(machinePool.SubnetIds) > 0 {
 			oi["az_subnets"] = machinePool.SubnetIds
+			oi["azs"] = make([]interface{}, 0) // empty array
 		} else {
-			oi["azs"] = machinePool.Azs
+			oi["az_subnets"] = make(map[string]interface{}) // empty map
+			if machinePool.Azs != nil {
+				oi["azs"] = machinePool.Azs
+			} else {
+				oi["azs"] = make([]interface{}, 0) // empty array
+			}
 		}
-		eksLaunchTemplates := flattenEksLaunchTemplate(machinePool.AwsLaunchTemplate)
 
+		// Always set eks_launch_template (empty array if not configured)
+		eksLaunchTemplates := flattenEksLaunchTemplate(machinePool.AwsLaunchTemplate)
 		if eksLaunchTemplates != nil {
-			oi["eks_launch_template"] = flattenEksLaunchTemplate(machinePool.AwsLaunchTemplate)
+			oi["eks_launch_template"] = eksLaunchTemplates
+		} else {
+			oi["eks_launch_template"] = make([]interface{}, 0)
 		}
 
 		ois = append(ois, oi)

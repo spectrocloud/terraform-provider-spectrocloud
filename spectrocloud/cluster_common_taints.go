@@ -57,5 +57,7 @@ func FlattenAdditionalLabelsAndTaints(labels map[string]string, intaints []*mode
 	taints := flattenClusterTaints(intaints)
 	if len(taints) > 0 {
 		oi["taints"] = taints
+	} else {
+		oi["taints"] = make([]interface{}, 0)
 	}
 }
