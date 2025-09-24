@@ -22,10 +22,28 @@ func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
 		buf.WriteString(HashStringMapList(nodePool["taints"]))
 	}
 	if val, ok := nodePool["control_plane"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := nodePool["control_plane_as_worker"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := nodePool["name"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
@@ -66,7 +84,16 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 	if val, ok := m["is_system_node_pool"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := m["os_type"]; ok && val != "" {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
@@ -86,7 +113,16 @@ func resourceMachinePoolAksHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
 	if val, ok := m["is_system_node_pool"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := m["storage_account_type"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
@@ -150,31 +186,73 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 }
 
 func resourceMachinePoolEksHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
+	nodePool := v.(map[string]interface{})
+	var buf bytes.Buffer
 
-	buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
-	if m["min"] != nil {
-		buf.WriteString(fmt.Sprintf("%d-", m["min"].(int)))
+	if val, ok := nodePool["count"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
-	if m["max"] != nil {
-		buf.WriteString(fmt.Sprintf("%d-", m["max"].(int)))
+	if val, ok := nodePool["disk_size_gb"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
-	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["capacity_type"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["max_price"].(string)))
+	if val, ok := nodePool["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["name"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
 
-	keys := make([]string, 0, len(m["az_subnets"].(map[string]interface{})))
-	for k := range m["az_subnets"].(map[string]interface{}) {
+	if _, ok := nodePool["additional_labels"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_labels"]))
+	}
+	if val, ok := nodePool["ami_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	keys := make([]string, 0, len(nodePool["az_subnets"].(map[string]interface{})))
+	for k := range nodePool["az_subnets"].(map[string]interface{}) {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		buf.WriteString(fmt.Sprintf("%s-%s", k, m["az_subnets"].(map[string]interface{})[k].(string)))
+		buf.WriteString(fmt.Sprintf("%s-%s", k, nodePool["az_subnets"].(map[string]interface{})[k].(string)))
 	}
 
-	if m["eks_launch_template"] != nil {
-		buf.WriteString(eksLaunchTemplate(m["eks_launch_template"]))
+	if nodePool["azs"] != nil {
+		azsList := nodePool["azs"].([]interface{})
+		azsListStr := make([]string, len(azsList))
+		for i, v := range azsList {
+			azsListStr[i] = v.(string)
+		}
+		sort.Strings(azsListStr)
+		azsStr := strings.Join(azsListStr, "-")
+		buf.WriteString(fmt.Sprintf("%s-", azsStr))
+	}
+
+	if val, ok := nodePool["capacity_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	if nodePool["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", nodePool["min"].(int)))
+	}
+	if nodePool["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", nodePool["max"].(int)))
+	}
+	if nodePool["max_price"] != nil {
+		buf.WriteString(fmt.Sprintf("%s-", nodePool["max_price"].(string)))
+	}
+	if nodePool["node"] != nil {
+		buf.WriteString(HashStringMapList(nodePool["node"]))
+	}
+	if _, ok := nodePool["taints"]; ok {
+		buf.WriteString(HashStringMapList(nodePool["taints"]))
+	}
+	if nodePool["eks_launch_template"] != nil {
+		buf.WriteString(eksLaunchTemplate(nodePool["eks_launch_template"]))
+	}
+	if val, ok := nodePool["update_strategy"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 
 	return int(hash(buf.String()))
@@ -246,23 +324,33 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 func resourceMachinePoolCustomCloudHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	var buf bytes.Buffer
-	if _, ok := m["name"]; ok {
-		buf.WriteString(HashStringMap(m["name"]))
-	}
-	if _, ok := m["count"]; ok {
-		buf.WriteString(HashStringMap(m["count"]))
-	}
-	if _, ok := m["additional_labels"]; ok {
-		buf.WriteString(HashStringMap(m["additional_labels"]))
-	}
+
 	if _, ok := m["taints"]; ok {
 		buf.WriteString(HashStringMapList(m["taints"]))
 	}
 	if val, ok := m["control_plane"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	if val, ok := m["control_plane_as_worker"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+		var boolVal bool
+		switch v := val.(type) {
+		case bool:
+			boolVal = v
+		case *bool:
+			if v != nil {
+				boolVal = *v
+			}
+		}
+		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
 	buf.WriteString(fmt.Sprintf("%s-", m["node_pool_config"].(string)))
 

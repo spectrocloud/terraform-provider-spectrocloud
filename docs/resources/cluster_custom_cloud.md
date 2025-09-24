@@ -147,7 +147,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `cloud` (String) The cloud provider name.
 - `cloud_account_id` (String) The cloud account id to use for this cluster.
 - `cloud_config` (Block List, Min: 1, Max: 1) The Cloud environment configuration settings such as network parameters and encryption parameters that apply to this cluster. (see [below for nested schema](#nestedblock--cloud_config))
-- `machine_pool` (Block List, Min: 1) The machine pool configuration for the cluster. (see [below for nested schema](#nestedblock--machine_pool))
+- `machine_pool` (Block Set, Min: 1) The machine pool configuration for the cluster. (see [below for nested schema](#nestedblock--machine_pool))
 - `name` (String) The name of the cluster.
 
 ### Optional

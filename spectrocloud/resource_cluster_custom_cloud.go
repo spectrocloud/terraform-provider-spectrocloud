@@ -37,7 +37,14 @@ func resourceClusterCustomCloud() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterCustomCloudResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterCustomCloudStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -133,8 +140,9 @@ func resourceClusterCustomCloud() *schema.Resource {
 			},
 
 			"machine_pool": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Required:    true,
+				Set:         resourceMachinePoolCustomCloudHash,
 				Description: "The machine pool configuration for the cluster.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -365,70 +373,74 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 		log.Printf("[DEBUG] === MACHINE POOL CHANGE DETECTED ===")
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
-			oraw = make([]interface{}, 0)
+			oraw = new(schema.Set)
 		}
 		if nraw == nil {
-			nraw = make([]interface{}, 0)
+			nraw = new(schema.Set)
 		}
 
-		os := oraw.([]interface{})
-		ns := nraw.([]interface{})
+		os := oraw.(*schema.Set)
+		ns := nraw.(*schema.Set)
 
-		log.Printf("[DEBUG] Old machine pools count: %d, New machine pools count: %d", len(os), len(ns))
+		log.Printf("[DEBUG] Old machine pools count: %d, New machine pools count: %d", os.Len(), ns.Len())
 
+		// Create maps by machine pool name for proper comparison
 		osMap := make(map[string]interface{})
-		for _, mp := range os {
-			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
+		for _, mp := range os.List() {
+			machinePoolResource := mp.(map[string]interface{})
+			name := extractMachinePoolNameFromYAML(machinePoolResource)
+			if name != "" {
+				osMap[name] = machinePoolResource
+			}
 		}
 
 		nsMap := make(map[string]interface{})
-		for i, mp := range ns {
+		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			log.Printf("[DEBUG] Processing machine pool %d: %+v", i, machinePoolResource)
-
-			// Extract name from YAML first
 			name := extractMachinePoolNameFromYAML(machinePoolResource)
-			log.Printf("[DEBUG] Extracted machine pool name: '%s'", name)
-
-			nsMap[name] = machinePoolResource
 			if name != "" {
-				newHash := resourceMachinePoolCustomCloudHash(machinePoolResource)
-				var err error
-				machinePool := toMachinePoolCustomCloud(mp)
-				if oldMachinePool, ok := osMap[name]; !ok {
+				nsMap[name] = machinePoolResource
+
+				// Check if this is a new, updated, or unchanged machine pool
+				if oldMachinePool, exists := osMap[name]; !exists {
+					// NEW machine pool - CREATE
 					log.Printf("[DEBUG] Creating new machine pool %s", name)
-					if err = c.CreateMachinePoolCustomCloud(machinePool, cloudConfigId, cloudType); err != nil {
+					machinePool := toMachinePoolCustomCloud(mp)
+					if err := c.CreateMachinePoolCustomCloud(machinePool, cloudConfigId, cloudType); err != nil {
 						return diag.FromErr(err)
 					}
 				} else {
+					// EXISTING machine pool - check if hash changed
 					oldHash := resourceMachinePoolCustomCloudHash(oldMachinePool)
-					log.Printf("[DEBUG] Machine pool %s - Old hash: %d, New hash: %d", name, oldHash, newHash)
-					if newHash != oldHash {
-						log.Printf("[DEBUG] Change detected in machine pool %s - updating", name)
-						if err = c.UpdateMachinePoolCustomCloud(machinePool, name, cloudConfigId, cloudType); err != nil {
+					newHash := resourceMachinePoolCustomCloudHash(machinePoolResource)
+
+					if oldHash != newHash {
+						// MODIFIED machine pool - UPDATE
+						log.Printf("[DEBUG] Updating machine pool %s (hash changed: %d -> %d)", name, oldHash, newHash)
+						machinePool := toMachinePoolCustomCloud(mp)
+						if err := c.UpdateMachinePoolCustomCloud(machinePool, name, cloudConfigId, cloudType); err != nil {
 							return diag.FromErr(err)
 						}
 					} else {
-						log.Printf("[DEBUG] No changes detected in machine pool %s - skipping update", name)
+						// UNCHANGED machine pool - no action needed
+						log.Printf("[DEBUG] Machine pool %s unchanged (hash: %d)", name, oldHash)
 					}
 				}
-				// Processed (if exists)
+
+				// Mark as processed
 				delete(osMap, name)
 			} else {
-				log.Printf("[DEBUG] WARNING: Machine pool %d has empty name!", i)
-			}
-		}
-		// Deleted old machine pools
-		for _, mp := range osMap {
-			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
-			log.Printf("Deleted machine pool %s", name)
-			if err = c.DeleteMachinePoolCustomCloud(name, cloudConfigId, cloudType); err != nil {
-				return diag.FromErr(err)
+				log.Printf("[DEBUG] WARNING: Machine pool has empty name!")
 			}
 		}
 
+		// REMOVED machine pools - DELETE
+		for name := range osMap {
+			log.Printf("[DEBUG] Deleting removed machine pool %s", name)
+			if err := c.DeleteMachinePoolCustomCloud(name, cloudConfigId, cloudType); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 
 	diagnostics, done := updateCommonFields(d, c)
@@ -457,7 +469,8 @@ func toCustomCloudCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 	customClusterConfig := toCustomClusterConfig(d)
 
 	machinePoolConfigs := make([]*models.V1CustomMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
+	machinePoolSet := d.Get("machine_pool").(*schema.Set)
+	for _, machinePool := range machinePoolSet.List() {
 		mp := toMachinePoolCustomCloud(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
@@ -1471,8 +1484,18 @@ func flattenMachinePoolConfigsCustomCloudWithOverrides(machinePools []*models.V1
 	}
 
 	// Get current machine pool configuration from state
-	currentMachinePools := d.Get("machine_pool").([]interface{})
+	currentMachinePoolsRaw := d.Get("machine_pool")
 	currentMPMap := make(map[string]map[string]interface{})
+
+	// Handle both TypeSet (new) and TypeList (during migration) formats
+	var currentMachinePools []interface{}
+	if machinePoolSet, ok := currentMachinePoolsRaw.(*schema.Set); ok {
+		// TypeSet format
+		currentMachinePools = machinePoolSet.List()
+	} else if machinePoolList, ok := currentMachinePoolsRaw.([]interface{}); ok {
+		// TypeList format (legacy/migration)
+		currentMachinePools = machinePoolList
+	}
 
 	for _, mp := range currentMachinePools {
 		if mpMap, ok := mp.(map[string]interface{}); ok {
@@ -1603,7 +1626,7 @@ func flattenCloudConfigCustom(configUID string, d *schema.ResourceData, c *clien
 			return diag.FromErr(err), true
 		}
 		log.Printf("[ERROR] About to call flattenMachinePoolConfigsCustomCloudWithOverrides")
-		if err := d.Set("machine_pool", flattenMachinePoolConfigsCustomCloudWithOverrides(config.Spec.MachinePoolConfig, d)); err != nil {
+		if err := d.Set("machine_pool", schema.NewSet(resourceMachinePoolCustomCloudHash, flattenMachinePoolConfigsCustomCloudWithOverrides(config.Spec.MachinePoolConfig, d))); err != nil {
 			log.Printf("[ERROR] Failed to set machine_pool: %v", err)
 			return diag.FromErr(err), true
 		}
@@ -1731,4 +1754,219 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// resourceClusterCustomCloudResourceV2 returns the schema for version 2 of the resource
+func resourceClusterCustomCloudResourceV2() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the cluster.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description: "The context of the EKS cluster. Allowed values are `project` or `tenant`. " +
+					"Default is `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"cloud": {
+				Type:        schema.TypeString,
+				ForceNew:    true,
+				Required:    true,
+				Description: "The cloud provider name.",
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
+			"cluster_profile": schemas.ClusterProfileSchema(),
+			"apply_setting": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
+			},
+			"cloud_account_id": {
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The cloud account id to use for this cluster.",
+			},
+			"cloud_config_id": {
+				Type:       schema.TypeString,
+				Computed:   true,
+				Deprecated: "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+			},
+			"cloud_config": {
+				Type:        schema.TypeList,
+				Required:    true,
+				MaxItems:    1,
+				Description: "The Cloud environment configuration settings such as network parameters and encryption parameters that apply to this cluster.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"values": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The values of the cloud config. The values are specified in YAML format. ",
+						},
+						"overrides": {
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "Key-value pairs to override specific values in the YAML.",
+						},
+					},
+				},
+			},
+			// Version 2 used TypeList for machine_pool
+			"machine_pool": {
+				Type:        schema.TypeList,
+				Required:    true,
+				Description: "The machine pool configuration for the cluster.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "The name of the machine pool. This will be derived from the name value in the `node_pool_config`.",
+						},
+						"count": {
+							Type:        schema.TypeInt,
+							Computed:    true,
+							Description: "Number of nodes in the machine pool. This will be derived from the replica value in the 'node_pool_config'.",
+						},
+						"taints": schemas.ClusterTaintsSchema(),
+						"control_plane": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
+						},
+						"control_plane_as_worker": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
+						},
+						"node_pool_config": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The values of the node pool config. The values are specified in YAML format. ",
+						},
+						"overrides": {
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "Key-value pairs to override specific values in the node pool config YAML.",
+						},
+					},
+				},
+			},
+			"pause_agent_upgrades": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "unlock",
+				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
+				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.",
+			},
+			"os_patch_on_boot": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to apply OS patch on boot. Default is `false`.",
+			},
+			"os_patch_schedule": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+				Description:      "The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.",
+			},
+			"os_patch_after": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+				Description:      "Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`",
+			},
+			"kubeconfig": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+			},
+			"admin_kube_config": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+			},
+			"backup_policy":        schemas.BackupPolicySchema(),
+			"scan_policy":          schemas.ScanPolicySchema(),
+			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
+			"namespaces":           schemas.ClusterNamespacesSchema(),
+			"location_config":      schemas.ClusterLocationSchema(),
+			"skip_completion": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
+			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
+			},
+		},
+	}
+}
+
+// resourceClusterCustomCloudStateUpgradeV2 migrates state from version 2 to version 3
+func resourceClusterCustomCloudStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading cluster custom cloud state from version 2 to 3")
+
+	// Convert machine_pool from TypeList to TypeSet
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if machinePoolRaw, exists := rawState["machine_pool"]; exists {
+		if machinePoolList, ok := machinePoolRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping machine_pool as list during state upgrade with %d items", len(machinePoolList))
+
+			// Keep the machine pool data as-is (as a list)
+			// Terraform will convert it to TypeSet when loading the resource using the schema
+			rawState["machine_pool"] = machinePoolList
+
+			log.Printf("[DEBUG] Successfully prepared machine_pool for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] machine_pool is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No machine_pool found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
