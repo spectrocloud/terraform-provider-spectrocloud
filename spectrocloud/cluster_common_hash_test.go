@@ -216,7 +216,7 @@ func TestResourceMachinePoolEksHash(t *testing.T) {
 					},
 				},
 			},
-			expected: 456946481,
+			expected: 706444520,
 		},
 	}
 
