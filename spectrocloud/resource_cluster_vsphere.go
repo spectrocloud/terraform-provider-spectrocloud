@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/constants"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
@@ -363,6 +363,12 @@ func resourceClusterVsphere() *schema.Resource {
 				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
 				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
 			},
+			"graceful_creation_timeout": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, cluster creation timeouts will be handled gracefully with warnings instead of errors, preserving the resource in state for subsequent applies to reconcile. Default is `false`.",
+			},
 		},
 	}
 }
@@ -387,6 +393,9 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
 	if isError {
 		return diagnostics
+	}
+	if len(diagnostics) > 0 {
+		diags = append(diags, diagnostics...)
 	}
 
 	resourceClusterVsphereRead(ctx, d, m)
@@ -855,7 +864,10 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 	memoryInt := ins["memory_mb"].(int)
 	cpuInt := ins["cpu"].(int)
 
-	if diskSizeInt > constants.Int32MaxValue || memoryInt > constants.Int64MaxValue || cpuInt > constants.Int32MaxValue {
+	if diskSizeInt < 0 || memoryInt < 0 || cpuInt < 0 {
+		return nil, fmt.Errorf("instance type values cannot be negative: disk_size_gb=%d, memory_mb=%d, cpu=%d", diskSizeInt, memoryInt, cpuInt)
+	}
+	if diskSizeInt > math.MaxInt32 || cpuInt > math.MaxInt32 {
 		return nil, fmt.Errorf("instance type values out of range: disk_size_gb=%d, memory_mb=%d, cpu=%d", diskSizeInt, memoryInt, cpuInt)
 	}
 
@@ -866,7 +878,10 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 	}
 
 	countInt := m["count"].(int)
-	if countInt > constants.Int32MaxValue {
+	if countInt < 0 {
+		return nil, fmt.Errorf("count value %d cannot be negative", countInt)
+	}
+	if countInt > math.MaxInt32 {
 		return nil, fmt.Errorf("count value %d is out of range for int32", countInt)
 	}
 
@@ -875,7 +890,10 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 
 	if m["min"] != nil {
 		minInt := m["min"].(int)
-		if minInt > constants.Int32MaxValue {
+		if minInt < 0 {
+			return nil, fmt.Errorf("min value %d cannot be negative", minInt)
+		}
+		if minInt > math.MaxInt32 {
 			return nil, fmt.Errorf("min value %d is out of range for int32", minInt)
 		}
 		min = SafeInt32(minInt)
@@ -883,7 +901,10 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 
 	if m["max"] != nil {
 		maxInt := m["max"].(int)
-		if maxInt > constants.Int32MaxValue {
+		if maxInt < 0 {
+			return nil, fmt.Errorf("max value %d cannot be negative", maxInt)
+		}
+		if maxInt > math.MaxInt32 {
 			return nil, fmt.Errorf("max value %d is out of range for int32", maxInt)
 		}
 		max = SafeInt32(maxInt)
@@ -915,13 +936,19 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		if m["node_repave_interval"] != nil {
 			nodeRepaveInterval = m["node_repave_interval"].(int)
 		}
-		if nodeRepaveInterval > constants.Int32MaxValue {
+		if nodeRepaveInterval < 0 {
+			return nil, fmt.Errorf("node_repave_interval value %d cannot be negative", nodeRepaveInterval)
+		}
+		if nodeRepaveInterval > math.MaxInt32 {
 			return nil, fmt.Errorf("node_repave_interval value %d is out of range for int32", nodeRepaveInterval)
 		}
 		mp.PoolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
 	} else {
 		nodeRepaveInterval := m["node_repave_interval"].(int)
-		if nodeRepaveInterval > constants.Int32MaxValue {
+		if nodeRepaveInterval < 0 {
+			return nil, fmt.Errorf("node_repave_interval value %d cannot be negative", nodeRepaveInterval)
+		}
+		if nodeRepaveInterval > math.MaxInt32 {
 			return nil, fmt.Errorf("node_repave_interval value %d is out of range for int32", nodeRepaveInterval)
 		}
 		err := ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval)
