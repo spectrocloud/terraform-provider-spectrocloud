@@ -34,7 +34,14 @@ func resourceClusterEks() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterEksResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterEksStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -224,8 +231,9 @@ func resourceClusterEks() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Required:    true,
+				Set:         resourceMachinePoolEksHash,
 				Description: "The machine pool configuration for the cluster.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -288,6 +296,7 @@ func resourceClusterEks() *schema.Resource {
 						"max_price": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"azs": {
 							Type:        schema.TypeList,
@@ -562,7 +571,11 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 			oi["capacity_type"] = machinePool.CapacityType
 		}
 		if machinePool.SpotMarketOptions != nil {
-			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
+			if machinePool.SpotMarketOptions.MaxPrice != "" {
+				oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
+			} else {
+				oi["max_price"] = ""
+			}
 		}
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 		if len(machinePool.SubnetIds) > 0 {
@@ -699,52 +712,13 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.([]interface{})
-		ns := nraw.([]interface{})
+		os := oraw.(*schema.Set)
+		ns := nraw.(*schema.Set)
 
-		osMap := make(map[string]interface{})
-		for _, mp := range os {
-			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
-		}
-
-		nsMap := make(map[string]interface{})
-		for _, mp := range ns {
-			machinePoolResource := mp.(map[string]interface{})
-			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
-			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
-			if machinePoolResource["name"].(string) != "" {
-				name := machinePoolResource["name"].(string)
-				hash := resourceMachinePoolEksHash(machinePoolResource)
-
-				machinePool := toMachinePoolEks(machinePoolResource)
-
-				var err error
-				if oldMachinePool, ok := osMap[name]; !ok {
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolEks(cloudConfigId, machinePool)
-				} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
-					// TODO
-					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
-					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEks, CloudConfig.Kind, cloudConfigId, name)
-					if err != nil {
-						return diag.FromErr(err)
-					}
-				}
-
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				// Processed (if exists)
-				delete(osMap, name)
-			}
-		}
-
-		// Deleted old machine pools
-		for _, mp := range osMap {
+		log.Printf("[DEBUG] Old machine pools count: %d, New machine pools count: %d", os.Len(), ns.Len())
+		// Get removed machine pools
+		removed := os.Difference(ns)
+		for _, mp := range removed.List() {
 			machinePool := mp.(map[string]interface{})
 			name := machinePool["name"].(string)
 			log.Printf("Deleted machine pool %s", name)
@@ -752,6 +726,85 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 				return diag.FromErr(err)
 			}
 		}
+
+		// Get added machine pools
+		added := ns.Difference(os)
+		for _, mp := range added.List() {
+			machinePoolResource := mp.(map[string]interface{})
+			name := machinePoolResource["name"].(string)
+			log.Printf("Creating machine pool %s", name)
+			machinePool := toMachinePoolEks(machinePoolResource)
+			if err := c.CreateMachinePoolEks(cloudConfigId, machinePool); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+		// Get intersection (potentially modified machine pools)
+		intersection := os.Intersection(ns)
+		for _, mp := range intersection.List() {
+			machinePoolResource := mp.(map[string]interface{})
+			name := machinePoolResource["name"].(string)
+			log.Printf("Updating machine pool %s", name)
+			machinePool := toMachinePoolEks(machinePoolResource)
+			if err := c.UpdateMachinePoolEks(cloudConfigId, machinePool); err != nil {
+				return diag.FromErr(err)
+			}
+			// Node Maintenance Actions
+			err := resourceNodeAction(c, ctx, machinePoolResource, c.GetNodeMaintenanceStatusEks, CloudConfig.Kind, cloudConfigId, name)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+		// osMap := make(map[string]interface{})
+		// for _, mp := range os {
+		// 	machinePool := mp.(map[string]interface{})
+		// 	osMap[machinePool["name"].(string)] = machinePool
+		// }
+
+		// nsMap := make(map[string]interface{})
+		// for _, mp := range ns {
+		// 	machinePoolResource := mp.(map[string]interface{})
+		// 	nsMap[machinePoolResource["name"].(string)] = machinePoolResource
+		// 	// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+		// 	if machinePoolResource["name"].(string) != "" {
+		// 		name := machinePoolResource["name"].(string)
+		// 		hash := resourceMachinePoolEksHash(machinePoolResource)
+
+		// 		machinePool := toMachinePoolEks(machinePoolResource)
+
+		// 		var err error
+		// 		if oldMachinePool, ok := osMap[name]; !ok {
+		// 			log.Printf("Create machine pool %s", name)
+		// 			err = c.CreateMachinePoolEks(cloudConfigId, machinePool)
+		// 		} else if hash != resourceMachinePoolEksHash(oldMachinePool) {
+		// 			// TODO
+		// 			log.Printf("Change in machine pool %s", name)
+		// 			err = c.UpdateMachinePoolEks(cloudConfigId, machinePool)
+		// 			// Node Maintenance Actions
+		// 			err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEks, CloudConfig.Kind, cloudConfigId, name)
+		// 			if err != nil {
+		// 				return diag.FromErr(err)
+		// 			}
+		// 		}
+
+		// 		if err != nil {
+		// 			return diag.FromErr(err)
+		// 		}
+
+		// 		// Processed (if exists)
+		// 		delete(osMap, name)
+		// 	}
+		// }
+
+		// // Deleted old machine pools
+		// for _, mp := range osMap {
+		// 	machinePool := mp.(map[string]interface{})
+		// 	name := machinePool["name"].(string)
+		// 	log.Printf("Deleted machine pool %s", name)
+		// 	if err := c.DeleteMachinePoolEks(cloudConfigId, name); err != nil {
+		// 		return diag.FromErr(err)
+		// 	}
+		// }
 	}
 
 	diagnostics, done := updateCommonFields(d, c)
@@ -1110,4 +1163,381 @@ func toCloudConfigEks(cloudConfig map[string]interface{}) *models.V1EksCloudClus
 	}
 
 	return clusterConfigEntity
+}
+
+func resourceClusterEksResourceV2() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The name of the cluster.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description: "The context of the EKS cluster. Allowed values are `project` or `tenant`. " +
+					"Default is `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`. The `tags` attribute will soon be deprecated. It is recommended to use `tags_map` instead.",
+			},
+			"tags_map": {
+				Type:          schema.TypeMap,
+				Optional:      true,
+				ConflictsWith: []string{"tags"},
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive — only one should be used at a time",
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
+			"cluster_meta_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
+			},
+			"cluster_profile": schemas.ClusterProfileSchema(),
+			"apply_setting": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
+			},
+			"cloud_account_id": {
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "The AWS cloud account id to use for this cluster.",
+			},
+			"cloud_config_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+			},
+			"review_repave_state": {
+				Type:         schema.TypeString,
+				Default:      "",
+				Optional:     true,
+				ValidateFunc: validateReviewRepaveValue,
+				Description:  "To authorize the cluster repave, set the value to `Approved` for approval and `\"\"` to decline. Default value is `\"\"`.",
+			},
+			"pause_agent_upgrades": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "unlock",
+				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
+				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.",
+			},
+			"os_patch_on_boot": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to apply OS patch on boot. Default is `false`.",
+			},
+			"os_patch_schedule": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+				Description:      "Cron schedule for OS patching. This must be in the form of `0 0 * * *`.",
+			},
+			"os_patch_after": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+				Description:      "Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`",
+			},
+			"kubeconfig": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+			},
+			"admin_kube_config": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+			},
+			"cloud_config": {
+				Type:        schema.TypeList,
+				Required:    true,
+				MaxItems:    1,
+				Description: "The AWS environment configuration settings such as network parameters and encryption parameters that apply to this cluster.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ssh_key_name": {
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Optional:    true,
+							Description: "Public SSH key to be used for the cluster nodes.",
+						},
+						"region": {
+							Type:     schema.TypeString,
+							ForceNew: true,
+							Required: true,
+						},
+						"vpc_id": {
+							Type:     schema.TypeString,
+							ForceNew: true,
+							Optional: true,
+						},
+						"azs": {
+							Type:        schema.TypeList,
+							Description: "Mutually exclusive with `az_subnets`. Use for Dynamic provisioning.",
+							Optional:    true,
+							ForceNew:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"az_subnets": {
+							Type:        schema.TypeMap,
+							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
+							Optional:    true,
+							ForceNew:    true,
+							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+								// UI strips the trailing newline on save
+								return strings.TrimSpace(old) == strings.TrimSpace(new)
+							},
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"endpoint_access": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							ForceNew:     true,
+							ValidateFunc: validation.StringInSlice([]string{"public", "private", "private_and_public"}, false),
+							Description:  "Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.",
+							Default:      "public",
+						},
+						"public_access_cidrs": {
+							Type:        schema.TypeSet,
+							Optional:    true,
+							Set:         schema.HashString,
+							Description: "List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.",
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"private_access_cidrs": {
+							Type:        schema.TypeSet,
+							Optional:    true,
+							Set:         schema.HashString,
+							Description: "List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.",
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"encryption_config_arn": {
+							Type:        schema.TypeString,
+							Description: "The ARN of the KMS encryption key to use for the cluster. Refer to the [Enable Secrets Encryption for EKS Cluster](https://docs.spectrocloud.com/clusters/public-cloud/aws/enable-secrets-encryption-kms-key/) for additional guidance.",
+							ForceNew:    true,
+							Optional:    true,
+						},
+					},
+				},
+			},
+			"machine_pool": {
+				Type:        schema.TypeList,
+				Required:    true,
+				Description: "The machine pool configuration for the cluster.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+							//ForceNew: true,
+						},
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"node":   schemas.NodeSchema(),
+						"taints": schemas.ClusterTaintsSchema(),
+						"disk_size_gb": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"count": {
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Number of nodes in the machine pool.",
+						},
+						"update_strategy": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "RollingUpdateScaleOut",
+							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+						},
+						"min": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
+						"max": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
+						"instance_type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"ami_type": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "AL2_x86_64",
+							Description: "Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.",
+						},
+						"capacity_type": {
+							Type:         schema.TypeString,
+							Default:      "on-demand",
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"on-demand", "spot"}, false),
+							Description:  "Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.",
+						},
+						"max_price": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"azs": {
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "Mutually exclusive with `az_subnets`.",
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"az_subnets": {
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"eks_launch_template": schemas.AwsLaunchTemplate(),
+					},
+				},
+			},
+			"fargate_profile": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"subnets": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"additional_tags": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"selector": {
+							Type:     schema.TypeList,
+							Required: true,
+							//MinItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"namespace": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"labels": {
+										Type:     schema.TypeMap,
+										Optional: true,
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"backup_policy":        schemas.BackupPolicySchema(),
+			"scan_policy":          schemas.ScanPolicySchema(),
+			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
+			"namespaces":           schemas.ClusterNamespacesSchema(),
+			"host_config":          schemas.ClusterHostConfigSchema(),
+			"location_config":      schemas.ClusterLocationSchemaComputed(),
+			"skip_completion": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
+			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
+			},
+		},
+	}
+}
+
+func resourceClusterEksStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading cluster custom cloud state from version 2 to 3")
+
+	// Convert machine_pool from TypeList to TypeSet
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if machinePoolRaw, exists := rawState["machine_pool"]; exists {
+		if machinePoolList, ok := machinePoolRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping machine_pool as list during state upgrade with %d items", len(machinePoolList))
+
+			// Keep the machine pool data as-is (as a list)
+			// Terraform will convert it to TypeSet when loading the resource using the schema
+			rawState["machine_pool"] = machinePoolList
+
+			log.Printf("[DEBUG] Successfully prepared machine_pool for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] machine_pool is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No machine_pool found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
