@@ -1925,15 +1925,18 @@ func resourceClusterCustomCloudStateUpgradeV2(ctx context.Context, rawState map[
 	log.Printf("[DEBUG] Upgrading cluster custom cloud state from version 2 to 3")
 
 	// Convert machine_pool from TypeList to TypeSet
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
 	if machinePoolRaw, exists := rawState["machine_pool"]; exists {
 		if machinePoolList, ok := machinePoolRaw.([]interface{}); ok {
-			log.Printf("[DEBUG] Converting machine_pool from TypeList to TypeSet with %d items", len(machinePoolList))
+			log.Printf("[DEBUG] Keeping machine_pool as list during state upgrade with %d items", len(machinePoolList))
 
-			// Create a new set with the hash function
-			machinePoolSet := schema.NewSet(resourceMachinePoolCustomCloudHash, machinePoolList)
-			rawState["machine_pool"] = machinePoolSet
+			// Keep the machine pool data as-is (as a list)
+			// Terraform will convert it to TypeSet when loading the resource using the schema
+			rawState["machine_pool"] = machinePoolList
 
-			log.Printf("[DEBUG] Successfully converted machine_pool to TypeSet")
+			log.Printf("[DEBUG] Successfully prepared machine_pool for TypeSet conversion")
 		} else {
 			log.Printf("[DEBUG] machine_pool is not a list, skipping conversion")
 		}
