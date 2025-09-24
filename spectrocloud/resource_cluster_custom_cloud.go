@@ -364,10 +364,10 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 		log.Printf("[DEBUG] === MACHINE POOL CHANGE DETECTED ===")
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
-			oraw = schema.NewSet(resourceMachinePoolCustomCloudHash, []interface{}{})
+			oraw = new(schema.Set) //schema.NewSet(resourceMachinePoolCustomCloudHash, []interface{}{})
 		}
 		if nraw == nil {
-			nraw = schema.NewSet(resourceMachinePoolCustomCloudHash, []interface{}{})
+			nraw = new(schema.Set) //schema.NewSet(resourceMachinePoolCustomCloudHash, []interface{}{})
 		}
 
 		os := oraw.(*schema.Set)
