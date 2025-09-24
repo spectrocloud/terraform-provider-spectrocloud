@@ -50,5 +50,7 @@ resource "local_file" "admin_kube_config" {
 ### Read-Only
 
 - `admin_kube_config` (String) The admin kubeconfig file for accessing the cluster. This is computed automatically.
+- `health` (String) The current health status of the cluster. This is computed automatically.
 - `id` (String) The ID of this resource.
 - `kube_config` (String) The kubeconfig file for accessing the cluster as a non-admin user. This is computed automatically.
+- `state` (String) The current state of the cluster. This is computed automatically.
