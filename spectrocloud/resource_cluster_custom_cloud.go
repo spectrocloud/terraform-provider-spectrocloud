@@ -364,10 +364,10 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 		log.Printf("[DEBUG] === MACHINE POOL CHANGE DETECTED ===")
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
-			oraw = new(schema.Set) //schema.NewSet(resourceMachinePoolCustomCloudHash, []interface{}{})
+			oraw = new(schema.Set)
 		}
 		if nraw == nil {
-			nraw = new(schema.Set) //schema.NewSet(resourceMachinePoolCustomCloudHash, []interface{}{})
+			nraw = new(schema.Set)
 		}
 
 		os := oraw.(*schema.Set)
@@ -375,46 +375,61 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 
 		log.Printf("[DEBUG] Old machine pools count: %d, New machine pools count: %d", os.Len(), ns.Len())
 
-		// Get removed machine pools
-		removed := os.Difference(ns)
-		for _, mp := range removed.List() {
+		// Create maps by machine pool name for proper comparison
+		osMap := make(map[string]interface{})
+		for _, mp := range os.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := extractMachinePoolNameFromYAML(machinePoolResource)
 			if name != "" {
-				log.Printf("[DEBUG] Deleting machine pool %s", name)
-				if err := c.DeleteMachinePoolCustomCloud(name, cloudConfigId, cloudType); err != nil {
-					return diag.FromErr(err)
-				}
+				osMap[name] = machinePoolResource
 			}
 		}
 
-		// Get added machine pools
-		added := ns.Difference(os)
-		for _, mp := range added.List() {
+		nsMap := make(map[string]interface{})
+		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
 			name := extractMachinePoolNameFromYAML(machinePoolResource)
 			if name != "" {
-				log.Printf("[DEBUG] Creating new machine pool %s", name)
-				machinePool := toMachinePoolCustomCloud(mp)
-				if err := c.CreateMachinePoolCustomCloud(machinePool, cloudConfigId, cloudType); err != nil {
-					return diag.FromErr(err)
+				nsMap[name] = machinePoolResource
+
+				// Check if this is a new, updated, or unchanged machine pool
+				if oldMachinePool, exists := osMap[name]; !exists {
+					// NEW machine pool - CREATE
+					log.Printf("[DEBUG] Creating new machine pool %s", name)
+					machinePool := toMachinePoolCustomCloud(mp)
+					if err := c.CreateMachinePoolCustomCloud(machinePool, cloudConfigId, cloudType); err != nil {
+						return diag.FromErr(err)
+					}
+				} else {
+					// EXISTING machine pool - check if hash changed
+					oldHash := resourceMachinePoolCustomCloudHash(oldMachinePool)
+					newHash := resourceMachinePoolCustomCloudHash(machinePoolResource)
+
+					if oldHash != newHash {
+						// MODIFIED machine pool - UPDATE
+						log.Printf("[DEBUG] Updating machine pool %s (hash changed: %d -> %d)", name, oldHash, newHash)
+						machinePool := toMachinePoolCustomCloud(mp)
+						if err := c.UpdateMachinePoolCustomCloud(machinePool, name, cloudConfigId, cloudType); err != nil {
+							return diag.FromErr(err)
+						}
+					} else {
+						// UNCHANGED machine pool - no action needed
+						log.Printf("[DEBUG] Machine pool %s unchanged (hash: %d)", name, oldHash)
+					}
 				}
+
+				// Mark as processed
+				delete(osMap, name)
 			} else {
 				log.Printf("[DEBUG] WARNING: Machine pool has empty name!")
 			}
 		}
 
-		// Get intersection (potentially modified machine pools)
-		intersection := os.Intersection(ns)
-		for _, mp := range intersection.List() {
-			machinePoolResource := mp.(map[string]interface{})
-			name := extractMachinePoolNameFromYAML(machinePoolResource)
-			if name != "" {
-				log.Printf("[DEBUG] Updating machine pool %s", name)
-				machinePool := toMachinePoolCustomCloud(mp)
-				if err := c.UpdateMachinePoolCustomCloud(machinePool, name, cloudConfigId, cloudType); err != nil {
-					return diag.FromErr(err)
-				}
+		// REMOVED machine pools - DELETE
+		for name := range osMap {
+			log.Printf("[DEBUG] Deleting removed machine pool %s", name)
+			if err := c.DeleteMachinePoolCustomCloud(name, cloudConfigId, cloudType); err != nil {
+				return diag.FromErr(err)
 			}
 		}
 	}
