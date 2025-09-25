@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -113,6 +115,13 @@ func resourceClusterReadyRefreshFunc(c *client.V1Client, id string) retry.StateR
 func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, initial bool) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
+	// Debug logging
+	if gracefulCreationTimeout, ok := d.GetOk("graceful_creation_timeout"); ok {
+		log.Printf("waitForClusterCreation: graceful_creation_timeout = %v", gracefulCreationTimeout)
+	} else {
+		log.Printf("waitForClusterCreation: graceful_creation_timeout not set or false")
+	}
+
 	if initial { // only skip_completion when initally creating a cluster, do not skip when attach addon profile
 		if d.Get("skip_completion") != nil && d.Get("skip_completion").(bool) {
 			return diags, true
@@ -140,6 +149,43 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid str
 	// Wait, catching any errors
 	_, err := stateConf.WaitForStateContext(ctx)
 	if err != nil {
+		// Check if graceful_creation_timeout is enabled and this is a timeout error
+		if gracefulCreationTimeout, ok := d.GetOk("graceful_creation_timeout"); ok && gracefulCreationTimeout.(bool) {
+			// Check if this is a timeout error
+			var timeoutErr *retry.TimeoutError
+			if errors.As(err, &timeoutErr) {
+				log.Printf("waitForClusterCreation (Running-Healthy phase): graceful timeout handling enabled, returning warning instead of error")
+
+				// Get current cluster state for warning message
+				cluster, stateErr := c.GetCluster(d.Id())
+				currentState := timeoutErr.LastState
+				if currentState == "" {
+					currentState = "Unknown"
+				}
+				if stateErr == nil && cluster != nil && cluster.Status != nil {
+					currentState = cluster.Status.State
+					if cluster.Status.State == "Running" {
+						if clusterSummary, _ := c.GetClusterOverview(d.Id()); clusterSummary != nil && clusterSummary.Status.Health != nil {
+							if clusterSummary.Status.Health.State != "" && clusterSummary.Status.Health.State != "Healthy" {
+								currentState += "-" + clusterSummary.Status.Health.State
+							}
+						}
+					}
+				}
+
+				// Return warning instead of error
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Warning,
+					Summary:  "Cluster creation timeout",
+					Detail: fmt.Sprintf(
+						"Cluster creation timed out after waiting for %v. Current cluster state is '%s'. "+
+							"The cluster may still be provisioning in the background and could eventually reach the 'Running-Healthy' state.",
+						d.Timeout(schema.TimeoutCreate), currentState),
+				})
+				return diags, false
+			}
+		}
+		// For non-timeout errors or when graceful_creation_timeout is disabled, still return the error
 		return diag.FromErr(err), true
 	}
 	return nil, false

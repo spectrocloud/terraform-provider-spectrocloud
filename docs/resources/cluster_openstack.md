@@ -101,6 +101,7 @@ resource "spectrocloud_cluster_openstack" "cluster" {
 - `description` (String) The description of the cluster. Default value is empty string.
 - `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
 - `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
+- `graceful_creation_timeout` (Boolean) If set to `true`, cluster creation timeouts will be handled gracefully with warnings instead of errors, preserving the resource in state for subsequent applies to reconcile. Default is `false`.
 - `host_config` (Block List) The host configuration for the cluster. (see [below for nested schema](#nestedblock--host_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
