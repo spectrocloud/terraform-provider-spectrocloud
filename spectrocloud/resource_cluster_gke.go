@@ -225,12 +225,6 @@ func resourceClusterGke() *schema.Resource {
 				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
 				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
 			},
-			"graceful_creation_timeout": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-				Description: "If set to `true`, cluster creation timeouts will be handled gracefully with warnings instead of errors, preserving the resource in state for subsequent applies to reconcile. Default is `false`.",
-			},
 		},
 	}
 }
@@ -255,10 +249,6 @@ func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m int
 	if isError {
 		return diagnostics
 	}
-	if len(diagnostics) > 0 {
-		diags = append(diags, diagnostics...)
-	}
-
 	resourceClusterGkeRead(ctx, d, m)
 	return diags
 }
