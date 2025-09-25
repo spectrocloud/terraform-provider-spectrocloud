@@ -333,8 +333,7 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 	if isError {
 		return diagnostics
 	}
-
-	diags = resourceClusterEdgeNativeRead(ctx, d, m)
+	resourceClusterEdgeNativeRead(ctx, d, m)
 
 	return diags
 }

@@ -249,7 +249,6 @@ func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m int
 	if isError {
 		return diagnostics
 	}
-
 	resourceClusterGkeRead(ctx, d, m)
 	return diags
 }

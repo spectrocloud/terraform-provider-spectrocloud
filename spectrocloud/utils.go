@@ -3,6 +3,8 @@ package spectrocloud
 import (
 	"math"
 	"time"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/common"
 )
 
 // SafeInt32 converts int to int32 with bounds checking to prevent overflow
@@ -24,13 +26,7 @@ func SafeInt64(value int) int64 {
 
 // SafeUint32 converts int to uint32 with bounds checking to prevent overflow
 func SafeUint32(value int) uint32 {
-	if value < 0 {
-		return 0
-	}
-	if value > math.MaxUint32 {
-		return math.MaxUint32
-	}
-	return uint32(value)
+	return common.SafeUint32(value)
 }
 
 func expandStringList(configured []interface{}) []string {

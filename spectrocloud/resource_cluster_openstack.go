@@ -296,7 +296,6 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 	if isError {
 		return diagnostics
 	}
-
 	resourceClusterOpenStackRead(ctx, d, m)
 
 	return diags

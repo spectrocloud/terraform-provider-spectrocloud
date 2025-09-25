@@ -43,6 +43,16 @@ func dataSourceCluster() *schema.Resource {
 				Default:     false,
 				Description: "If set to true, the cluster will treated as a virtual cluster. Defaults to `false`.",
 			},
+			"state": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The current state of the cluster. This is computed automatically.",
+			},
+			"health": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The current health status of the cluster. This is computed automatically.",
+			},
 		},
 	}
 }
@@ -72,6 +82,21 @@ func dataSourceClusterRead(_ context.Context, d *schema.ResourceData, m interfac
 			d.SetId(cluster.Metadata.UID)
 			if err := d.Set("name", cluster.Metadata.Name); err != nil {
 				return diag.FromErr(err)
+			}
+
+			// Set cluster state
+			if cluster.Status != nil && cluster.Status.State != "" {
+				if err := d.Set("state", cluster.Status.State); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+
+			// Set cluster health
+			clusterSummary, summaryErr := c.GetClusterOverview(cluster.Metadata.UID)
+			if summaryErr == nil && clusterSummary.Status.Health != nil && clusterSummary.Status.Health.State != "" {
+				if err := d.Set("health", clusterSummary.Status.Health.State); err != nil {
+					return diag.FromErr(err)
+				}
 			}
 		}
 	}

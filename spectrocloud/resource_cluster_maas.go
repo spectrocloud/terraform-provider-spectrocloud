@@ -361,7 +361,6 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 	if isError {
 		return diagnostics
 	}
-
 	resourceClusterMaasRead(ctx, d, m)
 
 	return diags
