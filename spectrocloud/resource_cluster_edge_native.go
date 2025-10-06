@@ -330,15 +330,14 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 	}
 
 	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
-	if isError {
-		return diagnostics
-	}
 	if len(diagnostics) > 0 {
 		diags = append(diags, diagnostics...)
 	}
+	if isError {
+		return diagnostics
+	}
 
-	readDiags := resourceClusterEdgeNativeRead(ctx, d, m)
-	diags = append(diags, readDiags...)
+	resourceClusterEdgeNativeRead(ctx, d, m)
 
 	return diags
 }

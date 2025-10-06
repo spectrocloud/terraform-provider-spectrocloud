@@ -358,11 +358,11 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 	}
 
 	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
-	if isError {
-		return diagnostics
-	}
 	if len(diagnostics) > 0 {
 		diags = append(diags, diagnostics...)
+	}
+	if isError {
+		return diagnostics
 	}
 
 	resourceClusterMaasRead(ctx, d, m)

@@ -246,11 +246,11 @@ func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m int
 	}
 
 	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
-	if isError {
-		return diagnostics
-	}
 	if len(diagnostics) > 0 {
 		diags = append(diags, diagnostics...)
+	}
+	if isError {
+		return diagnostics
 	}
 
 	resourceClusterGkeRead(ctx, d, m)
