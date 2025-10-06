@@ -149,7 +149,14 @@ func S3BackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) dia
 		s3["credential_type"] = string(*s3Bsl.Spec.Config.Credentials.CredentialType)
 		if *s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
-			s3["secret_key"] = s3Bsl.Spec.Config.Credentials.SecretKey
+			// Preserve the existing secret_key from state to avoid drift detection when API returns masked values
+			if currentS3Config := d.Get("s3").([]interface{}); len(currentS3Config) > 0 {
+				if currentS3 := currentS3Config[0].(map[string]interface{}); currentS3 != nil {
+					if secretKey, exists := currentS3["secret_key"]; exists {
+						s3["secret_key"] = secretKey
+					}
+				}
+			}
 		} else {
 			s3["arn"] = s3Bsl.Spec.Config.Credentials.Sts.Arn
 			if len(s3Bsl.Spec.Config.Credentials.Sts.ExternalID) > 0 {
@@ -218,7 +225,14 @@ func MinioBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 		s3["credential_type"] = string(*s3Bsl.Spec.Config.Credentials.CredentialType)
 		if *s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
-			s3["secret_key"] = s3Bsl.Spec.Config.Credentials.SecretKey
+			// Preserve the existing secret_key from state to avoid drift detection when API returns masked values
+			if currentS3Config := d.Get("s3").([]interface{}); len(currentS3Config) > 0 {
+				if currentS3 := currentS3Config[0].(map[string]interface{}); currentS3 != nil {
+					if secretKey, exists := currentS3["secret_key"]; exists {
+						s3["secret_key"] = secretKey
+					}
+				}
+			}
 		}
 		s3Config := make([]interface{}, 0, 1)
 		s3Config = append(s3Config, s3)
