@@ -104,10 +104,27 @@ func volumesFields() map[string]*schema.Schema {
 						Optional: true,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
+								"user_data_secret_ref": k8s.LocalObjectReferenceSchema("UserDataSecretRef references a k8s secret that contains cloud-init userdata."),
+								"user_data_base64": {
+									Type:        schema.TypeString,
+									Description: "UserDataBase64 contains cloud-init userdata as a base64 encoded string.",
+									Optional:    true,
+								},
 								"user_data": {
 									Type:        schema.TypeString,
-									Required:    true,
-									Description: "The user data to use for the cloud-init no cloud disk. This can be a local file path, a remote URL, or a registry URL.",
+									Description: "UserData contains cloud-init inline userdata.",
+									Optional:    true,
+								},
+								"network_data_secret_ref": k8s.LocalObjectReferenceSchema("NetworkDataSecretRef references a k8s secret that contains cloud-init networkdata."),
+								"network_data_base64": {
+									Type:        schema.TypeString,
+									Description: "NetworkDataBase64 contains cloud-init networkdata as a base64 encoded string.",
+									Optional:    true,
+								},
+								"network_data": {
+									Type:        schema.TypeString,
+									Optional:    true,
+									Description: "NetworkData contains cloud-init inline network configuration data.",
 								},
 							},
 						},
@@ -392,8 +409,23 @@ func expandCloudInitNoCloud(cloudInitNoCloudSource []interface{}) *kubevirtapiv1
 	result := &kubevirtapiv1.CloudInitNoCloudSource{}
 	in := cloudInitNoCloudSource[0].(map[string]interface{})
 
+	if v, ok := in["user_data_secret_ref"].([]interface{}); ok {
+		result.UserDataSecretRef = k8s.ExpandLocalObjectReferences(v)
+	}
+	if v, ok := in["user_data_base64"].(string); ok {
+		result.UserDataBase64 = v
+	}
 	if v, ok := in["user_data"].(string); ok {
 		result.UserData = v
+	}
+	if v, ok := in["network_data_secret_ref"].([]interface{}); ok {
+		result.NetworkDataSecretRef = k8s.ExpandLocalObjectReferences(v)
+	}
+	if v, ok := in["network_data_base64"].(string); ok {
+		result.NetworkDataBase64 = v
+	}
+	if v, ok := in["network_data"].(string); ok {
+		result.NetworkData = v
 	}
 
 	return result
@@ -621,7 +653,16 @@ func flattenContainerDisk(in kubevirtapiv1.ContainerDiskSource) []interface{} {
 func flattenCloudInitNoCloud(in kubevirtapiv1.CloudInitNoCloudSource) []interface{} {
 	att := make(map[string]interface{})
 
+	if in.UserDataSecretRef != nil {
+		att["user_data_secret_ref"] = k8s.FlattenLocalObjectReferences(*in.UserDataSecretRef)
+	}
+	att["user_data_base64"] = in.UserDataBase64
 	att["user_data"] = in.UserData
+	if in.NetworkDataSecretRef != nil {
+		att["network_data_secret_ref"] = k8s.FlattenLocalObjectReferences(*in.NetworkDataSecretRef)
+	}
+	att["network_data_base64"] = in.NetworkDataBase64
+	att["network_data"] = in.NetworkData
 
 	return []interface{}{att}
 }
