@@ -101,6 +101,7 @@ Optional:
 
 - `content_type` (String) ContentType options: "kubevirt", "archive".
 - `source` (Block List, Max: 1) Source is the src of the data for the requested DataVolume. (see [below for nested schema](#nestedblock--spec--source))
+- `storage` (Block List, Max: 1) Storage is the requested storage specification for the DataVolume. (see [below for nested schema](#nestedblock--spec--storage))
 
 <a id="nestedblock--spec--pvc"></a>
 ### Nested Schema for `spec.pvc`
@@ -185,6 +186,47 @@ Optional:
 Optional:
 
 - `image_url` (String) The registry URL of the image to download.
+
+
+
+<a id="nestedblock--spec--storage"></a>
+### Nested Schema for `spec.storage`
+
+Optional:
+
+- `access_modes` (Set of String) A set of the desired access modes the volume should have. More info: http://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+- `resources` (Block List, Max: 1) A list of the minimum resources the volume should have. More info: http://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--spec--storage--resources))
+- `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--spec--storage--selector))
+- `storage_class_name` (String) Name of the storage class requested by the claim
+- `volume_mode` (String) volumeMode defines what type of volume is required by the claim. Value of Filesystem is implied when not included in claim spec.
+- `volume_name` (String) The binding reference to the PersistentVolume backing this claim.
+
+<a id="nestedblock--spec--storage--resources"></a>
+### Nested Schema for `spec.storage.resources`
+
+Optional:
+
+- `limits` (Map of String) Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/
+- `requests` (Map of String) Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/
+
+
+<a id="nestedblock--spec--storage--selector"></a>
+### Nested Schema for `spec.storage.selector`
+
+Optional:
+
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--storage--selector--match_expressions))
+- `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value".
+
+<a id="nestedblock--spec--storage--selector--match_expressions"></a>
+### Nested Schema for `spec.storage.selector.match_expressions`
+
+Optional:
+
+- `key` (String) The label key that the selector applies to.
+- `operator` (String) A key's relationship to a set of values. Valid operators are `In`, `NotIn`, `Exists` and `DoesNotExist`.
+- `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty.
+
 
 
 
