@@ -160,10 +160,12 @@ func expandDataVolumeSource(dataVolumeSource []interface{}) *cdiv1.DataVolumeSou
 }
 
 func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) *cdiv1.DataVolumeBlankImage {
-	if len(dataVolumeSourceBlank) == 0 || dataVolumeSourceBlank[0] == nil {
+	if len(dataVolumeSourceBlank) == 0 {
 		return nil
 	}
 
+	// When blank {} is present in Terraform config, we should return a DataVolumeBlankImage
+	// even if the first element is nil or an empty map
 	result := &cdiv1.DataVolumeBlankImage{}
 
 	return result

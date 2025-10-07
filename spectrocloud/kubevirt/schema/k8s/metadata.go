@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -9,6 +10,24 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// filterSystemAnnotations removes system-managed annotations that should not be managed by Terraform
+func filterSystemAnnotations(annotations map[string]string) map[string]string {
+	if annotations == nil {
+		return nil
+	}
+
+	filtered := make(map[string]string)
+
+	for key, value := range annotations {
+		// Filter out all kubevirt.io/ system annotations
+		if !strings.HasPrefix(key, "kubevirt.io/") {
+			filtered[key] = value
+		}
+	}
+
+	return filtered
+}
 
 func metadataFields(objectName string) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
@@ -153,7 +172,9 @@ func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
 
 func FlattenMetadataDataVolume(meta metav1.ObjectMeta) []interface{} {
 	m := make(map[string]interface{})
-	m["annotations"] = utils.FlattenStringMap(meta.Annotations)
+	// Filter out system-managed annotations for data volumes as well
+	filteredAnnotations := filterSystemAnnotations(meta.Annotations)
+	m["annotations"] = utils.FlattenStringMap(filteredAnnotations)
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
@@ -175,7 +196,9 @@ func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) 
 	if resourceData == nil {
 		return err
 	}
-	if err = resourceData.Set("annotations", utils.FlattenStringMap(meta.Annotations)); err != nil {
+	// Filter out system-managed annotations before setting them in Terraform state
+	filteredAnnotations := filterSystemAnnotations(meta.Annotations)
+	if err = resourceData.Set("annotations", utils.FlattenStringMap(filteredAnnotations)); err != nil {
 		return err
 	}
 	if err = resourceData.Set("labels", utils.FlattenStringMap(meta.Labels)); err != nil {
