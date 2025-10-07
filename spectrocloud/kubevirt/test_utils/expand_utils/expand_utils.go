@@ -4,10 +4,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	test_entities "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/test_utils/entities"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
-	corev1 "k8s.io/api/core/v1"
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
@@ -33,10 +31,10 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 				Namespace: "namespace",
 				Name:      "name",
 			},
-			Blank: nil,
+			Blank: &cdiv1.DataVolumeBlankImage{},
 		},
-		PVC: &corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+		PVC: &k8sv1.PersistentVolumeClaimSpec{
+			AccessModes: []k8sv1.PersistentVolumeAccessMode{"ReadWriteOnce"},
 			Resources: k8sv1.VolumeResourceRequirements{
 				Requests: k8sv1.ResourceList{
 					"storage": requestStorage,
@@ -45,7 +43,7 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 					"storage": limitStorage,
 				},
 			},
-			Selector: &metav1.LabelSelector{
+			Selector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"anti-affinity-key": "anti-affinity-val",
 				},
