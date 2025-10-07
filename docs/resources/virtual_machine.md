@@ -971,6 +971,7 @@ Required:
 
 Optional:
 
+- `boot_order` (Number) BootOrder is an integer value > 0, used to determine ordering of boot devices. Lower values take precedence.
 - `serial` (String) Serial provides the ability to specify a serial number for the disk device.
 
 <a id="nestedblock--disk--disk_device"></a>

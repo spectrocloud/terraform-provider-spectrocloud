@@ -164,8 +164,9 @@ func GetBaseInputForVirtualMachine() interface{} {
 						},
 					},
 				},
-				"name":   "test-vm-datavolumedisk1",
-				"serial": "serial",
+				"name":       "test-vm-datavolumedisk1",
+				"serial":     "serial",
+				"boot_order": 1,
 			},
 		},
 		"interface": []interface{}{
@@ -301,8 +302,9 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 					Devices: kubevirtapiv1.Devices{
 						Disks: []kubevirtapiv1.Disk{
 							{
-								Name:   "test-vm-datavolumedisk1",
-								Serial: "serial",
+								Name:      "test-vm-datavolumedisk1",
+								Serial:    "serial",
+								BootOrder: func() *uint { bo := uint(1); return &bo }(),
 								DiskDevice: kubevirtapiv1.DiskDevice{
 									Disk: &kubevirtapiv1.DiskTarget{
 										Bus:        "virtio",

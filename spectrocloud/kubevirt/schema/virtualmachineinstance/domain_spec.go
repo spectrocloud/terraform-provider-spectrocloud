@@ -142,6 +142,11 @@ func domainSpecFields() map[string]*schema.Schema {
 									Description: "Serial provides the ability to specify a serial number for the disk device.",
 									Optional:    true,
 								},
+								"boot_order": {
+									Type:        schema.TypeInt,
+									Description: "BootOrder is an integer value > 0, used to determine ordering of boot devices. Lower values take precedence.",
+									Optional:    true,
+								},
 							},
 						},
 					},
@@ -367,6 +372,10 @@ func ExpandDisks(disks []interface{}) []kubevirtapiv1.Disk {
 		if v, ok := in["serial"].(string); ok {
 			result[i].Serial = v
 		}
+		if v, ok := in["boot_order"].(int); ok && v > 0 {
+			bootOrder := uint(v)
+			result[i].BootOrder = &bootOrder
+		}
 	}
 
 	return result
@@ -523,6 +532,9 @@ func flattenDisks(in []kubevirtapiv1.Disk) []interface{} {
 		c["name"] = v.Name
 		c["disk_device"] = flattenDiskDevice(v.DiskDevice)
 		c["serial"] = v.Serial
+		if v.BootOrder != nil {
+			c["boot_order"] = int(*v.BootOrder)
+		}
 
 		att[i] = c
 	}
