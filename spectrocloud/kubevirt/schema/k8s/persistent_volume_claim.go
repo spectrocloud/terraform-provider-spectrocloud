@@ -88,7 +88,7 @@ func PersistentVolumeClaimSpecSchema() *schema.Schema {
 	return &schema.Schema{
 		Type:        schema.TypeList,
 		Description: "PVC is a pointer to the PVC Spec we want to use.",
-		Required:    true,
+		Optional:    true,
 		MaxItems:    1,
 		Elem: &schema.Resource{
 			Schema: fields,

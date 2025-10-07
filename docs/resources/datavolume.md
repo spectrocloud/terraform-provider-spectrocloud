@@ -93,13 +93,10 @@ Read-Only:
 <a id="nestedblock--spec"></a>
 ### Nested Schema for `spec`
 
-Required:
-
-- `pvc` (Block List, Min: 1, Max: 1) PVC is a pointer to the PVC Spec we want to use. (see [below for nested schema](#nestedblock--spec--pvc))
-
 Optional:
 
 - `content_type` (String) ContentType options: "kubevirt", "archive".
+- `pvc` (Block List, Max: 1) PVC is a pointer to the PVC Spec we want to use. (see [below for nested schema](#nestedblock--spec--pvc))
 - `source` (Block List, Max: 1) Source is the src of the data for the requested DataVolume. (see [below for nested schema](#nestedblock--spec--source))
 - `storage` (Block List, Max: 1) Storage is the requested storage specification for the DataVolume. (see [below for nested schema](#nestedblock--spec--storage))
 
