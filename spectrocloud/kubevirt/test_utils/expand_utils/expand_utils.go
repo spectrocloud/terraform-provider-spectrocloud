@@ -5,8 +5,10 @@ import (
 	test_entities "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/test_utils/entities"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 	corev1 "k8s.io/api/core/v1"
+	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
@@ -31,15 +33,15 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 				Namespace: "namespace",
 				Name:      "name",
 			},
-			Blank: &cdiv1.DataVolumeBlankImage{},
+			Blank: nil,
 		},
 		PVC: &corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-			Resources: corev1.VolumeResourceRequirements{
-				Requests: corev1.ResourceList{
+			Resources: k8sv1.VolumeResourceRequirements{
+				Requests: k8sv1.ResourceList{
 					"storage": requestStorage,
 				},
-				Limits: corev1.ResourceList{
+				Limits: k8sv1.ResourceList{
 					"storage": limitStorage,
 				},
 			},
@@ -50,7 +52,7 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 			},
 			VolumeName:       "volume_name",
 			StorageClassName: &storageClassName,
-			VolumeMode:       (*corev1.PersistentVolumeMode)(&volumeMode),
+			VolumeMode:       (*k8sv1.PersistentVolumeMode)(&volumeMode),
 		},
 		ContentType: "content_type",
 	}
@@ -58,7 +60,7 @@ func getDataVolumeSpec() cdiv1.DataVolumeSpec {
 
 func getBaseOutputForDataVolumeTemplateSpec() kubevirtapiv1.DataVolumeTemplateSpec {
 	return kubevirtapiv1.DataVolumeTemplateSpec{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: v1.ObjectMeta{
 			Name: "test-vm-bootvolume",
 		},
 		Spec: getDataVolumeSpec(),
@@ -283,16 +285,16 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 			getBaseOutputForDataVolumeTemplateSpec(),
 		},
 		Template: &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{},
+			ObjectMeta: v1.ObjectMeta{},
 			Spec: kubevirtapiv1.VirtualMachineInstanceSpec{
 				PriorityClassName: "priority_class_name",
 				Domain: kubevirtapiv1.DomainSpec{
 					Resources: kubevirtapiv1.ResourceRequirements{
-						Requests: corev1.ResourceList{
+						Requests: k8sv1.ResourceList{
 							"memory": (func() resource.Quantity { res, _ := resource.ParseQuantity("10G"); return res })(),
 							"cpu":    *resource.NewQuantity(int64(4), resource.DecimalExponent),
 						},
-						Limits: corev1.ResourceList{
+						Limits: k8sv1.ResourceList{
 							"memory": (func() resource.Quantity { res, _ := resource.ParseQuantity("20G"); return res })(),
 							"cpu":    *resource.NewQuantity(int64(8), resource.DecimalExponent),
 						},
@@ -327,11 +329,11 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 				},
 				Affinity:      nil,
 				SchedulerName: "scheduler_name",
-				Tolerations: []corev1.Toleration{
+				Tolerations: []k8sv1.Toleration{
 					{
-						Effect:            corev1.TaintEffect("effect"),
+						Effect:            k8sv1.TaintEffect("effect"),
 						Key:               "key",
-						Operator:          corev1.TolerationOperator("operator"),
+						Operator:          k8sv1.TolerationOperator("operator"),
 						TolerationSeconds: utils.PtrToInt64(int64(60)),
 						Value:             "value",
 					},
@@ -349,12 +351,12 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 								Name: "test-vm-bootvolume",
 							},
 							CloudInitConfigDrive: &kubevirtapiv1.CloudInitConfigDriveSource{
-								UserDataSecretRef: &corev1.LocalObjectReference{
+								UserDataSecretRef: &k8sv1.LocalObjectReference{
 									Name: "name",
 								},
 								UserDataBase64: "user_data_base64",
 								UserData:       "user_data",
-								NetworkDataSecretRef: &corev1.LocalObjectReference{
+								NetworkDataSecretRef: &k8sv1.LocalObjectReference{
 									Name: "name",
 								},
 								NetworkDataBase64: "network_data_base64",
@@ -381,7 +383,7 @@ func GetBaseOutputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 						},
 					},
 				},
-				DNSPolicy: corev1.DNSPolicy("dns_policy"),
+				DNSPolicy: k8sv1.DNSPolicy("dns_policy"),
 				DNSConfig: nil,
 			},
 		},
