@@ -1161,9 +1161,30 @@ Required:
 <a id="nestedblock--volume--volume_source--cloud_init_no_cloud"></a>
 ### Nested Schema for `volume.volume_source.cloud_init_no_cloud`
 
+Optional:
+
+- `network_data` (String) NetworkData contains cloud-init inline network configuration data.
+- `network_data_base64` (String) NetworkDataBase64 contains cloud-init networkdata as a base64 encoded string.
+- `network_data_secret_ref` (Block List, Max: 1) NetworkDataSecretRef references a k8s secret that contains cloud-init networkdata. (see [below for nested schema](#nestedblock--volume--volume_source--cloud_init_no_cloud--network_data_secret_ref))
+- `user_data` (String) UserData contains cloud-init inline userdata.
+- `user_data_base64` (String) UserDataBase64 contains cloud-init userdata as a base64 encoded string.
+- `user_data_secret_ref` (Block List, Max: 1) UserDataSecretRef references a k8s secret that contains cloud-init userdata. (see [below for nested schema](#nestedblock--volume--volume_source--cloud_init_no_cloud--user_data_secret_ref))
+
+<a id="nestedblock--volume--volume_source--cloud_init_no_cloud--network_data_secret_ref"></a>
+### Nested Schema for `volume.volume_source.cloud_init_no_cloud.network_data_secret_ref`
+
 Required:
 
-- `user_data` (String) The user data to use for the cloud-init no cloud disk. This can be a local file path, a remote URL, or a registry URL.
+- `name` (String) Name of the referent.
+
+
+<a id="nestedblock--volume--volume_source--cloud_init_no_cloud--user_data_secret_ref"></a>
+### Nested Schema for `volume.volume_source.cloud_init_no_cloud.user_data_secret_ref`
+
+Required:
+
+- `name` (String) Name of the referent.
+
 
 
 <a id="nestedblock--volume--volume_source--config_map"></a>
