@@ -331,6 +331,9 @@ func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceDat
 	}
 
 	diagnostics, isError := waitForClusterCreation(ctx, d, uid, diags, c, true)
+	if len(diagnostics) > 0 {
+		diags = append(diags, diagnostics...)
+	}
 	if isError {
 		return diagnostics
 	}
