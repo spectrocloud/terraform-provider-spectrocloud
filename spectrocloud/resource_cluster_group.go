@@ -101,9 +101,9 @@ func resourceClusterGroup() *schema.Resource {
 						"k8s_distribution": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Default:     "k3s",
+							Default:     "vcluster-generic",
 							ForceNew:    true,
-							Description: "The Kubernetes distribution, allowed values are `k3s` and `cncf_k8s`.",
+							Description: "The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`.",
 						},
 					},
 				},
