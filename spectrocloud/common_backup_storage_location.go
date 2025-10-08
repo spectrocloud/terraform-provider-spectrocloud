@@ -149,7 +149,14 @@ func S3BackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) dia
 		s3["credential_type"] = string(*s3Bsl.Spec.Config.Credentials.CredentialType)
 		if *s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
-			s3["secret_key"] = s3Bsl.Spec.Config.Credentials.SecretKey
+			// Preserve the existing secret_key from state to avoid drift detection when API returns masked values
+			if currentS3Config := d.Get("s3").([]interface{}); len(currentS3Config) > 0 {
+				if currentS3 := currentS3Config[0].(map[string]interface{}); currentS3 != nil {
+					if secretKey, exists := currentS3["secret_key"]; exists {
+						s3["secret_key"] = secretKey
+					}
+				}
+			}
 		} else {
 			s3["arn"] = s3Bsl.Spec.Config.Credentials.Sts.Arn
 			if len(s3Bsl.Spec.Config.Credentials.Sts.ExternalID) > 0 {
@@ -218,7 +225,14 @@ func MinioBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 		s3["credential_type"] = string(*s3Bsl.Spec.Config.Credentials.CredentialType)
 		if *s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
-			s3["secret_key"] = s3Bsl.Spec.Config.Credentials.SecretKey
+			// Preserve the existing secret_key from state to avoid drift detection when API returns masked values
+			if currentS3Config := d.Get("s3").([]interface{}); len(currentS3Config) > 0 {
+				if currentS3 := currentS3Config[0].(map[string]interface{}); currentS3 != nil {
+					if secretKey, exists := currentS3["secret_key"]; exists {
+						s3["secret_key"] = secretKey
+					}
+				}
+			}
 		}
 		s3Config := make([]interface{}, 0, 1)
 		s3Config = append(s3Config, s3)
@@ -263,10 +277,20 @@ func GcpBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) di
 		if err := d.Set("bucket_name", *gcpBsl.Spec.Config.BucketName); err != nil {
 			return diag.FromErr(err)
 		}
-		gcpConfig = append(gcpConfig, map[string]interface{}{
-			"project_id":           gcpBsl.Spec.Config.ProjectID,
-			"gcp_json_credentials": gcpBsl.Spec.Config.Credentials.JSONCredentials,
-		})
+		gcpConfigMap := map[string]interface{}{
+			"project_id": gcpBsl.Spec.Config.ProjectID,
+		}
+
+		// Preserve the existing gcp_json_credentials from state to avoid drift detection when API returns masked values
+		if currentGcpConfig := d.Get("gcp_storage_config").([]interface{}); len(currentGcpConfig) > 0 {
+			if currentGcp := currentGcpConfig[0].(map[string]interface{}); currentGcp != nil {
+				if jsonCreds, exists := currentGcp["gcp_json_credentials"]; exists {
+					gcpConfigMap["gcp_json_credentials"] = jsonCreds
+				}
+			}
+		}
+
+		gcpConfig = append(gcpConfig, gcpConfigMap)
 		if err := d.Set("gcp_storage_config", gcpConfig); err != nil {
 			return diag.FromErr(err)
 		}
@@ -300,16 +324,26 @@ func AzureBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 		return diags
 	}
 	azConfig := make([]interface{}, 0)
-	azConfig = append(azConfig, map[string]interface{}{
-		"container_name":      azureBsl.Spec.Config.ContainerName,
-		"storage_name":        azureBsl.Spec.Config.StorageName,
-		"stock_keeping_unit":  azureBsl.Spec.Config.Sku,
-		"resource_group":      azureBsl.Spec.Config.ResourceGroup,
-		"azure_tenant_id":     azureBsl.Spec.Config.Credentials.TenantID,
-		"azure_client_id":     azureBsl.Spec.Config.Credentials.ClientID,
-		"subscription_id":     azureBsl.Spec.Config.Credentials.SubscriptionID,
-		"azure_client_secret": azureBsl.Spec.Config.Credentials.ClientSecret,
-	})
+	azConfigMap := map[string]interface{}{
+		"container_name":     azureBsl.Spec.Config.ContainerName,
+		"storage_name":       azureBsl.Spec.Config.StorageName,
+		"stock_keeping_unit": azureBsl.Spec.Config.Sku,
+		"resource_group":     azureBsl.Spec.Config.ResourceGroup,
+		"azure_tenant_id":    azureBsl.Spec.Config.Credentials.TenantID,
+		"azure_client_id":    azureBsl.Spec.Config.Credentials.ClientID,
+		"subscription_id":    azureBsl.Spec.Config.Credentials.SubscriptionID,
+	}
+
+	// Preserve the existing azure_client_secret from state to avoid drift detection when API returns masked values
+	if currentAzureConfig := d.Get("azure_storage_config").([]interface{}); len(currentAzureConfig) > 0 {
+		if currentAzure := currentAzureConfig[0].(map[string]interface{}); currentAzure != nil {
+			if clientSecret, exists := currentAzure["azure_client_secret"]; exists {
+				azConfigMap["azure_client_secret"] = clientSecret
+			}
+		}
+	}
+
+	azConfig = append(azConfig, azConfigMap)
 	if err := d.Set("azure_storage_config", azConfig); err != nil {
 		return diag.FromErr(err)
 	}
