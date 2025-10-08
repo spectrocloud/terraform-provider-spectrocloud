@@ -143,19 +143,29 @@ func expandDataVolumeSource(dataVolumeSource []interface{}) *cdiv1.DataVolumeSou
 
 	in := dataVolumeSource[0].(map[string]interface{})
 
-	result.Blank = expandDataVolumeSourceBlank(in["blank"].([]interface{}))
-	result.HTTP = expandDataVolumeSourceHTTP(in["http"].([]interface{}))
-	result.PVC = expandDataVolumeSourcePVC(in["pvc"].([]interface{}))
-	result.Registry = expandDataVolumeSourceRegistry(in["registry"].([]interface{}))
+	if v, ok := in["blank"].([]interface{}); ok {
+		result.Blank = expandDataVolumeSourceBlank(v)
+	}
+	if v, ok := in["http"].([]interface{}); ok {
+		result.HTTP = expandDataVolumeSourceHTTP(v)
+	}
+	if v, ok := in["pvc"].([]interface{}); ok {
+		result.PVC = expandDataVolumeSourcePVC(v)
+	}
+	if v, ok := in["registry"].([]interface{}); ok {
+		result.Registry = expandDataVolumeSourceRegistry(v)
+	}
 
 	return result
 }
 
 func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) *cdiv1.DataVolumeBlankImage {
-	if len(dataVolumeSourceBlank) == 0 || dataVolumeSourceBlank[0] == nil {
+	if len(dataVolumeSourceBlank) == 0 {
 		return nil
 	}
 
+	// When blank {} is present in Terraform config, we should return a DataVolumeBlankImage
+	// even if the first element is nil or an empty map
 	result := &cdiv1.DataVolumeBlankImage{}
 
 	return result

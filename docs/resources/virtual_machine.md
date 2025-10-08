@@ -825,14 +825,12 @@ Read-Only:
 <a id="nestedblock--data_volume_templates--spec"></a>
 ### Nested Schema for `data_volume_templates.spec`
 
-Required:
-
-- `pvc` (Block List, Min: 1, Max: 1) PVC is a pointer to the PVC Spec we want to use. (see [below for nested schema](#nestedblock--data_volume_templates--spec--pvc))
-
 Optional:
 
 - `content_type` (String) ContentType options: "kubevirt", "archive".
+- `pvc` (Block List, Max: 1) PVC is a pointer to the PVC Spec we want to use. (see [below for nested schema](#nestedblock--data_volume_templates--spec--pvc))
 - `source` (Block List, Max: 1) Source is the src of the data for the requested DataVolume. (see [below for nested schema](#nestedblock--data_volume_templates--spec--source))
+- `storage` (Block List, Max: 1) Storage is the requested storage specification for the DataVolume. (see [below for nested schema](#nestedblock--data_volume_templates--spec--storage))
 
 <a id="nestedblock--data_volume_templates--spec--pvc"></a>
 ### Nested Schema for `data_volume_templates.spec.pvc`
@@ -920,6 +918,47 @@ Optional:
 
 
 
+<a id="nestedblock--data_volume_templates--spec--storage"></a>
+### Nested Schema for `data_volume_templates.spec.storage`
+
+Optional:
+
+- `access_modes` (Set of String) A set of the desired access modes the volume should have. More info: http://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+- `resources` (Block List, Max: 1) A list of the minimum resources the volume should have. More info: http://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--data_volume_templates--spec--storage--resources))
+- `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--data_volume_templates--spec--storage--selector))
+- `storage_class_name` (String) Name of the storage class requested by the claim
+- `volume_mode` (String) volumeMode defines what type of volume is required by the claim. Value of Filesystem is implied when not included in claim spec.
+- `volume_name` (String) The binding reference to the PersistentVolume backing this claim.
+
+<a id="nestedblock--data_volume_templates--spec--storage--resources"></a>
+### Nested Schema for `data_volume_templates.spec.storage.resources`
+
+Optional:
+
+- `limits` (Map of String) Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/
+- `requests` (Map of String) Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/
+
+
+<a id="nestedblock--data_volume_templates--spec--storage--selector"></a>
+### Nested Schema for `data_volume_templates.spec.storage.selector`
+
+Optional:
+
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--data_volume_templates--spec--storage--selector--match_expressions))
+- `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value".
+
+<a id="nestedblock--data_volume_templates--spec--storage--selector--match_expressions"></a>
+### Nested Schema for `data_volume_templates.spec.storage.selector.match_expressions`
+
+Optional:
+
+- `key` (String) The label key that the selector applies to.
+- `operator` (String) A key's relationship to a set of values. Valid operators are `In`, `NotIn`, `Exists` and `DoesNotExist`.
+- `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty.
+
+
+
+
 
 
 <a id="nestedblock--disk"></a>
@@ -932,6 +971,7 @@ Required:
 
 Optional:
 
+- `boot_order` (Number) BootOrder is an integer value > 0, used to determine ordering of boot devices. Lower values take precedence.
 - `serial` (String) Serial provides the ability to specify a serial number for the disk device.
 
 <a id="nestedblock--disk--disk_device"></a>

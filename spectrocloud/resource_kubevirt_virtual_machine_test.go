@@ -1,6 +1,9 @@
 package spectrocloud
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -13,8 +16,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
-	"reflect"
-	"testing"
 )
 
 // Domain Spec Tests start
@@ -280,7 +281,8 @@ func TestExpandDisks(t *testing.T) {
 							},
 						},
 					},
-					"serial": "123",
+					"serial":     "123",
+					"boot_order": 1,
 				},
 				map[string]interface{}{
 					"name": "disk2",
@@ -295,12 +297,15 @@ func TestExpandDisks(t *testing.T) {
 							},
 						},
 					},
-					"serial": "456",
+					"serial":     "456",
+					"boot_order": 2,
 				},
 			},
 			expected: []kubevirtapiv1.Disk{
 				{
-					Name: "disk1",
+					Name:      "disk1",
+					Serial:    "123",
+					BootOrder: func() *uint { bo := uint(1); return &bo }(),
 					DiskDevice: kubevirtapiv1.DiskDevice{
 						Disk: &kubevirtapiv1.DiskTarget{
 							Bus:        "virtio",
@@ -308,10 +313,11 @@ func TestExpandDisks(t *testing.T) {
 							PciAddress: "0000:04:00.0",
 						},
 					},
-					Serial: "123",
 				},
 				{
-					Name: "disk2",
+					Name:      "disk2",
+					Serial:    "456",
+					BootOrder: func() *uint { bo := uint(2); return &bo }(),
 					DiskDevice: kubevirtapiv1.DiskDevice{
 						Disk: &kubevirtapiv1.DiskTarget{
 							Bus:        "sata",
@@ -319,7 +325,6 @@ func TestExpandDisks(t *testing.T) {
 							PciAddress: "",
 						},
 					},
-					Serial: "456",
 				},
 			},
 		},

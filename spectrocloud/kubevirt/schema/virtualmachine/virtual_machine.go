@@ -163,6 +163,11 @@ func VirtualMachineFields() map[string]*schema.Schema {
 						Description: "Serial provides the ability to specify a serial number for the disk device.",
 						Optional:    true,
 					},
+					"boot_order": {
+						Type:        schema.TypeInt,
+						Description: "BootOrder is an integer value > 0, used to determine ordering of boot devices. Lower values take precedence.",
+						Optional:    true,
+					},
 				},
 			},
 		},
