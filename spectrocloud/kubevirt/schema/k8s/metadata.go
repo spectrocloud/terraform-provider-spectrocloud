@@ -148,6 +148,8 @@ func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
 
 	if v, ok := m["annotations"].(map[string]string); ok && len(v) > 0 {
 		meta.Annotations = m["annotations"].(map[string]string) //utils.ExpandStringMap(m["annotations"].(map[string]interface{}))
+	} else if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 { // for supporting data volume templates annotations
+		meta.Annotations = utils.ExpandStringMap(m["annotations"].(map[string]interface{}))
 	}
 
 	if v, ok := m["labels"].(map[string]string); ok && len(v) > 0 {
