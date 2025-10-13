@@ -36,13 +36,22 @@ func PackSchema() *schema.Schema {
 					Optional: true,
 					Description: "The registry UID of the pack. The registry UID is the unique identifier of the registry. " +
 						"This attribute is required if there is more than one registry that contains a pack with the same name. " +
-						"If `uid` is not provided, this field is required along with `name` and `tag` to resolve the pack UID internally.",
+						"If `uid` is not provided, this field is required along with `name` and `tag` to resolve the pack UID internally. " +
+						"Either `registry_uid` or `registry_name` can be specified, but not both.",
+				},
+				"registry_name": {
+					Type:     schema.TypeString,
+					Optional: true,
+					Description: "The registry name of the pack. The registry name is the human-readable name of the registry. " +
+						"This attribute can be used instead of `registry_uid` for better readability. " +
+						"If `uid` is not provided, this field can be used along with `name` and `tag` to resolve the pack UID internally. " +
+						"Either `registry_uid` or `registry_name` can be specified, but not both.",
 				},
 				"tag": {
 					Type:     schema.TypeString,
 					Optional: true,
 					Description: "The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`. " +
-						"If `uid` is not provided, this field is required along with `name` and `registry_uid` to resolve the pack UID internally.",
+						"If `uid` is not provided, this field is required along with `name` and `registry_uid` (or `registry_name`) to resolve the pack UID internally.",
 				},
 				"values": {
 					Type:        schema.TypeString,
@@ -85,7 +94,7 @@ func PackSchema() *schema.Schema {
 }
 
 // ValidatePackUIDOrResolutionFields validates that either uid is provided
-// OR all of name, tag, and registry_uid are specified for pack resolution.
+// OR all of name, tag, and registry_uid/registry_name are specified for pack resolution.
 func ValidatePackUIDOrResolutionFields(packData map[string]interface{}) error {
 	uid := ""
 	if packData["uid"] != nil {
@@ -107,9 +116,19 @@ func ValidatePackUIDOrResolutionFields(packData map[string]interface{}) error {
 		registryUID = packData["registry_uid"].(string)
 	}
 
+	registryName := ""
+	if packData["registry_name"] != nil {
+		registryName = packData["registry_name"].(string)
+	}
+
 	packType := ""
 	if packData["type"] != nil {
 		packType = packData["type"].(string)
+	}
+
+	// Validate that both registry_uid and registry_name are not provided together
+	if registryUID != "" && registryName != "" {
+		return fmt.Errorf("pack %s: only one of 'registry_uid' or 'registry_name' can be specified, not both", name)
 	}
 
 	// Skip validation for manifest packs as they have special handling
@@ -131,13 +150,13 @@ func ValidatePackUIDOrResolutionFields(packData map[string]interface{}) error {
 	if tag == "" {
 		missingFields = append(missingFields, "tag")
 	}
-	if registryUID == "" {
-		missingFields = append(missingFields, "registry_uid")
+	if registryUID == "" && registryName == "" {
+		missingFields = append(missingFields, "registry_uid or registry_name")
 	}
 
 	if len(missingFields) > 0 {
 		return fmt.Errorf("pack %s: either 'uid' must be provided, or all of the following fields must be specified for pack resolution: %s. Missing: %s",
-			name, "name, tag, registry_uid", strings.Join(missingFields, ", "))
+			name, "name, tag, registry_uid (or registry_name)", strings.Join(missingFields, ", "))
 	}
 
 	return nil

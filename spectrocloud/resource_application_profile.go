@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
@@ -174,17 +175,50 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 		return make([]interface{}, 0), nil
 	}
 
+	// Build registry maps to track which packs use registry_name or registry_uid
+	registryNameMap := buildPackRegistryNameMap(d)
+	registryUIDMap := buildPackRegistryUIDMap(d)
+
 	ps := make([]interface{}, len(tiers))
 	for i, tier := range tierDet {
 		p := make(map[string]interface{})
 		p["uid"] = tier.Metadata.UID
-		if isRegistryUID(diagPacks, tier.Metadata.Name) {
-			p["registry_uid"] = c.GetPackRegistry(tier.Metadata.UID, string(*tier.Spec.Type))
+
+		// Get the registry UID from the API response
+		registryUID := tier.Spec.RegistryUID
+		if registryUID == "" {
+			registryUID = c.GetPackRegistry(tier.Metadata.UID, string(*tier.Spec.Type))
 		}
+
+		// Determine what the user originally provided in their config
+		usesRegistryName := registryNameMap != nil && registryNameMap[tier.Metadata.Name]
+		usesRegistryUID := registryUIDMap != nil && registryUIDMap[tier.Metadata.Name]
+
+		if usesRegistryName {
+			// User originally specified registry_name, resolve UID back to name
+			if registryUID != "" {
+				registryName, err := resolveRegistryUIDToName(c, registryUID)
+				if err == nil && registryName != "" {
+					p["registry_name"] = registryName
+					// Do NOT set registry_uid - user didn't provide it
+				} else {
+					// Fallback to UID if name resolution fails
+					p["registry_uid"] = registryUID
+				}
+			}
+		} else if usesRegistryUID {
+			// User originally specified registry_uid, set registry_uid
+			if registryUID != "" {
+				p["registry_uid"] = registryUID
+			}
+			// Do NOT set registry_name - user didn't provide it
+		}
+		// else: User didn't specify either registry_uid or registry_name
+		// (they probably used uid directly), so don't set either in state
+
 		p["name"] = tier.Metadata.Name
 		//p["tag"] = tier.Tag
 		p["type"] = tier.Spec.Type
-		p["registry_uid"] = tier.Spec.RegistryUID
 		p["source_app_tier"] = tier.Spec.SourceAppTierUID
 		prop := make(map[string]string)
 		if len(tier.Spec.Properties) > 0 {
@@ -329,6 +363,10 @@ func toAppTiers() []*models.V1AppTierEntity {
 }
 
 func toApplicationProfilePackCreate(pSrc interface{}) (*models.V1AppTierEntity, error) {
+	return toApplicationProfilePackCreateWithClient(pSrc, nil)
+}
+
+func toApplicationProfilePackCreateWithClient(pSrc interface{}, c *client.V1Client) (*models.V1AppTierEntity, error) {
 	p := pSrc.(map[string]interface{})
 
 	pName := p["name"].(string)
@@ -343,7 +381,25 @@ func toApplicationProfilePackCreate(pSrc interface{}) (*models.V1AppTierEntity, 
 	if p["registry_uid"] != nil {
 		pRegistryUID = p["registry_uid"].(string)
 	}
+	pRegistryName := ""
+	if p["registry_name"] != nil {
+		pRegistryName = p["registry_name"].(string)
+	}
 	pType := models.V1AppTierType(p["type"].(string))
+
+	// Validate that both registry_uid and registry_name are not provided together
+	if pRegistryUID != "" && pRegistryName != "" {
+		return nil, fmt.Errorf("pack %s: only one of 'registry_uid' or 'registry_name' can be specified, not both", pName)
+	}
+
+	// If registry_name is provided and client is available, resolve it to registry_uid
+	if pRegistryName != "" && pRegistryUID == "" && c != nil {
+		resolvedUID, err := resolveRegistryNameToUID(c, pRegistryName)
+		if err != nil {
+			return nil, fmt.Errorf("pack %s: %w", pName, err)
+		}
+		pRegistryUID = resolvedUID
+	}
 
 	tier := &models.V1AppTierEntity{
 		Name:             types.Ptr(pName),

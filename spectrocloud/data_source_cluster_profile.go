@@ -174,7 +174,10 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 		if done {
 			return diagnostics
 		}
-		packs, err := flattenPacks(c, diagPacks, profile.Spec.Published.Packs, packManifests)
+		// Build registry maps to track which packs use registry_name or registry_uid
+		registryNameMap := buildPackRegistryNameMap(d)
+		registryUIDMap := buildPackRegistryUIDMap(d)
+		packs, err := flattenPacksWithRegistryMaps(c, diagPacks, profile.Spec.Published.Packs, packManifests, registryNameMap, registryUIDMap)
 		if err != nil {
 			return diag.FromErr(err)
 		}
