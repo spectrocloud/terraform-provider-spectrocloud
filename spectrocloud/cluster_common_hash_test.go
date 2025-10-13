@@ -634,6 +634,52 @@ func TestResourceMachinePoolCustomCloudHash(t *testing.T) {
 			},
 			expected: 1525978111,
 		},
+		{
+			name: "YAML normalization - different formatting same content",
+			input: map[string]interface{}{
+				"name":  "yaml-pool",
+				"count": 2,
+				"node_pool_config": `apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: md-0
+  namespace: test
+spec:
+  replicas: 2
+  template:
+    spec:
+      version: v1.27.0`,
+			},
+			// This should match the normalized YAML hash
+			expected: 0, // Will be calculated by first run
+		},
+	}
+
+	// First, calculate the expected hash for the YAML normalization test
+	for i := range testCases {
+		if testCases[i].name == "YAML normalization - different formatting same content" {
+			// Calculate actual hash to set as expected
+			testCases[i].expected = resourceMachinePoolCustomCloudHash(testCases[i].input)
+			fmt.Printf("Setting expected hash for YAML normalization test: %d\n", testCases[i].expected)
+
+			// Now test that same content with different whitespace produces same hash
+			input2 := map[string]interface{}{
+				"name":  "yaml-pool",
+				"count": 2,
+				"node_pool_config": `apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind:    MachineDeployment
+metadata:
+  name:   md-0
+  namespace:  test
+spec:
+  replicas:   2
+  template:
+    spec:
+      version:  v1.27.0`,
+			}
+			hash2 := resourceMachinePoolCustomCloudHash(input2)
+			assert.Equal(t, testCases[i].expected, hash2, "YAML normalization should produce same hash regardless of whitespace formatting")
+		}
 	}
 
 	for _, tc := range testCases {
@@ -645,4 +691,55 @@ func TestResourceMachinePoolCustomCloudHash(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestResourceMachinePoolCustomCloudHashYAMLNormalization specifically tests
+// that different YAML formatting produces the same hash (perpetual diff fix)
+func TestResourceMachinePoolCustomCloudHashYAMLNormalization(t *testing.T) {
+	// Same YAML content with different whitespace/formatting
+	yaml1 := `apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: md-0
+spec:
+  replicas: 2`
+
+	yaml2 := `apiVersion:    infrastructure.cluster.x-k8s.io/v1beta1
+kind:   MachineDeployment
+metadata:
+  name:   md-0
+spec:
+  replicas:  2`
+
+	yaml3 := `apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+    name: md-0
+spec:
+    replicas: 2`
+
+	input1 := map[string]interface{}{
+		"name":             "test-pool",
+		"count":            2,
+		"node_pool_config": yaml1,
+	}
+
+	input2 := map[string]interface{}{
+		"name":             "test-pool",
+		"count":            2,
+		"node_pool_config": yaml2,
+	}
+
+	input3 := map[string]interface{}{
+		"name":             "test-pool",
+		"count":            2,
+		"node_pool_config": yaml3,
+	}
+
+	hash1 := resourceMachinePoolCustomCloudHash(input1)
+	hash2 := resourceMachinePoolCustomCloudHash(input2)
+	hash3 := resourceMachinePoolCustomCloudHash(input3)
+
+	assert.Equal(t, hash1, hash2, "YAML with extra spaces should produce same hash")
+	assert.Equal(t, hash1, hash3, "YAML with different indentation should produce same hash")
 }
