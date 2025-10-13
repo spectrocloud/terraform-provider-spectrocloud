@@ -18,7 +18,7 @@ require (
 	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1
 	kubevirt.io/api v1.6.2
-	kubevirt.io/containerized-data-importer-api v1.63.0
+	kubevirt.io/containerized-data-importer-api v1.63.1
 )
 
 require (
