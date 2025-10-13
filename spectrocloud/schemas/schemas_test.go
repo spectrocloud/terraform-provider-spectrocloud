@@ -29,8 +29,11 @@ func TestAppPackSchema(t *testing.T) {
 
 	assert.Equal(t, schema.TypeString, elemSchema.Schema["registry_uid"].Type)
 	assert.Equal(t, true, elemSchema.Schema["registry_uid"].Optional)
-	assert.Equal(t, true, elemSchema.Schema["registry_uid"].Computed)
-	assert.Equal(t, "The unique id of the registry to be used for the pack.", elemSchema.Schema["registry_uid"].Description)
+	assert.Equal(t, "The unique id of the registry to be used for the pack. Either `registry_uid` or `registry_name` can be specified, but not both.", elemSchema.Schema["registry_uid"].Description)
+
+	assert.Equal(t, schema.TypeString, elemSchema.Schema["registry_name"].Type)
+	assert.Equal(t, true, elemSchema.Schema["registry_name"].Optional)
+	assert.Equal(t, "The name of the registry to be used for the pack. This can be used instead of `registry_uid` for better readability. Either `registry_uid` or `registry_name` can be specified, but not both.", elemSchema.Schema["registry_name"].Description)
 
 	assert.Equal(t, schema.TypeString, elemSchema.Schema["uid"].Type)
 	assert.Equal(t, true, elemSchema.Schema["uid"].Optional)
