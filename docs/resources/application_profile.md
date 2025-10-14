@@ -397,7 +397,8 @@ Optional:
 - `install_order` (Number) The installation priority order of the app profile. The order of priority goes from lowest number to highest number. For example, a value of `-3` would be installed before an app profile with a higher number value. No upper and lower limits exist, and you may specify positive and negative integers. The default value is `0`.
 - `manifest` (Block List) The manifest of the pack. (see [below for nested schema](#nestedblock--pack--manifest))
 - `properties` (Map of String) The various properties required by different database tiers eg: `databaseName` and `databaseVolumeSize` size for Redis etc.
-- `registry_uid` (String) The unique id of the registry to be used for the pack.
+- `registry_name` (String) The name of the registry to be used for the pack. This can be used instead of `registry_uid` for better readability. Either `registry_uid` or `registry_name` can be specified, but not both.
+- `registry_uid` (String) The unique id of the registry to be used for the pack. Either `registry_uid` or `registry_name` can be specified, but not both.
 - `source_app_tier` (String) The unique id of the pack to be used as the source for the pack.
 - `tag` (String) The identifier or version to label the pack.
 - `type` (String) The type of Pack. Allowed values are `container`, `helm`, `manifest`, or `operator-instance`.
