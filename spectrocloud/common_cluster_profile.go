@@ -106,15 +106,33 @@ func buildPackRegistryUIDMap(d *schema.ResourceData) map[string]bool {
 }
 
 // resolveRegistryNameToUID resolves a registry name to its UID
-func resolveRegistryNameToUID(c *client.V1Client, registryName string) (string, error) {
+func resolveRegistryNameToUID(c *client.V1Client, registryName string, registryType string) (string, error) {
 	if registryName == "" {
 		return "", nil
 	}
-	registry, err := c.GetPackRegistryCommonByName(registryName)
-	if err != nil {
-		return "", err
+	if registryType == "oci" {
+		registry, err := c.GetOciRegistryByName(registryName)
+		if err != nil {
+			return "", err
+		}
+		return registry.Metadata.UID, nil
 	}
-	return registry.UID, nil
+	if registryType == "helm" {
+		registry, err := c.GetHelmRegistryByName(registryName)
+		if err != nil {
+			return "", err
+		}
+		return registry.Metadata.UID, nil
+	}
+	if registryType == "spectro" {
+		registry, err := c.GetPackRegistryCommonByName(registryName)
+		if err != nil {
+			return "", err
+		}
+		return registry.UID, nil
+	}
+
+	return "", nil
 }
 
 // resolveRegistryUIDToName resolves a registry UID to its name

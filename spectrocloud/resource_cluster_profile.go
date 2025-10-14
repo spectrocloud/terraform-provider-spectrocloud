@@ -404,7 +404,7 @@ func toClusterProfilePackCreateWithResolution(pSrc interface{}, c *client.V1Clie
 
 	// If registry_name is provided, resolve it to registry_uid
 	if pRegistryName != "" && pRegistryUID == "" {
-		resolvedUID, err := resolveRegistryNameToUID(c, pRegistryName)
+		resolvedUID, err := resolveRegistryNameToUID(c, pRegistryName, p["type"].(string))
 		if err != nil {
 			return nil, fmt.Errorf("pack %s: %w", pName, err)
 		}
