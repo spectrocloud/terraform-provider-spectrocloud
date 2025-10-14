@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/common"
@@ -82,6 +83,72 @@ func domainSpecFields() map[string]*schema.Schema {
 						// PageSize specifies the hugepage size, for x86_64 architecture valid values are 1Gi and 2Mi.
 						Description: "Hugepages attribute specifies the hugepage size, for x86_64 architecture valid values are 1Gi and 2Mi.",
 						Optional:    true,
+					},
+				},
+			},
+		},
+		"firmware": {
+			Type:        schema.TypeList,
+			Description: "Firmware configuration for the virtual machine.",
+			MaxItems:    1,
+			Optional:    true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"uuid": {
+						Type:        schema.TypeString,
+						Description: "UUID reported by the vmi bios. Defaults to a random generated uid.",
+						Optional:    true,
+						Computed:    true,
+					},
+					"serial": {
+						Type:        schema.TypeString,
+						Description: "The system-serial-number in SMBIOS.",
+						Optional:    true,
+					},
+					"bootloader": {
+						Type:        schema.TypeList,
+						Description: "Settings to control the bootloader that is used.",
+						MaxItems:    1,
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"bios": {
+									Type:        schema.TypeList,
+									Description: "If set (default), BIOS will be used.",
+									MaxItems:    1,
+									Optional:    true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"use_serial": {
+												Type:        schema.TypeBool,
+												Description: "If set, the BIOS output will be transmitted over serial.",
+												Optional:    true,
+											},
+										},
+									},
+								},
+								"efi": {
+									Type:        schema.TypeList,
+									Description: "If set, EFI will be used instead of BIOS.",
+									MaxItems:    1,
+									Optional:    true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"secure_boot": {
+												Type:        schema.TypeBool,
+												Description: "If set, SecureBoot will be enabled and the OVMF roms will be swapped for SecureBoot-enabled ones. Requires SMM to be enabled. Defaults to true.",
+												Optional:    true,
+											},
+											"persistent": {
+												Type:        schema.TypeBool,
+												Description: "If set to true, Persistent will persist the EFI NVRAM across reboots. Defaults to false.",
+												Optional:    true,
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -240,6 +307,13 @@ func ExpandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) 
 		}
 		result.Memory = &memory
 	}
+	if v, ok := d.GetOk("firmware"); ok {
+		firmware, err := expandFirmware(v.([]interface{}))
+		if err != nil {
+			return result, err
+		}
+		result.Firmware = firmware
+	}
 
 	return result, nil
 }
@@ -348,6 +422,94 @@ func expandMemory(memory []interface{}) (kubevirtapiv1.Memory, error) {
 				PageSize: v,
 			}
 		}
+	}
+
+	return result, nil
+}
+
+func expandFirmware(firmware []interface{}) (*kubevirtapiv1.Firmware, error) {
+	if len(firmware) == 0 || firmware[0] == nil {
+		return nil, nil
+	}
+
+	result := &kubevirtapiv1.Firmware{}
+	in := firmware[0].(map[string]interface{})
+
+	if v, ok := in["uuid"].(string); ok && v != "" {
+		result.UUID = types.UID(v)
+	}
+
+	if v, ok := in["serial"].(string); ok && v != "" {
+		result.Serial = v
+	}
+
+	if v, ok := in["bootloader"].([]interface{}); ok && len(v) > 0 {
+		bootloader, err := expandBootloader(v)
+		if err != nil {
+			return nil, err
+		}
+		result.Bootloader = bootloader
+	}
+
+	return result, nil
+}
+
+func expandBootloader(bootloader []interface{}) (*kubevirtapiv1.Bootloader, error) {
+	if len(bootloader) == 0 || bootloader[0] == nil {
+		return nil, nil
+	}
+
+	result := &kubevirtapiv1.Bootloader{}
+	in := bootloader[0].(map[string]interface{})
+
+	if v, ok := in["bios"].([]interface{}); ok && len(v) > 0 {
+		bios, err := expandBIOS(v)
+		if err != nil {
+			return nil, err
+		}
+		result.BIOS = bios
+	}
+
+	if v, ok := in["efi"].([]interface{}); ok && len(v) > 0 {
+		efi, err := expandEFI(v)
+		if err != nil {
+			return nil, err
+		}
+		result.EFI = efi
+	}
+
+	return result, nil
+}
+
+func expandBIOS(bios []interface{}) (*kubevirtapiv1.BIOS, error) {
+	if len(bios) == 0 || bios[0] == nil {
+		return &kubevirtapiv1.BIOS{}, nil
+	}
+
+	result := &kubevirtapiv1.BIOS{}
+	in := bios[0].(map[string]interface{})
+
+	if v, ok := in["use_serial"].(bool); ok {
+		result.UseSerial = &v
+	}
+
+	return result, nil
+}
+
+func expandEFI(efi []interface{}) (*kubevirtapiv1.EFI, error) {
+	if len(efi) == 0 || efi[0] == nil {
+		return &kubevirtapiv1.EFI{}, nil
+	}
+
+	result := &kubevirtapiv1.EFI{}
+	in := efi[0].(map[string]interface{})
+
+	if v, ok := in["secure_boot"].(bool); ok {
+		result.SecureBoot = &v
+	}
+
+	if v, ok := in["persistent"].(bool); ok {
+		result.Persistent = &v
 	}
 
 	return result, nil
@@ -470,6 +632,9 @@ func FlattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
 	if in.Memory != nil && (in.Memory.Guest != nil || in.Memory.Hugepages != nil) {
 		att["memory"] = flattenMemory(in.Memory)
 	}
+	if in.Firmware != nil {
+		att["firmware"] = flattenFirmware(in.Firmware)
+	}
 	att["devices"] = flattenDevices(in.Devices)
 
 	return []interface{}{att}
@@ -499,6 +664,83 @@ func flattenMemory(in *kubevirtapiv1.Memory) []interface{} {
 
 	if in.Hugepages != nil {
 		att["hugepages"] = in.Hugepages.PageSize
+	}
+
+	return []interface{}{att}
+}
+
+func flattenFirmware(in *kubevirtapiv1.Firmware) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.UUID != "" {
+		att["uuid"] = string(in.UUID)
+	}
+
+	if in.Serial != "" {
+		att["serial"] = in.Serial
+	}
+
+	if in.Bootloader != nil {
+		bootloader := flattenBootloader(in.Bootloader)
+		if len(bootloader) > 0 {
+			att["bootloader"] = bootloader
+		}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenBootloader(in *kubevirtapiv1.Bootloader) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.BIOS != nil {
+		bios := flattenBIOS(in.BIOS)
+		if len(bios) > 0 {
+			att["bios"] = bios
+		}
+	}
+
+	if in.EFI != nil {
+		efi := flattenEFI(in.EFI)
+		if len(efi) > 0 {
+			att["efi"] = efi
+		}
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenBIOS(in *kubevirtapiv1.BIOS) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.UseSerial != nil {
+		att["use_serial"] = *in.UseSerial
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenEFI(in *kubevirtapiv1.EFI) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.SecureBoot != nil {
+		att["secure_boot"] = *in.SecureBoot
+	}
+
+	if in.Persistent != nil {
+		att["persistent"] = *in.Persistent
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
 	}
 
 	return []interface{}{att}
