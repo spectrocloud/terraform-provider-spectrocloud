@@ -110,28 +110,35 @@ func resolveRegistryNameToUID(c *client.V1Client, registryName string, registryT
 	if registryName == "" {
 		return "", nil
 	}
-	if registryType == "oci" {
+	switch registryType {
+	case "oci":
 		registry, err := c.GetOciRegistryByName(registryName)
 		if err != nil {
 			return "", err
 		}
 		return registry.Metadata.UID, nil
-	}
-	if registryType == "helm" {
+	case "helm":
 		registry, err := c.GetHelmRegistryByName(registryName)
 		if err != nil {
 			return "", err
 		}
 		return registry.Metadata.UID, nil
-	}
-	if registryType == "spectro" {
-		registry, err := c.GetPackRegistryCommonByName(registryName)
+	case "spectro":
+		registry, err := c.GetPackRegistryByName(registryName)
 		if err != nil {
 			return "", err
 		}
-		return registry.UID, nil
-	}
+		return registry.Metadata.UID, nil
+	default:
+		if registryType != "manifest" {
+			registry, err := c.GetPackRegistryCommonByName(registryName)
+			if err != nil {
+				return "", err
 
+			}
+			return registry.UID, nil
+		}
+	}
 	return "", nil
 }
 
