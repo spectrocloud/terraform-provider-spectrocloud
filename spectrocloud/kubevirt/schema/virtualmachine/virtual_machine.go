@@ -281,6 +281,72 @@ func VirtualMachineFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"firmware": {
+			Type:        schema.TypeList,
+			Description: "Firmware configuration for the virtual machine.",
+			MaxItems:    1,
+			Optional:    true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"uuid": {
+						Type:        schema.TypeString,
+						Description: "UUID reported by the vmi bios. Defaults to a random generated uid.",
+						Optional:    true,
+						Computed:    true,
+					},
+					"serial": {
+						Type:        schema.TypeString,
+						Description: "The system-serial-number in SMBIOS.",
+						Optional:    true,
+					},
+					"bootloader": {
+						Type:        schema.TypeList,
+						Description: "Settings to control the bootloader that is used.",
+						MaxItems:    1,
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"bios": {
+									Type:        schema.TypeList,
+									Description: "If set (default), BIOS will be used.",
+									MaxItems:    1,
+									Optional:    true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"use_serial": {
+												Type:        schema.TypeBool,
+												Description: "If set, the BIOS output will be transmitted over serial.",
+												Optional:    true,
+											},
+										},
+									},
+								},
+								"efi": {
+									Type:        schema.TypeList,
+									Description: "If set, EFI will be used instead of BIOS.",
+									MaxItems:    1,
+									Optional:    true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"secure_boot": {
+												Type:        schema.TypeBool,
+												Description: "If set, SecureBoot will be enabled and the OVMF roms will be swapped for SecureBoot-enabled ones. Requires SMM to be enabled. Defaults to true.",
+												Optional:    true,
+											},
+											"persistent": {
+												Type:        schema.TypeBool,
+												Description: "If set to true, Persistent will persist the EFI NVRAM across reboots. Defaults to false.",
+												Optional:    true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		"network": virtualmachineinstance.NetworksSchema(),
 		"volume":  virtualmachineinstance.VolumesSchema(),
 		"priority_class_name": {

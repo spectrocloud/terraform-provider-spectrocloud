@@ -1383,7 +1383,6 @@ func extractMachinePoolNameFromYAML(machinePoolResource map[string]interface{}) 
 func toMachinePoolCustomCloud(machinePool interface{}) *models.V1CustomMachinePoolConfigEntity {
 	mp := &models.V1CustomMachinePoolConfigEntity{}
 	node := machinePool.(map[string]interface{})
-	controlPlane, _ := node["control_plane"].(bool)
 	controlPlaneAsWorker, _ := node["control_plane_as_worker"].(bool)
 
 	// Get node pool config YAML
@@ -1394,6 +1393,7 @@ func toMachinePoolCustomCloud(machinePool interface{}) *models.V1CustomMachinePo
 	log.Printf("[DEBUG] Original YAML preview: %s", nodePoolConfigYaml[:min(300, len(nodePoolConfigYaml))])
 
 	// Check if YAML contains KubeadmControlPlane (indicates control plane)
+	var controlPlane bool
 	if strings.Contains(nodePoolConfigYaml, "kind: KubeadmControlPlane") {
 		controlPlane = true
 		log.Printf("[DEBUG] Detected control plane from YAML (KubeadmControlPlane found)")

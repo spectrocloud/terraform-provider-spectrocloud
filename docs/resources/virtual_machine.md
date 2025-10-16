@@ -522,6 +522,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
 - `disk` (Block List) Disks describes disks, cdroms, floppy and luns which are connected to the vmi. (see [below for nested schema](#nestedblock--disk))
 - `dns_policy` (String) DNSPolicy defines how a pod's DNS will be configured.
 - `eviction_strategy` (String) EvictionStrategy can be set to "LiveMigrate" if the VirtualMachineInstance should be migrated instead of shut-off in case of a node drain.
+- `firmware` (Block List, Max: 1) Firmware configuration for the virtual machine. (see [below for nested schema](#nestedblock--firmware))
 - `generate_name` (String) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency
 - `hostname` (String) Specifies the hostname of the vmi.
 - `interface` (Block List) Interfaces describe network interfaces which are added to the vmi. (see [below for nested schema](#nestedblock--interface))
@@ -992,6 +993,42 @@ Optional:
 
 - `pci_address` (String) If specified, the virtual disk will be placed on the guests pci address with the specifed PCI address. For example: 0000:81:01.10
 - `read_only` (Boolean) ReadOnly. Defaults to false.
+
+
+
+
+<a id="nestedblock--firmware"></a>
+### Nested Schema for `firmware`
+
+Optional:
+
+- `bootloader` (Block List, Max: 1) Settings to control the bootloader that is used. (see [below for nested schema](#nestedblock--firmware--bootloader))
+- `serial` (String) The system-serial-number in SMBIOS.
+- `uuid` (String) UUID reported by the vmi bios. Defaults to a random generated uid.
+
+<a id="nestedblock--firmware--bootloader"></a>
+### Nested Schema for `firmware.bootloader`
+
+Optional:
+
+- `bios` (Block List, Max: 1) If set (default), BIOS will be used. (see [below for nested schema](#nestedblock--firmware--bootloader--bios))
+- `efi` (Block List, Max: 1) If set, EFI will be used instead of BIOS. (see [below for nested schema](#nestedblock--firmware--bootloader--efi))
+
+<a id="nestedblock--firmware--bootloader--bios"></a>
+### Nested Schema for `firmware.bootloader.bios`
+
+Optional:
+
+- `use_serial` (Boolean) If set, the BIOS output will be transmitted over serial.
+
+
+<a id="nestedblock--firmware--bootloader--efi"></a>
+### Nested Schema for `firmware.bootloader.efi`
+
+Optional:
+
+- `persistent` (Boolean) If set to true, Persistent will persist the EFI NVRAM across reboots. Defaults to false.
+- `secure_boot` (Boolean) If set, SecureBoot will be enabled and the OVMF roms will be swapped for SecureBoot-enabled ones. Requires SMM to be enabled. Defaults to true.
 
 
 
