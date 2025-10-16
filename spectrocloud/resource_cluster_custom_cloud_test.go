@@ -34,21 +34,30 @@ func TestFlattenCloudConfigsValuesCustomCloud(t *testing.T) {
 }
 
 func TestToMachinePoolCustomCloud(t *testing.T) {
-	// Test case 1: Valid machine pool configuration
+	// Test case 1: Valid control plane machine pool configuration
+	controlPlaneYaml := `kind: KubeadmControlPlane
+metadata:
+  name: test-control-plane`
+
+	// The normalized YAML will have consistent indentation after being processed
+	normalizedYaml := `kind: KubeadmControlPlane
+metadata:
+    name: test-control-plane`
+
 	machinePool := map[string]interface{}{
-		"node_pool_config":        "config123",
+		"node_pool_config":        controlPlaneYaml,
 		"control_plane":           true,
 		"control_plane_as_worker": true,
 	}
 
 	expected := &models.V1CustomMachinePoolConfigEntity{
 		CloudConfig: &models.V1CustomMachinePoolCloudConfigEntity{
-			Values: "config123",
+			Values: normalizedYaml,
 		},
 		PoolConfig: &models.V1CustomMachinePoolBaseConfigEntity{
 			IsControlPlane:          true,
 			UseControlPlaneAsWorker: true,
-			// Set other fields as expected
+			Taints:                  nil,
 		},
 	}
 
