@@ -325,6 +325,9 @@ func resourceMachinePoolCustomCloudHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	var buf bytes.Buffer
 
+	// IMPORTANT: Only include user-provided fields in hash
+	// Do NOT include computed fields (name, count, additional_labels) as they cause perpetual diffs
+
 	if _, ok := m["taints"]; ok {
 		buf.WriteString(HashStringMapList(m["taints"]))
 	}
@@ -352,7 +355,12 @@ func resourceMachinePoolCustomCloudHash(v interface{}) int {
 		}
 		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
-	buf.WriteString(fmt.Sprintf("%s-", m["node_pool_config"].(string)))
+
+	// Normalize YAML to match StateFunc behavior (critical for preventing perpetual diffs)
+	if yamlContent, ok := m["node_pool_config"].(string); ok {
+		normalizedYAML := NormalizeYamlContent(yamlContent)
+		buf.WriteString(fmt.Sprintf("%s-", normalizedYAML))
+	}
 
 	// Include overrides in hash calculation for change detection
 	if overrides, ok := m["overrides"]; ok {
