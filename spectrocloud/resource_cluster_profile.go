@@ -174,7 +174,10 @@ func resourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m int
 	if done {
 		return diagnostics
 	}
-	packs, err := flattenPacks(c, diagPacks, cp.Spec.Published.Packs, packManifests)
+	// Build registry maps to track which packs use registry_name or registry_uid
+	registryNameMap := buildPackRegistryNameMap(d)
+	registryUIDMap := buildPackRegistryUIDMap(d)
+	packs, err := flattenPacksWithRegistryMaps(c, diagPacks, cp.Spec.Published.Packs, packManifests, registryNameMap, registryUIDMap)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -324,6 +327,10 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 	if p["registry_uid"] != nil {
 		pRegistryUID = p["registry_uid"].(string)
 	}
+	pRegistryName := ""
+	if p["registry_name"] != nil {
+		pRegistryName = p["registry_name"].(string)
+	}
 	pType := models.V1PackType(p["type"].(string))
 
 	// Validate pack UID or resolution fields
@@ -331,12 +338,15 @@ func toClusterProfilePackCreate(pSrc interface{}) (*models.V1PackManifestEntity,
 		return nil, err
 	}
 
+	// Note: registry_name is stored but not resolved here since we don't have client
+	// Actual resolution will happen in toClusterProfilePackCreateWithResolution
+
 	switch pType {
 	case models.V1PackTypeSpectro:
 		if pUID == "" {
 			// UID not provided, validation already passed, so we have all resolution fields
 			// This path should not be reached if validation is working correctly
-			if pTag == "" || pRegistryUID == "" {
+			if pTag == "" || (pRegistryUID == "" && pRegistryName == "") {
 				return nil, fmt.Errorf("pack %s: internal error - validation should have caught missing resolution fields", pName)
 			}
 		}
@@ -381,11 +391,24 @@ func toClusterProfilePackCreateWithResolution(pSrc interface{}, c *client.V1Clie
 	if p["registry_uid"] != nil {
 		pRegistryUID = p["registry_uid"].(string)
 	}
+	pRegistryName := ""
+	if p["registry_name"] != nil {
+		pRegistryName = p["registry_name"].(string)
+	}
 	pType := models.V1PackType(p["type"].(string))
 
 	// Validate pack UID or resolution fields
 	if err := schemas.ValidatePackUIDOrResolutionFields(p); err != nil {
 		return nil, err
+	}
+
+	// If registry_name is provided, resolve it to registry_uid
+	if pRegistryName != "" && pRegistryUID == "" {
+		resolvedUID, err := resolveRegistryNameToUID(c, pRegistryName, p["type"].(string))
+		if err != nil {
+			return nil, fmt.Errorf("pack %s: %w", pName, err)
+		}
+		pRegistryUID = resolvedUID
 	}
 
 	switch pType {

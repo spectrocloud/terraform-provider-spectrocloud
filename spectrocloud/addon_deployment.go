@@ -8,6 +8,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -55,7 +56,11 @@ func flattenAddonDeployment(c *client.V1Client, d *schema.ResourceData, profile 
 	if done {
 		return diagnostics, false
 	}
-	packs, err := flattenPacks(c, diagPacks, profile.Packs, packManifests)
+
+	// Build registry maps to track which packs use registry_name or registry_uid
+	registryNameMap := buildPackRegistryNameMap(d)
+	registryUIDMap := buildPackRegistryUIDMap(d)
+	packs, err := flattenPacksWithRegistryMaps(c, diagPacks, profile.Packs, packManifests, registryNameMap, registryUIDMap)
 	if err != nil {
 		return diag.FromErr(err), false
 	}
@@ -102,6 +107,11 @@ func toAddonDeploymentPackCreate(pSrc interface{}) (*models.V1PackManifestEntity
 		pRegistryUID = p["registry_uid"].(string)
 	}
 	pType := models.V1PackType(p["type"].(string))
+
+	// Validate pack fields (validates both registry_uid and registry_name)
+	if err := schemas.ValidatePackUIDOrResolutionFields(p); err != nil {
+		return nil, err
+	}
 
 	pack := &models.V1PackManifestEntity{
 		Name:        types.Ptr(pName),

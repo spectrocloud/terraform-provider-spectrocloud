@@ -1393,6 +1393,15 @@ func toMachinePoolCustomCloud(machinePool interface{}) *models.V1CustomMachinePo
 	log.Printf("[DEBUG] Original node pool config YAML length: %d", len(nodePoolConfigYaml))
 	log.Printf("[DEBUG] Original YAML preview: %s", nodePoolConfigYaml[:min(300, len(nodePoolConfigYaml))])
 
+	// Check if YAML contains KubeadmControlPlane (indicates control plane)
+	if strings.Contains(nodePoolConfigYaml, "kind: KubeadmControlPlane") {
+		controlPlane = true
+		log.Printf("[DEBUG] Detected control plane from YAML (KubeadmControlPlane found)")
+	} else {
+		controlPlane = false
+		log.Printf("[DEBUG] Detected worker pool from YAML (MachineDeployment)")
+	}
+
 	// Taints are now handled directly via API, no YAML injection needed
 
 	// Check if overrides exist in the node map

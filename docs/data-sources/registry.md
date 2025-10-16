@@ -31,6 +31,10 @@ output "registry_id" {
 
 - `name` (String)
 
+### Optional
+
+- `type` (String) The type of the registry. Possible values are 'oci', 'helm', or 'spectro'. If not provided, the registry type will be inferred from the registry name.
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.

@@ -281,7 +281,7 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 				"values":   "test-values",
 				"manifest": []interface{}{},
 			},
-			expectedError: "pack test-pack: either 'uid' must be provided, or all of the following fields must be specified for pack resolution: name, tag, registry_uid. Missing: registry_uid",
+			expectedError: "pack test-pack: either 'uid' must be provided, or all of the following fields must be specified for pack resolution: name, tag, registry_uid (or registry_name). Missing: registry_uid or registry_name",
 			expectedPack:  nil,
 		},
 		{

@@ -1,8 +1,9 @@
 package schemas
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func AppPackSchema() *schema.Schema {
@@ -25,8 +26,12 @@ func AppPackSchema() *schema.Schema {
 				},
 				"registry_uid": {
 					Type:        schema.TypeString,
-					Description: "The unique id of the registry to be used for the pack.",
-					Computed:    true,
+					Description: "The unique id of the registry to be used for the pack. Either `registry_uid` or `registry_name` can be specified, but not both.",
+					Optional:    true,
+				},
+				"registry_name": {
+					Type:        schema.TypeString,
+					Description: "The name of the registry to be used for the pack. This can be used instead of `registry_uid` for better readability. Either `registry_uid` or `registry_name` can be specified, but not both.",
 					Optional:    true,
 				},
 				"uid": {

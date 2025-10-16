@@ -1,12 +1,13 @@
 package spectrocloud
 
 import (
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestToAddonDeploymentPackCreate(t *testing.T) {
@@ -59,6 +60,7 @@ func TestToAddonDeploymentPackCreate(t *testing.T) {
 			input: map[string]interface{}{
 				"name":         "test-pack",
 				"tag":          "v1.0.0",
+				"uid":          "pack-uid-456",
 				"registry_uid": nil,
 				"type":         "oci",
 				"values":       "some values\n",

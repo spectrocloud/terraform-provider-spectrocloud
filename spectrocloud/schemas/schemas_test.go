@@ -1,9 +1,10 @@
 package schemas
 
 import (
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestAppPackSchema(t *testing.T) {
@@ -28,8 +29,11 @@ func TestAppPackSchema(t *testing.T) {
 
 	assert.Equal(t, schema.TypeString, elemSchema.Schema["registry_uid"].Type)
 	assert.Equal(t, true, elemSchema.Schema["registry_uid"].Optional)
-	assert.Equal(t, true, elemSchema.Schema["registry_uid"].Computed)
-	assert.Equal(t, "The unique id of the registry to be used for the pack.", elemSchema.Schema["registry_uid"].Description)
+	assert.Equal(t, "The unique id of the registry to be used for the pack. Either `registry_uid` or `registry_name` can be specified, but not both.", elemSchema.Schema["registry_uid"].Description)
+
+	assert.Equal(t, schema.TypeString, elemSchema.Schema["registry_name"].Type)
+	assert.Equal(t, true, elemSchema.Schema["registry_name"].Optional)
+	assert.Equal(t, "The name of the registry to be used for the pack. This can be used instead of `registry_uid` for better readability. Either `registry_uid` or `registry_name` can be specified, but not both.", elemSchema.Schema["registry_name"].Description)
 
 	assert.Equal(t, schema.TypeString, elemSchema.Schema["uid"].Type)
 	assert.Equal(t, true, elemSchema.Schema["uid"].Optional)
@@ -343,14 +347,21 @@ func TestPackSchema(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, schema.TypeString, registryUIDSchema.Type)
 	assert.Equal(t, true, registryUIDSchema.Optional)
-	assert.Equal(t, "The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name. If `uid` is not provided, this field is required along with `name` and `tag` to resolve the pack UID internally.", registryUIDSchema.Description)
+	assert.Equal(t, "The registry UID of the pack. The registry UID is the unique identifier of the registry. This attribute is required if there is more than one registry that contains a pack with the same name. If `uid` is not provided, this field is required along with `name` and `tag` to resolve the pack UID internally. Either `registry_uid` or `registry_name` can be specified, but not both.", registryUIDSchema.Description)
+
+	// Test 'registry_name' schema
+	registryNameSchema, ok := elemSchema.Schema["registry_name"]
+	assert.True(t, ok)
+	assert.Equal(t, schema.TypeString, registryNameSchema.Type)
+	assert.Equal(t, true, registryNameSchema.Optional)
+	assert.Equal(t, "The registry name of the pack. The registry name is the human-readable name of the registry. This attribute can be used instead of `registry_uid` for better readability. If `uid` is not provided, this field can be used along with `name` and `tag` to resolve the pack UID internally. Either `registry_uid` or `registry_name` can be specified, but not both.", registryNameSchema.Description)
 
 	// Test 'tag' schema
 	tagSchema, ok := elemSchema.Schema["tag"]
 	assert.True(t, ok)
 	assert.Equal(t, schema.TypeString, tagSchema.Type)
 	assert.Equal(t, true, tagSchema.Optional)
-	assert.Equal(t, "The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`. If `uid` is not provided, this field is required along with `name` and `registry_uid` to resolve the pack UID internally.", tagSchema.Description)
+	assert.Equal(t, "The tag of the pack. The tag is the version of the pack. This attribute is required if the pack type is `spectro` or `helm`. If `uid` is not provided, this field is required along with `name` and `registry_uid` (or `registry_name`) to resolve the pack UID internally.", tagSchema.Description)
 
 	// Test 'values' schema
 	valuesSchema, ok := elemSchema.Schema["values"]
