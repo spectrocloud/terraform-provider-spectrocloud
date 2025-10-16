@@ -153,6 +153,63 @@ func domainSpecFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"features": {
+			Type:        schema.TypeList,
+			Description: "Features allows to configure various virtualization features.",
+			MaxItems:    1,
+			Optional:    true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"acpi": {
+						Type:        schema.TypeList,
+						Description: "ACPI enables/disables ACPI inside the guest. Defaults to enabled.",
+						MaxItems:    1,
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"enabled": {
+									Type:        schema.TypeBool,
+									Description: "Enabled determines if the feature should be enabled or disabled on the guest. Defaults to true.",
+									Optional:    true,
+									Default:     true,
+								},
+							},
+						},
+					},
+					"apic": {
+						Type:        schema.TypeList,
+						Description: "APIC enables/disables APIC inside the guest. Defaults to enabled.",
+						MaxItems:    1,
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"enabled": {
+									Type:        schema.TypeBool,
+									Description: "Enabled determines if the feature should be enabled or disabled on the guest. Defaults to true.",
+									Optional:    true,
+									Default:     true,
+								},
+							},
+						},
+					},
+					"smm": {
+						Type:        schema.TypeList,
+						Description: "SMM enables/disables System Management Mode. Required for Secure Boot with EFI.",
+						MaxItems:    1,
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"enabled": {
+									Type:        schema.TypeBool,
+									Description: "Enabled determines if the feature should be enabled or disabled on the guest.",
+									Optional:    true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		"devices": {
 			Type:        schema.TypeList,
 			Description: "Devices allows adding disks, network interfaces, ...",
@@ -313,6 +370,13 @@ func ExpandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) 
 			return result, err
 		}
 		result.Firmware = firmware
+	}
+	if v, ok := d.GetOk("features"); ok {
+		features, err := expandFeatures(v.([]interface{}))
+		if err != nil {
+			return result, err
+		}
+		result.Features = features
 	}
 
 	return result, nil
@@ -515,6 +579,58 @@ func expandEFI(efi []interface{}) (*kubevirtapiv1.EFI, error) {
 	return result, nil
 }
 
+func expandFeatures(features []interface{}) (*kubevirtapiv1.Features, error) {
+	if len(features) == 0 || features[0] == nil {
+		return nil, nil
+	}
+
+	result := &kubevirtapiv1.Features{}
+	in := features[0].(map[string]interface{})
+
+	if v, ok := in["acpi"].([]interface{}); ok && len(v) > 0 {
+		acpi, err := expandFeatureState(v)
+		if err != nil {
+			return nil, err
+		}
+		result.ACPI = *acpi
+	}
+
+	if v, ok := in["apic"].([]interface{}); ok && len(v) > 0 {
+		apic, err := expandFeatureState(v)
+		if err != nil {
+			return nil, err
+		}
+		result.APIC = &kubevirtapiv1.FeatureAPIC{
+			Enabled: apic.Enabled,
+		}
+	}
+
+	if v, ok := in["smm"].([]interface{}); ok && len(v) > 0 {
+		smm, err := expandFeatureState(v)
+		if err != nil {
+			return nil, err
+		}
+		result.SMM = smm
+	}
+
+	return result, nil
+}
+
+func expandFeatureState(featureState []interface{}) (*kubevirtapiv1.FeatureState, error) {
+	if len(featureState) == 0 || featureState[0] == nil {
+		return &kubevirtapiv1.FeatureState{}, nil
+	}
+
+	result := &kubevirtapiv1.FeatureState{}
+	in := featureState[0].(map[string]interface{})
+
+	if v, ok := in["enabled"].(bool); ok {
+		result.Enabled = &v
+	}
+
+	return result, nil
+}
+
 func ExpandDisks(disks []interface{}) []kubevirtapiv1.Disk {
 	result := make([]kubevirtapiv1.Disk, len(disks))
 
@@ -635,6 +751,12 @@ func FlattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
 	if in.Firmware != nil {
 		att["firmware"] = flattenFirmware(in.Firmware)
 	}
+	if in.Features != nil {
+		features := flattenFeatures(in.Features)
+		if len(features) > 0 {
+			att["features"] = features
+		}
+	}
 	att["devices"] = flattenDevices(in.Devices)
 
 	return []interface{}{att}
@@ -737,6 +859,53 @@ func flattenEFI(in *kubevirtapiv1.EFI) []interface{} {
 
 	if in.Persistent != nil {
 		att["persistent"] = *in.Persistent
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenFeatures(in *kubevirtapiv1.Features) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.ACPI.Enabled != nil {
+		acpi := flattenFeatureState(&in.ACPI)
+		if len(acpi) > 0 {
+			att["acpi"] = acpi
+		}
+	}
+
+	if in.APIC != nil && in.APIC.Enabled != nil {
+		apic := flattenFeatureState(&kubevirtapiv1.FeatureState{
+			Enabled: in.APIC.Enabled,
+		})
+		if len(apic) > 0 {
+			att["apic"] = apic
+		}
+	}
+
+	if in.SMM != nil && in.SMM.Enabled != nil {
+		smm := flattenFeatureState(in.SMM)
+		if len(smm) > 0 {
+			att["smm"] = smm
+		}
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenFeatureState(in *kubevirtapiv1.FeatureState) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.Enabled != nil {
+		att["enabled"] = *in.Enabled
 	}
 
 	if len(att) == 0 {

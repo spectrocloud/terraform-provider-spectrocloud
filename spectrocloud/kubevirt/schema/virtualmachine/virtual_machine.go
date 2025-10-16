@@ -347,6 +347,63 @@ func VirtualMachineFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"features": {
+			Type:        schema.TypeList,
+			Description: "Features allows to configure various virtualization features.",
+			MaxItems:    1,
+			Optional:    true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"acpi": {
+						Type:        schema.TypeList,
+						Description: "ACPI enables/disables ACPI inside the guest. Defaults to enabled.",
+						MaxItems:    1,
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"enabled": {
+									Type:        schema.TypeBool,
+									Description: "Enabled determines if the feature should be enabled or disabled on the guest. Defaults to true.",
+									Optional:    true,
+									Default:     true,
+								},
+							},
+						},
+					},
+					"apic": {
+						Type:        schema.TypeList,
+						Description: "APIC enables/disables APIC inside the guest. Defaults to enabled.",
+						MaxItems:    1,
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"enabled": {
+									Type:        schema.TypeBool,
+									Description: "Enabled determines if the feature should be enabled or disabled on the guest. Defaults to true.",
+									Optional:    true,
+									Default:     true,
+								},
+							},
+						},
+					},
+					"smm": {
+						Type:        schema.TypeList,
+						Description: "SMM enables/disables System Management Mode. Required for Secure Boot with EFI.",
+						MaxItems:    1,
+						Optional:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"enabled": {
+									Type:        schema.TypeBool,
+									Description: "Enabled determines if the feature should be enabled or disabled on the guest.",
+									Optional:    true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		"network": virtualmachineinstance.NetworksSchema(),
 		"volume":  virtualmachineinstance.VolumesSchema(),
 		"priority_class_name": {

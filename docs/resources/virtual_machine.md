@@ -522,6 +522,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-all-option-template-spec" {
 - `disk` (Block List) Disks describes disks, cdroms, floppy and luns which are connected to the vmi. (see [below for nested schema](#nestedblock--disk))
 - `dns_policy` (String) DNSPolicy defines how a pod's DNS will be configured.
 - `eviction_strategy` (String) EvictionStrategy can be set to "LiveMigrate" if the VirtualMachineInstance should be migrated instead of shut-off in case of a node drain.
+- `features` (Block List, Max: 1) Features allows to configure various virtualization features. (see [below for nested schema](#nestedblock--features))
 - `firmware` (Block List, Max: 1) Firmware configuration for the virtual machine. (see [below for nested schema](#nestedblock--firmware))
 - `generate_name` (String) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency
 - `hostname` (String) Specifies the hostname of the vmi.
@@ -994,6 +995,40 @@ Optional:
 - `pci_address` (String) If specified, the virtual disk will be placed on the guests pci address with the specifed PCI address. For example: 0000:81:01.10
 - `read_only` (Boolean) ReadOnly. Defaults to false.
 
+
+
+
+<a id="nestedblock--features"></a>
+### Nested Schema for `features`
+
+Optional:
+
+- `acpi` (Block List, Max: 1) ACPI enables/disables ACPI inside the guest. Defaults to enabled. (see [below for nested schema](#nestedblock--features--acpi))
+- `apic` (Block List, Max: 1) APIC enables/disables APIC inside the guest. Defaults to enabled. (see [below for nested schema](#nestedblock--features--apic))
+- `smm` (Block List, Max: 1) SMM enables/disables System Management Mode. Required for Secure Boot with EFI. (see [below for nested schema](#nestedblock--features--smm))
+
+<a id="nestedblock--features--acpi"></a>
+### Nested Schema for `features.acpi`
+
+Optional:
+
+- `enabled` (Boolean) Enabled determines if the feature should be enabled or disabled on the guest. Defaults to true.
+
+
+<a id="nestedblock--features--apic"></a>
+### Nested Schema for `features.apic`
+
+Optional:
+
+- `enabled` (Boolean) Enabled determines if the feature should be enabled or disabled on the guest. Defaults to true.
+
+
+<a id="nestedblock--features--smm"></a>
+### Nested Schema for `features.smm`
+
+Optional:
+
+- `enabled` (Boolean) Enabled determines if the feature should be enabled or disabled on the guest.
 
 
 
