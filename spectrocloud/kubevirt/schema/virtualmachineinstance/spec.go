@@ -2,7 +2,6 @@ package virtualmachineinstance
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	k8sv1 "k8s.io/api/core/v1"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
@@ -10,85 +9,6 @@ import (
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
-
-func virtualMachineInstanceSpecFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"priority_class_name": {
-			Type:        schema.TypeString,
-			Description: "If specified, indicates the pod's priority. If not specified, the pod priority will be default or zero if there is no default.",
-			Optional:    true,
-		},
-		"domain": domainSpecSchema(),
-		"node_selector": {
-			Type:        schema.TypeMap,
-			Description: "NodeSelector is a selector which must be true for the vmi to fit on a node. Selector which must match a node's labels for the vmi to be scheduled on that node.",
-			Optional:    true,
-			Elem:        &schema.Schema{Type: schema.TypeString},
-		},
-		"affinity": k8s.AffinitySchema(),
-		"scheduler_name": {
-			Type:        schema.TypeString,
-			Description: "If specified, the VMI will be dispatched by specified scheduler. If not specified, the VMI will be dispatched by default scheduler.",
-			Optional:    true,
-		},
-		"tolerations": k8s.TolerationSchema(),
-		"eviction_strategy": {
-			Type:        schema.TypeString,
-			Description: "EvictionStrategy can be set to \"LiveMigrate\" if the VirtualMachineInstance should be migrated instead of shut-off in case of a node drain.",
-			Optional:    true,
-			ValidateFunc: validation.StringInSlice([]string{
-				"LiveMigrate",
-			}, false),
-		},
-		"termination_grace_period_seconds": {
-			Type:        schema.TypeInt,
-			Description: "Grace period observed after signalling a VirtualMachineInstance to stop after which the VirtualMachineInstance is force terminated.",
-			Optional:    true,
-		},
-		"volume":          VolumesSchema(),
-		"liveness_probe":  ProbeSchema(),
-		"readiness_probe": ProbeSchema(),
-		"hostname": {
-			Type:        schema.TypeString,
-			Description: "Specifies the hostname of the vmi.",
-			Optional:    true,
-		},
-		"subdomain": {
-			Type:        schema.TypeString,
-			Description: "If specified, the fully qualified vmi hostname will be \"<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>\".",
-			Optional:    true,
-		},
-		"network": NetworksSchema(),
-		"dns_policy": {
-			Type:        schema.TypeString,
-			Description: "DNSPolicy defines how a pod's DNS will be configured.",
-			Optional:    true,
-			ValidateFunc: validation.StringInSlice([]string{
-				"ClusterFirstWithHostNet",
-				"ClusterFirst",
-				"Default",
-				"None",
-			}, false),
-		},
-		"pod_dns_config": k8s.PodDnsConfigSchema(),
-	}
-}
-
-func virtualMachineInstanceSpecSchema() *schema.Schema {
-	fields := virtualMachineInstanceSpecFields()
-
-	return &schema.Schema{
-		Type: schema.TypeList,
-
-		Description: "Template is the direct specification of VirtualMachineInstance.",
-		Optional:    true,
-		MaxItems:    1,
-		Elem: &schema.Resource{
-			Schema: fields,
-		},
-	}
-
-}
 
 func expandVirtualMachineInstanceSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineInstanceSpec, error) {
 	result := kubevirtapiv1.VirtualMachineInstanceSpec{}
