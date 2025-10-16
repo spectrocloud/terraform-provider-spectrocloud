@@ -67,6 +67,8 @@ func FlattenVMMToSpectroSchema(in kubevirtapiv1.VirtualMachineSpec, resourceData
 	resource := vmDomain["resources"]
 	cpu := vmDomain["cpu"]
 	memory := vmDomain["memory"]
+	firmware := vmDomain["firmware"]
+	features := vmDomain["features"]
 	device := vmDomain["devices"].([]interface{})[0].(map[string]interface{})
 	disks := device["disk"]
 	interfaces := device["interface"]
@@ -107,6 +109,12 @@ func FlattenVMMToSpectroSchema(in kubevirtapiv1.VirtualMachineSpec, resourceData
 		return err
 	}
 	if err := resourceData.Set("memory", memory); err != nil {
+		return err
+	}
+	if err := resourceData.Set("firmware", firmware); err != nil {
+		return err
+	}
+	if err := resourceData.Set("features", features); err != nil {
 		return err
 	}
 	if err := resourceData.Set("resources", resource); err != nil {

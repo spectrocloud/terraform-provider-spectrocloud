@@ -5,211 +5,13 @@ import (
 	"math"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/common"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
-
-func domainSpecFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"resources": {
-			Type:        schema.TypeList,
-			Description: "Resources describes the Compute Resources required by this vmi.",
-			MaxItems:    1,
-			Required:    true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"requests": {
-						Type:        schema.TypeMap,
-						Description: "Requests is a description of the initial vmi resources.",
-						Optional:    true,
-					},
-					"limits": {
-						Type:        schema.TypeMap,
-						Description: "Requests is the maximum amount of compute resources allowed. Valid resource keys are \"memory\" and \"cpu\"",
-						Optional:    true,
-					},
-					"over_commit_guest_overhead": {
-						Type:        schema.TypeBool,
-						Description: "Don't ask the scheduler to take the guest-management overhead into account. Instead put the overhead only into the container's memory limit. This can lead to crashes if all memory is in use on a node. Defaults to false.",
-						Optional:    true,
-					},
-				},
-			},
-		},
-		"cpu": {
-			Type:        schema.TypeList,
-			Description: "CPU allows to specifying the CPU topology. Valid resource keys are \"cores\" , \"sockets\" and \"threads\"",
-			MaxItems:    1,
-			Optional:    true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"cores": {
-						Type:        schema.TypeInt,
-						Description: "Cores is the number of cores inside the vmi. Must be a value greater or equal 1",
-						Optional:    true,
-					},
-					"sockets": {
-						Type:        schema.TypeInt,
-						Description: "Sockets is the number of sockets inside the vmi. Must be a value greater or equal 1.",
-						Optional:    true,
-					},
-					"threads": {
-						Type:        schema.TypeInt,
-						Description: "Threads is the number of threads inside the vmi. Must be a value greater or equal 1.",
-						Optional:    true,
-					},
-				},
-			},
-		},
-		"memory": {
-			Type:        schema.TypeList,
-			Description: "Memory allows specifying the vmi memory features.",
-			MaxItems:    1,
-			Optional:    true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"guest": {
-						Type:        schema.TypeString,
-						Description: "Guest is the amount of memory allocated to the vmi. This value must be less than or equal to the limit if specified.",
-						Optional:    true,
-					},
-					"hugepages": {
-						Type: schema.TypeString,
-						// PageSize specifies the hugepage size, for x86_64 architecture valid values are 1Gi and 2Mi.
-						Description: "Hugepages attribute specifies the hugepage size, for x86_64 architecture valid values are 1Gi and 2Mi.",
-						Optional:    true,
-					},
-				},
-			},
-		},
-		"devices": {
-			Type:        schema.TypeList,
-			Description: "Devices allows adding disks, network interfaces, ...",
-			MaxItems:    1,
-			Required:    true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"disk": {
-						Type:        schema.TypeList,
-						Description: "Disks describes disks, cdroms, floppy and luns which are connected to the vmi.",
-						Required:    true,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"name": {
-									Type:        schema.TypeString,
-									Description: "Name is the device name",
-									Required:    true,
-								},
-								"disk_device": {
-									Type:        schema.TypeList,
-									Description: "DiskDevice specifies as which device the disk should be added to the guest.",
-									Required:    true,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											"disk": {
-												Type:        schema.TypeList,
-												Description: "Attach a volume as a disk to the vmi.",
-												Optional:    true,
-												Elem: &schema.Resource{
-													Schema: map[string]*schema.Schema{
-														"bus": {
-															Type:        schema.TypeString,
-															Description: "Bus indicates the type of disk device to emulate.",
-															Required:    true,
-														},
-														"read_only": {
-															Type:        schema.TypeBool,
-															Description: "ReadOnly. Defaults to false.",
-															Optional:    true,
-														},
-														"pci_address": {
-															Type:        schema.TypeString,
-															Description: "If specified, the virtual disk will be placed on the guests pci address with the specifed PCI address. For example: 0000:81:01.10",
-															Optional:    true,
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-								"serial": {
-									Type:        schema.TypeString,
-									Description: "Serial provides the ability to specify a serial number for the disk device.",
-									Optional:    true,
-								},
-								"boot_order": {
-									Type:        schema.TypeInt,
-									Description: "BootOrder is an integer value > 0, used to determine ordering of boot devices. Lower values take precedence.",
-									Optional:    true,
-								},
-							},
-						},
-					},
-					"interface": {
-						Type:        schema.TypeList,
-						Description: "Interfaces describe network interfaces which are added to the vmi.",
-						Optional:    true,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"name": {
-									Type:        schema.TypeString,
-									Description: "Logical name of the interface as well as a reference to the associated networks.",
-									Required:    true,
-								},
-								"interface_binding_method": {
-									Type: schema.TypeString,
-									ValidateFunc: validation.StringInSlice([]string{
-										"InterfaceBridge",
-										"InterfaceSlirp",
-										"InterfaceMasquerade",
-										"InterfaceSRIOV",
-									}, false),
-									Description: "Represents the Interface model, One of: e1000, e1000e, ne2k_pci, pcnet, rtl8139, virtio. Defaults to virtio.",
-									Required:    true,
-								},
-								"model": {
-									Type:     schema.TypeString,
-									Optional: true,
-									ValidateFunc: validation.StringInSlice([]string{
-										"",
-										"e1000",
-										"e1000e",
-										"ne2k_pci",
-										"pcnet",
-										"rtl8139",
-										"virtio",
-									}, false),
-									Description: "Represents the method which will be used to connect the interface to the guest.",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func domainSpecSchema() *schema.Schema {
-	fields := domainSpecFields()
-
-	return &schema.Schema{
-		Type: schema.TypeList,
-
-		Description: "Specification of the desired behavior of the VirtualMachineInstance on the host.",
-		Optional:    true,
-		MaxItems:    1,
-		Elem: &schema.Resource{
-			Schema: fields,
-		},
-	}
-
-}
 
 func ExpandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) {
 	result := kubevirtapiv1.DomainSpec{}
@@ -239,6 +41,20 @@ func ExpandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) 
 			return result, err
 		}
 		result.Memory = &memory
+	}
+	if v, ok := d.GetOk("firmware"); ok {
+		firmware, err := expandFirmware(v.([]interface{}))
+		if err != nil {
+			return result, err
+		}
+		result.Firmware = firmware
+	}
+	if v, ok := d.GetOk("features"); ok {
+		features, err := expandFeatures(v.([]interface{}))
+		if err != nil {
+			return result, err
+		}
+		result.Features = features
 	}
 
 	return result, nil
@@ -348,6 +164,146 @@ func expandMemory(memory []interface{}) (kubevirtapiv1.Memory, error) {
 				PageSize: v,
 			}
 		}
+	}
+
+	return result, nil
+}
+
+func expandFirmware(firmware []interface{}) (*kubevirtapiv1.Firmware, error) {
+	if len(firmware) == 0 || firmware[0] == nil {
+		return nil, nil
+	}
+
+	result := &kubevirtapiv1.Firmware{}
+	in := firmware[0].(map[string]interface{})
+
+	if v, ok := in["uuid"].(string); ok && v != "" {
+		result.UUID = types.UID(v)
+	}
+
+	if v, ok := in["serial"].(string); ok && v != "" {
+		result.Serial = v
+	}
+
+	if v, ok := in["bootloader"].([]interface{}); ok && len(v) > 0 {
+		bootloader, err := expandBootloader(v)
+		if err != nil {
+			return nil, err
+		}
+		result.Bootloader = bootloader
+	}
+
+	return result, nil
+}
+
+func expandBootloader(bootloader []interface{}) (*kubevirtapiv1.Bootloader, error) {
+	if len(bootloader) == 0 || bootloader[0] == nil {
+		return nil, nil
+	}
+
+	result := &kubevirtapiv1.Bootloader{}
+	in := bootloader[0].(map[string]interface{})
+
+	if v, ok := in["bios"].([]interface{}); ok && len(v) > 0 {
+		bios, err := expandBIOS(v)
+		if err != nil {
+			return nil, err
+		}
+		result.BIOS = bios
+	}
+
+	if v, ok := in["efi"].([]interface{}); ok && len(v) > 0 {
+		efi, err := expandEFI(v)
+		if err != nil {
+			return nil, err
+		}
+		result.EFI = efi
+	}
+
+	return result, nil
+}
+
+func expandBIOS(bios []interface{}) (*kubevirtapiv1.BIOS, error) {
+	if len(bios) == 0 || bios[0] == nil {
+		return &kubevirtapiv1.BIOS{}, nil
+	}
+
+	result := &kubevirtapiv1.BIOS{}
+	in := bios[0].(map[string]interface{})
+
+	if v, ok := in["use_serial"].(bool); ok {
+		result.UseSerial = &v
+	}
+
+	return result, nil
+}
+
+func expandEFI(efi []interface{}) (*kubevirtapiv1.EFI, error) {
+	if len(efi) == 0 || efi[0] == nil {
+		return &kubevirtapiv1.EFI{}, nil
+	}
+
+	result := &kubevirtapiv1.EFI{}
+	in := efi[0].(map[string]interface{})
+
+	if v, ok := in["secure_boot"].(bool); ok {
+		result.SecureBoot = &v
+	}
+
+	if v, ok := in["persistent"].(bool); ok {
+		result.Persistent = &v
+	}
+
+	return result, nil
+}
+
+func expandFeatures(features []interface{}) (*kubevirtapiv1.Features, error) {
+	if len(features) == 0 || features[0] == nil {
+		return nil, nil
+	}
+
+	result := &kubevirtapiv1.Features{}
+	in := features[0].(map[string]interface{})
+
+	if v, ok := in["acpi"].([]interface{}); ok && len(v) > 0 {
+		acpi, err := expandFeatureState(v)
+		if err != nil {
+			return nil, err
+		}
+		result.ACPI = *acpi
+	}
+
+	if v, ok := in["apic"].([]interface{}); ok && len(v) > 0 {
+		apic, err := expandFeatureState(v)
+		if err != nil {
+			return nil, err
+		}
+		result.APIC = &kubevirtapiv1.FeatureAPIC{
+			Enabled: apic.Enabled,
+		}
+	}
+
+	if v, ok := in["smm"].([]interface{}); ok && len(v) > 0 {
+		smm, err := expandFeatureState(v)
+		if err != nil {
+			return nil, err
+		}
+		result.SMM = smm
+	}
+
+	return result, nil
+}
+
+func expandFeatureState(featureState []interface{}) (*kubevirtapiv1.FeatureState, error) {
+	if len(featureState) == 0 || featureState[0] == nil {
+		return &kubevirtapiv1.FeatureState{}, nil
+	}
+
+	result := &kubevirtapiv1.FeatureState{}
+	in := featureState[0].(map[string]interface{})
+
+	if v, ok := in["enabled"].(bool); ok {
+		result.Enabled = &v
 	}
 
 	return result, nil
@@ -470,6 +426,15 @@ func FlattenDomainSpec(in kubevirtapiv1.DomainSpec) []interface{} {
 	if in.Memory != nil && (in.Memory.Guest != nil || in.Memory.Hugepages != nil) {
 		att["memory"] = flattenMemory(in.Memory)
 	}
+	if in.Firmware != nil {
+		att["firmware"] = flattenFirmware(in.Firmware)
+	}
+	if in.Features != nil {
+		features := flattenFeatures(in.Features)
+		if len(features) > 0 {
+			att["features"] = features
+		}
+	}
 	att["devices"] = flattenDevices(in.Devices)
 
 	return []interface{}{att}
@@ -499,6 +464,130 @@ func flattenMemory(in *kubevirtapiv1.Memory) []interface{} {
 
 	if in.Hugepages != nil {
 		att["hugepages"] = in.Hugepages.PageSize
+	}
+
+	return []interface{}{att}
+}
+
+func flattenFirmware(in *kubevirtapiv1.Firmware) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.UUID != "" {
+		att["uuid"] = string(in.UUID)
+	}
+
+	if in.Serial != "" {
+		att["serial"] = in.Serial
+	}
+
+	if in.Bootloader != nil {
+		bootloader := flattenBootloader(in.Bootloader)
+		if len(bootloader) > 0 {
+			att["bootloader"] = bootloader
+		}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenBootloader(in *kubevirtapiv1.Bootloader) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.BIOS != nil {
+		bios := flattenBIOS(in.BIOS)
+		if len(bios) > 0 {
+			att["bios"] = bios
+		}
+	}
+
+	if in.EFI != nil {
+		efi := flattenEFI(in.EFI)
+		if len(efi) > 0 {
+			att["efi"] = efi
+		}
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenBIOS(in *kubevirtapiv1.BIOS) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.UseSerial != nil {
+		att["use_serial"] = *in.UseSerial
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenEFI(in *kubevirtapiv1.EFI) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.SecureBoot != nil {
+		att["secure_boot"] = *in.SecureBoot
+	}
+
+	if in.Persistent != nil {
+		att["persistent"] = *in.Persistent
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenFeatures(in *kubevirtapiv1.Features) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.ACPI.Enabled != nil {
+		acpi := flattenFeatureState(&in.ACPI)
+		if len(acpi) > 0 {
+			att["acpi"] = acpi
+		}
+	}
+
+	if in.APIC != nil && in.APIC.Enabled != nil {
+		apic := flattenFeatureState(&kubevirtapiv1.FeatureState{
+			Enabled: in.APIC.Enabled,
+		})
+		if len(apic) > 0 {
+			att["apic"] = apic
+		}
+	}
+
+	if in.SMM != nil && in.SMM.Enabled != nil {
+		smm := flattenFeatureState(in.SMM)
+		if len(smm) > 0 {
+			att["smm"] = smm
+		}
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
+	}
+
+	return []interface{}{att}
+}
+
+func flattenFeatureState(in *kubevirtapiv1.FeatureState) []interface{} {
+	att := make(map[string]interface{})
+
+	if in.Enabled != nil {
+		att["enabled"] = *in.Enabled
+	}
+
+	if len(att) == 0 {
+		return []interface{}{}
 	}
 
 	return []interface{}{att}
