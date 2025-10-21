@@ -319,7 +319,7 @@ func prepareBaseAwsAccountTestData() *schema.ResourceData {
 
 func prepareSecuredAwsAccountTestData() *schema.ResourceData {
 	d := resourceCloudAccountAws().TestResourceData()
-	d.SetId("test-aws-account-secured-1")
+	d.SetId("test-aws-account-1")
 	_ = d.Set("name", "test-aws-account-secured")
 	_ = d.Set("context", "project")
 	_ = d.Set("aws_secured_access_key", "test-secured-access-key")
@@ -373,7 +373,7 @@ func TestResourceCloudAccountAwsCreateWithSecuredAccessKey(t *testing.T) {
 	d := prepareSecuredAwsAccountTestData()
 	diags := resourceCloudAccountAwsCreate(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-aws-account-secured-1", d.Id())
+	assert.Equal(t, "test-aws-account-1", d.Id())
 }
 
 func TestResourceCloudAccountAwsReadWithSecuredAccessKey(t *testing.T) {
@@ -381,7 +381,7 @@ func TestResourceCloudAccountAwsReadWithSecuredAccessKey(t *testing.T) {
 	d := prepareSecuredAwsAccountTestData()
 	diags := resourceCloudAccountAwsRead(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-aws-account-secured-1", d.Id())
+	assert.Equal(t, "test-aws-account-1", d.Id())
 }
 
 func TestResourceCloudAccountAwsUpdateWithSecuredAccessKey(t *testing.T) {
@@ -389,7 +389,7 @@ func TestResourceCloudAccountAwsUpdateWithSecuredAccessKey(t *testing.T) {
 	d := prepareSecuredAwsAccountTestData()
 	diags := resourceCloudAccountAwsUpdate(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-aws-account-secured-1", d.Id())
+	assert.Equal(t, "test-aws-account-1", d.Id())
 }
 
 func TestResourceCloudAccountAwsDeleteWithSecuredAccessKey(t *testing.T) {
