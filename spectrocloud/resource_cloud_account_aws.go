@@ -39,9 +39,17 @@ func resourceCloudAccountAws() *schema.Resource {
 				Description: "ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.",
 			},
 			"aws_access_key": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The AWS access key used to authenticate.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				ConflictsWith: []string{"aws_secured_access_key"},
+				Description:   "The AWS access key used to authenticate. **Deprecated:** Use `aws_secured_access_key` instead for enhanced security.",
+			},
+			"aws_secured_access_key": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				ConflictsWith: []string{"aws_access_key"},
+				Description:   "The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled.",
 			},
 			"aws_secret_key": {
 				Type:        schema.TypeString,
@@ -175,13 +183,19 @@ func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m 
 }
 
 func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
+	// Determine which access key field to use (prefer secured, fallback to legacy)
+	accessKey := d.Get("aws_secured_access_key").(string)
+	if accessKey == "" {
+		accessKey = d.Get("aws_access_key").(string)
+	}
+
 	account := &models.V1AwsAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
 		},
 		Spec: &models.V1AwsCloudAccount{
-			AccessKey: d.Get("aws_access_key").(string),
+			AccessKey: accessKey,
 			SecretKey: d.Get("aws_secret_key").(string),
 		},
 	}
@@ -194,7 +208,7 @@ func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 	}
 	if len(d.Get("type").(string)) == 0 || d.Get("type").(string) == "secret" {
 		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret.Pointer()
-		account.Spec.AccessKey = d.Get("aws_access_key").(string)
+		account.Spec.AccessKey = accessKey
 		account.Spec.SecretKey = d.Get("aws_secret_key").(string)
 	} else if d.Get("type").(string) == "sts" {
 		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSts.Pointer()
@@ -236,8 +250,16 @@ func flattenCloudAccountAws(d *schema.ResourceData, account *models.V1AwsAccount
 		return diag.FromErr(err), true
 	}
 	if *account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
-		if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
-			return diag.FromErr(err), true
+		// Set the access key to the appropriate field based on which one is currently in use
+		// Prefer aws_secured_access_key if it was set, otherwise use aws_access_key for backward compatibility
+		if d.Get("aws_secured_access_key").(string) != "" {
+			if err := d.Set("aws_secured_access_key", account.Spec.AccessKey); err != nil {
+				return diag.FromErr(err), true
+			}
+		} else {
+			if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
+				return diag.FromErr(err), true
+			}
 		}
 	} else {
 		if err := d.Set("arn", account.Spec.Sts.Arn); err != nil {
