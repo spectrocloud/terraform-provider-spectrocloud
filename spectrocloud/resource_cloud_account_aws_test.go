@@ -302,6 +302,71 @@ func TestFlattenCloudAccountAws_LegacyAccessKey(t *testing.T) {
 	assert.Equal(t, "aws", rd.Get("partition"))
 }
 
+func TestFlattenCloudAccountAws_SwitchFromSecuredToLegacy(t *testing.T) {
+	rd := resourceCloudAccountAws().TestResourceData()
+	// Simulate scenario where aws_secured_access_key was previously set
+	// but now we're reading back an account that should use aws_access_key
+	rd.Set("aws_secured_access_key", "old_secured_key")
+
+	account := &models.V1AwsAccount{
+		Metadata: &models.V1ObjectMeta{
+			Name: "aws_test_account_switch",
+			Annotations: map[string]string{
+				"scope": "project",
+			},
+		},
+		Spec: &models.V1AwsCloudAccount{
+			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
+			AccessKey:      "new_access_key",
+			Partition:      types.Ptr("aws"),
+		},
+	}
+
+	// Call the flatten function - it should keep using aws_secured_access_key since it was already set
+	diags, hasError := flattenCloudAccountAws(rd, account)
+
+	// Assertions
+	assert.Nil(t, diags)
+	assert.False(t, hasError)
+	assert.Equal(t, "aws_test_account_switch", rd.Get("name"))
+	assert.Equal(t, "project", rd.Get("context"))
+	assert.Equal(t, "new_access_key", rd.Get("aws_secured_access_key"))
+	assert.Empty(t, rd.Get("aws_access_key")) // Legacy field should be cleared to avoid conflicts
+	assert.Equal(t, "aws", rd.Get("partition"))
+}
+
+func TestFlattenCloudAccountAws_ClearConflictingFieldLegacy(t *testing.T) {
+	rd := resourceCloudAccountAws().TestResourceData()
+	// Simulate scenario where aws_secured_access_key is NOT set,
+	// so aws_access_key should be used and aws_secured_access_key should be cleared
+
+	account := &models.V1AwsAccount{
+		Metadata: &models.V1ObjectMeta{
+			Name: "aws_test_account_clear",
+			Annotations: map[string]string{
+				"scope": "project",
+			},
+		},
+		Spec: &models.V1AwsCloudAccount{
+			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
+			AccessKey:      "legacy_access_key",
+			Partition:      types.Ptr("aws"),
+		},
+	}
+
+	// Call the flatten function
+	diags, hasError := flattenCloudAccountAws(rd, account)
+
+	// Assertions
+	assert.Nil(t, diags)
+	assert.False(t, hasError)
+	assert.Equal(t, "aws_test_account_clear", rd.Get("name"))
+	assert.Equal(t, "project", rd.Get("context"))
+	assert.Equal(t, "legacy_access_key", rd.Get("aws_access_key"))
+	assert.Empty(t, rd.Get("aws_secured_access_key")) // Should be explicitly cleared to avoid conflicts
+	assert.Equal(t, "aws", rd.Get("partition"))
+}
+
 func prepareBaseAwsAccountTestData() *schema.ResourceData {
 	d := resourceCloudAccountAws().TestResourceData()
 	d.SetId("test-aws-account-1")
