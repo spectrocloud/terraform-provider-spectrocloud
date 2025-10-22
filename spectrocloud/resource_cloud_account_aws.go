@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -39,17 +40,15 @@ func resourceCloudAccountAws() *schema.Resource {
 				Description: "ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.",
 			},
 			"aws_access_key": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				ConflictsWith: []string{"aws_secured_access_key"},
-				Description:   "The AWS access key used to authenticate. **Deprecated:** Use `aws_secured_access_key` instead for enhanced security.",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The AWS access key used to authenticate. **Deprecated:** Use `aws_secured_access_key` instead for enhanced security.",
 			},
 			"aws_secured_access_key": {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Sensitive:     true,
-				ConflictsWith: []string{"aws_access_key"},
-				Description:   "The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled.",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled.",
 			},
 			"aws_secret_key": {
 				Type:        schema.TypeString,
@@ -183,10 +182,18 @@ func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m 
 }
 
 func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
+	// Validate that only one access key field is set
+	securedAccessKey := d.Get("aws_secured_access_key").(string)
+	legacyAccessKey := d.Get("aws_access_key").(string)
+
+	if securedAccessKey != "" && legacyAccessKey != "" {
+		return nil, fmt.Errorf("conflicting configuration arguments: only one of 'aws_access_key' or 'aws_secured_access_key' can be set")
+	}
+
 	// Determine which access key field to use (prefer secured, fallback to legacy)
-	accessKey := d.Get("aws_secured_access_key").(string)
+	accessKey := securedAccessKey
 	if accessKey == "" {
-		accessKey = d.Get("aws_access_key").(string)
+		accessKey = legacyAccessKey
 	}
 
 	account := &models.V1AwsAccount{

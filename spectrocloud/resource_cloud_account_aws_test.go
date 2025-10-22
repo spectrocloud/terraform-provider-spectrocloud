@@ -86,7 +86,7 @@ func TestToAwsAccountCTXTenantSecuredAccessKey(t *testing.T) {
 func TestToAwsAccountSecuredAccessKeyPriority(t *testing.T) {
 	rd := resourceCloudAccountAws().TestResourceData()
 	rd.Set("name", "aws_unit_test_acc_priority")
-	// Set secured key - it should take priority even if legacy key exists in state
+	// Set only secured key
 	rd.Set("aws_secured_access_key", "SECURED_ACCESS_KEY_123")
 	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
 	rd.Set("context", "project")
@@ -96,6 +96,24 @@ func TestToAwsAccountSecuredAccessKeyPriority(t *testing.T) {
 
 	assert.Equal(t, "SECURED_ACCESS_KEY_123", acc.Spec.AccessKey)
 	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
+}
+
+func TestToAwsAccountBothAccessKeysSet(t *testing.T) {
+	rd := resourceCloudAccountAws().TestResourceData()
+	rd.Set("name", "aws_unit_test_acc_conflict")
+	// Set both keys - should return an error
+	rd.Set("aws_access_key", "LEGACY_ACCESS_KEY_123")
+	rd.Set("aws_secured_access_key", "SECURED_ACCESS_KEY_123")
+	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
+	rd.Set("context", "project")
+	rd.Set("type", "secret")
+
+	acc, err := toAwsAccount(rd)
+
+	assert.Error(t, err)
+	assert.Nil(t, acc)
+	assert.Contains(t, err.Error(), "conflicting configuration arguments")
+	assert.Contains(t, err.Error(), "only one of")
 }
 
 func TestToAwsAccountCTXProjectSTS(t *testing.T) {
