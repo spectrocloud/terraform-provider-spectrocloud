@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -174,4 +175,231 @@ func TestToMachinePoolMaas(t *testing.T) {
 	if result == nil {
 		t.Fatal("Expected a non-nil result")
 	}
+}
+
+func TestFlattenClusterConfigsMaas(t *testing.T) {
+	t.Run("Nil Input", func(t *testing.T) {
+		result := flattenClusterConfigsMaas(nil)
+		expected := make([]interface{}, 0)
+
+		if !reflect.DeepEqual(expected, result) {
+			t.Errorf("Expected empty array for nil input, got: %v", result)
+		}
+	})
+
+	t.Run("Nil Spec", func(t *testing.T) {
+		config := &models.V1MaasCloudConfig{}
+		result := flattenClusterConfigsMaas(config)
+		expected := make([]interface{}, 0)
+
+		if !reflect.DeepEqual(expected, result) {
+			t.Errorf("Expected empty array for nil spec, got: %v", result)
+		}
+	})
+
+	t.Run("Nil ClusterConfig", func(t *testing.T) {
+		config := &models.V1MaasCloudConfig{
+			Spec: &models.V1MaasCloudConfigSpec{},
+		}
+		result := flattenClusterConfigsMaas(config)
+		expected := make([]interface{}, 0)
+
+		if !reflect.DeepEqual(expected, result) {
+			t.Errorf("Expected empty array for nil cluster config, got: %v", result)
+		}
+	})
+
+	t.Run("Valid Input Without NtpServers", func(t *testing.T) {
+		domain := "test.maas.local"
+		config := &models.V1MaasCloudConfig{
+			Spec: &models.V1MaasCloudConfigSpec{
+				ClusterConfig: &models.V1MaasClusterConfig{
+					Domain:      &domain,
+					EnableLxdVM: false,
+				},
+			},
+		}
+
+		result := flattenClusterConfigsMaas(config)
+		resultMap := result[0].(map[string]interface{})
+
+		assert.Equal(t, "test.maas.local", resultMap["domain"])
+		// enable_lxd_vm is not set when false (relies on schema default)
+		assert.Nil(t, resultMap["enable_lxd_vm"])
+		assert.Nil(t, resultMap["ntp_servers"])
+	})
+
+	t.Run("Valid Input With NtpServers", func(t *testing.T) {
+		domain := "test.maas.local"
+		ntpServers := []string{"0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"}
+		config := &models.V1MaasCloudConfig{
+			Spec: &models.V1MaasCloudConfigSpec{
+				ClusterConfig: &models.V1MaasClusterConfig{
+					Domain:      &domain,
+					EnableLxdVM: true,
+					NtpServers:  ntpServers,
+				},
+			},
+		}
+
+		result := flattenClusterConfigsMaas(config)
+		resultMap := result[0].(map[string]interface{})
+
+		assert.Equal(t, "test.maas.local", resultMap["domain"])
+		assert.Equal(t, true, resultMap["enable_lxd_vm"])
+		assert.Equal(t, ntpServers, resultMap["ntp_servers"])
+	})
+
+	t.Run("Valid Input With Empty NtpServers", func(t *testing.T) {
+		domain := "test.maas.local"
+		ntpServers := []string{}
+		config := &models.V1MaasCloudConfig{
+			Spec: &models.V1MaasCloudConfigSpec{
+				ClusterConfig: &models.V1MaasClusterConfig{
+					Domain:      &domain,
+					EnableLxdVM: false,
+					NtpServers:  ntpServers,
+				},
+			},
+		}
+
+		result := flattenClusterConfigsMaas(config)
+		resultMap := result[0].(map[string]interface{})
+
+		assert.Equal(t, "test.maas.local", resultMap["domain"])
+		// enable_lxd_vm is not set when false (relies on schema default)
+		assert.Nil(t, resultMap["enable_lxd_vm"])
+		// Empty slice should be set
+		assert.Equal(t, ntpServers, resultMap["ntp_servers"])
+	})
+}
+
+func TestToMaasClusterWithNtpServers(t *testing.T) {
+	t.Run("With NtpServers", func(t *testing.T) {
+		d := resourceClusterMaas().TestResourceData()
+
+		// Set basic required fields
+		d.Set("name", "test-maas-cluster")
+		d.Set("context", "project")
+		d.Set("cloud_account_id", "test-account-id")
+
+		// Set cluster profile
+		cConfig := []map[string]interface{}{
+			{"id": "test-profile-id"},
+		}
+		d.Set("cluster_profile", cConfig)
+
+		// Set cloud config with NTP servers
+		ntpServers := schema.NewSet(schema.HashString, []interface{}{
+			"0.pool.ntp.org",
+			"1.pool.ntp.org",
+			"time.google.com",
+		})
+		cloudConfig := []map[string]interface{}{
+			{
+				"domain":        "test.maas.local",
+				"enable_lxd_vm": false,
+				"ntp_servers":   ntpServers,
+			},
+		}
+		d.Set("cloud_config", cloudConfig)
+
+		// Set machine pool
+		machinePools := schema.NewSet(resourceMachinePoolMaasHash, []interface{}{
+			map[string]interface{}{
+				"name":                    "worker-pool",
+				"count":                   3,
+				"control_plane":           false,
+				"control_plane_as_worker": false,
+				"node_repave_interval":    0,
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"min_cpu":       2,
+						"min_memory_mb": 4096,
+					},
+				},
+				"azs": schema.NewSet(schema.HashString, []interface{}{"zone1"}),
+				"placement": []interface{}{
+					map[string]interface{}{
+						"resource_pool": "default",
+					},
+				},
+				"node_tags": schema.NewSet(schema.HashString, []interface{}{}),
+			},
+		})
+		d.Set("machine_pool", machinePools)
+
+		// Mock client - pass nil for this unit test
+		// In a real scenario, you'd mock the client properly
+		result, err := toMaasCluster(nil, d)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Spec.CloudConfig)
+		assert.NotNil(t, result.Spec.CloudConfig.NtpServers)
+		assert.Equal(t, 3, len(result.Spec.CloudConfig.NtpServers))
+		// Check that NTP servers are present (order may vary due to Set)
+		ntpServerSlice := result.Spec.CloudConfig.NtpServers
+		assert.Contains(t, ntpServerSlice, "0.pool.ntp.org")
+		assert.Contains(t, ntpServerSlice, "1.pool.ntp.org")
+		assert.Contains(t, ntpServerSlice, "time.google.com")
+	})
+
+	t.Run("Without NtpServers", func(t *testing.T) {
+		d := resourceClusterMaas().TestResourceData()
+
+		// Set basic required fields
+		d.Set("name", "test-maas-cluster")
+		d.Set("context", "project")
+		d.Set("cloud_account_id", "test-account-id")
+
+		// Set cluster profile
+		cConfig := []map[string]interface{}{
+			{"id": "test-profile-id"},
+		}
+		d.Set("cluster_profile", cConfig)
+
+		// Set cloud config without NTP servers
+		cloudConfig := []map[string]interface{}{
+			{
+				"domain":        "test.maas.local",
+				"enable_lxd_vm": false,
+			},
+		}
+		d.Set("cloud_config", cloudConfig)
+
+		// Set machine pool
+		machinePools := schema.NewSet(resourceMachinePoolMaasHash, []interface{}{
+			map[string]interface{}{
+				"name":                    "worker-pool",
+				"count":                   3,
+				"control_plane":           false,
+				"control_plane_as_worker": false,
+				"node_repave_interval":    0,
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"min_cpu":       2,
+						"min_memory_mb": 4096,
+					},
+				},
+				"azs": schema.NewSet(schema.HashString, []interface{}{"zone1"}),
+				"placement": []interface{}{
+					map[string]interface{}{
+						"resource_pool": "default",
+					},
+				},
+				"node_tags": schema.NewSet(schema.HashString, []interface{}{}),
+			},
+		})
+		d.Set("machine_pool", machinePools)
+
+		// Mock client - pass nil for this unit test
+		result, err := toMaasCluster(nil, d)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Spec.CloudConfig)
+		// NtpServers should be empty slice when not provided
+		assert.Equal(t, 0, len(result.Spec.CloudConfig.NtpServers))
+	})
 }

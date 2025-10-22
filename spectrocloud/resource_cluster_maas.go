@@ -151,6 +151,15 @@ func resourceClusterMaas() *schema.Resource {
 							Default:     false,
 							Description: "Whether to enable LXD VM. Default is `false`. Available once **Palette with LXD support** is released.",
 						},
+						"ntp_servers": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "A list of NTP servers to use instead of the machine image's default NTP server list.",
+						},
 					},
 				},
 			},
@@ -446,6 +455,9 @@ func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
 	if config.Spec.ClusterConfig.EnableLxdVM {
 		m["enable_lxd_vm"] = true
 	}
+	if config.Spec.ClusterConfig.NtpServers != nil {
+		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
+	}
 
 	return []interface{}{m}
 }
@@ -619,6 +631,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 			CloudConfig: &models.V1MaasClusterConfig{
 				Domain:      &DomainVal,
 				EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
+				NtpServers:  toNtpServers(cloudConfig),
 			},
 		},
 	}

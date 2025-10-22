@@ -172,6 +172,7 @@ Required:
 Optional:
 
 - `enable_lxd_vm` (Boolean) Whether to enable LXD VM. Default is `false`. Available once **Palette with LXD support** is released.
+- `ntp_servers` (Set of String) A list of NTP servers to use instead of the machine image's default NTP server list.
 
 
 <a id="nestedblock--machine_pool"></a>
