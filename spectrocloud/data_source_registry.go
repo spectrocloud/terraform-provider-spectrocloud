@@ -30,6 +30,11 @@ func dataSourceRegistry() *schema.Resource {
 				Description:  "The type of the registry. Possible values are 'oci', 'helm', or 'spectro'. If not provided, the registry type will be inferred from the registry name.",
 				ValidateFunc: validation.StringInSlice([]string{"", "oci", "helm", "spectro"}, false),
 			},
+			"sync_status": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The synchronization status of the registry. Possible values: 'Completed', 'InProgress', 'Failed', 'Error', etc. Available for Helm registries only.",
+			},
 		},
 	}
 }
@@ -63,6 +68,14 @@ func dataSourceRegistryRead(_ context.Context, d *schema.ResourceData, m interfa
 		}
 		uid = registry.Metadata.UID
 		registryName = registry.Metadata.Name
+
+		// Fetch sync status for Helm registries
+		syncStatus, syncErr := c.GetHelmRegistrySyncStatus(uid)
+		if syncErr == nil && syncStatus != nil {
+			if err = d.Set("sync_status", syncStatus.Status); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	default: // "" or "spectro"
 		registry, e := c.GetPackRegistryCommonByName(name.(string))
 		if e != nil {
