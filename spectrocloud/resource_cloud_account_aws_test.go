@@ -100,8 +100,8 @@ func TestToAwsAccountSecuredAccessKeyPriority(t *testing.T) {
 
 func TestToAwsAccountBothAccessKeysSet(t *testing.T) {
 	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc_conflict")
-	// Set both keys - should return an error
+	rd.Set("name", "aws_unit_test_acc_priority")
+	// Set both keys - secured key should take priority for Crossplane compatibility during transitions
 	rd.Set("aws_access_key", "LEGACY_ACCESS_KEY_123")
 	rd.Set("aws_secured_access_key", "SECURED_ACCESS_KEY_123")
 	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
@@ -110,10 +110,12 @@ func TestToAwsAccountBothAccessKeysSet(t *testing.T) {
 
 	acc, err := toAwsAccount(rd)
 
-	assert.Error(t, err)
-	assert.Nil(t, acc)
-	assert.Contains(t, err.Error(), "conflicting configuration arguments")
-	assert.Contains(t, err.Error(), "only one of")
+	// Should not error - secured key takes priority during transitions
+	assert.NoError(t, err)
+	assert.NotNil(t, acc)
+	// Verify that secured key takes priority
+	assert.Equal(t, "SECURED_ACCESS_KEY_123", acc.Spec.AccessKey)
+	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
 }
 
 func TestToAwsAccountCTXProjectSTS(t *testing.T) {
