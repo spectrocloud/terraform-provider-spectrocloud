@@ -38,3 +38,4 @@ output "registry_id" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `sync_status` (String) The synchronization status of the registry. Possible values: 'Completed', 'InProgress', 'Failed', 'Error', etc. Available for Helm registries only.
