@@ -42,13 +42,13 @@ func resourceCloudAccountAws() *schema.Resource {
 			"aws_access_key": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The AWS access key used to authenticate. **Deprecated:** Use `aws_secured_access_key` instead for enhanced security.",
+				Description: "The AWS access key used to authenticate. **Deprecated:** Use `aws_secured_access_key` instead for enhanced security. **Note:** This field is mutually exclusive with `aws_secured_access_key`.",
 			},
 			"aws_secured_access_key": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled.",
+				Description: "The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled. **Note:** This field is mutually exclusive with `aws_access_key`.",
 			},
 			"aws_secret_key": {
 				Type:        schema.TypeString,

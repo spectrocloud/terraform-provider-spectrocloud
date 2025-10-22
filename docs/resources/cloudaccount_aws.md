@@ -30,9 +30,9 @@ resource "spectrocloud_cloudaccount_aws" "aws-1" {
 ### Optional
 
 - `arn` (String) The Amazon Resource Name (ARN) associated with the AWS resource. This is used for identifying resources in AWS.
-- `aws_access_key` (String) The AWS access key used to authenticate. **Deprecated:** Use `aws_secured_access_key` instead for enhanced security.
+- `aws_access_key` (String) The AWS access key used to authenticate. **Deprecated:** Use `aws_secured_access_key` instead for enhanced security. **Note:** This field is mutually exclusive with `aws_secured_access_key`.
 - `aws_secret_key` (String, Sensitive) The AWS secret key used in conjunction with the access key for authentication.
-- `aws_secured_access_key` (String, Sensitive) The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled.
+- `aws_secured_access_key` (String, Sensitive) The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled. **Note:** This field is mutually exclusive with `aws_access_key`.
 - `context` (String) The context of the AWS configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `external_id` (String, Sensitive) An optional external ID that can be used for cross-account access in AWS.
 - `partition` (String) The AWS partition in which the cloud account is located. 
