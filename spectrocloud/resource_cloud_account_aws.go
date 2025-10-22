@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -186,9 +185,9 @@ func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 	securedAccessKey := d.Get("aws_secured_access_key").(string)
 	legacyAccessKey := d.Get("aws_access_key").(string)
 
-	if securedAccessKey != "" && legacyAccessKey != "" {
-		return nil, fmt.Errorf("conflicting configuration arguments: only one of 'aws_access_key' or 'aws_secured_access_key' can be set")
-	}
+	// if securedAccessKey != "" && legacyAccessKey != "" {
+	// 	return nil, fmt.Errorf("conflicting configuration arguments: only one of 'aws_access_key' or 'aws_secured_access_key' can be set")
+	// }
 
 	// Determine which access key field to use (prefer secured, fallback to legacy)
 	accessKey := securedAccessKey
