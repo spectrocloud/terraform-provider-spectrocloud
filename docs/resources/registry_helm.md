@@ -21,6 +21,8 @@ resource "spectrocloud_registry_helm" "r1" {
     username        = "abc"
     password        = "def"
   }
+  # Optional: Wait for the registry to complete synchronization
+  # wait_for_sync = true
 }
 ```
 
@@ -52,6 +54,7 @@ The import will automatically populate all configuration fields from the Spectro
 ### Optional
 
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `wait_for_sync` (Boolean) If `true`, Terraform will wait for the Helm registry to complete its initial synchronization before marking the resource as created or updated. Default value is `false`.
 
 ### Read-Only
 

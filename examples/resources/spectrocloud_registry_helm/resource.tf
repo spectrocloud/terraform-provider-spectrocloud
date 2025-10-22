@@ -7,4 +7,6 @@ resource "spectrocloud_registry_helm" "r1" {
     username        = "abc"
     password        = "def"
   }
+  # Optional: Wait for the registry to complete synchronization
+  # wait_for_sync = true
 }

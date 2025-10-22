@@ -187,6 +187,18 @@ func RegistriesRoutes() []Route {
 		},
 		{
 			Method: "GET",
+			Path:   "/v1/registries/helm/{uid}/sync/status",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1RegistrySyncStatus{
+					IsSyncSupported: true,
+					Status:          "Success",
+					Message:         "Registry synchronized successfully",
+				},
+			},
+		},
+		{
+			Method: "GET",
 			Path:   "/v1/registries/metadata",
 			Response: ResponseData{
 				StatusCode: 200,
