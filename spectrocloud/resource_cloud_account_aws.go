@@ -256,8 +256,16 @@ func flattenCloudAccountAws(d *schema.ResourceData, account *models.V1AwsAccount
 			if err := d.Set("aws_secured_access_key", account.Spec.AccessKey); err != nil {
 				return diag.FromErr(err), true
 			}
+			// Clear the conflicting field to avoid conflicts
+			if err := d.Set("aws_access_key", ""); err != nil {
+				return diag.FromErr(err), true
+			}
 		} else {
 			if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
+				return diag.FromErr(err), true
+			}
+			// Clear the conflicting field to avoid conflicts
+			if err := d.Set("aws_secured_access_key", ""); err != nil {
 				return diag.FromErr(err), true
 			}
 		}
