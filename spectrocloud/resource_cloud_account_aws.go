@@ -41,7 +41,13 @@ func resourceCloudAccountAws() *schema.Resource {
 			"aws_access_key": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The AWS access key used to authenticate.",
+				Description: "The AWS access key used to authenticate. **Deprecated:** Use `aws_secured_access_key` instead for enhanced security. **Note:** This field is mutually exclusive with `aws_secured_access_key`.",
+			},
+			"aws_secured_access_key": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled. **Note:** This field is mutually exclusive with `aws_access_key`.",
 			},
 			"aws_secret_key": {
 				Type:        schema.TypeString,
@@ -175,13 +181,27 @@ func resourceCloudAccountAwsDelete(_ context.Context, d *schema.ResourceData, m 
 }
 
 func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
+	// Validate that only one access key field is set
+	securedAccessKey := d.Get("aws_secured_access_key").(string)
+	legacyAccessKey := d.Get("aws_access_key").(string)
+
+	// if securedAccessKey != "" && legacyAccessKey != "" {
+	// 	return nil, fmt.Errorf("conflicting configuration arguments: only one of 'aws_access_key' or 'aws_secured_access_key' can be set")
+	// }
+
+	// Determine which access key field to use (prefer secured, fallback to legacy)
+	accessKey := securedAccessKey
+	if accessKey == "" {
+		accessKey = legacyAccessKey
+	}
+
 	account := &models.V1AwsAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
 			UID:  d.Id(),
 		},
 		Spec: &models.V1AwsCloudAccount{
-			AccessKey: d.Get("aws_access_key").(string),
+			AccessKey: accessKey,
 			SecretKey: d.Get("aws_secret_key").(string),
 		},
 	}
@@ -194,7 +214,7 @@ func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 	}
 	if len(d.Get("type").(string)) == 0 || d.Get("type").(string) == "secret" {
 		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSecret.Pointer()
-		account.Spec.AccessKey = d.Get("aws_access_key").(string)
+		account.Spec.AccessKey = accessKey
 		account.Spec.SecretKey = d.Get("aws_secret_key").(string)
 	} else if d.Get("type").(string) == "sts" {
 		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypeSts.Pointer()
@@ -236,8 +256,24 @@ func flattenCloudAccountAws(d *schema.ResourceData, account *models.V1AwsAccount
 		return diag.FromErr(err), true
 	}
 	if *account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
-		if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
-			return diag.FromErr(err), true
+		// Set the access key to the appropriate field based on which one is currently in use
+		// Prefer aws_secured_access_key if it was set, otherwise use aws_access_key for backward compatibility
+		if d.Get("aws_secured_access_key").(string) != "" {
+			if err := d.Set("aws_secured_access_key", account.Spec.AccessKey); err != nil {
+				return diag.FromErr(err), true
+			}
+			// Clear the conflicting field to avoid conflicts
+			if err := d.Set("aws_access_key", ""); err != nil {
+				return diag.FromErr(err), true
+			}
+		} else {
+			if err := d.Set("aws_access_key", account.Spec.AccessKey); err != nil {
+				return diag.FromErr(err), true
+			}
+			// Clear the conflicting field to avoid conflicts
+			if err := d.Set("aws_secured_access_key", ""); err != nil {
+				return diag.FromErr(err), true
+			}
 		}
 	} else {
 		if err := d.Set("arn", account.Spec.Sts.Arn); err != nil {
