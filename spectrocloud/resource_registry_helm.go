@@ -2,6 +2,9 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/go-openapi/strfmt"
@@ -9,8 +12,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
 func resourceRegistryHelm() *schema.Resource {
@@ -78,6 +83,12 @@ func resourceRegistryHelm() *schema.Resource {
 					},
 				},
 			},
+			"wait_for_sync": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, Terraform will wait for the Helm registry to complete its initial synchronization before marking the resource as created or updated. Default value is `false`.",
+			},
 		},
 	}
 }
@@ -92,6 +103,18 @@ func resourceRegistryHelmCreate(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	d.SetId(uid)
+
+	// Wait for sync if requested
+	if d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+		diagnostics, isError := waitForRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate)
+		if len(diagnostics) > 0 {
+			diags = append(diags, diagnostics...)
+		}
+		if isError {
+			return diagnostics
+		}
+	}
+
 	return diags
 }
 
@@ -161,6 +184,17 @@ func resourceRegistryHelmUpdate(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 
+	// Wait for sync if requested
+	if d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+		diagnostics, isError := waitForRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate)
+		if len(diagnostics) > 0 {
+			diags = append(diags, diagnostics...)
+		}
+		if isError {
+			return diagnostics
+		}
+	}
+
 	return diags
 }
 
@@ -224,4 +258,133 @@ func toRegistryHelmCredential(regCred map[string]interface{}) *models.V1Registry
 		auth.Token = strfmt.Password(regCred["token"].(string))
 	}
 	return auth
+}
+
+// waitForRegistrySync waits for a Helm registry to complete its synchronization
+func waitForRegistrySync(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, timeoutType string) (diag.Diagnostics, bool) {
+	stateConf := &retry.StateChangeConf{
+		Pending: []string{
+			"InProgress",
+			"Pending",
+			"Unknown",
+			"", // Handle empty status as pending
+		},
+		Target: []string{
+			"Success",
+			"Completed",
+		},
+		Refresh:    resourceRegistrySyncRefreshFunc(c, uid),
+		Timeout:    d.Timeout(timeoutType) - 1*time.Minute,
+		MinTimeout: 10 * time.Second,
+		Delay:      30 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err := stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		// Handle timeout errors gracefully
+		var timeoutErr *retry.TimeoutError
+		if errors.As(err, &timeoutErr) {
+			log.Printf("waitForRegistrySync: timeout occurred, returning warning instead of error")
+
+			// Get current sync status for warning message
+			syncStatus, statusErr := c.GetHelmRegistrySyncStatus(uid)
+			currentStatus := timeoutErr.LastState
+			statusMessage := ""
+
+			if statusErr == nil && syncStatus != nil {
+				if syncStatus.Status != "" {
+					currentStatus = syncStatus.Status
+				}
+				if syncStatus.Message != "" {
+					statusMessage = fmt.Sprintf(" Message: %s", syncStatus.Message)
+				}
+			}
+
+			if currentStatus == "" {
+				currentStatus = "Unknown"
+			}
+
+			// Return warning instead of error for timeout
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "Helm registry sync timeout",
+				Detail: fmt.Sprintf(
+					"Helm registry synchronization timed out after waiting for %v. Current sync status is '%s'.%s "+
+						"The registry sync may still be in progress and could eventually complete successfully. "+
+						"You may need to increase the timeout or wait for the sync to complete manually.",
+					d.Timeout(timeoutType)-1*time.Minute, currentStatus, statusMessage),
+			})
+			return diags, false
+		}
+
+		// Check if this is a sync failure (not a timeout or API error)
+		// Get current sync status to provide detailed error information
+		syncStatus, statusErr := c.GetHelmRegistrySyncStatus(uid)
+		if statusErr == nil && syncStatus != nil {
+			status := syncStatus.Status
+			// Check if the sync explicitly failed
+			if status == "Failed" || status == "Error" || status == "failed" || status == "error" {
+				log.Printf("waitForRegistrySync: registry sync failed with status: %s", status)
+				errorDetail := fmt.Sprintf("Helm registry synchronization failed with status '%s'.", status)
+				if syncStatus.Message != "" {
+					errorDetail += fmt.Sprintf("\n\nError details: %s", syncStatus.Message)
+				}
+				errorDetail += "\n\nPlease check the registry configuration (endpoint, credentials) and try again."
+
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Error,
+					Summary:  "Helm registry sync failed",
+					Detail:   errorDetail,
+				})
+				return diags, true
+			}
+		}
+
+		// For other non-timeout errors (API errors, network issues, etc.), return the original error
+		log.Printf("waitForRegistrySync: unexpected error: %v", err)
+		return diag.FromErr(err), true
+	}
+	return nil, false
+}
+
+// resourceRegistrySyncRefreshFunc returns a retry.StateRefreshFunc that checks the sync status of a Helm registry
+func resourceRegistrySyncRefreshFunc(c *client.V1Client, uid string) retry.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		syncStatus, err := c.GetHelmRegistrySyncStatus(uid)
+		if err != nil {
+			return nil, "", err
+		}
+
+		// If sync is not supported, consider it as successful
+		if syncStatus != nil && !syncStatus.IsSyncSupported {
+			log.Printf("[DEBUG] Registry sync is not supported, considering as completed")
+			return syncStatus, "Success", nil
+		}
+
+		if syncStatus == nil || syncStatus.Status == "" {
+			log.Printf("[DEBUG] Registry sync status is empty, treating as pending")
+			return syncStatus, "", nil
+		}
+
+		status := syncStatus.Status
+		log.Printf("[DEBUG] Registry sync status: %s", status)
+
+		// Map various status values to our state machine
+		switch status {
+		case "Success", "Completed", "success", "completed":
+			return syncStatus, "Success", nil
+		case "Failed", "Error", "failed", "error":
+			if syncStatus.Message != "" {
+				return syncStatus, status, fmt.Errorf("registry sync failed: %s", syncStatus.Message)
+			}
+			return syncStatus, status, fmt.Errorf("registry sync failed")
+		case "InProgress", "Running", "Syncing", "inprogress", "running", "syncing":
+			return syncStatus, "InProgress", nil
+		default:
+			// Unknown status, treat as pending
+			log.Printf("[DEBUG] Unknown registry sync status '%s', treating as pending", status)
+			return syncStatus, status, nil
+		}
+	}
 }
