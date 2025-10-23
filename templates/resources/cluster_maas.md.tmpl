@@ -33,6 +33,8 @@ resource "spectrocloud_cluster_maas" "cluster" {
 
   cloud_config {
     domain = "maas.mycompany.com"
+    enable_lxd_vm = false
+    ntp_servers = ["0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"]
   }
 
   cluster_profile {
