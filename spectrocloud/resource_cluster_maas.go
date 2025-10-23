@@ -135,7 +135,6 @@ func resourceClusterMaas() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -530,6 +529,15 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
+	// Handle cloud_config updates (Day 2 operations for NTP servers, etc.)
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		cloudConfigEntity := toMaasCloudConfigUpdate(cloudConfig)
+		if err := c.UpdateCloudConfigMaas(cloudConfigId, cloudConfigEntity); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	CloudConfig, err := c.GetCloudConfigMaas(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -610,6 +618,17 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 	resourceClusterMaasRead(ctx, d, m)
 
 	return diags
+}
+
+func toMaasCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1MaasCloudClusterConfigEntity {
+	DomainVal := cloudConfig["domain"].(string)
+	return &models.V1MaasCloudClusterConfigEntity{
+		ClusterConfig: &models.V1MaasClusterConfig{
+			Domain:      &DomainVal,
+			EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
+			NtpServers:  toNtpServers(cloudConfig),
+		},
+	}
 }
 
 func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroMaasClusterEntity, error) {

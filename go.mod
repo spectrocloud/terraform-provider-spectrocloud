@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.24.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20251022144338-6edbe929303c
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20251023102737-bab920addd06
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools v2.2.0+incompatible
@@ -135,4 +135,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
 
-//replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
+// replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
