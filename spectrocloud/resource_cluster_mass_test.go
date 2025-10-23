@@ -403,3 +403,62 @@ func TestToMaasClusterWithNtpServers(t *testing.T) {
 		assert.Equal(t, 0, len(result.Spec.CloudConfig.NtpServers))
 	})
 }
+
+func TestToMaasCloudConfigUpdate(t *testing.T) {
+	t.Run("Valid cloud config update with NTP servers", func(t *testing.T) {
+		cloudConfig := map[string]interface{}{
+			"domain":        "test.maas.local",
+			"enable_lxd_vm": false,
+			"ntp_servers": schema.NewSet(schema.HashString, []interface{}{
+				"0.pool.ntp.org",
+				"1.pool.ntp.org",
+			}),
+		}
+
+		result := toMaasCloudConfigUpdate(cloudConfig)
+
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.ClusterConfig)
+		assert.Equal(t, "test.maas.local", *result.ClusterConfig.Domain)
+		assert.Equal(t, false, result.ClusterConfig.EnableLxdVM)
+		assert.Equal(t, 2, len(result.ClusterConfig.NtpServers))
+		assert.Contains(t, result.ClusterConfig.NtpServers, "0.pool.ntp.org")
+		assert.Contains(t, result.ClusterConfig.NtpServers, "1.pool.ntp.org")
+	})
+
+	t.Run("Valid cloud config update without NTP servers", func(t *testing.T) {
+		cloudConfig := map[string]interface{}{
+			"domain":        "test.maas.local",
+			"enable_lxd_vm": true,
+		}
+
+		result := toMaasCloudConfigUpdate(cloudConfig)
+
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.ClusterConfig)
+		assert.Equal(t, "test.maas.local", *result.ClusterConfig.Domain)
+		assert.Equal(t, true, result.ClusterConfig.EnableLxdVM)
+		assert.Equal(t, 0, len(result.ClusterConfig.NtpServers))
+	})
+
+	t.Run("Update NTP servers only", func(t *testing.T) {
+		cloudConfig := map[string]interface{}{
+			"domain":        "production.maas.local",
+			"enable_lxd_vm": false,
+			"ntp_servers": schema.NewSet(schema.HashString, []interface{}{
+				"time1.google.com",
+				"time2.google.com",
+				"time3.google.com",
+			}),
+		}
+
+		result := toMaasCloudConfigUpdate(cloudConfig)
+
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.ClusterConfig)
+		assert.Equal(t, 3, len(result.ClusterConfig.NtpServers))
+		assert.Contains(t, result.ClusterConfig.NtpServers, "time1.google.com")
+		assert.Contains(t, result.ClusterConfig.NtpServers, "time2.google.com")
+		assert.Contains(t, result.ClusterConfig.NtpServers, "time3.google.com")
+	})
+}
