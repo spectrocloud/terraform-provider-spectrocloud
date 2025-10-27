@@ -146,6 +146,25 @@ func getAccountResponse(cloud string) interface{} {
 			},
 			Listmeta: nil,
 		}
+	case "cloudstack":
+		return &models.V1CloudStackAccounts{
+			Items: []*models.V1CloudStackAccount{
+				{
+					Metadata: &models.V1ObjectMeta{
+						Name: "test-cloudstack-account-1",
+						UID:  "test-cloudstack-account-id-1",
+					},
+					Spec: &models.V1CloudStackCloudAccount{
+						APIURL:    spectrocloud.StringPtr("https://test.cloudstack.com:8080/client/api"),
+						APIKey:    spectrocloud.StringPtr("testApiKey"),
+						SecretKey: spectrocloud.StringPtr("testSecretKey"),
+						CaCert:    "",
+						Insecure:  false,
+					},
+				},
+			},
+			Listmeta: nil,
+		}
 	case "custom":
 		return &models.V1CustomAccounts{
 			Items: []*models.V1CustomAccount{
@@ -280,6 +299,25 @@ func getAccountNegativeResponse(cloud string) interface{} {
 			},
 			Listmeta: nil,
 		}
+	case "cloudstack":
+		return &models.V1CloudStackAccounts{
+			Items: []*models.V1CloudStackAccount{
+				{
+					Metadata: &models.V1ObjectMeta{
+						Name: "test-cloudstack-account-1-neg",
+						UID:  "test-cloudstack-account-id-1-neg",
+					},
+					Spec: &models.V1CloudStackCloudAccount{
+						APIURL:    spectrocloud.StringPtr("https://test.cloudstack.com:8080/client/api"),
+						APIKey:    spectrocloud.StringPtr("testApiKey"),
+						SecretKey: spectrocloud.StringPtr("testSecretKey"),
+						CaCert:    "",
+						Insecure:  false,
+					},
+				},
+			},
+			Listmeta: nil,
+		}
 	case "custom":
 		return &models.V1CustomAccounts{
 			Items: []*models.V1CustomAccount{
@@ -398,6 +436,77 @@ func CloudAccountsRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: 200,
 				Payload:    getAccountResponse("gcp"),
+			},
+		},
+
+		// CloudStack
+		{
+			Method: "POST",
+			Path:   "/v1/cloudaccounts/cloudstack",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "test-cloudstack-account-1"},
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/clouds/cloudstack/account/validate",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/cloudaccounts/cloudstack/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "DELETE",
+			Path:   "/v1/cloudaccounts/cloudstack/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/cloudaccounts/cloudstack",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload:    getAccountResponse("cloudstack"),
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/cloudaccounts/cloudstack/{uid}",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1CloudStackAccount{
+					Metadata: &models.V1ObjectMeta{
+						Name:        "test-cloudstack-account-1",
+						UID:         "test-cloudstack-account-id-1",
+						Annotations: map[string]string{"overlordUid": "test-pcg-id"},
+					},
+					Spec: &models.V1CloudStackCloudAccount{
+						APIURL:    spectrocloud.StringPtr("https://test.cloudstack.com:8080/client/api"),
+						APIKey:    spectrocloud.StringPtr("testApiKey"),
+						SecretKey: spectrocloud.StringPtr("testSecretKey"),
+						CaCert:    "",
+						Insecure:  false,
+					},
+				},
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/overlords/cloudstack/{uid}/account/validate",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
 			},
 		},
 
@@ -871,6 +980,14 @@ func CloudAccountsRoutes() []Route {
 
 func CloudAccountsNegativeRoutes() []Route {
 	return []Route{
+		{
+			Method: "GET",
+			Path:   "/v1/cloudaccounts/cloudstack",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload:    getAccountNegativeResponse("cloudstack"),
+			},
+		},
 		{
 			Method: "GET",
 			Path:   "/v1/cloudaccounts/gcp",

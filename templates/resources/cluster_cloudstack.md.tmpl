@@ -1,0 +1,289 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace }}
+
+## Example Usage
+
+### Basic Single-Zone CloudStack Cluster
+
+```terraform
+data "spectrocloud_cloudaccount_cloudstack" "account" {
+  name = var.cloudstack_account_name
+}
+
+data "spectrocloud_cluster_profile" "profile" {
+  name = var.cluster_profile_name
+}
+
+resource "spectrocloud_cluster_cloudstack" "cluster" {
+  name             = "cloudstack-cluster-basic"
+  cloud_account_id = data.spectrocloud_cloudaccount_cloudstack.account.id
+
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+  }
+
+  cloud_config {
+    domain       = "production"
+    ssh_key_name = "my-ssh-key"
+    
+    zone {
+      name = "zone1"
+      network {
+        name = "prod-network"
+      }
+    }
+  }
+
+  machine_pool {
+    name          = "control-plane-pool"
+    count         = 3
+    control_plane = true
+    
+    template = "ubuntu-22.04-kube-v1.28.0"
+    offering = "Medium Instance"
+  }
+
+  machine_pool {
+    name  = "worker-pool"
+    count = 3
+    
+    template = "ubuntu-22.04-kube-v1.28.0"
+    offering = "Large Instance"
+  }
+}
+```
+
+### Multi-Zone CloudStack Cluster with Autoscaling
+
+```terraform
+data "spectrocloud_cloudaccount_cloudstack" "account" {
+  name = var.cloudstack_account_name
+}
+
+data "spectrocloud_cluster_profile" "profile" {
+  name = var.cluster_profile_name
+}
+
+data "spectrocloud_backup_storage_location" "bsl" {
+  name = var.backup_storage_location_name
+}
+
+resource "spectrocloud_cluster_cloudstack" "cluster_ha" {
+  name             = "cloudstack-cluster-ha"
+  tags             = ["env:production", "team:devops"]
+  cloud_account_id = data.spectrocloud_cloudaccount_cloudstack.account.id
+
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+  }
+
+  cloud_config {
+    domain       = "production"
+    project      = "prod-project"
+    ssh_key_name = "prod-ssh-key"
+    
+    # Static control plane endpoint (optional)
+    control_plane_endpoint = "192.168.1.100"
+    
+    # Multiple zones for high availability
+    zone {
+      name = "zone1"
+      network {
+        name    = "zone1-network"
+        type    = "Isolated"
+        gateway = "192.168.1.1"
+        netmask = "255.255.255.0"
+      }
+    }
+    
+    zone {
+      name = "zone2"
+      network {
+        name    = "zone2-network"
+        type    = "Isolated"
+        gateway = "192.168.2.1"
+        netmask = "255.255.255.0"
+      }
+    }
+  }
+
+  machine_pool {
+    name                    = "control-plane-pool"
+    count                   = 3
+    control_plane           = true
+    control_plane_as_worker = false
+    
+    template           = "ubuntu-22.04-kube-v1.28.0"
+    offering           = "Medium Instance"
+    root_disk_size_gb  = 100
+    
+    # Affinity groups for anti-affinity
+    affinity_group_ids = ["anti-affinity-group-1"]
+    
+    network {
+      network_name = "control-plane-network"
+    }
+  }
+
+  machine_pool {
+    name  = "worker-pool"
+    count = 5
+    
+    # Enable autoscaling
+    min = 3
+    max = 10
+    
+    template           = "ubuntu-22.04-kube-v1.28.0"
+    offering           = "Large Instance"
+    root_disk_size_gb  = 200
+    disk_offering      = "Custom SSD"
+    
+    # Static IP for first worker (optional)
+    network {
+      network_name = "worker-network"
+      ip_address   = "192.168.1.50"
+    }
+    
+    additional_labels = {
+      "workload" = "general"
+      "tier"     = "backend"
+    }
+    
+    taints {
+      key    = "dedicated"
+      value  = "worker"
+      effect = "NoSchedule"
+    }
+    
+    # Custom instance details
+    details = {
+      "custom_key" = "custom_value"
+    }
+  }
+
+  # Backup policy
+  backup_policy {
+    schedule                  = "0 1 * * *"
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = "cloudstack-backup"
+    expiry_in_hour            = 168  # 7 days
+    include_disks             = true
+    include_cluster_resources = true
+  }
+
+  # Security scan policy
+  scan_policy {
+    configuration_scan_schedule = "0 2 * * *"
+    penetration_scan_schedule   = "0 3 * * 6"  # Weekly on Saturday
+    conformance_scan_schedule   = "0 4 * * *"
+  }
+
+  # OS patching
+  os_patch_on_boot = false
+  os_patch_schedule = "0 5 * * SUN"  # Weekly on Sunday
+}
+```
+
+### CloudStack Cluster with Custom Pack Values
+
+```terraform
+data "spectrocloud_cloudaccount_cloudstack" "account" {
+  name = var.cloudstack_account_name
+}
+
+data "spectrocloud_cluster_profile" "profile" {
+  name = var.cluster_profile_name
+}
+
+resource "spectrocloud_cluster_cloudstack" "cluster_custom" {
+  name             = "cloudstack-cluster-custom"
+  cloud_account_id = data.spectrocloud_cloudaccount_cloudstack.account.id
+
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+
+    # Override pack values
+    pack {
+      name   = "kubernetes"
+      tag    = "1.28.0"
+      values = <<-EOT
+        pack:
+          k8sHardening: true
+          podCIDR: "192.168.0.0/16"
+          serviceCIDR: "10.96.0.0/12"
+      EOT
+    }
+    
+    pack {
+      name   = "cni-calico"
+      tag    = "3.26.x"
+      values = <<-EOT
+        manifests:
+          calico:
+            env:
+              calicoBackend: "bird"
+      EOT
+    }
+  }
+
+  cloud_config {
+    domain       = "development"
+    ssh_key_name = "dev-key"
+    
+    zone {
+      name = "zone1"
+      network {
+        name = "dev-network"
+      }
+    }
+  }
+
+  machine_pool {
+    name          = "control-plane-pool"
+    count         = 1
+    control_plane = true
+    
+    template = "ubuntu-22.04-kube-v1.28.0"
+    offering = "Small Instance"
+  }
+
+  machine_pool {
+    name  = "worker-pool"
+    count = 2
+    
+    template = "ubuntu-22.04-kube-v1.28.0"
+    offering = "Medium Instance"
+  }
+}
+```
+
+## Import
+
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+to import the resource {{ .Name }} by using its `id` with the Palette `context` separated by a colon. For example:
+
+```terraform
+import {
+  to = {{ .Name }}.example
+  id = "example_id:context"
+}
+```
+
+Using `terraform import`, import the cluster using the `id` colon separated with `context`. For example:
+
+```console
+terraform import {{ .Name }}.example example_id:project
+```
+
+Refer to the [Import section](/docs#import) to learn more.
+
+{{ .SchemaMarkdown | trimspace }}
+
