@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -14,6 +15,15 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
+
+// safeInt32Conversion safely converts int to int32 with overflow protection
+// Returns the converted value and true if conversion is safe, or defaultVal and false if overflow would occur
+func safeInt32Conversion(value int, defaultVal int32) int32 {
+	if value < math.MinInt32 || value > math.MaxInt32 {
+		return defaultVal
+	}
+	return int32(value)
+}
 
 func resourceClusterCloudStack() *schema.Resource {
 	return &schema.Resource{
@@ -496,17 +506,11 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		Name: "",
 	}
 
-	// Safe conversion for root disk size
-	rootDiskSize := mp["root_disk_size_gb"].(int)
-	if rootDiskSize < 0 || rootDiskSize > 2147483647 {
-		rootDiskSize = 0 // Use 0 as default for invalid values
-	}
-
 	cloudConfig := &models.V1CloudStackMachinePoolCloudConfigEntity{
 		Template:       types.Ptr(mp["template"].(string)),
 		Offering:       types.Ptr(mp["offering"].(string)),
 		DiskOffering:   mp["disk_offering"].(string),
-		RootDiskSizeGB: int32(rootDiskSize),
+		RootDiskSizeGB: safeInt32Conversion(mp["root_disk_size_gb"].(int), 0),
 		InstanceConfig: instanceConfig,
 	}
 
@@ -539,19 +543,13 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		}
 	}
 
-	// Safe conversion for pool size
-	poolSize := mp["count"].(int)
-	if poolSize < 0 || poolSize > 2147483647 {
-		poolSize = 1 // Use 1 as default minimum for invalid values
-	}
-
 	poolConfig := &models.V1MachinePoolConfigEntity{
 		AdditionalLabels: toAdditionalNodePoolLabels(mp),
 		Taints:           toClusterTaints(mp),
 		IsControlPlane:   controlPlane,
 		Labels:           labels,
 		Name:             types.Ptr(mp["name"].(string)),
-		Size:             types.Ptr(int32(poolSize)),
+		Size:             types.Ptr(safeInt32Conversion(mp["count"].(int), 1)),
 		UpdateStrategy: &models.V1UpdateStrategy{
 			Type: getUpdateStrategy(mp),
 		},
@@ -561,16 +559,16 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 	// Safe conversion for min size
 	if mp["min"] != nil {
 		minSize := mp["min"].(int)
-		if minSize > 0 && minSize <= 2147483647 {
-			poolConfig.MinSize = int32(minSize)
+		if minSize > 0 {
+			poolConfig.MinSize = safeInt32Conversion(minSize, 0)
 		}
 	}
 
 	// Safe conversion for max size
 	if mp["max"] != nil {
 		maxSize := mp["max"].(int)
-		if maxSize > 0 && maxSize <= 2147483647 {
-			poolConfig.MaxSize = int32(maxSize)
+		if maxSize > 0 {
+			poolConfig.MaxSize = safeInt32Conversion(maxSize, 0)
 		}
 	}
 
