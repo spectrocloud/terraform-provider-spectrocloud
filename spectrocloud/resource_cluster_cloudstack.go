@@ -496,11 +496,17 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		Name: "",
 	}
 
+	// Safe conversion for root disk size
+	rootDiskSize := mp["root_disk_size_gb"].(int)
+	if rootDiskSize < 0 || rootDiskSize > 2147483647 {
+		rootDiskSize = 0 // Use 0 as default for invalid values
+	}
+
 	cloudConfig := &models.V1CloudStackMachinePoolCloudConfigEntity{
 		Template:       types.Ptr(mp["template"].(string)),
 		Offering:       types.Ptr(mp["offering"].(string)),
 		DiskOffering:   mp["disk_offering"].(string),
-		RootDiskSizeGB: int32(mp["root_disk_size_gb"].(int)),
+		RootDiskSizeGB: int32(rootDiskSize),
 		InstanceConfig: instanceConfig,
 	}
 
@@ -533,24 +539,39 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		}
 	}
 
+	// Safe conversion for pool size
+	poolSize := mp["count"].(int)
+	if poolSize < 0 || poolSize > 2147483647 {
+		poolSize = 1 // Use 1 as default minimum for invalid values
+	}
+
 	poolConfig := &models.V1MachinePoolConfigEntity{
 		AdditionalLabels: toAdditionalNodePoolLabels(mp),
 		Taints:           toClusterTaints(mp),
 		IsControlPlane:   controlPlane,
 		Labels:           labels,
 		Name:             types.Ptr(mp["name"].(string)),
-		Size:             types.Ptr(int32(mp["count"].(int))),
+		Size:             types.Ptr(int32(poolSize)),
 		UpdateStrategy: &models.V1UpdateStrategy{
 			Type: getUpdateStrategy(mp),
 		},
 		UseControlPlaneAsWorker: controlPlaneAsWorker,
 	}
 
-	if mp["min"] != nil && mp["min"].(int) > 0 {
-		poolConfig.MinSize = int32(mp["min"].(int))
+	// Safe conversion for min size
+	if mp["min"] != nil {
+		minSize := mp["min"].(int)
+		if minSize > 0 && minSize <= 2147483647 {
+			poolConfig.MinSize = int32(minSize)
+		}
 	}
-	if mp["max"] != nil && mp["max"].(int) > 0 {
-		poolConfig.MaxSize = int32(mp["max"].(int))
+
+	// Safe conversion for max size
+	if mp["max"] != nil {
+		maxSize := mp["max"].(int)
+		if maxSize > 0 && maxSize <= 2147483647 {
+			poolConfig.MaxSize = int32(maxSize)
+		}
 	}
 
 	mpEntity := &models.V1CloudStackMachinePoolConfigEntity{
