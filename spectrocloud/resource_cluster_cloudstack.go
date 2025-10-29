@@ -205,6 +205,41 @@ func resourceClusterCloudStack() *schema.Resource {
 													Optional:    true,
 													Description: "Network mask for the network.",
 												},
+												"offering": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Description: "Network offering name to use when creating the network. Optional for advanced network configurations.",
+												},
+												"routing_mode": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Description: "Routing mode for the network (e.g., Static, Dynamic). Optional, defaults to CloudStack's default routing mode.",
+												},
+												"vpc": {
+													Type:     schema.TypeList,
+													Optional: true,
+													MaxItems: 1,
+													Elem: &schema.Resource{
+														Schema: map[string]*schema.Schema{
+															"name": {
+																Type:        schema.TypeString,
+																Required:    true,
+																Description: "VPC name.",
+															},
+															"cidr": {
+																Type:        schema.TypeString,
+																Optional:    true,
+																Description: "CIDR block for the VPC (e.g., 10.0.0.0/16).",
+															},
+															"offering": {
+																Type:        schema.TypeString,
+																Optional:    true,
+																Description: "VPC offering name.",
+															},
+														},
+													},
+													Description: "VPC configuration for VPC-based network deployments. Optional, only needed when deploying in a VPC.",
+												},
 											},
 										},
 										Description: "Network configuration for this zone.",
@@ -478,10 +513,22 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 			if networks, ok := zone["network"].([]interface{}); ok && len(networks) > 0 {
 				network := networks[0].(map[string]interface{})
 				zoneSpec.Network = &models.V1CloudStackNetworkSpec{
-					Name:    network["name"].(string),
-					Type:    network["type"].(string),
-					Gateway: network["gateway"].(string),
-					Netmask: network["netmask"].(string),
+					Name:        network["name"].(string),
+					Type:        network["type"].(string),
+					Gateway:     network["gateway"].(string),
+					Netmask:     network["netmask"].(string),
+					Offering:    network["offering"].(string),
+					RoutingMode: network["routing_mode"].(string),
+				}
+
+				// Process VPC configuration if present
+				if vpcs, ok := network["vpc"].([]interface{}); ok && len(vpcs) > 0 {
+					vpc := vpcs[0].(map[string]interface{})
+					zoneSpec.Network.Vpc = &models.V1CloudStackVPCSpec{
+						Name:     vpc["name"].(string),
+						Cidr:     vpc["cidr"].(string),
+						Offering: vpc["offering"].(string),
+					}
 				}
 			}
 

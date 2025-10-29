@@ -192,6 +192,107 @@ resource "spectrocloud_cluster_cloudstack" "cluster_ha" {
 }
 ```
 
+### CloudStack Cluster with VPC Networking
+
+```terraform
+data "spectrocloud_cloudaccount_cloudstack" "account" {
+  name = var.cloudstack_account_name
+}
+
+data "spectrocloud_cluster_profile" "profile" {
+  name = var.cluster_profile_name
+}
+
+resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
+  name             = "cloudstack-vpc-cluster"
+  tags             = ["env:production", "network:vpc"]
+  cloud_account_id = data.spectrocloud_cloudaccount_cloudstack.account.id
+
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+  }
+
+  cloud_config {
+    domain       = "production"
+    project      = "vpc-project"
+    ssh_key_name = "vpc-ssh-key"
+    
+    zone {
+      name = "zone1"
+      network {
+        name         = "vpc-network"
+        type         = "Isolated"
+        gateway      = "10.0.1.1"
+        netmask      = "255.255.255.0"
+        offering     = "DefaultNetworkOffering"
+        routing_mode = "Static"
+        
+        # VPC configuration for VPC-based deployments
+        vpc {
+          name     = "production-vpc"
+          cidr     = "10.0.0.0/16"
+          offering = "Default VPC Offering"
+        }
+      }
+    }
+    
+    # Additional zone in the same VPC
+    zone {
+      name = "zone2"
+      network {
+        name         = "vpc-network-zone2"
+        type         = "Isolated"
+        gateway      = "10.0.2.1"
+        netmask      = "255.255.255.0"
+        offering     = "DefaultNetworkOffering"
+        routing_mode = "Static"
+        
+        vpc {
+          name     = "production-vpc"
+          cidr     = "10.0.0.0/16"
+          offering = "Default VPC Offering"
+        }
+      }
+    }
+  }
+
+  machine_pool {
+    name                    = "vpc-control-plane"
+    count                   = 3
+    control_plane           = true
+    control_plane_as_worker = false
+    
+    template = "ubuntu-22.04-kube-v1.28.0"
+    offering = "Medium Instance"
+    
+    network {
+      network_name = "vpc-network"
+      ip_address   = "10.0.1.10"  # Static IP in VPC subnet
+    }
+  }
+
+  machine_pool {
+    name  = "vpc-workers"
+    count = 3
+    min   = 3
+    max   = 10
+    
+    template          = "ubuntu-22.04-kube-v1.28.0"
+    offering          = "Large Instance"
+    root_disk_size_gb = 200
+    
+    network {
+      network_name = "vpc-network"
+    }
+    
+    additional_labels = {
+      "vpc"      = "production-vpc"
+      "workload" = "general"
+    }
+  }
+}
+```
+
 ### CloudStack Cluster with Custom Pack Values
 
 ```terraform
@@ -359,7 +460,23 @@ Optional:
 
 - `gateway` (String) Gateway IP address for the network.
 - `netmask` (String) Network mask for the network.
+- `offering` (String) Network offering name to use when creating the network. Optional for advanced network configurations.
+- `routing_mode` (String) Routing mode for the network (e.g., Static, Dynamic). Optional, defaults to CloudStack's default routing mode.
 - `type` (String) Network type: Isolated, Shared, etc.
+- `vpc` (Block List, Max: 1) VPC configuration for VPC-based network deployments. Optional, only needed when deploying in a VPC. (see [below for nested schema](#nestedblock--cloud_config--zone--network--vpc))
+
+<a id="nestedblock--cloud_config--zone--network--vpc"></a>
+### Nested Schema for `cloud_config.zone.network.vpc`
+
+Required:
+
+- `name` (String) VPC name.
+
+Optional:
+
+- `cidr` (String) CIDR block for the VPC (e.g., 10.0.0.0/16).
+- `offering` (String) VPC offering name.
+
 
 
 

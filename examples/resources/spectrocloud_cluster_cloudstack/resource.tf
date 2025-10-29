@@ -40,6 +40,17 @@ resource "spectrocloud_cluster_cloudstack" "cluster" {
         type    = "Isolated"
         gateway = "192.168.1.1"
         netmask = "255.255.255.0"
+
+        # Optional: Advanced network configuration
+        # offering     = "DefaultNetworkOffering"
+        # routing_mode = "Static"
+
+        # Optional: VPC configuration (only for VPC-based deployments)
+        # vpc {
+        #   name     = "my-vpc"
+        #   cidr     = "10.0.0.0/16"
+        #   offering = "Default VPC Offering"
+        # }
       }
     }
 
