@@ -23,8 +23,9 @@ resource "spectrocloud_cloudaccount_cloudstack" "cloudstack_account" {
   secret_key = "your-secret-key-here"
 
   # SSL Configuration (Optional)
+  # Set insecure to true to skip SSL certificate verification
+  # Note: CloudStack must have valid SSL certificates from a trusted CA if insecure is false
   insecure = false
-  # ca_certificate = file("path/to/ca-cert.pem")  # Optional CA certificate
 }
 
 # Output the cloud account ID

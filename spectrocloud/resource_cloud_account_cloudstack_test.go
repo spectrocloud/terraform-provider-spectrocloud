@@ -25,7 +25,6 @@ func TestToCloudStackAccount(t *testing.T) {
 				"api_url":                  "https://cloudstack.example.com:8080/client/api",
 				"api_key":                  "api-key",
 				"secret_key":               "secret-key",
-				"ca_certificate":           "ca-cert-content",
 				"insecure":                 false,
 			},
 			expected: &models.V1CloudStackAccount{
@@ -38,7 +37,6 @@ func TestToCloudStackAccount(t *testing.T) {
 					APIURL:    types.Ptr("https://cloudstack.example.com:8080/client/api"),
 					APIKey:    types.Ptr("api-key"),
 					SecretKey: types.Ptr("secret-key"),
-					CaCert:    "ca-cert-content",
 					Insecure:  false,
 				},
 			},
@@ -63,7 +61,6 @@ func TestToCloudStackAccount(t *testing.T) {
 					APIURL:    types.Ptr("https://cloudstack.example.com:8080/client/api"),
 					APIKey:    types.Ptr("test-key"),
 					SecretKey: types.Ptr("test-secret"),
-					CaCert:    "",
 					Insecure:  true,
 				},
 			},
@@ -100,7 +97,6 @@ func TestToCloudStackAccount(t *testing.T) {
 				assert.Equal(t, *tt.expected.Spec.SecretKey, *result.Spec.SecretKey)
 			}
 
-			assert.Equal(t, tt.expected.Spec.CaCert, result.Spec.CaCert)
 			assert.Equal(t, tt.expected.Spec.Insecure, result.Spec.Insecure)
 		})
 	}

@@ -24,11 +24,11 @@ resource "spectrocloud_cloudaccount_cloudstack" "account" {
 }
 ```
 
-### CloudStack Cloud Account with SSL Certificate
+### CloudStack Cloud Account with SSL Verification Disabled
 
 ```terraform
-resource "spectrocloud_cloudaccount_cloudstack" "account_with_cert" {
-  name                     = "my-cloudstack-account-secure"
+resource "spectrocloud_cloudaccount_cloudstack" "account_insecure" {
+  name                     = "my-cloudstack-account-insecure"
   context                  = "project"
   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
   
@@ -36,10 +36,12 @@ resource "spectrocloud_cloudaccount_cloudstack" "account_with_cert" {
   api_key    = var.cloudstack_api_key
   secret_key = var.cloudstack_secret_key
   
-  ca_certificate = file("ca-cert.pem")
-  insecure       = false
+  # Skip SSL certificate verification (not recommended for production)
+  insecure = true
 }
 ```
+
+**Note**: CloudStack must have valid SSL certificates from a trusted CA if `insecure` is set to `false` (default). If your CloudStack instance uses self-signed certificates, you must set `insecure = true` to skip SSL verification.
 
 ### CloudStack Cloud Account in Tenant Context
 
@@ -68,9 +70,8 @@ resource "spectrocloud_cloudaccount_cloudstack" "tenant_account" {
 
 ### Optional
 
-- `ca_certificate` (String) The CA certificate for SSL verification (optional).
 - `context` (String) The context of the CloudStack configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
-- `insecure` (Boolean) Skip SSL certificate verification. Default is `false`.
+- `insecure` (Boolean) Skip SSL certificate verification. Default is `false`. Note: CloudStack must have valid SSL certificates from a trusted CA if this is false.
 
 ### Read-Only
 

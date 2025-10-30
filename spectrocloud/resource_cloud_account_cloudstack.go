@@ -60,12 +60,7 @@ func resourceCloudAccountCloudStack() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Skip SSL certificate verification. Default is `false`.",
-			},
-			"ca_certificate": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The CA certificate for SSL verification (optional).",
+				Description: "Skip SSL certificate verification. Default is `false`. Note: CloudStack must have valid SSL certificates from a trusted CA if this is false.",
 			},
 		},
 	}
@@ -120,9 +115,6 @@ func resourceCloudAccountCloudStackRead(_ context.Context, d *schema.ResourceDat
 		if err := d.Set("insecure", account.Spec.Insecure); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("ca_certificate", account.Spec.CaCert); err != nil {
-			return diag.FromErr(err)
-		}
 	}
 
 	return diags
@@ -173,7 +165,6 @@ func toCloudStackAccount(d *schema.ResourceData) *models.V1CloudStackAccount {
 			APIKey:    types.Ptr(d.Get("api_key").(string)),
 			SecretKey: types.Ptr(d.Get("secret_key").(string)),
 			Insecure:  d.Get("insecure").(bool),
-			CaCert:    d.Get("ca_certificate").(string),
 		},
 	}
 
