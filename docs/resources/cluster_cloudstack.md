@@ -47,7 +47,6 @@ resource "spectrocloud_cluster_cloudstack" "cluster" {
     count         = 3
     control_plane = true
     
-    template = "ubuntu-22.04-kube-v1.28.0"
     offering = "Medium Instance"
   }
 
@@ -55,7 +54,6 @@ resource "spectrocloud_cluster_cloudstack" "cluster" {
     name  = "worker-pool"
     count = 3
     
-    template = "ubuntu-22.04-kube-v1.28.0"
     offering = "Large Instance"
   }
 }
@@ -121,7 +119,6 @@ resource "spectrocloud_cluster_cloudstack" "cluster_ha" {
     control_plane           = true
     control_plane_as_worker = false
     
-    template           = "ubuntu-22.04-kube-v1.28.0"
     offering           = "Medium Instance"
     root_disk_size_gb  = 100
     
@@ -141,7 +138,6 @@ resource "spectrocloud_cluster_cloudstack" "cluster_ha" {
     min = 3
     max = 10
     
-    template           = "ubuntu-22.04-kube-v1.28.0"
     offering           = "Large Instance"
     root_disk_size_gb  = 200
     disk_offering      = "Custom SSD"
@@ -262,7 +258,6 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
     control_plane           = true
     control_plane_as_worker = false
     
-    template = "ubuntu-22.04-kube-v1.28.0"
     offering = "Medium Instance"
     
     network {
@@ -277,7 +272,6 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
     min   = 3
     max   = 10
     
-    template          = "ubuntu-22.04-kube-v1.28.0"
     offering          = "Large Instance"
     root_disk_size_gb = 200
     
@@ -352,7 +346,6 @@ resource "spectrocloud_cluster_cloudstack" "cluster_custom" {
     count         = 1
     control_plane = true
     
-    template = "ubuntu-22.04-kube-v1.28.0"
     offering = "Small Instance"
   }
 
@@ -360,7 +353,6 @@ resource "spectrocloud_cluster_cloudstack" "cluster_custom" {
     name  = "worker-pool"
     count = 2
     
-    template = "ubuntu-22.04-kube-v1.28.0"
     offering = "Medium Instance"
   }
 }
@@ -437,6 +429,7 @@ Optional:
 - `control_plane_endpoint` (String) Endpoint IP to be used for the API server. Should only be set for static CloudStack networks.
 - `project` (String) CloudStack project name (optional). If not specified, the cluster will be created in the domain's default project.
 - `ssh_key_name` (String) SSH key name for accessing cluster nodes.
+- `sync_with_cks` (Boolean) Determines if an external managed CKS (CloudStack Kubernetes Service) cluster should be created. Default is `false`.
 
 <a id="nestedblock--cloud_config--zone"></a>
 ### Nested Schema for `cloud_config.zone`
@@ -489,7 +482,6 @@ Required:
 - `count` (Number) Number of nodes in the machine pool.
 - `name` (String) Name of the machine pool.
 - `offering` (String) CloudStack compute offering (instance type/size) name.
-- `template` (String) CloudStack VM template (image) name to use for the instances.
 
 Optional:
 
@@ -516,7 +508,7 @@ Required:
 
 Optional:
 
-- `ip_address` (String) Static IP address to assign (optional, for static IP configuration).
+- `ip_address` (String, Deprecated) Static IP address to assign. **DEPRECATED**: This field is no longer supported by CloudStack and will be ignored.
 
 
 <a id="nestedblock--machine_pool--node"></a>

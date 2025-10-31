@@ -168,6 +168,12 @@ func resourceClusterCloudStack() *schema.Resource {
 							Optional:    true,
 							Description: "Endpoint IP to be used for the API server. Should only be set for static CloudStack networks.",
 						},
+						"sync_with_cks": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Determines if an external managed CKS (CloudStack Kubernetes Service) cluster should be created. Default is `false`.",
+						},
 						"zone": {
 							Type:     schema.TypeList,
 							Required: true,
@@ -307,11 +313,6 @@ func resourceClusterCloudStack() *schema.Resource {
 							Optional:    true,
 							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling.",
 						},
-						"template": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "CloudStack VM template (image) name to use for the instances.",
-						},
 						"offering": {
 							Type:        schema.TypeString,
 							Required:    true,
@@ -356,7 +357,8 @@ func resourceClusterCloudStack() *schema.Resource {
 									"ip_address": {
 										Type:        schema.TypeString,
 										Optional:    true,
-										Description: "Static IP address to assign (optional, for static IP configuration).",
+										Deprecated:  "This field is no longer supported by the CloudStack API and will be ignored.",
+										Description: "Static IP address to assign. **DEPRECATED**: This field is no longer supported by CloudStack and will be ignored.",
 									},
 								},
 							},
@@ -469,8 +471,14 @@ func toCloudStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 		return nil, err
 	}
 
+	// Convert metadata to input entity type
+	metadata := getClusterMetadata(d)
 	cluster := &models.V1SpectroCloudStackClusterEntity{
-		Metadata: getClusterMetadata(d),
+		Metadata: &models.V1ObjectMetaInputEntity{
+			Name:        metadata.Name,
+			Labels:      metadata.Labels,
+			Annotations: metadata.Annotations,
+		},
 		Spec: &models.V1SpectroCloudStackClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
@@ -498,6 +506,7 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 		Project:              cloudConfig["project"].(string),
 		SSHKeyName:           cloudConfig["ssh_key_name"].(string),
 		ControlPlaneEndpoint: cloudConfig["control_plane_endpoint"].(string),
+		SyncWithCKS:          cloudConfig["sync_with_cks"].(bool),
 	}
 
 	// Process zones
@@ -549,16 +558,10 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		labels = append(labels, "master")
 	}
 
-	instanceConfig := &models.V1InstanceConfig{
-		Name: "",
-	}
-
 	cloudConfig := &models.V1CloudStackMachinePoolCloudConfigEntity{
-		Template:       types.Ptr(mp["template"].(string)),
 		Offering:       types.Ptr(mp["offering"].(string)),
 		DiskOffering:   mp["disk_offering"].(string),
 		RootDiskSizeGB: safeInt32Conversion(mp["root_disk_size_gb"].(int), 0),
-		InstanceConfig: instanceConfig,
 	}
 
 	// Process affinity groups
@@ -583,8 +586,8 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		for _, n := range networks {
 			network := n.(map[string]interface{})
 			netConfig := &models.V1CloudStackNetworkConfig{
-				Network:   types.Ptr(network["network_name"].(string)),
-				IPAddress: network["ip_address"].(string),
+				Name: network["network_name"].(string),
+				// Note: IP address assignment moved to different level in new SDK
 			}
 			cloudConfig.Networks = append(cloudConfig.Networks, netConfig)
 		}
@@ -630,11 +633,10 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 func resourceMachinePoolCloudStackHash(v interface{}) int {
 	var buf string
 	m := v.(map[string]interface{})
-	buf = fmt.Sprintf("%s-%t-%t-%s-%s",
+	buf = fmt.Sprintf("%s-%t-%t-%s",
 		m["name"].(string),
 		m["control_plane"].(bool),
 		m["control_plane_as_worker"].(bool),
-		m["template"].(string),
 		m["offering"].(string),
 	)
 	return schema.HashString(buf)

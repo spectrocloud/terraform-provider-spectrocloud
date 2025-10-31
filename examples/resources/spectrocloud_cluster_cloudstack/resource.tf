@@ -70,8 +70,7 @@ resource "spectrocloud_cluster_cloudstack" "cluster" {
     control_plane           = true
     control_plane_as_worker = false
 
-    template = "ubuntu-22.04-kube-v1.28.0" # CloudStack VM template
-    offering = "Medium Instance"           # CloudStack compute offering
+    offering = "Medium Instance" # CloudStack compute offering
 
     # Optional: Disk configuration
     # disk_offering = "Custom Disk"
@@ -102,7 +101,6 @@ resource "spectrocloud_cluster_cloudstack" "cluster" {
     min = 3
     max = 10
 
-    template = "ubuntu-22.04-kube-v1.28.0"
     offering = "Large Instance"
 
     root_disk_size_gb = 200

@@ -81,7 +81,6 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
     control_plane           = true
     control_plane_as_worker = false
 
-    template = "ubuntu-22.04-kube-v1.28.0"
     offering = "Medium Instance"
 
     # VPC network configuration
@@ -100,7 +99,6 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
     min = 3
     max = 10
 
-    template = "ubuntu-22.04-kube-v1.28.0"
     offering = "Large Instance"
 
     root_disk_size_gb = 200
@@ -158,7 +156,6 @@ resource "spectrocloud_cluster_cloudstack" "shared_vpc_cluster" {
     control_plane           = true
     control_plane_as_worker = true
 
-    template = "ubuntu-22.04-kube-v1.28.0"
     offering = "Small Instance"
 
     network {
