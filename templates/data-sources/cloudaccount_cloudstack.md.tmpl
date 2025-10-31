@@ -1,0 +1,54 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace }}
+
+## Example Usage
+
+### Lookup by Name
+
+```terraform
+data "spectrocloud_cloudaccount_cloudstack" "account" {
+  name = "my-cloudstack-account"
+}
+
+output "cloudstack_account_id" {
+  value = data.spectrocloud_cloudaccount_cloudstack.account.id
+}
+```
+
+### Lookup by ID
+
+```terraform
+data "spectrocloud_cloudaccount_cloudstack" "account" {
+  id = "cloudstack-account-123456"
+}
+
+output "cloudstack_account_name" {
+  value = data.spectrocloud_cloudaccount_cloudstack.account.name
+}
+```
+
+### Use in Cluster Resource
+
+```terraform
+data "spectrocloud_cloudaccount_cloudstack" "account" {
+  name = var.cloudstack_account_name
+}
+
+resource "spectrocloud_cluster_cloudstack" "cluster" {
+  name             = "my-cloudstack-cluster"
+  cloud_account_id = data.spectrocloud_cloudaccount_cloudstack.account.id
+  
+  # ... rest of cluster configuration
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
