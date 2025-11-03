@@ -95,6 +95,8 @@ resource "spectrocloud_cluster_cloudstack" "cluster_ha" {
     zone {
       name = "zone1"
       network {
+        # Either 'id' or 'name' can be used to identify the network
+        # id      = "network-uuid-123"
         name    = "zone1-network"
         type    = "Isolated"
         gateway = "192.168.1.1"
@@ -452,6 +454,7 @@ Required:
 Optional:
 
 - `gateway` (String) Gateway IP address for the network.
+- `id` (String) Network ID in CloudStack. Either `id` or `name` can be used to identify the network. If both are specified, `id` takes precedence.
 - `netmask` (String) Network mask for the network.
 - `offering` (String) Network offering name to use when creating the network. Optional for advanced network configurations.
 - `routing_mode` (String) Routing mode for the network (e.g., Static, Dynamic). Optional, defaults to CloudStack's default routing mode.

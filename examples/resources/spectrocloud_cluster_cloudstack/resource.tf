@@ -36,6 +36,9 @@ resource "spectrocloud_cluster_cloudstack" "cluster" {
 
       # Optional: Network configuration for the zone
       network {
+        # Either 'id' or 'name' can be used to identify the network
+        # If both are specified, 'id' takes precedence
+        # id      = "network-uuid-123"
         name    = "network1"
         type    = "Isolated"
         gateway = "192.168.1.1"

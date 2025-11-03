@@ -31,6 +31,8 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
       name = "zone1"
 
       network {
+        # Either 'id' or 'name' can be used to identify the network
+        # id      = "network-uuid-vpc-123"
         name    = "vpc-network"
         type    = "Isolated"
         gateway = "10.0.1.1"

@@ -191,6 +191,11 @@ func resourceClusterCloudStack() *schema.Resource {
 										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
+												"id": {
+													Type:        schema.TypeString,
+													Optional:    true,
+													Description: "Network ID in CloudStack. Either `id` or `name` can be used to identify the network. If both are specified, `id` takes precedence.",
+												},
 												"name": {
 													Type:        schema.TypeString,
 													Required:    true,
@@ -522,6 +527,7 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 			if networks, ok := zone["network"].([]interface{}); ok && len(networks) > 0 {
 				network := networks[0].(map[string]interface{})
 				zoneSpec.Network = &models.V1CloudStackNetworkSpec{
+					ID:          network["id"].(string),
 					Name:        network["name"].(string),
 					Type:        network["type"].(string),
 					Gateway:     network["gateway"].(string),
