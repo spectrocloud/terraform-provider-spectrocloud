@@ -3,6 +3,8 @@
 .DS_Store
 terraform-provider-spectrocloud.code-workspace
 
+knowledge_base/
+
 bin
 __debug_bin*
 profile.cov
