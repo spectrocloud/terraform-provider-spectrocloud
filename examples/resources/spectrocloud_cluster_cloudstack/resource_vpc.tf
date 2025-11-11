@@ -28,6 +28,8 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
 
     # Zone with VPC network configuration
     zone {
+      # Either 'id' or 'name' can be used to identify the zone
+      # id   = "zone-uuid-vpc-1"
       name = "zone1"
 
       network {
@@ -46,6 +48,8 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
 
         # VPC configuration
         vpc {
+          # Either 'id' or 'name' can be used to identify the VPC
+          # id       = "vpc-uuid-prod-123"
           name     = "production-vpc"
           cidr     = "10.0.0.0/16"
           offering = "Default VPC Offering"
@@ -55,9 +59,11 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
 
     # Multi-zone VPC deployment
     zone {
+      # id   = "zone-uuid-vpc-2"
       name = "zone2"
 
       network {
+        # id      = "network-uuid-vpc-456"
         name    = "vpc-network-zone2"
         type    = "Isolated"
         gateway = "10.0.2.1"
@@ -68,6 +74,7 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
 
         # Same VPC, different subnet
         vpc {
+          # id       = "vpc-uuid-prod-123"
           name     = "production-vpc"
           cidr     = "10.0.0.0/16"
           offering = "Default VPC Offering"

@@ -32,6 +32,8 @@ resource "spectrocloud_cluster_cloudstack" "cluster" {
 
     # Zone configuration - CloudStack zones for multi-AZ deployment
     zone {
+      # Either 'id' or 'name' can be used to identify the zone
+      # id   = "zone-uuid-123"
       name = "zone1"
 
       # Optional: Network configuration for the zone
@@ -50,6 +52,8 @@ resource "spectrocloud_cluster_cloudstack" "cluster" {
 
         # Optional: VPC configuration (only for VPC-based deployments)
         # vpc {
+        #   # Either 'id' or 'name' can be used to identify the VPC
+        #   # id       = "vpc-uuid-456"
         #   name     = "my-vpc"
         #   cidr     = "10.0.0.0/16"
         #   offering = "Default VPC Offering"

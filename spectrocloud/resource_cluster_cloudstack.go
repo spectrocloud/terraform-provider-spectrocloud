@@ -180,6 +180,11 @@ func resourceClusterCloudStack() *schema.Resource {
 							MinItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"id": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "CloudStack zone ID. Either `id` or `name` can be used to identify the zone. If both are specified, `id` takes precedence.",
+									},
 									"name": {
 										Type:        schema.TypeString,
 										Required:    true,
@@ -232,6 +237,11 @@ func resourceClusterCloudStack() *schema.Resource {
 													MaxItems: 1,
 													Elem: &schema.Resource{
 														Schema: map[string]*schema.Schema{
+															"id": {
+																Type:        schema.TypeString,
+																Optional:    true,
+																Description: "VPC ID. Either `id` or `name` can be used to identify the VPC. If both are specified, `id` takes precedence.",
+															},
 															"name": {
 																Type:        schema.TypeString,
 																Required:    true,
@@ -507,7 +517,6 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	config := &models.V1CloudStackClusterConfig{
-		Domain:               cloudConfig["domain"].(string),
 		Project:              cloudConfig["project"].(string),
 		SSHKeyName:           cloudConfig["ssh_key_name"].(string),
 		ControlPlaneEndpoint: cloudConfig["control_plane_endpoint"].(string),
@@ -520,6 +529,7 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 		for _, z := range zones {
 			zone := z.(map[string]interface{})
 			zoneSpec := &models.V1CloudStackZoneSpec{
+				ID:   zone["id"].(string),
 				Name: zone["name"].(string),
 			}
 
@@ -540,6 +550,7 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 				if vpcs, ok := network["vpc"].([]interface{}); ok && len(vpcs) > 0 {
 					vpc := vpcs[0].(map[string]interface{})
 					zoneSpec.Network.Vpc = &models.V1CloudStackVPCSpec{
+						ID:       vpc["id"].(string),
 						Name:     vpc["name"].(string),
 						Cidr:     vpc["cidr"].(string),
 						Offering: vpc["offering"].(string),
@@ -565,9 +576,17 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 	}
 
 	cloudConfig := &models.V1CloudStackMachinePoolCloudConfigEntity{
-		Offering:       types.Ptr(mp["offering"].(string)),
-		DiskOffering:   mp["disk_offering"].(string),
+		Offering: &models.V1CloudStackResource{
+			Name: mp["offering"].(string),
+		},
 		RootDiskSizeGB: safeInt32Conversion(mp["root_disk_size_gb"].(int), 0),
+	}
+
+	// Set disk offering if provided
+	if diskOffering, ok := mp["disk_offering"].(string); ok && diskOffering != "" {
+		cloudConfig.DiskOffering = &models.V1CloudStackResource{
+			Name: diskOffering,
+		}
 	}
 
 	// Process affinity groups

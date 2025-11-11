@@ -93,6 +93,8 @@ resource "spectrocloud_cluster_cloudstack" "cluster_ha" {
     
     # Multiple zones for high availability
     zone {
+      # Either 'id' or 'name' can be used to identify the zone
+      # id   = "zone-uuid-1"
       name = "zone1"
       network {
         # Either 'id' or 'name' can be used to identify the network
@@ -216,8 +218,10 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
     ssh_key_name = "vpc-ssh-key"
     
     zone {
+      # id   = "zone-uuid-vpc-1"
       name = "zone1"
       network {
+        # id           = "network-uuid-vpc-123"
         name         = "vpc-network"
         type         = "Isolated"
         gateway      = "10.0.1.1"
@@ -227,6 +231,7 @@ resource "spectrocloud_cluster_cloudstack" "vpc_cluster" {
         
         # VPC configuration for VPC-based deployments
         vpc {
+          # id       = "vpc-uuid-prod-456"
           name     = "production-vpc"
           cidr     = "10.0.0.0/16"
           offering = "Default VPC Offering"
