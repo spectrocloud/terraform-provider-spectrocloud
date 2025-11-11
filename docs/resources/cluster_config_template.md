@@ -98,6 +98,8 @@ terraform import spectrocloud_cluster_config_template.example <template-id>
 
 ### Read-Only
 
+- `attached_cluster` (List of Object) List of clusters attached to this template. (see [below for nested schema](#nestedatt--attached_cluster))
+- `execution_state` (String) Current execution state of the cluster template. Possible values: `Pending`, `Applied`, `Failed`, `PartiallyApplied`.
 - `id` (String) The ID of this resource.
 
 <a id="nestedblock--policies"></a>
@@ -119,6 +121,23 @@ Required:
 
 - `uid` (String) UID of the cluster profile.
 
+Optional:
+
+- `variables` (Block List) List of profile variable values and assignment strategies. (see [below for nested schema](#nestedblock--profiles--variables))
+
+<a id="nestedblock--profiles--variables"></a>
+### Nested Schema for `profiles.variables`
+
+Required:
+
+- `name` (String) Name of the variable.
+
+Optional:
+
+- `assign_strategy` (String) Assignment strategy for the variable. Allowed values are `all` or `cluster`. Default is `all`.
+- `value` (String) Value of the variable to be applied to all clusters launched from this template. This value is used when assign_strategy is set to 'all'.
+
+
 
 <a id="nestedblock--timeouts"></a>
 ### Nested Schema for `timeouts`
@@ -128,3 +147,12 @@ Optional:
 - `create` (String)
 - `delete` (String)
 - `update` (String)
+
+
+<a id="nestedatt--attached_cluster"></a>
+### Nested Schema for `attached_cluster`
+
+Read-Only:
+
+- `cluster_uid` (String)
+- `name` (String)

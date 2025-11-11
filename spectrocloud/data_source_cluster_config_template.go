@@ -56,6 +56,30 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 							Computed:    true,
 							Description: "UID of the cluster profile.",
 						},
+						"variables": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "List of profile variable values and assignment strategies.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "Name of the variable.",
+									},
+									"value": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "Value of the variable to be applied to all clusters launched from this template.",
+									},
+									"assign_strategy": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "Assignment strategy for the variable. Possible values: `all` or `cluster`.",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -77,6 +101,30 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 						},
 					},
 				},
+			},
+			"attached_cluster": {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "List of clusters attached to this template.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cluster_uid": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "UID of the attached cluster.",
+						},
+						"name": {
+							Type:        schema.TypeString,
+							Computed:    true,
+							Description: "Name of the attached cluster.",
+						},
+					},
+				},
+			},
+			"execution_state": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Current execution state of the cluster template. Possible values: `Pending`, `Applied`, `Failed`, `PartiallyApplied`.",
 			},
 		},
 	}
@@ -126,6 +174,18 @@ func dataSourceClusterConfigTemplateRead(ctx context.Context, d *schema.Resource
 		}
 
 		if err := d.Set("policies", flattenClusterTemplatePolicies(template.Spec.Policies)); err != nil {
+			return diag.FromErr(err)
+		}
+
+		// Set attached clusters
+		if err := d.Set("attached_cluster", flattenAttachedClusters(template.Spec.Clusters)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	// Set execution state from status
+	if template.Status != nil {
+		if err := d.Set("execution_state", template.Status.State); err != nil {
 			return diag.FromErr(err)
 		}
 	}

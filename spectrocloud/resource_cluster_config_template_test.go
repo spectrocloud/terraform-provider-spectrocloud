@@ -22,6 +22,18 @@ func prepareBaseClusterConfigTemplateTestData() *schema.ResourceData {
 	_ = d.Set("profiles", []interface{}{
 		map[string]interface{}{
 			"uid": "test-profile-uid-1",
+			"variables": []interface{}{
+				map[string]interface{}{
+					"name":            "region",
+					"value":           "us-west-2",
+					"assign_strategy": "all",
+				},
+				map[string]interface{}{
+					"name":            "instance_type",
+					"value":           "t3.medium",
+					"assign_strategy": "all",
+				},
+			},
 		},
 	})
 	_ = d.Set("policies", []interface{}{
@@ -95,4 +107,46 @@ func TestExpandClusterTemplatePolicies(t *testing.T) {
 	assert.Len(t, result, 1)
 	assert.Equal(t, "policy-uid-1", result[0].UID)
 	assert.Equal(t, "maintenance", result[0].Kind)
+}
+
+func TestProfileStructureChanged(t *testing.T) {
+	// Test case 1: Different number of profiles
+	oldProfiles := []interface{}{
+		map[string]interface{}{"uid": "profile-1"},
+	}
+	newProfiles := []interface{}{
+		map[string]interface{}{"uid": "profile-1"},
+		map[string]interface{}{"uid": "profile-2"},
+	}
+	assert.True(t, profileStructureChanged(oldProfiles, newProfiles), "Should detect added profile")
+
+	// Test case 2: Same number but different UIDs
+	oldProfiles = []interface{}{
+		map[string]interface{}{"uid": "profile-1"},
+		map[string]interface{}{"uid": "profile-2"},
+	}
+	newProfiles = []interface{}{
+		map[string]interface{}{"uid": "profile-1"},
+		map[string]interface{}{"uid": "profile-3"},
+	}
+	assert.True(t, profileStructureChanged(oldProfiles, newProfiles), "Should detect changed profile UID")
+
+	// Test case 3: Same UIDs, only variables changed
+	oldProfiles = []interface{}{
+		map[string]interface{}{
+			"uid": "profile-1",
+			"variables": []interface{}{
+				map[string]interface{}{"name": "var1", "value": "old"},
+			},
+		},
+	}
+	newProfiles = []interface{}{
+		map[string]interface{}{
+			"uid": "profile-1",
+			"variables": []interface{}{
+				map[string]interface{}{"name": "var1", "value": "new"},
+			},
+		},
+	}
+	assert.False(t, profileStructureChanged(oldProfiles, newProfiles), "Should not detect change when only variables differ")
 }
