@@ -13,11 +13,16 @@ description: |-
 
 ```terraform
 data "spectrocloud_cluster_config_policy" "policy" {
-  name = "weekly-maintenance-policy"
+  name    = "weekly-maintenance-policy"
+  context = "project"
 }
 
 output "policy_schedules" {
   value = data.spectrocloud_cluster_config_policy.policy.schedules
+}
+
+output "policy_tags" {
+  value = data.spectrocloud_cluster_config_policy.policy.tags
 }
 ```
 

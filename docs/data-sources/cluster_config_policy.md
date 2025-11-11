@@ -13,11 +13,16 @@ description: |-
 
 ```terraform
 data "spectrocloud_cluster_config_policy" "policy" {
-  name = "weekly-maintenance-policy"
+  name    = "weekly-maintenance-policy"
+  context = "project"
 }
 
 output "policy_schedules" {
   value = data.spectrocloud_cluster_config_policy.policy.schedules
+}
+
+output "policy_tags" {
+  value = data.spectrocloud_cluster_config_policy.policy.tags
 }
 ```
 
@@ -28,10 +33,15 @@ output "policy_schedules" {
 
 - `name` (String) The name of the cluster config policy.
 
+### Optional
+
+- `context` (String) The context of the cluster config policy. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.
 - `schedules` (List of Object) List of maintenance schedules for the policy. (see [below for nested schema](#nestedatt--schedules))
+- `tags` (Set of String) Tags assigned to the cluster config policy.
 
 <a id="nestedatt--schedules"></a>
 ### Nested Schema for `schedules`

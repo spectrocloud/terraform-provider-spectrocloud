@@ -11,6 +11,12 @@ import (
 func prepareBaseClusterConfigPolicyTestData() *schema.ResourceData {
 	d := resourceClusterConfigPolicy().TestResourceData()
 	_ = d.Set("name", "test-cluster-config-policy")
+	_ = d.Set("context", "project")
+	tags := schema.NewSet(schema.HashString, []interface{}{
+		"env:production",
+		"team:devops",
+	})
+	_ = d.Set("tags", tags)
 	_ = d.Set("schedules", []interface{}{
 		map[string]interface{}{
 			"name":         "weekly-maintenance",

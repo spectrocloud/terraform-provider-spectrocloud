@@ -18,5 +18,12 @@ variable "sc_project_name" {
 variable "policy_name" {
   description = "Name of the cluster config policy"
   type        = string
+  default     = "tenant-policy"
+}
+
+variable "policy_context" {
+  description = "Context of the cluster config policy (project or tenant)"
+  type        = string
+  default     = "tenant"
 }
 

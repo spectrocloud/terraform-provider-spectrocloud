@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -32,6 +33,23 @@ func resourceClusterConfigPolicy() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The name of the cluster config policy.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Description: "The context of the cluster config policy. Allowed values are `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Assign tags to the cluster config policy. Tags can be in the format `key:value` or just `key`.",
 			},
 			"schedules": {
 				Type:        schema.TypeList,
@@ -62,11 +80,12 @@ func resourceClusterConfigPolicy() *schema.Resource {
 }
 
 func resourceClusterConfigPolicyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
 
 	policy := &models.V1SpcPolicyEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name:   d.Get("name").(string),
+			Labels: toTags(d),
 		},
 		Spec: &models.V1SpcPolicySpec{
 			Schedules: expandClusterConfigPolicySchedules(d.Get("schedules").([]interface{})),
@@ -83,7 +102,7 @@ func resourceClusterConfigPolicyCreate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceClusterConfigPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
 	var diags diag.Diagnostics
 	uid := d.Id()
 
@@ -93,6 +112,10 @@ func resourceClusterConfigPolicyRead(ctx context.Context, d *schema.ResourceData
 	}
 
 	if err := d.Set("name", policy.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set("tags", flattenTags(policy.Metadata.Labels)); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -106,11 +129,12 @@ func resourceClusterConfigPolicyRead(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceClusterConfigPolicyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
 
 	policy := &models.V1SpcPolicyEntity{
 		Metadata: &models.V1ObjectMeta{
-			Name: d.Get("name").(string),
+			Name:   d.Get("name").(string),
+			Labels: toTags(d),
 		},
 		Spec: &models.V1SpcPolicySpec{
 			Schedules: expandClusterConfigPolicySchedules(d.Get("schedules").([]interface{})),
@@ -126,7 +150,7 @@ func resourceClusterConfigPolicyUpdate(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceClusterConfigPolicyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
 
 	err := c.DeleteClusterConfigPolicy(d.Id())
 	if err != nil {

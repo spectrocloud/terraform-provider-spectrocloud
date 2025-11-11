@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func dataSourceClusterConfigPolicy() *schema.Resource {
@@ -16,6 +17,23 @@ func dataSourceClusterConfigPolicy() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The name of the cluster config policy.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Description: "The context of the cluster config policy. Allowed values are `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Computed: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Tags assigned to the cluster config policy.",
 			},
 			"schedules": {
 				Type:        schema.TypeList,
@@ -46,7 +64,7 @@ func dataSourceClusterConfigPolicy() *schema.Resource {
 }
 
 func dataSourceClusterConfigPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
 	var diags diag.Diagnostics
 
 	name := d.Get("name").(string)
@@ -63,6 +81,10 @@ func dataSourceClusterConfigPolicyRead(ctx context.Context, d *schema.ResourceDa
 	d.SetId(policy.Metadata.UID)
 
 	if err := d.Set("name", policy.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := d.Set("tags", flattenTags(policy.Metadata.Labels)); err != nil {
 		return diag.FromErr(err)
 	}
 
