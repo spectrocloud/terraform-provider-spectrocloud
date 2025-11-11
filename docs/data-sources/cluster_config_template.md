@@ -11,17 +11,37 @@ description: |-
 
 ## Example Usage
 
+### Project-Level Template
+
 ```terraform
 data "spectrocloud_cluster_config_template" "template" {
-  name = "aws-prod-template"
+  name    = var.template_name
+  context = "project"
 }
 
 output "template_cloud_type" {
   value = data.spectrocloud_cluster_config_template.template.cloud_type
 }
 
-output "template_profiles" {
-  value = data.spectrocloud_cluster_config_template.template.profiles
+output "template_tags" {
+  value = data.spectrocloud_cluster_config_template.template.tags
+}
+
+output "template_description" {
+  value = data.spectrocloud_cluster_config_template.template.description
+}
+```
+
+### Tenant-Level Template
+
+```terraform
+data "spectrocloud_cluster_config_template" "tenant_template" {
+  name    = "organization-wide-template"
+  context = "tenant"
+}
+
+output "tenant_template_profiles" {
+  value = data.spectrocloud_cluster_config_template.tenant_template.profiles
 }
 ```
 
@@ -32,12 +52,18 @@ output "template_profiles" {
 
 - `name` (String) The name of the cluster config template.
 
+### Optional
+
+- `context` (String) The context of the cluster config template. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+
 ### Read-Only
 
 - `cloud_type` (String) The cloud type for the cluster template.
+- `description` (String) The description of the cluster config template.
 - `id` (String) The ID of this resource.
 - `policies` (List of Object) List of policy references. (see [below for nested schema](#nestedatt--policies))
 - `profiles` (List of Object) List of cluster profile references. (see [below for nested schema](#nestedatt--profiles))
+- `tags` (Set of String) Tags assigned to the cluster config template.
 
 <a id="nestedatt--policies"></a>
 ### Nested Schema for `policies`
@@ -54,4 +80,3 @@ Read-Only:
 Read-Only:
 
 - `uid` (String)
-

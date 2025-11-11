@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func dataSourceClusterConfigTemplate() *schema.Resource {
@@ -16,6 +17,28 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The name of the cluster config template.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Description: "The context of the cluster config template. Allowed values are `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The description of the cluster config template.",
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Computed: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Tags assigned to the cluster config template.",
 			},
 			"cloud_type": {
 				Type:        schema.TypeString,
@@ -60,7 +83,7 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 }
 
 func dataSourceClusterConfigTemplateRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
 	var diags diag.Diagnostics
 
 	name := d.Get("name").(string)
@@ -78,6 +101,19 @@ func dataSourceClusterConfigTemplateRead(ctx context.Context, d *schema.Resource
 
 	if err := d.Set("name", template.Metadata.Name); err != nil {
 		return diag.FromErr(err)
+	}
+
+	if err := d.Set("tags", flattenTags(template.Metadata.Labels)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Get description from annotations if it exists
+	if template.Metadata.Annotations != nil {
+		if description, found := template.Metadata.Annotations["description"]; found {
+			if err := d.Set("description", description); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 
 	if template.Spec != nil {

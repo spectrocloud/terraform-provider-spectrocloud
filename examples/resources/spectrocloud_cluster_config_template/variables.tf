@@ -15,12 +15,12 @@ variable "sc_project_name" {
   default     = "Default"
 }
 
-variable "cluster_profile_infra_id" {
+variable "infra_profile_id" {
   description = "UID of the infrastructure cluster profile"
   type        = string
 }
 
-variable "cluster_profile_addon_id" {
+variable "addon_profile_id" {
   description = "UID of the addon cluster profile"
   type        = string
 }
@@ -29,4 +29,3 @@ variable "maintenance_policy_id" {
   description = "UID of the maintenance policy"
   type        = string
 }
-

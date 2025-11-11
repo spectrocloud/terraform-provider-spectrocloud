@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -32,6 +33,28 @@ func resourceClusterConfigTemplate() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The name of the cluster config template.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Description: "The context of the cluster config template. Allowed values are `project` or `tenant`. " +
+					"Default value is `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The description of the cluster config template.",
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Assign tags to the cluster config template. Tags can be in the format `key:value` or just `key`.",
 			},
 			"cloud_type": {
 				Type:        schema.TypeString,
@@ -77,12 +100,22 @@ func resourceClusterConfigTemplate() *schema.Resource {
 }
 
 func resourceClusterConfigTemplateCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
+
+	metadata := &models.V1ObjectMetaInputEntity{
+		Name:   d.Get("name").(string),
+		Labels: toTags(d),
+	}
+
+	// Add description to annotations if provided
+	if description, ok := d.GetOk("description"); ok {
+		metadata.Annotations = map[string]string{
+			"description": description.(string),
+		}
+	}
 
 	template := &models.V1ClusterTemplateEntity{
-		Metadata: &models.V1ObjectMetaInputEntity{
-			Name: d.Get("name").(string),
-		},
+		Metadata: metadata,
 		Spec: &models.V1ClusterTemplateEntitySpec{
 			CloudType: d.Get("cloud_type").(string),
 			Profiles:  expandClusterTemplateProfiles(d.Get("profiles").([]interface{})),
@@ -100,7 +133,7 @@ func resourceClusterConfigTemplateCreate(ctx context.Context, d *schema.Resource
 }
 
 func resourceClusterConfigTemplateRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
 	var diags diag.Diagnostics
 	uid := d.Id()
 
@@ -111,6 +144,19 @@ func resourceClusterConfigTemplateRead(ctx context.Context, d *schema.ResourceDa
 
 	if err := d.Set("name", template.Metadata.Name); err != nil {
 		return diag.FromErr(err)
+	}
+
+	if err := d.Set("tags", flattenTags(template.Metadata.Labels)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Get description from annotations if it exists
+	if template.Metadata.Annotations != nil {
+		if description, found := template.Metadata.Annotations["description"]; found {
+			if err := d.Set("description", description); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 
 	if template.Spec != nil {
@@ -131,12 +177,22 @@ func resourceClusterConfigTemplateRead(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceClusterConfigTemplateUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
+
+	metadataEntity := &models.V1ObjectMetaInputEntity{
+		Name:   d.Get("name").(string),
+		Labels: toTags(d),
+	}
+
+	// Add description to annotations if provided
+	if description, ok := d.GetOk("description"); ok {
+		metadataEntity.Annotations = map[string]string{
+			"description": description.(string),
+		}
+	}
 
 	metadata := &models.V1ObjectMetaInputEntitySchema{
-		Metadata: &models.V1ObjectMetaInputEntity{
-			Name: d.Get("name").(string),
-		},
+		Metadata: metadataEntity,
 	}
 
 	err := c.UpdateClusterConfigTemplate(d.Id(), metadata)
@@ -148,7 +204,7 @@ func resourceClusterConfigTemplateUpdate(ctx context.Context, d *schema.Resource
 }
 
 func resourceClusterConfigTemplateDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	c := getV1ClientWithResourceContext(m, d.Get("context").(string))
 
 	err := c.DeleteClusterConfigTemplate(d.Id())
 	if err != nil {

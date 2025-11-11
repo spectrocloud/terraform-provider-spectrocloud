@@ -11,6 +11,13 @@ import (
 func prepareBaseClusterConfigTemplateTestData() *schema.ResourceData {
 	d := resourceClusterConfigTemplate().TestResourceData()
 	_ = d.Set("name", "test-cluster-config-template")
+	_ = d.Set("context", "project")
+	_ = d.Set("description", "Test cluster config template")
+	tags := schema.NewSet(schema.HashString, []interface{}{
+		"env:test",
+		"team:platform",
+	})
+	_ = d.Set("tags", tags)
 	_ = d.Set("cloud_type", "aws")
 	_ = d.Set("profiles", []interface{}{
 		map[string]interface{}{

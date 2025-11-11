@@ -11,36 +11,72 @@ description: |-
 
 ## Example Usage
 
-Basic cluster config template with profiles and policies.
+### Basic Cluster Config Template
 
 ```terraform
-resource "spectrocloud_cluster_config_template" "aws_template" {
-  name       = "aws-prod-template"
-  cloud_type = "aws"
+resource "spectrocloud_cluster_config_template" "basic_template" {
+  name        = "basic-aws-template"
+  cloud_type  = "aws"
+  context     = "project"
+  description = "Basic AWS cluster configuration template"
+  
+  tags = ["env:production", "team:platform"]
 
   profiles {
-    uid = spectrocloud_cluster_profile.infra.id
+    uid = spectrocloud_cluster_profile.infra_profile.id
   }
 
   profiles {
-    uid = spectrocloud_cluster_profile.addon.id
+    uid = spectrocloud_cluster_profile.addon_profile.id
+  }
+}
+```
+
+### Template with Maintenance Policy
+
+```terraform
+resource "spectrocloud_cluster_config_template" "template_with_policy" {
+  name        = "aws-template-with-maintenance"
+  cloud_type  = "aws"
+  context     = "project"
+  description = "AWS cluster template with maintenance policy"
+  
+  tags = ["env:staging", "critical", "automated"]
+
+  profiles {
+    uid = spectrocloud_cluster_profile.infra_profile.id
   }
 
   policies {
-    uid  = spectrocloud_cluster_config_policy.maintenance.id
+    uid  = spectrocloud_cluster_config_policy.weekly_maintenance.id
     kind = "maintenance"
   }
 }
 ```
 
-Minimal cluster config template with just the required fields.
+### Tenant-Level Template
 
 ```terraform
-resource "spectrocloud_cluster_config_template" "minimal" {
-  name       = "minimal-template"
-  cloud_type = "azure"
+resource "spectrocloud_cluster_config_template" "tenant_template" {
+  name        = "organization-wide-template"
+  cloud_type  = "azure"
+  context     = "tenant"
+  description = "Organization-wide Azure cluster template"
+  
+  tags = ["tenant:wide", "compliance:required"]
+
+  profiles {
+    uid = spectrocloud_cluster_profile.base_profile.id
+  }
 }
 ```
 
-{{ .SchemaMarkdown | trimspace }}
+## Import
 
+Cluster config templates can be imported using the template ID:
+
+```shell
+terraform import spectrocloud_cluster_config_template.example <template-id>
+```
+
+{{ .SchemaMarkdown | trimspace }}

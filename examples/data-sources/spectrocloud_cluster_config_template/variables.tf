@@ -20,3 +20,9 @@ variable "template_name" {
   type        = string
 }
 
+variable "template_context" {
+  description = "Context of the cluster config template (project or tenant)"
+  type        = string
+  default     = "project"
+}
+

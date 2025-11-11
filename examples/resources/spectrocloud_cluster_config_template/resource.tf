@@ -1,26 +1,29 @@
 resource "spectrocloud_cluster_config_template" "aws_template" {
   name       = "aws-prod-template"
   cloud_type = "aws"
-
-  profiles {
-    uid = var.cluster_profile_infra_id
-  }
-
-  profiles {
-    uid = var.cluster_profile_addon_id
-  }
+  context    = "project"
 
   policies {
     uid  = var.maintenance_policy_id
     kind = "maintenance"
   }
+
+  profiles {
+    uid = var.addon_profile_id
+  }
+
+  profiles {
+    uid = "69130518a2d75382d3f0ee89"
+  }
+
+ 
 }
 
 # Minimal example
-resource "spectrocloud_cluster_config_template" "minimal" {
-  name       = "minimal-template"
-  cloud_type = "azure"
-}
+# resource "spectrocloud_cluster_config_template" "minimal" {
+#   name       = "minimal-template"
+#   cloud_type = "azure"
+# }
 
 # Import example
 # import {
