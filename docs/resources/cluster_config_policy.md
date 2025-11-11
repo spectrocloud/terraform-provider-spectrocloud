@@ -73,7 +73,7 @@ resource "spectrocloud_cluster_config_policy" "tenant_policy" {
 ### Optional
 
 - `context` (String) The context of the cluster config policy. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
-- `schedules` (Block List) List of maintenance schedules for the policy. (see [below for nested schema](#nestedblock--schedules))
+- `schedules` (Block Set) Set of maintenance schedules for the policy. (see [below for nested schema](#nestedblock--schedules))
 - `tags` (Set of String) Assign tags to the cluster config policy. Tags can be in the format `key:value` or just `key`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 

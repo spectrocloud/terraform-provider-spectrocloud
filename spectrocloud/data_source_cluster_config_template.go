@@ -46,9 +46,9 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 				Description: "The cloud type for the cluster template.",
 			},
 			"profiles": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Computed:    true,
-				Description: "List of cluster profile references.",
+				Description: "Set of cluster profile references.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"uid": {
@@ -57,9 +57,9 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 							Description: "UID of the cluster profile.",
 						},
 						"variables": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Computed:    true,
-							Description: "List of profile variable values and assignment strategies.",
+							Description: "Set of profile variable values and assignment strategies.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"name": {

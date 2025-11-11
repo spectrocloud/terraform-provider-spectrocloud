@@ -17,13 +17,17 @@ func prepareBaseClusterConfigPolicyTestData() *schema.ResourceData {
 		"team:devops",
 	})
 	_ = d.Set("tags", tags)
-	_ = d.Set("schedules", []interface{}{
+
+	// Create schedules set
+	schedulesSet := schema.NewSet(resourceClusterConfigPolicyScheduleHash, []interface{}{
 		map[string]interface{}{
 			"name":         "weekly-maintenance",
 			"start_cron":   "0 2 * * SUN",
 			"duration_hrs": 4,
 		},
 	})
+	_ = d.Set("schedules", schedulesSet)
+
 	d.SetId("test-cluster-config-policy-id")
 	return d
 }

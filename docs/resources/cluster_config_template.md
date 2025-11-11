@@ -91,8 +91,8 @@ terraform import spectrocloud_cluster_config_template.example <template-id>
 
 - `context` (String) The context of the cluster config template. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster config template.
-- `policies` (Block List) List of policy references. (see [below for nested schema](#nestedblock--policies))
-- `profiles` (Block List) List of cluster profile references. (see [below for nested schema](#nestedblock--profiles))
+- `policies` (Block List, Max: 1) List of policy references. (see [below for nested schema](#nestedblock--policies))
+- `profiles` (Block Set) Set of cluster profile references. (see [below for nested schema](#nestedblock--profiles))
 - `tags` (Set of String) Assign tags to the cluster config template. Tags can be in the format `key:value` or just `key`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
@@ -123,7 +123,7 @@ Required:
 
 Optional:
 
-- `variables` (Block List) List of profile variable values and assignment strategies. (see [below for nested schema](#nestedblock--profiles--variables))
+- `variables` (Block Set) Set of profile variable values and assignment strategies. (see [below for nested schema](#nestedblock--profiles--variables))
 
 <a id="nestedblock--profiles--variables"></a>
 ### Nested Schema for `profiles.variables`

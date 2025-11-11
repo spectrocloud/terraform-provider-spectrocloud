@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -52,9 +54,10 @@ func resourceClusterConfigPolicy() *schema.Resource {
 				Description: "Assign tags to the cluster config policy. Tags can be in the format `key:value` or just `key`.",
 			},
 			"schedules": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
-				Description: "List of maintenance schedules for the policy.",
+				Description: "Set of maintenance schedules for the policy.",
+				Set:         resourceClusterConfigPolicyScheduleHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -88,7 +91,7 @@ func resourceClusterConfigPolicyCreate(ctx context.Context, d *schema.ResourceDa
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpcPolicySpec{
-			Schedules: expandClusterConfigPolicySchedules(d.Get("schedules").([]interface{})),
+			Schedules: expandClusterConfigPolicySchedules(d.Get("schedules").(*schema.Set).List()),
 		},
 	}
 
@@ -137,7 +140,7 @@ func resourceClusterConfigPolicyUpdate(ctx context.Context, d *schema.ResourceDa
 			Labels: toTags(d),
 		},
 		Spec: &models.V1SpcPolicySpec{
-			Schedules: expandClusterConfigPolicySchedules(d.Get("schedules").([]interface{})),
+			Schedules: expandClusterConfigPolicySchedules(d.Get("schedules").(*schema.Set).List()),
 		},
 	}
 
@@ -176,6 +179,24 @@ func resourceClusterConfigPolicyImport(ctx context.Context, d *schema.ResourceDa
 
 // Helper functions for expanding and flattening
 
+// Hash function for schedule set
+func resourceClusterConfigPolicyScheduleHash(v interface{}) int {
+	var buf strings.Builder
+	m := v.(map[string]interface{})
+
+	if name, ok := m["name"].(string); ok {
+		buf.WriteString(fmt.Sprintf("%s-", name))
+	}
+	if startCron, ok := m["start_cron"].(string); ok {
+		buf.WriteString(fmt.Sprintf("%s-", startCron))
+	}
+	if durationHrs, ok := m["duration_hrs"].(int); ok {
+		buf.WriteString(fmt.Sprintf("%d-", durationHrs))
+	}
+
+	return schema.HashString(buf.String())
+}
+
 func expandClusterConfigPolicySchedules(schedules []interface{}) []*models.V1Schedule {
 	if len(schedules) == 0 {
 		return nil
@@ -198,9 +219,9 @@ func expandClusterConfigPolicySchedules(schedules []interface{}) []*models.V1Sch
 	return result
 }
 
-func flattenClusterConfigPolicySchedules(schedules []*models.V1Schedule) []interface{} {
+func flattenClusterConfigPolicySchedules(schedules []*models.V1Schedule) *schema.Set {
 	if schedules == nil {
-		return []interface{}{}
+		return schema.NewSet(resourceClusterConfigPolicyScheduleHash, []interface{}{})
 	}
 
 	result := make([]interface{}, len(schedules))
@@ -218,5 +239,5 @@ func flattenClusterConfigPolicySchedules(schedules []*models.V1Schedule) []inter
 		result[i] = m
 	}
 
-	return result
+	return schema.NewSet(resourceClusterConfigPolicyScheduleHash, result)
 }

@@ -2,6 +2,8 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -63,9 +65,10 @@ func resourceClusterConfigTemplate() *schema.Resource {
 				Description: "The cloud type for the cluster template. Examples: 'aws', 'azure', 'gcp', 'vsphere', etc.",
 			},
 			"profiles": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
-				Description: "List of cluster profile references.",
+				Description: "Set of cluster profile references.",
+				Set:         resourceClusterConfigTemplateProfileHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"uid": {
@@ -74,9 +77,10 @@ func resourceClusterConfigTemplate() *schema.Resource {
 							Description: "UID of the cluster profile.",
 						},
 						"variables": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Optional:    true,
-							Description: "List of profile variable values and assignment strategies.",
+							Description: "Set of profile variable values and assignment strategies.",
+							Set:         resourceClusterConfigTemplateVariableHash,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"name": {
@@ -105,6 +109,7 @@ func resourceClusterConfigTemplate() *schema.Resource {
 			"policies": {
 				Type:        schema.TypeList,
 				Optional:    true,
+				MaxItems:    1, // Only one policy is supported for now
 				Description: "List of policy references.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -168,7 +173,7 @@ func resourceClusterConfigTemplateCreate(ctx context.Context, d *schema.Resource
 		Metadata: metadata,
 		Spec: &models.V1ClusterTemplateEntitySpec{
 			CloudType: d.Get("cloud_type").(string),
-			Profiles:  expandClusterTemplateProfiles(d.Get("profiles").([]interface{})),
+			Profiles:  expandClusterTemplateProfiles(d.Get("profiles").(*schema.Set).List()),
 			Policies:  expandClusterTemplatePolicies(d.Get("policies").([]interface{})),
 		},
 	}
@@ -265,14 +270,27 @@ func resourceClusterConfigTemplateUpdate(ctx context.Context, d *schema.Resource
 		}
 	}
 
+	// Handle policy updates
+	if d.HasChange("policies") {
+		policies := d.Get("policies").([]interface{})
+		policiesEntity := &models.V1ClusterTemplatePoliciesUpdateEntity{
+			Policies: expandClusterTemplatePolicies(policies),
+		}
+
+		err := c.UpdateClusterConfigTemplatePolicies(d.Id(), policiesEntity)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	// Handle profile updates (add/remove profiles or update variables)
 	if d.HasChange("profiles") {
 		oldProfiles, newProfiles := d.GetChange("profiles")
 
-		// Check if profile list structure changed (UIDs added/removed/changed)
-		if profileStructureChanged(oldProfiles.([]interface{}), newProfiles.([]interface{})) {
+		// Check if profile set structure changed (UIDs added/removed/changed)
+		if profileStructureChanged(oldProfiles, newProfiles) {
 			// Use PUT endpoint to update entire profiles list
-			profiles := newProfiles.([]interface{})
+			profiles := newProfiles.(*schema.Set).List()
 			profilesEntity := &models.V1ClusterTemplateProfilesUpdateEntity{
 				Profiles: expandClusterTemplateProfiles(profiles),
 			}
@@ -283,7 +301,7 @@ func resourceClusterConfigTemplateUpdate(ctx context.Context, d *schema.Resource
 			}
 		} else {
 			// Only variables changed within existing profiles - use PATCH endpoint
-			profiles := newProfiles.([]interface{})
+			profiles := newProfiles.(*schema.Set).List()
 			variablesEntity := buildProfilesVariablesBatchEntity(profiles)
 
 			err := c.UpdateClusterConfigTemplateProfilesVariables(d.Id(), variablesEntity)
@@ -321,12 +339,45 @@ func resourceClusterConfigTemplateImport(ctx context.Context, d *schema.Resource
 	return []*schema.ResourceData{d}, nil
 }
 
+// Hash functions for sets
+
+func resourceClusterConfigTemplateProfileHash(v interface{}) int {
+	var buf strings.Builder
+	m := v.(map[string]interface{})
+
+	if uid, ok := m["uid"].(string); ok {
+		buf.WriteString(fmt.Sprintf("%s-", uid))
+	}
+
+	return schema.HashString(buf.String())
+}
+
+func resourceClusterConfigTemplateVariableHash(v interface{}) int {
+	var buf strings.Builder
+	m := v.(map[string]interface{})
+
+	if name, ok := m["name"].(string); ok {
+		buf.WriteString(fmt.Sprintf("%s-", name))
+	}
+	if value, ok := m["value"].(string); ok {
+		buf.WriteString(fmt.Sprintf("%s-", value))
+	}
+	if strategy, ok := m["assign_strategy"].(string); ok {
+		buf.WriteString(fmt.Sprintf("%s-", strategy))
+	}
+
+	return schema.HashString(buf.String())
+}
+
 // Helper functions for expanding and flattening
 
-// profileStructureChanged checks if the profile list structure changed (UIDs added/removed/changed)
+// profileStructureChanged checks if the profile set structure changed (UIDs added/removed/changed)
 // Returns true if profiles were added, removed, or UIDs changed
 // Returns false if only variables within existing profiles changed
-func profileStructureChanged(oldProfiles, newProfiles []interface{}) bool {
+func profileStructureChanged(oldProfilesSet, newProfilesSet interface{}) bool {
+	oldProfiles := oldProfilesSet.(*schema.Set).List()
+	newProfiles := newProfilesSet.(*schema.Set).List()
+
 	// Different number of profiles = structure changed
 	if len(oldProfiles) != len(newProfiles) {
 		return true
@@ -349,7 +400,7 @@ func profileStructureChanged(oldProfiles, newProfiles []interface{}) bool {
 		}
 	}
 
-	// Same UIDs in same order = only variables changed
+	// Same UIDs = only variables changed
 	return false
 }
 
@@ -367,11 +418,13 @@ func buildProfilesVariablesBatchEntity(profiles []interface{}) *models.V1Cluster
 		p := profile.(map[string]interface{})
 		profileUID := p["uid"].(string)
 
-		// Check if this profile has variables
-		variables, hasVariables := p["variables"].([]interface{})
-		if !hasVariables || len(variables) == 0 {
+		// Check if this profile has variables (now a set)
+		variablesSet, hasVariables := p["variables"].(*schema.Set)
+		if !hasVariables || variablesSet.Len() == 0 {
 			continue
 		}
+
+		variables := variablesSet.List()
 
 		// Build variable cluster mappings
 		variableMappings := make([]*models.V1ClusterTemplateVariableClusterMapping, 0)
@@ -412,9 +465,9 @@ func expandClusterTemplateProfiles(profiles []interface{}) []*models.V1ClusterTe
 			UID: p["uid"].(string),
 		}
 
-		// Expand variables if present
-		if variables, ok := p["variables"].([]interface{}); ok && len(variables) > 0 {
-			profileEntity.Variables = expandClusterTemplateProfileVariables(variables)
+		// Expand variables if present (now a set)
+		if variablesSet, ok := p["variables"].(*schema.Set); ok && variablesSet.Len() > 0 {
+			profileEntity.Variables = expandClusterTemplateProfileVariables(variablesSet.List())
 		}
 
 		result[i] = profileEntity
@@ -466,9 +519,9 @@ func expandClusterTemplatePolicies(policies []interface{}) []*models.V1PolicyRef
 	return result
 }
 
-func flattenClusterTemplateProfiles(profiles []*models.V1ClusterTemplateProfile) []interface{} {
+func flattenClusterTemplateProfiles(profiles []*models.V1ClusterTemplateProfile) *schema.Set {
 	if profiles == nil {
-		return []interface{}{}
+		return schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{})
 	}
 
 	result := make([]interface{}, len(profiles))
@@ -477,20 +530,22 @@ func flattenClusterTemplateProfiles(profiles []*models.V1ClusterTemplateProfile)
 			"uid": profile.UID,
 		}
 
-		// Flatten variables if present
+		// Flatten variables if present (now returns a set)
 		if len(profile.Variables) > 0 {
 			profileMap["variables"] = flattenClusterTemplateProfileVariables(profile.Variables)
+		} else {
+			profileMap["variables"] = schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{})
 		}
 
 		result[i] = profileMap
 	}
 
-	return result
+	return schema.NewSet(resourceClusterConfigTemplateProfileHash, result)
 }
 
-func flattenClusterTemplateProfileVariables(variables []*models.V1ClusterTemplateVariable) []interface{} {
+func flattenClusterTemplateProfileVariables(variables []*models.V1ClusterTemplateVariable) *schema.Set {
 	if variables == nil {
-		return []interface{}{}
+		return schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{})
 	}
 
 	result := make([]interface{}, len(variables))
@@ -510,7 +565,7 @@ func flattenClusterTemplateProfileVariables(variables []*models.V1ClusterTemplat
 		result[i] = varMap
 	}
 
-	return result
+	return schema.NewSet(resourceClusterConfigTemplateVariableHash, result)
 }
 
 func flattenClusterTemplatePolicies(policies []*models.V1PolicyRef) []interface{} {

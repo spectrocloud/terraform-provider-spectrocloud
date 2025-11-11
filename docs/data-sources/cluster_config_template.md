@@ -64,7 +64,7 @@ output "tenant_template_profiles" {
 - `execution_state` (String) Current execution state of the cluster template. Possible values: `Pending`, `Applied`, `Failed`, `PartiallyApplied`.
 - `id` (String) The ID of this resource.
 - `policies` (List of Object) List of policy references. (see [below for nested schema](#nestedatt--policies))
-- `profiles` (List of Object) List of cluster profile references. (see [below for nested schema](#nestedatt--profiles))
+- `profiles` (Set of Object) Set of cluster profile references. (see [below for nested schema](#nestedatt--profiles))
 - `tags` (Set of String) Tags assigned to the cluster config template.
 
 <a id="nestedatt--attached_cluster"></a>
@@ -91,7 +91,7 @@ Read-Only:
 Read-Only:
 
 - `uid` (String)
-- `variables` (List of Object) (see [below for nested schema](#nestedobjatt--profiles--variables))
+- `variables` (Set of Object) (see [below for nested schema](#nestedobjatt--profiles--variables))
 
 <a id="nestedobjatt--profiles--variables"></a>
 ### Nested Schema for `profiles.variables`

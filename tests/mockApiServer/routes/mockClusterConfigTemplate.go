@@ -128,6 +128,13 @@ func ClusterConfigTemplateRoutes() []Route {
 			},
 		},
 		{
+			Method: "PATCH",
+			Path:   "/v1/clusterTemplates/{uid}/policies",
+			Response: ResponseData{
+				StatusCode: 204,
+			},
+		},
+		{
 			Method: "PUT",
 			Path:   "/v1/clusterTemplates/{uid}/profiles",
 			Response: ResponseData{
