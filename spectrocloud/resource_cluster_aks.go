@@ -69,7 +69,8 @@ func resourceClusterAks() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -317,6 +318,11 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
+	// Validate that only one of cluster_profile or cluster_template is specified
+	if err := validateClusterProfileAndTemplate(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	cluster, err := toAksCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
@@ -360,6 +366,13 @@ func resourceClusterAksRead(_ context.Context, d *schema.ResourceData, m interfa
 	err = ValidateCloudType("spectrocloud_cluster_aks", cluster)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	// Set cluster_template if present
+	if cluster.Spec != nil && cluster.Spec.ClusterTemplate != nil {
+		if err := d.Set("cluster_template", flattenClusterTemplate(cluster.Spec.ClusterTemplate)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	configUID := cluster.Spec.CloudConfigRef.UID
@@ -517,6 +530,12 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+
+	// Validate cluster_template doesn't support day 2 operations
+	if err := validateClusterTemplateUpdate(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -646,6 +665,7 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		Spec: &models.V1SpectroAzureClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
+			ClusterTemplate: toClusterTemplate(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AzureClusterConfig{
 				Location:      types.Ptr(cloudConfigMap["region"].(string)),
