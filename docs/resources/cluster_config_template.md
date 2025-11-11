@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cluster_config_template Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  A resource for creating and managing cluster config templates.
+  A resource for creating and managing cluster config templates. Tech Preview: This resource is in tech preview and may undergo changes.
 ---
 
 # spectrocloud_cluster_config_template (Resource)
 
-  A resource for creating and managing cluster config templates.
+  A resource for creating and managing cluster config templates. Tech Preview: This resource is in tech preview and may undergo changes.
 
 ## Example Usage
 

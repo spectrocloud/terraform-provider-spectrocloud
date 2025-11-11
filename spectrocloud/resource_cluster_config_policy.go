@@ -21,7 +21,7 @@ func resourceClusterConfigPolicy() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterConfigPolicyImport,
 		},
-		Description: "A resource for creating and managing cluster config policies (maintenance policies).",
+		Description: "A resource for creating and managing cluster config policies (maintenance policies). **Tech Preview**: This resource is in tech preview and may undergo changes.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

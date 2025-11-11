@@ -21,7 +21,7 @@ func resourceClusterConfigTemplate() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterConfigTemplateImport,
 		},
-		Description: "A resource for creating and managing cluster config templates.",
+		Description: "A resource for creating and managing cluster config templates. **Tech Preview**: This resource is in tech preview and may undergo changes.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
