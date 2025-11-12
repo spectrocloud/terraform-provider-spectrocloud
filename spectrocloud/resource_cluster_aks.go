@@ -318,11 +318,6 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	// Validate that only one of cluster_profile or cluster_template is specified
-	if err := validateClusterProfileAndTemplate(d); err != nil {
-		return diag.FromErr(err)
-	}
-
 	cluster, err := toAksCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)

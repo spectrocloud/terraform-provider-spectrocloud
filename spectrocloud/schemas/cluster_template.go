@@ -6,10 +6,8 @@ import (
 
 func ClusterTemplateSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:     schema.TypeString,
-		Optional: true,
-		Description: "[Tech Preview] The ID of the cluster template. When a cluster is launched using a template, the packs configuration is automatically derived from the template. " +
-			"Note: cluster_profile and cluster_template are mutually exclusive. Only one can be specified. " +
-			"Cluster template does not support day 2 operations - changing the template after cluster creation is not allowed.",
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "[Tech Preview] The ID of the cluster template. When a cluster is launched using a template, the packs configuration is automatically derived from the template. Cluster template does not support day 2 operations - changing the template after cluster creation is not allowed.",
 	}
 }
