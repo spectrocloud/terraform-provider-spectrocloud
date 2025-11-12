@@ -157,7 +157,7 @@ func resourceClusterConfigTemplate() *schema.Resource {
 				Description: "Timestamp to trigger an immediate upgrade for all clusters launched from this template. " +
 					"NOTE: The upgrade executes immediately when this value changes - the timestamp does NOT schedule a future upgrade. " +
 					"Set this to the current timestamp each time you want to trigger an upgrade. " +
-					"This field can be also used for tracking when upgrades were triggered by user. " +
+					"This field can also be used for tracking when upgrades were triggered by the user. " +
 					"Format: RFC3339 (e.g., '2024-01-15T10:30:00Z'). " +
 					"Example: To trigger an upgrade now, set to current time like '2024-11-12T15:30:00Z'.",
 			},

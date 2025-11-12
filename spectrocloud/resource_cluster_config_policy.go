@@ -53,6 +53,12 @@ func resourceClusterConfigPolicy() *schema.Resource {
 				},
 				Description: "Assign tags to the cluster config policy. Tags can be in the format `key:value` or just `key`.",
 			},
+			"policy_type": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "maintenance",
+				Description: "Type of the policy. Allowed values are `maintenance` or `upgrade`(not supported yet). Default value is `maintenance`.",
+			},
 			"schedules": {
 				Type:        schema.TypeSet,
 				Optional:    true,
