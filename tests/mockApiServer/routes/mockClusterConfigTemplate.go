@@ -155,5 +155,12 @@ func ClusterConfigTemplateRoutes() []Route {
 				StatusCode: 204,
 			},
 		},
+		{
+			Method: "PATCH",
+			Path:   "/v1/spectroclusters/clusterTemplates/{uid}/clusters/upgrade",
+			Response: ResponseData{
+				StatusCode: 204,
+			},
+		},
 	}
 }

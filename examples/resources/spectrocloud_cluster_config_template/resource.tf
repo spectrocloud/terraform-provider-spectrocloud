@@ -36,21 +36,32 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
     #   assign_strategy = "cluster" # Cluster-specific override
     # }
   }
+
+  # Trigger immediate cluster upgrade by setting/changing this timestamp
+  # NOTE: This triggers NOW - it does NOT schedule a future upgrade
+  # Set to current timestamp to trigger: upgrade_now = "2024-11-12T15:30:00Z"
 }
 
 # Example showing day 2 operations:
 #
-# 1. Replacing policy (uses PATCH /v1/clusterTemplates/{uid}/policies):
+# 1. Triggering immediate cluster upgrades (uses PATCH /v1/spectroclusters/clusterTemplates/{uid}/clusters/upgrade):
+#    # IMPORTANT: This triggers upgrade NOW, not at the specified time!
+#    upgrade_now = "2024-01-15T10:30:00Z"  # Initial trigger (executes immediately)
+#    
+#    # To trigger another upgrade later, change to current timestamp:
+#    upgrade_now = "2024-02-20T14:00:00Z"  # Second trigger (also executes immediately)
+#
+# 2. Replacing policy (uses PATCH /v1/clusterTemplates/{uid}/policies):
 #    policies {
 #      uid  = "new-policy-uid-123"  # Changed policy UID
 #      kind = "maintenance"
 #    }
 #
-# 2. Updating only variable values (uses PATCH /v1/clusterTemplates/{uid}/profiles/variables):
+# 3. Updating only variable values (uses PATCH /v1/clusterTemplates/{uid}/profiles/variables):
 #    - Change "region" from "us-west-2" to "us-east-1"
 #    - Change "instance_type" from "t3.medium" to "t3.large"
 #
-# 3. Adding/removing profiles (uses PUT /v1/clusterTemplates/{uid}/profiles):
+# 4. Adding/removing profiles (uses PUT /v1/clusterTemplates/{uid}/profiles):
 #    - Add a new profile block with different UID
 #    - Remove an existing profile block
 #
