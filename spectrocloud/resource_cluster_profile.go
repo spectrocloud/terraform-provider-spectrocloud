@@ -42,10 +42,14 @@ func resourceClusterProfile() *schema.Resource {
 				Required: true,
 			},
 			"version": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "1.0.0", // default as in UI
-				Description: "Version of the cluster profile. Defaults to '1.0.0'.",
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "1.0.0", // default as in UI
+				Description: "Version of the cluster profile. Defaults to '1.0.0'. " +
+					"**Important**: Modifying this value will only update the version number of the existing cluster profile. " +
+					"It will NOT create a new version in Palette. " +
+					"To create a new version of a cluster profile, refer to the example at: " +
+					"https://github.com/spectrocloud/spectro-samples/tree/main/terraform/cluster-profiles",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -227,7 +231,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") {
+	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") || d.HasChanges("version") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
 		if err != nil {
