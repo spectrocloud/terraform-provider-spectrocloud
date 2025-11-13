@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 func dataSourceClusterConfigPolicy() *schema.Resource {
@@ -89,10 +90,34 @@ func dataSourceClusterConfigPolicyRead(ctx context.Context, d *schema.ResourceDa
 	}
 
 	if policy.Spec != nil {
-		if err := d.Set("schedules", flattenClusterConfigPolicySchedules(policy.Spec.Schedules)); err != nil {
+		if err := d.Set("schedules", flattenClusterConfigPolicySchedulesForDataSource(policy.Spec.Schedules)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
 	return diags
+}
+
+// flattenClusterConfigPolicySchedulesForDataSource returns a slice for use with TypeList in data sources
+func flattenClusterConfigPolicySchedulesForDataSource(schedules []*models.V1Schedule) []interface{} {
+	if schedules == nil {
+		return []interface{}{}
+	}
+
+	result := make([]interface{}, len(schedules))
+	for i, schedule := range schedules {
+		m := map[string]interface{}{}
+		if schedule.Name != nil {
+			m["name"] = *schedule.Name
+		}
+		if schedule.StartCron != nil {
+			m["start_cron"] = *schedule.StartCron
+		}
+		if schedule.DurationHrs != nil {
+			m["duration_hrs"] = int(*schedule.DurationHrs)
+		}
+		result[i] = m
+	}
+
+	return result
 }
