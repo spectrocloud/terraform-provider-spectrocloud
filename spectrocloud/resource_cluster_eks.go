@@ -86,8 +86,7 @@ func resourceClusterEks() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile":  schemas.ClusterProfileSchema(),
-			"cluster_template": schemas.ClusterTemplateSchema(),
+			"cluster_profile": schemas.ClusterProfileSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -477,13 +476,6 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	// Set cluster_template if present
-	if cluster.Spec != nil && cluster.Spec.ClusterTemplate != nil {
-		if err := d.Set("cluster_template", flattenClusterTemplate(cluster.Spec.ClusterTemplate)); err != nil {
-			return diag.FromErr(err)
-		}
-	}
-
 	diagnostics, done := readCommonFields(c, d, cluster)
 
 	// handling flatten tags_map for aws  cluster
@@ -676,11 +668,6 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	// Validate cluster_template doesn't support day 2 operations
-	if err := validateClusterTemplateUpdate(d); err != nil {
-		return diag.FromErr(err)
-	}
-
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -833,7 +820,6 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		Spec: &models.V1SpectroEksClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
-			ClusterTemplate: toClusterTemplate(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
 				BastionDisabled:  true,

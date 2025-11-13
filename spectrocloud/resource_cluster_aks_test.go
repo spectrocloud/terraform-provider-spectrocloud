@@ -1,9 +1,10 @@
 package spectrocloud
 
 import (
+	"testing"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestToMachinePoolAks(t *testing.T) {
@@ -146,93 +147,4 @@ func TestFlattenMachinePoolConfigsAks(t *testing.T) {
 	assert.Equal(t, "Standard_LRS", m1["storage_account_type"])
 	assert.Equal(t, "RollingUpdate", m1["update_strategy"])
 
-}
-
-func TestToClusterTemplateAks(t *testing.T) {
-	tests := []struct {
-		name        string
-		templateUID string
-		expectNil   bool
-	}{
-		{
-			name:        "with template UID",
-			templateUID: "template-123",
-			expectNil:   false,
-		},
-		{
-			name:        "empty template UID",
-			templateUID: "",
-			expectNil:   true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resourceData := map[string]interface{}{
-				"name":             "test-aks-cluster",
-				"cloud_account_id": "test-account",
-				"cloud_config": []interface{}{
-					map[string]interface{}{
-						"region":          "eastus",
-						"resource_group":  "test-rg",
-						"subscription_id": "test-sub",
-						"ssh_key":         "test-key",
-					},
-				},
-			}
-
-			if tt.templateUID != "" {
-				resourceData["cluster_template"] = tt.templateUID
-			}
-
-			d := resourceClusterAks().TestResourceData()
-			for k, v := range resourceData {
-				d.Set(k, v)
-			}
-
-			result := toClusterTemplate(d)
-
-			if tt.expectNil {
-				assert.Nil(t, result, "Expected nil but got %+v", result)
-			} else {
-				assert.NotNil(t, result, "Expected result but got nil")
-				assert.Equal(t, tt.templateUID, result.UID, "Expected UID '%s', got '%s'", tt.templateUID, result.UID)
-			}
-		})
-	}
-}
-
-func TestFlattenClusterTemplateAks(t *testing.T) {
-	tests := []struct {
-		name            string
-		clusterTemplate *models.V1SpectroClusterTemplateRef
-		expectedResult  string
-	}{
-		{
-			name: "with template UID",
-			clusterTemplate: &models.V1SpectroClusterTemplateRef{
-				UID: "template-123",
-			},
-			expectedResult: "template-123",
-		},
-		{
-			name:            "nil template",
-			clusterTemplate: nil,
-			expectedResult:  "",
-		},
-		{
-			name: "empty template UID",
-			clusterTemplate: &models.V1SpectroClusterTemplateRef{
-				UID: "",
-			},
-			expectedResult: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := flattenClusterTemplate(tt.clusterTemplate)
-			assert.Equal(t, tt.expectedResult, result, "Expected '%s', got '%s'", tt.expectedResult, result)
-		})
-	}
 }
