@@ -3,11 +3,12 @@ package spectrocloud
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"strings"
 )
 
 // read common fields like kubeconfig, tags, backup policy, scan policy, cluster_rbac_binding, namespaces
@@ -159,6 +160,14 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
+	// Handle cluster_template changes separately using variables API (doesn't trigger full cluster update)
+	if d.HasChange("cluster_template") {
+		if err := updateClusterTemplateVariables(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	// Handle cluster_profile changes using the existing profile update flow
 	if d.HasChanges("cluster_profile", "packs", "manifests") {
 		if err := updateProfiles(c, d); err != nil {
 			return diag.FromErr(err), true

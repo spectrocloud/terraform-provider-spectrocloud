@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -12,6 +13,139 @@ import (
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
+
+// validateProfileSource checks that only one of cluster_template or cluster_profile is specified
+func validateProfileSource(d *schema.ResourceData) error {
+	clusterTemplate := d.Get("cluster_template").([]interface{})
+	clusterProfile := d.Get("cluster_profile").([]interface{})
+
+	if len(clusterTemplate) > 0 && len(clusterProfile) > 0 {
+		return errors.New("cannot specify both cluster_template and cluster_profile. Please use only one")
+	}
+
+	return nil
+}
+
+// extractProfilesFromTemplate extracts cluster_profile data from cluster_template schema
+// and transforms it into the same structure as regular cluster_profile for processing
+func extractProfilesFromTemplate(d *schema.ResourceData) ([]interface{}, error) {
+	clusterTemplate := d.Get("cluster_template").([]interface{})
+	if len(clusterTemplate) == 0 {
+		return []interface{}{}, nil
+	}
+
+	// cluster_template is a list with single item
+	templateData := clusterTemplate[0].(map[string]interface{})
+
+	// Extract cluster_profile set from template
+	if clusterProfiles, ok := templateData["cluster_profile"]; ok && clusterProfiles != nil {
+		profilesSet := clusterProfiles.(*schema.Set)
+		rawProfiles := profilesSet.List()
+
+		// Filter out empty/invalid profiles
+		validProfiles := make([]interface{}, 0)
+		for _, profile := range rawProfiles {
+			if profile == nil {
+				continue
+			}
+
+			p, ok := profile.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			// Skip profiles without an ID
+			profileID, hasID := p["id"]
+			if !hasID || profileID == nil || profileID == "" {
+				log.Printf("extractProfilesFromTemplate: skipping profile without ID")
+				continue
+			}
+
+			validProfiles = append(validProfiles, profile)
+		}
+
+		log.Printf("extractProfilesFromTemplate: extracted %d valid profiles (filtered from %d total)", len(validProfiles), len(rawProfiles))
+		return validProfiles, nil
+	}
+
+	return []interface{}{}, nil
+}
+
+// extractProfilesFromTemplateData extracts cluster_profile data from raw cluster_template data
+// This is used during updates when we have the new template data from d.GetChange()
+func extractProfilesFromTemplateData(clusterTemplateData []interface{}) ([]interface{}, error) {
+	if len(clusterTemplateData) == 0 {
+		log.Printf("extractProfilesFromTemplateData: empty cluster template data")
+		return []interface{}{}, nil
+	}
+
+	// cluster_template is a list with single item
+	templateData := clusterTemplateData[0].(map[string]interface{})
+
+	// Extract cluster_profile set from template
+	if clusterProfiles, ok := templateData["cluster_profile"]; ok && clusterProfiles != nil {
+		profilesSet := clusterProfiles.(*schema.Set)
+		rawProfiles := profilesSet.List()
+
+		// Filter out empty/invalid profiles
+		validProfiles := make([]interface{}, 0)
+		for _, profile := range rawProfiles {
+			if profile == nil {
+				continue
+			}
+
+			p, ok := profile.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			// Skip profiles without an ID
+			profileID, hasID := p["id"]
+			if !hasID || profileID == nil || profileID == "" {
+				log.Printf("extractProfilesFromTemplateData: skipping profile without ID")
+				continue
+			}
+
+			validProfiles = append(validProfiles, profile)
+		}
+
+		log.Printf("extractProfilesFromTemplateData: extracted %d valid profiles (filtered from %d total)", len(validProfiles), len(rawProfiles))
+		return validProfiles, nil
+	}
+
+	log.Printf("extractProfilesFromTemplateData: no cluster_profile found in template data")
+	return []interface{}{}, nil
+}
+
+// resolveProfileSource determines which source to use and returns the profile data
+// Returns: (profiles, source, error) where source is "cluster_template" or "cluster_profile"
+func resolveProfileSource(d *schema.ResourceData) ([]interface{}, string, error) {
+	// First validate mutual exclusivity
+	if err := validateProfileSource(d); err != nil {
+		return nil, "", err
+	}
+
+	clusterTemplate := d.Get("cluster_template").([]interface{})
+	clusterProfile := d.Get("cluster_profile").([]interface{})
+
+	// Check cluster_template first
+	if len(clusterTemplate) > 0 {
+		profiles, err := extractProfilesFromTemplate(d)
+		if err != nil {
+			return nil, "", err
+		}
+		log.Printf("Using profiles from cluster_template")
+		return profiles, "cluster_template", nil
+	}
+
+	// Fall back to cluster_profile
+	if len(clusterProfile) > 0 {
+		log.Printf("Using profiles from cluster_profile")
+		return clusterProfile, "cluster_profile", nil
+	}
+
+	return []interface{}{}, "", nil
+}
 
 func toProfiles(c *client.V1Client, d *schema.ResourceData, clusterContext string) ([]*models.V1SpectroClusterProfileEntity, error) {
 	return toProfilesCommon(c, d, d.Id(), clusterContext)
@@ -49,7 +183,13 @@ func toProfilesCommon(c *client.V1Client, d *schema.ResourceData, clusterUID, co
 	}
 
 	resp := make([]*models.V1SpectroClusterProfileEntity, 0)
-	profiles := d.Get("cluster_profile").([]interface{})
+
+	// Resolve profile source (cluster_template or cluster_profile)
+	profiles, source, err := resolveProfileSource(d)
+	if err != nil {
+		return nil, err
+	}
+
 	if len(profiles) > 0 {
 		for _, profile := range profiles {
 			p := profile.(map[string]interface{})
@@ -66,10 +206,16 @@ func toProfilesCommon(c *client.V1Client, d *schema.ResourceData, clusterUID, co
 			}
 
 			packValues := make([]*models.V1PackValuesEntity, 0)
-			for _, pack := range p["pack"].([]interface{}) {
-				p := toPack(cluster, pack)
-				packValues = append(packValues, p)
+			// Pack values only exist in cluster_profile, not in cluster_template
+			if source == "cluster_profile" {
+				if packs, ok := p["pack"]; ok && packs != nil {
+					for _, pack := range p["pack"].([]interface{}) {
+						p := toPack(cluster, pack)
+						packValues = append(packValues, p)
+					}
+				}
 			}
+
 			resp = append(resp, &models.V1SpectroClusterProfileEntity{
 				UID:        p["id"].(string),
 				PackValues: packValues,
@@ -152,14 +298,13 @@ func setPackManifests(pack *models.V1PackValuesEntity, p map[string]interface{},
 }
 
 func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
-	log.Printf("Updating profiles")
+	log.Printf("Updating cluster_profile (not cluster_template)")
 	profiles, err := toAddonDeplProfiles(c, d)
 	var variableEntity []*models.V1SpectroClusterVariableUpdateEntity
 	if err != nil {
+		// Restore old value on error
 		oldProfile, _ := d.GetChange("cluster_profile")
-		// When profile modification failed we are setting back the un applied version back to tf state
 		_ = d.Set("cluster_profile", oldProfile)
-
 		return err
 	}
 	settings, err := toSpcApplySettings(d)
@@ -184,21 +329,43 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		return err
 	}
 
-	// Profile Variable Handling
-	_, newProfiles := d.GetChange("cluster_profile")
-	for _, newProfile := range newProfiles.([]interface{}) {
-		pVars := make([]*models.V1SpectroClusterVariable, 0)
+	// Profile Variable Handling - only for cluster_profile
+	var newProfiles []interface{}
+	if d.HasChange("cluster_profile") {
+		_, newProfilesRaw := d.GetChange("cluster_profile")
+		newProfiles = newProfilesRaw.([]interface{})
+	}
+
+	for _, newProfile := range newProfiles {
+		if newProfile == nil {
+			continue
+		}
+
 		p := newProfile.(map[string]interface{})
+
+		// Skip profiles without an ID
+		profileID, hasID := p["id"]
+		if !hasID || profileID == nil || profileID.(string) == "" {
+			log.Printf("Skipping profile without ID during variable update")
+			continue
+		}
+
+		pVars := make([]*models.V1SpectroClusterVariable, 0)
 		if pv, ok := p["variables"]; ok && pv != nil {
 			variables := p["variables"].(map[string]interface{})
 			for key, value := range variables {
-				pVars = append(pVars, &models.V1SpectroClusterVariable{
-					Name:  StringPtr(key),
-					Value: value.(string),
-				})
+				if key != "" && value != nil {
+					pVars = append(pVars, &models.V1SpectroClusterVariable{
+						Name:  StringPtr(key),
+						Value: value.(string),
+					})
+				}
 			}
 		}
+
+		// Only add to variableEntity if there are variables to update
 		if len(pVars) != 0 {
+			log.Printf("Updating variables for profile: %s with %d variables", profileID.(string), len(pVars))
 			variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
 				ProfileUID: StringPtr(p["id"].(string)),
 				Variables:  pVars,
@@ -232,4 +399,203 @@ func flattenClusterProfileForImport(c *client.V1Client, d *schema.ResourceData) 
 		clusterProfiles = append(clusterProfiles, profile)
 	}
 	return clusterProfiles, nil
+}
+
+// toClusterTemplateReference extracts cluster template reference from ResourceData
+// Returns nil if cluster_template is not specified
+func toClusterTemplateReference(d *schema.ResourceData) *models.V1ClusterTemplateRef {
+	clusterTemplate := d.Get("cluster_template").([]interface{})
+	if len(clusterTemplate) == 0 {
+		return nil
+	}
+
+	templateData := clusterTemplate[0].(map[string]interface{})
+	templateID := templateData["id"].(string)
+
+	return &models.V1ClusterTemplateRef{
+		UID: templateID,
+	}
+}
+
+// updateClusterTemplateVariables handles variable updates for cluster_template using the variables API
+// This is a separate flow from updateProfiles and only patches variables without triggering full cluster update
+func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) error {
+	log.Printf("Updating cluster_template variables using variables API")
+
+	_, newTemplateData := d.GetChange("cluster_template")
+	if len(newTemplateData.([]interface{})) == 0 {
+		return nil
+	}
+
+	// Extract profiles with variables from the new template data
+	profiles, err := extractProfilesFromTemplateData(newTemplateData.([]interface{}))
+	if err != nil {
+		return err
+	}
+
+	// Build variable update entities
+	variableEntity := make([]*models.V1SpectroClusterVariableUpdateEntity, 0)
+	for _, profile := range profiles {
+		if profile == nil {
+			continue
+		}
+
+		p := profile.(map[string]interface{})
+		profileID, hasID := p["id"]
+		if !hasID || profileID == nil || profileID.(string) == "" {
+			continue
+		}
+
+		// Extract variables
+		pVars := make([]*models.V1SpectroClusterVariable, 0)
+		if pv, ok := p["variables"]; ok && pv != nil {
+			variables := p["variables"].(map[string]interface{})
+			for key, value := range variables {
+				if key != "" && value != nil {
+					pVars = append(pVars, &models.V1SpectroClusterVariable{
+						Name:  StringPtr(key),
+						Value: value.(string),
+					})
+				}
+			}
+		}
+
+		// Only add if there are variables to update
+		if len(pVars) > 0 {
+			log.Printf("Updating variables for profile: %s with %d variables", profileID.(string), len(pVars))
+			variableEntity = append(variableEntity, &models.V1SpectroClusterVariableUpdateEntity{
+				ProfileUID: StringPtr(profileID.(string)),
+				Variables:  pVars,
+			})
+		}
+	}
+
+	// Patch variables using the variables API (not full cluster update)
+	if len(variableEntity) > 0 {
+		log.Printf("Patching %d profile variables using variables API", len(variableEntity))
+		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
+		if err != nil {
+			// Rollback on error
+			oldTemplate, _ := d.GetChange("cluster_template")
+			_ = d.Set("cluster_template", oldTemplate)
+			return err
+		}
+
+		// Refresh variables from API after update
+		log.Printf("Refreshing cluster_template variables after update")
+		if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+			log.Printf("Warning: Failed to refresh variables after update: %v", err)
+			// Don't fail the update if refresh fails
+		}
+	} else {
+		log.Printf("No variables to update for cluster_template")
+	}
+
+	return nil
+}
+
+// flattenClusterTemplateVariables reads variables from the cluster and updates only the variables
+// in the cluster_template state, keeping the profile IDs from config
+func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData, clusterUID string) error {
+	// Only process if cluster_template is used
+	clusterTemplate := d.Get("cluster_template").([]interface{})
+	if len(clusterTemplate) == 0 {
+		return nil
+	}
+
+	// Get variables from cluster using the variables API
+	clusterVars, err := c.GetClusterVariables(clusterUID)
+	if err != nil {
+		log.Printf("Error fetching cluster variables: %v", err)
+		// Don't fail read if variables API fails, just skip variable updates
+		return nil
+	}
+
+	// Build a map of profileUID -> variables
+	profileVariablesMap := make(map[string]map[string]string)
+	for _, clusterVar := range clusterVars {
+		if clusterVar.ProfileUID != nil && clusterVar.Variables != nil {
+			vars := make(map[string]string)
+			for _, v := range clusterVar.Variables {
+				if v.Name != nil && v.Value != "" {
+					vars[*v.Name] = v.Value
+				}
+			}
+			if len(vars) > 0 {
+				profileVariablesMap[*clusterVar.ProfileUID] = vars
+			}
+		}
+	}
+
+	// Get configured profile IDs from current state
+	templateData := clusterTemplate[0].(map[string]interface{})
+	templateID := templateData["id"].(string)
+	configuredProfileIDs := make(map[string]bool)
+
+	// Build updated profile set with variables from API
+	updatedProfileSet := schema.NewSet(schema.HashResource(&schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"id": {
+				Type: schema.TypeString,
+			},
+			"variables": {
+				Type: schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+		},
+	}), []interface{}{})
+
+	// Update only the profiles that were in config with latest variables from API
+	if clusterProfiles, ok := templateData["cluster_profile"]; ok && clusterProfiles != nil {
+		profilesSet := clusterProfiles.(*schema.Set)
+		for _, profile := range profilesSet.List() {
+			p := profile.(map[string]interface{})
+			profileID := p["id"].(string)
+			configuredProfileIDs[profileID] = true
+
+			// Get configured variable names from config
+			configuredVarNames := make(map[string]bool)
+			if configVars, hasVars := p["variables"]; hasVars && configVars != nil {
+				configVarsMap := configVars.(map[string]interface{})
+				for varName := range configVarsMap {
+					configuredVarNames[varName] = true
+				}
+			}
+
+			// Create updated profile with variables from API
+			updatedProfile := make(map[string]interface{})
+			updatedProfile["id"] = profileID
+
+			// Get variables from API response - only include variables that are in config
+			if apiVars, ok := profileVariablesMap[profileID]; ok && len(apiVars) > 0 {
+				// Convert map[string]string to map[string]interface{} for Set compatibility
+				// Only include variables that were in the original config
+				variablesInterface := make(map[string]interface{})
+				for k, v := range apiVars {
+					if configuredVarNames[k] {
+						variablesInterface[k] = v
+					}
+				}
+				if len(variablesInterface) > 0 {
+					updatedProfile["variables"] = variablesInterface
+				}
+			}
+
+			updatedProfileSet.Add(updatedProfile)
+		}
+	}
+
+	log.Printf("flattenClusterTemplateVariables: updated %d profiles with variables (filtered to match config)", len(configuredProfileIDs))
+
+	// Update cluster_template in state with refreshed variables
+	updatedTemplate := []interface{}{
+		map[string]interface{}{
+			"id":              templateID,
+			"cluster_profile": updatedProfileSet,
+		},
+	}
+
+	return d.Set("cluster_template", updatedTemplate)
 }
