@@ -3,7 +3,7 @@
 .DS_Store
 terraform-provider-spectrocloud.code-workspace
 
-
+# Internal knowledge base documentation
 knowledge_base/
 
 bin
