@@ -11,11 +11,40 @@ description: |-
 
 ## Example Usage
 
+### Secret Credentials
+
 ```terraform
-resource "spectrocloud_cloudaccount_aws" "aws-1" {
-  name           = "aws-1"
+resource "spectrocloud_cloudaccount_aws" "aws_secret" {
+  name                   = "aws-account-secret"
+  type                   = "secret"
   aws_secured_access_key = var.aws_access_key # or aws_access_key=<access_key>
-  aws_secret_key = var.aws_secret_key
+  aws_secret_key         = var.aws_secret_key
+  partition              = "aws"
+  policy_arns            = ["arn:aws:iam::123456789012:policy/CustomPolicy"]
+}
+```
+
+### STS Credentials
+
+```terraform
+resource "spectrocloud_cloudaccount_aws" "aws_sts" {
+  name        = "aws-account-sts"
+  type        = "sts"
+  arn         = "arn:aws:iam::123456789012:role/SpectroCloudRole"
+  external_id = "externalId123"
+  partition   = "aws"
+}
+```
+
+### EKS Pod Identity
+
+```terraform
+resource "spectrocloud_cloudaccount_aws" "aws_pod_identity" {
+  name                      = "aws-account-pod-identity"
+  type                      = "pod-identity"
+  role_arn                  = "arn:aws:iam::123456789012:role/EKSPodIdentityRole"
+  permission_boundary_arn   = "arn:aws:iam::123456789012:policy/PermissionBoundary"
+  partition                 = "aws"
 }
 ```
 
@@ -29,18 +58,20 @@ resource "spectrocloud_cloudaccount_aws" "aws-1" {
 
 ### Optional
 
-- `arn` (String) The Amazon Resource Name (ARN) associated with the AWS resource. This is used for identifying resources in AWS.
+- `arn` (String) The Amazon Resource Name (ARN) associated with the AWS resource. This is used for identifying resources in AWS. Used for STS credential type.
 - `aws_access_key` (String) The AWS access key used to authenticate. **Deprecated:** Use `aws_secured_access_key` instead for enhanced security. **Note:** This field is mutually exclusive with `aws_secured_access_key`.
 - `aws_secret_key` (String, Sensitive) The AWS secret key used in conjunction with the access key for authentication.
 - `aws_secured_access_key` (String, Sensitive) The AWS access key used to authenticate. This is a secure alternative to `aws_access_key` with sensitive attribute enabled. **Note:** This field is mutually exclusive with `aws_access_key`.
 - `context` (String) The context of the AWS configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
-- `external_id` (String, Sensitive) An optional external ID that can be used for cross-account access in AWS.
+- `external_id` (String, Sensitive) An optional external ID that can be used for cross-account access in AWS. Used for STS credential type.
 - `partition` (String) The AWS partition in which the cloud account is located. 
 Can be 'aws' for standard AWS regions or 'aws-us-gov' for AWS GovCloud (US) regions.
 Default is 'aws'.
+- `permission_boundary_arn` (String) Optional Permission Boundary ARN to limit the maximum permissions for roles created by Hubble. Used with `pod-identity` credential type.
 - `policy_arns` (Set of String) A set of ARNs for the IAM policies that should be associated with the cloud account.
 - `private_cloud_gateway_id` (String) ID of the private cloud gateway. This is the ID of the private cloud gateway that is used to connect to the private cluster endpoint.
-- `type` (String) The type of AWS credentials to use. Can be `secret` or `sts`.
+- `role_arn` (String) The IAM Role ARN for AWS EKS Pod Identity authentication. Required when type is `pod-identity`.
+- `type` (String) The type of AWS credentials to use. Can be `secret`, `sts`, or `pod-identity`.
 
 ### Read-Only
 
