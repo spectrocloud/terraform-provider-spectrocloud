@@ -78,7 +78,8 @@ func resourceClusterAws() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -390,6 +391,11 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 		return diagnostics
 	}
 
+	// Flatten cluster_template variables using variables API
+	if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return flattenCloudConfigAws(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
@@ -623,6 +629,7 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		Spec: &models.V1SpectroAwsClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
+			ClusterTemplate: toClusterTemplateReference(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1AwsClusterConfig{
 				SSHKeyName:               cloudConfig["ssh_key_name"].(string),

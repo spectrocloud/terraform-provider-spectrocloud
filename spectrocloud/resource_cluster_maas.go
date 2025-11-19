@@ -69,7 +69,8 @@ func resourceClusterMaas() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -403,6 +404,11 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 		return diagnostics
 	}
 
+	// Flatten cluster_template variables using variables API
+	if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return flattenCloudConfigMaas(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
@@ -646,6 +652,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 		Spec: &models.V1SpectroMaasClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
+			ClusterTemplate: toClusterTemplateReference(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
 				Domain:      &DomainVal,
