@@ -45,16 +45,16 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 				Computed:    true,
 				Description: "The cloud type for the cluster template.",
 			},
-			"profiles": {
+			"cluster_profile": {
 				Type:        schema.TypeSet,
 				Computed:    true,
 				Description: "Set of cluster profile references.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"uid": {
+						"id": {
 							Type:        schema.TypeString,
 							Computed:    true,
-							Description: "UID of the cluster profile.",
+							Description: "ID of the cluster profile.",
 						},
 						"variables": {
 							Type:        schema.TypeSet,
@@ -83,16 +83,16 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 					},
 				},
 			},
-			"policies": {
+			"policy": {
 				Type:        schema.TypeList,
 				Computed:    true,
 				Description: "List of policy references.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"uid": {
+						"id": {
 							Type:        schema.TypeString,
 							Computed:    true,
-							Description: "UID of the policy.",
+							Description: "ID of the policy.",
 						},
 						"kind": {
 							Type:        schema.TypeString,
@@ -169,11 +169,11 @@ func dataSourceClusterConfigTemplateRead(ctx context.Context, d *schema.Resource
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("profiles", flattenClusterTemplateProfiles(template.Spec.Profiles)); err != nil {
+		if err := d.Set("cluster_profile", flattenClusterTemplateProfiles(template.Spec.Profiles)); err != nil {
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("policies", flattenClusterTemplatePolicies(template.Spec.Policies)); err != nil {
+		if err := d.Set("policy", flattenClusterTemplatePolicies(template.Spec.Policies)); err != nil {
 			return diag.FromErr(err)
 		}
 

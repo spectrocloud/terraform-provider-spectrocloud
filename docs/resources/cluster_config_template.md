@@ -22,12 +22,12 @@ resource "spectrocloud_cluster_config_template" "basic_template" {
   
   tags = ["env:production", "team:platform"]
 
-  profiles {
-    uid = spectrocloud_cluster_profile.infra_profile.id
+  cluster_profile {
+    id = spectrocloud_cluster_profile.infra_profile.id
   }
 
-  profiles {
-    uid = spectrocloud_cluster_profile.addon_profile.id
+  cluster_profile {
+    id = spectrocloud_cluster_profile.addon_profile.id
   }
 }
 ```
@@ -43,12 +43,12 @@ resource "spectrocloud_cluster_config_template" "template_with_policy" {
   
   tags = ["env:staging", "critical", "automated"]
 
-  profiles {
-    uid = spectrocloud_cluster_profile.infra_profile.id
+  cluster_profile {
+    id = spectrocloud_cluster_profile.infra_profile.id
   }
 
-  policies {
-    uid  = spectrocloud_cluster_config_policy.weekly_maintenance.id
+  policy {
+    id   = spectrocloud_cluster_config_policy.weekly_maintenance.id
     kind = "maintenance"
   }
 }
@@ -65,8 +65,8 @@ resource "spectrocloud_cluster_config_template" "tenant_template" {
   
   tags = ["tenant:wide", "compliance:required"]
 
-  profiles {
-    uid = spectrocloud_cluster_profile.base_profile.id
+  cluster_profile {
+    id = spectrocloud_cluster_profile.base_profile.id
   }
 }
 ```
@@ -89,10 +89,10 @@ terraform import spectrocloud_cluster_config_template.example <template-id>
 
 ### Optional
 
+- `cluster_profile` (Block Set) Set of cluster profile references. (see [below for nested schema](#nestedblock--cluster_profile))
 - `context` (String) The context of the cluster config template. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster config template.
-- `policies` (Block List, Max: 1) List of policy references. (see [below for nested schema](#nestedblock--policies))
-- `profiles` (Block Set) Set of cluster profile references. (see [below for nested schema](#nestedblock--profiles))
+- `policy` (Block List, Max: 1) List of policy references. (see [below for nested schema](#nestedblock--policy))
 - `tags` (Set of String) Assign tags to the cluster config template. Tags can be in the format `key:value` or just `key`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `upgrade_now` (String) Timestamp to trigger an immediate upgrade for all clusters launched from this template. NOTE: The upgrade executes immediately when this value changes - the timestamp does NOT schedule a future upgrade. Set this to the current timestamp each time you want to trigger an upgrade. This field can also be used for tracking when upgrades were triggered by the user. Format: RFC3339 (e.g., '2024-01-15T10:30:00Z'). Example: To trigger an upgrade now, set to current time like '2024-11-12T15:30:00Z'.
@@ -103,31 +103,19 @@ terraform import spectrocloud_cluster_config_template.example <template-id>
 - `execution_state` (String) Current execution state of the cluster template. Possible values: `Pending`, `Applied`, `Failed`, `PartiallyApplied`.
 - `id` (String) The ID of this resource.
 
-<a id="nestedblock--policies"></a>
-### Nested Schema for `policies`
+<a id="nestedblock--cluster_profile"></a>
+### Nested Schema for `cluster_profile`
 
 Required:
 
-- `uid` (String) UID of the policy.
+- `id` (String) ID of the cluster profile.
 
 Optional:
 
-- `kind` (String) Kind of the policy.
+- `variables` (Block Set) Set of profile variable values and assignment strategies. (see [below for nested schema](#nestedblock--cluster_profile--variables))
 
-
-<a id="nestedblock--profiles"></a>
-### Nested Schema for `profiles`
-
-Required:
-
-- `uid` (String) UID of the cluster profile.
-
-Optional:
-
-- `variables` (Block Set) Set of profile variable values and assignment strategies. (see [below for nested schema](#nestedblock--profiles--variables))
-
-<a id="nestedblock--profiles--variables"></a>
-### Nested Schema for `profiles.variables`
+<a id="nestedblock--cluster_profile--variables"></a>
+### Nested Schema for `cluster_profile.variables`
 
 Required:
 
@@ -138,6 +126,18 @@ Optional:
 - `assign_strategy` (String) Assignment strategy for the variable. Allowed values are `all` or `cluster`. Default is `all`.
 - `value` (String) Value of the variable to be applied to all clusters launched from this template. This value is used when assign_strategy is set to 'all'.
 
+
+
+<a id="nestedblock--policy"></a>
+### Nested Schema for `policy`
+
+Required:
+
+- `id` (String) ID of the policy.
+
+Optional:
+
+- `kind` (String) Kind of the policy.
 
 
 <a id="nestedblock--timeouts"></a>

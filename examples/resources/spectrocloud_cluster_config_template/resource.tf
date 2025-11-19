@@ -4,14 +4,14 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
   context    = "project"
 
   # Only one policy is supported (MaxItems: 1)
-  # Policy can be replaced by changing the UID
-  policies {
-    uid  = "69131adb05561b51307764e5"
+  # Policy can be replaced by changing the ID
+  policy {
+    id   = "69131adb05561b51307764e5"
     kind = "maintenance"
   }
 
-  profiles {
-    uid = var.addon_profile_id
+  cluster_profile {
+    id = var.addon_profile_id
 
     # Profile variables with assignment strategies
     variables {
@@ -27,8 +27,8 @@ resource "spectrocloud_cluster_config_template" "aws_template" {
     }
   }
 
-  profiles {
-    uid = "69130518a2d75382d3f0ee89"
+  cluster_profile {
+    id = "69130518a2d75382d3f0ee89"
 
     variables {
       name            = "environment"

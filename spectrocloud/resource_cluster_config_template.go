@@ -64,17 +64,17 @@ func resourceClusterConfigTemplate() *schema.Resource {
 				ForceNew:    true,
 				Description: "The cloud type for the cluster template. Examples: 'aws', 'azure', 'gcp', 'vsphere', etc.",
 			},
-			"profiles": {
+			"cluster_profile": {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Set of cluster profile references.",
 				Set:         resourceClusterConfigTemplateProfileHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"uid": {
+						"id": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "UID of the cluster profile.",
+							Description: "ID of the cluster profile.",
 						},
 						"variables": {
 							Type:        schema.TypeSet,
@@ -106,17 +106,17 @@ func resourceClusterConfigTemplate() *schema.Resource {
 					},
 				},
 			},
-			"policies": {
+			"policy": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				MaxItems:    1, // Only one policy is supported for now
 				Description: "List of policy references.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"uid": {
+						"id": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "UID of the policy.",
+							Description: "ID of the policy.",
 						},
 						"kind": {
 							Type:        schema.TypeString,
@@ -184,8 +184,8 @@ func resourceClusterConfigTemplateCreate(ctx context.Context, d *schema.Resource
 		Metadata: metadata,
 		Spec: &models.V1ClusterTemplateEntitySpec{
 			CloudType: d.Get("cloud_type").(string),
-			Profiles:  expandClusterTemplateProfiles(d.Get("profiles").(*schema.Set).List()),
-			Policies:  expandClusterTemplatePolicies(d.Get("policies").([]interface{})),
+			Profiles:  expandClusterTemplateProfiles(d.Get("cluster_profile").(*schema.Set).List()),
+			Policies:  expandClusterTemplatePolicies(d.Get("policy").([]interface{})),
 		},
 	}
 
@@ -230,11 +230,11 @@ func resourceClusterConfigTemplateRead(ctx context.Context, d *schema.ResourceDa
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("profiles", flattenClusterTemplateProfiles(template.Spec.Profiles)); err != nil {
+		if err := d.Set("cluster_profile", flattenClusterTemplateProfiles(template.Spec.Profiles)); err != nil {
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("policies", flattenClusterTemplatePolicies(template.Spec.Policies)); err != nil {
+		if err := d.Set("policy", flattenClusterTemplatePolicies(template.Spec.Policies)); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -282,8 +282,8 @@ func resourceClusterConfigTemplateUpdate(ctx context.Context, d *schema.Resource
 	}
 
 	// Handle policy updates
-	if d.HasChange("policies") {
-		policies := d.Get("policies").([]interface{})
+	if d.HasChange("policy") {
+		policies := d.Get("policy").([]interface{})
 		policiesEntity := &models.V1ClusterTemplatePoliciesUpdateEntity{
 			Policies: expandClusterTemplatePolicies(policies),
 		}
@@ -295,10 +295,10 @@ func resourceClusterConfigTemplateUpdate(ctx context.Context, d *schema.Resource
 	}
 
 	// Handle profile updates (add/remove profiles or update variables)
-	if d.HasChange("profiles") {
-		oldProfiles, newProfiles := d.GetChange("profiles")
+	if d.HasChange("cluster_profile") {
+		oldProfiles, newProfiles := d.GetChange("cluster_profile")
 
-		// Check if profile set structure changed (UIDs added/removed/changed)
+		// Check if profile set structure changed (IDs added/removed/changed)
 		if profileStructureChanged(oldProfiles, newProfiles) {
 			// Use PUT endpoint to update entire profiles list
 			profiles := newProfiles.(*schema.Set).List()
@@ -365,8 +365,8 @@ func resourceClusterConfigTemplateProfileHash(v interface{}) int {
 	var buf strings.Builder
 	m := v.(map[string]interface{})
 
-	if uid, ok := m["uid"].(string); ok {
-		buf.WriteString(fmt.Sprintf("%s-", uid))
+	if id, ok := m["id"].(string); ok {
+		buf.WriteString(fmt.Sprintf("%s-", id))
 	}
 
 	return schema.HashString(buf.String())
@@ -391,8 +391,8 @@ func resourceClusterConfigTemplateVariableHash(v interface{}) int {
 
 // Helper functions for expanding and flattening
 
-// profileStructureChanged checks if the profile set structure changed (UIDs added/removed/changed)
-// Returns true if profiles were added, removed, or UIDs changed
+// profileStructureChanged checks if the profile set structure changed (IDs added/removed/changed)
+// Returns true if profiles were added, removed, or IDs changed
 // Returns false if only variables within existing profiles changed
 func profileStructureChanged(oldProfilesSet, newProfilesSet interface{}) bool {
 	oldProfiles := oldProfilesSet.(*schema.Set).List()
@@ -403,24 +403,24 @@ func profileStructureChanged(oldProfilesSet, newProfilesSet interface{}) bool {
 		return true
 	}
 
-	// Build a set of old profile UIDs
-	oldUIDs := make(map[string]bool)
+	// Build a set of old profile IDs
+	oldIDs := make(map[string]bool)
 	for _, p := range oldProfiles {
 		profile := p.(map[string]interface{})
-		oldUIDs[profile["uid"].(string)] = true
+		oldIDs[profile["id"].(string)] = true
 	}
 
-	// Check if all new UIDs exist in old UIDs
+	// Check if all new IDs exist in old IDs
 	for _, p := range newProfiles {
 		profile := p.(map[string]interface{})
-		uid := profile["uid"].(string)
-		if !oldUIDs[uid] {
-			// New UID found = structure changed
+		id := profile["id"].(string)
+		if !oldIDs[id] {
+			// New ID found = structure changed
 			return true
 		}
 	}
 
-	// Same UIDs = only variables changed
+	// Same IDs = only variables changed
 	return false
 }
 
@@ -436,7 +436,7 @@ func buildProfilesVariablesBatchEntity(profiles []interface{}) *models.V1Cluster
 
 	for _, profile := range profiles {
 		p := profile.(map[string]interface{})
-		profileUID := p["uid"].(string)
+		profileUID := p["id"].(string)
 
 		// Check if this profile has variables (now a set)
 		variablesSet, hasVariables := p["variables"].(*schema.Set)
@@ -482,7 +482,7 @@ func expandClusterTemplateProfiles(profiles []interface{}) []*models.V1ClusterTe
 	for i, profile := range profiles {
 		p := profile.(map[string]interface{})
 		profileEntity := &models.V1ClusterTemplateProfile{
-			UID: p["uid"].(string),
+			UID: p["id"].(string),
 		}
 
 		// Expand variables if present (now a set)
@@ -531,7 +531,7 @@ func expandClusterTemplatePolicies(policies []interface{}) []*models.V1PolicyRef
 	for i, policy := range policies {
 		p := policy.(map[string]interface{})
 		result[i] = &models.V1PolicyRef{
-			UID:  p["uid"].(string),
+			UID:  p["id"].(string),
 			Kind: p["kind"].(string),
 		}
 	}
@@ -547,7 +547,7 @@ func flattenClusterTemplateProfiles(profiles []*models.V1ClusterTemplateProfile)
 	result := make([]interface{}, len(profiles))
 	for i, profile := range profiles {
 		profileMap := map[string]interface{}{
-			"uid": profile.UID,
+			"id": profile.UID,
 		}
 
 		// Flatten variables if present (now returns a set)
@@ -596,7 +596,7 @@ func flattenClusterTemplatePolicies(policies []*models.V1PolicyRef) []interface{
 	result := make([]interface{}, len(policies))
 	for i, policy := range policies {
 		result[i] = map[string]interface{}{
-			"uid":  policy.UID,
+			"id":   policy.UID,
 			"kind": policy.Kind,
 		}
 	}

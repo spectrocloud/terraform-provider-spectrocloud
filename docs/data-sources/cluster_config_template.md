@@ -40,8 +40,8 @@ data "spectrocloud_cluster_config_template" "tenant_template" {
   context = "tenant"
 }
 
-output "tenant_template_profiles" {
-  value = data.spectrocloud_cluster_config_template.tenant_template.profiles
+output "tenant_template_cluster_profile" {
+  value = data.spectrocloud_cluster_config_template.tenant_template.cluster_profile
 }
 ```
 
@@ -60,11 +60,11 @@ output "tenant_template_profiles" {
 
 - `attached_cluster` (List of Object) List of clusters attached to this template. (see [below for nested schema](#nestedatt--attached_cluster))
 - `cloud_type` (String) The cloud type for the cluster template.
+- `cluster_profile` (Set of Object) Set of cluster profile references. (see [below for nested schema](#nestedatt--cluster_profile))
 - `description` (String) The description of the cluster config template.
 - `execution_state` (String) Current execution state of the cluster template. Possible values: `Pending`, `Applied`, `Failed`, `PartiallyApplied`.
 - `id` (String) The ID of this resource.
-- `policies` (List of Object) List of policy references. (see [below for nested schema](#nestedatt--policies))
-- `profiles` (Set of Object) Set of cluster profile references. (see [below for nested schema](#nestedatt--profiles))
+- `policy` (List of Object) List of policy references. (see [below for nested schema](#nestedatt--policy))
 - `tags` (Set of String) Tags assigned to the cluster config template.
 
 <a id="nestedatt--attached_cluster"></a>
@@ -76,28 +76,29 @@ Read-Only:
 - `name` (String)
 
 
-<a id="nestedatt--policies"></a>
-### Nested Schema for `policies`
+<a id="nestedatt--cluster_profile"></a>
+### Nested Schema for `cluster_profile`
 
 Read-Only:
 
-- `kind` (String)
-- `uid` (String)
+- `id` (String)
+- `variables` (Set of Object) (see [below for nested schema](#nestedobjatt--cluster_profile--variables))
 
-
-<a id="nestedatt--profiles"></a>
-### Nested Schema for `profiles`
-
-Read-Only:
-
-- `uid` (String)
-- `variables` (Set of Object) (see [below for nested schema](#nestedobjatt--profiles--variables))
-
-<a id="nestedobjatt--profiles--variables"></a>
-### Nested Schema for `profiles.variables`
+<a id="nestedobjatt--cluster_profile--variables"></a>
+### Nested Schema for `cluster_profile.variables`
 
 Read-Only:
 
 - `assign_strategy` (String)
 - `name` (String)
 - `value` (String)
+
+
+
+<a id="nestedatt--policy"></a>
+### Nested Schema for `policy`
+
+Read-Only:
+
+- `id` (String)
+- `kind` (String)

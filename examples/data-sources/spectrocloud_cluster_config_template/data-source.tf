@@ -20,10 +20,10 @@ output "template_tags" {
   value = data.spectrocloud_cluster_config_template.template.tags
 }
 
-output "template_profiles" {
-  value = data.spectrocloud_cluster_config_template.template.profiles
+output "template_cluster_profile" {
+  value = data.spectrocloud_cluster_config_template.template.cluster_profile
 }
 
-output "template_policies" {
-  value = data.spectrocloud_cluster_config_template.template.policies
+output "template_policy" {
+  value = data.spectrocloud_cluster_config_template.template.policy
 }

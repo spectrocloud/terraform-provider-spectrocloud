@@ -40,8 +40,8 @@ data "spectrocloud_cluster_config_template" "tenant_template" {
   context = "tenant"
 }
 
-output "tenant_template_profiles" {
-  value = data.spectrocloud_cluster_config_template.tenant_template.profiles
+output "tenant_template_cluster_profile" {
+  value = data.spectrocloud_cluster_config_template.tenant_template.cluster_profile
 }
 ```
 

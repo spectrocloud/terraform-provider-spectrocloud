@@ -22,12 +22,12 @@ resource "spectrocloud_cluster_config_template" "basic_template" {
   
   tags = ["env:production", "team:platform"]
 
-  profiles {
-    uid = spectrocloud_cluster_profile.infra_profile.id
+  cluster_profile {
+    id = spectrocloud_cluster_profile.infra_profile.id
   }
 
-  profiles {
-    uid = spectrocloud_cluster_profile.addon_profile.id
+  cluster_profile {
+    id = spectrocloud_cluster_profile.addon_profile.id
   }
 }
 ```
@@ -43,12 +43,12 @@ resource "spectrocloud_cluster_config_template" "template_with_policy" {
   
   tags = ["env:staging", "critical", "automated"]
 
-  profiles {
-    uid = spectrocloud_cluster_profile.infra_profile.id
+  cluster_profile {
+    id = spectrocloud_cluster_profile.infra_profile.id
   }
 
-  policies {
-    uid  = spectrocloud_cluster_config_policy.weekly_maintenance.id
+  policy {
+    id   = spectrocloud_cluster_config_policy.weekly_maintenance.id
     kind = "maintenance"
   }
 }
@@ -65,8 +65,8 @@ resource "spectrocloud_cluster_config_template" "tenant_template" {
   
   tags = ["tenant:wide", "compliance:required"]
 
-  profiles {
-    uid = spectrocloud_cluster_profile.base_profile.id
+  cluster_profile {
+    id = spectrocloud_cluster_profile.base_profile.id
   }
 }
 ```

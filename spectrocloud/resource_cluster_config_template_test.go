@@ -37,15 +37,15 @@ func prepareBaseClusterConfigTemplateTestData() *schema.ResourceData {
 	// Create profiles set
 	profilesSet := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
 		map[string]interface{}{
-			"uid":       "test-profile-uid-1",
+			"id":        "test-profile-uid-1",
 			"variables": variablesSet,
 		},
 	})
 
-	_ = d.Set("profiles", profilesSet)
-	_ = d.Set("policies", []interface{}{
+	_ = d.Set("cluster_profile", profilesSet)
+	_ = d.Set("policy", []interface{}{
 		map[string]interface{}{
-			"uid":  "test-policy-uid-1",
+			"id":   "test-policy-uid-1",
 			"kind": "maintenance",
 		},
 	})
@@ -87,10 +87,10 @@ func TestResourceClusterConfigTemplateDelete(t *testing.T) {
 func TestExpandClusterTemplateProfiles(t *testing.T) {
 	profiles := []interface{}{
 		map[string]interface{}{
-			"uid": "profile-uid-1",
+			"id": "profile-uid-1",
 		},
 		map[string]interface{}{
-			"uid": "profile-uid-2",
+			"id": "profile-uid-2",
 		},
 	}
 
@@ -104,7 +104,7 @@ func TestExpandClusterTemplateProfiles(t *testing.T) {
 func TestExpandClusterTemplatePolicies(t *testing.T) {
 	policies := []interface{}{
 		map[string]interface{}{
-			"uid":  "policy-uid-1",
+			"id":   "policy-uid-1",
 			"kind": "maintenance",
 		},
 	}
@@ -120,46 +120,46 @@ func TestProfileStructureChanged(t *testing.T) {
 	// Test case 1: Different number of profiles
 	oldProfiles := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
 		map[string]interface{}{
-			"uid":       "profile-1",
+			"id":        "profile-1",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
 		},
 	})
 	newProfiles := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
 		map[string]interface{}{
-			"uid":       "profile-1",
+			"id":        "profile-1",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
 		},
 		map[string]interface{}{
-			"uid":       "profile-2",
+			"id":        "profile-2",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
 		},
 	})
 	assert.True(t, profileStructureChanged(oldProfiles, newProfiles), "Should detect added profile")
 
-	// Test case 2: Same number but different UIDs
+	// Test case 2: Same number but different IDs
 	oldProfiles = schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
 		map[string]interface{}{
-			"uid":       "profile-1",
+			"id":        "profile-1",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
 		},
 		map[string]interface{}{
-			"uid":       "profile-2",
+			"id":        "profile-2",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
 		},
 	})
 	newProfiles = schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
 		map[string]interface{}{
-			"uid":       "profile-1",
+			"id":        "profile-1",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
 		},
 		map[string]interface{}{
-			"uid":       "profile-3",
+			"id":        "profile-3",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
 		},
 	})
-	assert.True(t, profileStructureChanged(oldProfiles, newProfiles), "Should detect changed profile UID")
+	assert.True(t, profileStructureChanged(oldProfiles, newProfiles), "Should detect changed profile ID")
 
-	// Test case 3: Same UIDs, only variables changed
+	// Test case 3: Same IDs, only variables changed
 	oldVars := schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{
 		map[string]interface{}{"name": "var1", "value": "old", "assign_strategy": "all"},
 	})
@@ -169,13 +169,13 @@ func TestProfileStructureChanged(t *testing.T) {
 
 	oldProfiles = schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
 		map[string]interface{}{
-			"uid":       "profile-1",
+			"id":        "profile-1",
 			"variables": oldVars,
 		},
 	})
 	newProfiles = schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
 		map[string]interface{}{
-			"uid":       "profile-1",
+			"id":        "profile-1",
 			"variables": newVars,
 		},
 	})
