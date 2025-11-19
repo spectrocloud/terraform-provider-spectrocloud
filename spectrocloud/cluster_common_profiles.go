@@ -16,8 +16,17 @@ import (
 
 // validateProfileSource checks that only one of cluster_template or cluster_profile is specified
 func validateProfileSource(d *schema.ResourceData) error {
-	clusterTemplate := d.Get("cluster_template").([]interface{})
-	clusterProfile := d.Get("cluster_profile").([]interface{})
+	// cluster_template may not exist in all schemas (e.g., cluster_group)
+	clusterTemplateRaw := d.Get("cluster_template")
+	clusterProfileRaw := d.Get("cluster_profile")
+
+	var clusterTemplate, clusterProfile []interface{}
+	if clusterTemplateRaw != nil {
+		clusterTemplate = clusterTemplateRaw.([]interface{})
+	}
+	if clusterProfileRaw != nil {
+		clusterProfile = clusterProfileRaw.([]interface{})
+	}
 
 	if len(clusterTemplate) > 0 && len(clusterProfile) > 0 {
 		return errors.New("cannot specify both cluster_template and cluster_profile. Please use only one")
@@ -29,7 +38,11 @@ func validateProfileSource(d *schema.ResourceData) error {
 // extractProfilesFromTemplate extracts cluster_profile data from cluster_template schema
 // and transforms it into the same structure as regular cluster_profile for processing
 func extractProfilesFromTemplate(d *schema.ResourceData) ([]interface{}, error) {
-	clusterTemplate := d.Get("cluster_template").([]interface{})
+	clusterTemplateRaw := d.Get("cluster_template")
+	if clusterTemplateRaw == nil {
+		return []interface{}{}, nil
+	}
+	clusterTemplate := clusterTemplateRaw.([]interface{})
 	if len(clusterTemplate) == 0 {
 		return []interface{}{}, nil
 	}
@@ -125,8 +138,16 @@ func resolveProfileSource(d *schema.ResourceData) ([]interface{}, string, error)
 		return nil, "", err
 	}
 
-	clusterTemplate := d.Get("cluster_template").([]interface{})
-	clusterProfile := d.Get("cluster_profile").([]interface{})
+	clusterTemplateRaw := d.Get("cluster_template")
+	clusterProfileRaw := d.Get("cluster_profile")
+
+	var clusterTemplate, clusterProfile []interface{}
+	if clusterTemplateRaw != nil {
+		clusterTemplate = clusterTemplateRaw.([]interface{})
+	}
+	if clusterProfileRaw != nil {
+		clusterProfile = clusterProfileRaw.([]interface{})
+	}
 
 	// Check cluster_template first
 	if len(clusterTemplate) > 0 {
@@ -404,7 +425,11 @@ func flattenClusterProfileForImport(c *client.V1Client, d *schema.ResourceData) 
 // toClusterTemplateReference extracts cluster template reference from ResourceData
 // Returns nil if cluster_template is not specified
 func toClusterTemplateReference(d *schema.ResourceData) *models.V1ClusterTemplateRef {
-	clusterTemplate := d.Get("cluster_template").([]interface{})
+	clusterTemplateRaw := d.Get("cluster_template")
+	if clusterTemplateRaw == nil {
+		return nil
+	}
+	clusterTemplate := clusterTemplateRaw.([]interface{})
 	if len(clusterTemplate) == 0 {
 		return nil
 	}
@@ -498,7 +523,11 @@ func updateClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData) 
 // in the cluster_template state, keeping the profile IDs from config
 func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData, clusterUID string) error {
 	// Only process if cluster_template is used
-	clusterTemplate := d.Get("cluster_template").([]interface{})
+	clusterTemplateRaw := d.Get("cluster_template")
+	if clusterTemplateRaw == nil {
+		return nil
+	}
+	clusterTemplate := clusterTemplateRaw.([]interface{})
 	if len(clusterTemplate) == 0 {
 		return nil
 	}
