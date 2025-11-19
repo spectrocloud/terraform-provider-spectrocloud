@@ -58,20 +58,30 @@ func resourceCloudAccountAws() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				ValidateFunc: validation.StringInSlice([]string{"secret", "sts"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"secret", "sts", "pod-identity"}, false),
 				Default:      "secret",
-				Description:  "The type of AWS credentials to use. Can be `secret` or `sts`. ",
+				Description:  "The type of AWS credentials to use. Can be `secret`, `sts`, or `pod-identity`. ",
 			},
 			"arn": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The Amazon Resource Name (ARN) associated with the AWS resource. This is used for identifying resources in AWS.",
+				Description: "The Amazon Resource Name (ARN) associated with the AWS resource. This is used for identifying resources in AWS. Used for STS credential type.",
 			},
 			"external_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Sensitive:   true,
-				Description: "An optional external ID that can be used for cross-account access in AWS.",
+				Description: "An optional external ID that can be used for cross-account access in AWS. Used for STS credential type.",
+			},
+			"role_arn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The IAM Role ARN for AWS EKS Pod Identity authentication. Required when type is `pod-identity`.",
+			},
+			"permission_boundary_arn": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Optional Permission Boundary ARN to limit the maximum permissions for roles created by Hubble. Used with `pod-identity` credential type.",
 			},
 			"partition": {
 				Type:         schema.TypeString,
@@ -222,6 +232,12 @@ func toAwsAccount(d *schema.ResourceData) (*models.V1AwsAccount, error) {
 			Arn:        d.Get("arn").(string),
 			ExternalID: d.Get("external_id").(string),
 		}
+	} else if d.Get("type").(string) == "pod-identity" {
+		account.Spec.CredentialType = models.V1AwsCloudAccountCredentialTypePodDashIdentity.Pointer()
+		account.Spec.PodIdentity = &models.V1AwsPodIdentityCredentials{
+			RoleArn:               d.Get("role_arn").(string),
+			PermissionBoundaryArn: d.Get("permission_boundary_arn").(string),
+		}
 	}
 
 	// add partition to account
@@ -255,7 +271,8 @@ func flattenCloudAccountAws(d *schema.ResourceData, account *models.V1AwsAccount
 	if err := d.Set("type", account.Spec.CredentialType); err != nil {
 		return diag.FromErr(err), true
 	}
-	if *account.Spec.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
+	switch *account.Spec.CredentialType {
+	case models.V1AwsCloudAccountCredentialTypeSecret:
 		// Set the access key to the appropriate field based on which one is currently in use
 		// Prefer aws_secured_access_key if it was set, otherwise use aws_access_key for backward compatibility
 		if d.Get("aws_secured_access_key").(string) != "" {
@@ -275,8 +292,15 @@ func flattenCloudAccountAws(d *schema.ResourceData, account *models.V1AwsAccount
 				return diag.FromErr(err), true
 			}
 		}
-	} else {
+	case models.V1AwsCloudAccountCredentialTypeSts:
 		if err := d.Set("arn", account.Spec.Sts.Arn); err != nil {
+			return diag.FromErr(err), true
+		}
+	case models.V1AwsCloudAccountCredentialTypePodDashIdentity:
+		if err := d.Set("role_arn", account.Spec.PodIdentity.RoleArn); err != nil {
+			return diag.FromErr(err), true
+		}
+		if err := d.Set("permission_boundary_arn", account.Spec.PodIdentity.PermissionBoundaryArn); err != nil {
 			return diag.FromErr(err), true
 		}
 	}
