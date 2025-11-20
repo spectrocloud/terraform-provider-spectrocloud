@@ -86,7 +86,8 @@ func resourceClusterEks() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -283,8 +284,8 @@ func resourceClusterEks() *schema.Resource {
 						"ami_type": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Default:     "AL2_x86_64",
-							Description: "Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.",
+							Default:     "AL2023_x86_64_STANDARD",
+							Description: "Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2023_x86_64_STANDARD`.",
 						},
 						"capacity_type": {
 							Type:         schema.TypeString,
@@ -491,6 +492,12 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 	if done {
 		return diagnostics
 	}
+
+	// Flatten cluster_template variables using variables API
+	if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
 	generalWarningForRepave(&diags)
 	return diags
 }
@@ -667,6 +674,7 @@ func resourceClusterEksUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -819,6 +827,7 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		Spec: &models.V1SpectroEksClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
+			ClusterTemplate: toClusterTemplateReference(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
 				BastionDisabled:  true,
@@ -1189,7 +1198,8 @@ func resourceClusterEksResourceV2() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -1385,8 +1395,8 @@ func resourceClusterEksResourceV2() *schema.Resource {
 						"ami_type": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Default:     "AL2_x86_64",
-							Description: "Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.",
+							Default:     "AL2023_x86_64_STANDARD",
+							Description: "Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2023_x86_64_STANDARD`.",
 						},
 						"capacity_type": {
 							Type:         schema.TypeString,

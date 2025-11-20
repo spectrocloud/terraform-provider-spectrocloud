@@ -81,7 +81,8 @@ func resourceClusterCustomCloud() *schema.Resource {
 				Default:     "",
 				Description: "The description of the cluster. Default value is empty string.",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -333,6 +334,11 @@ func resourceClusterCustomCloudRead(ctx context.Context, d *schema.ResourceData,
 	log.Printf("[ERROR] flattenCloudConfigCustom succeeded")
 	log.Printf("[ERROR] ======= CUSTOM CLOUD READ END =======")
 
+	// Flatten cluster_template variables using variables API
+	if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return diags
 }
 
@@ -476,6 +482,7 @@ func toCustomCloudCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 			ClusterConfig:     customClusterConfig,
 			Machinepoolconfig: machinePoolConfigs,
 			Profiles:          profiles,
+			ClusterTemplate:   toClusterTemplateReference(d),
 		},
 	}
 
@@ -1797,7 +1804,8 @@ func resourceClusterCustomCloudResourceV2() *schema.Resource {
 				Default:     "",
 				Description: "The description of the cluster. Default value is empty string.",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
