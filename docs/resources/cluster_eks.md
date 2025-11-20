@@ -126,6 +126,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. (see [below for nested schema](#nestedblock--cluster_template))
 - `context` (String) The context of the EKS cluster. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster. Default value is empty string.
 - `fargate_profile` (Block List) (see [below for nested schema](#nestedblock--fargate_profile))
@@ -184,7 +185,7 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
-- `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2_x86_64`.
+- `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2023_x86_64_STANDARD`.
 - `az_subnets` (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
 - `azs` (List of String) Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
@@ -316,6 +317,34 @@ Required:
 Optional:
 
 - `namespace` (String) The Kubernetes namespace of the subject. Required if 'type' is set to 'ServiceAccount'.
+
+
+
+<a id="nestedblock--cluster_template"></a>
+### Nested Schema for `cluster_template`
+
+Required:
+
+- `id` (String) The ID of the cluster template.
+
+Optional:
+
+- `cluster_profile` (Block Set) The cluster profile of the cluster template. (see [below for nested schema](#nestedblock--cluster_template--cluster_profile))
+
+Read-Only:
+
+- `name` (String) The name of the cluster template.
+
+<a id="nestedblock--cluster_template--cluster_profile"></a>
+### Nested Schema for `cluster_template.cluster_profile`
+
+Required:
+
+- `id` (String) The UID of the cluster profile.
+
+Optional:
+
+- `variables` (Map of String) A map of cluster profile variables, specified as key-value pairs. For example: `priority = "5"`.
 
 
 

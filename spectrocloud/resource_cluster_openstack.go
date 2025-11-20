@@ -68,7 +68,8 @@ func resourceClusterOpenStack() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -318,6 +319,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1S
 		Spec: &models.V1SpectroOpenStackClusterEntitySpec{
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
+			ClusterTemplate: toClusterTemplateReference(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1OpenStackClusterConfig{
 				Region:     cloudConfig["region"].(string),
@@ -423,6 +425,12 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if done {
 		return diagnostics
 	}
+
+	// Flatten cluster_template variables using variables API
+	if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
 	generalWarningForRepave(&diags)
 	return diags
 }

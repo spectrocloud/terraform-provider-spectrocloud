@@ -1,0 +1,48 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+## Example Usage
+
+### Project-Level Template
+
+```terraform
+data "spectrocloud_cluster_config_template" "template" {
+  name    = var.template_name
+  context = "project"
+}
+
+output "template_cloud_type" {
+  value = data.spectrocloud_cluster_config_template.template.cloud_type
+}
+
+output "template_tags" {
+  value = data.spectrocloud_cluster_config_template.template.tags
+}
+
+output "template_description" {
+  value = data.spectrocloud_cluster_config_template.template.description
+}
+```
+
+### Tenant-Level Template
+
+```terraform
+data "spectrocloud_cluster_config_template" "tenant_template" {
+  name    = "organization-wide-template"
+  context = "tenant"
+}
+
+output "tenant_template_cluster_profile" {
+  value = data.spectrocloud_cluster_config_template.tenant_template.cluster_profile
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

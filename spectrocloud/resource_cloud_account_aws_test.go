@@ -483,3 +483,178 @@ func TestResourceCloudAccountAwsDeleteWithSecuredAccessKey(t *testing.T) {
 	diags := resourceCloudAccountAwsDelete(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
 }
+
+// ==================== Pod Identity Tests ====================
+
+func TestToAwsAccountCTXProjectPodIdentity(t *testing.T) {
+	rd := resourceCloudAccountAws().TestResourceData()
+	rd.Set("name", "aws_unit_test_acc_pod_identity")
+	rd.Set("type", "pod-identity")
+	rd.Set("role_arn", "arn:aws:iam::123456789012:role/EKSPodIdentityRole")
+	rd.Set("permission_boundary_arn", "arn:aws:iam::123456789012:policy/PermissionBoundary")
+	rd.Set("context", "project")
+	acc, err := toAwsAccount(rd)
+	assert.NoError(t, err)
+
+	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
+	assert.Equal(t, rd.Get("role_arn"), acc.Spec.PodIdentity.RoleArn)
+	assert.Equal(t, rd.Get("permission_boundary_arn"), acc.Spec.PodIdentity.PermissionBoundaryArn)
+	assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
+	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
+}
+
+func TestToAwsAccountCTXTenantPodIdentity(t *testing.T) {
+	rd := resourceCloudAccountAws().TestResourceData()
+	rd.Set("name", "aws_unit_test_acc_pod_identity_tenant")
+	rd.Set("type", "pod-identity")
+	rd.Set("role_arn", "arn:aws:iam::123456789012:role/EKSPodIdentityRole")
+	rd.Set("permission_boundary_arn", "arn:aws:iam::123456789012:policy/PermissionBoundary")
+	rd.Set("context", "tenant")
+	rd.Set("partition", "aws")
+	acc, err := toAwsAccount(rd)
+	assert.NoError(t, err)
+
+	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
+	assert.Equal(t, rd.Get("role_arn"), acc.Spec.PodIdentity.RoleArn)
+	assert.Equal(t, rd.Get("permission_boundary_arn"), acc.Spec.PodIdentity.PermissionBoundaryArn)
+	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
+	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
+	assert.Equal(t, rd.Get("partition"), *acc.Spec.Partition)
+}
+
+func TestToAwsAccountPodIdentityWithoutPermissionBoundary(t *testing.T) {
+	rd := resourceCloudAccountAws().TestResourceData()
+	rd.Set("name", "aws_unit_test_acc_pod_identity_no_boundary")
+	rd.Set("type", "pod-identity")
+	rd.Set("role_arn", "arn:aws:iam::123456789012:role/EKSPodIdentityRole")
+	rd.Set("context", "project")
+	acc, err := toAwsAccount(rd)
+	assert.NoError(t, err)
+
+	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
+	assert.Equal(t, rd.Get("role_arn"), acc.Spec.PodIdentity.RoleArn)
+	assert.Empty(t, acc.Spec.PodIdentity.PermissionBoundaryArn)
+	assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
+	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
+}
+
+func TestFlattenCloudAccountAwsPodIdentity(t *testing.T) {
+	rd := resourceCloudAccountAws().TestResourceData()
+
+	account := &models.V1AwsAccount{
+		Metadata: &models.V1ObjectMeta{
+			Name: "aws_test_account_pod_identity",
+			Annotations: map[string]string{
+				"scope": "project",
+			},
+		},
+		Spec: &models.V1AwsCloudAccount{
+			CredentialType: models.V1AwsCloudAccountCredentialTypePodDashIdentity.Pointer(),
+			PodIdentity: &models.V1AwsPodIdentityCredentials{
+				RoleArn:               "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
+				PermissionBoundaryArn: "arn:aws:iam::123456789012:policy/PermissionBoundary",
+			},
+			Partition: types.Ptr("aws"),
+		},
+	}
+
+	diags, hasError := flattenCloudAccountAws(rd, account)
+
+	assert.Nil(t, diags)
+	assert.False(t, hasError)
+	assert.Equal(t, "aws_test_account_pod_identity", rd.Get("name"))
+	assert.Equal(t, "project", rd.Get("context"))
+	assert.Equal(t, "arn:aws:iam::123456789012:role/EKSPodIdentityRole", rd.Get("role_arn"))
+	assert.Equal(t, "arn:aws:iam::123456789012:policy/PermissionBoundary", rd.Get("permission_boundary_arn"))
+	assert.Equal(t, "aws", rd.Get("partition"))
+	assert.Equal(t, string(models.V1AwsCloudAccountCredentialTypePodDashIdentity), rd.Get("type"))
+}
+
+func TestFlattenCloudAccountAwsPodIdentityWithoutPermissionBoundary(t *testing.T) {
+	rd := resourceCloudAccountAws().TestResourceData()
+
+	account := &models.V1AwsAccount{
+		Metadata: &models.V1ObjectMeta{
+			Name: "aws_test_account_pod_identity_no_boundary",
+			Annotations: map[string]string{
+				"scope": "tenant",
+			},
+		},
+		Spec: &models.V1AwsCloudAccount{
+			CredentialType: models.V1AwsCloudAccountCredentialTypePodDashIdentity.Pointer(),
+			PodIdentity: &models.V1AwsPodIdentityCredentials{
+				RoleArn: "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
+			},
+			Partition:  types.Ptr("aws-us-gov"),
+			PolicyARNs: []string{"arn:aws:iam::123456789012:policy/CustomPolicy"},
+		},
+	}
+
+	diags, hasError := flattenCloudAccountAws(rd, account)
+
+	assert.Nil(t, diags)
+	assert.False(t, hasError)
+	assert.Equal(t, "aws_test_account_pod_identity_no_boundary", rd.Get("name"))
+	assert.Equal(t, "tenant", rd.Get("context"))
+	assert.Equal(t, "arn:aws:iam::123456789012:role/EKSPodIdentityRole", rd.Get("role_arn"))
+	assert.Empty(t, rd.Get("permission_boundary_arn"))
+	assert.Equal(t, "aws-us-gov", rd.Get("partition"))
+	assert.Equal(t, string(models.V1AwsCloudAccountCredentialTypePodDashIdentity), rd.Get("type"))
+
+	policyARNs, ok := rd.Get("policy_arns").(*schema.Set)
+	if !ok {
+		t.Fatalf("Expected policy_arns to be a *schema.Set")
+	}
+
+	var actualARNs []string
+	for _, v := range policyARNs.List() {
+		actualARNs = append(actualARNs, v.(string))
+	}
+
+	expectedARNs := []string{"arn:aws:iam::123456789012:policy/CustomPolicy"}
+	assert.ElementsMatch(t, expectedARNs, actualARNs)
+}
+
+func preparePodIdentityAwsAccountTestData() *schema.ResourceData {
+	d := resourceCloudAccountAws().TestResourceData()
+	d.SetId("test-aws-account-1")
+	_ = d.Set("name", "test-aws-account-pod-identity")
+	_ = d.Set("context", "project")
+	_ = d.Set("type", "pod-identity")
+	_ = d.Set("role_arn", "arn:aws:iam::123456789012:role/EKSPodIdentityRole")
+	_ = d.Set("permission_boundary_arn", "arn:aws:iam::123456789012:policy/PermissionBoundary")
+	_ = d.Set("partition", "aws")
+	_ = d.Set("policy_arns", []string{"arn:aws:iam::123456789012:policy/TestPolicy"})
+	return d
+}
+
+func TestResourceCloudAccountAwsCreateWithPodIdentity(t *testing.T) {
+	ctx := context.Background()
+	d := preparePodIdentityAwsAccountTestData()
+	diags := resourceCloudAccountAwsCreate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-aws-account-1", d.Id())
+}
+
+func TestResourceCloudAccountAwsReadWithPodIdentity(t *testing.T) {
+	ctx := context.Background()
+	d := preparePodIdentityAwsAccountTestData()
+	diags := resourceCloudAccountAwsRead(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-aws-account-1", d.Id())
+}
+
+func TestResourceCloudAccountAwsUpdateWithPodIdentity(t *testing.T) {
+	ctx := context.Background()
+	d := preparePodIdentityAwsAccountTestData()
+	diags := resourceCloudAccountAwsUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+	assert.Equal(t, "test-aws-account-1", d.Id())
+}
+
+func TestResourceCloudAccountAwsDeleteWithPodIdentity(t *testing.T) {
+	ctx := context.Background()
+	d := preparePodIdentityAwsAccountTestData()
+	diags := resourceCloudAccountAwsDelete(ctx, d, unitTestMockAPIClient)
+	assert.Len(t, diags, 0)
+}

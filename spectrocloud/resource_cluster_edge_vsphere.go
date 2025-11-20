@@ -71,7 +71,8 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -362,6 +363,11 @@ func resourceClusterEdgeVsphereRead(_ context.Context, d *schema.ResourceData, m
 		return diagnostics
 	}
 
+	// Flatten cluster_template variables using variables API
+	if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return flattenCloudConfigEdgeVsphere(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
@@ -550,10 +556,11 @@ func toEdgeVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 	cluster := &models.V1SpectroVsphereClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroVsphereClusterEntitySpec{
-			EdgeHostUID: d.Get("edge_host_uid").(string),
-			Profiles:    profiles,
-			Policies:    toPolicies(d),
-			CloudConfig: getClusterConfigEntity(cloudConfig),
+			EdgeHostUID:     d.Get("edge_host_uid").(string),
+			Profiles:        profiles,
+			ClusterTemplate: toClusterTemplateReference(d),
+			Policies:        toPolicies(d),
+			CloudConfig:     getClusterConfigEntity(cloudConfig),
 		},
 	}
 

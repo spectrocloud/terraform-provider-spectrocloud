@@ -305,10 +305,7 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 			k8Distro = resources["k8s_distribution"].(string)
 		}
 	}
-	var hostClusterConfig []*models.V1ClusterGroupHostClusterConfig
-	if endpointType == "Ingress" {
-		hostClusterConfig = toHostClusterConfigs(clusterRefObj.([]interface{}))
-	}
+	hostClusterConfig := toHostClusterConfigs(clusterRefObj.([]interface{}))
 
 	ret := &models.V1ClusterGroupEntity{
 		Metadata: getClusterMetadata(d),
