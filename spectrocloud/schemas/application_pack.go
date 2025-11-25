@@ -8,8 +8,9 @@ import (
 
 func AppPackSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:        schema.TypeList,
+		Type:        schema.TypeSet,
 		Required:    true,
+		Set:         resourcePackHash,
 		Description: "A list of packs to be applied to the application profile.",
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
@@ -60,8 +61,9 @@ func AppPackSchema() *schema.Schema {
 					Optional:    true,
 				},
 				"manifest": {
-					Type:        schema.TypeList,
+					Type:        schema.TypeSet,
 					Optional:    true,
+					Set:         resourcePackManifestHash,
 					Description: "The manifest of the pack.",
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{

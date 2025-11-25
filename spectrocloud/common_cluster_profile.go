@@ -78,7 +78,13 @@ func flattenPacksWithRegistryMaps(c *client.V1Client, diagPacks []*models.V1Pack
 func buildPackRegistryNameMap(d *schema.ResourceData) map[string]bool {
 	registryNameMap := make(map[string]bool)
 	if packs, ok := d.GetOk("pack"); ok {
-		for _, packInterface := range packs.([]interface{}) {
+		var packList []interface{}
+		if packSet, ok := packs.(*schema.Set); ok {
+			packList = packSet.List()
+		} else if packListRaw, ok := packs.([]interface{}); ok {
+			packList = packListRaw
+		}
+		for _, packInterface := range packList {
 			pack := packInterface.(map[string]interface{})
 			packName := pack["name"].(string)
 			if registryName, ok := pack["registry_name"]; ok && registryName != nil && registryName.(string) != "" {
@@ -94,7 +100,13 @@ func buildPackRegistryNameMap(d *schema.ResourceData) map[string]bool {
 func buildPackRegistryUIDMap(d *schema.ResourceData) map[string]bool {
 	registryUIDMap := make(map[string]bool)
 	if packs, ok := d.GetOk("pack"); ok {
-		for _, packInterface := range packs.([]interface{}) {
+		var packList []interface{}
+		if packSet, ok := packs.(*schema.Set); ok {
+			packList = packSet.List()
+		} else if packListRaw, ok := packs.([]interface{}); ok {
+			packList = packListRaw
+		}
+		for _, packInterface := range packList {
 			pack := packInterface.(map[string]interface{})
 			packName := pack["name"].(string)
 			if registryUID, ok := pack["registry_uid"]; ok && registryUID != nil && registryUID.(string) != "" {
