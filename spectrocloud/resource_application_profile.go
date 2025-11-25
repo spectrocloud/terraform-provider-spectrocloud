@@ -19,6 +19,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
+// Added description to the resource application profile to avoid drift
 func resourceApplicationProfile() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceApplicationProfileCreate,
