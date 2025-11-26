@@ -127,7 +127,7 @@ func TestResourceCloudAccountApacheCloudStackCreate(t *testing.T) {
 	ctx := context.Background()
 	diags := resourceCloudAccountApacheCloudStackCreate(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-apache-cloudstack-account-1", d.Id())
+	assert.Equal(t, "test-apache-cloudstack-account-id-1", d.Id())
 }
 
 func TestResourceCloudAccountApacheCloudStackRead(t *testing.T) {

@@ -438,18 +438,18 @@ func CloudAccountsRoutes() []Route {
 			},
 		},
 
-		// CloudStack
+		// Apache CloudStack
 		{
 			Method: "POST",
-			Path:   "/v1/cloudaccounts/cloudstack",
+			Path:   "/v1/cloudaccounts/apache-cloudstack",
 			Response: ResponseData{
 				StatusCode: 201,
-				Payload:    map[string]string{"UID": "test-apache-cloudstack-account-1"},
+				Payload:    map[string]string{"UID": "test-apache-cloudstack-account-id-1"},
 			},
 		},
 		{
 			Method: "POST",
-			Path:   "/v1/clouds/cloudstack/account/validate",
+			Path:   "/v1/clouds/apache-cloudstack/account/validate",
 			Response: ResponseData{
 				StatusCode: 204,
 				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
@@ -457,7 +457,7 @@ func CloudAccountsRoutes() []Route {
 		},
 		{
 			Method: "PUT",
-			Path:   "/v1/cloudaccounts/cloudstack/{uid}",
+			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}",
 			Response: ResponseData{
 				StatusCode: 204,
 				Payload:    nil,
@@ -465,7 +465,7 @@ func CloudAccountsRoutes() []Route {
 		},
 		{
 			Method: "DELETE",
-			Path:   "/v1/cloudaccounts/cloudstack/{uid}",
+			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}",
 			Response: ResponseData{
 				StatusCode: 204,
 				Payload:    nil,
@@ -473,7 +473,7 @@ func CloudAccountsRoutes() []Route {
 		},
 		{
 			Method: "GET",
-			Path:   "/v1/cloudaccounts/cloudstack",
+			Path:   "/v1/cloudaccounts/apache-cloudstack",
 			Response: ResponseData{
 				StatusCode: 200,
 				Payload:    getAccountResponse("cloudstack"),
@@ -481,7 +481,7 @@ func CloudAccountsRoutes() []Route {
 		},
 		{
 			Method: "GET",
-			Path:   "/v1/cloudaccounts/cloudstack/{uid}",
+			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}",
 			Response: ResponseData{
 				StatusCode: 200,
 				Payload: &models.V1CloudStackAccount{
@@ -502,7 +502,7 @@ func CloudAccountsRoutes() []Route {
 		},
 		{
 			Method: "POST",
-			Path:   "/v1/overlords/cloudstack/{uid}/account/validate",
+			Path:   "/v1/overlords/apache-cloudstack/{uid}/account/validate",
 			Response: ResponseData{
 				StatusCode: 204,
 				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
@@ -981,7 +981,7 @@ func CloudAccountsNegativeRoutes() []Route {
 	return []Route{
 		{
 			Method: "GET",
-			Path:   "/v1/cloudaccounts/cloudstack",
+			Path:   "/v1/cloudaccounts/apache-cloudstack",
 			Response: ResponseData{
 				StatusCode: 200,
 				Payload:    getAccountNegativeResponse("cloudstack"),
