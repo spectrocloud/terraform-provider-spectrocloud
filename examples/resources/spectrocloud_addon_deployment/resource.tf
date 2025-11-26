@@ -8,9 +8,9 @@ resource "spectrocloud_addon_deployment" "example_basic" {
       test = "IfNotPresent"
     }
     pack {
-      name = "nginx-ingress"
-      tag  = "4.7.1"
-      uid  = data.spectrocloud_pack.nginx.id
+      name   = "nginx-ingress"
+      tag    = "4.7.1"
+      uid    = data.spectrocloud_pack.nginx.id
       values = <<-EOT
         controller:
           service:
