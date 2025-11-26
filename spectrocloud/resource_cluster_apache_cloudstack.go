@@ -25,16 +25,16 @@ func safeInt32Conversion(value int, defaultVal int32) int32 {
 	return int32(value)
 }
 
-func resourceClusterCloudStack() *schema.Resource {
+func resourceClusterApacheCloudStack() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceClusterCloudStackCreate,
-		ReadContext:   resourceClusterCloudStackRead,
-		UpdateContext: resourceClusterCloudStackUpdate,
+		CreateContext: resourceClusterApacheCloudStackCreate,
+		ReadContext:   resourceClusterApacheCloudStackRead,
+		UpdateContext: resourceClusterApacheCloudStackUpdate,
 		DeleteContext: resourceClusterDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: resourceClusterCloudStackImport,
+			StateContext: resourceClusterApacheCloudStackImport,
 		},
-		Description: "Resource for managing CloudStack clusters in Spectro Cloud through Palette.",
+		Description: "Resource for managing Apache CloudStack clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -276,7 +276,7 @@ func resourceClusterCloudStack() *schema.Resource {
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Set:      resourceMachinePoolCloudStackHash,
+				Set:      resourceMachinePoolApacheCloudStackHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"additional_labels": {
@@ -331,33 +331,68 @@ func resourceClusterCloudStack() *schema.Resource {
 						"offering": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "CloudStack compute offering (instance type/size) name.",
+							Description: "Apache CloudStack compute offering (instance type/size) name.",
 						},
-						"disk_offering": {
-							Type:        schema.TypeString,
+						"instance_config": {
+							Type:        schema.TypeList,
 							Optional:    true,
-							Description: "CloudStack disk offering name for root disk (optional).",
+							MaxItems:    1,
+							Description: "Advanced instance configuration for custom CPU, memory, and disk settings. Optional, used for customized instance specifications beyond standard offerings.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"disk_gib": {
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "Root disk size in GiB. Required if instance_config is specified.",
+									},
+									"memory_mib": {
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "Memory size in MiB. Required if instance_config is specified.",
+									},
+									"num_cpus": {
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "Number of CPUs for the instance. Required if instance_config is specified.",
+									},
+									"cpu_set": {
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Default:     0,
+										Description: "CPU set for the instance. Optional, defaults to 0.",
+									},
+									"name": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "Name for the instance configuration. Optional.",
+									},
+									"category": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "Category for the instance configuration. Optional.",
+									},
+								},
+							},
 						},
-						"root_disk_size_gb": {
-							Type:        schema.TypeInt,
+						"template": {
+							Type:        schema.TypeList,
 							Optional:    true,
-							Description: "Root disk size in GB (optional).",
-						},
-						"affinity_group_ids": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
+							MaxItems:    1,
+							Description: "Apache CloudStack template override for this machine pool. If not specified, inherits cluster default from profile.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"id": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "Template ID. Either ID or name must be provided.",
+									},
+									"name": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "Template name. Either ID or name must be provided.",
+									},
+								},
 							},
-							Description: "List of affinity group IDs for VM placement (optional).",
-						},
-						"details": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-							Description: "Additional details for instance creation as key-value pairs.",
 						},
 						"network": {
 							Type:     schema.TypeList,
@@ -393,7 +428,7 @@ func resourceClusterCloudStack() *schema.Resource {
 	}
 }
 
-func resourceClusterCloudStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterApacheCloudStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
@@ -417,12 +452,12 @@ func resourceClusterCloudStackCreate(ctx context.Context, d *schema.ResourceData
 		return diags
 	}
 
-	resourceClusterCloudStackRead(ctx, d, m)
+	resourceClusterApacheCloudStackRead(ctx, d, m)
 
 	return diags
 }
 
-func resourceClusterCloudStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterApacheCloudStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
@@ -448,7 +483,7 @@ func resourceClusterCloudStackRead(_ context.Context, d *schema.ResourceData, m 
 	return diags
 }
 
-func resourceClusterCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	var diags diag.Diagnostics
 
@@ -472,7 +507,7 @@ func resourceClusterCloudStackUpdate(ctx context.Context, d *schema.ResourceData
 		return diagnostics
 	}
 
-	resourceClusterCloudStackRead(ctx, d, m)
+	resourceClusterApacheCloudStackRead(ctx, d, m)
 
 	return diags
 }
@@ -579,31 +614,40 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		Offering: &models.V1CloudStackResource{
 			Name: mp["offering"].(string),
 		},
-		RootDiskSizeGB: safeInt32Conversion(mp["root_disk_size_gb"].(int), 0),
 	}
 
-	// Set disk offering if provided
-	if diskOffering, ok := mp["disk_offering"].(string); ok && diskOffering != "" {
-		cloudConfig.DiskOffering = &models.V1CloudStackResource{
-			Name: diskOffering,
+	// Process instance_config (NEW SDK structure)
+	if instanceConfigs, ok := mp["instance_config"].([]interface{}); ok && len(instanceConfigs) > 0 {
+		ic := instanceConfigs[0].(map[string]interface{})
+		cloudConfig.InstanceConfig = &models.V1InstanceConfig{
+			DiskGiB:   int64(ic["disk_gib"].(int)),
+			MemoryMiB: int64(ic["memory_mib"].(int)),
+			NumCPUs:   safeInt32Conversion(ic["num_cpus"].(int), 2),
+		}
+		if cpuSet, ok := ic["cpu_set"].(int); ok {
+			cloudConfig.InstanceConfig.CPUSet = int64(cpuSet)
+		}
+		if name, ok := ic["name"].(string); ok && name != "" {
+			cloudConfig.InstanceConfig.Name = name
+		}
+		if category, ok := ic["category"].(string); ok && category != "" {
+			cloudConfig.InstanceConfig.Category = category
 		}
 	}
 
-	// Process affinity groups
-	if affinityGroups, ok := mp["affinity_group_ids"].(*schema.Set); ok {
-		cloudConfig.AffinityGroupIds = make([]string, 0)
-		for _, ag := range affinityGroups.List() {
-			cloudConfig.AffinityGroupIds = append(cloudConfig.AffinityGroupIds, ag.(string))
+	// Process template (RE-ADDED in new SDK)
+	if templates, ok := mp["template"].([]interface{}); ok && len(templates) > 0 {
+		tmpl := templates[0].(map[string]interface{})
+		cloudConfig.Template = &models.V1CloudStackResource{}
+		if id, ok := tmpl["id"].(string); ok && id != "" {
+			cloudConfig.Template.ID = id
+		}
+		if name, ok := tmpl["name"].(string); ok && name != "" {
+			cloudConfig.Template.Name = name
 		}
 	}
 
-	// Process details
-	if details, ok := mp["details"].(map[string]interface{}); ok && len(details) > 0 {
-		cloudConfig.Details = make(map[string]string)
-		for k, v := range details {
-			cloudConfig.Details[k] = v.(string)
-		}
-	}
+	// NOTE: RootDiskSizeGB, DiskOffering, AffinityGroupIds, and Details have been REMOVED from the new SDK model
 
 	// Process networks
 	if networks, ok := mp["network"].([]interface{}); ok && len(networks) > 0 {
@@ -655,7 +699,7 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 	return mpEntity
 }
 
-func resourceMachinePoolCloudStackHash(v interface{}) int {
+func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	var buf string
 	m := v.(map[string]interface{})
 	buf = fmt.Sprintf("%s-%t-%t-%s",
@@ -711,13 +755,13 @@ func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *sch
 	return nil
 }
 
-func resourceClusterCloudStackImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+func resourceClusterApacheCloudStackImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	_, err := GetCommonCluster(d, m)
 	if err != nil {
 		return nil, err
 	}
 
-	diags := resourceClusterCloudStackRead(ctx, d, m)
+	diags := resourceClusterApacheCloudStackRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}

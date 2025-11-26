@@ -11,68 +11,74 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
-func resourceCloudAccountCloudStack() *schema.Resource {
+func resourceCloudAccountApacheCloudStack() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceCloudAccountCloudStackCreate,
-		ReadContext:   resourceCloudAccountCloudStackRead,
-		UpdateContext: resourceCloudAccountCloudStackUpdate,
-		DeleteContext: resourceCloudAccountCloudStackDelete,
+		CreateContext: resourceCloudAccountApacheCloudStackCreate,
+		ReadContext:   resourceCloudAccountApacheCloudStackRead,
+		UpdateContext: resourceCloudAccountApacheCloudStackUpdate,
+		DeleteContext: resourceCloudAccountApacheCloudStackDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: resourceAccountCloudStackImport,
+			StateContext: resourceAccountApacheCloudStackImport,
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "Name of the CloudStack cloud account.",
+				Description: "Name of the Apache CloudStack cloud account.",
 			},
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "project",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description: "The context of the CloudStack configuration. " +
+				Description: "The context of the Apache CloudStack configuration. " +
 					"Allowed values are `project` or `tenant`. Default value is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"private_cloud_gateway_id": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "ID of the private cloud gateway that is used to connect to the CloudStack cloud.",
+				Description: "ID of the private cloud gateway that is used to connect to the Apache CloudStack cloud.",
 			},
 			"api_url": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The API URL of the CloudStack management server. For example: https://cloudstack.example.com:8080/client/api",
+				Description: "The API URL of the Apache CloudStack management server. For example: https://cloudstack.example.com:8080/client/api",
 			},
 			"api_key": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Sensitive:   true,
-				Description: "The API key for CloudStack authentication.",
+				Description: "The API key for Apache CloudStack authentication.",
 			},
 			"secret_key": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Sensitive:   true,
-				Description: "The secret key for CloudStack authentication.",
+				Description: "The secret key for Apache CloudStack authentication.",
+			},
+			"domain": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The domain for the Apache CloudStack account. Optional, for multi-domain CloudStack environments. Default is empty (ROOT domain).",
 			},
 			"insecure": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Skip SSL certificate verification. Default is `false`. Note: CloudStack must have valid SSL certificates from a trusted CA if this is false.",
+				Description: "Skip SSL certificate verification. Default is `false`. Note: Apache CloudStack must have valid SSL certificates from a trusted CA if this is false.",
 			},
 		},
 	}
 }
 
-func resourceCloudAccountCloudStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceCloudAccountApacheCloudStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
-	account := toCloudStackAccount(d)
+	account := toApacheCloudStackAccount(d)
 	uid, err := c.CreateCloudAccountCloudStack(account)
 	if err != nil {
 		return diag.FromErr(err)
@@ -80,12 +86,12 @@ func resourceCloudAccountCloudStackCreate(ctx context.Context, d *schema.Resourc
 
 	d.SetId(uid)
 
-	resourceCloudAccountCloudStackRead(ctx, d, m)
+	resourceCloudAccountApacheCloudStackRead(ctx, d, m)
 
 	return diags
 }
 
-func resourceCloudAccountCloudStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceCloudAccountApacheCloudStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
@@ -112,6 +118,9 @@ func resourceCloudAccountCloudStackRead(_ context.Context, d *schema.ResourceDat
 				return diag.FromErr(err)
 			}
 		}
+		if err := d.Set("domain", account.Spec.Domain); err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("insecure", account.Spec.Insecure); err != nil {
 			return diag.FromErr(err)
 		}
@@ -120,25 +129,25 @@ func resourceCloudAccountCloudStackRead(_ context.Context, d *schema.ResourceDat
 	return diags
 }
 
-func resourceCloudAccountCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceCloudAccountApacheCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
 
-	account := toCloudStackAccount(d)
+	account := toApacheCloudStackAccount(d)
 
 	err := c.UpdateCloudAccountCloudStack(account)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	resourceCloudAccountCloudStackRead(ctx, d, m)
+	resourceCloudAccountApacheCloudStackRead(ctx, d, m)
 
 	return diags
 }
 
-func resourceCloudAccountCloudStackDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func resourceCloudAccountApacheCloudStackDelete(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
@@ -153,7 +162,7 @@ func resourceCloudAccountCloudStackDelete(_ context.Context, d *schema.ResourceD
 	return diags
 }
 
-func toCloudStackAccount(d *schema.ResourceData) *models.V1CloudStackAccount {
+func toApacheCloudStackAccount(d *schema.ResourceData) *models.V1CloudStackAccount {
 	account := &models.V1CloudStackAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name:        d.Get("name").(string),
@@ -164,6 +173,7 @@ func toCloudStackAccount(d *schema.ResourceData) *models.V1CloudStackAccount {
 			APIURL:    types.Ptr(d.Get("api_url").(string)),
 			APIKey:    types.Ptr(d.Get("api_key").(string)),
 			SecretKey: types.Ptr(d.Get("secret_key").(string)),
+			Domain:    d.Get("domain").(string),
 			Insecure:  d.Get("insecure").(bool),
 		},
 	}
@@ -171,7 +181,7 @@ func toCloudStackAccount(d *schema.ResourceData) *models.V1CloudStackAccount {
 	return account
 }
 
-func resourceAccountCloudStackImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+func resourceAccountApacheCloudStackImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
@@ -180,9 +190,9 @@ func resourceAccountCloudStackImport(ctx context.Context, d *schema.ResourceData
 		return nil, err
 	}
 
-	diags := resourceCloudAccountCloudStackRead(ctx, d, m)
+	diags := resourceCloudAccountApacheCloudStackRead(ctx, d, m)
 	if diags.HasError() {
-		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
+		return nil, fmt.Errorf("could not read account for import: %v", diags)
 	}
 
 	return []*schema.ResourceData{d}, nil

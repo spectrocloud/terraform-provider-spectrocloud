@@ -151,13 +151,14 @@ func getAccountResponse(cloud string) interface{} {
 			Items: []*models.V1CloudStackAccount{
 				{
 					Metadata: &models.V1ObjectMeta{
-						Name: "test-cloudstack-account-1",
-						UID:  "test-cloudstack-account-id-1",
+						Name: "test-apache-cloudstack-account-1",
+						UID:  "test-apache-cloudstack-account-id-1",
 					},
 					Spec: &models.V1CloudStackCloudAccount{
 						APIURL:    spectrocloud.StringPtr("https://test.cloudstack.com:8080/client/api"),
 						APIKey:    spectrocloud.StringPtr("testApiKey"),
 						SecretKey: spectrocloud.StringPtr("testSecretKey"),
+						Domain:    "ROOT",
 						Insecure:  false,
 					},
 				},
@@ -443,7 +444,7 @@ func CloudAccountsRoutes() []Route {
 			Path:   "/v1/cloudaccounts/cloudstack",
 			Response: ResponseData{
 				StatusCode: 201,
-				Payload:    map[string]string{"UID": "test-cloudstack-account-1"},
+				Payload:    map[string]string{"UID": "test-apache-cloudstack-account-1"},
 			},
 		},
 		{
@@ -485,14 +486,15 @@ func CloudAccountsRoutes() []Route {
 				StatusCode: 200,
 				Payload: &models.V1CloudStackAccount{
 					Metadata: &models.V1ObjectMeta{
-						Name:        "test-cloudstack-account-1",
-						UID:         "test-cloudstack-account-id-1",
+						Name:        "test-apache-cloudstack-account-1",
+						UID:         "test-apache-cloudstack-account-id-1",
 						Annotations: map[string]string{"overlordUid": "test-pcg-id"},
 					},
 					Spec: &models.V1CloudStackCloudAccount{
 						APIURL:    spectrocloud.StringPtr("https://test.cloudstack.com:8080/client/api"),
 						APIKey:    spectrocloud.StringPtr("testApiKey"),
 						SecretKey: spectrocloud.StringPtr("testSecretKey"),
+						Domain:    "ROOT",
 						Insecure:  false,
 					},
 				},

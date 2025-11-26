@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Test for the `toCloudStackAccount` function
-func TestToCloudStackAccount(t *testing.T) {
+// Test for the `toApacheCloudStackAccount` function
+func TestToApacheCloudStackAccount(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    map[string]interface{}
@@ -20,16 +20,17 @@ func TestToCloudStackAccount(t *testing.T) {
 		{
 			name: "All Fields Present",
 			input: map[string]interface{}{
-				"name":                     "cloudstack-account",
+				"name":                     "apache-cloudstack-account",
 				"private_cloud_gateway_id": "private-cloud-gateway-id",
 				"api_url":                  "https://cloudstack.example.com:8080/client/api",
 				"api_key":                  "api-key",
 				"secret_key":               "secret-key",
+				"domain":                   "ROOT",
 				"insecure":                 false,
 			},
 			expected: &models.V1CloudStackAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name:        "cloudstack-account",
+					Name:        "apache-cloudstack-account",
 					Annotations: map[string]string{OverlordUID: "private-cloud-gateway-id"},
 					UID:         "",
 				},
@@ -37,6 +38,7 @@ func TestToCloudStackAccount(t *testing.T) {
 					APIURL:    types.Ptr("https://cloudstack.example.com:8080/client/api"),
 					APIKey:    types.Ptr("api-key"),
 					SecretKey: types.Ptr("secret-key"),
+					Domain:    "ROOT",
 					Insecure:  false,
 				},
 			},
@@ -44,16 +46,17 @@ func TestToCloudStackAccount(t *testing.T) {
 		{
 			name: "Insecure Mode Enabled",
 			input: map[string]interface{}{
-				"name":                     "cloudstack-insecure",
+				"name":                     "apache-cloudstack-insecure",
 				"private_cloud_gateway_id": "pcg-id",
 				"api_url":                  "https://cloudstack.example.com:8080/client/api",
 				"api_key":                  "test-key",
 				"secret_key":               "test-secret",
+				"domain":                   "",
 				"insecure":                 true,
 			},
 			expected: &models.V1CloudStackAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name:        "cloudstack-insecure",
+					Name:        "apache-cloudstack-insecure",
 					Annotations: map[string]string{OverlordUID: "pcg-id"},
 					UID:         "",
 				},
@@ -61,6 +64,7 @@ func TestToCloudStackAccount(t *testing.T) {
 					APIURL:    types.Ptr("https://cloudstack.example.com:8080/client/api"),
 					APIKey:    types.Ptr("test-key"),
 					SecretKey: types.Ptr("test-secret"),
+					Domain:    "",
 					Insecure:  true,
 				},
 			},
@@ -70,10 +74,10 @@ func TestToCloudStackAccount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a schema.ResourceData instance
-			d := schema.TestResourceDataRaw(t, resourceCloudAccountCloudStack().Schema, tt.input)
+			d := schema.TestResourceDataRaw(t, resourceCloudAccountApacheCloudStack().Schema, tt.input)
 
 			// Call the function under test
-			result := toCloudStackAccount(d)
+			result := toApacheCloudStackAccount(d)
 
 			// Perform assertions
 			assert.Equal(t, tt.expected.Metadata.Name, result.Metadata.Name)
@@ -97,55 +101,57 @@ func TestToCloudStackAccount(t *testing.T) {
 				assert.Equal(t, *tt.expected.Spec.SecretKey, *result.Spec.SecretKey)
 			}
 
+			assert.Equal(t, tt.expected.Spec.Domain, result.Spec.Domain)
 			assert.Equal(t, tt.expected.Spec.Insecure, result.Spec.Insecure)
 		})
 	}
 }
 
-func prepareResourceCloudAccountCloudStack() *schema.ResourceData {
-	d := resourceCloudAccountCloudStack().TestResourceData()
-	d.SetId("test-cloudstack-account-id-1")
-	_ = d.Set("name", "test-cloudstack-account-1")
+func prepareResourceCloudAccountApacheCloudStack() *schema.ResourceData {
+	d := resourceCloudAccountApacheCloudStack().TestResourceData()
+	d.SetId("test-apache-cloudstack-account-id-1")
+	_ = d.Set("name", "test-apache-cloudstack-account-1")
 	_ = d.Set("context", "project")
 	_ = d.Set("private_cloud_gateway_id", "test-pcg-id")
 	_ = d.Set("api_url", "https://test.cloudstack.com:8080/client/api")
 	_ = d.Set("api_key", "test-api-key")
 	_ = d.Set("secret_key", "test-secret-key")
+	_ = d.Set("domain", "ROOT")
 	_ = d.Set("insecure", false)
 	return d
 }
 
-func TestResourceCloudAccountCloudStackCreate(t *testing.T) {
+func TestResourceCloudAccountApacheCloudStackCreate(t *testing.T) {
 	// Mock context and resource data
-	d := prepareResourceCloudAccountCloudStack()
+	d := prepareResourceCloudAccountApacheCloudStack()
 	ctx := context.Background()
-	diags := resourceCloudAccountCloudStackCreate(ctx, d, unitTestMockAPIClient)
+	diags := resourceCloudAccountApacheCloudStackCreate(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-cloudstack-account-1", d.Id())
+	assert.Equal(t, "test-apache-cloudstack-account-1", d.Id())
 }
 
-func TestResourceCloudAccountCloudStackRead(t *testing.T) {
+func TestResourceCloudAccountApacheCloudStackRead(t *testing.T) {
 	// Mock context and resource data
-	d := prepareResourceCloudAccountCloudStack()
+	d := prepareResourceCloudAccountApacheCloudStack()
 	ctx := context.Background()
-	diags := resourceCloudAccountCloudStackRead(ctx, d, unitTestMockAPIClient)
+	diags := resourceCloudAccountApacheCloudStackRead(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-cloudstack-account-id-1", d.Id())
+	assert.Equal(t, "test-apache-cloudstack-account-id-1", d.Id())
 }
 
-func TestResourceCloudAccountCloudStackUpdate(t *testing.T) {
+func TestResourceCloudAccountApacheCloudStackUpdate(t *testing.T) {
 	// Mock context and resource data
-	d := prepareResourceCloudAccountCloudStack()
+	d := prepareResourceCloudAccountApacheCloudStack()
 	ctx := context.Background()
-	diags := resourceCloudAccountCloudStackUpdate(ctx, d, unitTestMockAPIClient)
+	diags := resourceCloudAccountApacheCloudStackUpdate(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-cloudstack-account-id-1", d.Id())
+	assert.Equal(t, "test-apache-cloudstack-account-id-1", d.Id())
 }
 
-func TestResourceCloudAccountCloudStackDelete(t *testing.T) {
+func TestResourceCloudAccountApacheCloudStackDelete(t *testing.T) {
 	// Mock context and resource data
-	d := prepareResourceCloudAccountCloudStack()
+	d := prepareResourceCloudAccountApacheCloudStack()
 	ctx := context.Background()
-	diags := resourceCloudAccountCloudStackDelete(ctx, d, unitTestMockAPIClient)
+	diags := resourceCloudAccountApacheCloudStackDelete(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
 }

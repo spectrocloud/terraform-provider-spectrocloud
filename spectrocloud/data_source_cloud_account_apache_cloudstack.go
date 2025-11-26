@@ -10,9 +10,9 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
-func dataSourceCloudAccountCloudStack() *schema.Resource {
+func dataSourceCloudAccountApacheCloudStack() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceCloudAccountCloudStackRead,
+		ReadContext: dataSourceCloudAccountApacheCloudStackRead,
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -20,27 +20,27 @@ func dataSourceCloudAccountCloudStack() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
-				Description:  "The unique ID of the CloudStack cloud account. Either `id` or `name` must be provided, but not both.",
+				Description:  "The unique ID of the Apache CloudStack cloud account. Either `id` or `name` must be provided, but not both.",
 			},
 			"name": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
-				Description:  "The name of the CloudStack cloud account. Either `id` or `name` must be provided, but not both.",
+				Description:  "The name of the Apache CloudStack cloud account. Either `id` or `name` must be provided, but not both.",
 			},
 			"context": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
-				Description:  "The context of the cluster. Allowed values are `project` or `tenant` or ``. ",
+				Description:  "The context of the account. Allowed values are `project` or `tenant` or ``. ",
 			},
 		},
 	}
 }
 
-func dataSourceCloudAccountCloudStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+func dataSourceCloudAccountApacheCloudStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
 
 	var diags diag.Diagnostics
@@ -86,8 +86,8 @@ func dataSourceCloudAccountCloudStackRead(_ context.Context, d *schema.ResourceD
 	if account == nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
-			Summary:  "Unable to find CloudStack cloud account",
-			Detail:   "Unable to find the specified CloudStack cloud account",
+			Summary:  "Unable to find Apache CloudStack cloud account",
+			Detail:   "Unable to find the specified Apache CloudStack cloud account",
 		})
 		return diags
 	}

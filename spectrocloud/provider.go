@@ -103,8 +103,8 @@ func New(_ string) func() *schema.Provider {
 				"spectrocloud_cloudaccount_openstack": resourceCloudAccountOpenstack(),
 				"spectrocloud_cluster_openstack":      resourceClusterOpenStack(),
 
-				"spectrocloud_cloudaccount_cloudstack": resourceCloudAccountCloudStack(),
-				"spectrocloud_cluster_cloudstack":      resourceClusterCloudStack(),
+				"spectrocloud_cloudaccount_apache_cloudstack": resourceCloudAccountApacheCloudStack(),
+				"spectrocloud_cluster_apache_cloudstack":      resourceClusterApacheCloudStack(),
 
 				"spectrocloud_cloudaccount_vsphere": resourceCloudAccountVsphere(),
 				"spectrocloud_cluster_vsphere":      resourceClusterVsphere(),
@@ -170,13 +170,13 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cloudaccount_aws": dataSourceCloudAccountAws(),
 
-				"spectrocloud_cloudaccount_azure":      dataSourceCloudAccountAzure(),
-				"spectrocloud_cloudaccount_gcp":        dataSourceCloudAccountGcp(),
-				"spectrocloud_cloudaccount_vsphere":    dataSourceCloudAccountVsphere(),
-				"spectrocloud_cloudaccount_openstack":  dataSourceCloudAccountOpenStack(),
-				"spectrocloud_cloudaccount_cloudstack": dataSourceCloudAccountCloudStack(),
-				"spectrocloud_cloudaccount_maas":       dataSourceCloudAccountMaas(),
-				"spectrocloud_cloudaccount_custom":     dataSourceCloudAccountCustom(),
+				"spectrocloud_cloudaccount_azure":             dataSourceCloudAccountAzure(),
+				"spectrocloud_cloudaccount_gcp":               dataSourceCloudAccountGcp(),
+				"spectrocloud_cloudaccount_vsphere":           dataSourceCloudAccountVsphere(),
+				"spectrocloud_cloudaccount_openstack":         dataSourceCloudAccountOpenStack(),
+				"spectrocloud_cloudaccount_apache_cloudstack": dataSourceCloudAccountApacheCloudStack(),
+				"spectrocloud_cloudaccount_maas":              dataSourceCloudAccountMaas(),
+				"spectrocloud_cloudaccount_custom":            dataSourceCloudAccountCustom(),
 
 				"spectrocloud_backup_storage_location": dataSourceBackupStorageLocation(),
 
