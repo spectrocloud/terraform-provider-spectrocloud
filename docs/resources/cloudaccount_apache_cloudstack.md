@@ -27,8 +27,8 @@ resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_account" {
 
   # CloudStack API Configuration
   api_url    = var.cloudstack_api_url     # e.g., "https://cloudstack.example.com:8080/client/api"
-  api_key    = var.cloudstack_api_key
-  secret_key = var.cloudstack_secret_key
+  api_key    = var.cloudstack_api_key     # gitleaks:allow
+  secret_key = var.cloudstack_secret_key  # gitleaks:allow
 
   # Optional: CloudStack domain (defaults to ROOT domain if not specified)
   domain = var.cloudstack_domain  # e.g., "ROOT"
@@ -51,8 +51,8 @@ resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_domain_accoun
   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
 
   api_url    = var.cloudstack_api_url
-  api_key    = var.cloudstack_api_key
-  secret_key = var.cloudstack_secret_key
+  api_key    = var.cloudstack_api_key     # gitleaks:allow
+  secret_key = var.cloudstack_secret_key  # gitleaks:allow
 
   # Specify a custom CloudStack domain for multi-tenant environments
   domain = var.cloudstack_domain  # e.g., "Production"
@@ -77,8 +77,8 @@ resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_insecure" {
   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.dev_pcg.id
 
   api_url    = var.cloudstack_api_url
-  api_key    = var.cloudstack_api_key
-  secret_key = var.cloudstack_secret_key
+  api_key    = var.cloudstack_api_key     # gitleaks:allow
+  secret_key = var.cloudstack_secret_key  # gitleaks:allow
   domain     = var.cloudstack_domain
 
   # Skip SSL certificate verification (for self-signed certificates)

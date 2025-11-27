@@ -61,9 +61,9 @@ resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_account" {
   private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id # Required: ID of the private cloud gateway
 
   # CloudStack API Configuration
-  api_url    = "https://10.10.180.41:8443"                                                              # Required: e.g., https://cloudstack.example.com:8080/client/api
-  api_key    = "-DtcOxnX39GO856Z3NRhcHfiBGYiazalyyPxaRqkllaGOui7Y90ZxOcn7wXtPRV6MclvOB86XQ6uou92iFCDXQ" # Required: API key for CloudStack authentication
-  secret_key = "PBVFQAbri6UG7P0U-rbqetuw2LBz7uMSszMH5VjOjYJotJQJ439cxuDethStEyEbze5OKLUSZZksrXTQaa1zRg" # Required: Secret key for CloudStack authentication
+  api_url    = var.cloudstack_api_url    # Required: e.g., https://cloudstack.example.com:8080/client/api
+  api_key    = var.cloudstack_api_key    # Required: API key for CloudStack authentication # gitleaks:allow
+  secret_key = var.cloudstack_secret_key # Required: Secret key for CloudStack authentication # gitleaks:allow
 
   # Optional Configuration
   domain   = "ROOT" # Optional: Domain for multi-domain CloudStack environments. Default is empty (ROOT domain)
