@@ -10,6 +10,7 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"log"
+	"sort"
 	"strings"
 	"time"
 
@@ -36,6 +37,15 @@ func resourceApplicationProfile() *schema.Resource {
 		},
 
 		Description: "Provisions an Application Profile. App Profiles are templates created with preconfigured services. You can create as many profiles as required, with multiple tiers serving different functionalities per use case.",
+
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceApplicationProfileResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceApplicationProfileStateUpgradeV0,
+				Version: 0,
+			},
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -77,9 +87,199 @@ func resourceApplicationProfile() *schema.Resource {
 				Description: "The cloud provider the profile is eligible for. Default value is `all`.",
 				Optional:    true,
 			},
-			"pack": schemas.AppPackSchema(),
+			"pack": appPackSchemaSet(),
 		},
 	}
+}
+
+// appPackSchemaSet returns the TypeSet version of the pack schema for application profiles
+func appPackSchemaSet() *schema.Schema {
+	return &schema.Schema{
+		Type:        schema.TypeSet,
+		Required:    true,
+		Set:         resourceAppPackHash,
+		Description: "A set of packs to be applied to the application profile. The order of packs in the set does not matter.",
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"type": {
+					Type:        schema.TypeString,
+					Optional:    true,
+					Description: "The type of Pack. Allowed values are `container`, `helm`, `manifest`, or `operator-instance`.",
+					Default:     "spectro",
+				},
+				"source_app_tier": {
+					Type:        schema.TypeString,
+					Description: "The unique id of the pack to be used as the source for the pack.",
+					Optional:    true,
+				},
+				"registry_uid": {
+					Type:        schema.TypeString,
+					Description: "The unique id of the registry to be used for the pack. Either `registry_uid` or `registry_name` can be specified, but not both.",
+					Optional:    true,
+				},
+				"registry_name": {
+					Type:        schema.TypeString,
+					Description: "The name of the registry to be used for the pack. This can be used instead of `registry_uid` for better readability. Either `registry_uid` or `registry_name` can be specified, but not both.",
+					Optional:    true,
+				},
+				"uid": {
+					Type:        schema.TypeString,
+					Description: "The unique id of the pack. This is a computed field and is not required to be set.",
+					Computed:    true,
+					Optional:    true,
+				},
+				"name": {
+					Type:        schema.TypeString,
+					Description: "The name of the specified pack.",
+					Required:    true,
+				},
+				"properties": {
+					Type:        schema.TypeMap,
+					Optional:    true,
+					Description: "The various properties required by different database tiers eg: `databaseName` and `databaseVolumeSize` size for Redis etc.",
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
+				"install_order": {
+					Type:        schema.TypeInt,
+					Description: "The installation priority order of the app profile. The order of priority goes from lowest number to highest number. For example, a value of `-3` would be installed before an app profile with a higher number value. No upper and lower limits exist, and you may specify positive and negative integers. The default value is `0`. ",
+					Default:     0,
+					Optional:    true,
+				},
+				"manifest": {
+					Type:        schema.TypeList,
+					Optional:    true,
+					Description: "The manifest of the pack.",
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"uid": {
+								Type:     schema.TypeString,
+								Computed: true,
+							},
+							"name": {
+								Type:        schema.TypeString,
+								Description: "The name of the manifest.",
+								Required:    true,
+							},
+							"content": {
+								Type:        schema.TypeString,
+								Required:    true,
+								Description: "The content of the manifest.",
+								DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+									// UI strips the trailing newline on save
+									return strings.TrimSpace(old) == strings.TrimSpace(new)
+								},
+							},
+						},
+					},
+				},
+				"tag": {
+					Type:        schema.TypeString,
+					Description: "The identifier or version to label the pack.",
+					Optional:    true,
+				},
+				"values": {
+					Type:        schema.TypeString,
+					Optional:    true,
+					Description: "The values to be used for the pack. This is a stringified JSON object.",
+					DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+						// UI strips the trailing newline on save
+						return strings.TrimSpace(old) == strings.TrimSpace(new)
+					},
+				},
+			},
+		},
+	}
+}
+
+// resourceAppPackHash creates a hash for the pack resource
+// This hash includes all fields except computed ones (uid) to ensure proper identification
+func resourceAppPackHash(v interface{}) int {
+	var buf strings.Builder
+	m := v.(map[string]interface{})
+
+	// Include name (required field, most important identifier)
+	if v, ok := m["name"].(string); ok {
+		buf.WriteString(fmt.Sprintf("%s-", v))
+	} else {
+		log.Printf("[WARN] Pack hash: name is missing or not a string")
+	}
+
+	// Include type (optional but important for differentiation)
+	if v, ok := m["type"].(string); ok && v != "" {
+		buf.WriteString(fmt.Sprintf("%s-", v))
+	}
+
+	// Include tag/version (optional but critical for versioning)
+	if v, ok := m["tag"].(string); ok && v != "" {
+		buf.WriteString(fmt.Sprintf("%s-", v))
+	}
+
+	// Include source_app_tier (optional but important for cloning)
+	if v, ok := m["source_app_tier"].(string); ok && v != "" {
+		buf.WriteString(fmt.Sprintf("%s-", v))
+	}
+
+	// Include registry_uid (optional)
+	if v, ok := m["registry_uid"].(string); ok && v != "" {
+		buf.WriteString(fmt.Sprintf("%s-", v))
+	}
+
+	// Include registry_name (optional)
+	if v, ok := m["registry_name"].(string); ok && v != "" {
+		buf.WriteString(fmt.Sprintf("%s-", v))
+	}
+
+	// Include install_order (optional but affects deployment order)
+	if v, ok := m["install_order"].(int); ok {
+		buf.WriteString(fmt.Sprintf("%d-", v))
+	}
+
+	// Include properties (optional but critical for configuration)
+	if v, ok := m["properties"].(map[string]interface{}); ok && len(v) > 0 {
+		// Sort keys for consistent hashing
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys) // Ensure deterministic ordering
+		for _, k := range keys {
+			buf.WriteString(fmt.Sprintf("%s=%v;", k, v[k]))
+		}
+	}
+
+	// Include values (optional but critical for helm/container configuration)
+	if v, ok := m["values"].(string); ok && v != "" {
+		// Normalize whitespace for consistent hashing
+		normalized := strings.TrimSpace(v)
+		buf.WriteString(fmt.Sprintf("%s-", normalized))
+	}
+
+	// Include manifests (optional but critical for manifest/helm types)
+	if v, ok := m["manifest"].([]interface{}); ok && len(v) > 0 {
+		for _, manifestItem := range v {
+			if manifest, ok := manifestItem.(map[string]interface{}); ok {
+				if name, ok := manifest["name"].(string); ok {
+					buf.WriteString(fmt.Sprintf("manifest:%s;", name))
+				}
+				if content, ok := manifest["content"].(string); ok {
+					// Normalize whitespace for consistent hashing
+					normalized := strings.TrimSpace(content)
+					buf.WriteString(fmt.Sprintf("content:%s;", normalized))
+				}
+			}
+		}
+	}
+
+	// Note: We DO NOT include 'uid' in the hash as it is a computed field
+	// The hash should be based on user input only, not computed values
+
+	hashStr := buf.String()
+	hash := schema.HashString(hashStr)
+	log.Printf("[DEBUG] Pack hash for '%v': hash=%d, hashString='%s'", m["name"], hash, hashStr)
+
+	return hash
 }
 
 func resourceApplicationProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -138,11 +338,7 @@ func resourceApplicationProfileRead(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	diagPacks, diagnostics, done := GetDiagPacks(d, err)
-	if done {
-		return diagnostics
-	}
-	packs, err := flattenAppPacks(c, diagPacks, cp.Spec.Template.AppTiers, tierDetails, d, ctx)
+	packs, err := flattenAppPacks(c, cp.Spec.Template.AppTiers, tierDetails, d, ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -170,17 +366,34 @@ func getValueInProperties(prop map[string]interface{}, key string) string {
 	return ""
 }
 
-func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntity, tiers []*models.V1AppTierRef, tierDet []*models.V1AppTier, d *schema.ResourceData, ctx context.Context) ([]interface{}, error) {
+// findPackPropertiesByName searches through a pack TypeSet and returns the properties
+// of the pack with the matching name. This is used for retrieving masked property values.
+func findPackPropertiesByName(packSet *schema.Set, packName string) map[string]interface{} {
+	for _, packInterface := range packSet.List() {
+		pack := packInterface.(map[string]interface{})
+		if pack["name"].(string) == packName {
+			if props, ok := pack["properties"].(map[string]interface{}); ok {
+				return props
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+func flattenAppPacks(c *client.V1Client, tiers []*models.V1AppTierRef, tierDet []*models.V1AppTier, d *schema.ResourceData, ctx context.Context) ([]interface{}, error) {
 	if tiers == nil {
 		return make([]interface{}, 0), nil
 	}
 
 	// Build registry maps to track which packs use registry_name or registry_uid
-	registryNameMap := buildPackRegistryNameMap(d)
-	registryUIDMap := buildPackRegistryUIDMap(d)
+	registryNameMap := buildAppPackRegistryNameMap(d)
+	registryUIDMap := buildAppPackRegistryUIDMap(d)
 
-	ps := make([]interface{}, len(tiers))
+	// Use tierDet length instead of tiers length to avoid mismatch
+	ps := make([]interface{}, len(tierDet))
 	for i, tier := range tierDet {
+		log.Printf("[DEBUG] Flattening pack %d: name=%s, uid=%s, version=%s", i, tier.Metadata.Name, tier.Metadata.UID, tier.Spec.Version)
 		p := make(map[string]interface{})
 		p["uid"] = tier.Metadata.UID
 
@@ -197,47 +410,76 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 		if usesRegistryName {
 			// User originally specified registry_name, resolve UID back to name
 			if registryUID != "" {
-				registryName, err := resolveRegistryUIDToName(c, registryUID)
+				registryName, err := resolveAppRegistryUIDToName(c, registryUID)
 				if err == nil && registryName != "" {
 					p["registry_name"] = registryName
-					// Do NOT set registry_uid - user didn't provide it
+					p["registry_uid"] = "" // Explicitly set to empty
 				} else {
 					// Fallback to UID if name resolution fails
 					p["registry_uid"] = registryUID
+					p["registry_name"] = ""
 				}
+			} else {
+				p["registry_name"] = ""
+				p["registry_uid"] = ""
 			}
 		} else if usesRegistryUID {
 			// User originally specified registry_uid, set registry_uid
 			if registryUID != "" {
 				p["registry_uid"] = registryUID
+			} else {
+				p["registry_uid"] = ""
 			}
-			// Do NOT set registry_name - user didn't provide it
+			p["registry_name"] = "" // Explicitly set to empty
+		} else {
+			// User didn't specify either, set both to empty for consistent hashing
+			p["registry_name"] = ""
+			p["registry_uid"] = ""
 		}
-		// else: User didn't specify either registry_uid or registry_name
-		// (they probably used uid directly), so don't set either in state
 
 		p["name"] = tier.Metadata.Name
-		//p["tag"] = tier.Tag
+		// Set tag (version) from API response
+		if tier.Spec.Version != "" {
+			p["tag"] = tier.Spec.Version
+		} else {
+			p["tag"] = ""
+		}
 		p["type"] = tier.Spec.Type
-		p["source_app_tier"] = tier.Spec.SourceAppTierUID
+		// Set source_app_tier - empty string if not provided
+		if tier.Spec.SourceAppTierUID != "" {
+			p["source_app_tier"] = tier.Spec.SourceAppTierUID
+		} else {
+			p["source_app_tier"] = ""
+		}
+		// Set install_order - default to 0 if not specified
+		p["install_order"] = int(tier.Spec.InstallOrder)
 		prop := make(map[string]string)
 		if len(tier.Spec.Properties) > 0 {
 			for _, pt := range tier.Spec.Properties {
 				if pt.Value != "********" {
 					prop[pt.Name] = pt.Value
 				} else {
-					if _, ok := d.GetOk("pack"); ok {
-						ogProp := d.Get("pack").([]interface{})[i].(map[string]interface{})["properties"]
-						prop[pt.Name] = getValueInProperties(ogProp.(map[string]interface{}), pt.Name)
+					// For masked properties, find the original pack by name from the TypeSet
+					if packSet, ok := d.GetOk("pack"); ok {
+						originalPackProps := findPackPropertiesByName(packSet.(*schema.Set), tier.Metadata.Name)
+						if originalPackProps != nil {
+							prop[pt.Name] = getValueInProperties(originalPackProps, pt.Name)
+						}
 					}
 				}
 
 			}
 		}
 		p["properties"] = prop
+
+		// Set values - empty string if not provided
 		if tier.Spec.Type != nil && string(*tier.Spec.Type) == "container" {
 			p["values"] = tier.Spec.Values
+		} else {
+			p["values"] = ""
 		}
+
+		// Set manifest - empty list if not provided
 		if tier.Spec.Type != nil && (*tier.Spec.Type == "helm" || *tier.Spec.Type == "manifest") {
 			if len(tier.Spec.Manifests) > 0 {
 				ma := make([]interface{}, len(tier.Spec.Manifests))
@@ -257,11 +499,19 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 					ma[j] = mj
 				}
 				p["manifest"] = ma
+			} else {
+				p["manifest"] = make([]interface{}, 0)
 			}
+		} else {
+			p["manifest"] = make([]interface{}, 0)
 		}
 		ps[i] = p
+
+		// Debug log the flattened pack
+		log.Printf("[DEBUG] Flattened pack %d complete: %+v", i, p)
 	}
 
+	log.Printf("[DEBUG] Total flattened packs: %d", len(ps))
 	return ps, nil
 }
 
@@ -272,8 +522,8 @@ func resourceApplicationProfileUpdate(ctx context.Context, d *schema.ResourceDat
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
-	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") {
-		log.Printf("Updating packs")
+	if d.HasChange("name") || d.HasChange("tags") || d.HasChange("pack") {
+		log.Printf("Updating application profile")
 		tiersCreate, tiersUpdateMap, tiersDeleteIds, err := toApplicationTiersUpdate(d, c)
 		if err != nil {
 			return diag.FromErr(err)
@@ -323,7 +573,9 @@ func toApplicationProfileCreate(d *schema.ResourceData) (*models.V1AppProfileEnt
 	cp := toApplicationProfileBasic(d)
 
 	tiers := make([]*models.V1AppTierEntity, 0)
-	for _, tier := range d.Get("pack").([]interface{}) {
+	// Get pack as TypeSet and convert to list
+	packSet := d.Get("pack").(*schema.Set)
+	for _, tier := range packSet.List() {
 		if t, e := toApplicationProfilePackCreate(tier); e != nil {
 			return nil, e
 		} else {
@@ -394,7 +646,7 @@ func toApplicationProfilePackCreateWithClient(pSrc interface{}, c *client.V1Clie
 
 	// If registry_name is provided and client is available, resolve it to registry_uid
 	if pRegistryName != "" && pRegistryUID == "" && c != nil {
-		resolvedUID, err := resolveRegistryNameToUID(c, pRegistryName, p["type"].(string))
+		resolvedUID, err := resolveAppRegistryNameToUID(c, pRegistryName, p["type"].(string))
 		if err != nil {
 			return nil, fmt.Errorf("pack %s: %w", pName, err)
 		}
@@ -446,7 +698,9 @@ func toApplicationTiersUpdate(d *schema.ResourceData, c *client.V1Client) ([]*mo
 	var deleteTiers []string
 
 	createTiersMap := map[string]*models.V1AppTierEntity{}
-	for _, tier := range d.Get("pack").([]interface{}) {
+	// Get pack as TypeSet and convert to list
+	packSet := d.Get("pack").(*schema.Set)
+	for _, tier := range packSet.List() {
 		if _, found := previousTiersMap[tier.(map[string]interface{})["name"].(string)]; found {
 			t := toApplicationProfilePackUpdate(tier)
 			updateTiersMap[t.Name] = t
@@ -540,4 +794,195 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 	}
 
 	return pack
+}
+
+// ============================================================================
+// Internal Helper Functions for Application Profile Resource
+// ============================================================================
+// These functions are copied from shared files to make the application profile
+// resource more self-contained and independent. They are prefixed with "App"
+// to distinguish them from the shared versions used by other resources.
+
+// buildAppPackRegistryNameMap creates a map indicating which app packs use registry_name
+// by directly checking the resource data. This is specific to application profiles.
+func buildAppPackRegistryNameMap(d *schema.ResourceData) map[string]bool {
+	registryNameMap := make(map[string]bool)
+	if packs, ok := d.GetOk("pack"); ok {
+		packSet := packs.(*schema.Set)
+		for _, packInterface := range packSet.List() {
+			pack := packInterface.(map[string]interface{})
+			packName := pack["name"].(string)
+			if registryName, ok := pack["registry_name"]; ok && registryName != nil && registryName.(string) != "" {
+				registryNameMap[packName] = true
+			}
+		}
+	}
+	return registryNameMap
+}
+
+// buildAppPackRegistryUIDMap creates a map indicating which app packs use registry_uid
+// by directly checking the resource data. This is specific to application profiles.
+func buildAppPackRegistryUIDMap(d *schema.ResourceData) map[string]bool {
+	registryUIDMap := make(map[string]bool)
+	if packs, ok := d.GetOk("pack"); ok {
+		packSet := packs.(*schema.Set)
+		for _, packInterface := range packSet.List() {
+			pack := packInterface.(map[string]interface{})
+			packName := pack["name"].(string)
+			if registryUID, ok := pack["registry_uid"]; ok && registryUID != nil && registryUID.(string) != "" {
+				registryUIDMap[packName] = true
+			}
+		}
+	}
+	return registryUIDMap
+}
+
+// resolveAppRegistryNameToUID resolves a registry name to its UID for application profiles.
+// This function handles different registry types: oci, helm, spectro, container, and generic.
+func resolveAppRegistryNameToUID(c *client.V1Client, registryName string, registryType string) (string, error) {
+	if registryName == "" {
+		return "", nil
+	}
+	switch registryType {
+	case "oci":
+		registry, err := c.GetOciRegistryByName(registryName)
+		if err != nil {
+			return "", err
+		}
+		return registry.Metadata.UID, nil
+	case "helm":
+		registry, err := c.GetHelmRegistryByName(registryName)
+		if err != nil {
+			return "", err
+		}
+		return registry.Metadata.UID, nil
+	case "spectro":
+		registry, err := c.GetPackRegistryByName(registryName)
+		if err != nil {
+			return "", err
+		}
+		return registry.Metadata.UID, nil
+	case "container":
+		// Container type uses pack registry common
+		registry, err := c.GetPackRegistryCommonByName(registryName)
+		if err != nil {
+			return "", err
+		}
+		return registry.UID, nil
+	default:
+		if registryType != "manifest" && registryType != "operator-instance" {
+			registry, err := c.GetPackRegistryCommonByName(registryName)
+			if err != nil {
+				return "", err
+			}
+			return registry.UID, nil
+		}
+	}
+	return "", nil
+}
+
+// resolveAppRegistryUIDToName resolves a registry UID to its name for application profiles.
+// Used when displaying registry information back to the user in Terraform state.
+func resolveAppRegistryUIDToName(c *client.V1Client, registryUID string) (string, error) {
+	if registryUID == "" {
+		return "", nil
+	}
+	registries, err := c.SearchPackRegistryCommon()
+	if err != nil {
+		return "", fmt.Errorf("failed to search registries: %w", err)
+	}
+	for _, registry := range registries {
+		if registry.UID == registryUID {
+			return registry.Name, nil
+		}
+	}
+	return "", fmt.Errorf("registry with UID '%s' not found", registryUID)
+}
+
+// getAppDiagPacks converts the pack configuration from resource data to app tier entities
+// for validation and diagnostic purposes. This is specific to application profiles.
+func getAppDiagPacks(d *schema.ResourceData) ([]*models.V1AppTierEntity, diag.Diagnostics, error) {
+	diagPacks := make([]*models.V1AppTierEntity, 0)
+	// Get pack as TypeSet and convert to list
+	packSet := d.Get("pack").(*schema.Set)
+	for _, pack := range packSet.List() {
+		p, err := toApplicationProfilePackCreate(pack)
+		if err != nil {
+			return nil, diag.FromErr(err), err
+		}
+		diagPacks = append(diagPacks, p)
+	}
+	return diagPacks, nil, nil
+}
+
+// ============================================================================
+// State Upgrade Functions
+// ============================================================================
+
+// resourceApplicationProfileResourceV0 returns the schema for version 0 of the resource
+// This is used for state migration from v0 (TypeList) to v1 (TypeSet)
+func resourceApplicationProfileResourceV0() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"version": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "1.0.0",
+			},
+			"context": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "project",
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"description": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"cloud": {
+				Type:     schema.TypeString,
+				Default:  "all",
+				Optional: true,
+			},
+			"pack": schemas.AppPackSchema(), // This was TypeList in v0
+		},
+	}
+}
+
+// resourceApplicationProfileStateUpgradeV0 migrates state from version 0 to version 1
+// This handles the conversion of the "pack" field from TypeList to TypeSet
+func resourceApplicationProfileStateUpgradeV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading application profile state from version 0 to 1")
+
+	// Convert pack from TypeList to TypeSet
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if packRaw, exists := rawState["pack"]; exists {
+		if packList, ok := packRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping pack as list during state upgrade with %d items", len(packList))
+
+			// Keep the pack data as-is (as a list)
+			// Terraform will convert it to TypeSet when loading the resource using the schema
+			rawState["pack"] = packList
+
+			log.Printf("[DEBUG] Successfully prepared pack for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] pack is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No pack found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
