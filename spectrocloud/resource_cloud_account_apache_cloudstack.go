@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -78,7 +79,7 @@ func resourceCloudAccountApacheCloudStackCreate(ctx context.Context, d *schema.R
 
 	var diags diag.Diagnostics
 
-	account := toApacheCloudStackAccount(d)
+	account := toApacheCloudStackAccount(d, c)
 	uid, err := c.CreateCloudAccountCloudStack(account)
 	if err != nil {
 		return diag.FromErr(err)
@@ -135,7 +136,7 @@ func resourceCloudAccountApacheCloudStackUpdate(ctx context.Context, d *schema.R
 
 	var diags diag.Diagnostics
 
-	account := toApacheCloudStackAccount(d)
+	account := toApacheCloudStackAccount(d, c)
 
 	err := c.UpdateCloudAccountCloudStack(account)
 	if err != nil {
@@ -162,7 +163,8 @@ func resourceCloudAccountApacheCloudStackDelete(_ context.Context, d *schema.Res
 	return diags
 }
 
-func toApacheCloudStackAccount(d *schema.ResourceData) *models.V1CloudStackAccount {
+func toApacheCloudStackAccount(d *schema.ResourceData, c *client.V1Client) *models.V1CloudStackAccount {
+
 	account := &models.V1CloudStackAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name:        d.Get("name").(string),
@@ -176,6 +178,12 @@ func toApacheCloudStackAccount(d *schema.ResourceData) *models.V1CloudStackAccou
 			Domain:    d.Get("domain").(string),
 			Insecure:  d.Get("insecure").(bool),
 		},
+	}
+	// for system pcg, set overlordType to "system" in annotation only for apache cloudstack account
+	pcgID := d.Get("private_cloud_gateway_id").(string)
+	pcg, _ := c.GetPCGByID(pcgID)
+	if pcg.Metadata.Name == "System Private Gateway" {
+		account.Metadata.Annotations["overlordType"] = "system"
 	}
 
 	return account

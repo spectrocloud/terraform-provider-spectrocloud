@@ -903,6 +903,71 @@ func CloudAccountsRoutes() []Route {
 				},
 			},
 		},
+		// System Private Gateway - for Apache CloudStack tests
+		{
+			Method: "GET",
+			Path:   "/v1/overlords/test-system-pcg-id",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1Overlord{
+					Kind: "",
+					Metadata: &models.V1ObjectMeta{
+						Name: "System Private Gateway",
+						UID:  "test-system-pcg-id",
+					},
+					Spec: &models.V1OverloadSpec{
+						CloudAccountUID:   "test-acc-id",
+						IPAddress:         "10.10.10.10",
+						IPPools:           nil,
+						IsSelfHosted:      false,
+						IsSystem:          true,
+						SpectroClusterUID: "test-spectro-id",
+						TenantUID:         "test-tenant-id",
+					},
+					Status: &models.V1OverloadStatus{
+						Health:          nil,
+						IsActive:        true,
+						IsReady:         true,
+						KubectlCommands: nil,
+						Notifications:   nil,
+						State:           "Running",
+					},
+				},
+			},
+		},
+		// Regular PCG - for Apache CloudStack tests
+		{
+			Method: "GET",
+			Path:   "/v1/overlords/test-regular-pcg-id",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1Overlord{
+					Kind: "",
+					Metadata: &models.V1ObjectMeta{
+						Name: "Custom PCG",
+						UID:  "test-regular-pcg-id",
+					},
+					Spec: &models.V1OverloadSpec{
+						CloudAccountUID:   "test-acc-id",
+						IPAddress:         "192.168.1.100",
+						IPPools:           nil,
+						IsSelfHosted:      false,
+						IsSystem:          false,
+						SpectroClusterUID: "test-spectro-id",
+						TenantUID:         "test-tenant-id",
+					},
+					Status: &models.V1OverloadStatus{
+						Health:          nil,
+						IsActive:        true,
+						IsReady:         true,
+						KubectlCommands: nil,
+						Notifications:   nil,
+						State:           "Running",
+					},
+				},
+			},
+		},
+		// Generic PCG fallback
 		{
 			Method: "GET",
 			Path:   "/v1/overlords/{uid}",
