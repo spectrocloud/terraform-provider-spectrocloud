@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -76,8 +77,9 @@ func TestToApacheCloudStackAccount(t *testing.T) {
 			// Create a schema.ResourceData instance
 			d := schema.TestResourceDataRaw(t, resourceCloudAccountApacheCloudStack().Schema, tt.input)
 
-			// Call the function under test
-			result := toApacheCloudStackAccount(d)
+			// Call the function under test (passing nil client since we're only testing conversion logic)
+			c := unitTestMockAPIClient.(*client.V1Client)
+			result := toApacheCloudStackAccount(d, c)
 
 			// Perform assertions
 			assert.Equal(t, tt.expected.Metadata.Name, result.Metadata.Name)
@@ -154,4 +156,90 @@ func TestResourceCloudAccountApacheCloudStackDelete(t *testing.T) {
 	ctx := context.Background()
 	diags := resourceCloudAccountApacheCloudStackDelete(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
+}
+
+// Test for PCG Type Detection - System Private Gateway
+func TestToApacheCloudStackAccountWithSystemPCG(t *testing.T) {
+	// Create resource data with System Private Gateway
+	d := resourceCloudAccountApacheCloudStack().TestResourceData()
+	_ = d.Set("name", "test-cloudstack-account-system-pcg")
+	_ = d.Set("private_cloud_gateway_id", "test-system-pcg-id")
+	_ = d.Set("api_url", "https://cloudstack.example.com:8080/client/api")
+	_ = d.Set("api_key", "test-api-key")
+	_ = d.Set("secret_key", "test-secret-key")
+	_ = d.Set("domain", "ROOT")
+	_ = d.Set("insecure", false)
+
+	// Call the function under test with mock client
+	c := unitTestMockAPIClient.(*client.V1Client)
+	account := toApacheCloudStackAccount(d, c)
+
+	// Assert that overlordType annotation is set to "system" for System Private Gateway
+	assert.Equal(t, "test-cloudstack-account-system-pcg", account.Metadata.Name)
+	assert.Equal(t, "test-system-pcg-id", account.Metadata.Annotations[OverlordUID])
+	assert.Equal(t, "system", account.Metadata.Annotations["overlordType"], "overlordType should be 'system' for System Private Gateway")
+}
+
+// Test for PCG Type Detection - Regular/Custom PCG
+func TestToApacheCloudStackAccountWithRegularPCG(t *testing.T) {
+	// Create resource data with regular PCG
+	d := resourceCloudAccountApacheCloudStack().TestResourceData()
+	_ = d.Set("name", "test-cloudstack-account-regular-pcg")
+	_ = d.Set("private_cloud_gateway_id", "test-regular-pcg-id")
+	_ = d.Set("api_url", "https://cloudstack.example.com:8080/client/api")
+	_ = d.Set("api_key", "test-api-key")
+	_ = d.Set("secret_key", "test-secret-key")
+	_ = d.Set("domain", "ROOT")
+	_ = d.Set("insecure", false)
+
+	// Call the function under test with mock client
+	c := unitTestMockAPIClient.(*client.V1Client)
+	account := toApacheCloudStackAccount(d, c)
+
+	// Assert that overlordType annotation is NOT set for regular PCG
+	assert.Equal(t, "test-cloudstack-account-regular-pcg", account.Metadata.Name)
+	assert.Equal(t, "test-regular-pcg-id", account.Metadata.Annotations[OverlordUID])
+	assert.NotContains(t, account.Metadata.Annotations, "overlordType", "overlordType should NOT be set for regular PCG")
+}
+
+// Test for Create with System PCG
+func TestResourceCloudAccountApacheCloudStackCreateWithSystemPCG(t *testing.T) {
+	// Create resource data with System Private Gateway
+	d := resourceCloudAccountApacheCloudStack().TestResourceData()
+	_ = d.Set("name", "test-cloudstack-account-system")
+	_ = d.Set("context", "project")
+	_ = d.Set("private_cloud_gateway_id", "test-system-pcg-id")
+	_ = d.Set("api_url", "https://cloudstack.example.com:8080/client/api")
+	_ = d.Set("api_key", "test-api-key")
+	_ = d.Set("secret_key", "test-secret-key")
+	_ = d.Set("domain", "ROOT")
+	_ = d.Set("insecure", false)
+
+	ctx := context.Background()
+	diags := resourceCloudAccountApacheCloudStackCreate(ctx, d, unitTestMockAPIClient)
+
+	// Assert no errors
+	assert.Len(t, diags, 0)
+	assert.NotEmpty(t, d.Id(), "Resource ID should be set after creation")
+}
+
+// Test for Create with Regular PCG
+func TestResourceCloudAccountApacheCloudStackCreateWithRegularPCG(t *testing.T) {
+	// Create resource data with regular PCG
+	d := resourceCloudAccountApacheCloudStack().TestResourceData()
+	_ = d.Set("name", "test-cloudstack-account-regular")
+	_ = d.Set("context", "project")
+	_ = d.Set("private_cloud_gateway_id", "test-regular-pcg-id")
+	_ = d.Set("api_url", "https://cloudstack.example.com:8080/client/api")
+	_ = d.Set("api_key", "test-api-key")
+	_ = d.Set("secret_key", "test-secret-key")
+	_ = d.Set("domain", "Production")
+	_ = d.Set("insecure", true)
+
+	ctx := context.Background()
+	diags := resourceCloudAccountApacheCloudStackCreate(ctx, d, unitTestMockAPIClient)
+
+	// Assert no errors
+	assert.Len(t, diags, 0)
+	assert.NotEmpty(t, d.Id(), "Resource ID should be set after creation")
 }
