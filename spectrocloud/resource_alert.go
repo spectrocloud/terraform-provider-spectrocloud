@@ -380,8 +380,9 @@ func resourceAlertResourceV2() *schema.Resource {
 				Description: "The user who created the alert.",
 			},
 			"status": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
+				Set:         resourceAlertStatusHash,
 				Description: "A status block representing the internal status of the alert. This is primarily for internal use and not utilized directly.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
