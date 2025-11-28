@@ -282,9 +282,9 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 		}
 		//return handleReadError(d, err, diags)
 	} else if alertPayload == nil {
-		// Resource not found - Terraform will recreate it
 		d.SetId("")
-		return diags // ✅ Fixed: Return diags, not error
+		return diag.FromErr(err)
+
 	} else {
 		d.SetId(alertPayload.UID)
 		if err := d.Set("is_active", alertPayload.IsActive); err != nil {
@@ -299,25 +299,16 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 		if err := d.Set("identifiers", alertPayload.Identifiers); err != nil {
 			return diag.FromErr(err)
 		}
-
-		// Clear or set http field based on type
 		if alertPayload.Type == "http" {
-			if alertPayload.HTTP != nil {
-				var http []map[string]interface{}
-				hookConfig := map[string]interface{}{
-					"method":  alertPayload.HTTP.Method,
-					"url":     alertPayload.HTTP.URL,
-					"body":    alertPayload.HTTP.Body,
-					"headers": alertPayload.HTTP.Headers,
-				}
-				http = append(http, hookConfig)
-				if err := d.Set("http", http); err != nil {
-					return diag.FromErr(err)
-				}
+			var http []map[string]interface{}
+			hookConfig := map[string]interface{}{
+				"method":  alertPayload.HTTP.Method,
+				"url":     alertPayload.HTTP.URL,
+				"body":    alertPayload.HTTP.Body,
+				"headers": alertPayload.HTTP.Headers,
 			}
-		} else {
-			// Clear http field when type is not "http"
-			if err := d.Set("http", []interface{}{}); err != nil {
+			http = append(http, hookConfig)
+			if err := d.Set("http", http); err != nil {
 				return diag.FromErr(err)
 			}
 		}
