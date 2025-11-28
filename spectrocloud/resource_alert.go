@@ -283,8 +283,7 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 		//return handleReadError(d, err, diags)
 	} else if alertPayload == nil {
 		d.SetId("")
-		return diag.FromErr(err)
-
+		return diags
 	} else {
 		d.SetId(alertPayload.UID)
 		if err := d.Set("is_active", alertPayload.IsActive); err != nil {
@@ -299,16 +298,30 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 		if err := d.Set("identifiers", alertPayload.Identifiers); err != nil {
 			return diag.FromErr(err)
 		}
+
+		// ✅ Clear or set http field based on type
 		if alertPayload.Type == "http" {
-			var http []map[string]interface{}
-			hookConfig := map[string]interface{}{
-				"method":  alertPayload.HTTP.Method,
-				"url":     alertPayload.HTTP.URL,
-				"body":    alertPayload.HTTP.Body,
-				"headers": alertPayload.HTTP.Headers,
+			if alertPayload.HTTP != nil {
+				var http []map[string]interface{}
+				hookConfig := map[string]interface{}{
+					"method":  alertPayload.HTTP.Method,
+					"url":     alertPayload.HTTP.URL,
+					"body":    alertPayload.HTTP.Body,
+					"headers": alertPayload.HTTP.Headers,
+				}
+				http = append(http, hookConfig)
+				if err := d.Set("http", http); err != nil {
+					return diag.FromErr(err)
+				}
+			} else {
+				// HTTP type but no HTTP config - clear it
+				if err := d.Set("http", []interface{}{}); err != nil {
+					return diag.FromErr(err)
+				}
 			}
-			http = append(http, hookConfig)
-			if err := d.Set("http", http); err != nil {
+		} else {
+			// ✅ Clear http field when type is not "http"
+			if err := d.Set("http", []interface{}{}); err != nil {
 				return diag.FromErr(err)
 			}
 		}
