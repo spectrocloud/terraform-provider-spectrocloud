@@ -148,11 +148,6 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"domain": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "CloudStack domain name in which the cluster will be provisioned.",
-						},
 						"project": {
 							Type:        schema.TypeString,
 							Optional:    true,
