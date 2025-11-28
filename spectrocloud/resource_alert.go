@@ -299,7 +299,7 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 			return diag.FromErr(err)
 		}
 
-		// ✅ Clear or set http field based on type
+		//  Clear or set http field based on type
 		if alertPayload.Type == "http" {
 			if alertPayload.HTTP != nil {
 				var http []map[string]interface{}
@@ -320,7 +320,7 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 				}
 			}
 		} else {
-			// ✅ Clear http field when type is not "http"
+			// Clear http field when type is not "http"
 			if err := d.Set("http", []interface{}{}); err != nil {
 				return diag.FromErr(err)
 			}
