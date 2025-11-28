@@ -57,9 +57,9 @@ resource "spectrocloud_alert" "alert_http" {
 
 - `alert_all_users` (Boolean) If set to `true`, the alert will be sent to all users. If `false`, it will target specific users or identifiers.
 - `created_by` (String) The user who created the alert.
-- `http` (Block List) The configuration block for HTTP-based alerts. This is used when the `type` is set to `http`. (see [below for nested schema](#nestedblock--http))
+- `http` (Block Set) The configuration block for HTTP-based alerts. This is used when the `type` is set to `http`. (see [below for nested schema](#nestedblock--http))
 - `identifiers` (Set of String) A set of unique identifiers to which the alert will be sent. This is used to target specific users or groups.
-- `status` (Block List) A status block representing the internal status of the alert. This is primarily for internal use and not utilized directly. (see [below for nested schema](#nestedblock--status))
+- `status` (Block Set) A status block representing the internal status of the alert. This is primarily for internal use and not utilized directly. (see [below for nested schema](#nestedblock--status))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
