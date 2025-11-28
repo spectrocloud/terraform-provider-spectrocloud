@@ -28,9 +28,16 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_apache_cloudstack.account.id
 
   cloud_config {
-    zone_name    = "Zone1"
-    network_name = "DefaultNetwork"
-    ssh_key      = "my-ssh-key"
+    ssh_key_name = "my-ssh-key"
+    
+    zone {
+      name = "Zone1"
+      
+      network {
+        id   = "network-id"  # or use name instead
+        name = "DefaultNetwork"
+      }
+    }
   }
 
   cluster_profile {
@@ -43,10 +50,9 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     control_plane_as_worker = true
     name                    = "cp-pool"
     count                   = 1
+    offering                = "Medium Instance"  # CloudStack compute offering
 
-    placement {
-      zone         = "Zone1"
-      compute      = "Medium Instance"
+    network {
       network_name = "DefaultNetwork"
     }
 
@@ -57,12 +63,11 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
 
   # Worker Pool
   machine_pool {
-    name  = "worker-pool"
-    count = 2
+    name     = "worker-pool"
+    count    = 2
+    offering = "Large Instance"  # CloudStack compute offering
 
-    placement {
-      zone         = "Zone1"
-      compute      = "Large Instance"
+    network {
       network_name = "DefaultNetwork"
     }
 
@@ -94,9 +99,16 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_apache_cloudstack.account.id
 
   cloud_config {
-    zone_name    = "Zone1"
-    network_name = "ProductionNetwork"
-    ssh_key      = "production-ssh-key"
+    ssh_key_name = "production-ssh-key"
+    
+    zone {
+      name = "Zone1"
+      
+      network {
+        id   = "network-id"
+        name = "ProductionNetwork"
+      }
+    }
   }
 
   cluster_profile {
@@ -209,9 +221,16 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_static_ip" {
   cloud_account_id = data.spectrocloud_cloudaccount_apache_cloudstack.account.id
 
   cloud_config {
-    zone_name    = "Zone1"
-    network_name = "StaticIPNetwork"
-    ssh_key      = "prod-ssh-key"
+    ssh_key_name = "prod-ssh-key"
+    
+    zone {
+      name = "Zone1"
+      
+      network {
+        id   = "network-id"
+        name = "StaticIPNetwork"
+      }
+    }
   }
 
   cluster_profile {
@@ -263,9 +282,16 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_custom_template" {
   cloud_account_id = data.spectrocloud_cloudaccount_apache_cloudstack.account.id
 
   cloud_config {
-    zone_name    = "Zone1"
-    network_name = "DefaultNetwork"
-    ssh_key      = "dev-ssh-key"
+    ssh_key_name = "dev-ssh-key"
+    
+    zone {
+      name = "Zone1"
+      
+      network {
+        id   = "network-id"
+        name = "DefaultNetwork"
+      }
+    }
   }
 
   cluster_profile {
