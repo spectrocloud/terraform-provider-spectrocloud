@@ -198,20 +198,14 @@ func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interfac
 	return diags
 }
 func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "") // ✅ Use "" not "tenant"
+	c := getV1ClientWithResourceContext(m, "")
 	var err error
 
 	var diags diag.Diagnostics
-	projectUid, err := getProjectID(d, m) // ✅ Proper error handling
+	projectUid, err := getProjectID(d, m)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	/* c := getV1ClientWithResourceContext(m, "tenant")
-	var err error
-
-	var diags diag.Diagnostics
-	projectUid, _ := getProjectID(d, m) */
-	//c = getV1ClientWithResourceContextProject(m, projectUid)
 	alertObj := toAlert(d)
 	_, err = c.UpdateAlert(alertObj, projectUid, d.Get("component").(string), d.Id())
 	if err != nil {
@@ -380,7 +374,7 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 				"method":  alertPayload.HTTP.Method,
 				"url":     alertPayload.HTTP.URL,
 				"body":    alertPayload.HTTP.Body,
-				"headers": headersMap, // ✅ Use converted headers
+				"headers": headersMap,
 			}
 			http = append(http, hookConfig)
 			if err := d.Set("http", http); err != nil {
