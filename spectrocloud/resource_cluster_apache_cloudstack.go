@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -78,7 +80,8 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -425,6 +428,25 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 			"namespaces":           schemas.ClusterNamespacesSchema(),
 			"host_config":          schemas.ClusterHostConfigSchema(),
 			"location_config":      schemas.ClusterLocationSchemaComputed(),
+			"skip_completion": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
+			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
+			},
 		},
 	}
 }
@@ -472,8 +494,9 @@ func resourceClusterApacheCloudStackRead(_ context.Context, d *schema.ResourceDa
 		return diags
 	}
 
-	configUID := cluster.Spec.CloudConfigRef.UID
-	if err := d.Set("cloud_config_id", configUID); err != nil {
+	// Verify cluster type
+	err = ValidateCloudType("spectrocloud_cluster_apache_cloudstack", cluster)
+	if err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -482,7 +505,12 @@ func resourceClusterApacheCloudStackRead(_ context.Context, d *schema.ResourceDa
 		return diagnostics
 	}
 
-	return diags
+	// Flatten cluster_template variables using variables API
+	if err := flattenClusterTemplateVariables(c, d, d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+
+	return flattenCloudConfigApacheCloudStack(cluster.Spec.CloudConfigRef.UID, d, c)
 }
 
 func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -702,55 +730,129 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 }
 
 func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
-	var buf string
 	m := v.(map[string]interface{})
-	buf = fmt.Sprintf("%s-%t-%t-%s",
-		m["name"].(string),
-		m["control_plane"].(bool),
-		m["control_plane_as_worker"].(bool),
-		m["offering"].(string),
-	)
-	return schema.HashString(buf)
+	buf := CommonHash(m)
+
+	// Add CloudStack-specific fields
+	if val, ok := m["offering"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Hash instance_config
+	if instanceConfigList, ok := m["instance_config"].([]interface{}); ok && len(instanceConfigList) > 0 {
+		ic := instanceConfigList[0].(map[string]interface{})
+		if val, ok := ic["disk_gib"]; ok {
+			buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+		}
+		if val, ok := ic["memory_mib"]; ok {
+			buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+		}
+		if val, ok := ic["num_cpus"]; ok {
+			buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+		}
+		if val, ok := ic["cpu_set"]; ok {
+			buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+		}
+		if val, ok := ic["name"]; ok {
+			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+		}
+		if val, ok := ic["category"]; ok {
+			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+		}
+	}
+
+	// Hash template
+	if templateList, ok := m["template"].([]interface{}); ok && len(templateList) > 0 {
+		tmpl := templateList[0].(map[string]interface{})
+		if val, ok := tmpl["id"]; ok {
+			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+		}
+		if val, ok := tmpl["name"]; ok {
+			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+		}
+	}
+
+	// Hash networks
+	if networksList, ok := m["network"].([]interface{}); ok && len(networksList) > 0 {
+		var networkNames []string
+		for _, n := range networksList {
+			network := n.(map[string]interface{})
+			if val, ok := network["network_name"]; ok {
+				networkNames = append(networkNames, val.(string))
+			}
+		}
+		sort.Strings(networkNames)
+		buf.WriteString(strings.Join(networkNames, "-"))
+	}
+
+	return int(hash(buf.String()))
 }
 
 func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *schema.ResourceData, cloudConfigId string) error {
-	log.Printf("Updating CloudStack machine pools")
+	log.Printf("[DEBUG] === MACHINE POOL CHANGE DETECTED ===")
 
 	old, new := d.GetChange("machine_pool")
 	oldMachinePools := old.(*schema.Set)
 	newMachinePools := new.(*schema.Set)
 
-	// Delete removed machine pools
-	for _, old := range oldMachinePools.List() {
-		if !newMachinePools.Contains(old) {
-			oldMachinePool := old.(map[string]interface{})
-			machinePoolName := oldMachinePool["name"].(string)
-			log.Printf("Deleting machine pool: %s", machinePoolName)
-			if err := c.DeleteMachinePoolCloudStack(cloudConfigId, machinePoolName); err != nil {
-				return err
-			}
+	log.Printf("[DEBUG] Old machine pools count: %d, New machine pools count: %d", oldMachinePools.Len(), newMachinePools.Len())
+
+	// Create maps by machine pool name for proper comparison
+	osMap := make(map[string]interface{})
+	for _, mp := range oldMachinePools.List() {
+		machinePoolResource := mp.(map[string]interface{})
+		name := machinePoolResource["name"].(string)
+		if name != "" {
+			osMap[name] = machinePoolResource
 		}
 	}
 
-	// Create new machine pools
-	for _, new := range newMachinePools.List() {
-		if !oldMachinePools.Contains(new) {
-			newMachinePool := toMachinePoolCloudStack(new)
-			log.Printf("Creating machine pool: %s", *newMachinePool.PoolConfig.Name)
-			if err := c.CreateMachinePoolCloudStack(cloudConfigId, newMachinePool); err != nil {
-				return err
+	nsMap := make(map[string]interface{})
+	for _, mp := range newMachinePools.List() {
+		machinePoolResource := mp.(map[string]interface{})
+		name := machinePoolResource["name"].(string)
+		if name != "" {
+			nsMap[name] = machinePoolResource
+
+			// Check if this is a new, updated, or unchanged machine pool
+			if oldMachinePool, exists := osMap[name]; !exists {
+				// NEW machine pool - CREATE
+				log.Printf("[DEBUG] Creating new machine pool %s", name)
+				machinePool := toMachinePoolCloudStack(machinePoolResource)
+				if err := c.CreateMachinePoolCloudStack(cloudConfigId, machinePool); err != nil {
+					return err
+				}
+			} else {
+				// EXISTING machine pool - check if hash changed
+				oldHash := resourceMachinePoolApacheCloudStackHash(oldMachinePool)
+				newHash := resourceMachinePoolApacheCloudStackHash(machinePoolResource)
+
+				if oldHash != newHash {
+					// MODIFIED machine pool - UPDATE
+					log.Printf("[DEBUG] Updating machine pool %s (hash changed: %d -> %d)", name, oldHash, newHash)
+					machinePool := toMachinePoolCloudStack(machinePoolResource)
+					if err := c.UpdateMachinePoolCloudStack(cloudConfigId, machinePool); err != nil {
+						return err
+					}
+					// Note: Node maintenance actions are not supported for CloudStack clusters
+				} else {
+					// UNCHANGED machine pool - no action needed
+					log.Printf("[DEBUG] Machine pool %s unchanged (hash: %d)", name, oldHash)
+				}
 			}
+
+			// Mark as processed
+			delete(osMap, name)
+		} else {
+			log.Printf("[DEBUG] WARNING: Machine pool has empty name!")
 		}
 	}
 
-	// Update existing machine pools
-	for _, new := range newMachinePools.List() {
-		if oldMachinePools.Contains(new) {
-			newMachinePool := toMachinePoolCloudStack(new)
-			log.Printf("Updating machine pool: %s", *newMachinePool.PoolConfig.Name)
-			if err := c.UpdateMachinePoolCloudStack(cloudConfigId, newMachinePool); err != nil {
-				return err
-			}
+	// REMOVED machine pools - DELETE
+	for name := range osMap {
+		log.Printf("[DEBUG] Deleting removed machine pool %s", name)
+		if err := c.DeleteMachinePoolCloudStack(cloudConfigId, name); err != nil {
+			return err
 		}
 	}
 
@@ -769,4 +871,210 @@ func resourceClusterApacheCloudStackImport(ctx context.Context, d *schema.Resour
 	}
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func flattenCloudConfigApacheCloudStack(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if err := d.Set("cloud_config_id", configUID); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := ReadCommonAttributes(d); err != nil {
+		return diag.FromErr(err)
+	}
+
+	config, err := c.GetCloudConfigCloudStack(configUID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if config.Spec != nil && config.Spec.CloudAccountRef != nil {
+		if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if err := d.Set("cloud_config", flattenClusterConfigsApacheCloudStack(config)); err != nil {
+		return diag.FromErr(err)
+	}
+
+	mp := flattenMachinePoolConfigsApacheCloudStack(config.Spec.MachinePoolConfig)
+	mp, err = flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapCloudStack, mp, configUID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("machine_pool", mp); err != nil {
+		return diag.FromErr(err)
+	}
+
+	generalWarningForRepave(&diags)
+	return diags
+}
+
+func flattenClusterConfigsApacheCloudStack(config *models.V1CloudStackCloudConfig) []interface{} {
+	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
+		return make([]interface{}, 0)
+	}
+
+	clusterConfig := config.Spec.ClusterConfig
+	m := make(map[string]interface{})
+
+	if clusterConfig.Project != "" {
+		m["project"] = clusterConfig.Project
+	}
+	if clusterConfig.SSHKeyName != "" {
+		m["ssh_key_name"] = clusterConfig.SSHKeyName
+	}
+	if clusterConfig.ControlPlaneEndpoint != "" {
+		m["control_plane_endpoint"] = clusterConfig.ControlPlaneEndpoint
+	}
+	m["sync_with_cks"] = clusterConfig.SyncWithCKS
+
+	// Flatten zones
+	if len(clusterConfig.Zones) > 0 {
+		zones := make([]interface{}, 0, len(clusterConfig.Zones))
+		for _, zone := range clusterConfig.Zones {
+			zoneMap := make(map[string]interface{})
+			if zone.ID != "" {
+				zoneMap["id"] = zone.ID
+			}
+			if zone.Name != "" {
+				zoneMap["name"] = zone.Name
+			}
+
+			// Flatten network
+			if zone.Network != nil {
+				network := make(map[string]interface{})
+				if zone.Network.ID != "" {
+					network["id"] = zone.Network.ID
+				}
+				if zone.Network.Name != "" {
+					network["name"] = zone.Network.Name
+				}
+				if zone.Network.Type != "" {
+					network["type"] = zone.Network.Type
+				}
+				if zone.Network.Gateway != "" {
+					network["gateway"] = zone.Network.Gateway
+				}
+				if zone.Network.Netmask != "" {
+					network["netmask"] = zone.Network.Netmask
+				}
+				if zone.Network.Offering != "" {
+					network["offering"] = zone.Network.Offering
+				}
+				if zone.Network.RoutingMode != "" {
+					network["routing_mode"] = zone.Network.RoutingMode
+				}
+
+				// Flatten VPC
+				if zone.Network.Vpc != nil {
+					vpc := make(map[string]interface{})
+					if zone.Network.Vpc.ID != "" {
+						vpc["id"] = zone.Network.Vpc.ID
+					}
+					if zone.Network.Vpc.Name != "" {
+						vpc["name"] = zone.Network.Vpc.Name
+					}
+					if zone.Network.Vpc.Cidr != "" {
+						vpc["cidr"] = zone.Network.Vpc.Cidr
+					}
+					if zone.Network.Vpc.Offering != "" {
+						vpc["offering"] = zone.Network.Vpc.Offering
+					}
+					network["vpc"] = []interface{}{vpc}
+				}
+
+				zoneMap["network"] = []interface{}{network}
+			}
+
+			zones = append(zones, zoneMap)
+		}
+		m["zone"] = zones
+	}
+
+	return []interface{}{m}
+}
+
+func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudStackMachinePoolConfig) []interface{} {
+	if machinePools == nil {
+		return make([]interface{}, 0)
+	}
+
+	ois := make([]interface{}, len(machinePools))
+
+	for i, machinePool := range machinePools {
+		oi := make(map[string]interface{})
+
+		// Flatten pool configuration (from V1MachinePoolBaseConfig embedded)
+		// Note: AdditionalLabels and Taints are not available in the GET response for CloudStack
+		// They're only used during creation. So we skip flattening them to avoid state inconsistencies.
+		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+		if machinePool.IsControlPlane != nil {
+			oi["control_plane"] = *machinePool.IsControlPlane
+		}
+		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
+		oi["name"] = machinePool.Name
+		oi["count"] = int(machinePool.Size)
+
+		if machinePool.MinSize > 0 {
+			oi["min"] = int(machinePool.MinSize)
+		}
+		if machinePool.MaxSize > 0 {
+			oi["max"] = int(machinePool.MaxSize)
+		}
+
+		// Note: Labels field contains internal cluster-api labels (like "master"), not user-defined node labels
+		// User-defined node labels are managed separately through the node schema
+
+		// Flatten machine configuration (from V1CloudStackMachineConfig embedded)
+		// Flatten offering
+		if machinePool.Offering != nil {
+			oi["offering"] = machinePool.Offering.Name
+		}
+
+		// Flatten instance_config
+		if machinePool.InstanceConfig != nil {
+			instanceConfig := make(map[string]interface{})
+			instanceConfig["disk_gib"] = int(machinePool.InstanceConfig.DiskGiB)
+			instanceConfig["memory_mib"] = int(machinePool.InstanceConfig.MemoryMiB)
+			instanceConfig["num_cpus"] = int(machinePool.InstanceConfig.NumCPUs)
+			instanceConfig["cpu_set"] = int(machinePool.InstanceConfig.CPUSet)
+			if machinePool.InstanceConfig.Name != "" {
+				instanceConfig["name"] = machinePool.InstanceConfig.Name
+			}
+			if machinePool.InstanceConfig.Category != "" {
+				instanceConfig["category"] = machinePool.InstanceConfig.Category
+			}
+			oi["instance_config"] = []interface{}{instanceConfig}
+		}
+
+		// Flatten template
+		if machinePool.Template != nil {
+			template := make(map[string]interface{})
+			if machinePool.Template.ID != "" {
+				template["id"] = machinePool.Template.ID
+			}
+			if machinePool.Template.Name != "" {
+				template["name"] = machinePool.Template.Name
+			}
+			oi["template"] = []interface{}{template}
+		}
+
+		// Flatten networks
+		if len(machinePool.Networks) > 0 {
+			networks := make([]interface{}, 0, len(machinePool.Networks))
+			for _, network := range machinePool.Networks {
+				netMap := make(map[string]interface{})
+				if network.Name != "" {
+					netMap["network_name"] = network.Name
+				}
+				networks = append(networks, netMap)
+			}
+			oi["network"] = networks
+		}
+
+		ois[i] = oi
+	}
+
+	return ois
 }

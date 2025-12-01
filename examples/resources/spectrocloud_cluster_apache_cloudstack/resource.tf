@@ -51,6 +51,26 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     # }
   }
 
+  # Alternative: Use cluster_template instead of cluster_profile
+  # Note: cluster_template and cluster_profile are mutually exclusive
+  # cluster_template {
+  #   id = data.spectrocloud_cluster_config_template.template.id
+  #
+  #   # Optional: Override profile variables within the template
+  #   cluster_profile {
+  #     id = "profile-uid-1"
+  #     variables = {
+  #       "replicas" = "3"
+  #     }
+  #   }
+  #   cluster_profile {
+  #     id = "profile-uid-2"
+  #     variables = {
+  #       "namespace" = "production"
+  #     }
+  #   }
+  # }
+
   # Optional: Backup Policy
   # backup_policy {
   #   schedule                  = "0 0 * * SUN"
