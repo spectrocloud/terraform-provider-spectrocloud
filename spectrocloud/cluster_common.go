@@ -16,17 +16,18 @@ var (
 	DefaultDiskType = "Standard_LRS"
 	DefaultDiskSize = 60
 	NameToCloudType = map[string]string{
-		"spectrocloud_cluster_aks":          "aks",
-		"spectrocloud_cluster_aws":          "aws",
-		"spectrocloud_cluster_azure":        "azure",
-		"spectrocloud_cluster_edge_native":  "edge-native",
-		"spectrocloud_cluster_eks":          "eks",
-		"spectrocloud_cluster_edge_vsphere": "edge-vsphere",
-		"spectrocloud_cluster_gcp":          "gcp",
-		"spectrocloud_cluster_maas":         "maas",
-		"spectrocloud_cluster_openstack":    "openstack",
-		"spectrocloud_cluster_vsphere":      "vsphere",
-		"spectrocloud_cluster_gke":          "gke",
+		"spectrocloud_cluster_aks":               "aks",
+		"spectrocloud_cluster_aws":               "aws",
+		"spectrocloud_cluster_azure":             "azure",
+		"spectrocloud_cluster_edge_native":       "edge-native",
+		"spectrocloud_cluster_eks":               "eks",
+		"spectrocloud_cluster_edge_vsphere":      "edge-vsphere",
+		"spectrocloud_cluster_gcp":               "gcp",
+		"spectrocloud_cluster_maas":              "maas",
+		"spectrocloud_cluster_openstack":         "openstack",
+		"spectrocloud_cluster_vsphere":           "vsphere",
+		"spectrocloud_cluster_gke":               "gke",
+		"spectrocloud_cluster_apache_cloudstack": "apache-cloudstack",
 	}
 	//clusterVsphereKeys = []string{"name", "context", "tags", "description", "cluster_meta_attribute", "cluster_profile", "apply_setting", "cloud_account_id", "cloud_config_id", "review_repave_state", "pause_agent_upgrades", "os_patch_on_boot", "os_patch_schedule", "os_patch_after", "kubeconfig", "admin_kube_config", "cloud_config", "machine_pool", "backup_policy", "scan_policy", "cluster_rbac_binding", "namespaces", "host_config", "location_config", "skip_completion", "force_delete", "force_delete_delay"}
 )
