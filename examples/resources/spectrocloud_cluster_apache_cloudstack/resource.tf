@@ -13,6 +13,9 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   tags             = ["dev", "department:devops", "cloudstack"]
   cloud_account_id = data.spectrocloud_cloudaccount_apache_cloudstack.account.id
 
+  # Optional: Update all worker pools in parallel for faster updates (default: false)
+  # update_worker_pools_in_parallel = true
+
   cloud_config {
     # CloudStack Network Configuration
     zone_name    = var.cloudstack_zone_name

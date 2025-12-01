@@ -98,6 +98,9 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
   tags             = ["prod", "cloudstack", "department:platform"]
   cloud_account_id = data.spectrocloud_cloudaccount_apache_cloudstack.account.id
 
+  # Update all worker pools simultaneously for faster updates
+  update_worker_pools_in_parallel = true
+
   cloud_config {
     ssh_key_name = "production-ssh-key"
     

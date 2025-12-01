@@ -132,6 +132,12 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
+			"update_worker_pools_in_parallel": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -453,7 +459,8 @@ func resourceClusterApacheCloudStackCreate(ctx context.Context, d *schema.Resour
 }
 
 func resourceClusterApacheCloudStackRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c := getV1ClientWithResourceContext(m, "")
+	resourceContext := d.Get("context").(string)
+	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
 
 	cluster, err := c.GetCluster(d.Id())

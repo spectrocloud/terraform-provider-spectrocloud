@@ -98,6 +98,9 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
   tags             = ["prod", "cloudstack", "department:platform"]
   cloud_account_id = data.spectrocloud_cloudaccount_apache_cloudstack.account.id
 
+  # Update all worker pools simultaneously for faster updates
+  update_worker_pools_in_parallel = true
+
   cloud_config {
     ssh_key_name = "production-ssh-key"
     
@@ -369,6 +372,7 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_custom_template" {
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
 ### Read-Only
 

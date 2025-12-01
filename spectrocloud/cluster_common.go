@@ -3,12 +3,13 @@ package spectrocloud
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"strings"
 )
 
 var (
@@ -47,13 +48,20 @@ func toNtpServers(in map[string]interface{}) []string {
 }
 
 func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfigEntity {
-	return &models.V1ClusterConfigEntity{
+	config := &models.V1ClusterConfigEntity{
 		ClusterMetaAttribute:    toClusterMetaAttribute(d),
 		MachineManagementConfig: toMachineManagementConfig(d),
 		Resources:               toClusterResourceConfig(d),
 		HostClusterConfig:       toClusterHostConfigs(d),
 		Location:                toClusterLocationConfigs(d),
 	}
+
+	// Set UpdateWorkerPoolsInParallel if specified
+	if v, ok := d.GetOk("update_worker_pools_in_parallel"); ok {
+		config.UpdateWorkerPoolsInParallel = v.(bool)
+	}
+
+	return config
 }
 
 func toClusterMetaAttribute(d *schema.ResourceData) string {
