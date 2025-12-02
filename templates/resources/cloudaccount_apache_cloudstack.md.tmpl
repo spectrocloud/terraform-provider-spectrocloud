@@ -1,0 +1,90 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+## Example Usage
+
+### Basic Apache CloudStack Account
+
+```terraform
+data "spectrocloud_private_cloud_gateway" "pcg" {
+  name = "my-pcg"
+}
+
+resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_account" {
+  name    = "apache-cloudstack-account-1"
+  context = "project"  # Allowed values: "project" or "tenant". Default is "project"
+
+  # Private Cloud Gateway (Required)
+  private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
+
+  # CloudStack API Configuration
+  api_url    = var.cloudstack_api_url     # e.g., "https://cloudstack.example.com:8080/client/api"
+  api_key    = var.cloudstack_api_key     # gitleaks:allow
+  secret_key = var.cloudstack_secret_key  # gitleaks:allow
+
+  # Optional: CloudStack domain (defaults to ROOT domain if not specified)
+  domain = var.cloudstack_domain  # e.g., "ROOT"
+
+  # Optional: Skip SSL certificate verification (not recommended for production)
+  insecure = false
+}
+```
+
+### Apache CloudStack Account with Custom Domain
+
+```terraform
+data "spectrocloud_private_cloud_gateway" "pcg" {
+  name = "production-pcg"
+}
+
+resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_domain_account" {
+  name                     = "apache-cloudstack-production"
+  context                  = "project"
+  private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.pcg.id
+
+  api_url    = var.cloudstack_api_url
+  api_key    = var.cloudstack_api_key     # gitleaks:allow
+  secret_key = var.cloudstack_secret_key  # gitleaks:allow
+
+  # Specify a custom CloudStack domain for multi-tenant environments
+  domain = var.cloudstack_domain  # e.g., "Production"
+
+  insecure = false
+}
+```
+
+### Apache CloudStack Account with Insecure Connection
+
+```terraform
+# Note: Use insecure mode only in development/testing environments
+# Not recommended for production use
+
+data "spectrocloud_private_cloud_gateway" "dev_pcg" {
+  name = "dev-pcg"
+}
+
+resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_insecure" {
+  name                     = "apache-cloudstack-dev"
+  context                  = "project"
+  private_cloud_gateway_id = data.spectrocloud_private_cloud_gateway.dev_pcg.id
+
+  api_url    = var.cloudstack_api_url
+  api_key    = var.cloudstack_api_key     # gitleaks:allow
+  secret_key = var.cloudstack_secret_key  # gitleaks:allow
+  domain     = var.cloudstack_domain
+
+  # Skip SSL certificate verification (for self-signed certificates)
+  insecure = true
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
