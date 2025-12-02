@@ -1,13 +1,10 @@
 package spectrocloud
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"hash/fnv"
 	"log"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -35,14 +32,7 @@ func resourceAlert() *schema.Resource {
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
-		SchemaVersion: 3,
-		StateUpgraders: []schema.StateUpgrader{
-			{
-				Type:    resourceAlertResourceV2().CoreConfigSchema().ImpliedType(),
-				Upgrade: resourceAlertStateUpgradeV2,
-				Version: 2,
-			},
-		},
+
 		Schema: map[string]*schema.Schema{
 			"project": {
 				Type:        schema.TypeString,
@@ -64,7 +54,7 @@ func resourceAlert() *schema.Resource {
 			"type": {
 				Type:         schema.TypeString,
 				Required:     true,
-				ValidateFunc: validation.StringInSlice([]string{"email", "http"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"", "email", "http"}, false),
 				Description:  "The type of alert mechanism to use. Can be either `email` for email alerts or `http` for sending HTTP requests.",
 			},
 			"alert_all_users": {
@@ -80,9 +70,9 @@ func resourceAlert() *schema.Resource {
 			},
 			// Status is defined here just for schema, we are not using this status. it implemented for internal logic
 			"status": {
-				Type:        schema.TypeSet,
-				Optional:    true,
-				Set:         resourceAlertStatusHash,
+				Type:     schema.TypeList,
+				Optional: true,
+				// Set:         resourceAlertStatusHash,
 				Description: "A status block representing the internal status of the alert. This is primarily for internal use and not utilized directly.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -112,10 +102,10 @@ func resourceAlert() *schema.Resource {
 				},
 			},
 			"http": {
-				Type:        schema.TypeSet,
-				Optional:    true,
-				ForceNew:    true,
-				Set:         resourceAlertHttpHash,
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				//Set:         resourceAlertHttpHash,
 				Description: "The configuration block for HTTP-based alerts. This is used when the `type` is set to `http`.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -155,46 +145,106 @@ func resourceAlertCreate(ctx context.Context, d *schema.ResourceData, m interfac
 	component := d.Get("component").(string)
 	alertType := d.Get("type").(string)
 	var err error
-	projectUid, err := getProjectID(d, m)
+	projectUid := ""
+
+	projectUid, err = getProjectID(d, m)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	projectName := d.Get("project").(string)
+	// projectString, err := c.GetProjects()
+	if projectName == "" {
+		return diag.Errorf("project name is required")
+	}
+
 	var diags diag.Diagnostics
 	alertObj := toAlert(d)
 
-	// Handling logic as per UI. In UI, it shows only top email alert but back end stores as a list. email alerts are likely to single doc per project
-	if alertType == "email" {
-		projectSpec, err := c.GetProject(projectUid)
+	// Check if alert already exists by getting the project
+	projectSpec, err := c.GetProject(projectUid)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Find existing alert for this component
+	var existingAlertEntity *models.V1AlertEntity
+	// var existingChannels []*models.V1Channel
+	for _, alert := range projectSpec.Spec.Alerts {
+		if alert != nil && alert.Component == component {
+			//existingChannels = alert.Channels
+			existingAlertEntity = &models.V1AlertEntity{
+				Channels: alert.Channels,
+			}
+			break
+		}
+	}
+
+	customUID := projectUid + "-alert"
+	if alertType == "http" {
+		// Build channels list: preserve email alerts, replace http alerts
+		var channels []*models.V1Channel
+
+		// If there are existing alerts, process them
+		if existingAlertEntity != nil && len(existingAlertEntity.Channels) > 0 {
+			for _, channel := range existingAlertEntity.Channels {
+				// Preserve email alerts
+				if channel.Type == "email" {
+					channels = append(channels, channel)
+				}
+			}
+		}
+
+		// Add the new http alert
+		channels = append(channels, alertObj)
+
+		alertEntity := &models.V1AlertEntity{
+			Channels: channels,
+		}
+
+		err = c.UpdateProjectAlerts(alertEntity, projectUid, component)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		if len(projectSpec.Spec.Alerts) != 0 {
-			for _, s := range projectSpec.Spec.Alerts[0].Channels {
-				if s.Type == "email" {
-					_ = c.DeleteAlert(projectUid, d.Get("component").(string), s.UID)
+	} else {
+		// For email alerts: preserve existing http alerts, add the new email alert
+		var channels []*models.V1Channel
+
+		// If there are existing alerts, process them
+		if existingAlertEntity != nil && len(existingAlertEntity.Channels) > 0 {
+			for _, channel := range existingAlertEntity.Channels {
+				// Preserve http alerts
+				if channel.Type == "http" {
+					channels = append(channels, channel)
 				}
+				// Skip existing email alerts (they will be replaced by the new one)
+			}
+		}
+
+		// Add the new email alert
+		channels = append(channels, alertObj)
+
+		alertEntity := &models.V1AlertEntity{
+			Channels: channels,
+		}
+		err = c.UpdateProjectAlerts(alertEntity, projectUid, component)
+		if err != nil {
+			// Enabling `ClusterHealth` for alerts, basically for setting up for the first time
+			if strings.Contains(err.Error(), "Project 'ClusterHealth' alerts are not found") {
+				emptyAlert := &models.V1AlertEntity{
+					Channels: channels,
+				}
+				err = c.UpdateProjectAlerts(emptyAlert, projectUid, component)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			} else {
+				return diag.FromErr(err)
 			}
 		}
 	}
 
-	uid, err := c.CreateAlert(alertObj, projectUid, component)
-	if err != nil {
-		// Enabling `ClusterHealth` for alerts, basically for setting up for the first time
-		if strings.Contains(err.Error(), "Project 'ClusterHealth' alerts are not found") {
-			emptyAlert := &models.V1AlertEntity{
-				Channels: []*models.V1Channel{},
-			}
-			err = c.UpdateProjectAlerts(emptyAlert, projectUid, component)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			uid, err = c.CreateAlert(alertObj, projectUid, component)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
-	}
-	d.SetId(uid)
+	// Set the custom UID as the resource ID
+	d.SetId(customUID)
 	return diags
 }
 func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -202,14 +252,39 @@ func resourceAlertUpdate(ctx context.Context, d *schema.ResourceData, m interfac
 	var err error
 
 	var diags diag.Diagnostics
+	// Get project name instead of using getProjectID
+	projectName := d.Get("project").(string)
+	if projectName == "" {
+		return diag.Errorf("project name is required")
+	}
 	projectUid, err := getProjectID(d, m)
+
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	component := d.Get("component").(string)
+	alertType := d.Get("type").(string)
 	alertObj := toAlert(d)
-	_, err = c.UpdateAlert(alertObj, projectUid, d.Get("component").(string), d.Id())
-	if err != nil {
-		return diag.FromErr(err)
+	// If alert type is "http", check for existing "email" alert and preserve it
+	if alertType == "http" {
+		channels, err := preserveEmailAlertForHttp(c, projectUid, component, alertObj)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		// Create alert entity with both email and http channels (or just http if no email exists)
+		alertEntity := &models.V1AlertEntity{
+			Channels: channels,
+		}
+		err = c.UpdateProjectAlerts(alertEntity, projectUid, component)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		// For non-http alerts (email), use standard update
+		_, err = c.UpdateAlert(alertObj, projectUid, component, d.Id())
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	return diags
 }
@@ -232,7 +307,7 @@ func toAlert(d *schema.ResourceData) (alertChannel *models.V1Channel) {
 	}
 	_, hasHttp := d.GetOk("http")
 	if hasHttp {
-		httpList := d.Get("http").(*schema.Set).List()
+		httpList := d.Get("http").([]interface{})
 		if len(httpList) > 0 {
 			http := httpList[0].(map[string]interface{})
 			headersMap := make(map[string]string)
@@ -274,6 +349,12 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
+	// Get project name instead of using getProjectID
+	projectName := d.Get("project").(string)
+	if projectName == "" {
+		log.Printf("[WARN] Project name is empty during refresh. State preserved.")
+		return diags
+	}
 	//  Properly handle getProjectID error - don't ignore it
 	projectUid, err := getProjectID(d, m)
 	if err != nil {
@@ -288,49 +369,101 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 	}
 
 	component := d.Get("component").(string)
+	expectedType := d.Get("type").(string)
 	alertId := d.Id()
-	if alertId == "" {
-		log.Printf("[DEBUG] Alert ID is empty in state, cannot read")
+
+	log.Printf("[DEBUG] Reading alert: projectUid=%s, component=%s, alertId=%s, expectedType=%s", projectUid, component, alertId, expectedType)
+
+	projectSpec, err := c.GetProject(projectUid)
+	if err != nil {
+		log.Printf("[WARN] Error getting project during refresh: %v. State preserved.", err)
 		return diags
 	}
 
-	log.Printf("[DEBUG] Reading alert: projectUid=%s, component=%s, alertId=%s", projectUid, component, alertId)
+	// Find the alert entity for this component
+	var channels []*models.V1Channel
+	for _, alert := range projectSpec.Spec.Alerts {
+		if alert != nil && alert.Component == component && len(alert.Channels) > 0 {
+			channels = alert.Channels
+			break
+		}
+	}
 
-	alertPayload, err := c.GetAlert(projectUid, component, alertId)
-	if err != nil {
-		// Fix: Better error detection for NotFound
-		errStr := strings.ToLower(err.Error())
-		isNotFound := strings.Contains(errStr, "not found") ||
-			strings.Contains(errStr, "projectalertnotfound") ||
-			strings.Contains(errStr, "is not found") ||
-			strings.Contains(errStr, "404")
+	if len(channels) == 0 {
+		log.Printf("[DEBUG] No alerts found for component %s, clearing from state", component)
+		d.SetId("")
+		return diags
+	}
 
-		if isNotFound {
-			// Try to find the alert by matching attributes (URL, method, body)
-			log.Printf("[DEBUG] Alert not found with old UID (%s), UID may have changed. Searching by attributes...", alertId)
+	// Find the channel that matches the expected type and attributes
+	var alertPayload *models.V1Channel
 
-			alertPayload, err = findAlertByAttributes(c, projectUid, component, d)
-			if err != nil {
-				log.Printf("[DEBUG] Could not find alert by attributes: %v. Clearing from state.", err)
-				d.SetId("")
-				return diags
+	if expectedType == "email" {
+		// For email alerts, match by identifiers and alert_all_users
+		expectedIdentifiers := d.Get("identifiers").(*schema.Set)
+		expectedAlertAllUsers := d.Get("alert_all_users").(bool)
+
+		for _, channel := range channels {
+			if channel.Type == "email" {
+				// Check alert_all_users first (quick check)
+				if channel.AlertAllUsers != expectedAlertAllUsers {
+					continue
+				}
+
+				// Check identifiers match
+				identifiersMatch := true
+				if expectedIdentifiers.Len() > 0 {
+					if len(channel.Identifiers) != expectedIdentifiers.Len() {
+						identifiersMatch = false
+					} else {
+						// Convert channel identifiers to map for comparison
+						channelIdentifiers := make(map[string]bool)
+						for _, id := range channel.Identifiers {
+							channelIdentifiers[id] = true
+						}
+
+						// Check all expected identifiers exist in channel
+						for _, id := range expectedIdentifiers.List() {
+							if !channelIdentifiers[id.(string)] {
+								identifiersMatch = false
+								break
+							}
+						}
+					}
+				} else if len(channel.Identifiers) > 0 {
+					identifiersMatch = false
+				}
+
+				if identifiersMatch {
+					alertPayload = channel
+					break
+				}
 			}
-			if alertPayload == nil {
-				log.Printf("[DEBUG] Alert not found by attributes, clearing from state")
-				d.SetId("")
-				return diags
+		}
+	} else if expectedType == "http" {
+		// For HTTP alerts, match by URL, method, and body
+		expectedHttp := d.Get("http").([]interface{})
+		if len(expectedHttp) > 0 {
+
+			for _, channel := range channels {
+				if channel.Type == "http" && channel.HTTP != nil {
+					alertPayload = channel
+					break
+				}
 			}
-			// Found it! Continue with the found alert (which has the new UID)
-			log.Printf("[DEBUG] Found alert with new UID: %s (old UID was: %s)", alertPayload.UID, alertId)
 		} else {
-			//  For other errors, preserve state instead of failing
-			log.Printf("[WARN] Error reading alert during refresh: %v. State preserved (ID: %s).", err, alertId)
-			return diags // Return without error to preserve state
+			// If no http config in state but type is http, just get the first http channel
+			for _, channel := range channels {
+				if channel.Type == "http" {
+					alertPayload = channel
+					break
+				}
+			}
 		}
 	}
 
 	if alertPayload == nil {
-		log.Printf("[DEBUG] Alert payload is nil (ID: %s), clearing from state", alertId)
+		log.Printf("[DEBUG] Alert not found matching expected attributes, clearing from state")
 		d.SetId("")
 		return diags
 	}
@@ -338,14 +471,14 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 	// Resource found - update state with current values from API
 	d.SetId(alertPayload.UID)
 
-	// CRITICAL: Ensure project and component are set - Terraform needs these to match resources
+	// Ensure project and component are set - Terraform needs these to match resources
 	if err := d.Set("project", d.Get("project")); err != nil {
 		log.Printf("[WARN] Error setting project: %v", err)
 	}
 	if err := d.Set("component", component); err != nil {
 		log.Printf("[WARN] Error setting component: %v", err)
 	}
-
+	// Set common fields for all alert types
 	if err := d.Set("is_active", alertPayload.IsActive); err != nil {
 		log.Printf("[WARN] Error setting is_active: %v", err)
 	}
@@ -359,8 +492,15 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 		log.Printf("[WARN] Error setting identifiers: %v", err)
 	}
 
-	// Set http field if type is http
-	if alertPayload.Type == "http" {
+	// Set type-specific fields
+	switch alertPayload.Type {
+	case "email":
+		// Email alerts should never have an http field - clear it
+		if err := d.Set("http", []interface{}{}); err != nil {
+			log.Printf("[WARN] Error clearing http: %v", err)
+		}
+	case "http":
+		// Set http field if type is http
 		if alertPayload.HTTP != nil {
 			var http []map[string]interface{}
 			//  Convert headers from map[string]string to map[string]interface{}
@@ -386,138 +526,11 @@ func resourceAlertRead(ctx context.Context, d *schema.ResourceData, m interface{
 				log.Printf("[WARN] Error clearing http: %v", err)
 			}
 		}
-	} else {
-		// Clear http field when type is not "http"
-		if err := d.Set("http", []interface{}{}); err != nil {
-			log.Printf("[WARN] Error clearing http: %v", err)
-		}
 	}
 
 	return diags
 }
 
-// findAlertByAttributes finds an alert by matching attributes when UID has changed
-// This happens when the alert is updated via UI and the backend generates a new UID in spec.alerts[].channels[].uid
-func findAlertByAttributes(c *client.V1Client, projectUid, component string, d *schema.ResourceData) (*models.V1Channel, error) {
-	// Get the project to access all alerts
-	projectSpec, err := c.GetProject(projectUid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get project: %w", err)
-	}
-
-	// Find the alert entity for this component
-	// Structure: projectSpec.Spec.Alerts[] -> each has Component and Channels[]
-	var channels []*models.V1Channel
-	for _, alert := range projectSpec.Spec.Alerts {
-		if alert != nil && alert.Component == component && len(alert.Channels) > 0 {
-			channels = alert.Channels
-			break
-		}
-	}
-
-	if len(channels) == 0 {
-		return nil, fmt.Errorf("no alerts found for component %s", component)
-	}
-
-	// Get expected attributes from state
-	expectedType := d.Get("type").(string)
-
-	// For HTTP alerts, match by URL, method, and body (most reliable identifiers)
-	// For HTTP alerts, use flexible matching strategy
-	if expectedType == "http" {
-		// Count HTTP alerts for this component
-		httpChannels := make([]*models.V1Channel, 0)
-		for _, channel := range channels {
-			if channel.Type == "http" && channel.HTTP != nil {
-				httpChannels = append(httpChannels, channel)
-			}
-		}
-
-		if len(httpChannels) == 0 {
-			return nil, fmt.Errorf("no HTTP alerts found for component %s", component)
-		}
-
-		// If there's only one HTTP alert, use it (most common case)
-		// This handles the scenario where URL/body changed via UI
-		if len(httpChannels) == 1 {
-			log.Printf("[DEBUG] Found single HTTP alert (UID may have changed): new UID=%s", httpChannels[0].UID)
-			return httpChannels[0], nil
-		}
-
-		// If multiple HTTP alerts, try to match by method + headers (more stable than URL/body)
-		expectedHttp := d.Get("http").(*schema.Set)
-		if expectedHttp.Len() > 0 {
-			httpConfig := expectedHttp.List()[0].(map[string]interface{})
-			expectedMethod := httpConfig["method"].(string)
-			expectedHeaders := make(map[string]string)
-			if headers, ok := httpConfig["headers"].(map[string]interface{}); ok {
-				for k, v := range headers {
-					expectedHeaders[k] = v.(string)
-				}
-			}
-
-			// Try to match by method and headers first (more stable identifiers)
-			for _, channel := range httpChannels {
-				if channel.HTTP.Method == expectedMethod {
-					// Compare headers
-					headersMatch := true
-					if len(expectedHeaders) > 0 {
-						if channel.HTTP.Headers == nil || len(channel.HTTP.Headers) != len(expectedHeaders) {
-							headersMatch = false
-						} else {
-							for k, v := range expectedHeaders {
-								if channel.HTTP.Headers[k] != v {
-									headersMatch = false
-									break
-								}
-							}
-						}
-					}
-					if headersMatch {
-						log.Printf("[DEBUG] Found matching HTTP alert by method+headers: method=%s, new UID=%s",
-							expectedMethod, channel.UID)
-						return channel, nil
-					}
-				}
-			}
-
-			// Fallback: try to match by URL, method, and body (original logic)
-			expectedURL := httpConfig["url"].(string)
-			expectedBody := httpConfig["body"].(string)
-			for _, channel := range httpChannels {
-				if channel.HTTP.URL == expectedURL &&
-					channel.HTTP.Method == expectedMethod &&
-					channel.HTTP.Body == expectedBody {
-					log.Printf("[DEBUG] Found matching HTTP alert by URL/method/body: URL=%s, method=%s, new UID=%s",
-						expectedURL, expectedMethod, channel.UID)
-					return channel, nil
-				}
-			}
-		}
-
-		// If still no match and only one HTTP alert, use it anyway
-		// This handles the case where URL/body changed but there's only one alert
-		if len(httpChannels) == 1 {
-			log.Printf("[DEBUG] Using single HTTP alert (attributes may have changed): new UID=%s", httpChannels[0].UID)
-			return httpChannels[0], nil
-		}
-
-		return nil, fmt.Errorf("multiple HTTP alerts found but none match the expected attributes")
-	}
-
-	// For email alerts, match by type and alert_all_users
-	if expectedType == "email" {
-		expectedAlertAllUsers := d.Get("alert_all_users").(bool)
-		for _, channel := range channels {
-			if channel.Type == "email" && channel.AlertAllUsers == expectedAlertAllUsers {
-				log.Printf("[DEBUG] Found matching email alert: new UID=%s", channel.UID)
-				return channel, nil
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("no matching alert found for type %s", expectedType)
-}
 func getProjectID(d *schema.ResourceData, m interface{}) (string, error) {
 	projectUid := ""
 	var err error
@@ -569,9 +582,8 @@ func resourceAlertResourceV2() *schema.Resource {
 				Description: "The user who created the alert.",
 			},
 			"status": {
-				Type:        schema.TypeSet,
+				Type:        schema.TypeList,
 				Optional:    true,
-				Set:         resourceAlertStatusHash,
 				Description: "A status block representing the internal status of the alert. This is primarily for internal use and not utilized directly.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -601,10 +613,8 @@ func resourceAlertResourceV2() *schema.Resource {
 				},
 			},
 			"http": {
-				Type:        schema.TypeSet,
-				Optional:    true,
-				Set:         resourceAlertHttpHash,
-				Description: "The configuration block for HTTP-based alerts. This is used when the `type` is set to `http`.",
+				Type:     schema.TypeList,
+				Optional: true, Description: "The configuration block for HTTP-based alerts. This is used when the `type` is set to `http`.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"method": {
@@ -638,96 +648,37 @@ func resourceAlertResourceV2() *schema.Resource {
 	}
 }
 
-func resourceAlertStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
-	log.Printf("[DEBUG] Upgrading alert state from version 2 to 3")
-
-	// Convert http from TypeList to TypeSet
-	// Note: We keep the data as a list in rawState and let Terraform's schema processing
-	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
-	// issues with schema.Set objects that contain hash functions.
-	if httpRaw, exists := rawState["http"]; exists {
-		if httpList, ok := httpRaw.([]interface{}); ok {
-			log.Printf("[DEBUG] Keeping http as list during state upgrade with %d items", len(httpList))
-			// Keep the http data as-is (as a list)
-			// Terraform will convert it to TypeSet when loading the resource using the schema
-			rawState["http"] = httpList
-			log.Printf("[DEBUG] Successfully prepared http for TypeSet conversion")
-		} else {
-			log.Printf("[DEBUG] http is not a list, skipping conversion")
-		}
-	} else {
-		log.Printf("[DEBUG] No http found in state, skipping conversion")
+func preserveEmailAlertForHttp(c *client.V1Client, projectUid, component string, httpAlert *models.V1Channel) ([]*models.V1Channel, error) {
+	// Get the project to check for existing alerts
+	projectSpec, err := c.GetProject(projectUid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project: %w", err)
 	}
-
-	// Convert status from TypeList to TypeSet
-	// Note: We keep the data as a list in rawState and let Terraform's schema processing
-	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
-	// issues with schema.Set objects that contain hash functions.
-	if statusRaw, exists := rawState["status"]; exists {
-		if statusList, ok := statusRaw.([]interface{}); ok {
-			log.Printf("[DEBUG] Keeping status as list during state upgrade with %d items", len(statusList))
-			// Keep the status data as-is (as a list)
-			// Terraform will convert it to TypeSet when loading the resource using the schema
-			rawState["status"] = statusList
-			log.Printf("[DEBUG] Successfully prepared status for TypeSet conversion")
-		} else {
-			log.Printf("[DEBUG] status is not a list, skipping conversion")
-		}
-	} else {
-		log.Printf("[DEBUG] No status found in state, skipping conversion")
-	}
-
-	return rawState, nil
-}
-
-func resourceAlertHttpHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if val, ok := m["method"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
-	}
-	if val, ok := m["url"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
-	}
-	if val, ok := m["body"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
-	}
-	if headers, ok := m["headers"]; ok && headers != nil {
-		headersMap := headers.(map[string]interface{})
-		// Sort keys for consistent hashing
-		keys := make([]string, 0, len(headersMap))
-		for k := range headersMap {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			buf.WriteString(fmt.Sprintf("%s:%s-", k, headersMap[k].(string)))
+	// Find existing alert entity for this component
+	var existingAlertEntity *models.V1AlertEntity
+	for _, alert := range projectSpec.Spec.Alerts {
+		if alert != nil && alert.Component == component {
+			existingAlertEntity = &models.V1AlertEntity{
+				Channels: alert.Channels,
+			}
+			break
 		}
 	}
-
-	return int(alertHash(buf.String()))
-}
-
-func resourceAlertStatusHash(v interface{}) int {
-	var buf bytes.Buffer
-	m := v.(map[string]interface{})
-
-	if val, ok := m["is_succeeded"]; ok {
-		buf.WriteString(fmt.Sprintf("%t-", val.(bool)))
+	// Check if there's an existing email alert
+	var existingEmailChannel *models.V1Channel
+	if existingAlertEntity != nil {
+		for _, channel := range existingAlertEntity.Channels {
+			if channel.Type == "email" {
+				existingEmailChannel = channel
+				break
+			}
+		}
 	}
-	if val, ok := m["message"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	// If email alert exists, preserve it along with the http alert
+	if existingEmailChannel != nil {
+		// Return channels with both email and http
+		return []*models.V1Channel{existingEmailChannel, httpAlert}, nil
 	}
-	if val, ok := m["time"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
-	}
-
-	return int(alertHash(buf.String()))
-}
-
-func alertHash(s string) uint32 {
-	h := fnv.New32a()
-	_, _ = h.Write([]byte(s))
-	return h.Sum32()
+	// No email alert exists, return just the http alert
+	return []*models.V1Channel{httpAlert}, nil
 }
