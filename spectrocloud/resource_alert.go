@@ -70,9 +70,8 @@ func resourceAlert() *schema.Resource {
 			},
 			// Status is defined here just for schema, we are not using this status. it implemented for internal logic
 			"status": {
-				Type:     schema.TypeList,
-				Optional: true,
-				// Set:         resourceAlertStatusHash,
+				Type:        schema.TypeList,
+				Optional:    true,
 				Description: "A status block representing the internal status of the alert. This is primarily for internal use and not utilized directly.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -102,10 +101,9 @@ func resourceAlert() *schema.Resource {
 				},
 			},
 			"http": {
-				Type:     schema.TypeList,
-				Optional: true,
-				ForceNew: true,
-				//Set:         resourceAlertHttpHash,
+				Type:        schema.TypeList,
+				Optional:    true,
+				ForceNew:    true,
 				Description: "The configuration block for HTTP-based alerts. This is used when the `type` is set to `http`.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
