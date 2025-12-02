@@ -17,7 +17,7 @@ require (
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.34.2
 	k8s.io/apimachinery v0.34.2
-	kubevirt.io/api v1.6.3
+	kubevirt.io/api v1.7.0
 	kubevirt.io/containerized-data-importer-api v1.63.1
 )
 
@@ -125,7 +125,7 @@ require (
 	google.golang.org/protobuf v1.36.9 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/apiextensions-apiserver v0.32.5 // indirect
+	k8s.io/apiextensions-apiserver v0.33.5 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
 	kubevirt.io/controller-lifecycle-operator-sdk/api v0.0.0-20220329064328-f3cc58c6ed90 // indirect
