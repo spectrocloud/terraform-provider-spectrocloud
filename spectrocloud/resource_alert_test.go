@@ -2,9 +2,10 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -81,11 +82,11 @@ func TestToAlertHttp(t *testing.T) {
 
 /*
 Type - Unit Test
-Description - Testing ToAlert function for http schema with email schema.
+Description - Testing ToAlertChannels function for auto-detect with both email and http schema.
 */
-func TestToAlertHttpEmail(t *testing.T) {
+func TestToAlertChannelsAutoDetect(t *testing.T) {
 	rd := resourceAlert().TestResourceData()
-	err := rd.Set("type", "http")
+	err := rd.Set("type", "") // Auto-detect based on configuration
 	if err != nil {
 		return
 	}
@@ -117,27 +118,108 @@ func TestToAlertHttpEmail(t *testing.T) {
 	if err != nil {
 		return
 	}
-	alertChannelHttpEmail := toAlert(rd)
-	if alertChannelHttpEmail.Type != "http" || alertChannelHttpEmail.IsActive != true ||
-		alertChannelHttpEmail.AlertAllUsers != false || alertChannelHttpEmail == nil {
+
+	// Test toAlertChannels returns both email and http channels
+	channels := toAlertChannels(rd)
+	if len(channels) != 2 {
 		t.Fail()
-		t.Logf("Alert http channel schema definition is failing")
+		t.Logf("Expected 2 channels (email and http), got %d", len(channels))
+		return
 	}
-	if http[0]["method"] != alertChannelHttpEmail.HTTP.Method || http[0]["url"] != alertChannelHttpEmail.HTTP.URL ||
-		http[0]["body"] != alertChannelHttpEmail.HTTP.Body || len(http[0]["headers"].(map[string]interface{})) != len(alertChannelHttpEmail.HTTP.Headers) {
+
+	// First channel should be email
+	emailChannel := channels[0]
+	if emailChannel.Type != "email" || emailChannel.IsActive != true {
+		t.Fail()
+		t.Logf("Email channel schema definition is failing")
+	}
+	if !reflect.DeepEqual(emails, emailChannel.Identifiers) {
+		t.Fail()
+		t.Logf("Alert email identifiers are not matching with input")
+	}
+
+	// Second channel should be http
+	httpChannel := channels[1]
+	if httpChannel.Type != "http" || httpChannel.IsActive != true {
+		t.Fail()
+		t.Logf("HTTP channel schema definition is failing")
+	}
+	if http[0]["method"] != httpChannel.HTTP.Method || http[0]["url"] != httpChannel.HTTP.URL ||
+		http[0]["body"] != httpChannel.HTTP.Body || len(http[0]["headers"].(map[string]interface{})) != len(httpChannel.HTTP.Headers) {
 		t.Fail()
 		t.Logf("Alert http configurations are not matching with test http input")
 	}
-	if !reflect.DeepEqual(emails, alertChannelHttpEmail.Identifiers) {
+}
+
+/*
+Type - Unit Test
+Description - Testing ToAlertChannels function with multiple HTTP configurations.
+*/
+func TestToAlertMultipleHttp(t *testing.T) {
+	rd := resourceAlert().TestResourceData()
+	err := rd.Set("type", "http")
+	if err != nil {
+		return
+	}
+	err = rd.Set("is_active", true)
+	if err != nil {
+		return
+	}
+	err = rd.Set("alert_all_users", false)
+	if err != nil {
+		return
+	}
+
+	var httpConfigs []map[string]interface{}
+	// First HTTP webhook
+	hookConfig1 := map[string]interface{}{
+		"method": "POST",
+		"url":    "https://www.webhook1.com/notify",
+		"body":   "{ \"text\": \"{{message}}\" }",
+		"headers": map[string]interface{}{
+			"tag": "Health",
+		},
+	}
+	// Second HTTP webhook
+	hookConfig2 := map[string]interface{}{
+		"method": "POST",
+		"url":    "https://www.webhook2.com/alert",
+		"body":   "{ \"alert\": \"{{message}}\" }",
+		"headers": map[string]interface{}{
+			"source": "spectrocloud",
+		},
+	}
+	httpConfigs = append(httpConfigs, hookConfig1, hookConfig2)
+	err = rd.Set("http", httpConfigs)
+	if err != nil {
+		return
+	}
+
+	// Test toAlertChannels returns multiple http channels
+	channels := toAlertChannels(rd)
+	if len(channels) != 2 {
 		t.Fail()
-		t.Logf("Alert email identifiers are not matching with input")
+		t.Logf("Expected 2 HTTP channels, got %d", len(channels))
+		return
+	}
+
+	// Verify first HTTP channel
+	if channels[0].Type != "http" || channels[0].HTTP.URL != "https://www.webhook1.com/notify" {
+		t.Fail()
+		t.Logf("First HTTP channel configuration is incorrect")
+	}
+
+	// Verify second HTTP channel
+	if channels[1].Type != "http" || channels[1].HTTP.URL != "https://www.webhook2.com/alert" {
+		t.Fail()
+		t.Logf("Second HTTP channel configuration is incorrect")
 	}
 }
 
 func prepareAlertTestData() *schema.ResourceData {
 	rd := resourceAlert().TestResourceData()
 	rd.SetId("test-alert-id")
-	_ = rd.Set("type", "email")
+	_ = rd.Set("type", "") // Auto-detect based on configuration
 	_ = rd.Set("is_active", true)
 	_ = rd.Set("alert_all_users", false)
 	_ = rd.Set("project", "Default")
