@@ -320,16 +320,24 @@ func setPackManifests(pack *models.V1PackValuesEntity, p map[string]interface{},
 
 func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	log.Printf("Updating cluster_profile (not cluster_template)")
+
+	// Capture old cluster_profile value at the start to restore on any error
+	// This prevents Terraform state from getting out of sync with API when updates fail
+	oldProfile, _ := d.GetChange("cluster_profile")
+	restoreOldProfile := func() {
+		_ = d.Set("cluster_profile", oldProfile)
+	}
+
 	profiles, err := toAddonDeplProfiles(c, d)
 	var variableEntity []*models.V1SpectroClusterVariableUpdateEntity
 	if err != nil {
 		// Restore old value on error
-		oldProfile, _ := d.GetChange("cluster_profile")
-		_ = d.Set("cluster_profile", oldProfile)
+		restoreOldProfile()
 		return err
 	}
 	settings, err := toSpcApplySettings(d)
 	if err != nil {
+		restoreOldProfile()
 		return err
 	}
 	body := &models.V1SpectroClusterProfiles{
@@ -338,6 +346,9 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	}
 	clusterContext := d.Get("context").(string)
 	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
+		// Restore old value on API error (e.g., DuplicateClusterPacksForbidden)
+		// This ensures Terraform state stays in sync with actual API state
+		restoreOldProfile()
 		return err
 	}
 
@@ -347,6 +358,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 
 	ctx := context.Background()
 	if err := waitForProfileDownload(ctx, c, clusterContext, d.Id(), d.Timeout(schema.TimeoutUpdate)); err != nil {
+		restoreOldProfile()
 		return err
 	}
 
@@ -397,6 +409,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	if len(variableEntity) != 0 {
 		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
 		if err != nil {
+			restoreOldProfile()
 			return err
 		}
 	}
