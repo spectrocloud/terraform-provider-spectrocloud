@@ -337,7 +337,8 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		SpcApplySettings: settings,
 	}
 	clusterContext := d.Get("context").(string)
-	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
+	// Use PATCH instead of PUT to preserve add-on profiles attached via spectrocloud_addon_deployment
+	if err := c.PatchClusterProfileValues(d.Id(), body); err != nil {
 		return err
 	}
 
