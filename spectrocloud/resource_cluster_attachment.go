@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -183,28 +184,86 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 
 func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, cluster *models.V1SpectroCluster, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
 
+	// Get old and new profiles to detect deletions
+	oldProfilesRaw, newProfilesRaw := d.GetChange("cluster_profile")
+
+	// Build map of new profile UIDs
+	newProfileUIDs := make(map[string]bool)
+	if newProfilesRaw != nil {
+		for _, profileRaw := range newProfilesRaw.([]interface{}) {
+			profile := profileRaw.(map[string]interface{})
+			if id, ok := profile["id"].(string); ok && id != "" {
+				newProfileUIDs[id] = true
+			}
+		}
+	}
+
+	// Find profiles to delete (in old state but not in new state)
+	var profilesToDelete []string
+	if oldProfilesRaw != nil {
+		for _, profileRaw := range oldProfilesRaw.([]interface{}) {
+			profile := profileRaw.(map[string]interface{})
+			if id, ok := profile["id"].(string); ok && id != "" {
+				if !newProfileUIDs[id] {
+					profilesToDelete = append(profilesToDelete, id)
+					log.Printf("Profile %s will be deleted (removed from cluster_profile)", id)
+				}
+			}
+		}
+	}
+
+	// Delete removed profiles first
+	if len(profilesToDelete) > 0 {
+		deleteBody := &models.V1SpectroClusterProfilesDeleteEntity{
+			ProfileUids: profilesToDelete,
+		}
+		if err := c.DeleteAddonDeployment(clusterUid, deleteBody); err != nil {
+			return diag.FromErr(fmt.Errorf("failed to delete removed profiles: %w", err))
+		}
+	}
+
+	// Now handle updates/additions
 	addonDeployment, err := toAddonDeployment(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	if len(addonDeployment.Profiles) == 0 {
-		return diag.FromErr(errors.New("cannot convert addon deployment: zero profiles found"))
+		// No profiles to add/update, we're done
+		// Update resource ID to first profile (or keep existing if available)
+		if len(profilesToDelete) > 0 {
+			resourceAddonDeploymentRead(ctx, d, m)
+		}
+		return diags
 	}
 
-	newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
-	if err != nil {
-		return diag.FromErr(err)
+	// Update each profile
+	for _, profile := range addonDeployment.Profiles {
+		newProfile, err := c.GetClusterProfile(profile.UID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+
+		// Create a single-profile body for this profile
+		singleProfileBody := &models.V1SpectroClusterProfiles{
+			Profiles:         []*models.V1SpectroClusterProfileEntity{profile},
+			SpcApplySettings: addonDeployment.SpcApplySettings,
+		}
+
+		err = c.UpdateAddonDeployment(cluster, singleProfileBody, newProfile)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
-	clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
-	if err != nil {
-		return diag.FromErr(err)
+	// Update resource ID to first profile
+	if len(addonDeployment.Profiles) > 0 {
+		clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
 	}
-	d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
+
 	diagnostics, isError := waitForAddonDeploymentUpdate(ctx, d, *cluster, addonDeployment.Profiles[0].UID, diags, c)
 	if isError {
 		return diagnostics
