@@ -543,7 +543,6 @@ Optional:
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
-- `instance_config` (Block List, Max: 1) Advanced instance configuration for custom CPU, memory, and disk settings. Optional, used for customized instance specifications beyond standard offerings. (see [below for nested schema](#nestedblock--machine_pool--instance_config))
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling.
 - `network` (Block List) Network configuration for the machine pool instances. (see [below for nested schema](#nestedblock--machine_pool--network))
@@ -552,21 +551,9 @@ Optional:
 - `template` (Block List, Max: 1) Apache CloudStack template override for this machine pool. If not specified, inherits cluster default from profile. (see [below for nested schema](#nestedblock--machine_pool--template))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
-<a id="nestedblock--machine_pool--instance_config"></a>
-### Nested Schema for `machine_pool.instance_config`
+Read-Only:
 
-Required:
-
-- `disk_gib` (Number) Root disk size in GiB. Required if instance_config is specified.
-- `memory_mib` (Number) Memory size in MiB. Required if instance_config is specified.
-- `num_cpus` (Number) Number of CPUs for the instance. Required if instance_config is specified.
-
-Optional:
-
-- `category` (String) Category for the instance configuration. Optional.
-- `cpu_set` (Number) CPU set for the instance. Optional, defaults to 0.
-- `name` (String) Name for the instance configuration. Optional.
-
+- `instance_config` (List of Object) Instance configuration details returned by the CloudStack API. This is a computed field based on the selected offering. (see [below for nested schema](#nestedatt--machine_pool--instance_config))
 
 <a id="nestedblock--machine_pool--network"></a>
 ### Nested Schema for `machine_pool.network`
@@ -606,6 +593,19 @@ Optional:
 
 - `id` (String) Template ID. Either ID or name must be provided.
 - `name` (String) Template name. Either ID or name must be provided.
+
+
+<a id="nestedatt--machine_pool--instance_config"></a>
+### Nested Schema for `machine_pool.instance_config`
+
+Read-Only:
+
+- `category` (String)
+- `cpu_set` (Number)
+- `disk_gib` (Number)
+- `memory_mib` (Number)
+- `name` (String)
+- `num_cpus` (Number)
 
 
 
