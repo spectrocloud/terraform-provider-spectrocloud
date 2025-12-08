@@ -318,6 +318,127 @@ func setPackManifests(pack *models.V1PackValuesEntity, p map[string]interface{},
 	}
 }
 
+// setReplaceWithProfileForExisting sets the ReplaceWithProfile field for each profile
+// that already exists on the cluster. This is necessary when using PATCH to update
+// profiles - without ReplaceWithProfile, PATCH would add duplicates instead of updating.
+// It matches profiles by name: if a profile with the same name is already attached to
+// the cluster, ReplaceWithProfile is set to that existing profile's UID.
+func setReplaceWithProfileForExisting(c *client.V1Client, cluster *models.V1SpectroCluster, profiles []*models.V1SpectroClusterProfileEntity) error {
+	if cluster == nil || len(profiles) == 0 {
+		return nil
+	}
+
+	for _, profile := range profiles {
+		if profile == nil || profile.UID == "" {
+			continue
+		}
+
+		// Get the cluster profile to find its name
+		clusterProfile, err := c.GetClusterProfile(profile.UID)
+		if err != nil {
+			return fmt.Errorf("failed to get cluster profile %s: %w", profile.UID, err)
+		}
+		if clusterProfile == nil || clusterProfile.Metadata == nil {
+			continue
+		}
+
+		// Check if a profile with the same name is already attached to the cluster
+		existingUID := findAttachedProfileByName(cluster, clusterProfile.Metadata.Name)
+		if existingUID != "" && existingUID != profile.UID {
+			// Only set ReplaceWithProfile if the existing profile has a DIFFERENT UID
+			// If the UIDs match, the profile is already attached and doesn't need replacement
+			log.Printf("Profile %s (name: %s) will replace existing attached profile %s",
+				profile.UID, clusterProfile.Metadata.Name, existingUID)
+			profile.ReplaceWithProfile = existingUID
+		} else if existingUID == profile.UID {
+			log.Printf("Profile %s (name: %s) is already attached with same UID, no replacement needed",
+				profile.UID, clusterProfile.Metadata.Name)
+		}
+	}
+
+	return nil
+}
+
+// findAttachedProfileByName finds a profile attached to the cluster by its name.
+// Returns the UID of the attached profile if found, empty string otherwise.
+func findAttachedProfileByName(cluster *models.V1SpectroCluster, profileName string) string {
+	if cluster == nil || cluster.Spec == nil || profileName == "" {
+		return ""
+	}
+
+	for _, template := range cluster.Spec.ClusterProfileTemplates {
+		if template != nil && template.Name == profileName {
+			return template.UID
+		}
+	}
+
+	return ""
+}
+
+// getProfilesToDelete compares old and new cluster_profile state and returns
+// the UIDs of profiles that need to be deleted (profiles in old state but not in new state).
+// This is necessary when using PATCH since it doesn't automatically remove profiles.
+// Important: This compares by profile NAME, not just ID. If a profile ID changes but the
+// name stays the same (version upgrade), it's NOT a deletion - it's handled by ReplaceWithProfile.
+func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
+	oldProfilesRaw, newProfilesRaw := d.GetChange("cluster_profile")
+
+	// Build a set of new profile NAMES (not just IDs)
+	// This is important: version upgrades change the ID but keep the same name
+	newProfileNames := make(map[string]bool)
+	if newProfilesRaw != nil {
+		for _, p := range newProfilesRaw.([]interface{}) {
+			if p == nil {
+				continue
+			}
+			profile := p.(map[string]interface{})
+			if id, ok := profile["id"].(string); ok && id != "" {
+				// Get the profile name from the API
+				clusterProfile, err := c.GetClusterProfile(id)
+				if err != nil {
+					log.Printf("Warning: could not get profile %s to check name: %v", id, err)
+					continue
+				}
+				if clusterProfile != nil && clusterProfile.Metadata != nil {
+					newProfileNames[clusterProfile.Metadata.Name] = true
+				}
+			}
+		}
+	}
+
+	// Find profiles in old state whose NAME is not in new state
+	// Only these are actual deletions; ID changes with same name are version upgrades
+	var profilesToDelete []string
+	if oldProfilesRaw != nil {
+		for _, p := range oldProfilesRaw.([]interface{}) {
+			if p == nil {
+				continue
+			}
+			profile := p.(map[string]interface{})
+			if id, ok := profile["id"].(string); ok && id != "" {
+				// Get the old profile name from the API
+				clusterProfile, err := c.GetClusterProfile(id)
+				if err != nil {
+					log.Printf("Warning: could not get old profile %s to check name: %v", id, err)
+					continue
+				}
+				if clusterProfile != nil && clusterProfile.Metadata != nil {
+					profileName := clusterProfile.Metadata.Name
+					if !newProfileNames[profileName] {
+						// This profile name is not in the new state - it's a real deletion
+						log.Printf("Profile %s (name: %s) will be deleted (name removed from cluster_profile)", id, profileName)
+						profilesToDelete = append(profilesToDelete, id)
+					} else {
+						log.Printf("Profile %s (name: %s) ID changed but name still exists - version upgrade, not deletion", id, profileName)
+					}
+				}
+			}
+		}
+	}
+
+	return profilesToDelete
+}
+
 func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	log.Printf("Updating cluster_profile (not cluster_template)")
 	profiles, err := toAddonDeplProfiles(c, d)
@@ -332,6 +453,39 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	if err != nil {
 		return err
 	}
+
+	// Get the current cluster state to find existing profile UIDs for replacement
+	cluster, err := c.GetCluster(d.Id())
+	if err != nil {
+		return fmt.Errorf("failed to get cluster for profile update: %w", err)
+	}
+
+	// Handle profile deletions: find profiles that were in old state but not in new state
+	// These need to be explicitly deleted since PATCH doesn't remove profiles
+	if d.HasChange("cluster_profile") {
+		profilesToDelete := getProfilesToDelete(c, d)
+		if len(profilesToDelete) > 0 {
+			log.Printf("Deleting %d profiles that were removed from cluster_profile", len(profilesToDelete))
+			deleteBody := &models.V1SpectroClusterProfilesDeleteEntity{
+				ProfileUids: profilesToDelete,
+			}
+			if err := c.DeleteAddonDeployment(d.Id(), deleteBody); err != nil {
+				return fmt.Errorf("failed to delete removed profiles: %w", err)
+			}
+		}
+	}
+
+	// If there are no profiles to add/update, we're done
+	if len(profiles) == 0 {
+		return nil
+	}
+
+	// Set ReplaceWithProfile for profiles that already exist on the cluster
+	// This ensures PATCH updates existing profiles instead of adding duplicates
+	if err := setReplaceWithProfileForExisting(c, cluster, profiles); err != nil {
+		return fmt.Errorf("failed to resolve profile replacements: %w", err)
+	}
+
 	body := &models.V1SpectroClusterProfiles{
 		Profiles:         profiles,
 		SpcApplySettings: settings,
