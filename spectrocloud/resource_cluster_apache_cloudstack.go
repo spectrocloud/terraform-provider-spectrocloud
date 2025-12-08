@@ -339,41 +339,39 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 						},
 						"instance_config": {
 							Type:        schema.TypeList,
-							Optional:    true,
-							MaxItems:    1,
-							Description: "Advanced instance configuration for custom CPU, memory, and disk settings. Optional, used for customized instance specifications beyond standard offerings.",
+							Computed:    true,
+							Description: "Instance configuration details returned by the CloudStack API. This is a computed field based on the selected offering.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"disk_gib": {
 										Type:        schema.TypeInt,
-										Required:    true,
-										Description: "Root disk size in GiB. Required if instance_config is specified.",
+										Computed:    true,
+										Description: "Root disk size in GiB.",
 									},
 									"memory_mib": {
 										Type:        schema.TypeInt,
-										Required:    true,
-										Description: "Memory size in MiB. Required if instance_config is specified.",
+										Computed:    true,
+										Description: "Memory size in MiB.",
 									},
 									"num_cpus": {
 										Type:        schema.TypeInt,
-										Required:    true,
-										Description: "Number of CPUs for the instance. Required if instance_config is specified.",
+										Computed:    true,
+										Description: "Number of CPUs for the instance.",
 									},
 									"cpu_set": {
 										Type:        schema.TypeInt,
-										Optional:    true,
-										Default:     0,
-										Description: "CPU set for the instance. Optional, defaults to 0.",
+										Computed:    true,
+										Description: "CPU set for the instance.",
 									},
 									"name": {
 										Type:        schema.TypeString,
-										Optional:    true,
-										Description: "Name for the instance configuration. Optional.",
+										Computed:    true,
+										Description: "Name for the instance configuration.",
 									},
 									"category": {
 										Type:        schema.TypeString,
-										Optional:    true,
-										Description: "Category for the instance configuration. Optional.",
+										Computed:    true,
+										Description: "Category for the instance configuration.",
 									},
 								},
 							},
@@ -646,24 +644,7 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		},
 	}
 
-	// Process instance_config (NEW SDK structure)
-	if instanceConfigs, ok := mp["instance_config"].([]interface{}); ok && len(instanceConfigs) > 0 {
-		ic := instanceConfigs[0].(map[string]interface{})
-		cloudConfig.InstanceConfig = &models.V1InstanceConfig{
-			DiskGiB:   int64(ic["disk_gib"].(int)),
-			MemoryMiB: int64(ic["memory_mib"].(int)),
-			NumCPUs:   safeInt32Conversion(ic["num_cpus"].(int), 2),
-		}
-		if cpuSet, ok := ic["cpu_set"].(int); ok {
-			cloudConfig.InstanceConfig.CPUSet = int64(cpuSet)
-		}
-		if name, ok := ic["name"].(string); ok && name != "" {
-			cloudConfig.InstanceConfig.Name = name
-		}
-		if category, ok := ic["category"].(string); ok && category != "" {
-			cloudConfig.InstanceConfig.Category = category
-		}
-	}
+	// Note: instance_config is computed (returned by API based on offering) - not sent in requests
 
 	// Process template (RE-ADDED in new SDK)
 	if templates, ok := mp["template"].([]interface{}); ok && len(templates) > 0 {
@@ -738,28 +719,7 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 
-	// Hash instance_config
-	if instanceConfigList, ok := m["instance_config"].([]interface{}); ok && len(instanceConfigList) > 0 {
-		ic := instanceConfigList[0].(map[string]interface{})
-		if val, ok := ic["disk_gib"]; ok {
-			buf.WriteString(fmt.Sprintf("%d-", val.(int)))
-		}
-		if val, ok := ic["memory_mib"]; ok {
-			buf.WriteString(fmt.Sprintf("%d-", val.(int)))
-		}
-		if val, ok := ic["num_cpus"]; ok {
-			buf.WriteString(fmt.Sprintf("%d-", val.(int)))
-		}
-		if val, ok := ic["cpu_set"]; ok {
-			buf.WriteString(fmt.Sprintf("%d-", val.(int)))
-		}
-		if val, ok := ic["name"]; ok {
-			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
-		}
-		if val, ok := ic["category"]; ok {
-			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
-		}
-	}
+	// Note: instance_config is computed and excluded from hash to prevent false change detection
 
 	// Hash template
 	if templateList, ok := m["template"].([]interface{}); ok && len(templateList) > 0 {
