@@ -51,22 +51,33 @@ func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *mo
 			}
 		}
 
-		// CRITICAL FIX: Also read ALL add-on profiles from cluster
-		// This handles the case where state is incomplete (e.g., only 1 of 2 profiles was saved)
-		// We'll include all add-on profiles from the cluster to ensure we detect all removals
-		for _, templateProfile := range cluster.Spec.ClusterProfileTemplates {
-			if templateProfile != nil {
-				// Get profile definition to check if it's an add-on profile
-				profileDef, err := c.GetClusterProfile(templateProfile.UID)
-				if err == nil && profileDef != nil && profileDef.Spec != nil && profileDef.Spec.Published != nil {
-					// Check if this is an add-on profile (not infrastructure)
-					if string(profileDef.Spec.Published.Type) == string(models.V1ProfileTypeAddDashOn) {
-						// This is an add-on profile - include it
-						// This ensures we read all add-on profiles, even if state is incomplete
-						tfProfileIDs[templateProfile.UID] = true
+		// FIX: Only verify profiles from state exist on cluster, don't add new ones
+		// This ensures we detect deletions (profile removed from config but still in state)
+		// while still handling cases where a profile in state was deleted externally
+		profilesToRemove := make([]string, 0)
+		for profileID := range tfProfileIDs {
+			// Verify this profile exists on cluster
+			foundOnCluster := false
+			for _, templateProfile := range cluster.Spec.ClusterProfileTemplates {
+				if templateProfile != nil && templateProfile.UID == profileID {
+					// Verify it's an add-on profile
+					profileDef, err := c.GetClusterProfile(templateProfile.UID)
+					if err == nil && profileDef != nil && profileDef.Spec != nil && profileDef.Spec.Published != nil {
+						if string(profileDef.Spec.Published.Type) == string(models.V1ProfileTypeAddDashOn) {
+							foundOnCluster = true
+							break
+						}
 					}
 				}
 			}
+			// If profile in state doesn't exist on cluster, remove it (was deleted externally)
+			if !foundOnCluster {
+				profilesToRemove = append(profilesToRemove, profileID)
+			}
+		}
+		// Remove profiles that don't exist on cluster
+		for _, profileID := range profilesToRemove {
+			delete(tfProfileIDs, profileID)
 		}
 	} else {
 		// New resource - read from config
@@ -90,6 +101,12 @@ func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *mo
 		d.SetId("")
 		return diags, false
 	}
+
+	// Check if state already has packs BEFORE we start processing profiles
+	// This is critical: if state doesn't have packs and config doesn't have packs,
+	// we should NOT set packs in state to avoid Terraform showing a diff
+	diagPacks, _, _ := GetAddonDeploymentDiagPacks(d, nil)
+	stateHasPacks := len(diagPacks) > 0
 
 	// Read all profiles from cluster that match Terraform config (current + old)
 	cluster_profiles := make([]interface{}, 0)
@@ -128,69 +145,18 @@ func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *mo
 
 		// Use pack values from cluster profile definition (has full values)
 		profileTemplate := &models.V1ClusterProfileTemplate{
-			UID:            clusterTemplateProfile.UID,
-			Name:           clusterProfile.Metadata.Name,
-			ProfileVersion: clusterProfile.Spec.Published.ProfileVersion,
-			Type:           string(clusterProfile.Spec.Published.Type),
-			CloudType:      string(clusterProfile.Spec.Published.CloudType),
-			Packs:          clusterProfile.Spec.Published.Packs, // Use packs from profile definition which have full values
+			UID:   clusterTemplateProfile.UID,
+			Packs: clusterProfile.Spec.Published.Packs, // Use packs from profile definition which have full values
 		}
 
-		// Flatten this profile
-		packManifests, d2, done2 := getPacksContent(profileTemplate.Packs, c, d)
-		if done2 {
-			return d2, false
-		}
-
-		// For addon_deployment, if config doesn't have pack block, we should read packs from profile definition
-		// Get diagPacks from state FIRST to check if state already has packs
-		diagPacks, diagnostics, done := GetAddonDeploymentDiagPacks(d, nil)
+		// Use the refactored function to flatten this profile
+		cluster_profile, diagnostics, done := flattenAddonDeployment(c, d, profileTemplate, stateHasPacks)
 		if done {
 			return diagnostics, false
 		}
-
-		// Check if state already has packs BEFORE we modify diagPacks
-		// This is critical: if state doesn't have packs and config doesn't have packs,
-		// we should NOT set packs in state to avoid Terraform showing a diff
-		stateHasPacks := len(diagPacks) > 0
-
-		// If diagPacks is empty (config didn't specify packs), create diagPacks from profile definition
-		// This ensures registry maps are built correctly even when config doesn't have pack block
-		if len(diagPacks) == 0 && len(profileTemplate.Packs) > 0 {
-			// Create diagPacks from profile definition packs for registry mapping
-			for _, pack := range profileTemplate.Packs {
-				if pack.Name != nil {
-					packType := models.V1PackType(pack.Type)
-					diagPack := &models.V1PackManifestEntity{
-						Name: pack.Name,
-						Tag:  pack.Tag,
-						Type: &packType,
-					}
-					diagPacks = append(diagPacks, diagPack)
-				}
-			}
+		if cluster_profile != nil {
+			cluster_profiles = append(cluster_profiles, cluster_profile)
 		}
-
-		// Build registry maps to track which packs use registry_name or registry_uid
-		registryNameMap := buildPackRegistryNameMap(d)
-		registryUIDMap := buildPackRegistryUIDMap(d)
-		packs, err := flattenPacksWithRegistryMaps(c, diagPacks, profileTemplate.Packs, packManifests, registryNameMap, registryUIDMap)
-		if err != nil {
-			return diag.FromErr(err), false
-		}
-
-		cluster_profile := make(map[string]interface{})
-		// Only set packs in state if state already had packs
-		// If state didn't have packs and config doesn't have packs, set empty array to avoid diff
-		if stateHasPacks {
-			cluster_profile["pack"] = packs
-		} else {
-			// Config doesn't have packs, so don't set them in state (set empty to match config)
-			// This prevents Terraform from showing a diff when config and state both don't have packs
-			cluster_profile["pack"] = make([]interface{}, 0)
-		}
-		cluster_profile["id"] = profileTemplate.UID
-		cluster_profiles = append(cluster_profiles, cluster_profile)
 	}
 
 	// If no profiles found on cluster, mark as deleted
@@ -207,17 +173,37 @@ func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *mo
 	return diags, true
 }
 
-func flattenAddonDeployment(c *client.V1Client, d *schema.ResourceData, profile *models.V1ClusterProfileTemplate) (diag.Diagnostics, bool) {
+// flattenAddonDeployment flattens a single profile and returns it as a map
+// Returns (profileMap, diagnostics, done)
+func flattenAddonDeployment(c *client.V1Client, d *schema.ResourceData, profile *models.V1ClusterProfileTemplate, stateHasPacks bool) (map[string]interface{}, diag.Diagnostics, bool) {
 	var diags diag.Diagnostics
 
 	packManifests, d2, done2 := getPacksContent(profile.Packs, c, d)
 	if done2 {
-		return d2, false
+		return nil, d2, true
 	}
 
+	// Get diagPacks from state to check if state already has packs
 	diagPacks, diagnostics, done := GetAddonDeploymentDiagPacks(d, nil)
 	if done {
-		return diagnostics, false
+		return nil, diagnostics, true
+	}
+
+	// If diagPacks is empty (config didn't specify packs), create diagPacks from profile definition
+	// This ensures registry maps are built correctly even when config doesn't have pack block
+	if len(diagPacks) == 0 && len(profile.Packs) > 0 {
+		// Create diagPacks from profile definition packs for registry mapping
+		for _, pack := range profile.Packs {
+			if pack.Name != nil {
+				packType := models.V1PackType(pack.Type)
+				diagPack := &models.V1PackManifestEntity{
+					Name: pack.Name,
+					Tag:  pack.Tag,
+					Type: &packType,
+				}
+				diagPacks = append(diagPacks, diagPack)
+			}
+		}
 	}
 
 	// Build registry maps to track which packs use registry_name or registry_uid
@@ -225,20 +211,22 @@ func flattenAddonDeployment(c *client.V1Client, d *schema.ResourceData, profile 
 	registryUIDMap := buildPackRegistryUIDMap(d)
 	packs, err := flattenPacksWithRegistryMaps(c, diagPacks, profile.Packs, packManifests, registryNameMap, registryUIDMap)
 	if err != nil {
-		return diag.FromErr(err), false
+		return nil, diag.FromErr(err), true
 	}
 
-	cluster_profiles := make([]interface{}, 0)
 	cluster_profile := make(map[string]interface{})
-	cluster_profile["pack"] = packs
-	cluster_profile["id"] = profile.UID
-	cluster_profiles = append(cluster_profiles, cluster_profile)
-
-	if err := d.Set("cluster_profile", cluster_profiles); err != nil {
-		return diag.FromErr(err), false
+	// Only set packs in state if state already had packs
+	// If state didn't have packs and config doesn't have packs, set empty array to avoid diff
+	if stateHasPacks {
+		cluster_profile["pack"] = packs
+	} else {
+		// Config doesn't have packs, so don't set them in state (set empty to match config)
+		// This prevents Terraform from showing a diff when config and state both don't have packs
+		cluster_profile["pack"] = make([]interface{}, 0)
 	}
+	cluster_profile["id"] = profile.UID
 
-	return diags, true
+	return cluster_profile, diags, false
 }
 
 func GetAddonDeploymentDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEntity, diag.Diagnostics, bool) {
