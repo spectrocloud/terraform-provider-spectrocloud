@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -107,7 +108,6 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 
 	var diags diag.Diagnostics
 	clusterUid := d.Get("cluster_uid").(string)
-	//clusterContext := d.Get("context").(string)
 	cluster, err := c.GetCluster(clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -115,20 +115,86 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 		return diags
 	}
 
+	// FIX: Read ALL profiles from state, not just the one in resource ID
+	// The resource can manage multiple profiles via cluster_profile blocks
 	profile_uids := make([]string, 0)
-	profileId, err := getClusterProfileUID(d.Id())
-	if err != nil {
-		return diags
+	profile_names := make(map[string]bool) // Track profile names from state
+
+	// Read from state
+	stateProfilesRaw := d.Get("cluster_profile")
+	if stateProfilesRaw != nil {
+		if stateProfilesList, ok := stateProfilesRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Delete: Found %d profiles in state", len(stateProfilesList))
+			for _, profileRaw := range stateProfilesList {
+				profile := profileRaw.(map[string]interface{})
+				if id, ok := profile["id"].(string); ok && id != "" {
+					profile_uids = append(profile_uids, id)
+					log.Printf("[DEBUG] Delete: Adding profile UID from state: %s", id)
+					// Also get profile name for matching
+					if profileDef, err := c.GetClusterProfile(id); err == nil && profileDef != nil && profileDef.Metadata != nil {
+						profile_names[profileDef.Metadata.Name] = true
+						log.Printf("[DEBUG] Delete: Profile UID %s has name: %s", id, profileDef.Metadata.Name)
+					}
+				}
+			}
+		}
+	} else {
+		log.Printf("[DEBUG] Delete: No profiles found in state (stateProfilesRaw is nil)")
 	}
-	profile_uids = append(profile_uids, profileId)
+
+	// CRITICAL FIX: Also find add-on profiles on cluster that match by name
+	// This handles cases where profile UID changed (version update) or state is incomplete
+	// We'll delete all add-on profiles that match the names of profiles in state
+	if len(profile_names) > 0 {
+		log.Printf("[DEBUG] Delete: Checking cluster for add-on profiles matching %d profile names from state", len(profile_names))
+		for _, templateProfile := range cluster.Spec.ClusterProfileTemplates {
+			if templateProfile != nil && templateProfile.Name != "" {
+				// Check if this profile name matches any profile in state
+				if profile_names[templateProfile.Name] {
+					// Verify it's an add-on profile
+					profileDef, err := c.GetClusterProfile(templateProfile.UID)
+					if err == nil && profileDef != nil && profileDef.Spec != nil && profileDef.Spec.Published != nil {
+						if string(profileDef.Spec.Published.Type) == string(models.V1ProfileTypeAddDashOn) {
+							// Add to deletion list if not already there
+							alreadyInList := false
+							for _, uid := range profile_uids {
+								if uid == templateProfile.UID {
+									alreadyInList = true
+									break
+								}
+							}
+							if !alreadyInList {
+								profile_uids = append(profile_uids, templateProfile.UID)
+								log.Printf("[DEBUG] Delete: Found add-on profile %s (UID: %s) on cluster matching state profile name, will be deleted", templateProfile.Name, templateProfile.UID)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback: If state doesn't have profiles, try to get from resource ID
+	if len(profile_uids) == 0 {
+		log.Printf("[DEBUG] Delete: No profiles from state, trying resource ID fallback")
+		profileId, err := getClusterProfileUID(d.Id())
+		if err == nil && profileId != "" {
+			profile_uids = append(profile_uids, profileId)
+			log.Printf("[DEBUG] Delete: Using profile UID from resource ID: %s", profileId)
+		}
+	}
 
 	if len(profile_uids) > 0 {
+		log.Printf("[DEBUG] Delete: Deleting %d add-on profiles: %v", len(profile_uids), profile_uids)
 		err = c.DeleteAddonDeployment(clusterUid, &models.V1SpectroClusterProfilesDeleteEntity{
 			ProfileUids: profile_uids,
 		})
 		if err != nil {
-			return diag.FromErr(err)
+			return diag.FromErr(fmt.Errorf("failed to delete add-on profiles: %w", err))
 		}
+		log.Printf("[DEBUG] Delete: Successfully deleted %d add-on profiles", len(profile_uids))
+	} else {
+		log.Printf("[WARN] Delete: No profiles to delete (profile_uids is empty)")
 	}
 
 	return diags

@@ -8,9 +8,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	clientv1 "github.com/spectrocloud/palette-sdk-go/api/client/version1"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
-
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -337,7 +337,45 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		SpcApplySettings: settings,
 	}
 	clusterContext := d.Get("context").(string)
-	if err := c.UpdateClusterProfileValues(d.Id(), body); err != nil {
+
+	// CRITICAL FIX: Use PATCH instead of PUT to preserve add-on profiles attached via spectrocloud_addon_deployment
+	// Get cluster to determine scope for PATCH operation
+	cluster, err := c.GetClusterWithoutStatus(d.Id())
+	if err != nil {
+		return fmt.Errorf("failed to get cluster for profile update: %w", err)
+	}
+	if cluster == nil {
+		return fmt.Errorf("cluster not found: %s", d.Id())
+	}
+
+	// Get scope from cluster annotations, fallback to clusterContext from resource data
+	scope := clusterContext // Default to context from resource data
+	if cluster.Metadata != nil && cluster.Metadata.Annotations != nil {
+		if scopeVal, ok := cluster.Metadata.Annotations[client.Scope]; ok && scopeVal != "" {
+			scope = scopeVal
+		}
+	}
+
+	// Get project UID from cluster annotations if available
+	projectUID := ""
+	if cluster.Metadata != nil && cluster.Metadata.Annotations != nil {
+		// Try to get project UID from annotations (key is "projectUid")
+		if projectUIDVal, ok := cluster.Metadata.Annotations["projectUid"]; ok {
+			projectUID = projectUIDVal
+		}
+	}
+
+	// Use PATCH to preserve add-on profiles not in the request
+	// This ensures that when updating infra profile version, add-on profiles are not removed
+	// PATCH only updates profiles in the request, preserving others (like add-on profiles)
+	resolveNotifications := true
+	params := clientv1.NewV1SpectroClustersPatchProfilesParams().
+		WithContext(client.ContextForScope(context.Background(), scope, projectUID)).
+		WithUID(d.Id()).
+		WithBody(body).
+		WithResolveNotification(&resolveNotifications)
+
+	if err := c.ClustersPatchProfiles(params); err != nil {
 		return err
 	}
 
