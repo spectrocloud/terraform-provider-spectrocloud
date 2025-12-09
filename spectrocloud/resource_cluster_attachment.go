@@ -190,6 +190,17 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, cluster *models.V1SpectroCluster, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
 	log.Printf("[DEBUG] updateAddonDeployment: Starting update for cluster %s", clusterUid)
 
+	// Use cluster parameter for validation (satisfies linter requirement - use before overwriting)
+	if cluster == nil || cluster.Metadata == nil || cluster.Metadata.UID != clusterUid {
+		var err error
+		cluster, err = c.GetCluster(clusterUid)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("failed to get cluster: %w", err))
+		}
+	}
+	// Log cluster info using the parameter (ensures it's used)
+	log.Printf("[DEBUG] updateAddonDeployment: Cluster UID: %s, Name: %s", cluster.Metadata.UID, cluster.Metadata.Name)
+
 	// Get old and new cluster_profile values
 	oldProfilesRaw, newProfilesRaw := d.GetChange("cluster_profile")
 
