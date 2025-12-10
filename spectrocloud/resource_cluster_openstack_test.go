@@ -1,8 +1,9 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -40,28 +41,37 @@ func TestToOpenStackCluster(t *testing.T) {
 		},
 		"context":          "default-context",
 		"cloud_account_id": "cloud-account-id",
-		"machine_pool": []interface{}{
+		"machine_pool": schema.NewSet(resourceMachinePoolOpenStackHash, []interface{}{
 			map[string]interface{}{
-				"name":                 "worker",
-				"flavor":               "m1.small",
-				"control_plane":        false,
-				"worker":               true,
-				"desired_size":         2,
-				"availability_zones":   []interface{}{"zone-1"},
-				"subnet_ids":           []interface{}{"subnet-1"},
-				"node_pools":           []interface{}{},
-				"node_os_type":         "linux",
-				"initial_node_count":   2,
-				"auto_scaling_group":   false,
-				"spot_instance":        false,
-				"spot_max_price":       "0.0",
-				"max_size":             5,
-				"min_size":             2,
-				"desired_capacity":     2,
-				"force_delete":         false,
-				"on_demand_percentage": 100,
+				"name":                    "worker",
+				"instance_type":           "m1.small", // FIX: was "flavor"
+				"control_plane":           false,
+				"control_plane_as_worker": false,                                                     // FIX: removed invalid "worker": true
+				"count":                   2,                                                         // FIX: was "desired_size"
+				"azs":                     schema.NewSet(schema.HashString, []interface{}{"zone-1"}), // FIX: was "availability_zones"
+				"subnet_id":               "subnet-1",                                                // FIX: was "subnet_ids"
+				"update_strategy":         "RollingUpdateScaleOut",
+				"node_repave_interval":    0,
+				// "name":                 "worker",
+				// "flavor":               "m1.small",
+				// "control_plane":        false,
+				// "worker":               true,
+				// "desired_size":         2,
+				// "availability_zones":   []interface{}{"zone-1"},
+				// "subnet_ids":           []interface{}{"subnet-1"},
+				// "node_pools":           []interface{}{},
+				// "node_os_type":         "linux",
+				// "initial_node_count":   2,
+				// "auto_scaling_group":   false,
+				// "spot_instance":        false,
+				// "spot_max_price":       "0.0",
+				// "max_size":             5,
+				// "min_size":             2,
+				// "desired_capacity":     2,
+				// "force_delete":         false,
+				// "on_demand_percentage": 100,
 			},
-		},
+		}),
 	})
 
 	// Mock client
