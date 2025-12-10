@@ -81,6 +81,8 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 	if isError {
 		return diagnostics
 	}
+	// Clear the ID to skip resource tainted
+	d.SetId("")
 
 	if isProfileAttached(cluster, addonDeployment.Profiles[0].UID) {
 		return updateAddonDeployment(ctx, d, m, c, cluster, clusterUid, diags)
@@ -89,6 +91,8 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 
 	err = c.CreateAddonDeployment(cluster, addonDeployment)
 	if err != nil {
+		// Clear the ID to skip resource tainted
+		d.SetId("")
 		return diag.FromErr(err)
 	}
 
