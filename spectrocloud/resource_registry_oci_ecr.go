@@ -161,9 +161,9 @@ func resourceRegistryOciEcr() *schema.Resource {
 			if providerType == "zarf" && registryType != "basic" {
 				return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `type` is `basic`")
 			}
-			if providerType == "zarf" && isSync {
-				return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `is_synchronization` is set to `false`")
-			}
+			// if providerType == "zarf" && isSync {
+			// 	return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `is_synchronization` is set to `false`")
+			// }
 			if providerType == "pack" && !isSync {
 				return fmt.Errorf("`provider_type` set to `pack` is only allowed when `is_synchronization` is set to `true`")
 			}
@@ -173,7 +173,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 }
 
 func validateRegistryCred(c *client.V1Client, registryType string, providerType string, isSync bool, basicSpec *models.V1BasicOciRegistrySpec, ecrSpec *models.V1EcrRegistrySpec) error {
-	if isSync && (providerType == "pack" || providerType == "helm") {
+	if isSync && (providerType == "pack" || providerType == "helm" || providerType == "zarf") {
 		switch registryType {
 		case "basic":
 			if basicSpec != nil {
