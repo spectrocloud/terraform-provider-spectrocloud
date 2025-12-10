@@ -146,6 +146,25 @@ func getAccountResponse(cloud string) interface{} {
 			},
 			Listmeta: nil,
 		}
+	case "cloudstack":
+		return &models.V1CloudStackAccounts{
+			Items: []*models.V1CloudStackAccount{
+				{
+					Metadata: &models.V1ObjectMeta{
+						Name: "test-apache-cloudstack-account-1",
+						UID:  "test-apache-cloudstack-account-id-1",
+					},
+					Spec: &models.V1CloudStackCloudAccount{
+						APIURL:    spectrocloud.StringPtr("https://test.cloudstack.com:8080/client/api"),
+						APIKey:    spectrocloud.StringPtr("testApiKey"),
+						SecretKey: spectrocloud.StringPtr("testSecretKey"),
+						Domain:    "ROOT",
+						Insecure:  false,
+					},
+				},
+			},
+			Listmeta: nil,
+		}
 	case "custom":
 		return &models.V1CustomAccounts{
 			Items: []*models.V1CustomAccount{
@@ -280,6 +299,24 @@ func getAccountNegativeResponse(cloud string) interface{} {
 			},
 			Listmeta: nil,
 		}
+	case "cloudstack":
+		return &models.V1CloudStackAccounts{
+			Items: []*models.V1CloudStackAccount{
+				{
+					Metadata: &models.V1ObjectMeta{
+						Name: "test-cloudstack-account-1-neg",
+						UID:  "test-cloudstack-account-id-1-neg",
+					},
+					Spec: &models.V1CloudStackCloudAccount{
+						APIURL:    spectrocloud.StringPtr("https://test.cloudstack.com:8080/client/api"),
+						APIKey:    spectrocloud.StringPtr("testApiKey"),
+						SecretKey: spectrocloud.StringPtr("testSecretKey"),
+						Insecure:  false,
+					},
+				},
+			},
+			Listmeta: nil,
+		}
 	case "custom":
 		return &models.V1CustomAccounts{
 			Items: []*models.V1CustomAccount{
@@ -398,6 +435,77 @@ func CloudAccountsRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: 200,
 				Payload:    getAccountResponse("gcp"),
+			},
+		},
+
+		// Apache CloudStack
+		{
+			Method: "POST",
+			Path:   "/v1/cloudaccounts/apache-cloudstack",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "test-apache-cloudstack-account-id-1"},
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/clouds/apache-cloudstack/account/validate",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "DELETE",
+			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/cloudaccounts/apache-cloudstack",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload:    getAccountResponse("cloudstack"),
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1CloudStackAccount{
+					Metadata: &models.V1ObjectMeta{
+						Name:        "test-apache-cloudstack-account-1",
+						UID:         "test-apache-cloudstack-account-id-1",
+						Annotations: map[string]string{"overlordUid": "test-pcg-id"},
+					},
+					Spec: &models.V1CloudStackCloudAccount{
+						APIURL:    spectrocloud.StringPtr("https://test.cloudstack.com:8080/client/api"),
+						APIKey:    spectrocloud.StringPtr("testApiKey"),
+						SecretKey: spectrocloud.StringPtr("testSecretKey"),
+						Domain:    "ROOT",
+						Insecure:  false,
+					},
+				},
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/overlords/apache-cloudstack/{uid}/account/validate",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
 			},
 		},
 
@@ -795,6 +903,71 @@ func CloudAccountsRoutes() []Route {
 				},
 			},
 		},
+		// System Private Gateway - for Apache CloudStack tests
+		{
+			Method: "GET",
+			Path:   "/v1/overlords/test-system-pcg-id",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1Overlord{
+					Kind: "",
+					Metadata: &models.V1ObjectMeta{
+						Name: "System Private Gateway",
+						UID:  "test-system-pcg-id",
+					},
+					Spec: &models.V1OverloadSpec{
+						CloudAccountUID:   "test-acc-id",
+						IPAddress:         "10.10.10.10",
+						IPPools:           nil,
+						IsSelfHosted:      false,
+						IsSystem:          true,
+						SpectroClusterUID: "test-spectro-id",
+						TenantUID:         "test-tenant-id",
+					},
+					Status: &models.V1OverloadStatus{
+						Health:          nil,
+						IsActive:        true,
+						IsReady:         true,
+						KubectlCommands: nil,
+						Notifications:   nil,
+						State:           "Running",
+					},
+				},
+			},
+		},
+		// Regular PCG - for Apache CloudStack tests
+		{
+			Method: "GET",
+			Path:   "/v1/overlords/test-regular-pcg-id",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1Overlord{
+					Kind: "",
+					Metadata: &models.V1ObjectMeta{
+						Name: "Custom PCG",
+						UID:  "test-regular-pcg-id",
+					},
+					Spec: &models.V1OverloadSpec{
+						CloudAccountUID:   "test-acc-id",
+						IPAddress:         "192.168.1.100",
+						IPPools:           nil,
+						IsSelfHosted:      false,
+						IsSystem:          false,
+						SpectroClusterUID: "test-spectro-id",
+						TenantUID:         "test-tenant-id",
+					},
+					Status: &models.V1OverloadStatus{
+						Health:          nil,
+						IsActive:        true,
+						IsReady:         true,
+						KubectlCommands: nil,
+						Notifications:   nil,
+						State:           "Running",
+					},
+				},
+			},
+		},
+		// Generic PCG fallback
 		{
 			Method: "GET",
 			Path:   "/v1/overlords/{uid}",
@@ -871,6 +1044,14 @@ func CloudAccountsRoutes() []Route {
 
 func CloudAccountsNegativeRoutes() []Route {
 	return []Route{
+		{
+			Method: "GET",
+			Path:   "/v1/cloudaccounts/apache-cloudstack",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload:    getAccountNegativeResponse("cloudstack"),
+			},
+		},
 		{
 			Method: "GET",
 			Path:   "/v1/cloudaccounts/gcp",

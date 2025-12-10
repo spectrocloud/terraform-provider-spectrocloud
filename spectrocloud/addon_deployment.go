@@ -47,28 +47,71 @@ func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *mo
 func flattenAddonDeployment(c *client.V1Client, d *schema.ResourceData, profile *models.V1ClusterProfileTemplate) (diag.Diagnostics, bool) {
 	var diags diag.Diagnostics
 
-	packManifests, d2, done2 := getPacksContent(profile.Packs, c, d)
-	if done2 {
-		return d2, false
-	}
-
-	diagPacks, diagnostics, done := GetAddonDeploymentDiagPacks(d, nil)
-	if done {
-		return diagnostics, false
-	}
-
-	// Build registry maps to track which packs use registry_name or registry_uid
-	registryNameMap := buildPackRegistryNameMap(d)
-	registryUIDMap := buildPackRegistryUIDMap(d)
-	packs, err := flattenPacksWithRegistryMaps(c, diagPacks, profile.Packs, packManifests, registryNameMap, registryUIDMap)
-	if err != nil {
-		return diag.FromErr(err), false
+	// Check if user has defined packs in their config
+	hasPacksInConfig := false
+	profiles := d.Get("cluster_profile").([]interface{})
+	if len(profiles) > 0 {
+		for _, p := range profiles {
+			profileMap := p.(map[string]interface{})
+			if packs, ok := profileMap["pack"]; ok && packs != nil {
+				packsList := packs.([]interface{})
+				if len(packsList) > 0 {
+					hasPacksInConfig = true
+					break
+				}
+			}
+		}
 	}
 
 	cluster_profiles := make([]interface{}, 0)
 	cluster_profile := make(map[string]interface{})
-	cluster_profile["pack"] = packs
 	cluster_profile["id"] = profile.UID
+
+	// Only flatten packs if user has defined them in config
+	if hasPacksInConfig {
+		packManifests, d2, done2 := getPacksContent(profile.Packs, c, d)
+		if done2 {
+			return d2, false
+		}
+
+		diagPacks, diagnostics, done := GetAddonDeploymentDiagPacks(d, nil)
+		if done {
+			return diagnostics, false
+		}
+
+		// Build registry maps to track which packs use registry_name or registry_uid
+		registryNameMap := buildPackRegistryNameMap(d)
+		registryUIDMap := buildPackRegistryUIDMap(d)
+		packs, err := flattenPacksWithRegistryMaps(c, diagPacks, profile.Packs, packManifests, registryNameMap, registryUIDMap)
+		if err != nil {
+			return diag.FromErr(err), false
+		}
+		cluster_profile["pack"] = packs
+	}
+
+	// Flatten profile variables
+	clusterUID := d.Get("cluster_uid").(string)
+	if clusterUID != "" {
+		clusterVars, err := c.GetClusterVariables(clusterUID)
+		if err == nil {
+			// Find variables for this specific profile
+			for _, clusterVar := range clusterVars {
+				if clusterVar.ProfileUID != nil && *clusterVar.ProfileUID == profile.UID && clusterVar.Variables != nil {
+					vars := make(map[string]interface{})
+					for _, v := range clusterVar.Variables {
+						if v.Name != nil && v.Value != "" {
+							vars[*v.Name] = v.Value
+						}
+					}
+					if len(vars) > 0 {
+						cluster_profile["variables"] = vars
+					}
+					break
+				}
+			}
+		}
+	}
+
 	cluster_profiles = append(cluster_profiles, cluster_profile)
 
 	if err := d.Set("cluster_profile", cluster_profiles); err != nil {
