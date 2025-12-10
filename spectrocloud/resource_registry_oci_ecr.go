@@ -161,9 +161,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 			if providerType == "zarf" && registryType != "basic" {
 				return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `type` is `basic`")
 			}
-			// if providerType == "zarf" && isSync {
-			// 	return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `is_synchronization` is set to `false`")
-			// }
+
 			if providerType == "pack" && !isSync {
 				return fmt.Errorf("`provider_type` set to `pack` is only allowed when `is_synchronization` is set to `true`")
 			}
@@ -199,9 +197,8 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 	registryType := d.Get("type").(string)
 	providerType := d.Get("provider_type").(string)
 	isSync := d.Get("is_synchronization").(bool)
+	if registryType == "ecr" {
 
-	switch registryType {
-	case "ecr":
 		registry := toRegistryEcr(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, nil, registry.Spec); err != nil {
 			return diag.FromErr(err)
@@ -211,7 +208,7 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
-	case "basic":
+	} else if registryType == "basic" {
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
 			return diag.FromErr(err)
@@ -220,6 +217,7 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
 		d.SetId(uid)
 	}
 
