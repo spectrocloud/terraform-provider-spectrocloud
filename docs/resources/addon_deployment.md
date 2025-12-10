@@ -18,7 +18,7 @@ description: |-
 
 ### Required
 
-- `cluster_uid` (String)
+- `cluster_uid` (String) The UID of the cluster to attach the addon profile(s) to.
 
 ### Optional
 
