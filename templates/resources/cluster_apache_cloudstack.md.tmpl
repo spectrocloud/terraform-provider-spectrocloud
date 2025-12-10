@@ -104,6 +104,12 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
   cloud_config {
     ssh_key_name = "production-ssh-key"
     
+    # Optional: Specify CloudStack project
+    project {
+      id   = "project-uuid"        # CloudStack project ID
+      name = "ProductionProject"   # CloudStack project name
+    }
+    
     zone {
       name = "Zone1"
       
