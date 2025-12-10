@@ -107,7 +107,7 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 
 	var diags diag.Diagnostics
 	clusterUid := d.Get("cluster_uid").(string)
-	//clusterContext := d.Get("context").(string)
+
 	cluster, err := c.GetCluster(clusterUid)
 	if err != nil {
 		return diag.FromErr(err)
@@ -115,16 +115,21 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 		return diags
 	}
 
-	profile_uids := make([]string, 0)
-	profileId, err := getClusterProfileUID(d.Id())
+	// Get all profile UIDs from the resource ID
+	profileUIDs, err := getClusterProfileUIDs(d.Id())
 	if err != nil {
-		return diags
+		// Fallback to legacy single profile ID extraction
+		profileId, legacyErr := getClusterProfileUID(d.Id())
+		if legacyErr != nil {
+			return diags
+		}
+		profileUIDs = []string{profileId}
 	}
-	profile_uids = append(profile_uids, profileId)
 
-	if len(profile_uids) > 0 {
+	if len(profileUIDs) > 0 {
+		log.Printf("Deleting %d addon profiles from cluster %s: %v", len(profileUIDs), clusterUid, profileUIDs)
 		err = c.DeleteAddonDeployment(clusterUid, &models.V1SpectroClusterProfilesDeleteEntity{
-			ProfileUids: profile_uids,
+			ProfileUids: profileUIDs,
 		})
 		if err != nil {
 			return diag.FromErr(err)
