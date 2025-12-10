@@ -158,9 +158,24 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"project": {
-							Type:        schema.TypeString,
+							Type:        schema.TypeList,
 							Optional:    true,
-							Description: "CloudStack project name (optional). If not specified, the cluster will be created in the domain's default project.",
+							MaxItems:    1,
+							Description: "CloudStack project configuration (optional). If not specified, the cluster will be created in the domain's default project.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"id": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "CloudStack project ID.",
+									},
+									"name": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "CloudStack project name.",
+									},
+								},
+							},
 						},
 						"ssh_key_name": {
 							Type:        schema.TypeString,
@@ -580,10 +595,18 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	config := &models.V1CloudStackClusterConfig{
-		Project:              cloudConfig["project"].(string),
 		SSHKeyName:           cloudConfig["ssh_key_name"].(string),
 		ControlPlaneEndpoint: cloudConfig["control_plane_endpoint"].(string),
 		SyncWithCKS:          cloudConfig["sync_with_cks"].(bool),
+	}
+
+	// Process project if specified
+	if projects, ok := cloudConfig["project"].([]interface{}); ok && len(projects) > 0 {
+		project := projects[0].(map[string]interface{})
+		config.Project = &models.V1CloudStackResource{
+			ID:   project["id"].(string),
+			Name: project["name"].(string),
+		}
 	}
 
 	// Process zones
@@ -878,8 +901,16 @@ func flattenClusterConfigsApacheCloudStack(config *models.V1CloudStackCloudConfi
 	clusterConfig := config.Spec.ClusterConfig
 	m := make(map[string]interface{})
 
-	if clusterConfig.Project != "" {
-		m["project"] = clusterConfig.Project
+	// Flatten project (V1CloudStackResource)
+	if clusterConfig.Project != nil {
+		projectMap := make(map[string]interface{})
+		if clusterConfig.Project.ID != "" {
+			projectMap["id"] = clusterConfig.Project.ID
+		}
+		if clusterConfig.Project.Name != "" {
+			projectMap["name"] = clusterConfig.Project.Name
+		}
+		m["project"] = []interface{}{projectMap}
 	}
 	if clusterConfig.SSHKeyName != "" {
 		m["ssh_key_name"] = clusterConfig.SSHKeyName

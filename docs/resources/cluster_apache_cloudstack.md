@@ -104,6 +104,12 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
   cloud_config {
     ssh_key_name = "production-ssh-key"
     
+    # Optional: Specify CloudStack project
+    project {
+      id   = "project-uuid"        # CloudStack project ID
+      name = "ProductionProject"   # CloudStack project name
+    }
+    
     zone {
       name = "Zone1"
       
@@ -479,7 +485,7 @@ Required:
 Optional:
 
 - `control_plane_endpoint` (String) Endpoint IP to be used for the API server. Should only be set for static CloudStack networks.
-- `project` (String) CloudStack project name (optional). If not specified, the cluster will be created in the domain's default project.
+- `project` (Block List, Max: 1) CloudStack project configuration (optional). If not specified, the cluster will be created in the domain's default project. (see [below for nested schema](#nestedblock--cloud_config--project))
 - `ssh_key_name` (String) SSH key name for accessing cluster nodes.
 - `sync_with_cks` (Boolean) Determines if an external managed CKS (CloudStack Kubernetes Service) cluster should be created. Default is `false`.
 
@@ -526,6 +532,15 @@ Optional:
 - `offering` (String) VPC offering name.
 
 
+
+
+<a id="nestedblock--cloud_config--project"></a>
+### Nested Schema for `cloud_config.project`
+
+Optional:
+
+- `id` (String) CloudStack project ID.
+- `name` (String) CloudStack project name.
 
 
 
