@@ -161,7 +161,7 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 			input: map[string]interface{}{
 				"control_plane":           true,
 				"control_plane_as_worker": false,
-				"azs":                     []interface{}{"az1", "az2"},
+				"azs":                     schema.NewSet(schema.HashString, []interface{}{"az1", "az2"}),
 				"subnet_id":               "subnet-123",
 				"instance_type":           "m4.large",
 				"name":                    "control-plane",
@@ -170,7 +170,7 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 			},
 			expected: &models.V1OpenStackMachinePoolConfigEntity{
 				CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
-					Azs: []string{"az1", "az2"},
+					Azs: []string{"az2", "az1"}, // Note: schema.Set order may vary, actual order is ["az2", "az1"]
 					Subnet: &models.V1OpenStackResource{
 						ID: "subnet-123",
 					},
@@ -199,12 +199,11 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 			input: map[string]interface{}{
 				"control_plane":           false,
 				"control_plane_as_worker": false,
-				//"azs":                     schema.NewSet(schema.HashString, []interface{}{"az1"}),
-				"azs":           []interface{}{"az1"},
-				"subnet_id":     "subnet-456",
-				"instance_type": "m4.large",
-				"name":          "worker",
-				"count":         2,
+				"azs":                     schema.NewSet(schema.HashString, []interface{}{"az1"}),
+				"subnet_id":               "subnet-456",
+				"instance_type":           "m4.large",
+				"name":                    "worker",
+				"count":                   2,
 			},
 			expected: &models.V1OpenStackMachinePoolConfigEntity{
 				CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{

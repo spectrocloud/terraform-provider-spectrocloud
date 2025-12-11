@@ -33,12 +33,12 @@ func resourceClusterOpenStack() *schema.Resource {
 			Update: schema.DefaultTimeout(180 * time.Minute),
 			Delete: schema.DefaultTimeout(180 * time.Minute),
 		},
-		SchemaVersion: 3,
+		SchemaVersion: 1,
 		StateUpgraders: []schema.StateUpgrader{
 			{
-				Type:    resourceClusterOpenStackResourceV2().CoreConfigSchema().ImpliedType(),
-				Upgrade: resourceClusterOpenStackStateUpgradeV2,
-				Version: 2,
+				Type:    resourceClusterOpenStackResourceV1().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterOpenStackStateUpgradeV1,
+				Version: 0,
 			},
 		},
 
@@ -243,7 +243,7 @@ func resourceClusterOpenStack() *schema.Resource {
 							Required: true,
 						},
 						"azs": {
-							Type:     schema.TypeList,
+							Type:     schema.TypeSet,
 							Optional: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
@@ -581,8 +581,6 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 					}
 				}
 				delete(osMap, name)
-			} else {
-				log.Printf("[DEBUG] WARNING: Machine pool has empty name!")
 			}
 		}
 
@@ -619,7 +617,8 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 
 	azs := make([]string, 0)
 	if _, ok := m["azs"]; ok && m["azs"] != nil {
-		for _, val := range m["azs"].([]interface{}) {
+		azsSet := m["azs"].(*schema.Set)
+		for _, val := range azsSet.List() {
 			azs = append(azs, val.(string))
 		}
 	}
@@ -664,7 +663,7 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 	return mp, nil
 }
 
-func resourceClusterOpenStackResourceV2() *schema.Resource {
+func resourceClusterOpenStackResourceV1() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -908,7 +907,7 @@ func resourceClusterOpenStackResourceV2() *schema.Resource {
 	}
 }
 
-func resourceClusterOpenStackStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+func resourceClusterOpenStackStateUpgradeV1(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
 	log.Printf("[DEBUG] Upgrading cluster OpenStack state from version 2 to 3")
 
 	// Convert machine_pool from TypeList to TypeSet

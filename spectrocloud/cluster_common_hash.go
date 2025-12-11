@@ -735,9 +735,10 @@ func resourceMachinePoolOpenStackHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 
-	// Handle azs (TypeList) - sort for deterministic hash
+	// Handle azs (TypeSet) - sort for deterministic hash
 	if nodePool["azs"] != nil {
-		azsList := nodePool["azs"].([]interface{})
+		azsSet := nodePool["azs"].(*schema.Set)
+		azsList := azsSet.List()
 		azsListStr := make([]string, len(azsList))
 		for i, v := range azsList {
 			azsListStr[i] = v.(string)
