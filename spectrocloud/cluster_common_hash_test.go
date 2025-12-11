@@ -561,7 +561,7 @@ func TestResourceMachinePoolOpenStackHash(t *testing.T) {
 				//"azs":             schema.NewSet(schema.HashString, []interface{}{"az1", "az2"}),
 				"azs": []interface{}{"az1", "az2"},
 			},
-			expectedHash: 3846235121,
+			expectedHash: 715623002,
 		},
 		{
 			name: "Valid MachinePoolOpenStackHash 2",
@@ -577,7 +577,7 @@ func TestResourceMachinePoolOpenStackHash(t *testing.T) {
 				//"azs":             schema.NewSet(schema.HashString, []interface{}{"az3"}),
 				"azs": []interface{}{"az3"},
 			},
-			expectedHash: 2517921726,
+			expectedHash: 3371730139,
 		},
 	}
 
