@@ -43,7 +43,7 @@ func TestToOpenStackCluster(t *testing.T) {
 		"cloud_account_id": "cloud-account-id",
 		// FIX: Pass []interface{} instead of schema.NewSet() - TestResourceDataRaw will convert it to TypeSet
 		//"machine_pool": schema.NewSet(resourceMachinePoolOpenStackHash, []interface{}{
-		"machine_pool":  []interface{}{
+		"machine_pool": []interface{}{
 			map[string]interface{}{
 				"name":                    "worker",
 				"instance_type":           "m1.small",
@@ -74,7 +74,7 @@ func TestToOpenStackCluster(t *testing.T) {
 				// "force_delete":         false,
 				// "on_demand_percentage": 100,
 			},
-		}),
+		},
 	})
 
 	// Mock client
