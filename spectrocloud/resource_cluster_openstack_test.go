@@ -44,13 +44,13 @@ func TestToOpenStackCluster(t *testing.T) {
 		"machine_pool": schema.NewSet(resourceMachinePoolOpenStackHash, []interface{}{
 			map[string]interface{}{
 				"name":                    "worker",
-				"instance_type":           "m1.small", // FIX: was "flavor"
+				"instance_type":           "m1.small",
 				"control_plane":           false,
-				"control_plane_as_worker": false, // FIX: removed invalid "worker": true
-				"count":                   2,     // FIX: was "desired_size"
+				"control_plane_as_worker": false,
+				"count":                   2,
 				// "azs":                     schema.NewSet(schema.HashString, []interface{}{"zone-1"}), // FIX: was "availability_zones"
 				"azs":                  []interface{}{"zone-1"},
-				"subnet_id":            "subnet-1", // FIX: was "subnet_ids"
+				"subnet_id":            "subnet-1",
 				"update_strategy":      "RollingUpdateScaleOut",
 				"node_repave_interval": 0,
 				// "name":                 "worker",
