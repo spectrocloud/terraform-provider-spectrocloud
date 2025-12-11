@@ -87,7 +87,7 @@ resource "spectrocloud_cluster_openstack" "cluster" {
 
 - `cloud_account_id` (String)
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- `machine_pool` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
+- `machine_pool` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - `name` (String)
 
 ### Optional
@@ -152,7 +152,7 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
-- `azs` (Set of String)
+- `azs` (List of String)
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
