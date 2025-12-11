@@ -243,7 +243,7 @@ func resourceClusterOpenStack() *schema.Resource {
 							Required: true,
 						},
 						"azs": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
@@ -618,8 +618,10 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 	}
 
 	azs := make([]string, 0)
-	for _, val := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, val.(string))
+	if _, ok := m["azs"]; ok && m["azs"] != nil {
+		for _, val := range m["azs"].([]interface{}) {
+			azs = append(azs, val.(string))
+		}
 	}
 
 	mp := &models.V1OpenStackMachinePoolConfigEntity{
@@ -864,7 +866,7 @@ func resourceClusterOpenStackResourceV2() *schema.Resource {
 							Required: true,
 						},
 						"azs": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,

@@ -46,12 +46,13 @@ func TestToOpenStackCluster(t *testing.T) {
 				"name":                    "worker",
 				"instance_type":           "m1.small", // FIX: was "flavor"
 				"control_plane":           false,
-				"control_plane_as_worker": false,                                                     // FIX: removed invalid "worker": true
-				"count":                   2,                                                         // FIX: was "desired_size"
-				"azs":                     schema.NewSet(schema.HashString, []interface{}{"zone-1"}), // FIX: was "availability_zones"
-				"subnet_id":               "subnet-1",                                                // FIX: was "subnet_ids"
-				"update_strategy":         "RollingUpdateScaleOut",
-				"node_repave_interval":    0,
+				"control_plane_as_worker": false, // FIX: removed invalid "worker": true
+				"count":                   2,     // FIX: was "desired_size"
+				// "azs":                     schema.NewSet(schema.HashString, []interface{}{"zone-1"}), // FIX: was "availability_zones"
+				"azs":                  []interface{}{"zone-1"},
+				"subnet_id":            "subnet-1", // FIX: was "subnet_ids"
+				"update_strategy":      "RollingUpdateScaleOut",
+				"node_repave_interval": 0,
 				// "name":                 "worker",
 				// "flavor":               "m1.small",
 				// "control_plane":        false,
@@ -124,16 +125,19 @@ func TestToOpenStackCluster(t *testing.T) {
 			Machinepoolconfig: []*models.V1OpenStackMachinePoolConfigEntity{
 				{
 					CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
-						Azs:     []string{},
+						//Azs:     []string{},
+						Azs:     []string{"zone-1"},
 						DiskGiB: 0,
 						FlavorConfig: &models.V1OpenstackFlavorConfig{
 							DiskGiB:   0,
 							MemoryMiB: 0,
-							Name:      strPtr(""),
-							NumCPUs:   0,
+							//Name:      strPtr(""),
+							Name:    strPtr("m1.small"),
+							NumCPUs: 0,
 						},
 						Subnet: &models.V1OpenStackResource{
-							ID:   "",
+							//ID:   "",
+							ID:   "subnet-1",
 							Name: "",
 						},
 					},
@@ -143,9 +147,10 @@ func TestToOpenStackCluster(t *testing.T) {
 						IsControlPlane: false,
 						Labels:         []string{"worker"},
 						//MachinePoolProperties: &models.V1MachinePoolProperties{},
-						MaxSize:            0,
-						MinSize:            0,
-						Size:               int32Ptr(0),
+						MaxSize: 0,
+						MinSize: 0,
+						//Size:               int32Ptr(0),
+						Size:               int32Ptr(2),
 						Name:               strPtr("worker"),
 						NodeRepaveInterval: 0,
 						Taints:             []*models.V1Taint{},
@@ -178,12 +183,13 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 			input: map[string]interface{}{
 				"control_plane":           true,
 				"control_plane_as_worker": false,
-				"azs":                     schema.NewSet(schema.HashString, []interface{}{"az1", "az2"}),
-				"subnet_id":               "subnet-123",
-				"instance_type":           "m4.large",
-				"name":                    "control-plane",
-				"count":                   3,
-				"node_repave_interval":    0,
+				// "azs":                     schema.NewSet(schema.HashString, []interface{}{"az1", "az2"}),
+				"azs":                  []interface{}{"az1", "az2"},
+				"subnet_id":            "subnet-123",
+				"instance_type":        "m4.large",
+				"name":                 "control-plane",
+				"count":                3,
+				"node_repave_interval": 0,
 			},
 			expected: &models.V1OpenStackMachinePoolConfigEntity{
 				CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
@@ -216,11 +222,12 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 			input: map[string]interface{}{
 				"control_plane":           false,
 				"control_plane_as_worker": false,
-				"azs":                     schema.NewSet(schema.HashString, []interface{}{"az1"}),
-				"subnet_id":               "subnet-456",
-				"instance_type":           "m4.large",
-				"name":                    "worker",
-				"count":                   2,
+				//"azs":                     schema.NewSet(schema.HashString, []interface{}{"az1"}),
+				"azs":           []interface{}{"az1"},
+				"subnet_id":     "subnet-456",
+				"instance_type": "m4.large",
+				"name":          "worker",
+				"count":         2,
 			},
 			expected: &models.V1OpenStackMachinePoolConfigEntity{
 				CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
