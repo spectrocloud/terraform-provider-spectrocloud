@@ -152,7 +152,7 @@ Required:
 Optional:
 
 - `additional_labels` (Map of String)
-- `azs` (List of String)
+- `azs` (Set of String)
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
