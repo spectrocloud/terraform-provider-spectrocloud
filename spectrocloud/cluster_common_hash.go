@@ -103,16 +103,23 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 }
 
 func resourceMachinePoolAksHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
+	nodePool := v.(map[string]interface{})
+	var buf bytes.Buffer
 
-	if val, ok := m["instance_type"]; ok {
+	// Include all fields that should trigger a machine pool update
+	if val, ok := nodePool["name"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
-	if val, ok := m["disk_size_gb"]; ok {
+	if val, ok := nodePool["count"]; ok {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
-	if val, ok := m["is_system_node_pool"]; ok {
+	if val, ok := nodePool["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["disk_size_gb"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+	if val, ok := nodePool["is_system_node_pool"]; ok {
 		var boolVal bool
 		switch v := val.(type) {
 		case bool:
@@ -124,8 +131,36 @@ func resourceMachinePoolAksHash(v interface{}) int {
 		}
 		buf.WriteString(fmt.Sprintf("%t-", boolVal))
 	}
-	if val, ok := m["storage_account_type"]; ok {
+	if val, ok := nodePool["storage_account_type"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Additional labels (map)
+	if _, ok := nodePool["additional_labels"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_labels"]))
+	}
+
+	// Update strategy
+	if val, ok := nodePool["update_strategy"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Min and Max for autoscaling
+	if nodePool["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", nodePool["min"].(int)))
+	}
+	if nodePool["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", nodePool["max"].(int)))
+	}
+
+	// Node configuration (list of maps)
+	if nodePool["node"] != nil {
+		buf.WriteString(HashStringMapList(nodePool["node"]))
+	}
+
+	// Taints (list of maps)
+	if _, ok := nodePool["taints"]; ok {
+		buf.WriteString(HashStringMapList(nodePool["taints"]))
 	}
 
 	return int(hash(buf.String()))

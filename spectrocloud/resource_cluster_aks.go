@@ -33,7 +33,14 @@ func resourceClusterAks() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterAksResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterAksStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -222,8 +229,9 @@ func resourceClusterAks() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Required: true,
+				Set:      resourceMachinePoolAksHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
@@ -535,6 +543,7 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	if d.HasChange("machine_pool") {
+		log.Printf("[DEBUG] === MACHINE POOL CHANGE DETECTED ===")
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
 			oraw = new(schema.Set)
@@ -543,52 +552,69 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.([]interface{})
-		ns := nraw.([]interface{})
+		os := oraw.(*schema.Set)
+		ns := nraw.(*schema.Set)
 
+		log.Printf("[DEBUG] Old machine pools count: %d, New machine pools count: %d", os.Len(), ns.Len())
+
+		// Create maps by machine pool name for proper comparison
 		osMap := make(map[string]interface{})
-		for _, mp := range os {
-			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
-		}
-
-		nsMap := make(map[string]interface{})
-
-		for _, mp := range ns {
+		for _, mp := range os.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
-			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
-			if machinePoolResource["name"].(string) != "" {
-				name := machinePoolResource["name"].(string)
-				hash := resourceMachinePoolAksHash(machinePoolResource)
-
-				machinePool := toMachinePoolAks(machinePoolResource)
-
-				var err error
-				if oldMachinePool, ok := osMap[name]; !ok {
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolAks(cloudConfigId, machinePool)
-				} else if hash != resourceMachinePoolAksHash(oldMachinePool) {
-					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolAks(cloudConfigId, machinePool)
-					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusAks, CloudConfig.Kind, cloudConfigId, name)
-					if err != nil {
-						return diag.FromErr(err)
-					}
-				}
-				if err != nil {
-					return diag.FromErr(err)
-				}
-				delete(osMap, name)
+			name := machinePoolResource["name"].(string)
+			if name != "" {
+				osMap[name] = machinePoolResource
 			}
 		}
 
-		// Deleted old machine pools
-		for _, mp := range osMap {
-			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
-			log.Printf("Deleted machine pool %s", name)
+		nsMap := make(map[string]interface{})
+		for _, mp := range ns.List() {
+			machinePoolResource := mp.(map[string]interface{})
+			name := machinePoolResource["name"].(string)
+			if name != "" {
+				nsMap[name] = machinePoolResource
+
+				// Check if this is a new, updated, or unchanged machine pool
+				if oldMachinePool, exists := osMap[name]; !exists {
+					// NEW machine pool - CREATE
+					log.Printf("[DEBUG] Creating new machine pool %s", name)
+					machinePool := toMachinePoolAks(machinePoolResource)
+					if err := c.CreateMachinePoolAks(cloudConfigId, machinePool); err != nil {
+						return diag.FromErr(err)
+					}
+				} else {
+					// EXISTING machine pool - check if hash changed
+					oldHash := resourceMachinePoolAksHash(oldMachinePool)
+					newHash := resourceMachinePoolAksHash(machinePoolResource)
+
+					if oldHash != newHash {
+						// MODIFIED machine pool - UPDATE
+						log.Printf("[DEBUG] Updating machine pool %s (hash changed: %d -> %d)", name, oldHash, newHash)
+						machinePool := toMachinePoolAks(machinePoolResource)
+						if err := c.UpdateMachinePoolAks(cloudConfigId, machinePool); err != nil {
+							return diag.FromErr(err)
+						}
+						// Node Maintenance Actions
+						err = resourceNodeAction(c, ctx, machinePoolResource, c.GetNodeMaintenanceStatusAks, CloudConfig.Kind, cloudConfigId, name)
+						if err != nil {
+							return diag.FromErr(err)
+						}
+					} else {
+						// UNCHANGED machine pool - no action needed
+						log.Printf("[DEBUG] Machine pool %s unchanged (hash: %d)", name, oldHash)
+					}
+				}
+
+				// Mark as processed
+				delete(osMap, name)
+			} else {
+				log.Printf("[DEBUG] WARNING: Machine pool has empty name!")
+			}
+		}
+
+		// REMOVED machine pools - DELETE
+		for name := range osMap {
+			log.Printf("[DEBUG] Deleting removed machine pool %s", name)
 			if err := c.DeleteMachinePoolAks(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
@@ -674,7 +700,7 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	}
 
 	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
+	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp := toMachinePoolAks(machinePool)
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
@@ -737,4 +763,96 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 	}
 
 	return mp
+}
+
+func resourceClusterAksResourceV2() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"machine_pool": {
+				Type:     schema.TypeList,
+				Required: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"node":   schemas.NodeSchema(),
+						"taints": schemas.ClusterTaintsSchema(),
+						"count": {
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Number of nodes in the machine pool.",
+						},
+						"update_strategy": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+						},
+						"instance_type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"min": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
+						"max": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+						},
+						"disk_size_gb": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"is_system_node_pool": {
+							Type:     schema.TypeBool,
+							Required: true,
+						},
+						"storage_account_type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func resourceClusterAksStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading cluster AKS state from version 2 to 3")
+
+	// Convert machine_pool from TypeList to TypeSet
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if machinePoolRaw, exists := rawState["machine_pool"]; exists {
+		if machinePoolList, ok := machinePoolRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping machine_pool as list during state upgrade with %d items", len(machinePoolList))
+
+			// Keep the machine pool data as-is (as a list)
+			// Terraform will convert it to TypeSet when loading the resource using the schema
+			rawState["machine_pool"] = machinePoolList
+
+			log.Printf("[DEBUG] Successfully prepared machine_pool for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] machine_pool is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No machine_pool found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }

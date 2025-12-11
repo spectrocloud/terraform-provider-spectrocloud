@@ -109,14 +109,76 @@ func TestResourceMachinePoolAksHash(t *testing.T) {
 		expected int
 	}{
 		{
-			name: "Test Valid ResourceMachinePoolAksHash",
+			name: "Complete AKS machine pool with all fields",
 			input: map[string]interface{}{
+				"name":                 "aks-pool-1",
+				"count":                3,
 				"instance_type":        "Standard_D2s_v3",
 				"disk_size_gb":         100,
 				"is_system_node_pool":  true,
 				"storage_account_type": "Premium_LRS",
+				"additional_labels": map[string]interface{}{
+					"env":  "production",
+					"team": "platform",
+				},
+				"update_strategy": "RollingUpdateScaleOut",
+				"min":             1,
+				"max":             5,
+				"node": []interface{}{
+					map[string]interface{}{
+						"action": "cordon",
+					},
+				},
+				"taints": []interface{}{
+					map[string]interface{}{
+						"key":    "dedicated",
+						"value":  "backend",
+						"effect": "NoSchedule",
+					},
+				},
 			},
-			expected: 380130606,
+			expected: 489635413,
+		},
+		{
+			name: "Minimal AKS machine pool",
+			input: map[string]interface{}{
+				"name":                 "aks-pool-2",
+				"count":                2,
+				"instance_type":        "Standard_B2s",
+				"disk_size_gb":         50,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Standard_LRS",
+			},
+			expected: 4269923102,
+		},
+		{
+			name: "AKS machine pool with autoscaling",
+			input: map[string]interface{}{
+				"name":                 "aks-pool-3",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         80,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"min":                  1,
+				"max":                  10,
+			},
+			expected: 1815788174,
+		},
+		{
+			name: "System node pool with labels",
+			input: map[string]interface{}{
+				"name":                 "system-pool",
+				"count":                1,
+				"instance_type":        "Standard_DS2_v2",
+				"disk_size_gb":         30,
+				"is_system_node_pool":  true,
+				"storage_account_type": "Standard_LRS",
+				"additional_labels": map[string]interface{}{
+					"pool-type": "system",
+				},
+			},
+			expected: 650558149,
 		},
 	}
 
@@ -124,6 +186,247 @@ func TestResourceMachinePoolAksHash(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := resourceMachinePoolAksHash(tc.input)
 			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+// TestResourceMachinePoolAksHashAllFields tests that all fields are included in hash
+func TestResourceMachinePoolAksHashAllFields(t *testing.T) {
+	testCases := []struct {
+		name        string
+		baseInput   map[string]interface{}
+		modifyField func(map[string]interface{})
+		description string
+	}{
+		{
+			name: "Name change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["name"] = "pool-2"
+			},
+			description: "Changing name should change hash",
+		},
+		{
+			name: "Count change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["count"] = 3
+			},
+			description: "Changing count should change hash",
+		},
+		{
+			name: "Instance type change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["instance_type"] = "Standard_D4s_v3"
+			},
+			description: "Changing instance_type should change hash",
+		},
+		{
+			name: "Disk size change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["disk_size_gb"] = 200
+			},
+			description: "Changing disk_size_gb should change hash",
+		},
+		{
+			name: "System node pool flag change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["is_system_node_pool"] = true
+			},
+			description: "Changing is_system_node_pool should change hash",
+		},
+		{
+			name: "Storage account type change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["storage_account_type"] = "Standard_LRS"
+			},
+			description: "Changing storage_account_type should change hash",
+		},
+		{
+			name: "Additional labels change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"additional_labels": map[string]interface{}{
+					"env": "dev",
+				},
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["additional_labels"] = map[string]interface{}{
+					"env": "prod",
+				}
+			},
+			description: "Changing additional_labels should change hash",
+		},
+		{
+			name: "Update strategy change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"update_strategy":      "RollingUpdateScaleOut",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["update_strategy"] = "RollingUpdateScaleIn"
+			},
+			description: "Changing update_strategy should change hash",
+		},
+		{
+			name: "Min change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"min":                  1,
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["min"] = 2
+			},
+			description: "Changing min should change hash",
+		},
+		{
+			name: "Max change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"max":                  5,
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["max"] = 10
+			},
+			description: "Changing max should change hash",
+		},
+		{
+			name: "Node configuration change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"node": []interface{}{
+					map[string]interface{}{
+						"action": "cordon",
+					},
+				},
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["node"] = []interface{}{
+					map[string]interface{}{
+						"action": "drain",
+					},
+				}
+			},
+			description: "Changing node config should change hash",
+		},
+		{
+			name: "Taints change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"taints": []interface{}{
+					map[string]interface{}{
+						"key":    "key1",
+						"value":  "value1",
+						"effect": "NoSchedule",
+					},
+				},
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["taints"] = []interface{}{
+					map[string]interface{}{
+						"key":    "key2",
+						"value":  "value2",
+						"effect": "NoExecute",
+					},
+				}
+			},
+			description: "Changing taints should change hash",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Get hash of base input
+			baseHash := resourceMachinePoolAksHash(tc.baseInput)
+
+			// Create modified copy
+			modified := copyMap(tc.baseInput)
+			tc.modifyField(modified)
+
+			// Get hash of modified input
+			modifiedHash := resourceMachinePoolAksHash(modified)
+
+			// Hashes should be different
+			if baseHash == modifiedHash {
+				t.Errorf("%s: Base hash %d equals modified hash %d, but they should differ.\nBase: %+v\nModified: %+v",
+					tc.description, baseHash, modifiedHash, tc.baseInput, modified)
+			}
 		})
 	}
 }
