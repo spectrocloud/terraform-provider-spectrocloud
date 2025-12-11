@@ -579,32 +579,394 @@ func TestResourceMachinePoolOpenStackHash(t *testing.T) {
 
 func TestResourceMachinePoolGkeHash(t *testing.T) {
 	testCases := []struct {
+		name     string
 		input    interface{}
 		expected int
 	}{
 		{
+			name: "Complete GKE machine pool with all fields",
 			input: map[string]interface{}{
-				"instance_type": "n1-standard-4",
+				"name":          "gke-pool-1",
+				"count":         3,
 				"disk_size_gb":  100,
+				"instance_type": "n1-standard-4",
+				"additional_labels": map[string]interface{}{
+					"env":  "production",
+					"team": "platform",
+				},
+				"update_strategy": "RollingUpdateScaleOut",
+				"node": []interface{}{
+					map[string]interface{}{
+						"action": "cordon",
+					},
+				},
+				"taints": []interface{}{
+					map[string]interface{}{
+						"key":    "dedicated",
+						"value":  "backend",
+						"effect": "NoSchedule",
+					},
+				},
 			},
-			expected: 1800178524,
+			expected: 2359262765,
 		},
-
 		{
+			name: "Minimal GKE machine pool",
 			input: map[string]interface{}{
+				"name":          "gke-pool-2",
+				"count":         1,
+				"instance_type": "n1-standard-2",
+			},
+			expected: 1076173040,
+		},
+		{
+			name: "GKE machine pool with disk size",
+			input: map[string]interface{}{
+				"name":          "gke-pool-3",
+				"count":         2,
+				"disk_size_gb":  50,
 				"instance_type": "n1-standard-4",
 			},
-			//expected: 987654321, // Replace with expected hash value
-			expected: int(hash("n1-standard-4-")),
+			expected: 239420914,
+		},
+		{
+			name: "GKE machine pool with labels only",
+			input: map[string]interface{}{
+				"name":          "gke-pool-4",
+				"count":         2,
+				"instance_type": "n1-standard-2",
+				"additional_labels": map[string]interface{}{
+					"purpose": "testing",
+				},
+			},
+			expected: 2140789356,
+		},
+		{
+			name: "GKE machine pool with update strategy",
+			input: map[string]interface{}{
+				"name":            "gke-pool-5",
+				"count":           3,
+				"instance_type":   "n1-standard-4",
+				"update_strategy": "RollingUpdateScaleIn",
+			},
+			expected: 3893189545,
 		},
 	}
 
 	for _, tc := range testCases {
-		actual := resourceMachinePoolGkeHash(tc.input)
-		if actual != tc.expected {
-			t.Errorf("Expected hash %d, but got %d for input %+v", tc.expected, actual, tc.input)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			actual := resourceMachinePoolGkeHash(tc.input)
+			if actual != tc.expected {
+				t.Errorf("Expected hash %d, but got %d for input %+v", tc.expected, actual, tc.input)
+			}
+		})
 	}
+}
+
+// TestResourceMachinePoolGkeHashAllFields tests that all fields are included in hash
+func TestResourceMachinePoolGkeHashAllFields(t *testing.T) {
+	testCases := []struct {
+		name        string
+		baseInput   map[string]interface{}
+		modifyField func(map[string]interface{})
+		description string
+	}{
+		{
+			name: "Name change affects hash",
+			baseInput: map[string]interface{}{
+				"name":          "pool-1",
+				"count":         2,
+				"instance_type": "n1-standard-2",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["name"] = "pool-2"
+			},
+			description: "Changing name should change hash",
+		},
+		{
+			name: "Count change affects hash",
+			baseInput: map[string]interface{}{
+				"name":          "pool-1",
+				"count":         2,
+				"instance_type": "n1-standard-2",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["count"] = 3
+			},
+			description: "Changing count should change hash",
+		},
+		{
+			name: "Disk size change affects hash",
+			baseInput: map[string]interface{}{
+				"name":          "pool-1",
+				"count":         2,
+				"disk_size_gb":  50,
+				"instance_type": "n1-standard-2",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["disk_size_gb"] = 100
+			},
+			description: "Changing disk_size_gb should change hash",
+		},
+		{
+			name: "Instance type change affects hash",
+			baseInput: map[string]interface{}{
+				"name":          "pool-1",
+				"count":         2,
+				"instance_type": "n1-standard-2",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["instance_type"] = "n1-standard-4"
+			},
+			description: "Changing instance_type should change hash",
+		},
+		{
+			name: "Additional labels change affects hash",
+			baseInput: map[string]interface{}{
+				"name":          "pool-1",
+				"count":         2,
+				"instance_type": "n1-standard-2",
+				"additional_labels": map[string]interface{}{
+					"env": "dev",
+				},
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["additional_labels"] = map[string]interface{}{
+					"env": "prod",
+				}
+			},
+			description: "Changing additional_labels should change hash",
+		},
+		{
+			name: "Update strategy change affects hash",
+			baseInput: map[string]interface{}{
+				"name":            "pool-1",
+				"count":           2,
+				"instance_type":   "n1-standard-2",
+				"update_strategy": "RollingUpdateScaleOut",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["update_strategy"] = "RollingUpdateScaleIn"
+			},
+			description: "Changing update_strategy should change hash",
+		},
+		{
+			name: "Node configuration change affects hash",
+			baseInput: map[string]interface{}{
+				"name":          "pool-1",
+				"count":         2,
+				"instance_type": "n1-standard-2",
+				"node": []interface{}{
+					map[string]interface{}{
+						"action": "cordon",
+					},
+				},
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["node"] = []interface{}{
+					map[string]interface{}{
+						"action": "drain",
+					},
+				}
+			},
+			description: "Changing node config should change hash",
+		},
+		{
+			name: "Taints change affects hash",
+			baseInput: map[string]interface{}{
+				"name":          "pool-1",
+				"count":         2,
+				"instance_type": "n1-standard-2",
+				"taints": []interface{}{
+					map[string]interface{}{
+						"key":    "key1",
+						"value":  "value1",
+						"effect": "NoSchedule",
+					},
+				},
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["taints"] = []interface{}{
+					map[string]interface{}{
+						"key":    "key2",
+						"value":  "value2",
+						"effect": "NoExecute",
+					},
+				}
+			},
+			description: "Changing taints should change hash",
+		},
+		{
+			name: "Adding taints affects hash",
+			baseInput: map[string]interface{}{
+				"name":          "pool-1",
+				"count":         2,
+				"instance_type": "n1-standard-2",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["taints"] = []interface{}{
+					map[string]interface{}{
+						"key":    "key1",
+						"value":  "value1",
+						"effect": "NoSchedule",
+					},
+				}
+			},
+			description: "Adding taints should change hash",
+		},
+		{
+			name: "Adding node config affects hash",
+			baseInput: map[string]interface{}{
+				"name":          "pool-1",
+				"count":         2,
+				"instance_type": "n1-standard-2",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["node"] = []interface{}{
+					map[string]interface{}{
+						"action": "cordon",
+					},
+				}
+			},
+			description: "Adding node config should change hash",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Get hash of base input
+			baseHash := resourceMachinePoolGkeHash(tc.baseInput)
+
+			// Create modified copy
+			modified := copyMap(tc.baseInput)
+			tc.modifyField(modified)
+
+			// Get hash of modified input
+			modifiedHash := resourceMachinePoolGkeHash(modified)
+
+			// Hashes should be different
+			if baseHash == modifiedHash {
+				t.Errorf("%s: Base hash %d equals modified hash %d, but they should differ.\nBase: %+v\nModified: %+v",
+					tc.description, baseHash, modifiedHash, tc.baseInput, modified)
+			}
+		})
+	}
+}
+
+// TestResourceMachinePoolGkeHashConsistency verifies that the same input produces the same hash
+func TestResourceMachinePoolGkeHashConsistency(t *testing.T) {
+	input := map[string]interface{}{
+		"name":          "test-pool",
+		"count":         3,
+		"disk_size_gb":  100,
+		"instance_type": "n1-standard-4",
+		"additional_labels": map[string]interface{}{
+			"env": "test",
+		},
+		"update_strategy": "RollingUpdateScaleOut",
+	}
+
+	hash1 := resourceMachinePoolGkeHash(input)
+	hash2 := resourceMachinePoolGkeHash(input)
+
+	assert.Equal(t, hash1, hash2, "Same input should produce same hash")
+}
+
+// TestResourceMachinePoolGkeHashDifference verifies that different inputs produce different hashes
+func TestResourceMachinePoolGkeHashDifference(t *testing.T) {
+	baseInput := map[string]interface{}{
+		"name":          "test-pool",
+		"count":         3,
+		"disk_size_gb":  100,
+		"instance_type": "n1-standard-4",
+	}
+
+	testCases := []struct {
+		name     string
+		modifier func(map[string]interface{}) map[string]interface{}
+	}{
+		{
+			name: "Different name",
+			modifier: func(m map[string]interface{}) map[string]interface{} {
+				modified := copyMap(m)
+				modified["name"] = "different-pool"
+				return modified
+			},
+		},
+		{
+			name: "Different count",
+			modifier: func(m map[string]interface{}) map[string]interface{} {
+				modified := copyMap(m)
+				modified["count"] = 5
+				return modified
+			},
+		},
+		{
+			name: "Different disk size",
+			modifier: func(m map[string]interface{}) map[string]interface{} {
+				modified := copyMap(m)
+				modified["disk_size_gb"] = 200
+				return modified
+			},
+		},
+		{
+			name: "Different instance type",
+			modifier: func(m map[string]interface{}) map[string]interface{} {
+				modified := copyMap(m)
+				modified["instance_type"] = "n1-standard-8"
+				return modified
+			},
+		},
+		{
+			name: "Added labels",
+			modifier: func(m map[string]interface{}) map[string]interface{} {
+				modified := copyMap(m)
+				modified["additional_labels"] = map[string]interface{}{"env": "prod"}
+				return modified
+			},
+		},
+		{
+			name: "Different update strategy",
+			modifier: func(m map[string]interface{}) map[string]interface{} {
+				modified := copyMap(m)
+				modified["update_strategy"] = "RollingUpdateScaleIn"
+				return modified
+			},
+		},
+		{
+			name: "Added taints",
+			modifier: func(m map[string]interface{}) map[string]interface{} {
+				modified := copyMap(m)
+				modified["taints"] = []interface{}{
+					map[string]interface{}{
+						"key":    "test",
+						"value":  "true",
+						"effect": "NoSchedule",
+					},
+				}
+				return modified
+			},
+		},
+	}
+
+	baseHash := resourceMachinePoolGkeHash(baseInput)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			modifiedInput := tc.modifier(baseInput)
+			modifiedHash := resourceMachinePoolGkeHash(modifiedInput)
+			assert.NotEqual(t, baseHash, modifiedHash, "Modified input should produce different hash")
+		})
+	}
+}
+
+// Helper function to copy a map
+func copyMap(original map[string]interface{}) map[string]interface{} {
+	copied := make(map[string]interface{})
+	for key, value := range original {
+		copied[key] = value
+	}
+	return copied
 }
 
 func TestResourceMachinePoolCustomCloudHash(t *testing.T) {
