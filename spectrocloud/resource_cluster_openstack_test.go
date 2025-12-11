@@ -53,6 +53,21 @@ func TestToOpenStackCluster(t *testing.T) {
 				"subnet_id":               "subnet-1",
 				"update_strategy":         "RollingUpdateScaleOut",
 				"node_repave_interval":    0,
+				"additional_labels": map[string]interface{}{
+					"node-role": "worker",
+					"workload":  "general",
+				},
+				"node": map[string]interface{}{
+					"node_id": "i-0b2c3d4e5f678901",
+					"action":  "cordon",
+				},
+				"taints": []interface{}{
+					map[string]interface{}{
+						"key":    "node-role.spectrocloud.com/worker",
+						"value":  "true",
+						"effect": "NoSchedule",
+					},
+				},
 			},
 		},
 	})
@@ -121,7 +136,10 @@ func TestToOpenStackCluster(t *testing.T) {
 						},
 					},
 					PoolConfig: &models.V1MachinePoolConfigEntity{
-						AdditionalLabels: map[string]string{},
+						AdditionalLabels: map[string]string{
+							"node-role": "worker",
+							"workload":  "general",
+						},
 						//AdditionalTags:        map[string]string{},
 						IsControlPlane: false,
 						Labels:         []string{"worker"},
@@ -131,7 +149,13 @@ func TestToOpenStackCluster(t *testing.T) {
 						Size:               int32Ptr(2),
 						Name:               strPtr("worker"),
 						NodeRepaveInterval: 0,
-						Taints:             []*models.V1Taint{},
+						Taints: []*models.V1Taint{
+							{
+								Key:    "node-role.spectrocloud.com/worker",
+								Value:  "true",
+								Effect: "NoSchedule",
+							},
+						},
 						UpdateStrategy: &models.V1UpdateStrategy{
 							Type: "RollingUpdateScaleOut",
 						},
