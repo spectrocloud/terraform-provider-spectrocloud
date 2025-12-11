@@ -75,7 +75,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 - `cloud_account_id` (String)
 - `cloud_config` (Block List, Min: 1, Max: 1) The GKE environment configuration settings such as project parameters and region parameters that apply to this cluster. (see [below for nested schema](#nestedblock--cloud_config))
-- `machine_pool` (Block List, Min: 1) The machine pool configuration for the cluster. (see [below for nested schema](#nestedblock--machine_pool))
+- `machine_pool` (Block Set, Min: 1) The machine pool configuration for the cluster. (see [below for nested schema](#nestedblock--machine_pool))
 - `name` (String) The name of the cluster.
 
 ### Optional

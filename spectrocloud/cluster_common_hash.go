@@ -259,12 +259,43 @@ func resourceMachinePoolEksHash(v interface{}) int {
 }
 
 func resourceMachinePoolGkeHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
-	if _, ok := m["disk_size_gb"]; ok {
-		buf.WriteString(fmt.Sprintf("%d-", m["disk_size_gb"].(int)))
+	nodePool := v.(map[string]interface{})
+	var buf bytes.Buffer
+
+	// Include all fields that should trigger a machine pool update
+	if val, ok := nodePool["name"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
-	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
+	if val, ok := nodePool["count"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+	if val, ok := nodePool["disk_size_gb"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+	if val, ok := nodePool["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Additional labels (map)
+	if _, ok := nodePool["additional_labels"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_labels"]))
+	}
+
+	// Update strategy
+	if val, ok := nodePool["update_strategy"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Node configuration (list of maps)
+	if nodePool["node"] != nil {
+		buf.WriteString(HashStringMapList(nodePool["node"]))
+	}
+
+	// Taints (list of maps)
+	if _, ok := nodePool["taints"]; ok {
+		buf.WriteString(HashStringMapList(nodePool["taints"]))
+	}
+
 	return int(hash(buf.String()))
 }
 
