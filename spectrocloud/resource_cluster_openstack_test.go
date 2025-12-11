@@ -195,7 +195,7 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 			},
 			expected: &models.V1OpenStackMachinePoolConfigEntity{
 				CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
-					Azs: []string{"az2", "az1"},
+					Azs: []string{"az1", "az2"},
 					Subnet: &models.V1OpenStackResource{
 						ID: "subnet-123",
 					},
@@ -314,9 +314,10 @@ func TestFlattenMachinePoolConfigsOpenStack(t *testing.T) {
 					"count":                   3,
 					"subnet_id":               "subnet-12345",
 					"azs":                     []string{"az1", "az2"},
-					"instance_type":           strPtr("m1.medium"),
-					"additional_labels":       map[string]interface{}{},
-					"update_strategy":         "RollingUpdateScaleOut",
+					// "instance_type":           strPtr("m1.medium"),
+					"instance_type":     types.Ptr("m1.medium"),
+					"additional_labels": map[string]interface{}{},
+					"update_strategy":   "RollingUpdateScaleOut",
 				},
 			},
 		},
