@@ -115,7 +115,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 - `cloud_account_id` (String)
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- `machine_pool` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
+- `machine_pool` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
 - `name` (String)
 
 ### Optional

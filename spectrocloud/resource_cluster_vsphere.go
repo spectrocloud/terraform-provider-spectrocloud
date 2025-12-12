@@ -301,6 +301,7 @@ func resourceClusterVsphere() *schema.Resource {
 						},
 						"placement": {
 							Type:     schema.TypeList,
+							MaxItems: 1,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
