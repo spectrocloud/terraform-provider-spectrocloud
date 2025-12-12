@@ -33,6 +33,14 @@ func resourceClusterOpenStack() *schema.Resource {
 			Update: schema.DefaultTimeout(180 * time.Minute),
 			Delete: schema.DefaultTimeout(180 * time.Minute),
 		},
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterOpenStackResourceV1().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterOpenStackStateUpgradeV1,
+				Version: 0,
+			},
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -181,8 +189,9 @@ func resourceClusterOpenStack() *schema.Resource {
 				},
 			},
 			"machine_pool": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Required: true,
+				Set:      resourceMachinePoolOpenStackHash,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"additional_labels": {
@@ -353,7 +362,7 @@ func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1S
 
 	machinePoolConfigs := make([]*models.V1OpenStackMachinePoolConfigEntity, 0)
 
-	for _, machinePool := range d.Get("machine_pool").([]interface{}) {
+	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
 		mp, err := toMachinePoolOpenStack(machinePool)
 		if err != nil {
 			return nil, err
@@ -515,6 +524,7 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 	if d.HasChange("machine_pool") {
+		log.Printf("[DEBUG] === MACHINE POOL CHANGE DETECTED ===")
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
 			oraw = new(schema.Set)
@@ -523,56 +533,60 @@ func resourceClusterOpenStackUpdate(ctx context.Context, d *schema.ResourceData,
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.([]interface{})
-		ns := nraw.([]interface{})
+		os := oraw.(*schema.Set)
+		ns := nraw.(*schema.Set)
 
 		osMap := make(map[string]interface{})
-		for _, mp := range os {
-			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
+		for _, mp := range os.List() {
+			machinePoolResource := mp.(map[string]interface{})
+			name := machinePoolResource["name"].(string)
+			if name != "" {
+				osMap[name] = machinePoolResource
+			}
 		}
 		nsMap := make(map[string]interface{})
-		for _, mp := range ns {
+		for _, mp := range ns.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
-			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
-			if machinePoolResource["name"].(string) != "" {
-				name := machinePoolResource["name"].(string)
-				hash := resourceMachinePoolOpenStackHash(machinePoolResource)
-
-				var err error
-				machinePool, err := toMachinePoolOpenStack(machinePoolResource)
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				if oldMachinePool, ok := osMap[name]; !ok {
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolOpenStack(cloudConfigId, machinePool)
-				} else if hash != resourceMachinePoolOpenStackHash(oldMachinePool) {
-					log.Printf("Change in machine pool %s", name)
-					err = c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool)
-					// Node Maintenance Actions
-					err := resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusOpenStack, CloudConfig.Kind, cloudConfigId, name)
+			name := machinePoolResource["name"].(string)
+			if name != "" {
+				nsMap[name] = machinePoolResource
+				if oldMachinePool, exists := osMap[name]; !exists {
+					log.Printf("[DEBUG] Create machine pool %s", name)
+					machinePool, err := toMachinePoolOpenStack(machinePoolResource)
 					if err != nil {
 						return diag.FromErr(err)
 					}
-				}
+					if err := c.CreateMachinePoolOpenStack(cloudConfigId, machinePool); err != nil {
+						return diag.FromErr(err)
+					}
+				} else {
+					oldHash := resourceMachinePoolOpenStackHash(oldMachinePool)
+					newHash := resourceMachinePoolOpenStackHash(machinePoolResource)
 
-				if err != nil {
-					return diag.FromErr(err)
+					if oldHash != newHash {
+						log.Printf("[DEBUG] Updating machine pool %s (hash changed: %d -> %d)", name, oldHash, newHash)
+						machinePool, err := toMachinePoolOpenStack(machinePoolResource)
+						if err != nil {
+							return diag.FromErr(err)
+						}
+						if err := c.UpdateMachinePoolOpenStack(cloudConfigId, machinePool); err != nil {
+							return diag.FromErr(err)
+						}
+						err = resourceNodeAction(c, ctx, machinePoolResource, c.GetNodeMaintenanceStatusOpenStack, CloudConfig.Kind, cloudConfigId, name)
+						if err != nil {
+							return diag.FromErr(err)
+						}
+					} else {
+						log.Printf("[DEBUG] Machine pool %s unchanged (hash: %d)", name, oldHash)
+					}
 				}
-
-				// Processed (if exists)
 				delete(osMap, name)
 			}
 		}
 
-		// Deleted old machine pools
-		for _, mp := range osMap {
-			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
-			log.Printf("Deleted machine pool %s", name)
+		// REMOVED machine pools - DELETE
+		for name := range osMap {
+			log.Printf("[DEBUG] Deleting removed machine pool %s", name)
 			if err := c.DeleteMachinePoolOpenStack(cloudConfigId, name); err != nil {
 				return diag.FromErr(err)
 			}
@@ -602,8 +616,11 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 	}
 
 	azs := make([]string, 0)
-	for _, val := range m["azs"].(*schema.Set).List() {
-		azs = append(azs, val.(string))
+	if _, ok := m["azs"]; ok && m["azs"] != nil {
+		azsSet := m["azs"].(*schema.Set)
+		for _, val := range azsSet.List() {
+			azs = append(azs, val.(string))
+		}
 	}
 
 	mp := &models.V1OpenStackMachinePoolConfigEntity{
@@ -644,4 +661,274 @@ func toMachinePoolOpenStack(machinePool interface{}) (*models.V1OpenStackMachine
 	}
 
 	return mp, nil
+}
+
+func resourceClusterOpenStackResourceV1() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description: "The context of the OpenStack cluster. Allowed values are `project` or `tenant`. " +
+					"Default is `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
+			"cluster_meta_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
+			},
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
+			"apply_setting": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
+			},
+			"cloud_account_id": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"cloud_config_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the cloud config used for the cluster. This cloud config must be of type `azure`.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+			},
+			"review_repave_state": {
+				Type:         schema.TypeString,
+				Default:      "",
+				Optional:     true,
+				ValidateFunc: validateReviewRepaveValue,
+				Description:  "To authorize the cluster repave, set the value to `Approved` for approval and `\"\"` to decline. Default value is `\"\"`.",
+			},
+			"pause_agent_upgrades": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "unlock",
+				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
+				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.",
+			},
+			"os_patch_on_boot": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to apply OS patch on boot. Default is `false`.",
+			},
+			"os_patch_schedule": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+				Description:      "Cron schedule for OS patching. This must be in the form of `0 0 * * *`.",
+			},
+			"os_patch_after": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
+			},
+			"kubeconfig": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+			},
+			"admin_kube_config": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+			},
+			"cloud_config": {
+				Type:     schema.TypeList,
+				ForceNew: true,
+				Required: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"domain": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"region": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"project": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"ssh_key": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Public SSH key to be used for the cluster nodes.",
+						},
+						"network_id": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"subnet_id": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"dns_servers": {
+							Type:     schema.TypeSet,
+							Required: true,
+							ForceNew: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subnet_cidr": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"machine_pool": {
+				Type:        schema.TypeList, // V2: TypeList, V3: TypeSet
+				Required:    true,
+				Description: "The machine pool configuration for the cluster.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"additional_labels": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"taints": schemas.ClusterTaintsSchema(),
+						"node":   schemas.NodeSchema(),
+						"control_plane": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether this machine pool is a control plane. Defaults to `false`.",
+						},
+						"control_plane_as_worker": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether this machine pool is a control plane and a worker. Defaults to `false`.",
+						},
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"count": {
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Number of nodes in the machine pool.",
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
+						},
+						"update_strategy": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+						},
+						"instance_type": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"azs": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"subnet_id": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+			"backup_policy":        schemas.BackupPolicySchema(),
+			"scan_policy":          schemas.ScanPolicySchema(),
+			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
+			"namespaces":           schemas.ClusterNamespacesSchema(),
+			"host_config":          schemas.ClusterHostConfigSchema(),
+			"location_config":      schemas.ClusterLocationSchema(),
+			"skip_completion": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, the cluster will be created asynchronously. Default value is `false`.",
+			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
+			},
+		},
+	}
+}
+
+func resourceClusterOpenStackStateUpgradeV1(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading cluster OpenStack state from version 2 to 3")
+
+	// Convert machine_pool from TypeList to TypeSet
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet when loading the resource using the schema. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if machinePoolRaw, exists := rawState["machine_pool"]; exists {
+		if machinePoolList, ok := machinePoolRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping machine_pool as list during state upgrade with %d items", len(machinePoolList))
+
+			// Keep the machine pool data as-is (as a list)
+			// Terraform will convert it to TypeSet when loading the resource using the schema
+			rawState["machine_pool"] = machinePoolList
+
+			log.Printf("[DEBUG] Successfully prepared machine_pool for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] machine_pool is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No machine_pool found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
