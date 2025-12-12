@@ -553,7 +553,24 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	buf := CommonHash(m)
 
 	if edgeHosts, found := m["edge_host"]; found {
-		for _, host := range edgeHosts.([]interface{}) {
+		var edgeHostList []interface{}
+		if edgeHostSet, ok := edgeHosts.(*schema.Set); ok {
+			edgeHostList = edgeHostSet.List()
+		} else if edgeHostListRaw, ok := edgeHosts.([]interface{}); ok {
+			// Fallback for backward compatibility
+			edgeHostList = edgeHostListRaw
+		} else {
+			return int(hash(buf.String()))
+		}
+		// Sort hosts by host_uid for deterministic hashing
+		sort.Slice(edgeHostList, func(i, j int) bool {
+			hostI := edgeHostList[i].(map[string]interface{})
+			hostJ := edgeHostList[j].(map[string]interface{})
+			uidI := hostI["host_uid"].(string)
+			uidJ := hostJ["host_uid"].(string)
+			return uidI < uidJ
+		})
+		for _, host := range edgeHostList {
 			hostMap := host.(map[string]interface{})
 
 			if hostName, ok := hostMap["host_name"]; ok {
@@ -585,6 +602,7 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 				for _, v := range dnsServers.(*schema.Set).List() {
 					dns = append(dns, v.(string))
 				}
+				sort.Strings(dns)
 				buf.WriteString(fmt.Sprintf("dns_servers:%s-", strings.Join(dns, ",")))
 			}
 
@@ -797,4 +815,55 @@ func NormalizeYamlContent(yamlContent string) string {
 	}
 
 	return strings.Join(normalizedDocs, "\n---\n")
+}
+
+// resourceEdgeHostHash creates a hash for edge_host TypeSet
+func resourceEdgeHostHash(v interface{}) int {
+	var buf bytes.Buffer
+	host := v.(map[string]interface{})
+
+	// Required field - always include
+	if hostUID, ok := host["host_uid"]; ok && hostUID != nil {
+		buf.WriteString(fmt.Sprintf("host_uid:%s-", hostUID.(string)))
+	}
+
+	// Optional fields
+	if hostName, ok := host["host_name"]; ok && hostName != nil && hostName.(string) != "" {
+		buf.WriteString(fmt.Sprintf("host_name:%s-", hostName.(string)))
+	}
+
+	if staticIP, ok := host["static_ip"]; ok && staticIP != nil && staticIP.(string) != "" {
+		buf.WriteString(fmt.Sprintf("static_ip:%s-", staticIP.(string)))
+	}
+
+	if nicName, ok := host["nic_name"]; ok && nicName != nil && nicName.(string) != "" {
+		buf.WriteString(fmt.Sprintf("nic_name:%s-", nicName.(string)))
+	}
+
+	if defaultGateway, ok := host["default_gateway"]; ok && defaultGateway != nil && defaultGateway.(string) != "" {
+		buf.WriteString(fmt.Sprintf("default_gateway:%s-", defaultGateway.(string)))
+	}
+
+	if subnetMask, ok := host["subnet_mask"]; ok && subnetMask != nil && subnetMask.(string) != "" {
+		buf.WriteString(fmt.Sprintf("subnet_mask:%s-", subnetMask.(string)))
+	}
+
+	// Handle dns_servers (TypeSet) - sort for deterministic hash
+	if dnsServers, ok := host["dns_servers"]; ok && dnsServers != nil {
+		if dnsSet, ok := dnsServers.(*schema.Set); ok {
+			dnsList := dnsSet.List()
+			dnsListStr := make([]string, len(dnsList))
+			for i, v := range dnsList {
+				dnsListStr[i] = v.(string)
+			}
+			sort.Strings(dnsListStr)
+			buf.WriteString(fmt.Sprintf("dns_servers:%s-", strings.Join(dnsListStr, ",")))
+		}
+	}
+
+	if twoNodeRole, ok := host["two_node_role"]; ok && twoNodeRole != nil && twoNodeRole.(string) != "" {
+		buf.WriteString(fmt.Sprintf("two_node_role:%s-", twoNodeRole.(string)))
+	}
+
+	return int(hash(buf.String()))
 }
