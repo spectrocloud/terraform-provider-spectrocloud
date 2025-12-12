@@ -330,6 +330,12 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
+						},
 						"update_strategy": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -351,6 +357,45 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "Apache CloudStack compute offering (instance type/size) name.",
+						},
+						"instance_config": {
+							Type:        schema.TypeList,
+							Computed:    true,
+							Description: "Instance configuration details returned by the CloudStack API. This is a computed field based on the selected offering.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"disk_gib": {
+										Type:        schema.TypeInt,
+										Computed:    true,
+										Description: "Root disk size in GiB.",
+									},
+									"memory_mib": {
+										Type:        schema.TypeInt,
+										Computed:    true,
+										Description: "Memory size in MiB.",
+									},
+									"num_cpus": {
+										Type:        schema.TypeInt,
+										Computed:    true,
+										Description: "Number of CPUs for the instance.",
+									},
+									"cpu_set": {
+										Type:        schema.TypeInt,
+										Computed:    true,
+										Description: "CPU set for the instance.",
+									},
+									"name": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "Name for the instance configuration.",
+									},
+									"category": {
+										Type:        schema.TypeString,
+										Computed:    true,
+										Description: "Category for the instance configuration.",
+									},
+								},
+							},
 						},
 						"template": {
 							Type:        schema.TypeList,
@@ -543,7 +588,10 @@ func toCloudStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 
 	machinePoolConfigs := make([]*models.V1CloudStackMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolCloudStack(machinePool)
+		mp, err := toMachinePoolCloudStack(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
@@ -612,7 +660,7 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 	return config
 }
 
-func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachinePoolConfigEntity {
+func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachinePoolConfigEntity, error) {
 	mp := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -627,6 +675,8 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 			Name: mp["offering"].(string),
 		},
 	}
+
+	// Note: instance_config is computed (returned by API based on offering) - not sent in requests
 
 	// Process template (RE-ADDED in new SDK)
 	if templates, ok := mp["template"].([]interface{}); ok && len(templates) > 0 {
@@ -684,12 +734,26 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		}
 	}
 
+	// Handle node_repave_interval
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if mp["node_repave_interval"] != nil {
+			nodeRepaveInterval = mp["node_repave_interval"].(int)
+		}
+		poolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(mp["node_repave_interval"].(int))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	mpEntity := &models.V1CloudStackMachinePoolConfigEntity{
 		CloudConfig: cloudConfig,
 		PoolConfig:  poolConfig,
 	}
 
-	return mpEntity
+	return mpEntity, nil
 }
 
 func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
@@ -700,6 +764,8 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	if val, ok := m["offering"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
+
+	// Note: instance_config is computed and excluded from hash to prevent false change detection
 
 	// Hash template
 	if templateList, ok := m["template"].([]interface{}); ok && len(templateList) > 0 {
@@ -758,7 +824,10 @@ func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *sch
 			if oldMachinePool, exists := osMap[name]; !exists {
 				// NEW machine pool - CREATE
 				log.Printf("[DEBUG] Creating new machine pool %s", name)
-				machinePool := toMachinePoolCloudStack(machinePoolResource)
+				machinePool, err := toMachinePoolCloudStack(machinePoolResource)
+				if err != nil {
+					return err
+				}
 				if err := c.CreateMachinePoolCloudStack(cloudConfigId, machinePool); err != nil {
 					return err
 				}
@@ -770,7 +839,10 @@ func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *sch
 				if oldHash != newHash {
 					// MODIFIED machine pool - UPDATE
 					log.Printf("[DEBUG] Updating machine pool %s (hash changed: %d -> %d)", name, oldHash, newHash)
-					machinePool := toMachinePoolCloudStack(machinePoolResource)
+					machinePool, err := toMachinePoolCloudStack(machinePoolResource)
+					if err != nil {
+						return err
+					}
 					if err := c.UpdateMachinePoolCloudStack(cloudConfigId, machinePool); err != nil {
 						return err
 					}
@@ -954,12 +1026,10 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 		oi := make(map[string]interface{})
 
 		// Flatten pool configuration (from V1MachinePoolBaseConfig embedded)
-		// Note: AdditionalLabels and Taints are not available in the GET response for CloudStack
-		// They're only used during creation. So we skip flattening them to avoid state inconsistencies.
+		// Note: AdditionalLabels and Taints are now available in the GET response for CloudStack
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
-		if machinePool.IsControlPlane != nil {
-			oi["control_plane"] = *machinePool.IsControlPlane
-		}
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
@@ -978,6 +1048,22 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 		// Flatten offering
 		if machinePool.Offering != nil {
 			oi["offering"] = machinePool.Offering.Name
+		}
+
+		// Flatten instance_config
+		if machinePool.InstanceConfig != nil {
+			instanceConfig := make(map[string]interface{})
+			instanceConfig["disk_gib"] = int(machinePool.InstanceConfig.DiskGiB)
+			instanceConfig["memory_mib"] = int(machinePool.InstanceConfig.MemoryMiB)
+			instanceConfig["num_cpus"] = int(machinePool.InstanceConfig.NumCPUs)
+			instanceConfig["cpu_set"] = int(machinePool.InstanceConfig.CPUSet)
+			if machinePool.InstanceConfig.Name != "" {
+				instanceConfig["name"] = machinePool.InstanceConfig.Name
+			}
+			if machinePool.InstanceConfig.Category != "" {
+				instanceConfig["category"] = machinePool.InstanceConfig.Category
+			}
+			oi["instance_config"] = []interface{}{instanceConfig}
 		}
 
 		// Flatten template
