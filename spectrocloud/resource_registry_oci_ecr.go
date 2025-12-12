@@ -312,7 +312,6 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		acc["username"] = registry.Spec.Auth.Username
 		// FIX: Preserve password from state to avoid drift detection when API returns masked/different format
 		// This applies to ALL provider types: helm, zarf, and pack
-		// Following the same pattern used in common_backup_storage_location.go for secret_key
 		if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
 			if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
 				if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
@@ -320,7 +319,6 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 						// Preserve password from state to avoid drift
 						acc["password"] = password
 					} else {
-						// Fallback: use API value if not in state (convert to string if needed)
 						acc["password"] = registry.Spec.Auth.Password.String()
 					}
 				}
@@ -329,8 +327,6 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			// No existing credentials in state, use API value
 			acc["password"] = registry.Spec.Auth.Password.String()
 		}
-		// tls configuration handling
-		// tls configuration handling
 		tlsConfig := make([]interface{}, 0, 1)
 		tls := make(map[string]interface{})
 		tls["certificate"] = registry.Spec.Auth.TLS.Certificate
