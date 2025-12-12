@@ -346,6 +346,19 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
+	// VALIDATION: Prevent changing is_synchronization from true to false
+	// Once synchronization is enabled, it cannot be disabled
+	if d.HasChange("is_synchronization") {
+		oldSync, newSync := d.GetChange("is_synchronization")
+		oldSyncBool := oldSync.(bool)
+		newSyncBool := newSync.(bool)
+
+		// If old value was true and new value is false, reject the change
+		if oldSyncBool && !newSyncBool {
+			return diag.FromErr(fmt.Errorf(
+				"cannot disable synchronization: `is_synchronization` cannot be modified during Day-2 Operations"))
+		}
+	}
 
 	registryType := d.Get("type").(string)
 	providerType := d.Get("provider_type").(string)
