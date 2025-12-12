@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/go-openapi/strfmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -81,6 +83,12 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Default:      "helm",
 				ValidateFunc: validation.StringInSlice([]string{"helm", "zarf", "pack"}, false),
 				Description:  "The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type=\"basic\"`  ",
+			},
+			"wait_for_sync": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If `true`, Terraform will wait for the OCI registry to complete its initial synchronization before marking the resource as created or updated. Default value is `false`.",
 			},
 			"credentials": {
 				Type:        schema.TypeList,
@@ -208,6 +216,15 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
+		if d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+			diagnostics, isError := waitForOciRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate, registryType)
+			if len(diagnostics) > 0 {
+				diags = append(diags, diagnostics...)
+			}
+			if isError {
+				return diagnostics
+			}
+		}
 	} else if registryType == "basic" {
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
@@ -219,6 +236,17 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 		}
 
 		d.SetId(uid)
+		// Wait for sync if requested
+		if d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+			diagnostics, isError := waitForOciRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate, registryType)
+			if len(diagnostics) > 0 {
+				diags = append(diags, diagnostics...)
+			}
+			if isError {
+				return diagnostics
+			}
+		}
+
 	}
 
 	return diags
@@ -308,8 +336,28 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
+		acc["credential_type"] = "basic"
 		acc["username"] = registry.Spec.Auth.Username
-		acc["password"] = registry.Spec.Auth.Password
+
+		// FIX: Preserve password from state to avoid drift detection when API returns masked/different format
+		// This applies to ALL provider types: helm, zarf, and pack
+		// Following the same pattern used in common_backup_storage_location.go for secret_key
+		if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+			if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+				if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+					if password, exists := currentCredMap["password"]; exists && password != nil {
+						// Preserve password from state to avoid drift
+						acc["password"] = password
+					} else {
+						// Fallback: use API value if not in state (convert to string if needed)
+						acc["password"] = registry.Spec.Auth.Password.String()
+					}
+				}
+			}
+		} else {
+			// No existing credentials in state, use API value
+			acc["password"] = registry.Spec.Auth.Password.String()
+		}
 		// tls configuration handling
 		tlsConfig := make([]interface{}, 0, 1)
 		tls := make(map[string]interface{})
@@ -340,6 +388,16 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		err := c.UpdateOciEcrRegistry(d.Id(), registry)
+		// Wait for sync if requested
+		if d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+			diagnostics, isError := waitForOciRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate, registryType)
+			if len(diagnostics) > 0 {
+				diags = append(diags, diagnostics...)
+			}
+			if isError {
+				return diagnostics
+			}
+		}
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -349,6 +407,17 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		err := c.UpdateOciBasicRegistry(d.Id(), registry)
+		// Wait for sync if requested
+		if d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+			diagnostics, isError := waitForOciRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate, registryType)
+			if len(diagnostics) > 0 {
+				diags = append(diags, diagnostics...)
+			}
+			if isError {
+				return diagnostics
+			}
+		}
+
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -468,4 +537,143 @@ func toRegistryAwsAccountCredential(regCred map[string]interface{}) *models.V1Aw
 		}
 	}
 	return account
+}
+
+// waitForOciRegistrySync waits for an OCI registry to complete its synchronization
+func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, timeoutType string, registryType string) (diag.Diagnostics, bool) {
+	// Implementation similar to waitForRegistrySync in resource_registry_helm.go
+	stateConf := &retry.StateChangeConf{
+		Pending: []string{
+			"InProgress",
+			"Pending",
+			"Unknown",
+			"", // Handle empty status as pending
+		},
+		Target: []string{
+			"Success",
+			"Completed",
+		},
+		Refresh:    resourceOciRegistrySyncRefreshFunc(c, uid, registryType),
+		Timeout:    d.Timeout(timeoutType) - 1*time.Minute,
+		MinTimeout: 10 * time.Second,
+		Delay:      30 * time.Second,
+	}
+
+	// Wait, catching any errors
+	_, err := stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		// Handle timeout errors gracefully
+		var timeoutErr *retry.TimeoutError
+		if errors.As(err, &timeoutErr) {
+			log.Printf("waitForOciRegistrySync: timeout occurred, returning warning instead of error")
+
+			// Get current sync status for warning message
+			syncStatus, statusErr := getOciRegistrySyncStatus(c, uid, registryType)
+			currentStatus := timeoutErr.LastState
+			statusMessage := ""
+
+			if statusErr == nil && syncStatus != nil {
+				if syncStatus.Status != "" {
+					currentStatus = syncStatus.Status
+				}
+				if syncStatus.Message != "" {
+					statusMessage = fmt.Sprintf(" Message: %s", syncStatus.Message)
+				}
+			}
+
+			if currentStatus == "" {
+				currentStatus = "Unknown"
+			}
+
+			// Return warning instead of error for timeout
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "OCI registry sync timeout",
+				Detail: fmt.Sprintf(
+					"OCI registry synchronization timed out after waiting for %v. Current sync status is '%s'.%s "+
+						"The registry sync may still be in progress and could eventually complete successfully. "+
+						"You may need to increase the timeout or wait for the sync to complete manually.",
+					d.Timeout(timeoutType)-1*time.Minute, currentStatus, statusMessage),
+			})
+			return diags, false
+		}
+
+		// Check if this is a sync failure (not a timeout or API error)
+		// Get current sync status to provide detailed error information
+		syncStatus, statusErr := getOciRegistrySyncStatus(c, uid, registryType)
+		if statusErr == nil && syncStatus != nil {
+			status := syncStatus.Status
+			// Check if the sync explicitly failed
+			if status == "Failed" || status == "Error" || status == "failed" || status == "error" {
+				log.Printf("waitForOciRegistrySync: registry sync failed with status: %s", status)
+				errorDetail := fmt.Sprintf("OCI registry synchronization failed with status '%s'.", status)
+				if syncStatus.Message != "" {
+					errorDetail += fmt.Sprintf("\n\nError details: %s", syncStatus.Message)
+				}
+				errorDetail += "\n\nPlease check the registry configuration (endpoint, credentials) and try again."
+
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Error,
+					Summary:  "OCI registry sync failed",
+					Detail:   errorDetail,
+				})
+				return diags, true
+			}
+		}
+
+		// For other non-timeout errors (API errors, network issues, etc.), return the original error
+		log.Printf("waitForOciRegistrySync: unexpected error: %v", err)
+		return diag.FromErr(err), true
+	}
+	return nil, false
+}
+
+// getOciRegistrySyncStatus retrieves the sync status for an OCI registry
+func getOciRegistrySyncStatus(c *client.V1Client, uid string, registryType string) (*models.V1RegistrySyncStatus, error) {
+	switch registryType {
+	case "basic":
+		return c.GetOciBasicRegistrySyncStatus(uid)
+	case "ecr":
+		return c.GetOciEcrRegistrySyncStatus(uid)
+	default:
+		return nil, fmt.Errorf("unsupported registry type: %s", registryType)
+	}
+}
+
+// resourceOciRegistrySyncRefreshFunc returns a retry.StateRefreshFunc that checks the sync status of an OCI registry
+func resourceOciRegistrySyncRefreshFunc(c *client.V1Client, uid string, registryType string) retry.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		syncStatus, err := getOciRegistrySyncStatus(c, uid, registryType)
+		if err != nil {
+			return nil, "", err
+		}
+
+		// If sync is not supported, consider it as successful
+		if syncStatus != nil && !syncStatus.IsSyncSupported {
+			log.Printf("[DEBUG] OCI registry sync is not supported, considering as completed")
+			return syncStatus, "Success", nil
+		}
+
+		if syncStatus == nil || syncStatus.Status == "" {
+			log.Printf("[DEBUG] OCI registry sync status is empty, treating as pending")
+			return syncStatus, "", nil
+		}
+
+		status := syncStatus.Status
+		log.Printf("[DEBUG] OCI registry sync status: %s", status)
+
+		// Map various status values to our state machine
+		switch status {
+		case "Success", "Completed", "success", "completed":
+			return syncStatus, "Success", nil
+		case "Failed", "Error", "failed", "error":
+			return syncStatus, "Failed", nil
+		case "InProgress", "Pending", "in_progress", "pending":
+			return syncStatus, "InProgress", nil
+		default:
+			// Unknown status - treat as pending
+			log.Printf("[DEBUG] Unknown OCI registry sync status: %s, treating as pending", status)
+			return syncStatus, "Pending", nil
+		}
+	}
 }
