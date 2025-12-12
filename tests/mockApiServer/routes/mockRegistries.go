@@ -1,9 +1,10 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
-	"net/http"
 )
 
 func getHelmRegistryPayload() *models.V1HelmRegistry {
@@ -121,6 +122,75 @@ func RegistriesRoutes() []Route {
 			Path:   "/v1/registries/oci/ecr/validate",
 			Response: ResponseData{
 				StatusCode: 200,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/registries/oci/basic/validate",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/registries/oci/basic",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "test-zarf-oci-reg-basic-uid"},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/registries/oci/{uid}/basic",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1BasicOciRegistry{
+					Kind: "",
+					Metadata: &models.V1ObjectMeta{
+						Annotations:           nil,
+						CreationTimestamp:     models.V1Time{},
+						DeletionTimestamp:     models.V1Time{},
+						Labels:                nil,
+						LastModifiedTimestamp: models.V1Time{},
+						Name:                  "test-zarf-registry",
+						UID:                   "test-zarf-oci-reg-basic-uid",
+					},
+					Spec: &models.V1BasicOciRegistrySpec{
+						Endpoint:        spectrocloud.StringPtr("https://registry.example.com"),
+						BasePath:        "",
+						BaseContentPath: "/",
+						ProviderType:    spectrocloud.StringPtr("zarf"),
+						IsSyncSupported: true,
+						Auth: &models.V1RegistryAuth{
+							Username: "test-username",
+							Password: "test-password",
+							Type:     "basic",
+							TLS: &models.V1TLSConfiguration{
+								Certificate:        "",
+								Enabled:            false,
+								InsecureSkipVerify: false,
+							},
+						},
+						Scope: "tenant",
+					},
+				},
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/registries/oci/{uid}/basic",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "DELETE",
+			Path:   "/v1/registries/oci/{uid}/basic",
+			Response: ResponseData{
+				StatusCode: 204,
 				Payload:    nil,
 			},
 		},

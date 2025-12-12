@@ -161,9 +161,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 			if providerType == "zarf" && registryType != "basic" {
 				return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `type` is `basic`")
 			}
-			if providerType == "zarf" && isSync {
-				return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `is_synchronization` is set to `false`")
-			}
+
 			if providerType == "pack" && !isSync {
 				return fmt.Errorf("`provider_type` set to `pack` is only allowed when `is_synchronization` is set to `true`")
 			}
@@ -173,7 +171,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 }
 
 func validateRegistryCred(c *client.V1Client, registryType string, providerType string, isSync bool, basicSpec *models.V1BasicOciRegistrySpec, ecrSpec *models.V1EcrRegistrySpec) error {
-	if isSync && (providerType == "pack" || providerType == "helm") {
+	if isSync && (providerType == "pack" || providerType == "helm" || providerType == "zarf") {
 		switch registryType {
 		case "basic":
 			if basicSpec != nil {
@@ -310,9 +308,25 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
+		acc["credential_type"] = "basic" // ← ADD THIS LINE (missing in current code)
 		acc["username"] = registry.Spec.Auth.Username
-		acc["password"] = registry.Spec.Auth.Password
-		// tls configuration handling
+		// FIX: Preserve password from state to avoid drift detection when API returns masked/different format
+		// This applies to ALL provider types: helm, zarf, and pack
+		if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+			if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+				if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+					if password, exists := currentCredMap["password"]; exists && password != nil {
+						// Preserve password from state to avoid drift
+						acc["password"] = password
+					} else {
+						acc["password"] = registry.Spec.Auth.Password.String()
+					}
+				}
+			}
+		} else {
+			// No existing credentials in state, use API value
+			acc["password"] = registry.Spec.Auth.Password.String()
+		}
 		tlsConfig := make([]interface{}, 0, 1)
 		tls := make(map[string]interface{})
 		tls["certificate"] = registry.Spec.Auth.TLS.Certificate
@@ -332,6 +346,19 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
+	// VALIDATION: Prevent changing is_synchronization from true to false
+	// Once synchronization is enabled, it cannot be disabled
+	if d.HasChange("is_synchronization") {
+		oldSync, newSync := d.GetChange("is_synchronization")
+		oldSyncBool := oldSync.(bool)
+		newSyncBool := newSync.(bool)
+
+		// If old value was true and new value is false, reject the change
+		if oldSyncBool && !newSyncBool {
+			return diag.FromErr(fmt.Errorf(
+				"cannot disable synchronization: `is_synchronization` cannot be modified during Day-2 Operations"))
+		}
+	}
 
 	registryType := d.Get("type").(string)
 	providerType := d.Get("provider_type").(string)
