@@ -86,6 +86,19 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	// Flatten update_worker_pools_in_parallel - always set during read (including import)
+	// This field is not present in all cluster types (e.g., EKS doesn't have it)
+	if _, ok := d.GetOk("update_worker_pools_in_parallel"); ok {
+		if err := d.Set("update_worker_pools_in_parallel", cluster.Spec.ClusterConfig.UpdateWorkerPoolsInParallel); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	// Flatten pause_agent_upgrades - always set during read (including import)
+	if err := d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster)); err != nil {
+		return diag.FromErr(err), true
+	}
+
 	hostConfig := cluster.Spec.ClusterConfig.HostClusterConfig
 	if hostConfig != nil && *hostConfig.IsHostCluster {
 		flattenHostConfig := flattenHostConfig(hostConfig)
@@ -93,12 +106,6 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 			if err := d.Set("host_config", flattenHostConfig); err != nil {
 				return diag.FromErr(err), true
 			}
-		}
-	}
-
-	if _, ok := d.GetOk("pause_agent_upgrades"); ok {
-		if err := d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster)); err != nil {
-			return diag.FromErr(err), true
 		}
 	}
 
