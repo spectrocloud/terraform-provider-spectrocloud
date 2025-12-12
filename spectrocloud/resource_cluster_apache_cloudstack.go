@@ -352,45 +352,6 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Required:    true,
 							Description: "Apache CloudStack compute offering (instance type/size) name.",
 						},
-						"instance_config": {
-							Type:        schema.TypeList,
-							Computed:    true,
-							Description: "Instance configuration details returned by the CloudStack API. This is a computed field based on the selected offering.",
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"disk_gib": {
-										Type:        schema.TypeInt,
-										Computed:    true,
-										Description: "Root disk size in GiB.",
-									},
-									"memory_mib": {
-										Type:        schema.TypeInt,
-										Computed:    true,
-										Description: "Memory size in MiB.",
-									},
-									"num_cpus": {
-										Type:        schema.TypeInt,
-										Computed:    true,
-										Description: "Number of CPUs for the instance.",
-									},
-									"cpu_set": {
-										Type:        schema.TypeInt,
-										Computed:    true,
-										Description: "CPU set for the instance.",
-									},
-									"name": {
-										Type:        schema.TypeString,
-										Computed:    true,
-										Description: "Name for the instance configuration.",
-									},
-									"category": {
-										Type:        schema.TypeString,
-										Computed:    true,
-										Description: "Category for the instance configuration.",
-									},
-								},
-							},
-						},
 						"template": {
 							Type:        schema.TypeList,
 							Optional:    true,
@@ -667,8 +628,6 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		},
 	}
 
-	// Note: instance_config is computed (returned by API based on offering) - not sent in requests
-
 	// Process template (RE-ADDED in new SDK)
 	if templates, ok := mp["template"].([]interface{}); ok && len(templates) > 0 {
 		tmpl := templates[0].(map[string]interface{})
@@ -741,8 +700,6 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	if val, ok := m["offering"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
-
-	// Note: instance_config is computed and excluded from hash to prevent false change detection
 
 	// Hash template
 	if templateList, ok := m["template"].([]interface{}); ok && len(templateList) > 0 {
@@ -1021,22 +978,6 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 		// Flatten offering
 		if machinePool.Offering != nil {
 			oi["offering"] = machinePool.Offering.Name
-		}
-
-		// Flatten instance_config
-		if machinePool.InstanceConfig != nil {
-			instanceConfig := make(map[string]interface{})
-			instanceConfig["disk_gib"] = int(machinePool.InstanceConfig.DiskGiB)
-			instanceConfig["memory_mib"] = int(machinePool.InstanceConfig.MemoryMiB)
-			instanceConfig["num_cpus"] = int(machinePool.InstanceConfig.NumCPUs)
-			instanceConfig["cpu_set"] = int(machinePool.InstanceConfig.CPUSet)
-			if machinePool.InstanceConfig.Name != "" {
-				instanceConfig["name"] = machinePool.InstanceConfig.Name
-			}
-			if machinePool.InstanceConfig.Category != "" {
-				instanceConfig["category"] = machinePool.InstanceConfig.Category
-			}
-			oi["instance_config"] = []interface{}{instanceConfig}
 		}
 
 		// Flatten template

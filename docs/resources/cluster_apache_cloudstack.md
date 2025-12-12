@@ -566,10 +566,6 @@ Optional:
 - `template` (Block List, Max: 1) Apache CloudStack template override for this machine pool. If not specified, inherits cluster default from profile. (see [below for nested schema](#nestedblock--machine_pool--template))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 
-Read-Only:
-
-- `instance_config` (List of Object) Instance configuration details returned by the CloudStack API. This is a computed field based on the selected offering. (see [below for nested schema](#nestedatt--machine_pool--instance_config))
-
 <a id="nestedblock--machine_pool--network"></a>
 ### Nested Schema for `machine_pool.network`
 
@@ -608,19 +604,6 @@ Optional:
 
 - `id` (String) Template ID. Either ID or name must be provided.
 - `name` (String) Template name. Either ID or name must be provided.
-
-
-<a id="nestedatt--machine_pool--instance_config"></a>
-### Nested Schema for `machine_pool.instance_config`
-
-Read-Only:
-
-- `category` (String)
-- `cpu_set` (Number)
-- `disk_gib` (Number)
-- `memory_mib` (Number)
-- `name` (String)
-- `num_cpus` (Number)
 
 
 
