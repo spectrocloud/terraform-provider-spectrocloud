@@ -408,7 +408,9 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(cloudConfig, config)); err != nil {
 			return diag.FromErr(err)
 		}
+
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
+
 		mp, err := flattenNodeMaintenanceStatus(c, d, c.GetNodeStatusMapEdgeNative, mp, configUID)
 		if err != nil {
 			return diag.FromErr(err)
@@ -583,19 +585,25 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 					if oldEdgeHostSet != nil && newEdgeHostSet != nil {
 						for _, oEdgeHost := range oldEdgeHostSet.List() {
 							oHostMap := oEdgeHost.(map[string]interface{})
-							oHostName := oHostMap["host_name"].(string)
+							//oHostName := oHostMap["host_name"].(string)
+							oHostUID := oHostMap["host_uid"].(string)
+							// oHostName := ""
+							// if name, ok := oHostMap["host_name"].(string); ok {
+							// 	oHostName = name
+							// }
 							isPresent := false
 							for _, nEdgeHost := range newEdgeHostSet.List() {
 								nHostMap := nEdgeHost.(map[string]interface{})
-								nHostName := nHostMap["host_name"].(string)
-								if oHostName == nHostName {
-									// Found the host, so it's not deleted
+								// nHostName := nHostMap["host_name"].(string)
+								nHostUID := nHostMap["host_uid"].(string)
+								if oHostUID == nHostUID {
+									// Found the hostuid, so it's not deleted
 									isPresent = true
 									break
 								}
 							}
 							if !isPresent {
-								deletedHosts = append(deletedHosts, oHostName)
+								deletedHosts = append(deletedHosts, oHostUID)
 							}
 						}
 					}
@@ -838,7 +846,7 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 		if v, ok := hostMap["two_node_role"].(string); ok {
 			if v != "" {
 				if _, ok := twoNodeHostRoles[v]; ok {
-					return nil, fmt.Errorf("two node role '%s' already assigned to edge host '%s'; roles must be unique", v, hostId)
+					return nil, fmt.Errorf("two node role '%s' already assigned to edge host '%s'; roles must be unique", v, twoNodeHostRoles[v])
 				}
 				edgeHost.TwoNodeCandidatePriority = v
 				twoNodeHostRoles[v] = hostId

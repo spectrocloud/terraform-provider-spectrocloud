@@ -1,9 +1,10 @@
 package spectrocloud
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/stretchr/testify/assert"
 
@@ -197,7 +198,7 @@ func TestToEdgeHosts(t *testing.T) {
 				},
 			},
 			expected:    nil,
-			expectedErr: "two node role 'primary' already assigned to edge host 'uid2'; roles must be unique",
+			expectedErr: "two node role 'primary' already assigned to edge host 'uid1'; roles must be unique",
 		},
 		{
 			name: "Invalid two node edge hosts: missing leader",
@@ -414,8 +415,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool1",
-					"edge_host": []map[string]interface{}{
-						{
+					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+						map[string]interface{}{
 							"host_name":       "host1",
 							"host_uid":        "uid1",
 							"static_ip":       "ip1",
@@ -424,7 +425,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"subnet_mask":     "",
 							"dns_servers":     []string(nil),
 						},
-						{
+						map[string]interface{}{
 							"host_name":       "host2",
 							"host_uid":        "uid2",
 							"static_ip":       "ip2",
@@ -433,7 +434,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"subnet_mask":     "",
 							"dns_servers":     []string(nil),
 						},
-					},
+					}),
 					"update_strategy": "strategy1",
 				},
 				map[string]interface{}{
@@ -442,8 +443,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool2",
-					"edge_host": []map[string]interface{}{
-						{
+					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+						map[string]interface{}{
 							"host_name":       "host3",
 							"host_uid":        "uid3",
 							"static_ip":       "ip3",
@@ -452,7 +453,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"subnet_mask":     "",
 							"dns_servers":     []string(nil),
 						},
-					},
+					}),
 					"update_strategy": "strategy2",
 				},
 			},
