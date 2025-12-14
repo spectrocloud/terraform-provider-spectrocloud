@@ -494,14 +494,139 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 	return ois
 }
 
+// Helper function to extract machine pool maps from schema sets
+func extractMachinePoolMaps(oldSet, newSet *schema.Set) (oldMap, newMap map[string]interface{}) {
+	oldMap = make(map[string]interface{})
+	for _, mp := range oldSet.List() {
+		machinePool := mp.(map[string]interface{})
+		oldMap[machinePool["name"].(string)] = machinePool
+	}
+
+	newMap = make(map[string]interface{})
+	for _, mp := range newSet.List() {
+		machinePoolResource := mp.(map[string]interface{})
+		newMap[machinePoolResource["name"].(string)] = machinePoolResource
+	}
+	return oldMap, newMap
+}
+
+// Helper function to safely extract edge_host set from machine pool map
+func extractEdgeHostSet(machinePoolMap map[string]interface{}) *schema.Set {
+	if edgeHostRaw, ok := machinePoolMap["edge_host"]; ok && edgeHostRaw != nil {
+		if edgeHostSet, ok := edgeHostRaw.(*schema.Set); ok {
+			return edgeHostSet
+		}
+		// Fallback: convert from list if needed (backward compatibility during migration)
+		if edgeHostList, ok := edgeHostRaw.([]interface{}); ok {
+			return schema.NewSet(resourceEdgeHostHash, edgeHostList)
+		}
+	}
+	return nil
+}
+
+// Helper function to identify deleted hosts by comparing old and new edge_host sets
+func identifyDeletedHosts(oldSet, newSet *schema.Set) []string {
+	if oldSet == nil || newSet == nil {
+		return []string{}
+	}
+
+	deletedHosts := make([]string, 0)
+	for _, oEdgeHost := range oldSet.List() {
+		oHostMap := oEdgeHost.(map[string]interface{})
+		oHostUID := oHostMap["host_uid"].(string)
+
+		isPresent := false
+		for _, nEdgeHost := range newSet.List() {
+			nHostMap := nEdgeHost.(map[string]interface{})
+			nHostUID := nHostMap["host_uid"].(string)
+			if oHostUID == nHostUID {
+				isPresent = true
+				break
+			}
+		}
+		if !isPresent {
+			deletedHosts = append(deletedHosts, oHostUID)
+		}
+	}
+	return deletedHosts
+}
+
+// Helper function to delete nodes for removed hosts
+func deleteNodesForHosts(c *client.V1Client, cloudConfigId, poolName string, deletedHosts []string) error {
+	if len(deletedHosts) == 0 {
+		return nil
+	}
+
+	machineList, err := c.GetNodeListInEdgeNativeMachinePool(cloudConfigId, poolName)
+	if err != nil {
+		return err
+	}
+
+	for _, existingMachine := range machineList.Items {
+		for _, host := range deletedHosts {
+			if existingMachine.Metadata.Name == host {
+				err := c.DeleteNodeInEdgeNativeMachinePool(cloudConfigId, poolName, existingMachine.Metadata.UID)
+				if err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+	return nil
+}
+
+// Helper function to handle machine pool update (modified pools)
+func handleMachinePoolUpdate(c *client.V1Client, ctx context.Context, cloudConfigId, name string, oldPool, newPool map[string]interface{}, newPoolResource map[string]interface{}) error {
+	oldEdgeHostSet := extractEdgeHostSet(oldPool)
+	newEdgeHostSet := extractEdgeHostSet(newPool)
+
+	deletedHosts := identifyDeletedHosts(oldEdgeHostSet, newEdgeHostSet)
+	if err := deleteNodesForHosts(c, cloudConfigId, name, deletedHosts); err != nil {
+		return err
+	}
+
+	machinePool, err := toMachinePoolEdgeNative(newPoolResource)
+	if err != nil {
+		return err
+	}
+
+	if err := c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool); err != nil {
+		return err
+	}
+
+	return resourceNodeAction(c, ctx, newPoolResource, c.GetNodeMaintenanceStatusEdgeNative, "edge-native", cloudConfigId, name)
+}
+
+// Helper function to handle deleted machine pools
+func handleDeletedMachinePools(c *client.V1Client, cloudConfigId string, deletedPools map[string]interface{}) error {
+	for _, mp := range deletedPools {
+		machinePool := mp.(map[string]interface{})
+		name := machinePool["name"].(string)
+		log.Printf("Deleted machine pool %s", name)
+
+		machineList, err := c.GetNodeListInEdgeNativeMachinePool(cloudConfigId, name)
+		if err != nil {
+			return err
+		}
+
+		for _, existingMachine := range machineList.Items {
+			err := c.DeleteNodeInEdgeNativeMachinePool(cloudConfigId, name, existingMachine.Metadata.UID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Refactored main update function
 func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
-	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-	err := validateSystemRepaveApproval(d, c)
-	if err != nil {
+	if err := validateSystemRepaveApproval(d, c); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -516,167 +641,50 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 			nraw = new(schema.Set)
 		}
 
-		os := oraw.(*schema.Set)
-		ns := nraw.(*schema.Set)
+		oldSet := oraw.(*schema.Set)
+		newSet := nraw.(*schema.Set)
+		oldMap, newMap := extractMachinePoolMaps(oldSet, newSet)
 
-		osMap := make(map[string]interface{})
-		for _, mp := range os.List() {
-			machinePool := mp.(map[string]interface{})
-			osMap[machinePool["name"].(string)] = machinePool
-		}
-
-		nsMap := make(map[string]interface{})
-
-		for _, mp := range ns.List() {
+		// Process new and modified machine pools
+		for _, mp := range newSet.List() {
 			machinePoolResource := mp.(map[string]interface{})
-			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
-			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
-			if machinePoolResource["name"].(string) != "" {
-				name := machinePoolResource["name"].(string)
-				if name == "" {
-					continue
-				}
-				hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
-				var err error
-				machinePool, err := toMachinePoolEdgeNative(machinePoolResource)
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				if oldMachinePool, ok := osMap[name]; !ok {
-					// NEW machine pool - CREATE
-					log.Printf("Create machine pool %s", name)
-					err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
-				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
-					// MODIFIED machine pool - UPDATE
-					log.Printf("Change in machine pool %s", name)
-
-					// Logic for delete machine in node pool starts
-					deletedHosts := make([]string, 0)
-					// Handle TypeSet instead of TypeList
-					oldMachinePoolMap := osMap[name].(map[string]interface{})
-					newMachinePoolMap := nsMap[name].(map[string]interface{})
-
-					var oldEdgeHostSet, newEdgeHostSet *schema.Set
-					// Safely extract old edge_host set
-					if oldEdgeHostRaw, ok := oldMachinePoolMap["edge_host"]; ok && oldEdgeHostRaw != nil {
-						if oldSet, ok := oldEdgeHostRaw.(*schema.Set); ok {
-							oldEdgeHostSet = oldSet
-						} else {
-							// Fallback: convert from list if needed (backward compatibility during migration)
-							if oldList, ok := oldEdgeHostRaw.([]interface{}); ok {
-								oldEdgeHostSet = schema.NewSet(resourceEdgeHostHash, oldList)
-							}
-						}
-					}
-					// Safely extract new edge_host set
-					if newEdgeHostRaw, ok := newMachinePoolMap["edge_host"]; ok && newEdgeHostRaw != nil {
-						if newSet, ok := newEdgeHostRaw.(*schema.Set); ok {
-							newEdgeHostSet = newSet
-						} else {
-							// Fallback: convert from list if needed (backward compatibility during migration)
-							if newList, ok := newEdgeHostRaw.([]interface{}); ok {
-								newEdgeHostSet = schema.NewSet(resourceEdgeHostHash, newList)
-							}
-						}
-					}
-
-					// Identify deleted hosts by comparing old and new edge_host sets
-					if oldEdgeHostSet != nil && newEdgeHostSet != nil {
-						for _, oEdgeHost := range oldEdgeHostSet.List() {
-							oHostMap := oEdgeHost.(map[string]interface{})
-							//oHostName := oHostMap["host_name"].(string)
-							oHostUID := oHostMap["host_uid"].(string)
-							// oHostName := ""
-							// if name, ok := oHostMap["host_name"].(string); ok {
-							// 	oHostName = name
-							// }
-							isPresent := false
-							for _, nEdgeHost := range newEdgeHostSet.List() {
-								nHostMap := nEdgeHost.(map[string]interface{})
-								// nHostName := nHostMap["host_name"].(string)
-								nHostUID := nHostMap["host_uid"].(string)
-								if oHostUID == nHostUID {
-									// Found the hostuid, so it's not deleted
-									isPresent = true
-									break
-								}
-							}
-							if !isPresent {
-								deletedHosts = append(deletedHosts, oHostUID)
-							}
-						}
-					}
-
-					// Delete nodes for removed hosts
-					if len(deletedHosts) > 0 {
-						machineList, err := c.GetNodeListInEdgeNativeMachinePool(cloudConfigId, name)
-						if err != nil {
-							return diag.FromErr(err)
-						}
-						for _, existingMachine := range machineList.Items {
-							found := false
-							for _, host := range deletedHosts {
-								if existingMachine.Metadata.Name == host {
-									found = true
-									break
-								}
-							}
-							if found {
-								err := c.DeleteNodeInEdgeNativeMachinePool(cloudConfigId, name, existingMachine.Metadata.UID)
-								if err != nil {
-									return diag.FromErr(err)
-								}
-							}
-						}
-					}
-					// Logic for delete machine in node pool ends
-
-					// Update the machine pool
-					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
-					if err != nil {
-						return diag.FromErr(err)
-					}
-
-					// Handle node maintenance actions
-					err = resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", cloudConfigId, name)
-					if err != nil {
-						return diag.FromErr(err)
-					}
-				} else {
-					// UNCHANGED machine pool - no action needed
-					log.Printf("Machine pool %s unchanged (hash: %d)", name, hash)
-				}
-
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				// Processed (if exists)
-				delete(osMap, name)
+			name, ok := machinePoolResource["name"].(string)
+			if !ok || name == "" {
+				continue
 			}
-		}
 
-		// Deleted old machine pools
-		for _, mp := range osMap {
-			machinePool := mp.(map[string]interface{})
-			name := machinePool["name"].(string)
-			log.Printf("Deleted machine pool %s", name)
-			machineList, err := c.GetNodeListInEdgeNativeMachinePool(cloudConfigId, name)
+			hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
+			machinePool, err := toMachinePoolEdgeNative(machinePoolResource)
 			if err != nil {
 				return diag.FromErr(err)
 			}
-			for _, existingMachine := range machineList.Items {
-				err := c.DeleteNodeInEdgeNativeMachinePool(cloudConfigId, name, existingMachine.Metadata.UID)
-				if err != nil {
+
+			oldPool, exists := oldMap[name]
+			if !exists {
+				// NEW machine pool - CREATE
+				log.Printf("Create machine pool %s", name)
+				if err := c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool); err != nil {
 					return diag.FromErr(err)
 				}
+			} else if hash != resourceMachinePoolEdgeNativeHash(oldPool) {
+				// MODIFIED machine pool - UPDATE
+				log.Printf("Change in machine pool %s", name)
+				oldPoolMap := oldPool.(map[string]interface{})
+				if err := handleMachinePoolUpdate(c, ctx, cloudConfigId, name, oldPoolMap, newMap[name].(map[string]interface{}), machinePoolResource); err != nil {
+					return diag.FromErr(err)
+				}
+			} else {
+				// UNCHANGED machine pool - no action needed
+				log.Printf("Machine pool %s unchanged (hash: %d)", name, hash)
 			}
 
-			// We Tested when all nodes in node pool is deleted node pool will me remove by default no need to delete worker pool explicit
-			//if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
-			//	return diag.FromErr(err)
-			//}
+			// Mark as processed
+			delete(oldMap, name)
+		}
+
+		// Handle deleted machine pools
+		if err := handleDeletedMachinePools(c, cloudConfigId, oldMap); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 
@@ -686,9 +694,204 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	}
 
 	diags = resourceClusterEdgeNativeRead(ctx, d, m)
-
 	return diags
 }
+
+// func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+// 	resourceContext := d.Get("context").(string)
+// 	c := getV1ClientWithResourceContext(m, resourceContext)
+
+// 	// Warning or errors can be collected in a slice type
+// 	var diags diag.Diagnostics
+// 	err := validateSystemRepaveApproval(d, c)
+// 	if err != nil {
+// 		return diag.FromErr(err)
+// 	}
+
+// 	cloudConfigId := d.Get("cloud_config_id").(string)
+
+// 	if d.HasChange("machine_pool") {
+// 		oraw, nraw := d.GetChange("machine_pool")
+// 		if oraw == nil {
+// 			oraw = new(schema.Set)
+// 		}
+// 		if nraw == nil {
+// 			nraw = new(schema.Set)
+// 		}
+
+// 		os := oraw.(*schema.Set)
+// 		ns := nraw.(*schema.Set)
+
+// 		osMap := make(map[string]interface{})
+// 		for _, mp := range os.List() {
+// 			machinePool := mp.(map[string]interface{})
+// 			osMap[machinePool["name"].(string)] = machinePool
+// 		}
+
+// 		nsMap := make(map[string]interface{})
+
+// 		for _, mp := range ns.List() {
+// 			machinePoolResource := mp.(map[string]interface{})
+// 			nsMap[machinePoolResource["name"].(string)] = machinePoolResource
+// 			// since known issue in TF SDK: https://github.com/hashicorp/terraform-plugin-sdk/issues/588
+// 			if machinePoolResource["name"].(string) != "" {
+// 				name := machinePoolResource["name"].(string)
+// 				if name == "" {
+// 					continue
+// 				}
+// 				hash := resourceMachinePoolEdgeNativeHash(machinePoolResource)
+// 				var err error
+// 				machinePool, err := toMachinePoolEdgeNative(machinePoolResource)
+// 				if err != nil {
+// 					return diag.FromErr(err)
+// 				}
+
+// 				if oldMachinePool, ok := osMap[name]; !ok {
+// 					// NEW machine pool - CREATE
+// 					log.Printf("Create machine pool %s", name)
+// 					err = c.CreateMachinePoolEdgeNative(cloudConfigId, machinePool)
+// 				} else if hash != resourceMachinePoolEdgeNativeHash(oldMachinePool) {
+// 					// MODIFIED machine pool - UPDATE
+// 					log.Printf("Change in machine pool %s", name)
+
+// 					// Logic for delete machine in node pool starts
+// 					deletedHosts := make([]string, 0)
+// 					// Handle TypeSet instead of TypeList
+// 					oldMachinePoolMap := osMap[name].(map[string]interface{})
+// 					newMachinePoolMap := nsMap[name].(map[string]interface{})
+
+// 					var oldEdgeHostSet, newEdgeHostSet *schema.Set
+// 					// Safely extract old edge_host set
+// 					if oldEdgeHostRaw, ok := oldMachinePoolMap["edge_host"]; ok && oldEdgeHostRaw != nil {
+// 						if oldSet, ok := oldEdgeHostRaw.(*schema.Set); ok {
+// 							oldEdgeHostSet = oldSet
+// 						} else {
+// 							// Fallback: convert from list if needed (backward compatibility during migration)
+// 							if oldList, ok := oldEdgeHostRaw.([]interface{}); ok {
+// 								oldEdgeHostSet = schema.NewSet(resourceEdgeHostHash, oldList)
+// 							}
+// 						}
+// 					}
+// 					// Safely extract new edge_host set
+// 					if newEdgeHostRaw, ok := newMachinePoolMap["edge_host"]; ok && newEdgeHostRaw != nil {
+// 						if newSet, ok := newEdgeHostRaw.(*schema.Set); ok {
+// 							newEdgeHostSet = newSet
+// 						} else {
+// 							// Fallback: convert from list if needed (backward compatibility during migration)
+// 							if newList, ok := newEdgeHostRaw.([]interface{}); ok {
+// 								newEdgeHostSet = schema.NewSet(resourceEdgeHostHash, newList)
+// 							}
+// 						}
+// 					}
+
+// 					// Identify deleted hosts by comparing old and new edge_host sets
+// 					if oldEdgeHostSet != nil && newEdgeHostSet != nil {
+// 						for _, oEdgeHost := range oldEdgeHostSet.List() {
+// 							oHostMap := oEdgeHost.(map[string]interface{})
+// 							//oHostName := oHostMap["host_name"].(string)
+// 							oHostUID := oHostMap["host_uid"].(string)
+// 							// oHostName := ""
+// 							// if name, ok := oHostMap["host_name"].(string); ok {
+// 							// 	oHostName = name
+// 							// }
+// 							isPresent := false
+// 							for _, nEdgeHost := range newEdgeHostSet.List() {
+// 								nHostMap := nEdgeHost.(map[string]interface{})
+// 								// nHostName := nHostMap["host_name"].(string)
+// 								nHostUID := nHostMap["host_uid"].(string)
+// 								if oHostUID == nHostUID {
+// 									// Found the hostuid, so it's not deleted
+// 									isPresent = true
+// 									break
+// 								}
+// 							}
+// 							if !isPresent {
+// 								deletedHosts = append(deletedHosts, oHostUID)
+// 							}
+// 						}
+// 					}
+
+// 					// Delete nodes for removed hosts
+// 					if len(deletedHosts) > 0 {
+// 						machineList, err := c.GetNodeListInEdgeNativeMachinePool(cloudConfigId, name)
+// 						if err != nil {
+// 							return diag.FromErr(err)
+// 						}
+// 						for _, existingMachine := range machineList.Items {
+// 							found := false
+// 							for _, host := range deletedHosts {
+// 								if existingMachine.Metadata.Name == host {
+// 									found = true
+// 									break
+// 								}
+// 							}
+// 							if found {
+// 								err := c.DeleteNodeInEdgeNativeMachinePool(cloudConfigId, name, existingMachine.Metadata.UID)
+// 								if err != nil {
+// 									return diag.FromErr(err)
+// 								}
+// 							}
+// 						}
+// 					}
+// 					// Logic for delete machine in node pool ends
+
+// 					// Update the machine pool
+// 					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
+// 					if err != nil {
+// 						return diag.FromErr(err)
+// 					}
+
+// 					// Handle node maintenance actions
+// 					err = resourceNodeAction(c, ctx, nsMap[name], c.GetNodeMaintenanceStatusEdgeNative, "edge-native", cloudConfigId, name)
+// 					if err != nil {
+// 						return diag.FromErr(err)
+// 					}
+// 				} else {
+// 					// UNCHANGED machine pool - no action needed
+// 					log.Printf("Machine pool %s unchanged (hash: %d)", name, hash)
+// 				}
+
+// 				if err != nil {
+// 					return diag.FromErr(err)
+// 				}
+
+// 				// Processed (if exists)
+// 				delete(osMap, name)
+// 			}
+// 		}
+
+// 		// Deleted old machine pools
+// 		for _, mp := range osMap {
+// 			machinePool := mp.(map[string]interface{})
+// 			name := machinePool["name"].(string)
+// 			log.Printf("Deleted machine pool %s", name)
+// 			machineList, err := c.GetNodeListInEdgeNativeMachinePool(cloudConfigId, name)
+// 			if err != nil {
+// 				return diag.FromErr(err)
+// 			}
+// 			for _, existingMachine := range machineList.Items {
+// 				err := c.DeleteNodeInEdgeNativeMachinePool(cloudConfigId, name, existingMachine.Metadata.UID)
+// 				if err != nil {
+// 					return diag.FromErr(err)
+// 				}
+// 			}
+
+// 			// We Tested when all nodes in node pool is deleted node pool will me remove by default no need to delete worker pool explicit
+// 			//if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
+// 			//	return diag.FromErr(err)
+// 			//}
+// 		}
+// 	}
+
+// 	diagnostics, errorSet := updateCommonFields(d, c)
+// 	if errorSet {
+// 		return diagnostics
+// 	}
+
+// 	diags = resourceClusterEdgeNativeRead(ctx, d, m)
+
+// 	return diags
+// }
 
 func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroEdgeNativeClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
