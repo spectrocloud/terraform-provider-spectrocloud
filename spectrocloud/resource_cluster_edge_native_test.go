@@ -199,7 +199,7 @@ func TestToEdgeHosts(t *testing.T) {
 				}),
 			},
 			expected:    nil,
-			expectedErr: "two node role 'primary' already assigned to edge host 'uid1'; roles must be unique",
+			expectedErr: "two node role 'primary' already assigned to edge host 'uid2'; roles must be unique",
 		},
 		{
 			name: "Invalid two node edge hosts: missing leader",

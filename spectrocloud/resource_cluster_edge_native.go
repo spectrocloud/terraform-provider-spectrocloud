@@ -895,7 +895,6 @@ func getFirstIPRange(cidr string) (string, error) {
 func resourceClusterEdgeNativeResourceV2() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
-			// ... copy all fields from main schema ...
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Required: true,
