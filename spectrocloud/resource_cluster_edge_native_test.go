@@ -35,13 +35,13 @@ func TestToEdgeHosts(t *testing.T) {
 	}{
 		{
 			name:     "Empty edge_host",
-			input:    map[string]interface{}{"edge_host": []interface{}{}},
+			input:    map[string]interface{}{"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{})},
 			expected: nil,
 		},
 		{
 			name: "Valid edge_host",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":       "host1",
 						"host_uid":        "uid1",
@@ -60,7 +60,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"subnet_mask":     "2.2.2.2",
 						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
-				},
+				}),
 			},
 			expected: &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 				EdgeHosts: []*models.V1EdgeNativeMachinePoolHostEntity{
@@ -92,7 +92,7 @@ func TestToEdgeHosts(t *testing.T) {
 		{
 			name: "Edge_host with empty host_name",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":       "",
 						"host_uid":        "uid1",
@@ -111,7 +111,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"subnet_mask":     "2.2.2.2",
 						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
-				},
+				}),
 			},
 			expected: &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 				EdgeHosts: []*models.V1EdgeNativeMachinePoolHostEntity{
@@ -143,7 +143,7 @@ func TestToEdgeHosts(t *testing.T) {
 		{
 			name: "Valid two node edge hosts",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":     "",
 						"host_uid":      "uid1",
@@ -156,7 +156,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"static_ip":     "ip2",
 						"two_node_role": "secondary",
 					},
-				},
+				}),
 			},
 			expected: &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 				EdgeHosts: []*models.V1EdgeNativeMachinePoolHostEntity{
@@ -182,7 +182,7 @@ func TestToEdgeHosts(t *testing.T) {
 		{
 			name: "Invalid two node edge hosts: duplicate role",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":     "",
 						"host_uid":      hostUI1,
@@ -195,15 +195,15 @@ func TestToEdgeHosts(t *testing.T) {
 						"static_ip":     "ip2",
 						"two_node_role": "primary",
 					},
-				},
+				}),
 			},
 			expected:    nil,
-			expectedErr: "two node role 'primary' already assigned to edge host 'uid2'; roles must be unique",
+			expectedErr: "two node role 'primary' already assigned to edge host 'uid1'; roles must be unique",
 		},
 		{
 			name: "Invalid two node edge hosts: missing leader",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":     "",
 						"host_uid":      hostUI1,
@@ -215,7 +215,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"host_uid":  hostUI2,
 						"static_ip": "ip2",
 					},
-				},
+				}),
 			},
 			expected:    nil,
 			expectedErr: "primary edge host 'uid1' specified, but missing secondary edge host",
@@ -223,7 +223,7 @@ func TestToEdgeHosts(t *testing.T) {
 		{
 			name: "Invalid two node edge hosts: missing follower",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":     "",
 						"host_uid":      hostUI1,
@@ -235,7 +235,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"host_uid":  hostUI2,
 						"static_ip": "ip2",
 					},
-				},
+				}),
 			},
 			expected:    nil,
 			expectedErr: "secondary edge host 'uid1' specified, but missing primary edge host",
@@ -268,7 +268,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 				"control_plane":           true,
 				"control_plane_as_worker": false,
 				"name":                    "pool1",
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name": "",
 						"host_uid":  "uid1",
@@ -279,7 +279,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 						"host_uid":  "uid2",
 						"static_ip": "ip2",
 					},
-				},
+				}),
 				"additional_labels": map[string]interface{}{
 					"label1": "value1",
 					"label2": "value2",
