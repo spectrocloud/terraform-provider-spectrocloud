@@ -36,6 +36,19 @@ variable "cloudstack_zone_name" {
   type        = string
 }
 
+# Optional: CloudStack Project (V1CloudStackResource)
+variable "cloudstack_project_id" {
+  description = "CloudStack project ID (optional)"
+  type        = string
+  default     = ""
+}
+
+variable "cloudstack_project_name" {
+  description = "CloudStack project name (optional)"
+  type        = string
+  default     = ""
+}
+
 variable "cloudstack_network_name" {
   description = "CloudStack network name for the cluster"
   type        = string

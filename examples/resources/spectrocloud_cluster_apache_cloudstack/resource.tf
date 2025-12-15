@@ -17,12 +17,31 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   # update_worker_pools_in_parallel = true
 
   cloud_config {
-    # CloudStack Network Configuration
-    zone_name    = var.cloudstack_zone_name
-    network_name = var.cloudstack_network_name
-
     # Optional: SSH key for cluster nodes
-    ssh_key = var.ssh_key_name
+    ssh_key_name = var.ssh_key_name
+
+    # Optional: CloudStack project (V1CloudStackResource)
+    # project {
+    #   id   = var.cloudstack_project_id    # CloudStack project ID
+    #   name = var.cloudstack_project_name  # CloudStack project name
+    # }
+
+    # Zone configuration (required)
+    zone {
+      name = var.cloudstack_zone_name
+
+      # Network configuration within the zone
+      network {
+        name = var.cloudstack_network_name
+        # Optional fields:
+        # id           = var.cloudstack_network_id
+        # type         = "shared"  # or "isolated"
+        # gateway      = "10.0.0.1"
+        # netmask      = "255.255.255.0"
+        # offering     = "DefaultNetworkOffering"
+        # routing_mode = "static"
+      }
+    }
   }
 
   cluster_profile {
