@@ -1,9 +1,10 @@
 package spectrocloud
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/stretchr/testify/assert"
 
@@ -469,10 +470,40 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 			}
 
 			for i, expectedMap := range tt.expected {
-				if diff := cmp.Diff(expectedMap, result[i]); diff != "" {
+				resultMap := result[i].(map[string]interface{})
+				expectedMapTyped := expectedMap.(map[string]interface{})
+
+				// Convert both expected and actual edge_host Sets to slices for comparison
+				expectedMapCopy := make(map[string]interface{})
+				for k, v := range expectedMapTyped {
+					expectedMapCopy[k] = v
+				}
+
+				// Convert actual edge_host Set to list for comparison
+				if resultEdgeHost, ok := resultMap["edge_host"].(*schema.Set); ok {
+					resultMap["edge_host"] = resultEdgeHost.List()
+				}
+
+				// Convert expected edge_host from []map[string]interface{} to []interface{} to match actual format
+				if expectedEdgeHost, ok := expectedMapCopy["edge_host"].([]map[string]interface{}); ok {
+					// Convert []map[string]interface{} to []interface{}
+					edgeHostList := make([]interface{}, len(expectedEdgeHost))
+					for j, host := range expectedEdgeHost {
+						edgeHostList[j] = host
+					}
+					expectedMapCopy["edge_host"] = edgeHostList
+				}
+
+				if diff := cmp.Diff(expectedMapCopy, resultMap); diff != "" {
 					t.Errorf("Test %s failed for item %d. Mismatch (-expected +actual):\n%s", tt.name, i, diff)
 				}
 			}
+
+			// for i, expectedMap := range tt.expected {
+			// 	if diff := cmp.Diff(expectedMap, result[i]); diff != "" {
+			// 		t.Errorf("Test %s failed for item %d. Mismatch (-expected +actual):\n%s", tt.name, i, diff)
+			// 	}
+			// }
 		})
 	}
 }
