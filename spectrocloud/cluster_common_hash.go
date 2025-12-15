@@ -436,18 +436,6 @@ func resourceMachinePoolCustomCloudHash(v interface{}) int {
 	return int(hash(buf.String()))
 }
 
-func resourceMachinePoolOpenStackHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
-
-	buf.WriteString(fmt.Sprintf("%s-", m["instance_type"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["subnet_id"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["update_strategy"].(string)))
-	buf.WriteString(fmt.Sprintf("%s-", m["azs"].(*schema.Set).GoString()))
-
-	return int(hash(buf.String()))
-}
-
 func resourceMachinePoolVirtualHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
@@ -797,4 +785,39 @@ func NormalizeYamlContent(yamlContent string) string {
 	}
 
 	return strings.Join(normalizedDocs, "\n---\n")
+}
+
+func resourceMachinePoolOpenStackHash(v interface{}) int {
+	nodePool := v.(map[string]interface{})
+	var buf bytes.Buffer
+
+	// Use CommonHash for common fields: additional_labels, taints, control_plane,
+	// control_plane_as_worker, name, count, update_strategy, node_repave_interval, node
+	commonBuf := CommonHash(nodePool)
+	buf.WriteString(commonBuf.String())
+
+	// Add OpenStack-specific fields
+	if val, ok := nodePool["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Handle azs (TypeSet) - sort for deterministic hash
+	if nodePool["azs"] != nil {
+		azsSet := nodePool["azs"].(*schema.Set)
+		azsList := azsSet.List()
+		azsListStr := make([]string, len(azsList))
+		for i, v := range azsList {
+			azsListStr[i] = v.(string)
+		}
+		sort.Strings(azsListStr)
+		azsStr := strings.Join(azsListStr, "-")
+		buf.WriteString(fmt.Sprintf("%s-", azsStr))
+	}
+
+	// Handle subnet_id (optional string field)
+	if val, ok := nodePool["subnet_id"]; ok && val != nil && val.(string) != "" {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	return int(hash(buf.String()))
 }
