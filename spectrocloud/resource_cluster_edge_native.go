@@ -550,7 +550,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 					var oldEdgeHostList, newEdgeHostList []interface{}
 					oldMachinePoolMap := osMap[name].(map[string]interface{})
 					newMachinePoolMap := nsMap[name].(map[string]interface{})
-
+					// Extract old edge_host list
 					if oldEdgeHostRaw := oldMachinePoolMap["edge_host"]; oldEdgeHostRaw != nil {
 						if oldSet, ok := oldEdgeHostRaw.(*schema.Set); ok {
 							oldEdgeHostList = oldSet.List()
@@ -558,7 +558,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 							oldEdgeHostList = oldList
 						}
 					}
-
+					// Extract new edge_host list
 					if newEdgeHostRaw := newMachinePoolMap["edge_host"]; newEdgeHostRaw != nil {
 						if newSet, ok := newEdgeHostRaw.(*schema.Set); ok {
 							newEdgeHostList = newSet.List()
@@ -566,7 +566,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 							newEdgeHostList = newList
 						}
 					}
-
+					// Compare old vs new to find deleted hosts
 					for _, oEdgeHost := range oldEdgeHostList {
 						oHostName := oEdgeHost.(map[string]interface{})["host_name"].(string)
 						isPresent := false
@@ -582,10 +582,12 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 							deletedHosts = append(deletedHosts, oHostName)
 						}
 					}
+					// Get actual machine list from API
 					machineList, err := c.GetNodeListInEdgeNativeMachinePool(cloudConfigId, name)
 					if err != nil {
 						return diag.FromErr(err)
 					}
+					// Delete nodes for removed hosts
 					for _, existingMachine := range machineList.Items {
 						found := false
 						for _, host := range deletedHosts {
@@ -602,7 +604,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 						}
 					}
 					// Logic for delete machine in node pool ends
-
+					//  Update machine pool
 					err = c.UpdateMachinePoolEdgeNative(cloudConfigId, machinePool)
 					if err != nil {
 						return diag.FromErr(err)
