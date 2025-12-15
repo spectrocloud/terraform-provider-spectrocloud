@@ -509,12 +509,6 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					t.Errorf("Test %s failed for item %d. Mismatch (-expected +actual):\n%s", tt.name, i, diff)
 				}
 			}
-
-			// for i, expectedMap := range tt.expected {
-			// 	if diff := cmp.Diff(expectedMap, result[i]); diff != "" {
-			// 		t.Errorf("Test %s failed for item %d. Mismatch (-expected +actual):\n%s", tt.name, i, diff)
-			// 	}
-			// }
 		})
 	}
 }
