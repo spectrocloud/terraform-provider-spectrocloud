@@ -487,7 +487,15 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	buf := CommonHash(m)
 
 	if edgeHosts, found := m["edge_host"]; found {
-		for _, host := range edgeHosts.([]interface{}) {
+		var edgeHostList []interface{}
+		if edgeHostSet, ok := edgeHosts.(*schema.Set); ok {
+			edgeHostList = edgeHostSet.List()
+		} else if edgeHostListRaw, ok := edgeHosts.([]interface{}); ok {
+			edgeHostList = edgeHostListRaw
+		}
+
+		//for _, host := range edgeHosts.([]interface{}) {
+		for _, host := range edgeHostList {
 			hostMap := host.(map[string]interface{})
 
 			if hostName, ok := hostMap["host_name"]; ok {

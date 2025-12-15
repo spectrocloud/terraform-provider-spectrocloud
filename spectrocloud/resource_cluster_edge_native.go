@@ -1,10 +1,13 @@
 package spectrocloud
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"net"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -230,7 +233,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 						"edge_host": {
 							Type:     schema.TypeSet,
 							Required: true,
-							//Set: resourceEdgeHostHash,
+							Set:      resourceEdgeHostHash,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"host_name": {
@@ -465,7 +468,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 
-		var hosts []map[string]interface{}
+		var hosts []interface{}
 		for _, host := range machinePool.Hosts {
 			rawHost := map[string]interface{}{
 				"host_name":       host.HostName,
@@ -750,14 +753,30 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 }
 
 func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloudConfigEntity, error) {
-	edgeHostIdsLen := len(m["edge_host"].(*schema.Set).List())
+	// edgeHostIdsLen := len(m["edge_host"].(*schema.Set).List())
 	edgeHosts := make([]*models.V1EdgeNativeMachinePoolHostEntity, 0)
-	if m["edge_host"] == nil || edgeHostIdsLen == 0 {
-		return nil, nil
+	var edgeHostSet *schema.Set
+	if edgeHostRaw, ok := m["edge_host"]; ok && edgeHostRaw != nil {
+		if edgeHostSet, ok = edgeHostRaw.(*schema.Set); !ok {
+			// Fallback: try to convert from list (for backward compatibility)
+			if edgeHostList, ok := edgeHostRaw.([]interface{}); ok {
+				edgeHostSet = schema.NewSet(schema.HashResource(resourceClusterEdgeNative().Schema["machine_pool"].Elem.(*schema.Resource).Schema["edge_host"].Elem.(*schema.Resource)), edgeHostList)
+			} else {
+				return nil, fmt.Errorf("edge_host must be a set or list")
+			}
+		}
 	}
 
+	if edgeHostSet == nil || edgeHostSet.Len() == 0 {
+		return nil, nil
+	}
+	// if m["edge_host"] == nil || edgeHostIdsLen == 0 {
+	// 	return nil, nil
+	// }
+
 	twoNodeHostRoles := make(map[string]string)
-	for _, host := range m["edge_host"].([]interface{}) {
+	//edgeHostSet = m["edge_host"].(*schema.Set)
+	for _, host := range edgeHostSet.List() {
 		hostName := ""
 		if v, ok := host.(map[string]interface{})["host_name"].(string); ok {
 			hostName = v
@@ -990,4 +1009,55 @@ func resourceClusterEdgeNativeStateUpgradeV2(ctx context.Context, rawState map[s
 	}
 
 	return rawState, nil
+}
+
+// resourceEdgeHostHash creates a hash for edge_host TypeSet
+func resourceEdgeHostHash(v interface{}) int {
+	var buf bytes.Buffer
+	host := v.(map[string]interface{})
+
+	// Required field - always include
+	if hostUID, ok := host["host_uid"]; ok && hostUID != nil {
+		buf.WriteString(fmt.Sprintf("host_uid:%s-", hostUID.(string)))
+	}
+
+	// Optional fields
+	if hostName, ok := host["host_name"]; ok && hostName != nil && hostName.(string) != "" {
+		buf.WriteString(fmt.Sprintf("host_name:%s-", hostName.(string)))
+	}
+
+	if staticIP, ok := host["static_ip"]; ok && staticIP != nil && staticIP.(string) != "" {
+		buf.WriteString(fmt.Sprintf("static_ip:%s-", staticIP.(string)))
+	}
+
+	if nicName, ok := host["nic_name"]; ok && nicName != nil && nicName.(string) != "" {
+		buf.WriteString(fmt.Sprintf("nic_name:%s-", nicName.(string)))
+	}
+
+	if defaultGateway, ok := host["default_gateway"]; ok && defaultGateway != nil && defaultGateway.(string) != "" {
+		buf.WriteString(fmt.Sprintf("default_gateway:%s-", defaultGateway.(string)))
+	}
+
+	if subnetMask, ok := host["subnet_mask"]; ok && subnetMask != nil && subnetMask.(string) != "" {
+		buf.WriteString(fmt.Sprintf("subnet_mask:%s-", subnetMask.(string)))
+	}
+
+	// Handle dns_servers (TypeSet) - sort for deterministic hash
+	if dnsServers, ok := host["dns_servers"]; ok && dnsServers != nil {
+		if dnsSet, ok := dnsServers.(*schema.Set); ok {
+			dnsList := dnsSet.List()
+			dnsListStr := make([]string, len(dnsList))
+			for i, v := range dnsList {
+				dnsListStr[i] = v.(string)
+			}
+			sort.Strings(dnsListStr)
+			buf.WriteString(fmt.Sprintf("dns_servers:%s-", strings.Join(dnsListStr, ",")))
+		}
+	}
+
+	if twoNodeRole, ok := host["two_node_role"]; ok && twoNodeRole != nil && twoNodeRole.(string) != "" {
+		buf.WriteString(fmt.Sprintf("two_node_role:%s-", twoNodeRole.(string)))
+	}
+
+	return int(hash(buf.String()))
 }
