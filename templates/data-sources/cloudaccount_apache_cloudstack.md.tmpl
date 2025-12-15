@@ -1,0 +1,74 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+
+## Example Usage
+
+You can retrieve the details of an Apache CloudStack cloud account registered in Palette by specifying either the name or ID of the cloud account.
+
+### Retrieve by Name
+
+```terraform
+# Retrieve details of an Apache CloudStack cloud account using name
+data "spectrocloud_cloudaccount_apache_cloudstack" "example" {
+  name    = "apache-cloudstack-account-1"  # Required if 'id' is not provided
+  context = "project"                       # Optional: Allowed values are "project", "tenant", or "" (default)
+}
+
+# Output cloud account details
+output "cloudstack_account_id" {
+  value       = data.spectrocloud_cloudaccount_apache_cloudstack.example.id
+  description = "Apache CloudStack cloud account ID"
+}
+
+output "cloudstack_api_url" {
+  value       = data.spectrocloud_cloudaccount_apache_cloudstack.example.api_url
+  description = "CloudStack API endpoint URL"
+}
+
+output "cloudstack_domain" {
+  value       = data.spectrocloud_cloudaccount_apache_cloudstack.example.domain
+  description = "CloudStack domain for the account"
+}
+```
+
+### Retrieve by ID
+
+```terraform
+# Retrieve details of an Apache CloudStack cloud account using ID
+data "spectrocloud_cloudaccount_apache_cloudstack" "by_id" {
+  id = "123e4567-e89b-12d3-a456-426614174000"  # Required if 'name' is not provided
+}
+
+# Use the retrieved account in other resources
+output "pcg_id" {
+  value = data.spectrocloud_cloudaccount_apache_cloudstack.by_id.private_cloud_gateway_id
+}
+```
+
+### Using Retrieved Account in Cluster Creation
+
+```terraform
+# Retrieve Apache CloudStack account
+data "spectrocloud_cloudaccount_apache_cloudstack" "account" {
+  name    = "my-cloudstack-account"
+  context = "project"
+}
+
+# Use the account to create a cluster
+resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
+  name             = "cloudstack-cluster"
+  cloud_account_id = data.spectrocloud_cloudaccount_apache_cloudstack.account.id
+  # ... rest of cluster configuration
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+

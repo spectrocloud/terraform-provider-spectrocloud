@@ -1,6 +1,6 @@
 module github.com/spectrocloud/terraform-provider-spectrocloud
 
-go 1.24.0
+go 1.24.11
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.24.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.1
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20251120090536-9954daf8ad26
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20251215074243-9fbcfc1e9704
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools v2.2.0+incompatible
