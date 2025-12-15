@@ -562,6 +562,7 @@ Optional:
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling.
 - `network` (Block List) Network configuration for the machine pool instances. (see [below for nested schema](#nestedblock--machine_pool--network))
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
+- `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `template` (Block List, Max: 1) Apache CloudStack template override for this machine pool. If not specified, inherits cluster default from profile. (see [below for nested schema](#nestedblock--machine_pool--template))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
@@ -698,7 +699,7 @@ Required:
 Optional:
 
 - `namespace` (String) The Kubernetes namespace of the RBAC binding. Required if 'type' is set to 'RoleBinding'.
-- `role` (Map of String) The role of the RBAC binding. Required if 'type' is set to 'RoleBinding'.
+- `role` (Map of String) The role of the RBAC binding. Required if 'type' is set to 'RoleBinding'. Must include 'name' and 'kind' fields.
 - `subjects` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding--subjects))
 
 <a id="nestedblock--cluster_rbac_binding--subjects"></a>
