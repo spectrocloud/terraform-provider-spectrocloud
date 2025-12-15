@@ -465,7 +465,6 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 
-		//var hosts []map[string]interface{}
 		var hosts []interface{}
 		for _, host := range machinePool.Hosts {
 			rawHost := map[string]interface{}{
@@ -482,7 +481,6 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 			}
 			hosts = append(hosts, rawHost)
 		}
-		//oi["edge_host"] = hosts
 		oi["edge_host"] = schema.NewSet(resourceEdgeHostHash, hosts)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
@@ -580,17 +578,6 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 								break
 							}
 						}
-						// for _, oEdgeHost := range osMap[name].(map[string]interface{})["edge_host"].([]interface{}) {
-						// 	oHostName := oEdgeHost.(map[string]interface{})["host_name"].(string)
-						// 	isPresent := false
-						// 	for _, nEdgeHost := range nsMap[name].(map[string]interface{})["edge_host"].([]interface{}) {
-						// 		nHostName := nEdgeHost.(map[string]interface{})["host_name"].(string)
-						// 		if oHostName == nHostName {
-						// 			// Found the host, so it's not deleted
-						// 			isPresent = true
-						// 			break
-						// 		}
-						// 	}
 						if !isPresent {
 							deletedHosts = append(deletedHosts, oHostName)
 						}
@@ -650,11 +637,6 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 					return diag.FromErr(err)
 				}
 			}
-
-			// We Tested when all nodes in node pool is deleted node pool will me remove by default no need to delete worker pool explicit
-			//if err := c.DeleteMachinePoolEdgeNative(cloudConfigId, name); err != nil {
-			//	return diag.FromErr(err)
-			//}
 		}
 	}
 
@@ -764,7 +746,6 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 }
 
 func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloudConfigEntity, error) {
-	//edgeHostIdsLen := len(m["edge_host"].([]interface{}))
 	edgeHosts := make([]*models.V1EdgeNativeMachinePoolHostEntity, 0)
 	var edgeHostSet *schema.Set
 	if edgeHostRaw, ok := m["edge_host"]; ok && edgeHostRaw != nil {
