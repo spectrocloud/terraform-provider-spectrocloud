@@ -806,7 +806,8 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 		if v, ok := host.(map[string]interface{})["two_node_role"].(string); ok {
 			if v != "" {
 				if _, ok := twoNodeHostRoles[v]; ok {
-					return nil, fmt.Errorf("two node role '%s' already assigned to edge host '%s'; roles must be unique", v, hostId)
+					// return nil, fmt.Errorf("two node role '%s' already assigned to edge host '%s'; roles must be unique", v, hostId)
+					return nil, fmt.Errorf("two node role '%s' already assigned to edge host '%s'; roles must be unique", v, twoNodeHostRoles[v])
 				}
 				edgeHost.TwoNodeCandidatePriority = v
 				twoNodeHostRoles[v] = hostId

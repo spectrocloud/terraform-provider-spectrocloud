@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -245,8 +246,24 @@ func TestToEdgeHosts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := toEdgeHosts(tt.input)
-			if err != nil && !reflect.DeepEqual(err.Error(), tt.expectedErr) {
-				t.Errorf("Expected error %v, got %v", tt.expectedErr, err)
+			if tt.expectedErr != "" {
+				if err == nil {
+					t.Errorf("Expected error %v, got nil", tt.expectedErr)
+				} else {
+					// For duplicate role test, accept either uid1 or uid2 due to non-deterministic Set iteration
+					if tt.name == "Invalid two node edge hosts: duplicate role" {
+						errMsg := err.Error()
+						if !(strings.Contains(errMsg, "two node role 'primary' already assigned to edge host 'uid1'") ||
+							strings.Contains(errMsg, "two node role 'primary' already assigned to edge host 'uid2'")) ||
+							!strings.Contains(errMsg, "roles must be unique") {
+							t.Errorf("Expected error to contain 'two node role 'primary' already assigned to edge host 'uid1' or 'uid2' and 'roles must be unique', got %v", errMsg)
+						}
+					} else if !reflect.DeepEqual(err.Error(), tt.expectedErr) {
+						t.Errorf("Expected error %v, got %v", tt.expectedErr, err)
+					}
+				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
 			}
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
