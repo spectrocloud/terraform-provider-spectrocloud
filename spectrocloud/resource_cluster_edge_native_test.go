@@ -415,8 +415,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool1",
-					"edge_host": []map[string]interface{}{
-						{
+					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+						map[string]interface{}{
 							"host_name":       "host1",
 							"host_uid":        "uid1",
 							"static_ip":       "ip1",
@@ -425,7 +425,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"subnet_mask":     "",
 							"dns_servers":     []string(nil),
 						},
-						{
+						map[string]interface{}{
 							"host_name":       "host2",
 							"host_uid":        "uid2",
 							"static_ip":       "ip2",
@@ -434,7 +434,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"subnet_mask":     "",
 							"dns_servers":     []string(nil),
 						},
-					},
+					}),
 					"update_strategy": "strategy1",
 				},
 				map[string]interface{}{
@@ -443,8 +443,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool2",
-					"edge_host": []map[string]interface{}{
-						{
+					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+						map[string]interface{}{
 							"host_name":       "host3",
 							"host_uid":        "uid3",
 							"static_ip":       "ip3",
@@ -453,7 +453,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"subnet_mask":     "",
 							"dns_servers":     []string(nil),
 						},
-					},
+					}),
 					"update_strategy": "strategy2",
 				},
 			},
@@ -473,25 +473,19 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 				resultMap := result[i].(map[string]interface{})
 				expectedMapTyped := expectedMap.(map[string]interface{})
 
-				// Convert both expected and actual edge_host Sets to slices for comparison
+				// Copy expected map for comparison
 				expectedMapCopy := make(map[string]interface{})
 				for k, v := range expectedMapTyped {
 					expectedMapCopy[k] = v
 				}
 
-				// Convert actual edge_host Set to list for comparison
+				// Compare Sets directly - both expected and actual are now *schema.Set
+				// Convert both to lists for comparison (since Set comparison is complex)
+				if expectedEdgeHost, ok := expectedMapCopy["edge_host"].(*schema.Set); ok {
+					expectedMapCopy["edge_host"] = expectedEdgeHost.List()
+				}
 				if resultEdgeHost, ok := resultMap["edge_host"].(*schema.Set); ok {
 					resultMap["edge_host"] = resultEdgeHost.List()
-				}
-
-				// Convert expected edge_host from []map[string]interface{} to []interface{} to match actual format
-				if expectedEdgeHost, ok := expectedMapCopy["edge_host"].([]map[string]interface{}); ok {
-					// Convert []map[string]interface{} to []interface{}
-					edgeHostList := make([]interface{}, len(expectedEdgeHost))
-					for j, host := range expectedEdgeHost {
-						edgeHostList[j] = host
-					}
-					expectedMapCopy["edge_host"] = edgeHostList
 				}
 
 				if diff := cmp.Diff(expectedMapCopy, resultMap); diff != "" {
