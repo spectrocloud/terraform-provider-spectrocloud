@@ -35,7 +35,14 @@ func resourceClusterEdgeNative() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterEdgeNativeResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterEdgeNativeStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -221,8 +228,9 @@ func resourceClusterEdgeNative() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"edge_host": {
-							Type:     schema.TypeList,
+							Type:     schema.TypeSet,
 							Required: true,
+							Set:      resourceEdgeHostHash,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"host_name": {
@@ -457,7 +465,8 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 
-		var hosts []map[string]interface{}
+		//var hosts []map[string]interface{}
+		var hosts []interface{}
 		for _, host := range machinePool.Hosts {
 			rawHost := map[string]interface{}{
 				"host_name":       host.HostName,
@@ -473,8 +482,8 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 			}
 			hosts = append(hosts, rawHost)
 		}
-		oi["edge_host"] = hosts
-
+		//oi["edge_host"] = hosts
+		oi["edge_host"] = schema.NewSet(resourceEdgeHostHash, hosts)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 
 		ois = append(ois, oi)
@@ -540,10 +549,30 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 					// Logic for delete machine in node pool starts
 					deletedHosts := make([]string, 0)
-					for _, oEdgeHost := range osMap[name].(map[string]interface{})["edge_host"].([]interface{}) {
+					var oldEdgeHostList, newEdgeHostList []interface{}
+					oldMachinePoolMap := osMap[name].(map[string]interface{})
+					newMachinePoolMap := nsMap[name].(map[string]interface{})
+
+					if oldEdgeHostRaw := oldMachinePoolMap["edge_host"]; oldEdgeHostRaw != nil {
+						if oldSet, ok := oldEdgeHostRaw.(*schema.Set); ok {
+							oldEdgeHostList = oldSet.List()
+						} else if oldList, ok := oldEdgeHostRaw.([]interface{}); ok {
+							oldEdgeHostList = oldList
+						}
+					}
+
+					if newEdgeHostRaw := newMachinePoolMap["edge_host"]; newEdgeHostRaw != nil {
+						if newSet, ok := newEdgeHostRaw.(*schema.Set); ok {
+							newEdgeHostList = newSet.List()
+						} else if newList, ok := newEdgeHostRaw.([]interface{}); ok {
+							newEdgeHostList = newList
+						}
+					}
+
+					for _, oEdgeHost := range oldEdgeHostList {
 						oHostName := oEdgeHost.(map[string]interface{})["host_name"].(string)
 						isPresent := false
-						for _, nEdgeHost := range nsMap[name].(map[string]interface{})["edge_host"].([]interface{}) {
+						for _, nEdgeHost := range newEdgeHostList {
 							nHostName := nEdgeHost.(map[string]interface{})["host_name"].(string)
 							if oHostName == nHostName {
 								// Found the host, so it's not deleted
@@ -551,6 +580,17 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 								break
 							}
 						}
+						// for _, oEdgeHost := range osMap[name].(map[string]interface{})["edge_host"].([]interface{}) {
+						// 	oHostName := oEdgeHost.(map[string]interface{})["host_name"].(string)
+						// 	isPresent := false
+						// 	for _, nEdgeHost := range nsMap[name].(map[string]interface{})["edge_host"].([]interface{}) {
+						// 		nHostName := nEdgeHost.(map[string]interface{})["host_name"].(string)
+						// 		if oHostName == nHostName {
+						// 			// Found the host, so it's not deleted
+						// 			isPresent = true
+						// 			break
+						// 		}
+						// 	}
 						if !isPresent {
 							deletedHosts = append(deletedHosts, oHostName)
 						}
@@ -724,14 +764,30 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 }
 
 func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloudConfigEntity, error) {
-	edgeHostIdsLen := len(m["edge_host"].([]interface{}))
+	//edgeHostIdsLen := len(m["edge_host"].([]interface{}))
 	edgeHosts := make([]*models.V1EdgeNativeMachinePoolHostEntity, 0)
-	if m["edge_host"] == nil || edgeHostIdsLen == 0 {
-		return nil, nil
+	var edgeHostSet *schema.Set
+	if edgeHostRaw, ok := m["edge_host"]; ok && edgeHostRaw != nil {
+		if edgeHostSet, ok = edgeHostRaw.(*schema.Set); !ok {
+			// Fallback: try to convert from list (for backward compatibility)
+			if edgeHostList, ok := edgeHostRaw.([]interface{}); ok {
+				edgeHostSet = schema.NewSet(schema.HashResource(resourceClusterEdgeNative().Schema["machine_pool"].Elem.(*schema.Resource).Schema["edge_host"].Elem.(*schema.Resource)), edgeHostList)
+			} else {
+				return nil, fmt.Errorf("edge_host must be a set or list")
+			}
+		}
 	}
 
+	if edgeHostSet == nil || edgeHostSet.Len() == 0 {
+		return nil, nil
+	}
+	// if m["edge_host"] == nil || edgeHostIdsLen == 0 {
+	// 	return nil, nil
+	// }
+
 	twoNodeHostRoles := make(map[string]string)
-	for _, host := range m["edge_host"].([]interface{}) {
+	// edgeHostSet = m["edge_host"].(*schema.Set)
+	for _, host := range edgeHostSet.List() {
 		hostName := ""
 		if v, ok := host.(map[string]interface{})["host_name"].(string); ok {
 			hostName = v
@@ -851,4 +907,117 @@ func getFirstIPRange(cidr string) (string, error) {
 	firstIPString := firstIP.String()
 
 	return firstIPString, nil
+}
+
+// resourceClusterEdgeNativeResourceV2 returns the V2 schema with edge_host as TypeList
+func resourceClusterEdgeNativeResourceV2() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			// ... copy all fields from main schema ...
+			"machine_pool": {
+				Type:     schema.TypeSet,
+				Required: true,
+				Set:      resourceMachinePoolEdgeNativeHash,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						// ... other machine_pool fields ...
+						"edge_host": {
+							Type:     schema.TypeList, // V2: TypeList, V3: TypeSet
+							Required: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"host_name": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Default:     "",
+										Description: "Edge host name",
+									},
+									"host_uid": {
+										Type:        schema.TypeString,
+										Description: "Edge host id",
+										Required:    true,
+									},
+									"static_ip": {
+										Type:        schema.TypeString,
+										Description: "Edge host static IP address",
+										Optional:    true,
+									},
+									"nic_name": {
+										Type:        schema.TypeString,
+										Description: "NIC Name for edge host.",
+										Optional:    true,
+									},
+									"default_gateway": {
+										Type:        schema.TypeString,
+										Description: "Edge host default gateway",
+										Optional:    true,
+									},
+									"subnet_mask": {
+										Type:        schema.TypeString,
+										Description: "Edge host subnet mask",
+										Optional:    true,
+									},
+									"dns_servers": {
+										Type:        schema.TypeSet,
+										Optional:    true,
+										Set:         schema.HashString,
+										Description: "Edge host DNS servers",
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+									},
+									"two_node_role": {
+										Type:         schema.TypeString,
+										Description:  "Two node role for edge host. Valid values are `primary` and `secondary`.",
+										Optional:     true,
+										ValidateFunc: validation.StringInSlice([]string{"primary", "secondary"}, false),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// resourceClusterEdgeNativeStateUpgradeV2 upgrades state from version 2 to 3
+// Converts edge_host from TypeList to TypeSet
+func resourceClusterEdgeNativeStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading cluster Edge Native state from version 2 to 3")
+
+	// Convert edge_host from TypeList to TypeSet within machine_pool
+	if machinePoolRaw, exists := rawState["machine_pool"]; exists {
+		if machinePoolSet, ok := machinePoolRaw.(*schema.Set); ok {
+			machinePoolList := machinePoolSet.List()
+			for _, mpRaw := range machinePoolList {
+				if mp, ok := mpRaw.(map[string]interface{}); ok {
+					if edgeHostRaw, exists := mp["edge_host"]; exists {
+						if edgeHostList, ok := edgeHostRaw.([]interface{}); ok {
+							log.Printf("[DEBUG] Converting edge_host from TypeList to TypeSet with %d items", len(edgeHostList))
+							// Keep as list - Terraform will convert to TypeSet when loading using schema
+							mp["edge_host"] = edgeHostList
+						}
+					}
+				}
+			}
+			rawState["machine_pool"] = machinePoolList
+		} else if machinePoolList, ok := machinePoolRaw.([]interface{}); ok {
+			// Handle case where machine_pool is still a list
+			for _, mpRaw := range machinePoolList {
+				if mp, ok := mpRaw.(map[string]interface{}); ok {
+					if edgeHostRaw, exists := mp["edge_host"]; exists {
+						if edgeHostList, ok := edgeHostRaw.([]interface{}); ok {
+							log.Printf("[DEBUG] Converting edge_host from TypeList to TypeSet with %d items", len(edgeHostList))
+							mp["edge_host"] = edgeHostList
+						}
+					}
+				}
+			}
+			rawState["machine_pool"] = machinePoolList
+		}
+	}
+
+	return rawState, nil
 }
