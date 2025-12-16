@@ -29,6 +29,14 @@ func AlertRoutes() []Route {
 			},
 		},
 		{
+			Method: "PUT",
+			Path:   "/v1/projects/{uid}/alerts/{component}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
 			Method: "GET",
 			Path:   "/v1/projects/{uid}/alerts/{component}/{alertUid}",
 			Response: ResponseData{
