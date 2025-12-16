@@ -88,17 +88,19 @@ func toClusterRBACBindings(clusterRbacBinding interface{}) []*models.V1ClusterRb
 		}
 		subjects = append(subjects, subject)
 	}
-
+	roleRef := &models.V1ClusterRoleRef{}
+	if v, ok := role["kind"]; ok {
+		roleRef.Kind = v.(string)
+	}
+	if v, ok := role["name"]; ok {
+		roleRef.Name = v.(string)
+	}
 	bindings = append(bindings, &models.V1ClusterRbacBinding{
-		Type: m["type"].(string),
-		Role: &models.V1ClusterRoleRef{
-			Kind: role["kind"].(string),
-			Name: role["name"].(string),
-		},
+		Type:      m["type"].(string),
+		Role:      roleRef,
 		Namespace: namespace,
 		Subjects:  subjects,
 	})
-
 	return bindings
 
 }

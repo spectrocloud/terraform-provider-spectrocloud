@@ -29,7 +29,7 @@ func ClusterRbacBindingSchema() *schema.Schema {
 					Elem: &schema.Schema{
 						Type: schema.TypeString,
 					},
-					Description: "The role of the RBAC binding. Required if 'type' is set to 'RoleBinding'.",
+					Description: "The role of the RBAC binding. Required if 'type' is set to 'RoleBinding'. Must include 'name' and 'kind' fields.",
 				},
 				"subjects": {
 					Type:     schema.TypeList,

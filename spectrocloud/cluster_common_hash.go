@@ -880,3 +880,4 @@ func resourceEdgeHostHash(v interface{}) int {
 
 	return int(hash(buf.String()))
 }
+

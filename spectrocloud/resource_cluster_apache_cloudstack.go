@@ -330,6 +330,12 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Required:    true,
 							Description: "Number of nodes in the machine pool.",
 						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
+						},
 						"update_strategy": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -582,7 +588,10 @@ func toCloudStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 
 	machinePoolConfigs := make([]*models.V1CloudStackMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolCloudStack(machinePool)
+		mp, err := toMachinePoolCloudStack(machinePool)
+		if err != nil {
+			return nil, err
+		}
 		machinePoolConfigs = append(machinePoolConfigs, mp)
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
@@ -651,7 +660,7 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 	return config
 }
 
-func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachinePoolConfigEntity {
+func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachinePoolConfigEntity, error) {
 	mp := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -725,12 +734,26 @@ func toMachinePoolCloudStack(machinePool interface{}) *models.V1CloudStackMachin
 		}
 	}
 
+	// Handle node_repave_interval
+	if !controlPlane {
+		nodeRepaveInterval := 0
+		if mp["node_repave_interval"] != nil {
+			nodeRepaveInterval = mp["node_repave_interval"].(int)
+		}
+		poolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
+	} else {
+		err := ValidationNodeRepaveIntervalForControlPlane(mp["node_repave_interval"].(int))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	mpEntity := &models.V1CloudStackMachinePoolConfigEntity{
 		CloudConfig: cloudConfig,
 		PoolConfig:  poolConfig,
 	}
 
-	return mpEntity
+	return mpEntity, nil
 }
 
 func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
@@ -801,7 +824,10 @@ func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *sch
 			if oldMachinePool, exists := osMap[name]; !exists {
 				// NEW machine pool - CREATE
 				log.Printf("[DEBUG] Creating new machine pool %s", name)
-				machinePool := toMachinePoolCloudStack(machinePoolResource)
+				machinePool, err := toMachinePoolCloudStack(machinePoolResource)
+				if err != nil {
+					return err
+				}
 				if err := c.CreateMachinePoolCloudStack(cloudConfigId, machinePool); err != nil {
 					return err
 				}
@@ -813,7 +839,10 @@ func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *sch
 				if oldHash != newHash {
 					// MODIFIED machine pool - UPDATE
 					log.Printf("[DEBUG] Updating machine pool %s (hash changed: %d -> %d)", name, oldHash, newHash)
-					machinePool := toMachinePoolCloudStack(machinePoolResource)
+					machinePool, err := toMachinePoolCloudStack(machinePoolResource)
+					if err != nil {
+						return err
+					}
 					if err := c.UpdateMachinePoolCloudStack(cloudConfigId, machinePool); err != nil {
 						return err
 					}
@@ -843,7 +872,7 @@ func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *sch
 }
 
 func resourceClusterApacheCloudStackImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	_, err := GetCommonCluster(d, m)
+	c, err := GetCommonCluster(d, m)
 	if err != nil {
 		return nil, err
 	}
@@ -851,6 +880,12 @@ func resourceClusterApacheCloudStackImport(ctx context.Context, d *schema.Resour
 	diags := resourceClusterApacheCloudStackRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
+	}
+
+	// cluster profile and common default cluster attribute is get set here
+	err = flattenCommonAttributeForClusterImport(c, d)
+	if err != nil {
+		return nil, err
 	}
 
 	return []*schema.ResourceData{d}, nil
@@ -997,12 +1032,10 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 		oi := make(map[string]interface{})
 
 		// Flatten pool configuration (from V1MachinePoolBaseConfig embedded)
-		// Note: AdditionalLabels and Taints are not available in the GET response for CloudStack
-		// They're only used during creation. So we skip flattening them to avoid state inconsistencies.
+		// Note: AdditionalLabels and Taints are now available in the GET response for CloudStack
+		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
-		if machinePool.IsControlPlane != nil {
-			oi["control_plane"] = *machinePool.IsControlPlane
-		}
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
