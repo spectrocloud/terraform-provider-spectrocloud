@@ -1,9 +1,11 @@
 package spectrocloud
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/stretchr/testify/assert"
 
@@ -34,13 +36,13 @@ func TestToEdgeHosts(t *testing.T) {
 	}{
 		{
 			name:     "Empty edge_host",
-			input:    map[string]interface{}{"edge_host": []interface{}{}},
+			input:    map[string]interface{}{"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{})},
 			expected: nil,
 		},
 		{
 			name: "Valid edge_host",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":       "host1",
 						"host_uid":        "uid1",
@@ -59,7 +61,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"subnet_mask":     "2.2.2.2",
 						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
-				},
+				}),
 			},
 			expected: &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 				EdgeHosts: []*models.V1EdgeNativeMachinePoolHostEntity{
@@ -91,7 +93,7 @@ func TestToEdgeHosts(t *testing.T) {
 		{
 			name: "Edge_host with empty host_name",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":       "",
 						"host_uid":        "uid1",
@@ -110,7 +112,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"subnet_mask":     "2.2.2.2",
 						"dns_servers":     ToSchemaSetFromStrings([]string{"t.t.com"}),
 					},
-				},
+				}),
 			},
 			expected: &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 				EdgeHosts: []*models.V1EdgeNativeMachinePoolHostEntity{
@@ -142,7 +144,7 @@ func TestToEdgeHosts(t *testing.T) {
 		{
 			name: "Valid two node edge hosts",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":     "",
 						"host_uid":      "uid1",
@@ -155,7 +157,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"static_ip":     "ip2",
 						"two_node_role": "secondary",
 					},
-				},
+				}),
 			},
 			expected: &models.V1EdgeNativeMachinePoolCloudConfigEntity{
 				EdgeHosts: []*models.V1EdgeNativeMachinePoolHostEntity{
@@ -181,7 +183,7 @@ func TestToEdgeHosts(t *testing.T) {
 		{
 			name: "Invalid two node edge hosts: duplicate role",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":     "",
 						"host_uid":      hostUI1,
@@ -194,7 +196,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"static_ip":     "ip2",
 						"two_node_role": "primary",
 					},
-				},
+				}),
 			},
 			expected:    nil,
 			expectedErr: "two node role 'primary' already assigned to edge host 'uid2'; roles must be unique",
@@ -202,7 +204,7 @@ func TestToEdgeHosts(t *testing.T) {
 		{
 			name: "Invalid two node edge hosts: missing leader",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":     "",
 						"host_uid":      hostUI1,
@@ -214,7 +216,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"host_uid":  hostUI2,
 						"static_ip": "ip2",
 					},
-				},
+				}),
 			},
 			expected:    nil,
 			expectedErr: "primary edge host 'uid1' specified, but missing secondary edge host",
@@ -222,7 +224,7 @@ func TestToEdgeHosts(t *testing.T) {
 		{
 			name: "Invalid two node edge hosts: missing follower",
 			input: map[string]interface{}{
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name":     "",
 						"host_uid":      hostUI1,
@@ -234,7 +236,7 @@ func TestToEdgeHosts(t *testing.T) {
 						"host_uid":  hostUI2,
 						"static_ip": "ip2",
 					},
-				},
+				}),
 			},
 			expected:    nil,
 			expectedErr: "secondary edge host 'uid1' specified, but missing primary edge host",
@@ -244,8 +246,24 @@ func TestToEdgeHosts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := toEdgeHosts(tt.input)
-			if err != nil && !reflect.DeepEqual(err.Error(), tt.expectedErr) {
-				t.Errorf("Expected error %v, got %v", tt.expectedErr, err)
+			if tt.expectedErr != "" {
+				if err == nil {
+					t.Errorf("Expected error %v, got nil", tt.expectedErr)
+				} else {
+					// For duplicate role test, accept either uid1 or uid2 due to non-deterministic Set iteration
+					if tt.name == "Invalid two node edge hosts: duplicate role" {
+						errMsg := err.Error()
+						if !(strings.Contains(errMsg, "two node role 'primary' already assigned to edge host 'uid1'") ||
+							strings.Contains(errMsg, "two node role 'primary' already assigned to edge host 'uid2'")) ||
+							!strings.Contains(errMsg, "roles must be unique") {
+							t.Errorf("Expected error to contain 'two node role 'primary' already assigned to edge host 'uid1' or 'uid2' and 'roles must be unique', got %v", errMsg)
+						}
+					} else if !reflect.DeepEqual(err.Error(), tt.expectedErr) {
+						t.Errorf("Expected error %v, got %v", tt.expectedErr, err)
+					}
+				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
 			}
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
@@ -267,7 +285,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 				"control_plane":           true,
 				"control_plane_as_worker": false,
 				"name":                    "pool1",
-				"edge_host": []interface{}{
+				"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 					map[string]interface{}{
 						"host_name": "",
 						"host_uid":  "uid1",
@@ -278,7 +296,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 						"host_uid":  "uid2",
 						"static_ip": "ip2",
 					},
-				},
+				}),
 				"additional_labels": map[string]interface{}{
 					"label1": "value1",
 					"label2": "value2",
@@ -414,8 +432,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool1",
-					"edge_host": []map[string]interface{}{
-						{
+					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+						map[string]interface{}{
 							"host_name":       "host1",
 							"host_uid":        "uid1",
 							"static_ip":       "ip1",
@@ -424,7 +442,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"subnet_mask":     "",
 							"dns_servers":     []string(nil),
 						},
-						{
+						map[string]interface{}{
 							"host_name":       "host2",
 							"host_uid":        "uid2",
 							"static_ip":       "ip2",
@@ -433,7 +451,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"subnet_mask":     "",
 							"dns_servers":     []string(nil),
 						},
-					},
+					}),
 					"update_strategy": "strategy1",
 				},
 				map[string]interface{}{
@@ -442,8 +460,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool2",
-					"edge_host": []map[string]interface{}{
-						{
+					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+						map[string]interface{}{
 							"host_name":       "host3",
 							"host_uid":        "uid3",
 							"static_ip":       "ip3",
@@ -452,7 +470,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"subnet_mask":     "",
 							"dns_servers":     []string(nil),
 						},
-					},
+					}),
 					"update_strategy": "strategy2",
 				},
 			},
@@ -469,7 +487,25 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 			}
 
 			for i, expectedMap := range tt.expected {
-				if diff := cmp.Diff(expectedMap, result[i]); diff != "" {
+				resultMap := result[i].(map[string]interface{})
+				expectedMapTyped := expectedMap.(map[string]interface{})
+
+				// Copy expected map for comparison
+				expectedMapCopy := make(map[string]interface{})
+				for k, v := range expectedMapTyped {
+					expectedMapCopy[k] = v
+				}
+
+				// Compare Sets directly - both expected and actual are now *schema.Set
+				// Convert both to lists for comparison (since Set comparison is complex)
+				if expectedEdgeHost, ok := expectedMapCopy["edge_host"].(*schema.Set); ok {
+					expectedMapCopy["edge_host"] = expectedEdgeHost.List()
+				}
+				if resultEdgeHost, ok := resultMap["edge_host"].(*schema.Set); ok {
+					resultMap["edge_host"] = resultEdgeHost.List()
+				}
+
+				if diff := cmp.Diff(expectedMapCopy, resultMap); diff != "" {
 					t.Errorf("Test %s failed for item %d. Mismatch (-expected +actual):\n%s", tt.name, i, diff)
 				}
 			}
