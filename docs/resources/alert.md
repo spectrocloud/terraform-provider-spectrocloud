@@ -51,7 +51,6 @@ resource "spectrocloud_alert" "alert_http" {
 - `component` (String) The component of the system that the alert is associated with. Currently, `ClusterHealth` is the only supported value.
 - `is_active` (Boolean) Indicates whether the alert is active. Set to `true` to activate the alert, or `false` to deactivate it.
 - `project` (String) The project to which the alert belongs to.
-- `type` (String) The type of alert mechanism to use. Can be either `email` for email alerts or `http` for sending HTTP requests.
 
 ### Optional
 
@@ -61,6 +60,7 @@ resource "spectrocloud_alert" "alert_http" {
 - `identifiers` (Set of String) A set of unique identifiers to which the alert will be sent. This is used to target specific users or groups.
 - `status` (Block List) A status block representing the internal status of the alert. This is primarily for internal use and not utilized directly. (see [below for nested schema](#nestedblock--status))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `type` (String) The type of alert mechanism to use. Can be `email` for email alerts, `http` for HTTP webhooks, or empty string to auto-detect based on provided configuration.
 
 ### Read-Only
 

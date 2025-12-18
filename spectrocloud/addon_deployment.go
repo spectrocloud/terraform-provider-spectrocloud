@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -12,6 +13,204 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
+// readAddonDeploymentMultiple reads multiple addon profiles from the cluster
+func readAddonDeploymentMultiple(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
+	var diags diag.Diagnostics
+
+	// Get the profile UIDs from resource ID
+	profileUIDs, err := getClusterProfileUIDs(d.Id())
+	if err != nil {
+		// Fallback to legacy single profile handling
+		return readAddonDeployment(c, d, cluster)
+	}
+
+	// Build a map of profile UIDs we're tracking
+	trackedProfiles := make(map[string]bool)
+	for _, uid := range profileUIDs {
+		trackedProfiles[uid] = true
+	}
+
+	// Get existing profiles from config to preserve pack configurations
+	existingProfiles := d.Get("cluster_profile").([]interface{})
+	existingProfilesMap := make(map[string]map[string]interface{})
+	for _, p := range existingProfiles {
+		if p == nil {
+			continue
+		}
+		profile := p.(map[string]interface{})
+		if id, ok := profile["id"].(string); ok && id != "" {
+			existingProfilesMap[id] = profile
+		}
+	}
+
+	// Flatten all tracked profiles from cluster state
+	clusterProfiles := make([]interface{}, 0)
+	foundProfiles := make([]string, 0)
+
+	for _, template := range cluster.Spec.ClusterProfileTemplates {
+		if template == nil {
+			continue
+		}
+
+		// Check if this profile is one we're tracking
+		if !trackedProfiles[template.UID] {
+			// Check by fetching the profile and matching by name (for version upgrades)
+			found := false
+			for trackedUID := range trackedProfiles {
+				trackedProfile, err := c.GetClusterProfile(trackedUID)
+				if err != nil {
+					continue
+				}
+				if trackedProfile != nil && trackedProfile.Metadata != nil &&
+					template.Name == trackedProfile.Metadata.Name {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		// Flatten this profile
+		profileData, err := flattenAddonDeploymentProfile(c, d, template, existingProfilesMap)
+		if err != nil {
+			log.Printf("Warning: failed to flatten profile %s: %v", template.UID, err)
+			continue
+		}
+
+		clusterProfiles = append(clusterProfiles, profileData)
+		foundProfiles = append(foundProfiles, template.UID)
+	}
+
+	// If no profiles found, mark resource as deleted
+	if len(clusterProfiles) == 0 {
+		d.SetId("")
+		return diags, false
+	}
+
+	// Update cluster_profile in state
+	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
+		return diag.FromErr(err), false
+	}
+
+	// Update resource ID with current profile UIDs
+	clusterUid := d.Get("cluster_uid").(string)
+	d.SetId(buildAddonDeploymentId(clusterUid, foundProfiles))
+
+	return diags, true
+}
+
+// flattenAddonDeploymentProfile flattens a single profile template
+func flattenAddonDeploymentProfile(c *client.V1Client, d *schema.ResourceData, profile *models.V1ClusterProfileTemplate, existingProfilesMap map[string]map[string]interface{}) (map[string]interface{}, error) {
+	clusterProfile := make(map[string]interface{})
+	clusterProfile["id"] = profile.UID
+
+	// Check if user has defined packs in their config for this profile
+	hasPacksInConfig := false
+	if existingConfig, exists := existingProfilesMap[profile.UID]; exists {
+		if packs, ok := existingConfig["pack"]; ok && packs != nil {
+			packsList := packs.([]interface{})
+			if len(packsList) > 0 {
+				hasPacksInConfig = true
+			}
+		}
+	}
+
+	// Only flatten packs if user has defined them in config
+	if hasPacksInConfig {
+		packManifests, diagResult, done := getPacksContent(profile.Packs, c, d)
+		if done {
+			log.Printf("Warning: error getting pack content for profile %s: %v", profile.UID, diagResult)
+		} else {
+			diagPacks := make([]*models.V1PackManifestEntity, 0)
+			if existingConfig, exists := existingProfilesMap[profile.UID]; exists {
+				if packsRaw, ok := existingConfig["pack"]; ok && packsRaw != nil {
+					for _, pack := range packsRaw.([]interface{}) {
+						if p, e := toAddonDeploymentPackCreate(pack); e == nil {
+							diagPacks = append(diagPacks, p)
+						}
+					}
+				}
+			}
+
+			// Build registry maps for this profile
+			registryNameMap := buildPackRegistryNameMapForProfile(existingProfilesMap[profile.UID])
+			registryUIDMap := buildPackRegistryUIDMapForProfile(existingProfilesMap[profile.UID])
+
+			packs, err := flattenPacksWithRegistryMaps(c, diagPacks, profile.Packs, packManifests, registryNameMap, registryUIDMap)
+			if err == nil {
+				clusterProfile["pack"] = packs
+			}
+		}
+	}
+
+	// Flatten profile variables
+	clusterUID := d.Get("cluster_uid").(string)
+	if clusterUID != "" {
+		clusterVars, err := c.GetClusterVariables(clusterUID)
+		if err == nil {
+			for _, clusterVar := range clusterVars {
+				if clusterVar.ProfileUID != nil && *clusterVar.ProfileUID == profile.UID && clusterVar.Variables != nil {
+					vars := make(map[string]interface{})
+					for _, v := range clusterVar.Variables {
+						if v.Name != nil && v.Value != "" {
+							vars[*v.Name] = v.Value
+						}
+					}
+					if len(vars) > 0 {
+						clusterProfile["variables"] = vars
+					}
+					break
+				}
+			}
+		}
+	}
+
+	return clusterProfile, nil
+}
+
+// buildPackRegistryNameMapForProfile builds a registry name map for a single profile
+// Returns a map indicating which packs have registry_name set
+func buildPackRegistryNameMapForProfile(profileConfig map[string]interface{}) map[string]bool {
+	registryNameMap := make(map[string]bool)
+	if profileConfig == nil {
+		return registryNameMap
+	}
+
+	if packsRaw, ok := profileConfig["pack"]; ok && packsRaw != nil {
+		for _, pack := range packsRaw.([]interface{}) {
+			p := pack.(map[string]interface{})
+			packName := p["name"].(string)
+			if regName, ok := p["registry_name"]; ok && regName != nil && regName.(string) != "" {
+				registryNameMap[packName] = true
+			}
+		}
+	}
+	return registryNameMap
+}
+
+// buildPackRegistryUIDMapForProfile builds a registry UID map for a single profile
+// Returns a map indicating which packs have registry_uid set
+func buildPackRegistryUIDMapForProfile(profileConfig map[string]interface{}) map[string]bool {
+	registryUIDMap := make(map[string]bool)
+	if profileConfig == nil {
+		return registryUIDMap
+	}
+
+	if packsRaw, ok := profileConfig["pack"]; ok && packsRaw != nil {
+		for _, pack := range packsRaw.([]interface{}) {
+			p := pack.(map[string]interface{})
+			packName := p["name"].(string)
+			if regUID, ok := p["registry_uid"]; ok && regUID != nil && regUID.(string) != "" {
+				registryUIDMap[packName] = true
+			}
+		}
+	}
+	return registryUIDMap
+}
+
+// readAddonDeployment is the legacy function for reading a single addon profile (kept for backward compatibility)
 func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
 
 	var diags diag.Diagnostics
