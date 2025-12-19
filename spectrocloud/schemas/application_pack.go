@@ -1,6 +1,9 @@
 package schemas
 
 import (
+	"bytes"
+	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -8,9 +11,10 @@ import (
 
 func AppPackSchema() *schema.Schema {
 	return &schema.Schema{
-		Type:        schema.TypeList,
+		Type:        schema.TypeSet,
 		Required:    true,
 		Description: "A list of packs to be applied to the application profile.",
+		Set:         resourceAppPackHash,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"type": {
@@ -103,4 +107,111 @@ func AppPackSchema() *schema.Schema {
 			},
 		},
 	}
+}
+
+func resourceAppPackHash(v interface{}) int {
+	m := v.(map[string]interface{})
+	var buf bytes.Buffer
+
+	// Primary identifier - name is required
+	if val, ok := m["name"]; ok {
+		buf.WriteString(fmt.Sprintf("name-%s-", val.(string)))
+	}
+
+	if val, ok := m["uid"]; ok && val != nil && val != "" {
+		buf.WriteString(fmt.Sprintf("uid-%s-", val.(string)))
+	}
+
+	// Pack type (optional, default "spectro")
+	if val, ok := m["type"]; ok && val != nil && val != "" {
+		buf.WriteString(fmt.Sprintf("type-%s-", val.(string)))
+	} else {
+		buf.WriteString("type-spectro-") // Default value
+	}
+
+	// Tag/version identifier
+	if val, ok := m["tag"]; ok && val != nil && val != "" {
+		buf.WriteString(fmt.Sprintf("tag-%s-", val.(string)))
+	}
+
+	// Registry identifier - use registry_uid if available, otherwise registry_name
+	if val, ok := m["registry_uid"]; ok && val != nil && val != "" {
+		buf.WriteString(fmt.Sprintf("registry_uid-%s-", val.(string)))
+	} else if val, ok := m["registry_name"]; ok && val != nil && val != "" {
+		buf.WriteString(fmt.Sprintf("registry_name-%s-", val.(string)))
+	}
+
+	// Source app tier
+	if val, ok := m["source_app_tier"]; ok && val != nil && val != "" {
+		buf.WriteString(fmt.Sprintf("source_app_tier-%s-", val.(string)))
+	}
+
+	// Install order (optional, default 0)
+	if val, ok := m["install_order"]; ok {
+		if intVal, ok := val.(int); ok {
+			buf.WriteString(fmt.Sprintf("install_order-%d-", intVal))
+		}
+	} else {
+		buf.WriteString("install_order-0-") // Default value
+	}
+
+	// Properties map
+	if val, ok := m["properties"]; ok && val != nil {
+		if props, ok := val.(map[string]interface{}); ok && len(props) > 0 {
+			// Sort keys for deterministic hashing
+			if len(props) > 0 {
+				keys := make([]string, 0, len(props))
+				for k := range props {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
+				for _, k := range keys {
+					var propValue string
+					if v, ok := props[k].(string); ok {
+						buf.WriteString(fmt.Sprintf("properties-%s-%s-", k, v))
+					}
+					if propValue != "" {
+						buf.WriteString(fmt.Sprintf("properties-%s-%s-", k, propValue))
+					}
+				}
+			}
+		}
+	}
+
+	// Values - normalize by trimming whitespace (matching DiffSuppressFunc behavior)
+	if val, ok := m["values"]; ok && val != nil {
+		valuesStr := ""
+		if v, ok := val.(string); ok {
+			valuesStr = strings.TrimSpace(v)
+		}
+		if valuesStr != "" {
+			buf.WriteString(fmt.Sprintf("values-%s-", valuesStr))
+		}
+	}
+
+	// Manifest list - include in hash since it affects pack identity
+	// Since manifest is TypeList (order matters), we preserve order in hash
+	if val, ok := m["manifest"]; ok && val != nil {
+		if manifestList, ok := val.([]interface{}); ok && len(manifestList) > 0 {
+			for i, manifest := range manifestList {
+				if m, ok := manifest.(map[string]interface{}); ok {
+					manifestName := ""
+					manifestContent := ""
+					if name, ok := m["name"].(string); ok {
+						manifestName = name
+					}
+					if content, ok := m["content"].(string); ok {
+						// Normalize content by trimming whitespace (matching DiffSuppressFunc)
+						manifestContent = strings.TrimSpace(content)
+					}
+					// Include index to preserve order
+					buf.WriteString(fmt.Sprintf("manifest-%d-name-%s-content-%s-", i, manifestName, manifestContent))
+				}
+			}
+		}
+	}
+
+	// DO NOT include "uid" - it's a computed field and should not affect hash
+
+	return int(hash(buf.String()))
 }

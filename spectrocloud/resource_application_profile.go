@@ -35,8 +35,15 @@ func resourceApplicationProfile() *schema.Resource {
 			Delete: schema.DefaultTimeout(20 * time.Second),
 		},
 
-		Description: "Provisions an Application Profile. App Profiles are templates created with preconfigured services. You can create as many profiles as required, with multiple tiers serving different functionalities per use case.",
-
+		Description:   "Provisions an Application Profile. App Profiles are templates created with preconfigured services. You can create as many profiles as required, with multiple tiers serving different functionalities per use case.",
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceApplicationProfileResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceApplicationProfileStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -164,7 +171,11 @@ func getAppTiersContent(c *client.V1Client, d *schema.ResourceData) ([]*models.V
 func getValueInProperties(prop map[string]interface{}, key string) string {
 	for k, v := range prop {
 		if k == key {
-			return v.(string)
+			// Handle both string and interface{} types
+			if strVal, ok := v.(string); ok {
+				return strVal
+			}
+			return fmt.Sprintf("%v", v)
 		}
 	}
 	return ""
@@ -178,6 +189,23 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 	// Build registry maps to track which packs use registry_name or registry_uid
 	registryNameMap := buildPackRegistryNameMap(d)
 	registryUIDMap := buildPackRegistryUIDMap(d)
+
+	// Build pack-by-name map for efficient lookup (crispy way!)
+	packMap := make(map[string]map[string]interface{})
+	if packRaw, ok := d.GetOk("pack"); ok {
+		var packList []interface{}
+		if packSet, ok := packRaw.(*schema.Set); ok {
+			packList = packSet.List()
+		} else if packListRaw, ok := packRaw.([]interface{}); ok {
+			packList = packListRaw // Backward compatibility
+		}
+
+		for _, packInterface := range packList {
+			pack := packInterface.(map[string]interface{})
+			packName := pack["name"].(string)
+			packMap[packName] = pack
+		}
+	}
 
 	ps := make([]interface{}, len(tiers))
 	for i, tier := range tierDet {
@@ -220,21 +248,27 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 		//p["tag"] = tier.Tag
 		p["type"] = tier.Spec.Type
 		p["source_app_tier"] = tier.Spec.SourceAppTierUID
-		prop := make(map[string]string)
+
+		// prop := make(map[string]string)
+		prop := make(map[string]interface{})
 		if len(tier.Spec.Properties) > 0 {
 			for _, pt := range tier.Spec.Properties {
 				if pt.Value != "********" {
 					prop[pt.Name] = pt.Value
 				} else {
-					if _, ok := d.GetOk("pack"); ok {
-						ogProp := d.Get("pack").([]interface{})[i].(map[string]interface{})["properties"]
-						prop[pt.Name] = getValueInProperties(ogProp.(map[string]interface{}), pt.Name)
+					// Searching by name instead of index
+					if pack, found := packMap[tier.Metadata.Name]; found {
+						if ogProp, ok := pack["properties"]; ok && ogProp != nil {
+							prop[pt.Name] = getValueInProperties(ogProp.(map[string]interface{}), pt.Name)
+						}
 					}
 				}
-
 			}
 		}
-		p["properties"] = prop
+		// Only set properties if it's not empty, to match hash function behavior
+		if len(prop) > 0 {
+			p["properties"] = prop
+		}
 		if tier.Spec.Type != nil && string(*tier.Spec.Type) == "container" {
 			p["values"] = tier.Spec.Values
 		}
@@ -323,7 +357,7 @@ func toApplicationProfileCreate(d *schema.ResourceData) (*models.V1AppProfileEnt
 	cp := toApplicationProfileBasic(d)
 
 	tiers := make([]*models.V1AppTierEntity, 0)
-	for _, tier := range d.Get("pack").([]interface{}) {
+	for _, tier := range d.Get("pack").(*schema.Set).List() {
 		if t, e := toApplicationProfilePackCreate(tier); e != nil {
 			return nil, e
 		} else {
@@ -414,13 +448,19 @@ func toApplicationProfilePackCreateWithClient(pSrc interface{}, c *client.V1Clie
 	}
 
 	manifests := make([]*models.V1ManifestInputEntity, 0)
-	if len(p["manifest"].([]interface{})) > 0 {
-		for _, manifest := range p["manifest"].([]interface{}) {
-			m := manifest.(map[string]interface{})
-			manifests = append(manifests, &models.V1ManifestInputEntity{
-				Content: strings.TrimSpace(m["content"].(string)),
-				Name:    m["name"].(string),
-			})
+	if manifestRaw, ok := p["manifest"]; ok && manifestRaw != nil {
+		var manifestList []interface{}
+		if manifestListRaw, ok := manifestRaw.([]interface{}); ok {
+			manifestList = manifestListRaw
+		}
+		if len(manifestList) > 0 {
+			for _, manifest := range manifestList {
+				m := manifest.(map[string]interface{})
+				manifests = append(manifests, &models.V1ManifestInputEntity{
+					Content: strings.TrimSpace(m["content"].(string)),
+					Name:    m["name"].(string),
+				})
+			}
 		}
 	}
 	tier.Manifests = manifests
@@ -446,7 +486,16 @@ func toApplicationTiersUpdate(d *schema.ResourceData, c *client.V1Client) ([]*mo
 	var deleteTiers []string
 
 	createTiersMap := map[string]*models.V1AppTierEntity{}
-	for _, tier := range d.Get("pack").([]interface{}) {
+	var packList []interface{}
+	packRaw := d.Get("pack")
+	if packSet, ok := packRaw.(*schema.Set); ok {
+		packList = packSet.List()
+	} else if packListRaw, ok := packRaw.([]interface{}); ok {
+		packList = packListRaw // Backward compatibility during migration
+	} else {
+		return nil, nil, nil, fmt.Errorf("unexpected pack type: %T", packRaw)
+	}
+	for _, tier := range packList {
 		if _, found := previousTiersMap[tier.(map[string]interface{})["name"].(string)]; found {
 			t := toApplicationProfilePackUpdate(tier)
 			updateTiersMap[t.Name] = t
@@ -519,13 +568,19 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 	//pUID := p["uid"].(string)
 
 	manifests := make([]*models.V1ManifestRefUpdateEntity, 0)
-	for _, manifest := range p["manifest"].([]interface{}) {
-		m := manifest.(map[string]interface{})
-		manifests = append(manifests, &models.V1ManifestRefUpdateEntity{
-			Content: strings.TrimSpace(m["content"].(string)),
-			Name:    types.Ptr(m["name"].(string)),
-			//UID:     getManifestUID(m["name"].(string), packs),
-		})
+	if manifestRaw, ok := p["manifest"]; ok && manifestRaw != nil {
+		var manifestList []interface{}
+		if manifestListRaw, ok := manifestRaw.([]interface{}); ok {
+			manifestList = manifestListRaw
+		}
+		for _, manifest := range manifestList {
+			m := manifest.(map[string]interface{})
+			manifests = append(manifests, &models.V1ManifestRefUpdateEntity{
+				Content: strings.TrimSpace(m["content"].(string)),
+				Name:    types.Ptr(m["name"].(string)),
+				//UID:     getManifestUID(m["name"].(string), packs),
+			})
+		}
 	}
 
 	pack := &models.V1AppTierUpdateEntity{
@@ -540,4 +595,151 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 	}
 
 	return pack
+}
+
+// Add this function at the end of resource_application_profile.go
+
+// resourceApplicationProfileResourceV2 returns the schema for version 2 of the resource
+// This represents the old schema where "pack" was TypeList
+func resourceApplicationProfileResourceV2() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"version": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "1.0.0",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"description": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"cloud": {
+				Type:     schema.TypeString,
+				Default:  "all",
+				Optional: true,
+			},
+			// Version 2 used TypeList for pack
+			"pack": {
+				Type:        schema.TypeList, // OLD: TypeList
+				Required:    true,
+				Description: "A list of packs to be applied to the application profile.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						// Copy the schema from schemas.AppPackSchema() but keep as TypeList
+						"type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "spectro",
+						},
+						"source_app_tier": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"registry_name": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"uid": {
+							Type:     schema.TypeString,
+							Computed: true,
+							Optional: true,
+						},
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"properties": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"install_order": {
+							Type:     schema.TypeInt,
+							Default:  0,
+							Optional: true,
+						},
+						"manifest": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"uid": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"content": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// resourceApplicationProfileStateUpgradeV2 migrates state from version 2 to version 3
+func resourceApplicationProfileStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading application profile state from version 2 to 3")
+
+	// Convert pack from TypeList to TypeSet
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if packRaw, exists := rawState["pack"]; exists {
+		if packList, ok := packRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping pack as list during state upgrade with %d items", len(packList))
+
+			// Keep the pack data as-is (as a list)
+			// Terraform will convert it to TypeSet when loading the resource using the schema
+			rawState["pack"] = packList
+
+			log.Printf("[DEBUG] Successfully prepared pack for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] pack is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No pack found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
