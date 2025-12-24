@@ -191,7 +191,7 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 
 func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEntity, diag.Diagnostics, bool) {
 	diagPacks := make([]*models.V1PackManifestEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
+	for _, pack := range d.Get("pack").(*schema.Set).List() {
 		if p, e := toClusterProfilePackCreate(pack); e != nil {
 			return nil, diag.FromErr(err), true
 		} else {
