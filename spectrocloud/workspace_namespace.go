@@ -55,9 +55,22 @@ func toWorkspaceNamespaces(d *schema.ResourceData) []*models.V1WorkspaceClusterN
 	if d.Get("namespaces") == nil {
 		return nil
 	}
-	for _, clusterNamespace := range d.Get("namespaces").([]interface{}) {
+	// Handle both TypeSet and TypeList for backward compatibility
+	var namespaceList []interface{}
+	namespacesRaw := d.Get("namespaces")
+	if namespaceSet, ok := namespacesRaw.(*schema.Set); ok {
+		namespaceList = namespaceSet.List()
+	} else if namespaceListRaw, ok := namespacesRaw.([]interface{}); ok {
+		namespaceList = namespaceListRaw // Backward compatibility during migration
+	} else {
+		return nil
+	}
+
+	for _, clusterNamespace := range namespaceList {
 		ns := toWorkspaceNamespace(clusterNamespace)
-		workspaceNamespaces = append(workspaceNamespaces, ns)
+		if ns != nil {
+			workspaceNamespaces = append(workspaceNamespaces, ns)
+		}
 	}
 
 	return workspaceNamespaces
