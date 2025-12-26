@@ -94,6 +94,15 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	// Flatten cluster_timezone - always set during read (including import)
+	if cluster.Spec.ClusterConfig.Timezone != "" {
+		if _, ok := d.GetOk("cluster_timezone"); ok {
+			if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+				return diag.FromErr(err), true
+			}
+		}
+	}
+
 	// Flatten pause_agent_upgrades - always set during read (including import)
 	if err := d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster)); err != nil {
 		return diag.FromErr(err), true
@@ -213,6 +222,12 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 
 	if d.HasChange("location_config") {
 		if err := updateLocationConfig(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
+	if d.HasChange("cluster_timezone") {
+		if err := updateClusterTimezone(c, d); err != nil {
 			return diag.FromErr(err), true
 		}
 	}
