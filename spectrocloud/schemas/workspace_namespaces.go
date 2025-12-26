@@ -78,21 +78,66 @@ func resourceWorkspaceNamespaceHash(v interface{}) int {
 	}
 
 	// Resource allocation - include in hash for drift detection
+	// Exclude default/computed values to prevent hash mismatches
 	if val, ok := m["resource_allocation"]; ok && val != nil {
 		if resourceAlloc, ok := val.(map[string]interface{}); ok && len(resourceAlloc) > 0 {
+			// Check if gpu_limit is set and non-zero (do this first)
+			gpuLimitSet := false
+			if gpuLimitVal, hasGpuLimit := resourceAlloc["gpu_limit"]; hasGpuLimit {
+				if gpuLimitStr, ok := gpuLimitVal.(string); ok && gpuLimitStr != "" && gpuLimitStr != "0" {
+					gpuLimitSet = true
+				}
+			}
+
 			// Sort keys for deterministic hashing
 			keys := make([]string, 0, len(resourceAlloc))
 			for k := range resourceAlloc {
 				keys = append(keys, k)
 			}
 			sort.Strings(keys)
+
 			for _, k := range keys {
-				if v, ok := resourceAlloc[k].(string); ok && v != "" {
-					buf.WriteString(fmt.Sprintf("resource_allocation-%s-%s-", k, v))
+				v, ok := resourceAlloc[k].(string)
+				if !ok || v == "" {
+					continue // Skip empty values
 				}
+
+				// Skip default gpu_limit ("0")
+				if k == "gpu_limit" && v == "0" {
+					continue
+				}
+
+				// For gpu_provider: only include if gpu_limit is set and non-zero
+				if k == "gpu_provider" {
+					if !gpuLimitSet {
+						continue // Skip gpu_provider if gpu_limit is not set or is "0"
+					}
+					// Include gpu_provider when gpu_limit is set
+					// Note: We include it even if it's "nvidia" (default) because
+					// the user might have explicitly set it
+				}
+
+				// Include the field in hash
+				buf.WriteString(fmt.Sprintf("resource_allocation-%s-%s-", k, v))
 			}
 		}
 	}
+	// Resource allocation - include in hash for drift detection
+	// if val, ok := m["resource_allocation"]; ok && val != nil {
+	// 	if resourceAlloc, ok := val.(map[string]interface{}); ok && len(resourceAlloc) > 0 {
+	// 		// Sort keys for deterministic hashing
+	// 		keys := make([]string, 0, len(resourceAlloc))
+	// 		for k := range resourceAlloc {
+	// 			keys = append(keys, k)
+	// 		}
+	// 		sort.Strings(keys)
+	// 		for _, k := range keys {
+	// 			if v, ok := resourceAlloc[k].(string); ok && v != "" {
+	// 				buf.WriteString(fmt.Sprintf("resource_allocation-%s-%s-", k, v))
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	// Cluster resource allocations - include in hash
 	if val, ok := m["cluster_resource_allocations"]; ok && val != nil {

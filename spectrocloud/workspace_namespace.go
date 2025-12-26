@@ -211,7 +211,7 @@ func flattenWorkspaceResourceAllocation(resourceAlloc *models.V1WorkspaceResourc
 	}
 
 	// Handle GPU configuration if present
-	if resourceAlloc.GpuConfig != nil {
+	if resourceAlloc.GpuConfig != nil && resourceAlloc.GpuConfig.Limit > 0 {
 		// Convert GPU limit with bounds checking to prevent integer overflow
 		gpuLimit := int64(resourceAlloc.GpuConfig.Limit)
 		if gpuLimit > math.MaxInt || gpuLimit < math.MinInt {
@@ -228,12 +228,34 @@ func flattenWorkspaceResourceAllocation(resourceAlloc *models.V1WorkspaceResourc
 				result["gpu_provider"] = "nvidia" // Default provider
 			}
 		}
-	} else {
-		result["gpu_limit"] = "0"
-		if includeProvider {
-			result["gpu_provider"] = ""
-		}
 	}
+	// Do NOT set gpu_limit = "0" when GPU is not configured
+	// This prevents hash mismatches - only include GPU fields when actually configured
+
+	// // Handle GPU configuration if present
+	// if resourceAlloc.GpuConfig != nil {
+	// 	// Convert GPU limit with bounds checking to prevent integer overflow
+	// 	gpuLimit := int64(resourceAlloc.GpuConfig.Limit)
+	// 	if gpuLimit > math.MaxInt || gpuLimit < math.MinInt {
+	// 		// Fallback to string representation if out of int range
+	// 		result["gpu_limit"] = fmt.Sprintf("%d", gpuLimit)
+	// 	} else {
+	// 		result["gpu_limit"] = strconv.Itoa(int(gpuLimit))
+	// 	}
+	// 	// Only include gpu_provider for default resource allocations, not cluster-specific ones
+	// 	if includeProvider {
+	// 		if resourceAlloc.GpuConfig.Provider != nil {
+	// 			result["gpu_provider"] = *resourceAlloc.GpuConfig.Provider
+	// 		} else {
+	// 			result["gpu_provider"] = "nvidia" // Default provider
+	// 		}
+	// 	}
+	// } else {
+	// 	result["gpu_limit"] = "0"
+	// 	if includeProvider {
+	// 		result["gpu_provider"] = ""
+	// 	}
+	// }
 
 	return result
 }
