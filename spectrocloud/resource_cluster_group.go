@@ -172,7 +172,6 @@ func resourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m inter
 }
 
 func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.ResourceData) diag.Diagnostics {
-
 	if clusterGroup == nil {
 		return diag.Diagnostics{}
 	}

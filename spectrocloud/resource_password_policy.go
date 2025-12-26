@@ -278,7 +278,7 @@ func resourcePasswordPolicyImport(ctx context.Context, d *schema.ResourceData, m
 		return nil, err
 	}
 	if givenTenantId != actualTenantId {
-		return nil, fmt.Errorf("tenant id is not valid with curent user: %v", diags)
+		return nil, fmt.Errorf("tenant id is not valid with current user: %v", diags)
 	}
 	diags = resourcePasswordPolicyRead(ctx, d, m)
 	if diags.HasError() {

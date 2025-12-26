@@ -127,6 +127,13 @@ func resourceClusterVsphere() *schema.Resource {
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -459,7 +466,6 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 }
 
 func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1VsphereCloudConfig) interface{} {
-
 	cloudConfigFlatten := make([]interface{}, 0)
 	if cloudConfig == nil {
 		return cloudConfigFlatten
@@ -516,7 +522,6 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 }
 
 func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -610,8 +615,7 @@ func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, er
 	}
 	// Validating any New or old placements got added/removed.
 	if len(nPlacements) != len(oPlacements) {
-		errMsg := `Placement validation error - Adding/Removing placement component in control plane is not allowed. 
-To update the placement configuration in the control plane, kindly recreate the cluster.`
+		errMsg := `placement validation error - adding/removing placement component in control plane is not allowed; to update the placement configuration in the control plane, kindly recreate the cluster`
 		return true, errors.New(errMsg)
 	}
 
@@ -807,7 +811,6 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 }
 
 func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
-
 	V1VsphereClusterConfigEntity := getClusterConfigEntity(cloudConfig)
 	V1VsphereClusterConfigEntity.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
 		DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
@@ -856,7 +859,6 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 				StaticIP:      staticIP,
 			},
 		})
-
 	}
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
@@ -963,7 +965,6 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 }
 
 func getSSHKey(cloudConfig map[string]interface{}) []string {
-
 	sshKeys, _ := toSSHKeys(cloudConfig)
 	return sshKeys
 }

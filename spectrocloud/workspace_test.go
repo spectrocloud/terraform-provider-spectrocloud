@@ -203,7 +203,6 @@ func TestToWorkspaceNamespace(t *testing.T) {
 	assert.Equal(t, 4.5, result.NamespaceResourceAllocation.DefaultResourceAllocation.CPUCores)
 	assert.Equal(t, 2048.8, result.NamespaceResourceAllocation.DefaultResourceAllocation.MemoryMiB)
 	assert.Equal(t, []string{"image1", "image2"}, result.Image.BlackListedImages)
-
 }
 
 func TestToWorkspaceNamespace_InvalidCPU(t *testing.T) {
@@ -251,7 +250,6 @@ func TestToWorkspaceNamespace_NoBlacklist(t *testing.T) {
 	assert.Equal(t, "namespace-1", result.Name)
 	assert.Equal(t, 4.5, result.NamespaceResourceAllocation.DefaultResourceAllocation.CPUCores)
 	assert.Equal(t, 2048.8, result.NamespaceResourceAllocation.DefaultResourceAllocation.MemoryMiB)
-
 }
 
 func TestToWorkspaceNamespace_InvalidRegex(t *testing.T) {
@@ -268,5 +266,4 @@ func TestToWorkspaceNamespace_InvalidRegex(t *testing.T) {
 
 	assert.NotNil(t, result)
 	assert.Equal(t, "/namespace-1", result.Name)
-
 }

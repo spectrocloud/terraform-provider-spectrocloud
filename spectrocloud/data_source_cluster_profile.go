@@ -120,7 +120,6 @@ func dataSourceClusterProfile() *schema.Resource {
 }
 
 func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	ProjectContext := "project"
 	if Pcontext, ok_context := d.GetOk("context"); ok_context {
 		ProjectContext = Pcontext.(string)
@@ -202,7 +201,6 @@ func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEn
 }
 
 func getProfile(profiles []*models.V1ClusterProfileMetadata, d *schema.ResourceData, version, ProfileContext string, c *client.V1Client) (*models.V1ClusterProfile, error) {
-
 	for _, p := range profiles {
 		if v, ok := d.GetOk("id"); ok && v.(string) == p.Metadata.UID {
 			fullProfile, err := c.GetClusterProfile(p.Metadata.UID)

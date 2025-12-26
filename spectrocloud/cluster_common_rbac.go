@@ -45,7 +45,6 @@ func toRbacInputEntities(config *models.V1ClusterRbac) []*models.V1ClusterRbacIn
 		case "RoleBinding":
 			roleBindings = append(roleBindings, binding)
 		}
-
 	}
 
 	if len(clusterRoleBindings) > 0 {
@@ -102,7 +101,6 @@ func toClusterRBACBindings(clusterRbacBinding interface{}) []*models.V1ClusterRb
 		Subjects:  subjects,
 	})
 	return bindings
-
 }
 
 func flattenClusterRBAC(items []*models.V1ClusterRbac) []interface{} {

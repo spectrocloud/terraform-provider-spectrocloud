@@ -1,9 +1,10 @@
 package routes
 
 import (
-	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"net/http"
 	"strconv"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 func getMockWorkspacePayload() *models.V1Workspace {
@@ -101,7 +102,7 @@ func getMockWorkspacePayload() *models.V1Workspace {
 func getMockWorkspaceBackUpPayload() *models.V1WorkspaceBackup {
 	return &models.V1WorkspaceBackup{
 		Metadata: &models.V1ObjectMeta{
-			Name:        "Deafult-backup",
+			Name:        "Default-backup",
 			UID:         generateRandomStringUID(),
 			Labels:      map[string]string{"environment": "dev"},
 			Annotations: map[string]string{"createdBy": "testUser"},

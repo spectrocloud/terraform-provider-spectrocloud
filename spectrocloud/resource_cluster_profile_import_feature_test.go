@@ -28,7 +28,6 @@ func TestResourceClusterProfileImportFeatureRead(t *testing.T) {
 	d.SetId("cluster-profile-import-1")
 	diags := resourceClusterProfileImportFeatureRead(ctx, d, unitTestMockAPINegativeClient)
 	assert.NotEmpty(t, diags)
-
 }
 
 func TestResourceClusterProfileImportFeatureUpdate(t *testing.T) {
@@ -37,7 +36,6 @@ func TestResourceClusterProfileImportFeatureUpdate(t *testing.T) {
 	d.SetId("cluster-profile-import-1")
 	diags := resourceClusterProfileImportFeatureUpdate(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
-
 }
 
 func TestResourceClusterProfileImportFeatureDelete(t *testing.T) {
@@ -46,5 +44,4 @@ func TestResourceClusterProfileImportFeatureDelete(t *testing.T) {
 	d.SetId("cluster-profile-import-1")
 	diags := resourceClusterProfileImportFeatureDelete(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
-
 }

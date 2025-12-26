@@ -50,6 +50,7 @@ resource "local_file" "admin_kube_config" {
 ### Read-Only
 
 - `admin_kube_config` (String) The admin kubeconfig file for accessing the cluster. This is computed automatically.
+- `cluster_timezone` (String) The time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades follow this time zone to ensure they run at the appropriate local time for the cluster. Value is in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata').
 - `health` (String) The current health status of the cluster. This is computed automatically.
 - `id` (String) The ID of this resource.
 - `kube_config` (String) The kubeconfig file for accessing the cluster as a non-admin user. This is computed automatically.

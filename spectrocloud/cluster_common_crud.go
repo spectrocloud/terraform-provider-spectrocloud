@@ -115,7 +115,7 @@ func resourceClusterReadyRefreshFunc(c *client.V1Client, id string) retry.StateR
 func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, initial bool) (diag.Diagnostics, bool) {
 	d.SetId(uid)
 
-	if initial { // only skip_completion when initally creating a cluster, do not skip when attach addon profile
+	if initial { // only skip_completion when initially creating a cluster, do not skip when attach addon profile
 		if d.Get("skip_completion") != nil && d.Get("skip_completion").(bool) {
 			return diags, true
 		}
@@ -219,7 +219,6 @@ func resourceClusterStateRefreshFunc(c *client.V1Client, id string) retry.StateR
 					state += "-" + clusterSummary.Status.Health.State
 				}
 			}
-
 		}
 
 		log.Printf("Cluster state (%s): %s", id, state)

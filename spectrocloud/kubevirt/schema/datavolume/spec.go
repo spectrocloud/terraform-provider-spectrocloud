@@ -152,7 +152,6 @@ func DataVolumeSpecSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func ExpandDataVolumeSpec(dataVolumeSpec []interface{}) (cdiv1.DataVolumeSpec, error) {

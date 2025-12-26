@@ -9,7 +9,6 @@ import (
 )
 
 func resourceClusterProfileImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-
 	_, err := GetCommonClusterProfile(d, m)
 	if err != nil {
 		return nil, err
@@ -27,7 +26,6 @@ func resourceClusterProfileImport(ctx context.Context, d *schema.ResourceData, m
 }
 
 func GetCommonClusterProfile(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
-
 	resourceContext, profileID, err := ParseResourceID(d)
 	if err != nil {
 		return nil, err

@@ -94,6 +94,15 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	// Flatten cluster_timezone - always set during read (including import)
+	if cluster.Spec.ClusterConfig.Timezone != "" {
+		if _, ok := d.GetOk("cluster_timezone"); ok {
+			if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+				return diag.FromErr(err), true
+			}
+		}
+	}
+
 	// Flatten pause_agent_upgrades - always set during read (including import)
 	if err := d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster)); err != nil {
 		return diag.FromErr(err), true
@@ -217,6 +226,12 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
+	if d.HasChange("cluster_timezone") {
+		if err := updateClusterTimezone(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
 	return diag.Diagnostics{}, false
 }
 
@@ -247,7 +262,6 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 					err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `review_repave_state` to `Approved` to approve the repave operation on the cluster")
 					return err
 				}
-
 			} else {
 				reasons, err := c.GetRepaveReasons(d.Id())
 				if err != nil {

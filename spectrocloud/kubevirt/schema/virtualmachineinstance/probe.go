@@ -24,7 +24,6 @@ func ProbeSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func expandProbe(probe []interface{}) *kubevirtapiv1.Probe {

@@ -52,7 +52,6 @@ func resourceProject() *schema.Resource {
 }
 
 func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
@@ -66,7 +65,6 @@ func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
@@ -97,7 +95,6 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, m interfac
 }
 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
@@ -109,7 +106,6 @@ func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 

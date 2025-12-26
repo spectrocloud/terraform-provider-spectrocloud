@@ -188,7 +188,6 @@ func TestFlattenOidc(t *testing.T) {
 }
 
 func TestToSAML(t *testing.T) {
-
 	saml := map[string]interface{}{
 		"saml": []interface{}{
 			map[string]interface{}{
@@ -224,7 +223,6 @@ func TestToSAML(t *testing.T) {
 }
 
 func TestFlattenSAML(t *testing.T) {
-
 	resourceData := resourceSSO().TestResourceData()
 
 	samlSpec := &models.V1TenantSamlSpec{
@@ -272,7 +270,6 @@ func TestToDomains(t *testing.T) {
 }
 
 func TestFlattenDomains(t *testing.T) {
-
 	resourceData := resourceSSO().TestResourceData()
 	err := resourceData.Set("domains", []interface{}{})
 	if err != nil {
@@ -298,7 +295,6 @@ func TestToAuthProviders(t *testing.T) {
 }
 
 func TestFlattenAuthProviders(t *testing.T) {
-
 	resourceData := resourceSSO().TestResourceData()
 	err := resourceData.Set("auth_providers", []interface{}{})
 	authProviderSpec := &models.V1TenantSsoAuthProvidersEntity{

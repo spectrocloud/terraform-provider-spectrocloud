@@ -130,6 +130,13 @@ func resourceClusterOpenStack() *schema.Resource {
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -315,7 +322,6 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 }
 
 func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroOpenStackClusterEntity, error) {
-
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	clusterContext := d.Get("context").(string)
@@ -410,7 +416,6 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if config, err := c.GetCloudConfigOpenStack(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-
 		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
 			if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
 				return diag.FromErr(err)
@@ -480,7 +485,6 @@ func flattenClusterConfigsOpenstack(config *models.V1OpenStackCloudConfig) []int
 }
 
 func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -752,6 +756,13 @@ func resourceClusterOpenStackResourceV1() *schema.Resource {
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
+			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,

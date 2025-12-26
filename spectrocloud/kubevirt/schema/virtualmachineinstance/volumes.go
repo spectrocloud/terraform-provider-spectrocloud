@@ -262,7 +262,6 @@ func VolumesSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func expandVolumes(volumes []interface{}) []kubevirtapiv1.Volume {
@@ -444,7 +443,6 @@ func expandEphemeral(ephemeralSource []interface{}) *kubevirtapiv1.EphemeralVolu
 	}
 
 	return result
-
 }
 
 func expandPersistentVolumeClaim(persistentVolumeClaimSource []interface{}) *v1.PersistentVolumeClaimVolumeSource {

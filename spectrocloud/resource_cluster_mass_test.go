@@ -99,7 +99,6 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 }
 
 func TestToMachinePoolMaas(t *testing.T) {
-
 	input := map[string]interface{}{
 		"control_plane":   false,
 		"name":            "mass_mp_worker",

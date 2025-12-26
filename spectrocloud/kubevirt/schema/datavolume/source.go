@@ -40,7 +40,6 @@ func dataVolumeSourceSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func dataVolumeSourceHTTPFields() map[string]*schema.Schema {
@@ -75,7 +74,6 @@ func dataVolumeSourceHTTPSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func dataVolumeSourcePVCFields() map[string]*schema.Schema {
@@ -115,7 +113,6 @@ func dataVolumeSourcePVCSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func dataVolumeSourceRegistrySchema() *schema.Schema {

@@ -141,6 +141,13 @@ func resourceClusterEks() *schema.Resource {
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 				Description:      "Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -503,7 +510,6 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 }
 
 func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} {
-
 	cloudConfigFlatten := make([]interface{}, 0)
 	if cloudConfig == nil {
 		return cloudConfigFlatten
@@ -527,7 +533,6 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 		if pool.Name == "cp-pool" {
 			ret["az_subnets"] = pool.SubnetIds
 		}
-
 	}
 
 	if cloudConfig.Spec.ClusterConfig.EncryptionConfig != nil && cloudConfig.Spec.ClusterConfig.EncryptionConfig.IsEnabled {
@@ -553,7 +558,6 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 }
 
 func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -639,7 +643,6 @@ func flattenEksLaunchTemplate(launchTemplate *models.V1AwsLaunchTemplate) []inte
 }
 
 func flattenFargateProfilesEks(fargateProfiles []*models.V1FargateProfile) []interface{} {
-
 	if fargateProfiles == nil {
 		return make([]interface{}, 0)
 	}
@@ -1252,6 +1255,13 @@ func resourceClusterEksResourceV2() *schema.Resource {
 				Optional:         true,
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 				Description:      "Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`",
+			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,

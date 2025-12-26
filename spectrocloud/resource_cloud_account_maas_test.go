@@ -105,5 +105,4 @@ func TestResourceCloudAccountMaasDelete(t *testing.T) {
 	ctx := context.Background()
 	diags := resourceCloudAccountMaasDelete(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
-
 }

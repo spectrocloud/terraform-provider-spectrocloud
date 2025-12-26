@@ -212,7 +212,6 @@ func buildPackRegistryUIDMapForProfile(profileConfig map[string]interface{}) map
 
 // readAddonDeployment is the legacy function for reading a single addon profile (kept for backward compatibility)
 func readAddonDeployment(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
-
 	var diags diag.Diagnostics
 
 	profileId, err := getClusterProfileUID(d.Id())

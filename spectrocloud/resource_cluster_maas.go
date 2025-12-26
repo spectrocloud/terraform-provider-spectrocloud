@@ -124,6 +124,13 @@ func resourceClusterMaas() *schema.Resource {
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -468,7 +475,6 @@ func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
 }
 
 func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfig, config *models.V1MaasClusterConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -602,7 +608,6 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 				// Processed (if exists)
 				delete(osMap, name)
 			}
-
 		}
 
 		// Deleted old machine pools

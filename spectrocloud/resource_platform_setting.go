@@ -352,7 +352,6 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 				}
 			}
 		}
-
 	} else {
 		// get cluster_auto_remediation project
 		var respProjectRemediation *models.V1ProjectClusterSettings
@@ -480,7 +479,6 @@ func resourcePlatformSettingUpdate(ctx context.Context, d *schema.ResourceData, 
 				return diag.FromErr(err)
 			}
 		}
-
 	} else {
 		// cluster node remediation for project
 		if d.HasChanges("cluster_auto_remediation", "enable_auto_remediation") {
@@ -561,7 +559,6 @@ func updatePlatformSettingsDefault(d *schema.ResourceData, m interface{}) diag.D
 				return diag.FromErr(err)
 			}
 		}
-
 	} else {
 		// cluster node remediation for project
 		err = c.UpdateClusterAutoRemediationForProject(ProviderInitProjectUid, remediationSettings)
@@ -602,7 +599,7 @@ func resourcePlatformSettingImport(ctx context.Context, d *schema.ResourceData, 
 			return nil, err
 		}
 		if givenTenantId != actualTenantId {
-			return nil, fmt.Errorf("tenant id is not valid with curent user or invalid tenant uid provided: %v", diags)
+			return nil, fmt.Errorf("tenant id is not valid with current user or invalid tenant uid provided: %v", diags)
 		}
 		if err = d.Set("context", tenantString); err != nil {
 			return nil, err

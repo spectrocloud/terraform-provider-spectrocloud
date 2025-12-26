@@ -135,6 +135,13 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -533,7 +540,6 @@ func resourceClusterApacheCloudStackRead(_ context.Context, d *schema.ResourceDa
 }
 
 func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
@@ -762,7 +768,7 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 
 	// Add CloudStack-specific fields
 	if val, ok := m["offering"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+		fmt.Fprintf(buf, "%s-", val.(string))
 	}
 
 	// Note: instance_config is computed and excluded from hash to prevent false change detection
@@ -771,10 +777,10 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	if templateList, ok := m["template"].([]interface{}); ok && len(templateList) > 0 {
 		tmpl := templateList[0].(map[string]interface{})
 		if val, ok := tmpl["id"]; ok {
-			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+			fmt.Fprintf(buf, "%s-", val.(string))
 		}
 		if val, ok := tmpl["name"]; ok {
-			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+			fmt.Fprintf(buf, "%s-", val.(string))
 		}
 	}
 

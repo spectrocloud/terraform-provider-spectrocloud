@@ -164,7 +164,6 @@ func resourceCloudAccountApacheCloudStackDelete(_ context.Context, d *schema.Res
 }
 
 func toApacheCloudStackAccount(d *schema.ResourceData, c *client.V1Client) *models.V1CloudStackAccount {
-
 	account := &models.V1CloudStackAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name:        d.Get("name").(string),

@@ -6,7 +6,6 @@ import (
 )
 
 func ClusterCommonRoutes() []Route {
-
 	return []Route{
 		{
 			Method: "POST",

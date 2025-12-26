@@ -64,7 +64,6 @@ func dataSourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m
 	var account *models.V1MaasAccount
 	filteredAccounts := make([]*models.V1MaasAccount, 0)
 	for _, a := range accounts {
-
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break

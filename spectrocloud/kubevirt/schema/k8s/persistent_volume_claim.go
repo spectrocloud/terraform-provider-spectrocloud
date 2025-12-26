@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	api "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
@@ -94,7 +93,6 @@ func PersistentVolumeClaimSpecSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 // Flatteners
@@ -194,15 +192,15 @@ func expandResourceRequirements(l []interface{}) (*v1.ResourceRequirements, erro
 	return obj, nil
 }
 
-func expandPersistentVolumeAccessModes(s []interface{}) []api.PersistentVolumeAccessMode {
-	out := make([]api.PersistentVolumeAccessMode, len(s))
+func expandPersistentVolumeAccessModes(s []interface{}) []v1.PersistentVolumeAccessMode {
+	out := make([]v1.PersistentVolumeAccessMode, len(s))
 	for i, v := range s {
-		out[i] = api.PersistentVolumeAccessMode(v.(string))
+		out[i] = v1.PersistentVolumeAccessMode(v.(string))
 	}
 	return out
 }
 
-func flattenPersistentVolumeAccessModes(in []api.PersistentVolumeAccessMode) *schema.Set {
+func flattenPersistentVolumeAccessModes(in []v1.PersistentVolumeAccessMode) *schema.Set {
 	var out = make([]interface{}, len(in))
 	for i, v := range in {
 		out[i] = string(v)
