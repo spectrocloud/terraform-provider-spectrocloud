@@ -3,7 +3,6 @@ package schemas
 import (
 	"bytes"
 	"fmt"
-	"hash/fnv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -94,10 +93,4 @@ func resourceDataVolumeHash(v interface{}) int {
 	buf.WriteString(fmt.Sprintf("%s-", m["storage"].(string)))
 
 	return int(hash(buf.String()))
-}
-
-func hash(s string) uint32 {
-	h := fnv.New32a()
-	_, _ = h.Write([]byte(s))
-	return h.Sum32()
 }

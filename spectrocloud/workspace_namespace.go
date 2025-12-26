@@ -49,19 +49,45 @@ func toWorkspaceResourceAllocation(resourceAllocation map[string]interface{}) (*
 
 	return resource_alloc, nil
 }
-
 func toWorkspaceNamespaces(d *schema.ResourceData) []*models.V1WorkspaceClusterNamespace {
 	workspaceNamespaces := make([]*models.V1WorkspaceClusterNamespace, 0)
 	if d.Get("namespaces") == nil {
 		return nil
 	}
-	for _, clusterNamespace := range d.Get("namespaces").([]interface{}) {
+
+	// Handle both TypeSet and TypeList for backward compatibility
+	var namespaceList []interface{}
+	namespacesRaw := d.Get("namespaces")
+	if namespaceSet, ok := namespacesRaw.(*schema.Set); ok {
+		namespaceList = namespaceSet.List()
+	} else if namespaceListRaw, ok := namespacesRaw.([]interface{}); ok {
+		namespaceList = namespaceListRaw // Backward compatibility during migration
+	} else {
+		return nil
+	}
+
+	for _, clusterNamespace := range namespaceList {
 		ns := toWorkspaceNamespace(clusterNamespace)
-		workspaceNamespaces = append(workspaceNamespaces, ns)
+		if ns != nil {
+			workspaceNamespaces = append(workspaceNamespaces, ns)
+		}
 	}
 
 	return workspaceNamespaces
 }
+
+// func toWorkspaceNamespaces(d *schema.ResourceData) []*models.V1WorkspaceClusterNamespace {
+// 	workspaceNamespaces := make([]*models.V1WorkspaceClusterNamespace, 0)
+// 	if d.Get("namespaces") == nil {
+// 		return nil
+// 	}
+// 	for _, clusterNamespace := range d.Get("namespaces").([]interface{}) {
+// 		ns := toWorkspaceNamespace(clusterNamespace)
+// 		workspaceNamespaces = append(workspaceNamespaces, ns)
+// 	}
+
+// 	return workspaceNamespaces
+// }
 
 func toWorkspaceNamespace(clusterNamespaceConfig interface{}) *models.V1WorkspaceClusterNamespace {
 	m := clusterNamespaceConfig.(map[string]interface{})
@@ -94,11 +120,16 @@ func toWorkspaceNamespace(clusterNamespaceConfig interface{}) *models.V1Workspac
 		}
 	}
 
-	// Handle images blacklist
-	images, _ := m["images_blacklist"].([]interface{})
-	blacklist := make([]string, 0)
-	for _, image := range images {
-		blacklist = append(blacklist, image.(string))
+	// // Handle images blacklist
+	var blacklist []string
+	if imagesRaw, ok := m["images_blacklist"]; ok && imagesRaw != nil {
+		if images, ok := imagesRaw.([]interface{}); ok {
+			for _, image := range images {
+				if imgStr, ok := image.(string); ok && imgStr != "" {
+					blacklist = append(blacklist, imgStr)
+				}
+			}
+		}
 	}
 
 	name := m["name"].(string)
