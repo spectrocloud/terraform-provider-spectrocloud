@@ -533,7 +533,6 @@ func resourceClusterApacheCloudStackRead(_ context.Context, d *schema.ResourceDa
 }
 
 func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
@@ -762,7 +761,7 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 
 	// Add CloudStack-specific fields
 	if val, ok := m["offering"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+		fmt.Fprintf(buf, "%s-", val.(string))
 	}
 
 	// Note: instance_config is computed and excluded from hash to prevent false change detection
@@ -771,10 +770,10 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	if templateList, ok := m["template"].([]interface{}); ok && len(templateList) > 0 {
 		tmpl := templateList[0].(map[string]interface{})
 		if val, ok := tmpl["id"]; ok {
-			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+			fmt.Fprintf(buf, "%s-", val.(string))
 		}
 		if val, ok := tmpl["name"]; ok {
-			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+			fmt.Fprintf(buf, "%s-", val.(string))
 		}
 	}
 

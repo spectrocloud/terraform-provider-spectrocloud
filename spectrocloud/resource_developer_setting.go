@@ -227,7 +227,7 @@ func resourceDeveloperSettingImport(ctx context.Context, d *schema.ResourceData,
 		return nil, err
 	}
 	if givenTenantId != actualTenantId {
-		return nil, fmt.Errorf("tenant id is not valid with curent user: %v", diags)
+		return nil, fmt.Errorf("tenant id is not valid with current user: %v", diags)
 	}
 	diags = resourceDeveloperSettingRead(ctx, d, m)
 	if diags.HasError() {

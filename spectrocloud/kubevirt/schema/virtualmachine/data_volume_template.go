@@ -26,7 +26,6 @@ func dataVolumeTemplatesSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func expandDataVolumeTemplates(dataVolumes []interface{}) ([]kubevirtapiv1.DataVolumeTemplateSpec, error) {

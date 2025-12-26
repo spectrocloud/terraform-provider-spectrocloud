@@ -350,5 +350,4 @@ func TestResourceTeamDelete(t *testing.T) {
 	var ctx context.Context
 	diags := resourceTeamDelete(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
-
 }

@@ -80,7 +80,6 @@ func TestToAppliance(t *testing.T) {
 }
 
 func TestSetFields_WithNameTag(t *testing.T) {
-
 	d := resourceAppliance().TestResourceData()
 	d.Set("uid", "testID")
 	d.SetId("testID")
@@ -130,7 +129,6 @@ func prepareApplianceBaseData() *schema.ResourceData {
 }
 
 func TestResourceApplianceCreateInvalid(t *testing.T) {
-
 	d := prepareApplianceBaseData()
 
 	diags := resourceApplianceCreate(context.Background(), d, unitTestMockAPINegativeClient)
@@ -140,27 +138,22 @@ func TestResourceApplianceCreateInvalid(t *testing.T) {
 }
 
 func TestResourceApplianceRead(t *testing.T) {
-
 	d := prepareApplianceBaseData()
 
 	diags := resourceApplianceRead(context.Background(), d, unitTestMockAPIClient)
 
 	assert.Empty(t, diags)
-
 }
 
 func TestResourceApplianceUpdate(t *testing.T) {
-
 	d := prepareApplianceBaseData()
 
 	diags := resourceApplianceUpdate(context.Background(), d, unitTestMockAPIClient)
 
 	assert.Empty(t, diags)
-
 }
 
 func TestResourceApplianceDelete(t *testing.T) {
-
 	d := prepareApplianceBaseData()
 
 	diags := resourceApplianceDelete(context.Background(), d, unitTestMockAPIClient)
@@ -169,20 +162,16 @@ func TestResourceApplianceDelete(t *testing.T) {
 }
 
 func TestResourceApplianceDeleteInvalid(t *testing.T) {
-
 	d := prepareApplianceBaseData()
 
 	diags := resourceApplianceDelete(context.Background(), d, unitTestMockAPINegativeClient)
 
 	assert.NotEmpty(t, diags)
 	assertFirstDiagMessage(t, diags, "No edge host found")
-
 }
 
 func TestResourceApplianceGetState(t *testing.T) {
-
 	diags := resourceApplianceStateRefreshFunc(getV1ClientWithResourceContext(unitTestMockAPIClient, "project"), "test")
 
 	assert.NotEmpty(t, diags)
-
 }

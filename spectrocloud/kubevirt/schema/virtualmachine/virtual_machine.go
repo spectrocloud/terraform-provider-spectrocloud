@@ -149,7 +149,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 											},
 											"pci_address": {
 												Type:        schema.TypeString,
-												Description: "If specified, the virtual disk will be placed on the guests pci address with the specifed PCI address. For example: 0000:81:01.10",
+												Description: "If specified, the virtual disk will be placed on the guests pci address with the specified PCI address. For example: 0000:81:01.10",
 												Optional:    true,
 											},
 										},
@@ -485,7 +485,6 @@ func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.Virtual
 }
 
 func ToResourceData(vm kubevirtapiv1.VirtualMachine, resourceData *schema.ResourceData) error {
-
 	if err := k8s.FlattenMetadata(vm.ObjectMeta, resourceData); err != nil {
 		return err
 	}

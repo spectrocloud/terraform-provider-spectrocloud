@@ -50,7 +50,6 @@ func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, err
 }
 
 func ToResourceData(dv cdiv1.DataVolume, resourceData *schema.ResourceData) error {
-
 	if err := resourceData.Set("metadata", k8s.FlattenMetadataDataVolume(dv.ObjectMeta)); err != nil {
 		return err
 	}

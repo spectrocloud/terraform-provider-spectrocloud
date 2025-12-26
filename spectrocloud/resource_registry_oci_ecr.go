@@ -512,7 +512,6 @@ func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 			IsSyncSupported: isSynchronization,
 		},
 	}
-
 }
 
 func toRegistryAwsAccountCredential(regCred map[string]interface{}) *models.V1AwsCloudAccount {

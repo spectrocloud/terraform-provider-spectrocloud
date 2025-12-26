@@ -66,7 +66,6 @@ func virtualMachineConditionsSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func expandVirtualMachineConditions(conditions []interface{}) ([]kubevirtapiv1.VirtualMachineCondition, error) {

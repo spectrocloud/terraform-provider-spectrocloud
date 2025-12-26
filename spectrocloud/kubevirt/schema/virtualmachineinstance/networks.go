@@ -72,7 +72,6 @@ func NetworksSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func expandNetworks(networks []interface{}) []kubevirtapiv1.Network {

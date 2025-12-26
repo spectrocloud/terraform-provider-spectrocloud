@@ -72,7 +72,6 @@ func toClusterNamespace(clusterRbacBinding interface{}) *models.V1ClusterNamespa
 	}
 
 	return ns
-
 }
 
 func flattenClusterNamespaces(items []*models.V1ClusterNamespaceResource) []interface{} {

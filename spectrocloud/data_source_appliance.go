@@ -60,7 +60,6 @@ func dataSourceAppliance() *schema.Resource {
 }
 
 func dataSourceApplianceRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 	var err error

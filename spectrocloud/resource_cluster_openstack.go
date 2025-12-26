@@ -315,7 +315,6 @@ func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData,
 }
 
 func toOpenStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroOpenStackClusterEntity, error) {
-
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
 	clusterContext := d.Get("context").(string)
@@ -410,7 +409,6 @@ func resourceClusterOpenStackRead(_ context.Context, d *schema.ResourceData, m i
 	if config, err := c.GetCloudConfigOpenStack(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-
 		if config.Spec != nil && config.Spec.CloudAccountRef != nil {
 			if err := d.Set("cloud_account_id", config.Spec.CloudAccountRef.UID); err != nil {
 				return diag.FromErr(err)
@@ -480,7 +478,6 @@ func flattenClusterConfigsOpenstack(config *models.V1OpenStackCloudConfig) []int
 }
 
 func flattenMachinePoolConfigsOpenStack(machinePools []*models.V1OpenStackMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}

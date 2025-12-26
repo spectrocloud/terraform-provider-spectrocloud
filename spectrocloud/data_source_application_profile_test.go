@@ -13,5 +13,4 @@ func TestDataSourceApplicationProfileRead(t *testing.T) {
 	diags := dataSourceApplicationProfileRead(context.Background(), resourceData, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
 	assert.Equal(t, "test-application-profile", resourceData.Get("name").(string))
-
 }

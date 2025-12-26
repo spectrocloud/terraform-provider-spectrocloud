@@ -17,7 +17,6 @@ func getBaseResourceData() *schema.ResourceData {
 	rd.Set("description", "Test profile creation for unit test")
 	rd.Set("cloud", "all")
 	return rd
-
 }
 
 func TestToApplicationProfileBasic(t *testing.T) {
@@ -37,7 +36,6 @@ func TestToAppTiers(t *testing.T) {
 }
 
 func TestToApplicationProfilePackCreateWithPack(t *testing.T) {
-
 	packOne := make(map[string]interface{})
 	prop := make(map[string]interface{})
 	prop["dbRootPassword"] = "test123!wewe!"
@@ -62,11 +60,9 @@ func TestToApplicationProfilePackCreateWithPack(t *testing.T) {
 	for _, v := range profileEntity.Properties {
 		assert.Equal(t, prop[v.Name], v.Value)
 	}
-
 }
 
 func TestToApplicationProfilePackCreateWithManifest(t *testing.T) {
-
 	packOne := make(map[string]interface{})
 	packOne["type"] = "operator-instance"
 	packOne["name"] = "nginx"
@@ -93,11 +89,9 @@ func TestToApplicationProfilePackCreateWithManifest(t *testing.T) {
 		assert.Equal(t, v.Content, strings.TrimSpace(manifest[0].(map[string]interface{})["content"].(string)))
 		assert.Equal(t, v.Name, manifest[0].(map[string]interface{})["name"].(string))
 	}
-
 }
 
 func TestToApplicationProfilePackCreateWithPackManifest(t *testing.T) {
-
 	packOne := make(map[string]interface{})
 	prop := make(map[string]interface{})
 	prop["dbRootPassword"] = "test123!wewe!"
@@ -131,7 +125,6 @@ func TestToApplicationProfilePackCreateWithPackManifest(t *testing.T) {
 		assert.Equal(t, v.Content, strings.TrimSpace(manifest[0].(map[string]interface{})["content"].(string)))
 		assert.Equal(t, v.Name, manifest[0].(map[string]interface{})["name"].(string))
 	}
-
 }
 
 func TestToTags(t *testing.T) {
@@ -144,7 +137,6 @@ func TestToTags(t *testing.T) {
 	tags := toTags(tagRD)
 	assert.Equal(t, strings.Split(tagMap[0], ":")[1], tags["owner"])
 	assert.Equal(t, "spectro__tag", tags["unittest"])
-
 }
 
 func TestFlattenTags(t *testing.T) {
@@ -293,7 +285,6 @@ func TestResourceApplicationProfileCreate(t *testing.T) {
 	_ = d.Set("context", "project")
 	s := resourceApplicationProfileCreate(ctx, d, unitTestMockAPIClient)
 	assert.Equal(t, false, s.HasError())
-
 }
 
 func TestResourceApplicationProfileUpdate(t *testing.T) {
@@ -302,7 +293,6 @@ func TestResourceApplicationProfileUpdate(t *testing.T) {
 	_ = d.Set("context", "project")
 	s := resourceApplicationProfileUpdate(ctx, d, unitTestMockAPIClient)
 	assert.Equal(t, false, s.HasError())
-
 }
 
 func TestResourceApplicationProfileDelete(t *testing.T) {

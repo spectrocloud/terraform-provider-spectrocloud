@@ -140,7 +140,6 @@ func IsRegex(name string) bool {
 	} else {
 		return false // not a valid regex doesn't compile
 	}
-
 }
 
 func toUpdateWorkspaceNamespaces(d *schema.ResourceData, c *client.V1Client) (*models.V1WorkspaceClusterNamespacesEntity, error) {

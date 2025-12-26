@@ -992,7 +992,7 @@ Required:
 
 Optional:
 
-- `pci_address` (String) If specified, the virtual disk will be placed on the guests pci address with the specifed PCI address. For example: 0000:81:01.10
+- `pci_address` (String) If specified, the virtual disk will be placed on the guests pci address with the specified PCI address. For example: 0000:81:01.10
 - `read_only` (Boolean) ReadOnly. Defaults to false.
 
 

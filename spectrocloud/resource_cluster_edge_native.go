@@ -449,7 +449,6 @@ func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config 
 }
 
 func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -814,7 +813,6 @@ func toEdgeHosts(m map[string]interface{}) (*models.V1EdgeNativeMachinePoolCloud
 				edgeHost.TwoNodeCandidatePriority = v
 				twoNodeHostRoles[v] = hostId
 			}
-
 		}
 		edgeHosts = append(edgeHosts, edgeHost)
 	}

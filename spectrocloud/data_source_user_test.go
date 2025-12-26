@@ -35,5 +35,4 @@ func TestDataSourceUserNegativeRead(t *testing.T) {
 	// Call the dataSourceUserRead function
 	diags := dataSourceUserRead(context.Background(), resourceData, unitTestMockAPINegativeClient)
 	assertFirstDiagMessage(t, diags, "User not found")
-
 }

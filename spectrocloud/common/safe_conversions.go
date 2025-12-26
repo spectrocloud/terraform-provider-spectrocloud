@@ -1,5 +1,7 @@
 package common
 
+const maxUint32 = 0xFFFFFFFF
+
 // SafeUint32 converts int to uint32 with bounds checking to prevent overflow
 func SafeUint32(value int) uint32 {
 	if value < 0 {
@@ -15,8 +17,8 @@ func SafeUint32(value int) uint32 {
 		return 0
 	}
 	// 64-bit system: check against uint32 max
-	if uint64(value) > 0xFFFFFFFF {
-		return 0xFFFFFFFF
+	if uint64(value) > maxUint32 {
+		return maxUint32
 	}
 	if value >= 0 {
 		return uint32(value)

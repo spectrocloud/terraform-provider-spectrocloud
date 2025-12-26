@@ -320,7 +320,6 @@ func TestUpdateClusterRBAC(t *testing.T) {
 //}
 
 func prepareSpectroClusterModel() *models.V1SpectroCluster {
-
 	scp := &models.V1SpectroCluster{
 		APIVersion: "V1",
 		Kind:       "",
@@ -1459,10 +1458,8 @@ func TestGetCommonCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			_, err := GetCommonCluster(tt.resourceData, unitTestMockAPIClient)
 			assert.NoError(t, err)
-
 		})
 	}
 }
@@ -1563,7 +1560,6 @@ func TestUpdateAgentUpgradeSetting(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-
 		})
 	}
 }

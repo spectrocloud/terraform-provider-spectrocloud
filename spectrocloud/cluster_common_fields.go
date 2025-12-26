@@ -247,7 +247,6 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 					err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `review_repave_state` to `Approved` to approve the repave operation on the cluster")
 					return err
 				}
-
 			} else {
 				reasons, err := c.GetRepaveReasons(d.Id())
 				if err != nil {

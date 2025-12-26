@@ -7,7 +7,6 @@ import (
 )
 
 func TestDataSourceWorkspaceRead(t *testing.T) {
-
 	resourceData := dataSourceWorkspace().TestResourceData()
 	_ = resourceData.Set("name", "test-workspace")
 	diags := dataSourceWorkspaceRead(context.Background(), resourceData, unitTestMockAPIClient)

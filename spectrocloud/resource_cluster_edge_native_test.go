@@ -362,7 +362,6 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 			if !cmp.Equal(result.PoolConfig.Labels[0], "control-plane") {
 				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(result.PoolConfig.Labels[0], "control-plane"))
 			}
-
 		})
 	}
 }

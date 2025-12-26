@@ -32,7 +32,6 @@ func commonNodePool() map[string]interface{} {
 }
 
 func TestCommonHash(t *testing.T) {
-
 	expectedHash := "label1-value1effect-NoSchedulekey-taint1value-truetrue-false-test-pool-3-RollingUpdate-10-"
 	hash := CommonHash(commonNodePool()).String()
 
@@ -495,7 +494,6 @@ func TestResourceMachinePoolAwsHash(t *testing.T) {
 }
 
 func TestResourceMachinePoolEksHash(t *testing.T) {
-
 	testCases := []struct {
 		input    interface{}
 		expected int
@@ -537,7 +535,6 @@ func TestResourceMachinePoolEksHash(t *testing.T) {
 }
 
 func TestEksLaunchTemplate(t *testing.T) {
-
 	testCases := []struct {
 		input    interface{}
 		expected string
@@ -576,7 +573,6 @@ func TestEksLaunchTemplate(t *testing.T) {
 }
 
 func TestResourceMachinePoolVsphereHash(t *testing.T) {
-
 	testCases := []struct {
 		input    interface{}
 		expected int
@@ -633,7 +629,6 @@ func TestResourceMachinePoolVsphereHash(t *testing.T) {
 }
 
 func TestResourceMachinePoolEdgeNativeHash(t *testing.T) {
-
 	testCases := []struct {
 		input    interface{}
 		expected int
@@ -700,7 +695,6 @@ func TestResourceMachinePoolEdgeNativeHashAdv(t *testing.T) {
 }
 
 func TestGpuConfigHash(t *testing.T) {
-
 	testCases := []struct {
 		input    map[string]interface{}
 		expected string

@@ -456,7 +456,6 @@ func flattenClusterConfigsAws(config *models.V1AwsCloudConfig) []interface{} {
 }
 
 func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -752,7 +751,6 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 		if err != nil {
 			return mp, err
 		}
-
 	}
 
 	if capacityType == "spot" {

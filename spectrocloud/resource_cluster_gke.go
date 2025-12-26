@@ -457,7 +457,6 @@ func flattenClusterConfigsGke(config *models.V1GcpCloudConfig) []interface{} {
 }
 
 func flattenMachinePoolConfigsGke(machinePools []*models.V1GcpMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}

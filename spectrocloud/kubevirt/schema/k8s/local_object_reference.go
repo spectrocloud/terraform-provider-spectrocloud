@@ -27,7 +27,6 @@ func LocalObjectReferenceSchema(description string) *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func ExpandLocalObjectReferences(localObjectReference []interface{}) *v1.LocalObjectReference {

@@ -8,7 +8,6 @@ import (
 )
 
 func resourceClusterAwsImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-
 	c, err := GetCommonCluster(d, m)
 	if err != nil {
 		return nil, err

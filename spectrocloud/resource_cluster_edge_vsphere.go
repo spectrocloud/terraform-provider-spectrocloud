@@ -394,7 +394,6 @@ func flattenCloudConfigEdgeVsphere(configUID string, d *schema.ResourceData, c *
 }
 
 func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -629,7 +628,6 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachine
 				StaticIP:      staticIP,
 			},
 		})
-
 	}
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
@@ -669,7 +667,6 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachine
 		if err != nil {
 			return mp, err
 		}
-
 	}
 
 	return mp, nil

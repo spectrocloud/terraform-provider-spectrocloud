@@ -20,7 +20,6 @@ func SafeInt32(value int) int32 {
 
 // SafeInt64 converts int to int64 with bounds checking to prevent overflow
 func SafeInt64(value int) int64 {
-
 	return int64(value)
 }
 

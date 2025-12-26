@@ -182,7 +182,6 @@ func prepareExpandDomainSpecTD3() *schema.ResourceData {
 }
 
 func TestExpandDomainSpec(t *testing.T) {
-
 	testCases := []struct {
 		input          *schema.ResourceData //[]interface{}
 		expectedOutput kubevirtapiv1.DomainSpec
@@ -250,7 +249,6 @@ func TestExpandDomainSpec(t *testing.T) {
 				t.Errorf("Test case %d:\nInput: %#v\nExpected output: %#v\nActual output: %#v", i, tc.input, tc.expectedOutput, output)
 			}
 		}
-
 	}
 }
 
@@ -583,7 +581,6 @@ func TestFlattenVirtualMachineSpec(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-
 		output := vm.FlattenVirtualMachineSpec(tc.input, prepareBasicResourceData())
 
 		//Some fields include terraform randomly generated params that can't be compared

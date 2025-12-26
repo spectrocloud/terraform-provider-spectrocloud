@@ -14,7 +14,7 @@ import (
 func IdParts(id string) (string, string, string, string, error) {
 	parts := strings.Split(id, "/")
 	if len(parts) != 4 {
-		err := fmt.Errorf("Unexpected ID format (%q), expected %q.", id, "namespace/name")
+		err := fmt.Errorf("unexpected ID format (%q), expected %q", id, "namespace/name")
 		return "", "", "", "", err
 	}
 
@@ -24,7 +24,7 @@ func IdParts(id string) (string, string, string, string, error) {
 func IdPartsDV(id string) (string, string, string, string, string, error) {
 	parts := strings.Split(id, "/")
 	if len(parts) != 5 {
-		err := fmt.Errorf("Unexpected ID format (%q), expected %q.", id, "namespace/name")
+		err := fmt.Errorf("unexpected ID format (%q), expected %q", id, "namespace/name")
 		return "", "", "", "", "", err
 	}
 
@@ -189,7 +189,7 @@ func ExpandMapToResourceList(m map[string]interface{}) (*api.ResourceList, error
 				return &out, err
 			}
 		} else {
-			return &out, fmt.Errorf("Unexpected value type: %#v", origValue)
+			return &out, fmt.Errorf("unexpected value type: %#v", origValue)
 		}
 
 		out[key] = value
