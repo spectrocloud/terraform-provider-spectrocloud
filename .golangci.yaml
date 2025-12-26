@@ -18,7 +18,7 @@ linters:
     - misspell
     - whitespace
     - mnd
-    
+
   settings:
     errcheck:
       exclude-functions:
@@ -52,8 +52,6 @@ linters:
       allow-unused: false
       allow-no-explanation:
         - mnd
-    unparam:
-      check-exported: true
   exclusions:
     rules:
       - path: (.+)_test\.go
