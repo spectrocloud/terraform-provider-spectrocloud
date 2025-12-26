@@ -103,16 +103,23 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 }
 
 func resourceMachinePoolAksHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
+	nodePool := v.(map[string]interface{})
+	var buf bytes.Buffer
 
-	if val, ok := m["instance_type"]; ok {
-		fmt.Fprintf(buf, "%s-", val.(string))
+	// Include all fields that should trigger a machine pool update
+	if val, ok := nodePool["name"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
-	if val, ok := m["disk_size_gb"]; ok {
-		fmt.Fprintf(buf, "%d-", val.(int))
+	if val, ok := nodePool["count"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
-	if val, ok := m["is_system_node_pool"]; ok {
+	if val, ok := nodePool["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["disk_size_gb"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+	if val, ok := nodePool["is_system_node_pool"]; ok {
 		var boolVal bool
 		switch v := val.(type) {
 		case bool:
@@ -124,8 +131,36 @@ func resourceMachinePoolAksHash(v interface{}) int {
 		}
 		fmt.Fprintf(buf, "%t-", boolVal)
 	}
-	if val, ok := m["storage_account_type"]; ok {
-		fmt.Fprintf(buf, "%s-", val.(string))
+	if val, ok := nodePool["storage_account_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Additional labels (map)
+	if _, ok := nodePool["additional_labels"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_labels"]))
+	}
+
+	// Update strategy
+	if val, ok := nodePool["update_strategy"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Min and Max for autoscaling
+	if nodePool["min"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", nodePool["min"].(int)))
+	}
+	if nodePool["max"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", nodePool["max"].(int)))
+	}
+
+	// Node configuration (list of maps)
+	if nodePool["node"] != nil {
+		buf.WriteString(HashStringMapList(nodePool["node"]))
+	}
+
+	// Taints (list of maps)
+	if _, ok := nodePool["taints"]; ok {
+		buf.WriteString(HashStringMapList(nodePool["taints"]))
 	}
 
 	return int(hash(buf.String()))
@@ -259,12 +294,43 @@ func resourceMachinePoolEksHash(v interface{}) int {
 }
 
 func resourceMachinePoolGkeHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
-	if _, ok := m["disk_size_gb"]; ok {
-		fmt.Fprintf(buf, "%d-", m["disk_size_gb"].(int))
+	nodePool := v.(map[string]interface{})
+	var buf bytes.Buffer
+
+	// Include all fields that should trigger a machine pool update
+	if val, ok := nodePool["name"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
-	fmt.Fprintf(buf, "%s-", m["instance_type"].(string))
+	if val, ok := nodePool["count"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+	if val, ok := nodePool["disk_size_gb"]; ok {
+		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
+	}
+	if val, ok := nodePool["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Additional labels (map)
+	if _, ok := nodePool["additional_labels"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_labels"]))
+	}
+
+	// Update strategy
+	if val, ok := nodePool["update_strategy"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Node configuration (list of maps)
+	if nodePool["node"] != nil {
+		buf.WriteString(HashStringMapList(nodePool["node"]))
+	}
+
+	// Taints (list of maps)
+	if _, ok := nodePool["taints"]; ok {
+		buf.WriteString(HashStringMapList(nodePool["taints"]))
+	}
+
 	return int(hash(buf.String()))
 }
 
@@ -366,18 +432,6 @@ func resourceMachinePoolCustomCloudHash(v interface{}) int {
 	if overrides, ok := m["overrides"]; ok {
 		buf.WriteString(HashStringMap(overrides))
 	}
-
-	return int(hash(buf.String()))
-}
-
-func resourceMachinePoolOpenStackHash(v interface{}) int {
-	m := v.(map[string]interface{})
-	buf := CommonHash(m)
-
-	fmt.Fprintf(buf, "%s-", m["instance_type"].(string))
-	fmt.Fprintf(buf, "%s-", m["subnet_id"].(string))
-	fmt.Fprintf(buf, "%s-", m["update_strategy"].(string))
-	fmt.Fprintf(buf, "%s-", m["azs"].(*schema.Set).GoString())
 
 	return int(hash(buf.String()))
 }
@@ -487,7 +541,15 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	buf := CommonHash(m)
 
 	if edgeHosts, found := m["edge_host"]; found {
-		for _, host := range edgeHosts.([]interface{}) {
+		var edgeHostList []interface{}
+		if edgeHostSet, ok := edgeHosts.(*schema.Set); ok {
+			edgeHostList = edgeHostSet.List()
+		} else if edgeHostListRaw, ok := edgeHosts.([]interface{}); ok {
+			// Fallback for backward compatibility
+			edgeHostList = edgeHostListRaw
+		}
+
+		for _, host := range edgeHostList {
 			hostMap := host.(map[string]interface{})
 
 			if hostName, ok := hostMap["host_name"]; ok {
@@ -731,4 +793,90 @@ func NormalizeYamlContent(yamlContent string) string {
 	}
 
 	return strings.Join(normalizedDocs, "\n---\n")
+}
+
+func resourceMachinePoolOpenStackHash(v interface{}) int {
+	nodePool := v.(map[string]interface{})
+	var buf bytes.Buffer
+
+	// Use CommonHash for common fields: additional_labels, taints, control_plane,
+	// control_plane_as_worker, name, count, update_strategy, node_repave_interval, node
+	commonBuf := CommonHash(nodePool)
+	buf.WriteString(commonBuf.String())
+
+	// Add OpenStack-specific fields
+	if val, ok := nodePool["instance_type"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Handle azs (TypeSet) - sort for deterministic hash
+	if nodePool["azs"] != nil {
+		azsSet := nodePool["azs"].(*schema.Set)
+		azsList := azsSet.List()
+		azsListStr := make([]string, len(azsList))
+		for i, v := range azsList {
+			azsListStr[i] = v.(string)
+		}
+		sort.Strings(azsListStr)
+		azsStr := strings.Join(azsListStr, "-")
+		buf.WriteString(fmt.Sprintf("%s-", azsStr))
+	}
+
+	// Handle subnet_id (optional string field)
+	if val, ok := nodePool["subnet_id"]; ok && val != nil && val.(string) != "" {
+		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	return int(hash(buf.String()))
+}
+
+// resourceEdgeHostHash creates a hash for edge_host TypeSet
+func resourceEdgeHostHash(v interface{}) int {
+	var buf bytes.Buffer
+	host := v.(map[string]interface{})
+
+	// Required field - always include
+	if hostUID, ok := host["host_uid"]; ok && hostUID != nil {
+		buf.WriteString(fmt.Sprintf("host_uid:%s-", hostUID.(string)))
+	}
+
+	// Optional fields
+	if hostName, ok := host["host_name"]; ok && hostName != nil && hostName.(string) != "" {
+		buf.WriteString(fmt.Sprintf("host_name:%s-", hostName.(string)))
+	}
+
+	if staticIP, ok := host["static_ip"]; ok && staticIP != nil && staticIP.(string) != "" {
+		buf.WriteString(fmt.Sprintf("static_ip:%s-", staticIP.(string)))
+	}
+
+	if nicName, ok := host["nic_name"]; ok && nicName != nil && nicName.(string) != "" {
+		buf.WriteString(fmt.Sprintf("nic_name:%s-", nicName.(string)))
+	}
+
+	if defaultGateway, ok := host["default_gateway"]; ok && defaultGateway != nil && defaultGateway.(string) != "" {
+		buf.WriteString(fmt.Sprintf("default_gateway:%s-", defaultGateway.(string)))
+	}
+
+	if subnetMask, ok := host["subnet_mask"]; ok && subnetMask != nil && subnetMask.(string) != "" {
+		buf.WriteString(fmt.Sprintf("subnet_mask:%s-", subnetMask.(string)))
+	}
+
+	// Handle dns_servers (TypeSet) - sort for deterministic hash
+	if dnsServers, ok := host["dns_servers"]; ok && dnsServers != nil {
+		if dnsSet, ok := dnsServers.(*schema.Set); ok {
+			dnsList := dnsSet.List()
+			dnsListStr := make([]string, len(dnsList))
+			for i, v := range dnsList {
+				dnsListStr[i] = v.(string)
+			}
+			sort.Strings(dnsListStr)
+			buf.WriteString(fmt.Sprintf("dns_servers:%s-", strings.Join(dnsListStr, ",")))
+		}
+	}
+
+	if twoNodeRole, ok := host["two_node_role"]; ok && twoNodeRole != nil && twoNodeRole.(string) != "" {
+		buf.WriteString(fmt.Sprintf("two_node_role:%s-", twoNodeRole.(string)))
+	}
+
+	return int(hash(buf.String()))
 }
