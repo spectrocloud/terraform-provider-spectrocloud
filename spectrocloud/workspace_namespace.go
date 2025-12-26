@@ -122,7 +122,7 @@ func toWorkspaceNamespace(clusterNamespaceConfig interface{}) *models.V1Workspac
 func IsRegex(name string) bool {
 	last := string(name[len(name)-1])
 
-	if !((strings.HasPrefix(name, "~/") || strings.HasPrefix(name, "/")) && last == "/") {
+	if (!strings.HasPrefix(name, "~/") && !strings.HasPrefix(name, "/")) || last != "/" {
 		return false // not a regular expression since it doesn't start with ~/ / or end with /
 	}
 

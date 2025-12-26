@@ -62,8 +62,8 @@ func DiffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOp
 // escapeJsonPointer escapes string per RFC 6901
 // so it can be used as path in JSON patch operations
 func escapeJsonPointer(path string) string {
-	path = strings.Replace(path, "~", "~0", -1)
-	path = strings.Replace(path, "/", "~1", -1)
+	path = strings.ReplaceAll(path, "~", "~0")
+	path = strings.ReplaceAll(path, "/", "~1")
 	return path
 }
 

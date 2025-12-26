@@ -849,10 +849,10 @@ func isActualTemplateVariable(yamlContent string, key string) bool {
 
 	// Must be a valid identifier
 	for _, char := range key {
-		if !((char >= 'a' && char <= 'z') ||
-			(char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') ||
-			char == '_' || char == '-') {
+		if (char < 'a' || char > 'z') &&
+			(char < 'A' || char > 'Z') &&
+			(char < '0' || char > '9') &&
+			char != '_' && char != '-' {
 			return false
 		}
 	}
@@ -897,10 +897,10 @@ func isFieldPattern(key string) bool {
 
 		// Each part must be a valid identifier (letters, numbers, underscore, hyphen)
 		for _, char := range part {
-			if !((char >= 'a' && char <= 'z') ||
-				(char >= 'A' && char <= 'Z') ||
-				(char >= '0' && char <= '9') ||
-				char == '_' || char == '-') {
+			if (char < 'a' || char > 'z') &&
+				(char < 'A' || char > 'Z') &&
+				(char < '0' || char > '9') &&
+				char != '_' && char != '-' {
 				return false
 			}
 		}
@@ -997,12 +997,8 @@ func applyWildcardPatternOverrides(yamlContent string, wildcardOverrides map[str
 
 // applyWildcardPatternToDocument applies a wildcard pattern override to all matching field names in a document
 func applyWildcardPatternToDocument(data *interface{}, pattern string, value interface{}) bool {
-	modified := false
-
 	// Recursively search for field names that contain the pattern
-	if findAndUpdateWildcardPattern(data, pattern, value, "") {
-		modified = true
-	}
+	modified := findAndUpdateWildcardPattern(data, pattern, value, "")
 
 	return modified
 }

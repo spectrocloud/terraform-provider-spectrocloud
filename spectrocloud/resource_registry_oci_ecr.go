@@ -199,7 +199,8 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 	registryType := d.Get("type").(string)
 	providerType := d.Get("provider_type").(string)
 	isSync := d.Get("is_synchronization").(bool)
-	if registryType == "ecr" {
+	switch registryType {
+	case "ecr":
 
 		registry := toRegistryEcr(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, nil, registry.Spec); err != nil {
@@ -210,7 +211,7 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
-	} else if registryType == "basic" {
+	case "basic":
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
 			return diag.FromErr(err)
@@ -232,7 +233,8 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 
 	registryType := d.Get("type").(string)
 
-	if registryType == "ecr" {
+	switch registryType {
+	case "ecr":
 		registry, err := c.GetOciEcrRegistry(d.Id())
 		if err != nil {
 			return handleReadError(d, err, diags)
@@ -283,7 +285,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		return diags
 
-	} else if registryType == "basic" {
+	case "basic":
 		registry, err := c.GetOciBasicRegistry(d.Id())
 		if err != nil {
 			return handleReadError(d, err, diags)
@@ -336,7 +338,8 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 	registryType := d.Get("type").(string)
 	providerType := d.Get("provider_type").(string)
 	isSync := d.Get("is_synchronization").(bool)
-	if registryType == "ecr" {
+	switch registryType {
+	case "ecr":
 		registry := toRegistryEcr(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, nil, registry.Spec); err != nil {
 			return diag.FromErr(err)
@@ -345,7 +348,7 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 		if err != nil {
 			return diag.FromErr(err)
 		}
-	} else if registryType == "basic" {
+	case "basic":
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
 			return diag.FromErr(err)
@@ -364,12 +367,13 @@ func resourceRegistryEcrDelete(ctx context.Context, d *schema.ResourceData, m in
 	var diags diag.Diagnostics
 
 	registryType := d.Get("type").(string)
-	if registryType == "ecr" {
+	switch registryType {
+	case "ecr":
 		err := c.DeleteOciEcrRegistry(d.Id())
 		if err != nil {
 			return diag.FromErr(err)
 		}
-	} else if registryType == "basic" {
+	case "basic":
 		err := c.DeleteOciBasicRegistry(d.Id())
 		if err != nil {
 			return diag.FromErr(err)

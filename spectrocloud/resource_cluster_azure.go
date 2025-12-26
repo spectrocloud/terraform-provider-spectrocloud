@@ -852,7 +852,7 @@ func validateCPPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) d
 	for _, machineConfig := range machinePool {
 		if machineConfig.PoolConfig.IsControlPlane {
 			if *machineConfig.PoolConfig.Size%2 == 0 {
-				return diag.FromErr(fmt.Errorf("The control-plane node pool size should be in an odd number. But it set to an even number '%d' in node name '%s' ", *machineConfig.PoolConfig.Size, *machineConfig.PoolConfig.Name))
+				return diag.FromErr(fmt.Errorf("the control-plane node pool size should be in an odd number. But it set to an even number '%d' in node name '%s'", *machineConfig.PoolConfig.Size, *machineConfig.PoolConfig.Name))
 			}
 		}
 	}

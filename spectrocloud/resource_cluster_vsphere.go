@@ -609,8 +609,8 @@ func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, er
 	}
 	// Validating any New or old placements got added/removed.
 	if len(nPlacements) != len(oPlacements) {
-		errMsg := `Placement validation error - Adding/Removing placement component in control plane is not allowed. 
-To update the placement configuration in the control plane, kindly recreate the cluster.`
+		errMsg := `placement validation error - Adding/Removing placement component in control plane is not allowed. 
+To update the placement configuration in the control plane, kindly recreate the cluster`
 		return true, errors.New(errMsg)
 	}
 

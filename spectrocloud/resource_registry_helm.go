@@ -141,34 +141,25 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	if registry.Spec.Auth.Type == "noAuth" {
-		credentials := make([]interface{}, 0, 1)
-		acc := make(map[string]interface{})
+	credentials := make([]interface{}, 0, 1)
+	acc := make(map[string]interface{})
+
+	switch registry.Spec.Auth.Type {
+	case "noAuth":
 		acc["credential_type"] = "noAuth"
-		credentials = append(credentials, acc)
-		if err := d.Set("credentials", credentials); err != nil {
-			return diag.FromErr(err)
-		}
-	} else if registry.Spec.Auth.Type == "basic" {
-		credentials := make([]interface{}, 0, 1)
-		acc := make(map[string]interface{})
+	case "basic":
 		acc["credential_type"] = "basic"
 		acc["username"] = registry.Spec.Auth.Username
 		acc["password"] = registry.Spec.Auth.Password.String()
-		credentials = append(credentials, acc)
-		if err := d.Set("credentials", credentials); err != nil {
-			return diag.FromErr(err)
-		}
-	} else if registry.Spec.Auth.Type == "token" {
-		credentials := make([]interface{}, 0, 1)
-		acc := make(map[string]interface{})
+	case "token":
 		acc["credential_type"] = "token"
 		acc["username"] = registry.Spec.Auth.Username
 		acc["token"] = registry.Spec.Auth.Token.String()
-		credentials = append(credentials, acc)
-		if err := d.Set("credentials", credentials); err != nil {
-			return diag.FromErr(err)
-		}
+	}
+
+	credentials = append(credentials, acc)
+	if err := d.Set("credentials", credentials); err != nil {
+		return diag.FromErr(err)
 	}
 
 	return diags
@@ -248,11 +239,12 @@ func toRegistryHelmCredential(regCred map[string]interface{}) *models.V1Registry
 		Type: "noAuth",
 	}
 
-	if regCred["credential_type"].(string) == "basic" {
+	switch regCred["credential_type"].(string) {
+	case "basic":
 		auth.Type = "basic"
 		auth.Username = regCred["username"].(string)
 		auth.Password = strfmt.Password(regCred["password"].(string))
-	} else if regCred["credential_type"].(string) == "token" {
+	case "token":
 		auth.Type = "token"
 		auth.Username = regCred["username"].(string)
 		auth.Token = strfmt.Password(regCred["token"].(string))

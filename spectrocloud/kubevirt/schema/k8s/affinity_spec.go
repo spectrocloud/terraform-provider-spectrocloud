@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	api "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
@@ -333,7 +332,7 @@ func flattenWeightedPodAffinityTerms(in []v1.WeightedPodAffinityTerm) []interfac
 	return att
 }
 
-func flattenNodeSelectorTerms(in []api.NodeSelectorTerm) []interface{} {
+func flattenNodeSelectorTerms(in []v1.NodeSelectorTerm) []interface{} {
 	att := make([]interface{}, len(in))
 	for i, n := range in {
 		att[i] = flattenNodeSelectorTerm(n)[0]
@@ -341,7 +340,7 @@ func flattenNodeSelectorTerms(in []api.NodeSelectorTerm) []interface{} {
 	return att
 }
 
-func flattenNodeSelectorTerm(in api.NodeSelectorTerm) []interface{} {
+func flattenNodeSelectorTerm(in v1.NodeSelectorTerm) []interface{} {
 	att := make(map[string]interface{})
 	if len(in.MatchExpressions) > 0 {
 		att["match_expressions"] = flattenNodeSelectorRequirementList(in.MatchExpressions)
@@ -352,7 +351,7 @@ func flattenNodeSelectorTerm(in api.NodeSelectorTerm) []interface{} {
 	return []interface{}{att}
 }
 
-func flattenNodeSelectorRequirementList(in []api.NodeSelectorRequirement) []interface{} {
+func flattenNodeSelectorRequirementList(in []v1.NodeSelectorRequirement) []interface{} {
 	att := make([]interface{}, len(in))
 	for i, v := range in {
 		m := map[string]interface{}{}
@@ -495,23 +494,23 @@ func expandWeightedPodAffinityTerms(t []interface{}) []v1.WeightedPodAffinityTer
 	return obj
 }
 
-func expandNodeSelectorTerms(l []interface{}) []api.NodeSelectorTerm {
+func expandNodeSelectorTerms(l []interface{}) []v1.NodeSelectorTerm {
 	if len(l) == 0 || l[0] == nil {
-		return []api.NodeSelectorTerm{}
+		return []v1.NodeSelectorTerm{}
 	}
-	obj := make([]api.NodeSelectorTerm, len(l))
+	obj := make([]v1.NodeSelectorTerm, len(l))
 	for i, n := range l {
 		obj[i] = *expandNodeSelectorTerm([]interface{}{n})
 	}
 	return obj
 }
 
-func expandNodeSelectorTerm(l []interface{}) *api.NodeSelectorTerm {
+func expandNodeSelectorTerm(l []interface{}) *v1.NodeSelectorTerm {
 	if len(l) == 0 || l[0] == nil {
-		return &api.NodeSelectorTerm{}
+		return &v1.NodeSelectorTerm{}
 	}
 	in := l[0].(map[string]interface{})
-	obj := api.NodeSelectorTerm{}
+	obj := v1.NodeSelectorTerm{}
 	if v, ok := in["match_expressions"].([]interface{}); ok && len(v) > 0 {
 		obj.MatchExpressions = expandNodeSelectorRequirementList(v)
 	}
@@ -521,16 +520,16 @@ func expandNodeSelectorTerm(l []interface{}) *api.NodeSelectorTerm {
 	return &obj
 }
 
-func expandNodeSelectorRequirementList(in []interface{}) []api.NodeSelectorRequirement {
-	att := []api.NodeSelectorRequirement{}
+func expandNodeSelectorRequirementList(in []interface{}) []v1.NodeSelectorRequirement {
+	att := []v1.NodeSelectorRequirement{}
 	if len(in) < 1 {
 		return att
 	}
-	att = make([]api.NodeSelectorRequirement, len(in))
+	att = make([]v1.NodeSelectorRequirement, len(in))
 	for i, c := range in {
 		p := c.(map[string]interface{})
 		att[i].Key = p["key"].(string)
-		att[i].Operator = api.NodeSelectorOperator(p["operator"].(string))
+		att[i].Operator = v1.NodeSelectorOperator(p["operator"].(string))
 		att[i].Values = utils.ExpandStringSlice(p["values"].(*schema.Set).List())
 	}
 	return att
