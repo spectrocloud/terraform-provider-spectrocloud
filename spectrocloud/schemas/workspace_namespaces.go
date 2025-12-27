@@ -27,7 +27,7 @@ func WorkspaceNamespacesSchema() *schema.Schema {
 					Elem: &schema.Schema{
 						Type: schema.TypeString,
 					},
-					Description: "Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu_limit: '1', gpu_provider: 'nvidia'}`",
+					Description: "Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1', gpu_provider: 'nvidia'}`",
 				},
 				"cluster_resource_allocations": {
 					Type:     schema.TypeList,
@@ -45,7 +45,7 @@ func WorkspaceNamespacesSchema() *schema.Schema {
 								Elem: &schema.Schema{
 									Type: schema.TypeString,
 								},
-								Description: "Resource allocation for the cluster. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu_limit: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.",
+								Description: "Resource allocation for the cluster. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.",
 							},
 						},
 					},
@@ -82,7 +82,7 @@ func resourceWorkspaceNamespaceHash(v interface{}) int {
 		if resourceAlloc, ok := val.(map[string]interface{}); ok && len(resourceAlloc) > 0 {
 			// Check if gpu_limit is set and non-zero (do this first)
 			gpuLimitSet := false
-			if gpuLimitVal, hasGpuLimit := resourceAlloc["gpu_limit"]; hasGpuLimit {
+			if gpuLimitVal, hasGpuLimit := resourceAlloc["gpu"]; hasGpuLimit {
 				if gpuLimitStr, ok := gpuLimitVal.(string); ok && gpuLimitStr != "" && gpuLimitStr != "0" {
 					gpuLimitSet = true
 				}
@@ -102,11 +102,11 @@ func resourceWorkspaceNamespaceHash(v interface{}) int {
 				}
 
 				// Skip default gpu_limit ("0")
-				if k == "gpu_limit" && v == "0" {
+				if k == "gpu" && v == "0" {
 					continue
 				}
 
-				// For gpu_provider: only include if gpu_limit is set and non-zero
+				// For gpu_provider: only include if gpu is set and non-zero
 				if k == "gpu_provider" {
 					if !gpuLimitSet {
 						continue // Skip gpu_provider if gpu_limit is not set or is "0"

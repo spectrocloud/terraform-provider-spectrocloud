@@ -15,11 +15,28 @@ import (
 
 // Helper function to create V1WorkspaceResourceAllocation from resource allocation map
 func toWorkspaceResourceAllocation(resourceAllocation map[string]interface{}) (*models.V1WorkspaceResourceAllocation, error) {
+	cpuCoresVal, ok := resourceAllocation["cpu_cores"]
+	if !ok || cpuCoresVal == nil {
+		return nil, fmt.Errorf("cpu_cores is required in resource_allocation")
+	}
+	cpuCoresStr, ok := cpuCoresVal.(string)
+	if !ok || cpuCoresStr == "" {
+		return nil, fmt.Errorf("cpu_cores must be a non-empty string")
+	}
 	cpu_cores, err := strconv.ParseFloat(resourceAllocation["cpu_cores"].(string), 64)
 	if err != nil {
 		return nil, err
 	}
 
+	// FIX: Safe type assertion for memory_MiB - prevents panic when nil or missing
+	memoryVal, ok := resourceAllocation["memory_MiB"]
+	if !ok || memoryVal == nil {
+		return nil, fmt.Errorf("memory_MiB is required in resource_allocation")
+	}
+	memoryStr, ok := memoryVal.(string)
+	if !ok || memoryStr == "" {
+		return nil, fmt.Errorf("memory_MiB must be a non-empty string")
+	}
 	memory_MiB, err := strconv.ParseFloat(resourceAllocation["memory_MiB"].(string), 64)
 	if err != nil {
 		return nil, err
@@ -30,20 +47,28 @@ func toWorkspaceResourceAllocation(resourceAllocation map[string]interface{}) (*
 		MemoryMiB: memory_MiB,
 	}
 
-	// Handle GPU configuration if specified
-	if gpuVal, exists := resourceAllocation["gpu"]; exists && gpuVal.(int) > 0 {
-		gpuInt := gpuVal.(int)
-		if gpuInt > constants.Int32MaxValue {
-			return nil, fmt.Errorf("gpu value %d is out of range for int32", gpuInt)
+	// Handle GPU configuration if specified - same pattern as cpu_cores and memory_MiB
+	if gpuVal, exists := resourceAllocation["gpu"]; exists && gpuVal != nil {
+		gpuInt, err := strconv.Atoi(gpuVal.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid gpu value: %v", gpuVal)
 		}
-		provider := "nvidia" // Default provider for cluster allocations
-		// gpu_provider is optional - mainly used for default resource allocations
-		if gpuProvider, providerExists := resourceAllocation["gpu_provider"]; providerExists && gpuProvider.(string) != "" {
-			provider = gpuProvider.(string)
-		}
-		resource_alloc.GpuConfig = &models.V1GpuConfig{
-			Limit:    SafeInt32(gpuInt),
-			Provider: &provider,
+
+		if gpuInt > 0 {
+			if gpuInt > constants.Int32MaxValue {
+				return nil, fmt.Errorf("gpu value %d is out of range for int32", gpuInt)
+			}
+			provider := "nvidia" // Default provider for cluster allocations
+			// gpu_provider is optional - mainly used for default resource allocations
+			if gpuProvider, providerExists := resourceAllocation["gpu_provider"]; providerExists && gpuProvider != nil {
+				if providerStr, ok := gpuProvider.(string); ok && providerStr != "" {
+					provider = providerStr
+				}
+			}
+			resource_alloc.GpuConfig = &models.V1GpuConfig{
+				Limit:    SafeInt32(gpuInt),
+				Provider: &provider,
+			}
 		}
 	}
 
@@ -79,8 +104,16 @@ func toWorkspaceNamespaces(d *schema.ResourceData) []*models.V1WorkspaceClusterN
 func toWorkspaceNamespace(clusterNamespaceConfig interface{}) *models.V1WorkspaceClusterNamespace {
 	m := clusterNamespaceConfig.(map[string]interface{})
 
+	resourceAllocationRaw, exists := m["resource_allocation"]
+	if !exists || resourceAllocationRaw == nil {
+		return nil // Return nil if resource_allocation is missing
+	}
+
 	// Handle default resource allocation
-	resourceAllocation, _ := m["resource_allocation"].(map[string]interface{})
+	resourceAllocation, ok := m["resource_allocation"].(map[string]interface{})
+	if !ok {
+		return nil // Return nil if type assertion fails
+	}
 	defaultResourceAlloc, err := toWorkspaceResourceAllocation(resourceAllocation)
 	if err != nil {
 		return nil
@@ -93,7 +126,18 @@ func toWorkspaceNamespace(clusterNamespaceConfig interface{}) *models.V1Workspac
 		for _, clusterAlloc := range clusterAllocations {
 			clusterAllocMap := clusterAlloc.(map[string]interface{})
 			uid := clusterAllocMap["uid"].(string)
-			clusterResourceAllocation := clusterAllocMap["resource_allocation"].(map[string]interface{})
+
+			clusterResourceAllocationRaw, exists := clusterAllocMap["resource_allocation"]
+			if !exists || clusterResourceAllocationRaw == nil {
+				continue // Skip if missing
+			}
+
+			clusterResourceAllocation, ok := clusterResourceAllocationRaw.(map[string]interface{})
+			if !ok {
+				continue // Skip if type assertion fails
+			}
+
+			//clusterResourceAllocation := clusterAllocMap["resource_allocation"].(map[string]interface{})
 
 			resourceAlloc, err := toWorkspaceResourceAllocation(clusterResourceAllocation)
 			if err != nil {
@@ -197,9 +241,9 @@ func flattenWorkspaceResourceAllocation(resourceAlloc *models.V1WorkspaceResourc
 		gpuLimit := int64(resourceAlloc.GpuConfig.Limit)
 		if gpuLimit > math.MaxInt || gpuLimit < math.MinInt {
 			// Fallback to string representation if out of int range
-			result["gpu_limit"] = fmt.Sprintf("%d", gpuLimit)
+			result["gpu"] = fmt.Sprintf("%d", gpuLimit)
 		} else {
-			result["gpu_limit"] = strconv.Itoa(int(gpuLimit))
+			result["gpu"] = strconv.Itoa(int(gpuLimit))
 		}
 		// Only include gpu_provider for default resource allocations, not cluster-specific ones
 		if includeProvider {
@@ -210,7 +254,7 @@ func flattenWorkspaceResourceAllocation(resourceAlloc *models.V1WorkspaceResourc
 			}
 		}
 	} else {
-		result["gpu_limit"] = "0"
+		result["gpu"] = "0"
 		if includeProvider {
 			result["gpu_provider"] = ""
 		}
