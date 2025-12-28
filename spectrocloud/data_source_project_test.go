@@ -8,7 +8,6 @@ import (
 )
 
 func TestDataSourceProjectRead(t *testing.T) {
-
 	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
 		"name": {
 			Type:     schema.TypeString,

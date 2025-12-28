@@ -187,7 +187,6 @@ func resourceCloudAccountOpenStackDelete(_ context.Context, d *schema.ResourceDa
 }
 
 func toOpenStackAccount(d *schema.ResourceData) *models.V1OpenStackAccount {
-
 	account := &models.V1OpenStackAccount{
 		Metadata: &models.V1ObjectMeta{
 			Name:        d.Get("name").(string),

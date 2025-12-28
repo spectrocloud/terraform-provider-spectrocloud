@@ -138,7 +138,6 @@ func TestResourceCustomCloudAccountRead(t *testing.T) {
 
 	assert.Len(t, diags, 0)
 	assert.Equal(t, "mock-uid", d.Id())
-
 }
 
 func TestResourceCustomCloudAccountUpdate(t *testing.T) {

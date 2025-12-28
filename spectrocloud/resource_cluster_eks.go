@@ -503,7 +503,6 @@ func resourceClusterEksRead(_ context.Context, d *schema.ResourceData, m interfa
 }
 
 func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} {
-
 	cloudConfigFlatten := make([]interface{}, 0)
 	if cloudConfig == nil {
 		return cloudConfigFlatten
@@ -527,7 +526,6 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 		if pool.Name == "cp-pool" {
 			ret["az_subnets"] = pool.SubnetIds
 		}
-
 	}
 
 	if cloudConfig.Spec.ClusterConfig.EncryptionConfig != nil && cloudConfig.Spec.ClusterConfig.EncryptionConfig.IsEnabled {
@@ -553,7 +551,6 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 }
 
 func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -639,7 +636,6 @@ func flattenEksLaunchTemplate(launchTemplate *models.V1AwsLaunchTemplate) []inte
 }
 
 func flattenFargateProfilesEks(fargateProfiles []*models.V1FargateProfile) []interface{} {
-
 	if fargateProfiles == nil {
 		return make([]interface{}, 0)
 	}

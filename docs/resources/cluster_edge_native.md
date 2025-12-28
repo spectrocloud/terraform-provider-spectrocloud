@@ -137,7 +137,7 @@ Optional:
 
 Required:
 
-- `edge_host` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--edge_host))
+- `edge_host` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--edge_host))
 - `name` (String)
 
 Optional:
@@ -262,7 +262,7 @@ Required:
 Optional:
 
 - `namespace` (String) The Kubernetes namespace of the RBAC binding. Required if 'type' is set to 'RoleBinding'.
-- `role` (Map of String) The role of the RBAC binding. Required if 'type' is set to 'RoleBinding'.
+- `role` (Map of String) The role of the RBAC binding. Required if 'type' is set to 'RoleBinding'. Must include 'name' and 'kind' fields.
 - `subjects` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding--subjects))
 
 <a id="nestedblock--cluster_rbac_binding--subjects"></a>

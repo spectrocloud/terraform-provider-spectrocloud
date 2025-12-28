@@ -3,11 +3,12 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"time"
 )
 
 func resourceResourceLimit() *schema.Resource {
@@ -216,7 +217,6 @@ var KindToFieldMapping = []struct {
 }
 
 func toResourceLimits(d *schema.ResourceData) (*models.V1TenantResourceLimitsEntity, error) {
-
 	resourceLimit := make([]*models.V1TenantResourceLimitEntity, len(KindToFieldMapping))
 	for i, mapping := range KindToFieldMapping {
 		resourceLimit[i] = &models.V1TenantResourceLimitEntity{
@@ -229,7 +229,6 @@ func toResourceLimits(d *schema.ResourceData) (*models.V1TenantResourceLimitsEnt
 }
 
 func toResourceDefaultLimits(d *schema.ResourceData) (*models.V1TenantResourceLimitsEntity, error) {
-
 	resourceLimit := make([]*models.V1TenantResourceLimitEntity, len(KindToFieldMapping))
 	for i, limit := range KindToFieldMapping {
 		resourceLimit[i] = &models.V1TenantResourceLimitEntity{
@@ -347,7 +346,7 @@ func resourceResourceLimitsImport(ctx context.Context, d *schema.ResourceData, m
 		return nil, err
 	}
 	if givenTenantId != actualTenantId {
-		return nil, fmt.Errorf("tenant id is not valid with curent user: %v", diags)
+		return nil, fmt.Errorf("tenant id is not valid with current user: %v", diags)
 	}
 	diags = resourceResourceLimitsRead(ctx, d, m)
 	if diags.HasError() {

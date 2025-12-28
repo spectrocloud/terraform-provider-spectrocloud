@@ -28,7 +28,6 @@ func ToKubevirtVMStatusM(status *models.V1ClusterVirtualMachineStatus) (kubevirt
 }
 
 func ToKubevirtVMStatus(status *models.V1ClusterVirtualMachineStatus) kubevirtapiv1.VirtualMachineStatus {
-
 	var PrintableStatus kubevirtapiv1.VirtualMachinePrintableStatus
 	if status.PrintableStatus != "" {
 		PrintableStatus = kubevirtapiv1.VirtualMachinePrintableStatus(status.PrintableStatus)

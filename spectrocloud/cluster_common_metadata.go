@@ -26,7 +26,6 @@ func safeGetOk(d *schema.ResourceData, key string) (interface{}, bool) {
 }
 
 func toClusterMetadataUpdate(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
-
 	cMetadata := &models.V1ObjectMetaInputEntity{
 		Name:        d.Get("name").(string),
 		Labels:      toTags(d),

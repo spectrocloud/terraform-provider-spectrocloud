@@ -529,7 +529,6 @@ func flattenCloudConfigAzure(configUID string, d *schema.ResourceData, c *client
 }
 
 func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -755,9 +754,7 @@ func toStaticPlacement(c *models.V1SpectroAzureClusterEntity, cloudConfig map[st
 			c.Spec.CloudConfig.InfraLBConfig = &models.V1InfraLBConfig{
 				APIServerLB: apiServerLB,
 			}
-
 		}
-
 	}
 }
 
@@ -852,7 +849,7 @@ func validateCPPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) d
 	for _, machineConfig := range machinePool {
 		if machineConfig.PoolConfig.IsControlPlane {
 			if *machineConfig.PoolConfig.Size%2 == 0 {
-				return diag.FromErr(fmt.Errorf("The control-plane node pool size should be in an odd number. But it set to an even number '%d' in node name '%s' ", *machineConfig.PoolConfig.Size, *machineConfig.PoolConfig.Name))
+				return diag.FromErr(fmt.Errorf("the control-plane node pool size should be in an odd number, but it set to an even number '%d' in node name '%s'", *machineConfig.PoolConfig.Size, *machineConfig.PoolConfig.Name))
 			}
 		}
 	}

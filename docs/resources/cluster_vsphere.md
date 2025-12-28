@@ -170,7 +170,7 @@ Required:
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String) The name of the machine pool. This is used to identify the machine pool in the cluster.
-- `placement` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
+- `placement` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
 
@@ -307,7 +307,7 @@ Required:
 Optional:
 
 - `namespace` (String) The Kubernetes namespace of the RBAC binding. Required if 'type' is set to 'RoleBinding'.
-- `role` (Map of String) The role of the RBAC binding. Required if 'type' is set to 'RoleBinding'.
+- `role` (Map of String) The role of the RBAC binding. Required if 'type' is set to 'RoleBinding'. Must include 'name' and 'kind' fields.
 - `subjects` (Block List) (see [below for nested schema](#nestedblock--cluster_rbac_binding--subjects))
 
 <a id="nestedblock--cluster_rbac_binding--subjects"></a>

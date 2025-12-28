@@ -453,7 +453,6 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 }
 
 func toCustomCloudCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroCustomClusterEntity, error) {
-
 	clusterContext := d.Get("context").(string)
 	profiles, err := toProfiles(c, d, clusterContext)
 	if err != nil {

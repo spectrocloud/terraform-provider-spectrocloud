@@ -301,6 +301,7 @@ func resourceClusterVsphere() *schema.Resource {
 						},
 						"placement": {
 							Type:     schema.TypeList,
+							MaxItems: 1,
 							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -458,7 +459,6 @@ func resourceClusterVsphereRead(_ context.Context, d *schema.ResourceData, m int
 }
 
 func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1VsphereCloudConfig) interface{} {
-
 	cloudConfigFlatten := make([]interface{}, 0)
 	if cloudConfig == nil {
 		return cloudConfigFlatten
@@ -515,7 +515,6 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 }
 
 func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoolConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -609,8 +608,7 @@ func ValidateMachinePoolChange(oMPool interface{}, nMPool interface{}) (bool, er
 	}
 	// Validating any New or old placements got added/removed.
 	if len(nPlacements) != len(oPlacements) {
-		errMsg := `Placement validation error - Adding/Removing placement component in control plane is not allowed. 
-To update the placement configuration in the control plane, kindly recreate the cluster.`
+		errMsg := `placement validation error - adding/removing placement component in control plane is not allowed; to update the placement configuration in the control plane, kindly recreate the cluster`
 		return true, errors.New(errMsg)
 	}
 
@@ -806,7 +804,6 @@ func toVsphereCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 }
 
 func toCloudConfigCreate(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
-
 	V1VsphereClusterConfigEntity := getClusterConfigEntity(cloudConfig)
 	V1VsphereClusterConfigEntity.ControlPlaneEndpoint = &models.V1ControlPlaneEndPoint{
 		DdnsSearchDomain: cloudConfig["network_search_domain"].(string),
@@ -855,7 +852,6 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 				StaticIP:      staticIP,
 			},
 		})
-
 	}
 
 	ins := m["instance_type"].([]interface{})[0].(map[string]interface{})
@@ -962,7 +958,6 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 }
 
 func getSSHKey(cloudConfig map[string]interface{}) []string {
-
 	sshKeys, _ := toSSHKeys(cloudConfig)
 	return sshKeys
 }

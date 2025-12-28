@@ -1,8 +1,9 @@
 package spectrocloud
 
 import (
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -40,26 +41,33 @@ func TestToOpenStackCluster(t *testing.T) {
 		},
 		"context":          "default-context",
 		"cloud_account_id": "cloud-account-id",
+		// FIX: Pass []interface{} instead of schema.NewSet() - TestResourceDataRaw will convert it to TypeSet
 		"machine_pool": []interface{}{
 			map[string]interface{}{
-				"name":                 "worker",
-				"flavor":               "m1.small",
-				"control_plane":        false,
-				"worker":               true,
-				"desired_size":         2,
-				"availability_zones":   []interface{}{"zone-1"},
-				"subnet_ids":           []interface{}{"subnet-1"},
-				"node_pools":           []interface{}{},
-				"node_os_type":         "linux",
-				"initial_node_count":   2,
-				"auto_scaling_group":   false,
-				"spot_instance":        false,
-				"spot_max_price":       "0.0",
-				"max_size":             5,
-				"min_size":             2,
-				"desired_capacity":     2,
-				"force_delete":         false,
-				"on_demand_percentage": 100,
+				"name":                    "worker",
+				"instance_type":           "m1.small",
+				"control_plane":           false,
+				"control_plane_as_worker": false,
+				"count":                   2,
+				"azs":                     []interface{}{"zone-1"},
+				"subnet_id":               "subnet-1",
+				"update_strategy":         "RollingUpdateScaleOut",
+				"node_repave_interval":    0,
+				"additional_labels": map[string]interface{}{
+					"node-role": "worker",
+					"workload":  "general",
+				},
+				"node": map[string]interface{}{
+					"node_id": "i-0b2c3d4e5f678901",
+					"action":  "cordon",
+				},
+				"taints": []interface{}{
+					map[string]interface{}{
+						"key":    "node-role.spectrocloud.com/worker",
+						"value":  "true",
+						"effect": "NoSchedule",
+					},
+				},
 			},
 		},
 	})
@@ -114,31 +122,40 @@ func TestToOpenStackCluster(t *testing.T) {
 			Machinepoolconfig: []*models.V1OpenStackMachinePoolConfigEntity{
 				{
 					CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
-						Azs:     []string{},
+						Azs:     []string{"zone-1"},
 						DiskGiB: 0,
 						FlavorConfig: &models.V1OpenstackFlavorConfig{
 							DiskGiB:   0,
 							MemoryMiB: 0,
-							Name:      strPtr(""),
+							Name:      strPtr("m1.small"),
 							NumCPUs:   0,
 						},
 						Subnet: &models.V1OpenStackResource{
-							ID:   "",
+							ID:   "subnet-1",
 							Name: "",
 						},
 					},
 					PoolConfig: &models.V1MachinePoolConfigEntity{
-						AdditionalLabels: map[string]string{},
+						AdditionalLabels: map[string]string{
+							"node-role": "worker",
+							"workload":  "general",
+						},
 						//AdditionalTags:        map[string]string{},
 						IsControlPlane: false,
 						Labels:         []string{"worker"},
 						//MachinePoolProperties: &models.V1MachinePoolProperties{},
 						MaxSize:            0,
 						MinSize:            0,
-						Size:               int32Ptr(0),
+						Size:               int32Ptr(2),
 						Name:               strPtr("worker"),
 						NodeRepaveInterval: 0,
-						Taints:             []*models.V1Taint{},
+						Taints: []*models.V1Taint{
+							{
+								Key:    "node-role.spectrocloud.com/worker",
+								Value:  "true",
+								Effect: "NoSchedule",
+							},
+						},
 						UpdateStrategy: &models.V1UpdateStrategy{
 							Type: "RollingUpdateScaleOut",
 						},
@@ -177,7 +194,7 @@ func TestToMachinePoolOpenStack(t *testing.T) {
 			},
 			expected: &models.V1OpenStackMachinePoolConfigEntity{
 				CloudConfig: &models.V1OpenStackMachinePoolCloudConfigEntity{
-					Azs: []string{"az2", "az1"},
+					Azs: []string{"az2", "az1"}, // Note: schema.Set order may vary, actual order is ["az2", "az1"]
 					Subnet: &models.V1OpenStackResource{
 						ID: "subnet-123",
 					},
@@ -295,7 +312,7 @@ func TestFlattenMachinePoolConfigsOpenStack(t *testing.T) {
 					"count":                   3,
 					"subnet_id":               "subnet-12345",
 					"azs":                     []string{"az1", "az2"},
-					"instance_type":           strPtr("m1.medium"),
+					"instance_type":           types.Ptr("m1.medium"),
 					"additional_labels":       map[string]interface{}{},
 					"update_strategy":         "RollingUpdateScaleOut",
 				},

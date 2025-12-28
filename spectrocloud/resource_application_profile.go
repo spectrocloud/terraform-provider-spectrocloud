@@ -231,7 +231,6 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 						prop[pt.Name] = getValueInProperties(ogProp.(map[string]interface{}), pt.Name)
 					}
 				}
-
 			}
 		}
 		p["properties"] = prop
@@ -472,7 +471,6 @@ func toApplicationTiersUpdate(d *schema.ResourceData, c *client.V1Client) ([]*mo
 	}
 
 	return createTiers, updateTiersMapId, deleteTiers, nil
-
 }
 
 func toApplicationProfilePatch(d *schema.ResourceData) (*models.V1AppProfileMetaEntity, error) {

@@ -7,7 +7,6 @@ import (
 )
 
 func TestDataSourceClusterGroupRead_SystemContext(t *testing.T) {
-
 	resourceData := dataSourceClusterGroup().TestResourceData()
 	_ = resourceData.Set("name", "test-cluster-group")
 	_ = resourceData.Set("context", "system")

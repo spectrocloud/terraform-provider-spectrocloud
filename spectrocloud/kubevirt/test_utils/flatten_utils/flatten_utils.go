@@ -295,7 +295,6 @@ func GetBaseInputForVirtualMachine() kubevirtapiv1.VirtualMachineSpec {
 }
 
 func GetBaseOutputForVirtualMachine() interface{} {
-
 	return map[string]interface{}{
 		"data_volume_templates": []interface{}{
 			map[string]interface{}{

@@ -137,7 +137,6 @@ func resourceKubevirtDataVolumeUpdate(ctx context.Context, resourceData *schema.
 	}
 
 	return resourceKubevirtDataVolumeCreate(ctx, resourceData, m)
-
 }
 
 func resourceKubevirtDataVolumeDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

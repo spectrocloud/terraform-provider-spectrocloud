@@ -46,7 +46,6 @@ func virtualMachineStateChangeRequestsSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func expandVirtualMachineStateChangeRequests(virtualMachineStateChangeRequests []interface{}) []kubevirtapiv1.VirtualMachineStateChangeRequest {

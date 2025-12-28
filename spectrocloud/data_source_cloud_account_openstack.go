@@ -54,7 +54,6 @@ func dataSourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceDa
 	var account *models.V1OpenStackAccount
 	filteredAccounts := make([]*models.V1OpenStackAccount, 0)
 	for _, a := range accounts {
-
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break

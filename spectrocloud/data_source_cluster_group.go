@@ -36,7 +36,6 @@ func dataSourceClusterGroupRead(_ context.Context, d *schema.ResourceData, m int
 	c := getV1ClientWithResourceContext(m, GroupContext)
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
-
 		switch GroupContext {
 		case "system", "tenant":
 			group, err := c.GetClusterGroupScopeMetadataByName(name.(string))

@@ -468,7 +468,6 @@ func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
 }
 
 func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfig, config *models.V1MaasClusterConfig) []interface{} {
-
 	if machinePools == nil {
 		return make([]interface{}, 0)
 	}
@@ -602,7 +601,6 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 				// Processed (if exists)
 				delete(osMap, name)
 			}
-
 		}
 
 		// Deleted old machine pools

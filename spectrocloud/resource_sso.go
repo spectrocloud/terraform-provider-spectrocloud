@@ -467,7 +467,6 @@ func resourceCommonUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceSSOCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	diags := resourceCommonUpdate(ctx, d, m)
 	if !diags.HasError() {
 		d.SetId("sso_settings")

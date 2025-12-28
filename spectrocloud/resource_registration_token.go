@@ -191,7 +191,6 @@ func resourceRegistrationTokenCreate(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 	return diags
-
 }
 
 func resourceRegistrationTokenRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

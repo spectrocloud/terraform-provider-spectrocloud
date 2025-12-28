@@ -62,7 +62,6 @@ func dataSourceClusterRead(_ context.Context, d *schema.ResourceData, m interfac
 	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
 	if name, okName := d.GetOk("name"); okName {
-
 		cluster, err := c.GetClusterByName(name.(string), d.Get("virtual").(bool))
 		if err != nil {
 			return handleReadError(d, err, diags)
