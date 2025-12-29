@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -182,15 +181,13 @@ func TestFlattenSpec(t *testing.T) {
 				filterGroupMap := filterGroupList[0].(map[string]interface{})
 				assert.Equal(t, "and", filterGroupMap["conjunction"])
 
-				// Verify filters is a *schema.Set
-				filtersSet, ok := filterGroupMap["filters"].(*schema.Set)
-				assert.True(t, ok, "filters should be *schema.Set")
-				assert.Equal(t, 1, filtersSet.Len())
+				// Verify filters is []interface{} (works with both TypeSet and TypeList)
+				filtersList, ok := filterGroupMap["filters"].([]interface{})
+				assert.True(t, ok, "filters should be []interface{}")
+				assert.Len(t, filtersList, 1)
 
 				// Verify filter content
-				filterList := filtersSet.List()
-				assert.Len(t, filterList, 1)
-				filterMap := filterList[0].(map[string]interface{})
+				filterMap := filtersList[0].(map[string]interface{})
 				assert.Equal(t, "test_key", filterMap["key"])
 				assert.Equal(t, false, filterMap["negation"])
 				assert.Equal(t, "EQUALS", filterMap["operator"])
