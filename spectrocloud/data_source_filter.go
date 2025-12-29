@@ -57,8 +57,9 @@ func dataSourceFilter() *schema.Resource {
 										Description: "The conjunction used to combine filter groups. Common values: `AND`, `OR`.",
 									},
 									"filters": {
-										Type:     schema.TypeList,
+										Type:     schema.TypeSet,
 										Computed: true,
+										Set:      resourceFilterItemHash,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"key": {

@@ -148,9 +148,14 @@ func flattenFilterGroup(filterGroup *models.V1TagFilterGroup) []interface{} {
 		filtersSet = schema.NewSet(resourceFilterItemHash, []interface{}{})
 	}
 
+	conjunction := ""
+	if filterGroup.Conjunction != nil {
+		conjunction = string(*filterGroup.Conjunction)
+	}
+
 	m := map[string]interface{}{
-		"conjunction": string(*filterGroup.Conjunction),
-		"filters":     flattenFilters(filterGroup.Filters),
+		"conjunction": conjunction,
+		"filters":     filtersSet,
 	}
 
 	return []interface{}{m}
