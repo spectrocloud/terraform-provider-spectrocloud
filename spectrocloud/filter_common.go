@@ -1,6 +1,9 @@
 package spectrocloud
 
-import "github.com/spectrocloud/palette-sdk-go/api/models"
+import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+)
 
 func expandMetadata(list []interface{}) *models.V1ObjectMetaInputEntity {
 	if len(list) == 0 || list[0] == nil {
@@ -33,13 +36,25 @@ func expandFilterGroup(list []interface{}) *models.V1TagFilterGroup {
 	}
 
 	m := list[0].(map[string]interface{})
-	filters := m["filters"].([]interface{})
+
+	// Handle both TypeSet and TypeList for backward compatibility
+	var filtersList []interface{}
+	if filtersRaw, ok := m["filters"]; ok && filtersRaw != nil {
+		if filtersSet, ok := filtersRaw.(*schema.Set); ok {
+			filtersList = filtersSet.List()
+		} else if filtersListRaw, ok := filtersRaw.([]interface{}); ok {
+			// Fallback for backward compatibility during migration
+			filtersList = filtersListRaw
+		}
+	}
+
+	// filters := m["filters"].([]interface{})
 
 	conjunction := models.V1SearchFilterConjunctionOperator(m["conjunction"].(string))
 
 	return &models.V1TagFilterGroup{
 		Conjunction: &conjunction,
-		Filters:     expandFilters(filters),
+		Filters:     expandFilters(filtersList),
 	}
 }
 
