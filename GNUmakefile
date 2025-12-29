@@ -58,7 +58,7 @@ BIN_DIR ?= ./bin
 bin-dir:
 	test -d $(BIN_DIR) || mkdir $(BIN_DIR)
 
-GOLANGCI_VERSION ?= 2.7.2
+GOLANGCI_VERSION ?= 1.64.6
 golangci-lint: bin-dir
 	if ! test -f $(BIN_DIR)/golangci-lint-linux-amd64; then \
 		curl -LOs https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_VERSION)/golangci-lint-$(GOLANGCI_VERSION)-linux-amd64.tar.gz; \
