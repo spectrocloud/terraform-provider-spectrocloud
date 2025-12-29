@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"hash/fnv"
 	"log"
 	"sort"
 	"strings"
@@ -344,11 +343,4 @@ func resourceFilterItemHash(v interface{}) int {
 	}
 
 	return int(hash(buf.String()))
-}
-
-// hash function (if not already available in the package)
-func hash(s string) uint32 {
-	h := fnv.New32a()
-	h.Write([]byte(s))
-	return h.Sum32()
 }

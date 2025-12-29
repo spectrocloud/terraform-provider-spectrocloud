@@ -130,6 +130,23 @@ func flattenFilterGroup(filterGroup *models.V1TagFilterGroup) []interface{} {
 	if filterGroup == nil {
 		return []interface{}{}
 	}
+	// Convert filters to schema.Set for proper TypeSet handling
+	var filtersSet *schema.Set
+	if filterGroup.Filters != nil && len(filterGroup.Filters) > 0 {
+		filtersList := make([]interface{}, len(filterGroup.Filters))
+		for i, filter := range filterGroup.Filters {
+			filtersList[i] = map[string]interface{}{
+				"key":      filter.Key,
+				"negation": filter.Negation,
+				"operator": string(filter.Operator),
+				"values":   filter.Values,
+			}
+		}
+		// Create a schema.Set using the hash function
+		filtersSet = schema.NewSet(resourceFilterItemHash, filtersList)
+	} else {
+		filtersSet = schema.NewSet(resourceFilterItemHash, []interface{}{})
+	}
 
 	m := map[string]interface{}{
 		"conjunction": string(*filterGroup.Conjunction),
