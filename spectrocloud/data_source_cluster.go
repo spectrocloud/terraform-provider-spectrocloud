@@ -53,6 +53,11 @@ func dataSourceCluster() *schema.Resource {
 				Computed:    true,
 				Description: "The current health status of the cluster. This is computed automatically.",
 			},
+			"cluster_timezone": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades follow this time zone to ensure they run at the appropriate local time for the cluster. Value is in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata').",
+			},
 		},
 	}
 }
@@ -94,6 +99,13 @@ func dataSourceClusterRead(_ context.Context, d *schema.ResourceData, m interfac
 			clusterSummary, summaryErr := c.GetClusterOverview(cluster.Metadata.UID)
 			if summaryErr == nil && clusterSummary.Status.Health != nil && clusterSummary.Status.Health.State != "" {
 				if err := d.Set("health", clusterSummary.Status.Health.State); err != nil {
+					return diag.FromErr(err)
+				}
+			}
+
+			// Set cluster timezone if available
+			if cluster.Spec != nil && cluster.Spec.ClusterConfig != nil && cluster.Spec.ClusterConfig.Timezone != "" {
+				if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
 					return diag.FromErr(err)
 				}
 			}
