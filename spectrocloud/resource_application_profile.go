@@ -145,11 +145,11 @@ func resourceApplicationProfileRead(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	diagPacks, diagnostics, done := GetDiagPacks(d, err)
-	if done {
-		return diagnostics
-	}
-	packs, err := flattenAppPacks(c, diagPacks, cp.Spec.Template.AppTiers, tierDetails, d, ctx)
+	// diagPacks, diagnostics, done := GetDiagPacks(d, err)
+	// if done {
+	// 	return diagnostics
+	// }
+	packs, err := flattenAppPacks(c, nil, cp.Spec.Template.AppTiers, tierDetails, d, ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
