@@ -202,12 +202,33 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 
 		for _, packInterface := range packList {
 			pack := packInterface.(map[string]interface{})
-			packName := pack["name"].(string)
-			packMap[packName] = pack
+			// Safe type assertion to prevent panic
+			if packNameVal, ok := pack["name"]; ok && packNameVal != nil {
+				if packName, ok := packNameVal.(string); ok && packName != "" {
+					packMap[packName] = pack
+				}
+			}
 		}
 	}
-	ps := make([]interface{}, len(tiers))
-	for i, tier := range tierDet {
+
+	// FIX: Deduplicate tiers by NAME to prevent duplicate pack entries
+	tierMap := make(map[string]*models.V1AppTier)
+	for _, tier := range tierDet {
+		if tier != nil && tier.Metadata != nil && tier.Metadata.Name != "" {
+			key := tier.Metadata.Name
+			// If we've seen this name before, prefer the one with properties
+			if existing, found := tierMap[key]; found {
+				// Prefer tier with properties over one without
+				if len(tier.Spec.Properties) > 0 && len(existing.Spec.Properties) == 0 {
+					tierMap[key] = tier
+				}
+			} else {
+				tierMap[key] = tier
+			}
+		}
+	}
+	ps := make([]interface{}, 0, len(tierMap))
+	for _, tier := range tierMap {
 		p := make(map[string]interface{})
 		p["uid"] = tier.Metadata.UID
 
@@ -247,48 +268,35 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 		//p["tag"] = tier.Tag
 		p["type"] = tier.Spec.Type
 		p["source_app_tier"] = tier.Spec.SourceAppTierUID
-		// FIX: Preserve user's original properties from state (packMap)
-		// This ensures the hash remains consistent when API returns different values
-		// Similar to how workspace handles resource_allocation in TypeSet
+
+		// CRITICAL: Always use API values for properties to enable proper drift detection
+		// Only preserve from state for masked values ("********")
 		prop := make(map[string]interface{})
 
-		// First, check if properties exist in state (from packMap)
-		// State should contain user's original config values from previous Read/Update
-		if pack, found := packMap[tier.Metadata.Name]; found {
-			if ogProp, ok := pack["properties"]; ok && ogProp != nil {
-				if ogPropMap, ok := ogProp.(map[string]interface{}); ok && len(ogPropMap) > 0 {
-					// Preserve user's original properties from state
-					// This keeps hash consistent even if API returns different values
-					for k, v := range ogPropMap {
-						if vStr, ok := v.(string); ok {
-							prop[k] = vStr
-						}
-					}
-				}
-			}
-		}
-
-		// If no properties in state, get from API (but handle masked values)
-		// This handles the case where properties weren't in state (e.g., first read)
-		if len(prop) == 0 && len(tier.Spec.Properties) > 0 {
+		// Get properties from API (handle masked values by preserving from state)
+		if len(tier.Spec.Properties) > 0 {
 			for _, pt := range tier.Spec.Properties {
-				if pt.Value != "********" {
-					prop[pt.Name] = pt.Value
-				} else {
-					// If masked, try to get from state (which should have user's original value)
+				if pt.Value == "********" {
+					// If masked, preserve from state (user's original value)
 					if pack, found := packMap[tier.Metadata.Name]; found {
 						if ogProp, ok := pack["properties"]; ok && ogProp != nil {
-							prop[pt.Name] = getValueInProperties(ogProp.(map[string]interface{}), pt.Name)
+							if ogPropMap, ok := ogProp.(map[string]interface{}); ok {
+								if val := getValueInProperties(ogPropMap, pt.Name); val != "" {
+									prop[pt.Name] = val
+								}
+							}
 						}
 					}
+				} else {
+					// ALWAYS use API value - this enables drift detection
+					prop[pt.Name] = pt.Value
 				}
 			}
 		}
 
-		// Only set properties if it's not empty, to match hash function behavior
-		if len(prop) > 0 {
-			p["properties"] = prop
-		}
+		// Always set properties map (even if empty) to ensure consistent representation
+		p["properties"] = prop
+
 		if tier.Spec.Type != nil && string(*tier.Spec.Type) == "container" {
 			p["values"] = tier.Spec.Values
 		}
@@ -313,9 +321,9 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 				p["manifest"] = ma
 			}
 		}
-		ps[i] = p
-	}
 
+		ps = append(ps, p)
+	}
 	return ps, nil
 }
 

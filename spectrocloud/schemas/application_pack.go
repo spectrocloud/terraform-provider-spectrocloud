@@ -118,9 +118,9 @@ func resourceAppPackHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("name-%s-", val.(string)))
 	}
 
-	if val, ok := m["uid"]; ok && val != nil && val != "" {
-		buf.WriteString(fmt.Sprintf("uid-%s-", val.(string)))
-	}
+	// if val, ok := m["uid"]; ok && val != nil && val != "" {
+	// 	buf.WriteString(fmt.Sprintf("uid-%s-", val.(string)))
+	// }
 
 	// Pack type (optional, default "spectro")
 	if val, ok := m["type"]; ok && val != nil && val != "" {
