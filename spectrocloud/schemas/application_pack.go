@@ -3,7 +3,6 @@ package schemas
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -157,21 +156,21 @@ func resourceAppPackHash(v interface{}) int {
 
 	// Properties map
 	// Properties map - FIX: removed duplicate dead code
-	if val, ok := m["properties"]; ok && val != nil {
-		if props, ok := val.(map[string]interface{}); ok && len(props) > 0 {
-			// Sort keys for deterministic hashing
-			keys := make([]string, 0, len(props))
-			for k := range props {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-			for _, k := range keys {
-				if v, ok := props[k].(string); ok {
-					buf.WriteString(fmt.Sprintf("properties-%s-%s-", k, v))
-				}
-			}
-		}
-	}
+	// if val, ok := m["properties"]; ok && val != nil {
+	// 	if props, ok := val.(map[string]interface{}); ok && len(props) > 0 {
+	// 		// Sort keys for deterministic hashing
+	// 		keys := make([]string, 0, len(props))
+	// 		for k := range props {
+	// 			keys = append(keys, k)
+	// 		}
+	// 		sort.Strings(keys)
+	// 		for _, k := range keys {
+	// 			if v, ok := props[k].(string); ok {
+	// 				buf.WriteString(fmt.Sprintf("properties-%s-%s-", k, v))
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	// Values - normalize by trimming whitespace (matching DiffSuppressFunc behavior)
 	if val, ok := m["values"]; ok && val != nil {

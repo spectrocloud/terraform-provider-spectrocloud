@@ -229,6 +229,9 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 	}
 	ps := make([]interface{}, 0, len(tierMap))
 	for _, tier := range tierMap {
+		log.Printf("[DEBUG] Processing tier: %s, UID: %s", tier.Metadata.Name, tier.Metadata.UID)
+		log.Printf("[DEBUG] Tier has %d properties", len(tier.Spec.Properties))
+
 		p := make(map[string]interface{})
 		p["uid"] = tier.Metadata.UID
 
@@ -289,7 +292,7 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 					}
 				} else {
 					// ALWAYS use API value - this enables drift detection
-					prop[pt.Name] = pt.Value
+					prop[pt.Name] = fmt.Sprintf("%v", pt.Value)
 				}
 			}
 		}
