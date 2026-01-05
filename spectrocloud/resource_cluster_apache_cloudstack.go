@@ -418,7 +418,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Type:        schema.TypeList,
 							Optional:    true,
 							MaxItems:    1,
-							Description: "Apache CloudStack template override for this machine pool. If not specified, inherits cluster default from profile.",
+							Description: "Apache CloudStack template override for this machine pool. If not specified, inherits cluster default.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"id": {
