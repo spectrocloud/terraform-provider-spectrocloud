@@ -111,7 +111,7 @@ data "spectrocloud_backup_storage_location" "bsl" {
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `description` (String)
-- `namespaces` (Block List) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
+- `namespaces` (Block Set) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
 - `tags` (Set of String)
 - `workspace_quota` (Block List, Max: 1) Workspace quota default limits assigned to the namespace. (see [below for nested schema](#nestedblock--workspace_quota))
 
@@ -184,11 +184,11 @@ Optional:
 Required:
 
 - `name` (String) Name of the namespace. This is the name of the Kubernetes namespace in the cluster.
-- `resource_allocation` (Map of String) Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu_limit: '1', gpu_provider: 'nvidia'}`
+- `resource_allocation` (Map of String) Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1', gpu_provider: 'nvidia'}`
 
 Optional:
 
-- `cluster_resource_allocations` (Block List) (see [below for nested schema](#nestedblock--namespaces--cluster_resource_allocations))
+- `cluster_resource_allocations` (Block List, Max: 1) (see [below for nested schema](#nestedblock--namespaces--cluster_resource_allocations))
 - `images_blacklist` (List of String) List of images to disallow for the namespace. For example, `['nginx:latest', 'redis:latest']`
 
 <a id="nestedblock--namespaces--cluster_resource_allocations"></a>
@@ -196,7 +196,7 @@ Optional:
 
 Required:
 
-- `resource_allocation` (Map of String) Resource allocation for the cluster. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu_limit: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.
+- `resource_allocation` (Map of String) Resource allocation for the cluster. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.
 - `uid` (String)
 
 
