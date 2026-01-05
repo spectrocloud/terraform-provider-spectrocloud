@@ -346,12 +346,12 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
-		// acc["credential_type"] = "basic" // ← ADD THIS LINE (missing in current code)
-		// acc["username"] = registry.Spec.Auth.Username
 		// Read the actual auth type from the API response
 		switch registry.Spec.Auth.Type {
 		case "noAuth":
 			acc["credential_type"] = "noAuth"
+			acc["username"] = ""
+			acc["password"] = ""
 		case "basic":
 			acc["credential_type"] = "basic"
 			acc["username"] = registry.Spec.Auth.Username
