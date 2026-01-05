@@ -327,25 +327,33 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
-		acc["credential_type"] = "basic" // ← ADD THIS LINE (missing in current code)
-		acc["username"] = registry.Spec.Auth.Username
-		// FIX: Preserve password from state to avoid drift detection when API returns masked/different format
-		// This applies to ALL provider types: helm, zarf, and pack
-		if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
-			if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
-				if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
-					if password, exists := currentCredMap["password"]; exists && password != nil {
-						// Preserve password from state to avoid drift
-						acc["password"] = password
-					} else {
-						acc["password"] = registry.Spec.Auth.Password.String()
+		// Read the actual auth type from the API response
+		switch registry.Spec.Auth.Type {
+		case "noAuth":
+			acc["credential_type"] = "noAuth"
+			// For noAuth, don't set username/password
+		case "basic":
+			acc["credential_type"] = "basic" // ← ADD THIS LINE (missing in current code)
+			acc["username"] = registry.Spec.Auth.Username
+			// FIX: Preserve password from state to avoid drift detection when API returns masked/different format
+			// This applies to ALL provider types: helm, zarf, and pack
+			if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+				if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+					if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+						if password, exists := currentCredMap["password"]; exists && password != nil {
+							// Preserve password from state to avoid drift
+							acc["password"] = password
+						} else {
+							acc["password"] = registry.Spec.Auth.Password.String()
+						}
 					}
 				}
+			} else {
+				// No existing credentials in state, use API value
+				acc["password"] = registry.Spec.Auth.Password.String()
 			}
-		} else {
-			// No existing credentials in state, use API value
-			acc["password"] = registry.Spec.Auth.Password.String()
 		}
+
 		tlsConfig := make([]interface{}, 0, 1)
 		tls := make(map[string]interface{})
 		tls["certificate"] = registry.Spec.Auth.TLS.Certificate
@@ -485,10 +493,34 @@ func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 		tlsCertificate = authConfig["tls_config"].([]interface{})[0].(map[string]interface{})["certificate"].(string)
 		tlsSkipVerify = authConfig["tls_config"].([]interface{})[0].(map[string]interface{})["insecure_skip_verify"].(bool)
 	}
-	var username, password string
+	// Initialize auth with noAuth as default
+	auth := &models.V1RegistryAuth{
+		Type: "noAuth",
+		TLS: &models.V1TLSConfiguration{
+			Certificate:        tlsCertificate,
+			Enabled:            true,
+			InsecureSkipVerify: tlsSkipVerify,
+		},
+	}
+	// Only set username/password if credential_type is "basic"
+	credentialType := authConfig["credential_type"].(string)
+	if credentialType == "basic" {
+		auth.Type = "basic"
+		auth.Username = authConfig["username"].(string)
+		auth.Password = strfmt.Password(authConfig["password"].(string))
+	}
+	// For Zarf registries with noAuth, ensure auth.Type is explicitly set to "noAuth"
+	// and username/password are not set (they should be empty/nil)
+	if provider == "zarf" && credentialType == "noAuth" {
+		auth.Type = "noAuth"
+		// Explicitly ensure username and password are not set for noAuth
+		auth.Username = ""
+		auth.Password = ""
+	}
+	// var username, password string
 
-	username = authConfig["username"].(string)
-	password = authConfig["password"].(string)
+	// username = authConfig["username"].(string)
+	// password = authConfig["password"].(string)
 
 	return &models.V1BasicOciRegistry{
 		Metadata: &models.V1ObjectMeta{
@@ -499,16 +531,7 @@ func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 			BasePath:        endpointSuffix,
 			ProviderType:    &provider,
 			BaseContentPath: baseContentPath,
-			Auth: &models.V1RegistryAuth{
-				Username: username,
-				Password: strfmt.Password(password),
-				Type:     "basic",
-				TLS: &models.V1TLSConfiguration{
-					Certificate:        tlsCertificate,
-					Enabled:            true,
-					InsecureSkipVerify: tlsSkipVerify,
-				},
-			},
+			Auth:            auth,
 			IsSyncSupported: isSynchronization,
 		},
 	}
