@@ -291,3 +291,74 @@ func TestResourceMachinePoolApacheCloudStackHashKubernetesStyleAnnotations(t *te
 	sameHash := resourceMachinePoolApacheCloudStackHash(machinePool)
 	assert.Equal(t, hash, sameHash, "Same input should produce same hash")
 }
+
+func TestResourceMachinePoolApacheCloudStackHashOverrideKubeadmConfiguration(t *testing.T) {
+	// Base machine pool without override_kubeadm_configuration
+	baseMachinePool := map[string]interface{}{
+		"name":                    "test-pool",
+		"count":                   3,
+		"offering":                "medium-instance",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+	}
+
+	// Machine pool with override_kubeadm_configuration
+	withOverride := map[string]interface{}{
+		"name":                           "test-pool",
+		"count":                          3,
+		"offering":                       "medium-instance",
+		"control_plane":                  false,
+		"control_plane_as_worker":        false,
+		"override_kubeadm_configuration": "kubeletExtraArgs:\n  node-labels: custom=value",
+	}
+
+	// Machine pool with different override_kubeadm_configuration
+	differentOverride := map[string]interface{}{
+		"name":                           "test-pool",
+		"count":                          3,
+		"offering":                       "medium-instance",
+		"control_plane":                  false,
+		"control_plane_as_worker":        false,
+		"override_kubeadm_configuration": "preKubeadmCommands:\n  - echo 'test'",
+	}
+
+	baseHash := resourceMachinePoolApacheCloudStackHash(baseMachinePool)
+	withOverrideHash := resourceMachinePoolApacheCloudStackHash(withOverride)
+	differentOverrideHash := resourceMachinePoolApacheCloudStackHash(differentOverride)
+
+	// Hash should be different when override_kubeadm_configuration is added
+	assert.NotEqual(t, baseHash, withOverrideHash, "Adding override_kubeadm_configuration should change hash")
+
+	// Hash should be different when override_kubeadm_configuration values change
+	assert.NotEqual(t, withOverrideHash, differentOverrideHash, "Changing override_kubeadm_configuration should change hash")
+
+	// Hash should be consistent for same input
+	sameHash := resourceMachinePoolApacheCloudStackHash(withOverride)
+	assert.Equal(t, withOverrideHash, sameHash, "Same input should produce same hash")
+}
+
+func TestResourceMachinePoolApacheCloudStackHashOverrideKubeadmEmptyString(t *testing.T) {
+	// Machine pool with empty override_kubeadm_configuration should be same as no override
+	poolWithEmptyOverride := map[string]interface{}{
+		"name":                           "test-pool",
+		"count":                          3,
+		"offering":                       "medium-instance",
+		"control_plane":                  false,
+		"control_plane_as_worker":        false,
+		"override_kubeadm_configuration": "",
+	}
+
+	poolWithoutOverride := map[string]interface{}{
+		"name":                    "test-pool",
+		"count":                   3,
+		"offering":                "medium-instance",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+	}
+
+	emptyOverrideHash := resourceMachinePoolApacheCloudStackHash(poolWithEmptyOverride)
+	withoutOverrideHash := resourceMachinePoolApacheCloudStackHash(poolWithoutOverride)
+
+	// Empty string should be treated same as no override
+	assert.Equal(t, emptyOverrideHash, withoutOverrideHash, "Empty override_kubeadm_configuration should have same hash as no override")
+}

@@ -360,6 +360,11 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							ValidateFunc:  validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"rolling_update_strategy": schemas.RollingUpdateSchema(),
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
+						},
 						"min": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -733,6 +738,13 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 		UseControlPlaneAsWorker: controlPlaneAsWorker,
 	}
 
+	// Handle override_kubeadm_configuration (worker pools only)
+	if !controlPlane {
+		if overrideKubeadm, ok := mp["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
+			poolConfig.OverrideKubeadmConfiguration = overrideKubeadm
+		}
+	}
+
 	// Safe conversion for min size
 	if mp["min"] != nil {
 		minSize := mp["min"].(int)
@@ -782,6 +794,11 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	// Add CloudStack-specific fields
 	if val, ok := m["offering"]; ok {
 		fmt.Fprintf(buf, "%s-", val.(string))
+	}
+
+	// Hash override_kubeadm_configuration
+	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
 	}
 
 	// Note: instance_config is computed and excluded from hash to prevent false change detection
@@ -1058,6 +1075,11 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
+
+		// Flatten override_kubeadm_configuration (worker pools only)
+		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
+			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
 
 		if machinePool.MinSize > 0 {
 			oi["min"] = int(machinePool.MinSize)
