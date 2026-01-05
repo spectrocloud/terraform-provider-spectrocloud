@@ -117,10 +117,6 @@ func resourceAppPackHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("name-%s-", val.(string)))
 	}
 
-	// if val, ok := m["uid"]; ok && val != nil && val != "" {
-	// 	buf.WriteString(fmt.Sprintf("uid-%s-", val.(string)))
-	// }
-
 	// Pack type (optional, default "spectro")
 	if val, ok := m["type"]; ok && val != nil && val != "" {
 		buf.WriteString(fmt.Sprintf("type-%s-", val.(string)))
@@ -153,24 +149,6 @@ func resourceAppPackHash(v interface{}) int {
 	} else {
 		buf.WriteString("install_order-0-") // Default value
 	}
-
-	// Properties map
-	// Properties map - FIX: removed duplicate dead code
-	// if val, ok := m["properties"]; ok && val != nil {
-	// 	if props, ok := val.(map[string]interface{}); ok && len(props) > 0 {
-	// 		// Sort keys for deterministic hashing
-	// 		keys := make([]string, 0, len(props))
-	// 		for k := range props {
-	// 			keys = append(keys, k)
-	// 		}
-	// 		sort.Strings(keys)
-	// 		for _, k := range keys {
-	// 			if v, ok := props[k].(string); ok {
-	// 				buf.WriteString(fmt.Sprintf("properties-%s-%s-", k, v))
-	// 			}
-	// 		}
-	// 	}
-	// }
 
 	// Values - normalize by trimming whitespace (matching DiffSuppressFunc behavior)
 	if val, ok := m["values"]; ok && val != nil {
