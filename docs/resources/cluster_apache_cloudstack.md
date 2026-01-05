@@ -556,6 +556,7 @@ Required:
 
 Optional:
 
+- `additional_annotations` (Map of String) Additional annotation to be applied to the machine pool. annotation must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.

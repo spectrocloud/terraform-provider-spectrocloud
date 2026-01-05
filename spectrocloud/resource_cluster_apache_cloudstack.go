@@ -313,6 +313,14 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							},
 							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
 						},
+						"additional_annotations": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Additional annotation to be applied to the machine pool. annotation must be in the form of `key:value`.",
+						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
@@ -673,7 +681,7 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 	controlPlane := mp["control_plane"].(bool)
 	controlPlaneAsWorker := mp["control_plane_as_worker"].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, "control-plane")
 	}
 
 	cloudConfig := &models.V1CloudStackMachinePoolCloudConfigEntity{
@@ -712,12 +720,13 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 	}
 
 	poolConfig := &models.V1MachinePoolConfigEntity{
-		AdditionalLabels: toAdditionalNodePoolLabels(mp),
-		Taints:           toClusterTaints(mp),
-		IsControlPlane:   controlPlane,
-		Labels:           labels,
-		Name:             types.Ptr(mp["name"].(string)),
-		Size:             types.Ptr(safeInt32Conversion(mp["count"].(int), 1)),
+		AdditionalLabels:      toAdditionalNodePoolLabels(mp),
+		AdditionalAnnotations: toAdditionalNodePoolAnnotations(mp),
+		Taints:                toClusterTaints(mp),
+		IsControlPlane:        controlPlane,
+		Labels:                labels,
+		Name:                  types.Ptr(mp["name"].(string)),
+		Size:                  types.Ptr(safeInt32Conversion(mp["count"].(int), 1)),
 		UpdateStrategy: &models.V1UpdateStrategy{
 			Type: getUpdateStrategy(mp),
 		},
@@ -765,6 +774,10 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
+
+	if _, ok := m["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(m["additional_annotations"]))
+	}
 
 	// Add CloudStack-specific fields
 	if val, ok := m["offering"]; ok {
@@ -1039,7 +1052,7 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 
 		// Flatten pool configuration (from V1MachinePoolBaseConfig embedded)
 		// Note: AdditionalLabels and Taints are now available in the GET response for CloudStack
-		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
