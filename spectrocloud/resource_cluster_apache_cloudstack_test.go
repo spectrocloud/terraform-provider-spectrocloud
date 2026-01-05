@@ -3,7 +3,10 @@ package spectrocloud
 import (
 	"testing"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestResourceMachinePoolApacheCloudStackHash(t *testing.T) {
@@ -361,4 +364,301 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideKubeadmEmptyString(t *te
 
 	// Empty string should be treated same as no override
 	assert.Equal(t, emptyOverrideHash, withoutOverrideHash, "Empty override_kubeadm_configuration should have same hash as no override")
+}
+
+func TestToMachinePoolCloudStackOverrideKubeadmConfiguration(t *testing.T) {
+	tests := []struct {
+		name                           string
+		input                          map[string]interface{}
+		expectOverrideKubeadmConfigSet bool
+		expectedValue                  string
+	}{
+		{
+			name: "Worker pool with override_kubeadm_configuration",
+			input: map[string]interface{}{
+				"name":                           "worker-pool",
+				"count":                          3,
+				"offering":                       "medium",
+				"control_plane":                  false,
+				"control_plane_as_worker":        false,
+				"node_repave_interval":           0,
+				"override_kubeadm_configuration": "kubeletExtraArgs:\n  node-labels: \"custom=value\"",
+			},
+			expectOverrideKubeadmConfigSet: true,
+			expectedValue:                  "kubeletExtraArgs:\n  node-labels: \"custom=value\"",
+		},
+		{
+			name: "Worker pool without override_kubeadm_configuration",
+			input: map[string]interface{}{
+				"name":                    "worker-pool",
+				"count":                   3,
+				"offering":                "medium",
+				"control_plane":           false,
+				"control_plane_as_worker": false,
+				"node_repave_interval":    0,
+			},
+			expectOverrideKubeadmConfigSet: false,
+			expectedValue:                  "",
+		},
+		{
+			name: "Worker pool with empty override_kubeadm_configuration",
+			input: map[string]interface{}{
+				"name":                           "worker-pool",
+				"count":                          3,
+				"offering":                       "medium",
+				"control_plane":                  false,
+				"control_plane_as_worker":        false,
+				"node_repave_interval":           0,
+				"override_kubeadm_configuration": "",
+			},
+			expectOverrideKubeadmConfigSet: false,
+			expectedValue:                  "",
+		},
+		{
+			name: "Control plane pool with override_kubeadm_configuration should be ignored",
+			input: map[string]interface{}{
+				"name":                           "control-plane-pool",
+				"count":                          3,
+				"offering":                       "large",
+				"control_plane":                  true,
+				"control_plane_as_worker":        false,
+				"node_repave_interval":           0,
+				"override_kubeadm_configuration": "kubeletExtraArgs:\n  node-labels: \"custom=value\"",
+			},
+			expectOverrideKubeadmConfigSet: false,
+			expectedValue:                  "",
+		},
+		{
+			name: "Worker pool with complex YAML override",
+			input: map[string]interface{}{
+				"name":                    "worker-pool",
+				"count":                   3,
+				"offering":                "medium",
+				"control_plane":           false,
+				"control_plane_as_worker": false,
+				"node_repave_interval":    0,
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  node-labels: "custom=value,env=prod"
+  max-pods: "110"
+preKubeadmCommands:
+  - echo 'Setting up node'
+  - sysctl -w net.ipv4.ip_forward=1
+postKubeadmCommands:
+  - echo 'Node setup complete'`,
+			},
+			expectOverrideKubeadmConfigSet: true,
+			expectedValue: `kubeletExtraArgs:
+  node-labels: "custom=value,env=prod"
+  max-pods: "110"
+preKubeadmCommands:
+  - echo 'Setting up node'
+  - sysctl -w net.ipv4.ip_forward=1
+postKubeadmCommands:
+  - echo 'Node setup complete'`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := toMachinePoolCloudStack(tt.input)
+			require.NoError(t, err, "toMachinePoolCloudStack should not return error")
+			require.NotNil(t, result, "Result should not be nil")
+			require.NotNil(t, result.PoolConfig, "PoolConfig should not be nil")
+
+			if tt.expectOverrideKubeadmConfigSet {
+				assert.Equal(t, tt.expectedValue, result.PoolConfig.OverrideKubeadmConfiguration,
+					"OverrideKubeadmConfiguration should match expected value")
+			} else {
+				assert.Empty(t, result.PoolConfig.OverrideKubeadmConfiguration,
+					"OverrideKubeadmConfiguration should be empty")
+			}
+		})
+	}
+}
+
+func TestFlattenMachinePoolConfigsApacheCloudStackOverrideKubeadmConfiguration(t *testing.T) {
+	tests := []struct {
+		name                           string
+		input                          []*models.V1CloudStackMachinePoolConfig
+		expectedPoolName               string
+		expectOverrideKubeadmConfigSet bool
+		expectedValue                  string
+	}{
+		{
+			name: "Worker pool with override_kubeadm_configuration",
+			input: []*models.V1CloudStackMachinePoolConfig{
+				{
+					V1MachinePoolBaseConfig: models.V1MachinePoolBaseConfig{
+						AdditionalLabels:             map[string]string{},
+						AdditionalAnnotations:        map[string]string{},
+						IsControlPlane:               types.Ptr(false),
+						Name:                         "worker-pool",
+						Size:                         3,
+						OverrideKubeadmConfiguration: "kubeletExtraArgs:\n  node-labels: \"custom=value\"",
+						UseControlPlaneAsWorker:      false,
+						UpdateStrategy:               &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+					},
+					V1CloudStackMachineConfig: models.V1CloudStackMachineConfig{
+						Offering: &models.V1CloudStackResource{Name: "medium"},
+					},
+				},
+			},
+			expectedPoolName:               "worker-pool",
+			expectOverrideKubeadmConfigSet: true,
+			expectedValue:                  "kubeletExtraArgs:\n  node-labels: \"custom=value\"",
+		},
+		{
+			name: "Worker pool without override_kubeadm_configuration",
+			input: []*models.V1CloudStackMachinePoolConfig{
+				{
+					V1MachinePoolBaseConfig: models.V1MachinePoolBaseConfig{
+						AdditionalLabels:             map[string]string{},
+						AdditionalAnnotations:        map[string]string{},
+						IsControlPlane:               types.Ptr(false),
+						Name:                         "worker-pool",
+						Size:                         3,
+						OverrideKubeadmConfiguration: "",
+						UseControlPlaneAsWorker:      false,
+						UpdateStrategy:               &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+					},
+					V1CloudStackMachineConfig: models.V1CloudStackMachineConfig{
+						Offering: &models.V1CloudStackResource{Name: "medium"},
+					},
+				},
+			},
+			expectedPoolName:               "worker-pool",
+			expectOverrideKubeadmConfigSet: false,
+			expectedValue:                  "",
+		},
+		{
+			name: "Control plane pool with override_kubeadm_configuration should not be set",
+			input: []*models.V1CloudStackMachinePoolConfig{
+				{
+					V1MachinePoolBaseConfig: models.V1MachinePoolBaseConfig{
+						AdditionalLabels:             map[string]string{},
+						AdditionalAnnotations:        map[string]string{},
+						IsControlPlane:               types.Ptr(true),
+						Name:                         "control-plane-pool",
+						Size:                         3,
+						OverrideKubeadmConfiguration: "kubeletExtraArgs:\n  node-labels: \"custom=value\"",
+						UseControlPlaneAsWorker:      false,
+						UpdateStrategy:               &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+					},
+					V1CloudStackMachineConfig: models.V1CloudStackMachineConfig{
+						Offering: &models.V1CloudStackResource{Name: "large"},
+					},
+				},
+			},
+			expectedPoolName:               "control-plane-pool",
+			expectOverrideKubeadmConfigSet: false,
+			expectedValue:                  "",
+		},
+		{
+			name: "Worker pool with complex YAML override",
+			input: []*models.V1CloudStackMachinePoolConfig{
+				{
+					V1MachinePoolBaseConfig: models.V1MachinePoolBaseConfig{
+						AdditionalLabels:      map[string]string{},
+						AdditionalAnnotations: map[string]string{},
+						IsControlPlane:        types.Ptr(false),
+						Name:                  "worker-pool",
+						Size:                  3,
+						OverrideKubeadmConfiguration: `kubeletExtraArgs:
+  node-labels: "env=prod"
+  max-pods: "110"
+preKubeadmCommands:
+  - echo 'Setup complete'`,
+						UseControlPlaneAsWorker: false,
+						UpdateStrategy:          &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+					},
+					V1CloudStackMachineConfig: models.V1CloudStackMachineConfig{
+						Offering: &models.V1CloudStackResource{Name: "medium"},
+					},
+				},
+			},
+			expectedPoolName:               "worker-pool",
+			expectOverrideKubeadmConfigSet: true,
+			expectedValue: `kubeletExtraArgs:
+  node-labels: "env=prod"
+  max-pods: "110"
+preKubeadmCommands:
+  - echo 'Setup complete'`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := flattenMachinePoolConfigsApacheCloudStack(tt.input)
+			require.NotNil(t, result, "Result should not be nil")
+			require.Len(t, result, 1, "Should have exactly one machine pool")
+
+			pool := result[0].(map[string]interface{})
+			assert.Equal(t, tt.expectedPoolName, pool["name"], "Pool name should match")
+
+			if tt.expectOverrideKubeadmConfigSet {
+				value, exists := pool["override_kubeadm_configuration"]
+				assert.True(t, exists, "override_kubeadm_configuration should exist in flattened data")
+				assert.Equal(t, tt.expectedValue, value, "override_kubeadm_configuration value should match")
+			} else {
+				_, exists := pool["override_kubeadm_configuration"]
+				assert.False(t, exists, "override_kubeadm_configuration should not exist in flattened data")
+			}
+		})
+	}
+}
+
+func TestOverrideKubeadmConfigurationRoundTrip(t *testing.T) {
+	// Test that data survives a round trip from Terraform -> API model -> Terraform
+	originalInput := map[string]interface{}{
+		"name":                    "worker-pool",
+		"count":                   3,
+		"offering":                "medium",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
+		"override_kubeadm_configuration": `kubeletExtraArgs:
+  node-labels: "env=production,tier=frontend"
+  max-pods: "110"
+preKubeadmCommands:
+  - echo 'Starting node setup'
+  - sysctl -w net.ipv4.ip_forward=1
+postKubeadmCommands:
+  - echo 'Node setup complete'
+  - systemctl restart kubelet`,
+	}
+
+	// Convert to API model (CREATE)
+	apiModel, err := toMachinePoolCloudStack(originalInput)
+	require.NoError(t, err)
+	require.NotNil(t, apiModel)
+	require.NotNil(t, apiModel.PoolConfig)
+
+	// Simulate API response (READ)
+	apiResponse := &models.V1CloudStackMachinePoolConfig{
+		V1MachinePoolBaseConfig: models.V1MachinePoolBaseConfig{
+			AdditionalLabels:             map[string]string{},
+			AdditionalAnnotations:        map[string]string{},
+			IsControlPlane:               types.Ptr(false),
+			Name:                         "worker-pool",
+			Size:                         3,
+			OverrideKubeadmConfiguration: apiModel.PoolConfig.OverrideKubeadmConfiguration,
+			UseControlPlaneAsWorker:      false,
+			UpdateStrategy:               &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+		},
+		V1CloudStackMachineConfig: models.V1CloudStackMachineConfig{
+			Offering: &models.V1CloudStackResource{Name: "medium"},
+		},
+	}
+
+	// Flatten back to Terraform state (READ)
+	flattened := flattenMachinePoolConfigsApacheCloudStack([]*models.V1CloudStackMachinePoolConfig{apiResponse})
+	require.Len(t, flattened, 1)
+
+	pool := flattened[0].(map[string]interface{})
+	flattenedValue, exists := pool["override_kubeadm_configuration"]
+	require.True(t, exists, "override_kubeadm_configuration should exist after round trip")
+
+	// Verify the value matches the original
+	assert.Equal(t, originalInput["override_kubeadm_configuration"], flattenedValue,
+		"override_kubeadm_configuration should match original after round trip")
 }

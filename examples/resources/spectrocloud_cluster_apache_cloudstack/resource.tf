@@ -175,6 +175,39 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
       "role"    = "worker"
       "purpose" = "workload-execution"
     }
+
+    # Optional: Additional annotations for the worker pool nodes
+    # additional_annotations = {
+    #   "custom.io/annotation" = "value"
+    #   "company.com/owner"    = "platform-team"
+    # }
+
+    # Optional: Override kubeadm configuration for worker nodes only
+    # This YAML config can override kubeletExtraArgs, preKubeadmCommands, and postKubeadmCommands
+    # override_kubeadm_configuration = <<-EOT
+    #   kubeletExtraArgs:
+    #     node-labels: "env=production,tier=frontend"
+    #     max-pods: "110"
+    #   preKubeadmCommands:
+    #     - echo 'Starting node setup'
+    #     - sysctl -w net.ipv4.ip_forward=1
+    #   postKubeadmCommands:
+    #     - echo 'Node setup complete'
+    #     - systemctl restart kubelet
+    # EOT
+
+    # Optional: Rolling update strategy (default: RollingUpdateScaleOut)
+    # rolling_update_strategy {
+    #   type            = "OverrideScaling"        # Options: RollingUpdateScaleOut, RollingUpdateScaleIn, OverrideScaling
+    #   max_surge       = "25%"                    # Max extra nodes during update (integer or percentage)
+    #   max_unavailable = "1"                      # Max unavailable nodes during update (integer or percentage)
+    # }
+
+    # Deprecated: Use rolling_update_strategy instead
+    # update_strategy = "RollingUpdateScaleOut"
+
+    # Optional: Node repave interval in days (0 = disabled)
+    # node_repave_interval = 90
   }
 
   # Optional: Additional Worker Pool with Minimum and Maximum Scaling
@@ -193,6 +226,22 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   #   additional_labels = {
   #     "role"     = "worker"
   #     "scalable" = "true"
+  #   }
+  #
+  #   additional_annotations = {
+  #     "cluster-autoscaler.kubernetes.io/enabled" = "true"
+  #   }
+  #
+  #   # Optional: Override kubeadm configuration for this pool
+  #   override_kubeadm_configuration = <<-EOT
+  #     kubeletExtraArgs:
+  #       node-labels: "pool=scalable,priority=low"
+  #   EOT
+  #
+  #   rolling_update_strategy {
+  #     type            = "RollingUpdateScaleOut"
+  #     max_surge       = "1"
+  #     max_unavailable = "0"
   #   }
   # }
 
