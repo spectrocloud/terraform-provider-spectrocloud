@@ -190,7 +190,23 @@ func dataSourceClusterProfileRead(_ context.Context, d *schema.ResourceData, m i
 
 func GetDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEntity, diag.Diagnostics, bool) {
 	diagPacks := make([]*models.V1PackManifestEntity, 0)
-	for _, pack := range d.Get("pack").([]interface{}) {
+	// Handle both TypeSet and TypeList for backward compatibility
+	packRaw := d.Get("pack")
+	var packList []interface{}
+	if packSet, ok := packRaw.(*schema.Set); ok {
+		packList = packSet.List()
+	} else if packListRaw, ok := packRaw.([]interface{}); ok {
+		packList = packListRaw // Backward compatibility (TypeList from v2)
+	} else {
+		// Fallback: try to convert directly
+		if packListRaw, ok := packRaw.([]interface{}); ok {
+			packList = packListRaw
+		} else {
+			return nil, diag.Errorf("unexpected type for pack: %T", packRaw), true
+		}
+	}
+
+	for _, pack := range packList {
 		if p, e := toClusterProfilePackCreate(pack); e != nil {
 			return nil, diag.FromErr(err), true
 		} else {
