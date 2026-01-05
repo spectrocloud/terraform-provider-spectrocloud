@@ -71,6 +71,7 @@ func resourceClusterMaas() *schema.Resource {
 			},
 			"cluster_profile":  schemas.ClusterProfileSchema(),
 			"cluster_template": schemas.ClusterTemplateSchema(),
+			"cluster_type":     schemas.ClusterTypeSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -528,6 +529,12 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+
+	// Validate that cluster_type is not being modified (it's a create-only field)
+	if err := ValidateClusterTypeUpdate(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -653,6 +660,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
 			Profiles:        profiles,
 			ClusterTemplate: toClusterTemplateReference(d),
+			ClusterType:     toClusterType(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
 				Domain:      &DomainVal,

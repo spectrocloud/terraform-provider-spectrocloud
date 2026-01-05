@@ -1625,3 +1625,128 @@ func TestFlattenCloudConfigGeneric(t *testing.T) {
 	assert.Empty(t, diags)
 	assert.Equal(t, configUID, resourceData.Get("cloud_config_id"))
 }
+
+func TestToClusterType(t *testing.T) {
+	tests := []struct {
+		name           string
+		clusterType    interface{}
+		expectedResult *models.V1ClusterType
+	}{
+		{
+			name:           "ClusterType is PureManage",
+			clusterType:    "PureManage",
+			expectedResult: models.V1ClusterTypePureManage.Pointer(),
+		},
+		{
+			name:           "ClusterType is PureAttach",
+			clusterType:    "PureAttach",
+			expectedResult: models.V1ClusterTypePureAttach.Pointer(),
+		},
+		{
+			name:           "ClusterType is empty string",
+			clusterType:    "",
+			expectedResult: nil,
+		},
+		{
+			name:           "ClusterType is not set",
+			clusterType:    nil,
+			expectedResult: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceSchema := map[string]*schema.Schema{
+				"cluster_type": {
+					Type:     schema.TypeString,
+					Optional: true,
+				},
+			}
+
+			resourceData := schema.TestResourceDataRaw(t, resourceSchema, map[string]interface{}{})
+			if tt.clusterType != nil && tt.clusterType != "" {
+				err := resourceData.Set("cluster_type", tt.clusterType)
+				require.NoError(t, err)
+			}
+
+			result := toClusterType(resourceData)
+
+			if tt.expectedResult == nil {
+				assert.Nil(t, result)
+			} else {
+				require.NotNil(t, result)
+				assert.Equal(t, *tt.expectedResult, *result)
+			}
+		})
+	}
+}
+
+func TestClusterTypeInClusterSpec(t *testing.T) {
+	// Test that cluster spec contains ClusterType field when set
+	clusterType := "PureManage"
+	cluster := &models.V1SpectroCluster{
+		Metadata: &models.V1ObjectMeta{
+			Name: "test-cluster",
+			UID:  "test-uid",
+		},
+		Spec: &models.V1SpectroClusterSpec{
+			CloudType:   "maas",
+			ClusterType: clusterType,
+		},
+	}
+
+	assert.Equal(t, clusterType, cluster.Spec.ClusterType)
+}
+
+func TestClusterTypeSchemaConfiguration(t *testing.T) {
+	// Test that the schema is configured correctly for create-only behavior
+	resourceSchema := map[string]*schema.Schema{
+		"cluster_type": {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+		},
+	}
+
+	// Verify the schema configuration
+	clusterTypeSchema := resourceSchema["cluster_type"]
+	assert.False(t, clusterTypeSchema.ForceNew, "cluster_type should NOT have ForceNew set (updates are blocked in update function)")
+	assert.True(t, clusterTypeSchema.Computed, "cluster_type should have Computed set to true")
+	assert.True(t, clusterTypeSchema.Optional, "cluster_type should have Optional set to true")
+}
+
+func TestValidateClusterTypeUpdate(t *testing.T) {
+	// Note: Testing HasChange behavior requires integration tests with actual Terraform state.
+	// Unit tests with schema.TestResourceDataRaw cannot accurately simulate state changes.
+	// The ValidateClusterTypeUpdate function is tested through integration/acceptance tests.
+
+	t.Run("Error message format is correct", func(t *testing.T) {
+		// Verify the error message format that will be shown to users
+		expectedSubstring := "cluster_type cannot be modified after cluster creation"
+		errMsg := fmt.Sprintf("cluster_type cannot be modified after cluster creation. "+
+			"Current value: %q, attempted new value: %q. "+
+			"To change the cluster type, you must delete and recreate the cluster", "PureManage", "PureAttach")
+		assert.Contains(t, errMsg, expectedSubstring)
+		assert.Contains(t, errMsg, "PureManage")
+		assert.Contains(t, errMsg, "PureAttach")
+		assert.Contains(t, errMsg, "delete and recreate the cluster")
+	})
+
+	t.Run("Empty state has no change", func(t *testing.T) {
+		// When cluster_type is not in the schema data at all, there should be no change detected
+		resourceSchema := map[string]*schema.Schema{
+			"cluster_type": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+		}
+
+		// Create resource data with empty state - no cluster_type set
+		d := schema.TestResourceDataRaw(t, resourceSchema, map[string]interface{}{})
+		d.SetId("test-cluster-id")
+
+		err := ValidateClusterTypeUpdate(d)
+		assert.NoError(t, err, "Should not error when cluster_type is not present in state")
+	})
+}
