@@ -565,9 +565,10 @@ Optional:
 - `network` (Block List) Network configuration for the machine pool instances. (see [below for nested schema](#nestedblock--machine_pool--network))
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `rolling_update_strategy` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--rolling_update_strategy))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `template` (Block List, Max: 1) Apache CloudStack template override for this machine pool. If not specified, inherits cluster default from profile. (see [below for nested schema](#nestedblock--machine_pool--template))
-- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
+- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`. This field will be deprecated in the future. Use `rolling_update_strategy` instead.
 
 Read-Only:
 
@@ -592,6 +593,16 @@ Required:
 
 - `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
 - `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
+
+
+<a id="nestedblock--machine_pool--rolling_update_strategy"></a>
+### Nested Schema for `machine_pool.rolling_update_strategy`
+
+Optional:
+
+- `max_surge` (String) Max extra nodes during rolling update. Integer or percentage (e.g., '1' or '20%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.
+- `max_unavailable` (String) Max unavailable nodes during rolling update. Integer or percentage (e.g., '0' or '10%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.
+- `type` (String) Type of rolling update strategy. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`.
 
 
 <a id="nestedblock--machine_pool--taints"></a>

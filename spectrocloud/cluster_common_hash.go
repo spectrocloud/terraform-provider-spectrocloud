@@ -51,8 +51,22 @@ func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
 	if val, ok := nodePool["count"]; ok {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}
+	// Legacy update_strategy field
 	if val, ok := nodePool["update_strategy"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	// New rolling_update_strategy field with maxSurge and maxUnavailable
+	if rollingUpdateList, ok := nodePool["rolling_update_strategy"].([]interface{}); ok && len(rollingUpdateList) > 0 {
+		rollingUpdate := rollingUpdateList[0].(map[string]interface{})
+		if strategyType, ok := rollingUpdate["type"].(string); ok {
+			buf.WriteString(fmt.Sprintf("rolling_type:%s-", strategyType))
+		}
+		if maxSurge, ok := rollingUpdate["max_surge"].(string); ok && maxSurge != "" {
+			buf.WriteString(fmt.Sprintf("max_surge:%s-", maxSurge))
+		}
+		if maxUnavailable, ok := rollingUpdate["max_unavailable"].(string); ok && maxUnavailable != "" {
+			buf.WriteString(fmt.Sprintf("max_unavailable:%s-", maxUnavailable))
+		}
 	}
 	if val, ok := nodePool["node_repave_interval"]; ok {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))

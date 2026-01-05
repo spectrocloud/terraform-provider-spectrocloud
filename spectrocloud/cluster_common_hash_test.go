@@ -38,6 +38,103 @@ func TestCommonHash(t *testing.T) {
 	assert.Equal(t, expectedHash, hash)
 }
 
+func TestCommonHashWithRollingUpdateStrategy(t *testing.T) {
+	nodePool := map[string]interface{}{
+		"additional_labels": map[string]interface{}{
+			"label1": "value1",
+		},
+		"taints": []interface{}{
+			map[string]interface{}{
+				"key":    "taint1",
+				"value":  "true",
+				"effect": "NoSchedule",
+			},
+		},
+		"control_plane":           true,
+		"control_plane_as_worker": false,
+		"name":                    "test-pool",
+		"count":                   3,
+		"rolling_update_strategy": []interface{}{
+			map[string]interface{}{
+				"type":            "OverrideScaling",
+				"max_surge":       "1",
+				"max_unavailable": "0",
+			},
+		},
+		"node_repave_interval": 10,
+	}
+
+	expectedHash := "label1-value1effect-NoSchedulekey-taint1value-truetrue-false-test-pool-3-rolling_type:OverrideScaling-max_surge:1-max_unavailable:0-10-"
+	hash := CommonHash(nodePool).String()
+
+	assert.Equal(t, expectedHash, hash)
+}
+
+func TestCommonHashRollingUpdateStrategyChangeDetection(t *testing.T) {
+	// Base node pool with legacy update_strategy
+	baseLegacy := map[string]interface{}{
+		"name":            "test-pool",
+		"count":           3,
+		"update_strategy": "RollingUpdateScaleOut",
+	}
+
+	// Node pool with rolling_update_strategy
+	withRolling := map[string]interface{}{
+		"name":  "test-pool",
+		"count": 3,
+		"rolling_update_strategy": []interface{}{
+			map[string]interface{}{
+				"type":            "OverrideScaling",
+				"max_surge":       "1",
+				"max_unavailable": "0",
+			},
+		},
+	}
+
+	// Node pool with different maxSurge
+	differentMaxSurge := map[string]interface{}{
+		"name":  "test-pool",
+		"count": 3,
+		"rolling_update_strategy": []interface{}{
+			map[string]interface{}{
+				"type":            "OverrideScaling",
+				"max_surge":       "2",
+				"max_unavailable": "0",
+			},
+		},
+	}
+
+	// Node pool with different maxUnavailable
+	differentMaxUnavailable := map[string]interface{}{
+		"name":  "test-pool",
+		"count": 3,
+		"rolling_update_strategy": []interface{}{
+			map[string]interface{}{
+				"type":            "OverrideScaling",
+				"max_surge":       "1",
+				"max_unavailable": "1",
+			},
+		},
+	}
+
+	baseLegacyHash := CommonHash(baseLegacy).String()
+	withRollingHash := CommonHash(withRolling).String()
+	differentMaxSurgeHash := CommonHash(differentMaxSurge).String()
+	differentMaxUnavailableHash := CommonHash(differentMaxUnavailable).String()
+
+	// Hash should be different when switching to rolling_update_strategy
+	assert.NotEqual(t, baseLegacyHash, withRollingHash, "Adding rolling_update_strategy should change hash")
+
+	// Hash should be different when maxSurge changes
+	assert.NotEqual(t, withRollingHash, differentMaxSurgeHash, "Changing max_surge should change hash")
+
+	// Hash should be different when maxUnavailable changes
+	assert.NotEqual(t, withRollingHash, differentMaxUnavailableHash, "Changing max_unavailable should change hash")
+
+	// Hash should be different between different maxSurge and maxUnavailable
+	assert.NotEqual(t, differentMaxSurgeHash, differentMaxUnavailableHash, "Different max values should produce different hashes")
+}
+
 func TestResourceMachinePoolAzureHash(t *testing.T) {
 	nodePool := map[string]interface{}{
 		"additional_labels": map[string]interface{}{
