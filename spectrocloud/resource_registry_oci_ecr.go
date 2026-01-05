@@ -451,7 +451,6 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 			if isError {
 				return diagnostics
 			}
-
 		}
 	}
 
