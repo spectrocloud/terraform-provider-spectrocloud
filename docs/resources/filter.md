@@ -77,7 +77,7 @@ Required:
 Required:
 
 - `conjunction` (String) Conjunction operation of the filter group. Valid values are 'and' and 'or'.
-- `filters` (Block List, Min: 1) List of filters in the filter group. (see [below for nested schema](#nestedblock--spec--filter_group--filters))
+- `filters` (Block Set, Min: 1) List of filters in the filter group. (see [below for nested schema](#nestedblock--spec--filter_group--filters))
 
 <a id="nestedblock--spec--filter_group--filters"></a>
 ### Nested Schema for `spec.filter_group.filters`
