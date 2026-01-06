@@ -179,6 +179,12 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 		return err
 	}
 
+	if cluster.Spec.ClusterConfig.Timezone != "" {
+		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+			return err
+		}
+	}
+
 	if cluster.Metadata.Annotations["description"] != "" {
 		if err := d.Set("description", cluster.Metadata.Annotations["description"]); err != nil {
 			return err
@@ -293,6 +299,12 @@ func flattenCommonAttributeForCustomClusterImport(c *client.V1Client, d *schema.
 	if cluster.Status.SpcApply != nil {
 		err = d.Set("apply_setting", cluster.Status.SpcApply.ActionType)
 		if err != nil {
+			return err
+		}
+	}
+
+	if cluster.Spec.ClusterConfig.Timezone != "" {
+		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
 			return err
 		}
 	}
