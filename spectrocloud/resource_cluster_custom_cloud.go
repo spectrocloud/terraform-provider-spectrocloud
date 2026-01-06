@@ -83,6 +83,7 @@ func resourceClusterCustomCloud() *schema.Resource {
 			},
 			"cluster_profile":  schemas.ClusterProfileSchema(),
 			"cluster_template": schemas.ClusterTemplateSchema(),
+			"cluster_type":     schemas.ClusterTypeSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -356,6 +357,11 @@ func resourceClusterCustomCloudUpdate(ctx context.Context, d *schema.ResourceDat
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
 
+	// Validate that cluster_type is not being modified (it's a create-only field)
+	if err := ValidateClusterTypeUpdate(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	//clusterContext := d.Get("context").(string)
 	cloudType := d.Get("cloud").(string)
@@ -489,6 +495,7 @@ func toCustomCloudCluster(c *client.V1Client, d *schema.ResourceData) (*models.V
 			Machinepoolconfig: machinePoolConfigs,
 			Profiles:          profiles,
 			ClusterTemplate:   toClusterTemplateReference(d),
+			ClusterType:       toClusterType(d),
 		},
 	}
 
@@ -1812,6 +1819,7 @@ func resourceClusterCustomCloudResourceV2() *schema.Resource {
 			},
 			"cluster_profile":  schemas.ClusterProfileSchema(),
 			"cluster_template": schemas.ClusterTemplateSchema(),
+			"cluster_type":     schemas.ClusterTypeSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
