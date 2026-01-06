@@ -352,12 +352,11 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"update_strategy": {
-							Type:          schema.TypeString,
-							Optional:      true,
-							Default:       "RollingUpdateScaleOut",
-							ConflictsWith: []string{"rolling_update_strategy"},
-							Description:   "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`. This field will be deprecated in the future. Use `rolling_update_strategy` instead.",
-							ValidateFunc:  validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`. This field is deprecated. Use `rolling_update_strategy` instead. If both are specified, `rolling_update_strategy` takes precedence.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
 						"rolling_update_strategy": schemas.RollingUpdateSchema(),
 						"override_kubeadm_configuration": {

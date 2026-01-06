@@ -804,7 +804,7 @@ Optional:
 - `rolling_update_strategy` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--rolling_update_strategy))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `template` (Block List, Max: 1) Apache CloudStack template override for this machine pool. If not specified, inherits cluster default. (see [below for nested schema](#nestedblock--machine_pool--template))
-- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`. This field will be deprecated in the future. Use `rolling_update_strategy` instead.
+- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`. This field is deprecated. Use `rolling_update_strategy` instead. If both are specified, `rolling_update_strategy` takes precedence.
 
 Read-Only:
 
