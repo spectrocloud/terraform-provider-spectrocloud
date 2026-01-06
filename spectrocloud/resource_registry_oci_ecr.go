@@ -651,11 +651,11 @@ func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid str
 				errorDetail += "\n\nPlease check the registry configuration (endpoint, credentials) and try again."
 
 				diags = append(diags, diag.Diagnostic{
-					Severity: diag.Error,
+					Severity: diag.Warning,
 					Summary:  "OCI registry sync failed",
 					Detail:   errorDetail,
 				})
-				return diags, true
+				return diags, false
 			}
 		}
 
