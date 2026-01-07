@@ -498,10 +498,12 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
-		if machinePool.UpdateStrategy != nil {
+		if machinePool.UpdateStrategy != nil && machinePool.UpdateStrategy.Type != "" {
 			oi["update_strategy"] = machinePool.UpdateStrategy.Type
 			// Flatten override_Scaling if using OverrideScaling strategy
 			flattenOverrideScaling(machinePool.UpdateStrategy, oi)
+		} else {
+			oi["update_strategy"] = "RollingUpdateScaleOut"
 		}
 
 		// Flatten override_kubeadm_configuration (worker pools only)
