@@ -260,9 +260,10 @@ func resourceClusterMaas() *schema.Resource {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn", "OverrideScaling"}, false),
 						},
+						"override_scaling": schemas.OverrideScalingSchema(),
 						"override_kubeadm_configuration": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -375,6 +376,11 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+
+	// Validate override_Scaling configuration
+	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+		return diag.FromErr(err)
+	}
 
 	cluster, err := toMaasCluster(c, d)
 	if err != nil {
@@ -503,7 +509,11 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
-		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+		if machinePool.UpdateStrategy != nil {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+			// Flatten override_Scaling if using OverrideScaling strategy
+			flattenOverrideScaling(machinePool.UpdateStrategy, oi)
+		}
 
 		// Flatten override_kubeadm_configuration (worker pools only)
 		if !machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
@@ -573,6 +583,11 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 	if d.HasChange("machine_pool") {
+		// Validate override_Scaling configuration
+		if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+			return diag.FromErr(err)
+		}
+
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
 			oraw = new(schema.Set)
@@ -747,16 +762,14 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 			UseLxdVM: m["use_lxd_vm"].(bool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels:      toAdditionalNodePoolLabels(m),
-			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),
-			Taints:                toClusterTaints(m),
-			IsControlPlane:        controlPlane,
-			Labels:                labels,
-			Name:                  types.Ptr(m["name"].(string)),
-			Size:                  types.Ptr(SafeInt32(m["count"].(int))),
-			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: getUpdateStrategy(m),
-			},
+			AdditionalLabels:        toAdditionalNodePoolLabels(m),
+			AdditionalAnnotations:   toAdditionalNodePoolAnnotations(m),
+			Taints:                  toClusterTaints(m),
+			IsControlPlane:          controlPlane,
+			Labels:                  labels,
+			Name:                    types.Ptr(m["name"].(string)),
+			Size:                    types.Ptr(SafeInt32(m["count"].(int))),
+			UpdateStrategy:          toUpdateStrategy(m),
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 			MinSize:                 min,
 			MaxSize:                 max,

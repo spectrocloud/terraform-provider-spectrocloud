@@ -171,6 +171,17 @@ func resourceMachinePoolAksHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 
+	// Hash override_scaling
+	if overrideScaling, ok := nodePool["override_scaling"].([]interface{}); ok && len(overrideScaling) > 0 {
+		scalingConfig := overrideScaling[0].(map[string]interface{})
+		if maxSurge, ok := scalingConfig["max_surge"].(string); ok && maxSurge != "" {
+			fmt.Fprintf(&buf, "max_surge:%s-", maxSurge)
+		}
+		if maxUnavailable, ok := scalingConfig["max_unavailable"].(string); ok && maxUnavailable != "" {
+			fmt.Fprintf(&buf, "max_unavailable:%s-", maxUnavailable)
+		}
+	}
+
 	// Min and Max for autoscaling
 	if nodePool["min"] != nil {
 		buf.WriteString(fmt.Sprintf("%d-", nodePool["min"].(int)))
@@ -378,6 +389,17 @@ func resourceMachinePoolGkeHash(v interface{}) int {
 	// Update strategy
 	if val, ok := nodePool["update_strategy"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+
+	// Hash override_scaling
+	if overrideScaling, ok := nodePool["override_scaling"].([]interface{}); ok && len(overrideScaling) > 0 {
+		scalingConfig := overrideScaling[0].(map[string]interface{})
+		if maxSurge, ok := scalingConfig["max_surge"].(string); ok && maxSurge != "" {
+			fmt.Fprintf(&buf, "max_surge:%s-", maxSurge)
+		}
+		if maxUnavailable, ok := scalingConfig["max_unavailable"].(string); ok && maxUnavailable != "" {
+			fmt.Fprintf(&buf, "max_unavailable:%s-", maxUnavailable)
+		}
 	}
 
 	// Node configuration (list of maps)

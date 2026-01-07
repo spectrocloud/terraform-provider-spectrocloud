@@ -197,8 +197,9 @@ Optional:
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
+- `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
-- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
+- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.
 
 <a id="nestedblock--machine_pool--eks_launch_template"></a>
 ### Nested Schema for `machine_pool.eks_launch_template`
@@ -219,6 +220,15 @@ Required:
 
 - `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
 - `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
+
+
+<a id="nestedblock--machine_pool--override_scaling"></a>
+### Nested Schema for `machine_pool.override_scaling`
+
+Optional:
+
+- `max_surge` (String) Max extra nodes during rolling update. Integer or percentage (e.g., '1' or '20%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.
+- `max_unavailable` (String) Max unavailable nodes during rolling update. Integer or percentage (e.g., '0' or '10%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.
 
 
 <a id="nestedblock--machine_pool--taints"></a>
