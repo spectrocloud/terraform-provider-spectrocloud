@@ -52,6 +52,7 @@ func TestFlattenMachinePoolConfigsAws(t *testing.T) {
 					"control_plane":              true,
 					"control_plane_as_worker":    false,
 					"additional_labels":          map[string]any{},
+					"additional_annotations":     map[string]any{},
 					"count":                      3,
 					"min":                        1,
 					"max":                        5,
