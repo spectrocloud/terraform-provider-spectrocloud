@@ -1,11 +1,12 @@
 package spectrocloud
 
 import (
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestToMachinePoolAws(t *testing.T) {
@@ -38,14 +39,15 @@ func TestToMachinePoolAws(t *testing.T) {
 					Subnets:        []*models.V1AwsSubnetEntity{},
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
-					Name:             types.Ptr("control-plane-pool"),
-					Size:             types.Ptr(int32(3)),
-					MinSize:          3,
-					MaxSize:          3,
-					IsControlPlane:   true,
-					Labels:           []string{"control-plane"},
-					UpdateStrategy:   &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
-					AdditionalLabels: map[string]string{},
+					Name:                  types.Ptr("control-plane-pool"),
+					Size:                  types.Ptr(int32(3)),
+					MinSize:               3,
+					MaxSize:               3,
+					IsControlPlane:        true,
+					Labels:                []string{"control-plane"},
+					UpdateStrategy:        &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+					AdditionalLabels:      map[string]string{},
+					AdditionalAnnotations: map[string]string{},
 				},
 			},
 			expectedErr: false,
@@ -82,15 +84,16 @@ func TestToMachinePoolAws(t *testing.T) {
 					},
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
-					Name:               types.Ptr("worker-pool"),
-					Size:               types.Ptr(int32(5)),
-					MinSize:            5,
-					MaxSize:            5,
-					IsControlPlane:     false,
-					Labels:             []string{"worker"},
-					NodeRepaveInterval: 10,
-					UpdateStrategy:     &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
-					AdditionalLabels:   map[string]string{},
+					Name:                  types.Ptr("worker-pool"),
+					Size:                  types.Ptr(int32(5)),
+					MinSize:               5,
+					MaxSize:               5,
+					IsControlPlane:        false,
+					Labels:                []string{"worker"},
+					NodeRepaveInterval:    10,
+					UpdateStrategy:        &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+					AdditionalLabels:      map[string]string{},
+					AdditionalAnnotations: map[string]string{},
 				},
 			},
 			expectedErr: false,

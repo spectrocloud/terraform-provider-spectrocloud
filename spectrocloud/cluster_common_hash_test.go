@@ -38,6 +38,103 @@ func TestCommonHash(t *testing.T) {
 	assert.Equal(t, expectedHash, hash)
 }
 
+func TestCommonHashWithRollingUpdateStrategy(t *testing.T) {
+	nodePool := map[string]interface{}{
+		"additional_labels": map[string]interface{}{
+			"label1": "value1",
+		},
+		"taints": []interface{}{
+			map[string]interface{}{
+				"key":    "taint1",
+				"value":  "true",
+				"effect": "NoSchedule",
+			},
+		},
+		"control_plane":           true,
+		"control_plane_as_worker": false,
+		"name":                    "test-pool",
+		"count":                   3,
+		"update_strategy":         "OverrideScaling",
+		"override_scaling": []interface{}{
+			map[string]interface{}{
+				"max_surge":       "1",
+				"max_unavailable": "0",
+			},
+		},
+		"node_repave_interval": 10,
+	}
+
+	expectedHash := "label1-value1effect-NoSchedulekey-taint1value-truetrue-false-test-pool-3-OverrideScaling-max_surge:1-max_unavailable:0-10-"
+	hash := CommonHash(nodePool).String()
+
+	assert.Equal(t, expectedHash, hash)
+}
+
+func TestCommonHashRollingUpdateStrategyChangeDetection(t *testing.T) {
+	// Base node pool with legacy update_strategy
+	baseLegacy := map[string]interface{}{
+		"name":            "test-pool",
+		"count":           3,
+		"update_strategy": "RollingUpdateScaleOut",
+	}
+
+	// Node pool with override_scaling
+	withOverrideScaling := map[string]interface{}{
+		"name":            "test-pool",
+		"count":           3,
+		"update_strategy": "OverrideScaling",
+		"override_scaling": []interface{}{
+			map[string]interface{}{
+				"max_surge":       "1",
+				"max_unavailable": "0",
+			},
+		},
+	}
+
+	// Node pool with different maxSurge
+	differentMaxSurge := map[string]interface{}{
+		"name":            "test-pool",
+		"count":           3,
+		"update_strategy": "OverrideScaling",
+		"override_scaling": []interface{}{
+			map[string]interface{}{
+				"max_surge":       "2",
+				"max_unavailable": "0",
+			},
+		},
+	}
+
+	// Node pool with different maxUnavailable
+	differentMaxUnavailable := map[string]interface{}{
+		"name":            "test-pool",
+		"count":           3,
+		"update_strategy": "OverrideScaling",
+		"override_scaling": []interface{}{
+			map[string]interface{}{
+				"max_surge":       "1",
+				"max_unavailable": "1",
+			},
+		},
+	}
+
+	baseLegacyHash := CommonHash(baseLegacy).String()
+	withOverrideScalingHash := CommonHash(withOverrideScaling).String()
+	differentMaxSurgeHash := CommonHash(differentMaxSurge).String()
+	differentMaxUnavailableHash := CommonHash(differentMaxUnavailable).String()
+
+	// Hash should be different when switching to override_scaling
+	assert.NotEqual(t, baseLegacyHash, withOverrideScalingHash, "Adding override_scaling should change hash")
+
+	// Hash should be different when maxSurge changes
+	assert.NotEqual(t, withOverrideScalingHash, differentMaxSurgeHash, "Changing max_surge should change hash")
+
+	// Hash should be different when maxUnavailable changes
+	assert.NotEqual(t, withOverrideScalingHash, differentMaxUnavailableHash, "Changing max_unavailable should change hash")
+
+	// Hash should be different between different maxSurge and maxUnavailable
+	assert.NotEqual(t, differentMaxSurgeHash, differentMaxUnavailableHash, "Different max values should produce different hashes")
+}
+
 func TestResourceMachinePoolAzureHash(t *testing.T) {
 	nodePool := map[string]interface{}{
 		"additional_labels": map[string]interface{}{
@@ -1411,4 +1508,652 @@ spec:
 
 	assert.Equal(t, hash1, hash2, "YAML with extra spaces should produce same hash")
 	assert.Equal(t, hash1, hash3, "YAML with different indentation should produce same hash")
+}
+
+// TestHashFunctionsWithAdditionalAnnotations tests that all hash functions correctly detect changes
+// to additional_annotations field
+func TestHashFunctionsWithAdditionalAnnotations(t *testing.T) {
+	testCases := []struct {
+		name            string
+		hashFunc        func(interface{}) int
+		baseInput       map[string]interface{}
+		withAnnotations map[string]interface{}
+	}{
+		{
+			name:     "Azure hash with annotations",
+			hashFunc: resourceMachinePoolAzureHash,
+			baseInput: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"os_type":       "Linux",
+			},
+			withAnnotations: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"os_type":       "Linux",
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation": "value",
+				},
+			},
+		},
+		{
+			name:     "GCP hash with annotations",
+			hashFunc: resourceMachinePoolGcpHash,
+			baseInput: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+			},
+			withAnnotations: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation": "value",
+				},
+			},
+		},
+		{
+			name:     "AWS hash with annotations",
+			hashFunc: resourceMachinePoolAwsHash,
+			baseInput: map[string]interface{}{
+				"instance_type": "t2.micro",
+				"capacity_type": "ON_DEMAND",
+				"max_price":     "0.03",
+				"azs":           schema.NewSet(schema.HashString, []interface{}{"us-east-1a"}),
+				"az_subnets":    map[string]interface{}{"us-east-1a": "subnet-1"},
+			},
+			withAnnotations: map[string]interface{}{
+				"instance_type": "t2.micro",
+				"capacity_type": "ON_DEMAND",
+				"max_price":     "0.03",
+				"azs":           schema.NewSet(schema.HashString, []interface{}{"us-east-1a"}),
+				"az_subnets":    map[string]interface{}{"us-east-1a": "subnet-1"},
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation": "value",
+				},
+			},
+		},
+		{
+			name:     "vSphere hash with annotations",
+			hashFunc: resourceMachinePoolVsphereHash,
+			baseInput: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"cpu":          2,
+						"disk_size_gb": 50,
+						"memory_mb":    4096,
+					},
+				},
+			},
+			withAnnotations: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"cpu":          2,
+						"disk_size_gb": 50,
+						"memory_mb":    4096,
+					},
+				},
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation": "value",
+				},
+			},
+		},
+		{
+			name:     "MAAS hash with annotations",
+			hashFunc: resourceMachinePoolMaasHash,
+			baseInput: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"min_cpu":       2,
+						"min_memory_mb": 4096,
+					},
+				},
+			},
+			withAnnotations: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"min_cpu":       2,
+						"min_memory_mb": 4096,
+					},
+				},
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation": "value",
+				},
+			},
+		},
+		{
+			name:     "Edge Native hash with annotations",
+			hashFunc: resourceMachinePoolEdgeNativeHash,
+			baseInput: map[string]interface{}{
+				"edge_host": []interface{}{
+					map[string]interface{}{
+						"host_name": "host1",
+						"host_uid":  "uid1",
+					},
+				},
+			},
+			withAnnotations: map[string]interface{}{
+				"edge_host": []interface{}{
+					map[string]interface{}{
+						"host_name": "host1",
+						"host_uid":  "uid1",
+					},
+				},
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation": "value",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			baseHash := tc.hashFunc(tc.baseInput)
+			annotatedHash := tc.hashFunc(tc.withAnnotations)
+
+			assert.NotEqual(t, baseHash, annotatedHash,
+				"Hash should change when additional_annotations are added")
+		})
+	}
+}
+
+// TestHashFunctionsWithOverrideKubeadmConfiguration tests that all hash functions correctly detect
+// changes to override_kubeadm_configuration field
+func TestHashFunctionsWithOverrideKubeadmConfiguration(t *testing.T) {
+	testCases := []struct {
+		name         string
+		hashFunc     func(interface{}) int
+		baseInput    map[string]interface{}
+		withOverride map[string]interface{}
+	}{
+		{
+			name:     "Azure hash with override_kubeadm_configuration",
+			hashFunc: resourceMachinePoolAzureHash,
+			baseInput: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"os_type":       "Linux",
+			},
+			withOverride: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"os_type":       "Linux",
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+		{
+			name:     "GCP hash with override_kubeadm_configuration",
+			hashFunc: resourceMachinePoolGcpHash,
+			baseInput: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+			},
+			withOverride: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+		{
+			name:     "AWS hash with override_kubeadm_configuration",
+			hashFunc: resourceMachinePoolAwsHash,
+			baseInput: map[string]interface{}{
+				"instance_type": "t2.micro",
+				"capacity_type": "ON_DEMAND",
+				"max_price":     "0.03",
+				"azs":           schema.NewSet(schema.HashString, []interface{}{"us-east-1a"}),
+				"az_subnets":    map[string]interface{}{"us-east-1a": "subnet-1"},
+			},
+			withOverride: map[string]interface{}{
+				"instance_type": "t2.micro",
+				"capacity_type": "ON_DEMAND",
+				"max_price":     "0.03",
+				"azs":           schema.NewSet(schema.HashString, []interface{}{"us-east-1a"}),
+				"az_subnets":    map[string]interface{}{"us-east-1a": "subnet-1"},
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+		{
+			name:     "vSphere hash with override_kubeadm_configuration",
+			hashFunc: resourceMachinePoolVsphereHash,
+			baseInput: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"cpu":          2,
+						"disk_size_gb": 50,
+						"memory_mb":    4096,
+					},
+				},
+			},
+			withOverride: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"cpu":          2,
+						"disk_size_gb": 50,
+						"memory_mb":    4096,
+					},
+				},
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+		{
+			name:     "MAAS hash with override_kubeadm_configuration",
+			hashFunc: resourceMachinePoolMaasHash,
+			baseInput: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"min_cpu":       2,
+						"min_memory_mb": 4096,
+					},
+				},
+			},
+			withOverride: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"min_cpu":       2,
+						"min_memory_mb": 4096,
+					},
+				},
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+		{
+			name:     "Edge Native hash with override_kubeadm_configuration",
+			hashFunc: resourceMachinePoolEdgeNativeHash,
+			baseInput: map[string]interface{}{
+				"edge_host": []interface{}{
+					map[string]interface{}{
+						"host_name": "host1",
+						"host_uid":  "uid1",
+					},
+				},
+			},
+			withOverride: map[string]interface{}{
+				"edge_host": []interface{}{
+					map[string]interface{}{
+						"host_name": "host1",
+						"host_uid":  "uid1",
+					},
+				},
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			baseHash := tc.hashFunc(tc.baseInput)
+			overrideHash := tc.hashFunc(tc.withOverride)
+
+			assert.NotEqual(t, baseHash, overrideHash,
+				"Hash should change when override_kubeadm_configuration is added")
+		})
+	}
+}
+
+// TestHashFunctionsAnnotationsChangeDetection tests that hash changes when annotations change
+func TestHashFunctionsAnnotationsChangeDetection(t *testing.T) {
+	testCases := []struct {
+		name     string
+		hashFunc func(interface{}) int
+		input1   map[string]interface{}
+		input2   map[string]interface{}
+	}{
+		{
+			name:     "Azure annotations change",
+			hashFunc: resourceMachinePoolAzureHash,
+			input1: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"additional_annotations": map[string]interface{}{
+					"annotation1": "value1",
+				},
+			},
+			input2: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"additional_annotations": map[string]interface{}{
+					"annotation1": "value2",
+				},
+			},
+		},
+		{
+			name:     "GCP annotations change",
+			hashFunc: resourceMachinePoolGcpHash,
+			input1: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"additional_annotations": map[string]interface{}{
+					"annotation1": "value1",
+				},
+			},
+			input2: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"additional_annotations": map[string]interface{}{
+					"annotation1": "value2",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			hash1 := tc.hashFunc(tc.input1)
+			hash2 := tc.hashFunc(tc.input2)
+
+			assert.NotEqual(t, hash1, hash2,
+				"Hash should change when annotation values change")
+		})
+	}
+}
+
+// TestHashFunctionsOverrideKubeadmChangeDetection tests that hash changes when override_kubeadm_configuration changes
+func TestHashFunctionsOverrideKubeadmChangeDetection(t *testing.T) {
+	testCases := []struct {
+		name     string
+		hashFunc func(interface{}) int
+		input1   map[string]interface{}
+		input2   map[string]interface{}
+	}{
+		{
+			name:     "Azure override_kubeadm_configuration change",
+			hashFunc: resourceMachinePoolAzureHash,
+			input1: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+			input2: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "200"`,
+			},
+		},
+		{
+			name:     "GCP override_kubeadm_configuration change",
+			hashFunc: resourceMachinePoolGcpHash,
+			input1: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+			input2: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"override_kubeadm_configuration": `preKubeadmCommands:
+  - echo 'Starting setup'`,
+			},
+		},
+		{
+			name:     "vSphere override_kubeadm_configuration change",
+			hashFunc: resourceMachinePoolVsphereHash,
+			input1: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"cpu":          2,
+						"disk_size_gb": 50,
+						"memory_mb":    4096,
+					},
+				},
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+			input2: map[string]interface{}{
+				"instance_type": []interface{}{
+					map[string]interface{}{
+						"cpu":          2,
+						"disk_size_gb": 50,
+						"memory_mb":    4096,
+					},
+				},
+				"override_kubeadm_configuration": `postKubeadmCommands:
+  - systemctl restart kubelet`,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			hash1 := tc.hashFunc(tc.input1)
+			hash2 := tc.hashFunc(tc.input2)
+
+			assert.NotEqual(t, hash1, hash2,
+				"Hash should change when override_kubeadm_configuration content changes")
+		})
+	}
+}
+
+// TestHashFunctionsBothFieldsChangeDetection tests that hash changes when both annotations and override_kubeadm_configuration are modified
+func TestHashFunctionsBothFieldsChangeDetection(t *testing.T) {
+	testCases := []struct {
+		name     string
+		hashFunc func(interface{}) int
+		base     map[string]interface{}
+		withOne  map[string]interface{}
+		withBoth map[string]interface{}
+	}{
+		{
+			name:     "Azure with both fields",
+			hashFunc: resourceMachinePoolAzureHash,
+			base: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+			},
+			withOne: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"additional_annotations": map[string]interface{}{
+					"annotation1": "value1",
+				},
+			},
+			withBoth: map[string]interface{}{
+				"instance_type": "Standard_D2_v3",
+				"additional_annotations": map[string]interface{}{
+					"annotation1": "value1",
+				},
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+		{
+			name:     "GCP with both fields",
+			hashFunc: resourceMachinePoolGcpHash,
+			base: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+			},
+			withOne: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"additional_annotations": map[string]interface{}{
+					"annotation1": "value1",
+				},
+			},
+			withBoth: map[string]interface{}{
+				"instance_type": "n1-standard-4",
+				"additional_annotations": map[string]interface{}{
+					"annotation1": "value1",
+				},
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			baseHash := tc.hashFunc(tc.base)
+			withOneHash := tc.hashFunc(tc.withOne)
+			withBothHash := tc.hashFunc(tc.withBoth)
+
+			assert.NotEqual(t, baseHash, withOneHash,
+				"Hash should change when annotations are added")
+			assert.NotEqual(t, withOneHash, withBothHash,
+				"Hash should change when override_kubeadm_configuration is also added")
+			assert.NotEqual(t, baseHash, withBothHash,
+				"Hash should be different with both fields added")
+		})
+	}
+}
+
+// TestAKSAndEKSHashWithAnnotationsAndOverride tests the non-CommonHash functions (AKS, EKS, GKE)
+func TestAKSAndEKSHashWithAnnotationsAndOverride(t *testing.T) {
+	testCases := []struct {
+		name     string
+		hashFunc func(interface{}) int
+		base     map[string]interface{}
+		modified map[string]interface{}
+	}{
+		{
+			name:     "AKS with annotations",
+			hashFunc: resourceMachinePoolAksHash,
+			base: map[string]interface{}{
+				"name":          "aks-pool",
+				"count":         2,
+				"instance_type": "Standard_D2s_v3",
+				"disk_size_gb":  100,
+			},
+			modified: map[string]interface{}{
+				"name":          "aks-pool",
+				"count":         2,
+				"instance_type": "Standard_D2s_v3",
+				"disk_size_gb":  100,
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation": "value",
+				},
+			},
+		},
+		{
+			name:     "AKS with override_kubeadm_configuration",
+			hashFunc: resourceMachinePoolAksHash,
+			base: map[string]interface{}{
+				"name":          "aks-pool",
+				"count":         2,
+				"instance_type": "Standard_D2s_v3",
+				"disk_size_gb":  100,
+			},
+			modified: map[string]interface{}{
+				"name":          "aks-pool",
+				"count":         2,
+				"instance_type": "Standard_D2s_v3",
+				"disk_size_gb":  100,
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+		{
+			name:     "EKS with annotations",
+			hashFunc: resourceMachinePoolEksHash,
+			base: map[string]interface{}{
+				"count":         3,
+				"disk_size_gb":  100,
+				"instance_type": "t2.micro",
+				"az_subnets": map[string]interface{}{
+					"subnet1": "subnet-123",
+				},
+			},
+			modified: map[string]interface{}{
+				"count":         3,
+				"disk_size_gb":  100,
+				"instance_type": "t2.micro",
+				"az_subnets": map[string]interface{}{
+					"subnet1": "subnet-123",
+				},
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation": "value",
+				},
+			},
+		},
+		{
+			name:     "EKS with override_kubeadm_configuration",
+			hashFunc: resourceMachinePoolEksHash,
+			base: map[string]interface{}{
+				"count":         3,
+				"disk_size_gb":  100,
+				"instance_type": "t2.micro",
+				"az_subnets": map[string]interface{}{
+					"subnet1": "subnet-123",
+				},
+			},
+			modified: map[string]interface{}{
+				"count":         3,
+				"disk_size_gb":  100,
+				"instance_type": "t2.micro",
+				"az_subnets": map[string]interface{}{
+					"subnet1": "subnet-123",
+				},
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+		{
+			name:     "GKE with annotations",
+			hashFunc: resourceMachinePoolGkeHash,
+			base: map[string]interface{}{
+				"name":          "gke-pool",
+				"count":         2,
+				"instance_type": "n1-standard-4",
+			},
+			modified: map[string]interface{}{
+				"name":          "gke-pool",
+				"count":         2,
+				"instance_type": "n1-standard-4",
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation": "value",
+				},
+			},
+		},
+		{
+			name:     "GKE with override_kubeadm_configuration",
+			hashFunc: resourceMachinePoolGkeHash,
+			base: map[string]interface{}{
+				"name":          "gke-pool",
+				"count":         2,
+				"instance_type": "n1-standard-4",
+			},
+			modified: map[string]interface{}{
+				"name":          "gke-pool",
+				"count":         2,
+				"instance_type": "n1-standard-4",
+				"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			baseHash := tc.hashFunc(tc.base)
+			modifiedHash := tc.hashFunc(tc.modified)
+
+			assert.NotEqual(t, baseHash, modifiedHash,
+				"Hash should change when additional_annotations or override_kubeadm_configuration is added")
+		})
+	}
+}
+
+// TestOpenStackHashWithNewFields tests OpenStack hash function with annotations and override
+func TestOpenStackHashWithNewFields(t *testing.T) {
+	base := map[string]interface{}{
+		"name":          "worker-pool",
+		"count":         3,
+		"instance_type": "flavor1",
+	}
+
+	withAnnotations := map[string]interface{}{
+		"name":          "worker-pool",
+		"count":         3,
+		"instance_type": "flavor1",
+		"additional_annotations": map[string]interface{}{
+			"custom.io/annotation": "value",
+		},
+	}
+
+	withOverride := map[string]interface{}{
+		"name":          "worker-pool",
+		"count":         3,
+		"instance_type": "flavor1",
+		"override_kubeadm_configuration": `kubeletExtraArgs:
+  max-pods: "110"`,
+	}
+
+	baseHash := resourceMachinePoolOpenStackHash(base)
+	annotationsHash := resourceMachinePoolOpenStackHash(withAnnotations)
+	overrideHash := resourceMachinePoolOpenStackHash(withOverride)
+
+	assert.NotEqual(t, baseHash, annotationsHash,
+		"OpenStack hash should change when annotations are added")
+	assert.NotEqual(t, baseHash, overrideHash,
+		"OpenStack hash should change when override_kubeadm_configuration is added")
+	assert.NotEqual(t, annotationsHash, overrideHash,
+		"Annotations and override should produce different hashes")
 }

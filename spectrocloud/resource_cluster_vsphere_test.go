@@ -2,9 +2,10 @@ package spectrocloud
 
 import (
 	"fmt"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"reflect"
 	"testing"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
@@ -346,8 +347,9 @@ func TestFlattenMachinePoolConfigsVsphere(t *testing.T) {
 							"static_ip_pool_id": "pool1",
 						},
 					},
-					"update_strategy":   "RollingUpdate",          // Include this field in expected
-					"additional_labels": map[string]interface{}{}, // Include this field in expected
+					"update_strategy":        "RollingUpdate",          // Include this field in expected
+					"additional_labels":      map[string]interface{}{}, // Include this field in expected
+					"additional_annotations": map[string]interface{}{}, // Include this field in expected
 				},
 			},
 		},

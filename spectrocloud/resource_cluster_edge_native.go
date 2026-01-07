@@ -204,6 +204,15 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
+						},
+						"additional_annotations": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.",
 						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
@@ -231,8 +240,14 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn", "OverrideScaling"}, false),
+						},
+						"override_scaling": schemas.OverrideScalingSchema(),
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"edge_host": {
 							Type:     schema.TypeSet,
@@ -334,6 +349,11 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+
+	// Validate override_Scaling configuration
+	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+		return diag.FromErr(err)
+	}
 
 	cluster, err := toEdgeNativeCluster(c, d)
 	if err != nil {
@@ -465,11 +485,21 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 		FlattenControlPlaneAndRepaveInterval(&machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
+		if machinePool.UpdateStrategy != nil {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+			// Flatten override_Scaling if using OverrideScaling strategy
+			flattenOverrideScaling(machinePool.UpdateStrategy, oi)
+		}
+
+		// Flatten override_kubeadm_configuration (worker pools only)
+		if !machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
+			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
 
 		var hosts []interface{}
 		for _, host := range machinePool.Hosts {
@@ -510,6 +540,11 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
 	if d.HasChange("machine_pool") {
+		// Validate override_Scaling configuration
+		if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+			return diag.FromErr(err)
+		}
+
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
 			oraw = new(schema.Set)
@@ -724,17 +759,23 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 	mp := &models.V1EdgeNativeMachinePoolConfigEntity{
 		CloudConfig: cloudConfig,
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels: toAdditionalNodePoolLabels(m),
-			Taints:           toClusterTaints(m),
-			IsControlPlane:   controlPlane,
-			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(SafeInt32(len(cloudConfig.EdgeHosts))),
-			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: getUpdateStrategy(m),
-			},
+			AdditionalLabels:        toAdditionalNodePoolLabels(m),
+			AdditionalAnnotations:   toAdditionalNodePoolAnnotations(m),
+			Taints:                  toClusterTaints(m),
+			IsControlPlane:          controlPlane,
+			Labels:                  labels,
+			Name:                    types.Ptr(m["name"].(string)),
+			Size:                    types.Ptr(SafeInt32(len(cloudConfig.EdgeHosts))),
+			UpdateStrategy:          toUpdateStrategy(m),
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+
+	// Handle override_kubeadm_configuration (worker pools only)
+	if !controlPlane {
+		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
+			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
+		}
 	}
 
 	nodeRepaveInterval := 0
@@ -896,78 +937,6 @@ func getFirstIPRange(cidr string) (string, error) {
 	firstIPString := firstIP.String()
 
 	return firstIPString, nil
-}
-
-// resourceClusterEdgeNativeResourceV2 returns the V2 schema with edge_host as TypeList
-func resourceClusterEdgeNativeResourceV2() *schema.Resource {
-	return &schema.Resource{
-		Schema: map[string]*schema.Schema{
-			"machine_pool": {
-				Type:     schema.TypeSet,
-				Required: true,
-				Set:      resourceMachinePoolEdgeNativeHash,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						// ... other machine_pool fields ...
-						"edge_host": {
-							Type:     schema.TypeList, // V2: TypeList, V3: TypeSet
-							Required: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"host_name": {
-										Type:        schema.TypeString,
-										Optional:    true,
-										Default:     "",
-										Description: "Edge host name",
-									},
-									"host_uid": {
-										Type:        schema.TypeString,
-										Description: "Edge host id",
-										Required:    true,
-									},
-									"static_ip": {
-										Type:        schema.TypeString,
-										Description: "Edge host static IP address",
-										Optional:    true,
-									},
-									"nic_name": {
-										Type:        schema.TypeString,
-										Description: "NIC Name for edge host.",
-										Optional:    true,
-									},
-									"default_gateway": {
-										Type:        schema.TypeString,
-										Description: "Edge host default gateway",
-										Optional:    true,
-									},
-									"subnet_mask": {
-										Type:        schema.TypeString,
-										Description: "Edge host subnet mask",
-										Optional:    true,
-									},
-									"dns_servers": {
-										Type:        schema.TypeSet,
-										Optional:    true,
-										Set:         schema.HashString,
-										Description: "Edge host DNS servers",
-										Elem: &schema.Schema{
-											Type: schema.TypeString,
-										},
-									},
-									"two_node_role": {
-										Type:         schema.TypeString,
-										Description:  "Two node role for edge host. Valid values are `primary` and `secondary`.",
-										Optional:     true,
-										ValidateFunc: validation.StringInSlice([]string{"primary", "secondary"}, false),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
 }
 
 // resourceClusterEdgeNativeStateUpgradeV2 upgrades state from version 2 to 3
