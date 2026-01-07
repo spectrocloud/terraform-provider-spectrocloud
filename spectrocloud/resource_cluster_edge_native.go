@@ -204,6 +204,15 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
+						},
+						"additional_annotations": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.",
 						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
@@ -233,6 +242,11 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Default:      "RollingUpdateScaleOut",
 							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+						},
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"edge_host": {
 							Type:     schema.TypeSet,
@@ -465,11 +479,16 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 		FlattenControlPlaneAndRepaveInterval(&machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
+
+		// Flatten override_kubeadm_configuration (worker pools only)
+		if !machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
+			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
 
 		var hosts []interface{}
 		for _, host := range machinePool.Hosts {
@@ -724,17 +743,25 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 	mp := &models.V1EdgeNativeMachinePoolConfigEntity{
 		CloudConfig: cloudConfig,
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels: toAdditionalNodePoolLabels(m),
-			Taints:           toClusterTaints(m),
-			IsControlPlane:   controlPlane,
-			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(SafeInt32(len(cloudConfig.EdgeHosts))),
+			AdditionalLabels:      toAdditionalNodePoolLabels(m),
+			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),
+			Taints:                toClusterTaints(m),
+			IsControlPlane:        controlPlane,
+			Labels:                labels,
+			Name:                  types.Ptr(m["name"].(string)),
+			Size:                  types.Ptr(SafeInt32(len(cloudConfig.EdgeHosts))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+
+	// Handle override_kubeadm_configuration (worker pools only)
+	if !controlPlane {
+		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
+			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
+		}
 	}
 
 	nodeRepaveInterval := 0

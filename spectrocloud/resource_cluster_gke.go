@@ -158,6 +158,15 @@ func resourceClusterGke() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
+						},
+						"additional_annotations": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -168,6 +177,11 @@ func resourceClusterGke() *schema.Resource {
 							Optional:    true,
 							Default:     "RollingUpdateScaleOut",
 							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+						},
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
@@ -473,10 +487,15 @@ func flattenMachinePoolConfigsGke(machinePools []*models.V1GcpMachinePoolConfig)
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
+		// Flatten override_kubeadm_configuration (worker pools only)
+		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
+			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
 
 		oi["instance_type"] = *machinePool.InstanceType
 
@@ -534,10 +553,11 @@ func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEn
 			RootDeviceSize: SafeInt64(m["disk_size_gb"].(int)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels: toAdditionalNodePoolLabels(m),
-			Taints:           toClusterTaints(m),
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(SafeInt32(m["count"].(int))),
+			AdditionalLabels:      toAdditionalNodePoolLabels(m),
+			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),
+			Taints:                toClusterTaints(m),
+			Name:                  types.Ptr(m["name"].(string)),
+			Size:                  types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
@@ -545,6 +565,10 @@ func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEn
 	}
 	if !mp.PoolConfig.IsControlPlane {
 		mp.PoolConfig.Labels = []string{"worker"}
+		// Handle override_kubeadm_configuration (worker pools only)
+		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
+			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
+		}
 	}
 	return mp, nil
 }
@@ -662,6 +686,15 @@ func resourceClusterGkeResourceV1() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
+						},
+						"additional_annotations": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -672,6 +705,11 @@ func resourceClusterGkeResourceV1() *schema.Resource {
 							Optional:    true,
 							Default:     "RollingUpdateScaleOut",
 							Description: "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
+						},
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),

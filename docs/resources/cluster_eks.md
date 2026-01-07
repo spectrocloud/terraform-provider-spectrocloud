@@ -185,7 +185,8 @@ Required:
 
 Optional:
 
-- `additional_labels` (Map of String)
+- `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
+- `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2023_x86_64_STANDARD`.
 - `az_subnets` (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
 - `azs` (List of String) Mutually exclusive with `az_subnets`.
@@ -195,6 +196,7 @@ Optional:
 - `max_price` (String)
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
+- `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 

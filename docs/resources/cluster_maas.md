@@ -192,6 +192,7 @@ Required:
 
 Optional:
 
+- `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
@@ -201,6 +202,7 @@ Optional:
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `node_tags` (Set of String) Node tags to dynamically place nodes in a pool by using MAAS automatic tags. Specify the tag values that you want to apply to all nodes in the node pool.
+- `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 - `use_lxd_vm` (Boolean) Whether to use LXD VM. Default is `false`. Available once **Palette with LXD support** is released.

@@ -236,7 +236,8 @@ Required:
 
 Optional:
 
-- `additional_labels` (Map of String)
+- `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
+- `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `azs` (Set of String) Availability zones for the machine pool. Check if your region provides availability zones on [the Azure documentation](https://learn.microsoft.com/en-us/azure/reliability/availability-zones-service-support#azure-regions-with-availability-zone-support). Default value is `[""]`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
@@ -245,6 +246,7 @@ Optional:
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `os_type` (String) Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.
+- `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 

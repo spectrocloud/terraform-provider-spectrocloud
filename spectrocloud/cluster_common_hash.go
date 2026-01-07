@@ -80,6 +80,14 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
 
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := m["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(m["additional_annotations"]))
+	}
+	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+
 	if val, ok := m["instance_type"]; ok {
 		fmt.Fprintf(buf, "%s-", val.(string))
 	}
@@ -105,6 +113,14 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 func resourceMachinePoolAksHash(v interface{}) int {
 	nodePool := v.(map[string]interface{})
 	var buf bytes.Buffer
+
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := nodePool["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_annotations"]))
+	}
+	if val, ok := nodePool["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(&buf, "%s-", val)
+	}
 
 	// Include all fields that should trigger a machine pool update
 	if val, ok := nodePool["name"]; ok {
@@ -169,6 +185,15 @@ func resourceMachinePoolAksHash(v interface{}) int {
 func resourceMachinePoolGcpHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
+
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := m["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(m["additional_annotations"]))
+	}
+	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+
 	if _, ok := m["disk_size_gb"]; ok {
 		fmt.Fprintf(buf, "%d-", m["disk_size_gb"].(int))
 	}
@@ -193,6 +218,14 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 func resourceMachinePoolAwsHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
+
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := m["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(m["additional_annotations"]))
+	}
+	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	if m["min"] != nil {
 		fmt.Fprintf(buf, "%d-", m["min"].(int))
@@ -223,6 +256,14 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 func resourceMachinePoolEksHash(v interface{}) int {
 	nodePool := v.(map[string]interface{})
 	var buf bytes.Buffer
+
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := nodePool["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_annotations"]))
+	}
+	if val, ok := nodePool["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(&buf, "%s-", val)
+	}
 
 	if val, ok := nodePool["count"]; ok {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
@@ -297,6 +338,14 @@ func resourceMachinePoolGkeHash(v interface{}) int {
 	nodePool := v.(map[string]interface{})
 	var buf bytes.Buffer
 
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := nodePool["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_annotations"]))
+	}
+	if val, ok := nodePool["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(&buf, "%s-", val)
+	}
+
 	// Include all fields that should trigger a machine pool update
 	if val, ok := nodePool["name"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
@@ -364,6 +413,14 @@ func eksLaunchTemplate(v interface{}) string {
 func resourceMachinePoolVsphereHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
+
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := m["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(m["additional_annotations"]))
+	}
+	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	if v, found := m["instance_type"]; found {
 		if len(v.([]interface{})) > 0 {
@@ -446,6 +503,14 @@ func resourceMachinePoolVirtualHash(v interface{}) int {
 func resourceMachinePoolMaasHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
+
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := m["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(m["additional_annotations"]))
+	}
+	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	if v, found := m["instance_type"]; found {
 		if len(v.([]interface{})) > 0 {
@@ -539,6 +604,14 @@ func GpuConfigHash(config map[string]interface{}) string {
 func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
+
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := m["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(m["additional_annotations"]))
+	}
+	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	if edgeHosts, found := m["edge_host"]; found {
 		var edgeHostList []interface{}
@@ -803,6 +876,14 @@ func resourceMachinePoolOpenStackHash(v interface{}) int {
 	// control_plane_as_worker, name, count, update_strategy, node_repave_interval, node
 	commonBuf := CommonHash(nodePool)
 	buf.WriteString(commonBuf.String())
+
+	// Hash additional annotations and override_kubeadm_configuration
+	if _, ok := nodePool["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(nodePool["additional_annotations"]))
+	}
+	if val, ok := nodePool["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(&buf, "%s-", val)
+	}
 
 	// Add OpenStack-specific fields
 	if val, ok := nodePool["instance_type"]; ok {

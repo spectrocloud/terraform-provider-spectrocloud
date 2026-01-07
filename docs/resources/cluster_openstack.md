@@ -152,12 +152,14 @@ Required:
 
 Optional:
 
-- `additional_labels` (Map of String)
+- `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
+- `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `azs` (Set of String)
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `subnet_id` (String)
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.

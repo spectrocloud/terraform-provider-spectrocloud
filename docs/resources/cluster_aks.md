@@ -189,10 +189,12 @@ Required:
 
 Optional:
 
-- `additional_labels` (Map of String)
+- `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
+- `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
+- `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
 

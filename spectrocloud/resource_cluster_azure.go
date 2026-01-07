@@ -242,6 +242,15 @@ func resourceClusterAzure() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
+						},
+						"additional_annotations": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.",
 						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
@@ -287,6 +296,11 @@ func resourceClusterAzure() *schema.Resource {
 							Default:      "RollingUpdateScaleOut",
 							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+						},
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"disk": {
 							Type:     schema.TypeList,
@@ -545,13 +559,18 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
+		// Flatten override_kubeadm_configuration (worker pools only)
+		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
+			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
 
 		oi["instance_type"] = machinePool.InstanceType
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
@@ -823,17 +842,25 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels: toAdditionalNodePoolLabels(m),
-			Taints:           toClusterTaints(m),
-			IsControlPlane:   controlPlane,
-			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(SafeInt32(m["count"].(int))),
+			AdditionalLabels:      toAdditionalNodePoolLabels(m),
+			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),
+			Taints:                toClusterTaints(m),
+			IsControlPlane:        controlPlane,
+			Labels:                labels,
+			Name:                  types.Ptr(m["name"].(string)),
+			Size:                  types.Ptr(SafeInt32(m["count"].(int))),
 			UpdateStrategy: &models.V1UpdateStrategy{
 				Type: getUpdateStrategy(m),
 			},
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+
+	// Handle override_kubeadm_configuration (worker pools only)
+	if !controlPlane {
+		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
+			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
+		}
 	}
 
 	if !controlPlane {
