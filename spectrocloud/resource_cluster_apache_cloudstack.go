@@ -355,9 +355,10 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn", "OverrideScaling"}, false),
 						},
+						"override_scaling": schemas.OverrideScalingSchema(),
 						"override_kubeadm_configuration": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -494,6 +495,11 @@ func resourceClusterApacheCloudStackCreate(ctx context.Context, d *schema.Resour
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
+	// Validate override_Scaling configuration
+	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+		return diag.FromErr(err)
+	}
+
 	cluster, err := toCloudStackCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
@@ -564,6 +570,11 @@ func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.Resour
 	}
 
 	if d.HasChange("machine_pool") {
+		// Validate override_Scaling configuration
+		if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+			return diag.FromErr(err)
+		}
+
 		if err := updateMachinePoolCloudStack(ctx, c, d, cloudConfigId); err != nil {
 			return diag.FromErr(err)
 		}
@@ -725,16 +736,14 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 	}
 
 	poolConfig := &models.V1MachinePoolConfigEntity{
-		AdditionalLabels:      toAdditionalNodePoolLabels(mp),
-		AdditionalAnnotations: toAdditionalNodePoolAnnotations(mp),
-		Taints:                toClusterTaints(mp),
-		IsControlPlane:        controlPlane,
-		Labels:                labels,
-		Name:                  types.Ptr(mp["name"].(string)),
-		Size:                  types.Ptr(safeInt32Conversion(mp["count"].(int), 1)),
-		UpdateStrategy: &models.V1UpdateStrategy{
-			Type: getUpdateStrategy(mp),
-		},
+		AdditionalLabels:        toAdditionalNodePoolLabels(mp),
+		AdditionalAnnotations:   toAdditionalNodePoolAnnotations(mp),
+		Taints:                  toClusterTaints(mp),
+		IsControlPlane:          controlPlane,
+		Labels:                  labels,
+		Name:                    types.Ptr(mp["name"].(string)),
+		Size:                    types.Ptr(safeInt32Conversion(mp["count"].(int), 1)),
+		UpdateStrategy:          toUpdateStrategy(mp),
 		UseControlPlaneAsWorker: controlPlaneAsWorker,
 	}
 
@@ -799,6 +808,17 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	// Hash override_kubeadm_configuration
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
+	}
+
+	// Hash override_scaling
+	if overrideScaling, ok := m["override_scaling"].([]interface{}); ok && len(overrideScaling) > 0 {
+		scalingConfig := overrideScaling[0].(map[string]interface{})
+		if maxSurge, ok := scalingConfig["max_surge"].(string); ok && maxSurge != "" {
+			fmt.Fprintf(buf, "max_surge:%s-", maxSurge)
+		}
+		if maxUnavailable, ok := scalingConfig["max_unavailable"].(string); ok && maxUnavailable != "" {
+			fmt.Fprintf(buf, "max_unavailable:%s-", maxUnavailable)
+		}
 	}
 
 	// Note: instance_config is computed and excluded from hash to prevent false change detection
@@ -1074,6 +1094,8 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 
 		if machinePool.UpdateStrategy != nil {
 			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+			// Flatten override_Scaling if using OverrideScaling strategy
+			flattenOverrideScaling(machinePool.UpdateStrategy, oi)
 		}
 
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker

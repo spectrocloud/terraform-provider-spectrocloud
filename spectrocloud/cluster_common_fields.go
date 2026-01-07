@@ -293,3 +293,45 @@ func validateReviewRepaveValue(val interface{}, key string) (warns []string, err
 	}
 	return warns, errs
 }
+
+// validateOverrideScaling validates that when update_strategy is set to "OverrideScaling",
+// the override_scaling attribute must be specified with both max_surge and max_unavailable.
+func validateOverrideScaling(d *schema.ResourceData, machinePoolKey string) error {
+	if machinePools, ok := d.GetOk(machinePoolKey); ok {
+		machinePoolSet := machinePools.(*schema.Set)
+		for _, mp := range machinePoolSet.List() {
+			machinePool := mp.(map[string]interface{})
+
+			updateStrategy := ""
+			if us, ok := machinePool["update_strategy"].(string); ok {
+				updateStrategy = us
+			}
+
+			// If update_strategy is OverrideScaling, validate override_scaling is present
+			if updateStrategy == "OverrideScaling" {
+				overrideScaling, hasOverrideScaling := machinePool["override_scaling"].([]interface{})
+
+				if !hasOverrideScaling || len(overrideScaling) == 0 {
+					poolName := machinePool["name"].(string)
+					return fmt.Errorf("machine pool '%s': when update_strategy is 'OverrideScaling', override_scaling must be specified with both max_surge and max_unavailable", poolName)
+				}
+
+				// Validate that both max_surge and max_unavailable are provided
+				scalingConfig := overrideScaling[0].(map[string]interface{})
+				maxSurge, hasSurge := scalingConfig["max_surge"].(string)
+				maxUnavailable, hasUnavailable := scalingConfig["max_unavailable"].(string)
+
+				if !hasSurge || maxSurge == "" {
+					poolName := machinePool["name"].(string)
+					return fmt.Errorf("machine pool '%s': override_scaling.max_surge is required when update_strategy is 'OverrideScaling'", poolName)
+				}
+
+				if !hasUnavailable || maxUnavailable == "" {
+					poolName := machinePool["name"].(string)
+					return fmt.Errorf("machine pool '%s': override_scaling.max_unavailable is required when update_strategy is 'OverrideScaling'", poolName)
+				}
+			}
+		}
+	}
+	return nil
+}
