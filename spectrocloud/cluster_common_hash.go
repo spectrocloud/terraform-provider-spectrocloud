@@ -54,6 +54,16 @@ func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
 	if val, ok := nodePool["update_strategy"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
+	// Hash override_scaling if present
+	if overrideScaling, ok := nodePool["override_scaling"].([]interface{}); ok && len(overrideScaling) > 0 {
+		scalingConfig := overrideScaling[0].(map[string]interface{})
+		if maxSurge, ok := scalingConfig["max_surge"].(string); ok && maxSurge != "" {
+			buf.WriteString(fmt.Sprintf("max_surge:%s-", maxSurge))
+		}
+		if maxUnavailable, ok := scalingConfig["max_unavailable"].(string); ok && maxUnavailable != "" {
+			buf.WriteString(fmt.Sprintf("max_unavailable:%s-", maxUnavailable))
+		}
+	}
 	if val, ok := nodePool["node_repave_interval"]; ok {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))
 	}

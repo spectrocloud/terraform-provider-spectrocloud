@@ -54,9 +54,9 @@ func TestCommonHashWithRollingUpdateStrategy(t *testing.T) {
 		"control_plane_as_worker": false,
 		"name":                    "test-pool",
 		"count":                   3,
-		"rolling_update_strategy": []interface{}{
+		"update_strategy":         "OverrideScaling",
+		"override_scaling": []interface{}{
 			map[string]interface{}{
-				"type":            "OverrideScaling",
 				"max_surge":       "1",
 				"max_unavailable": "0",
 			},
@@ -64,7 +64,7 @@ func TestCommonHashWithRollingUpdateStrategy(t *testing.T) {
 		"node_repave_interval": 10,
 	}
 
-	expectedHash := "label1-value1effect-NoSchedulekey-taint1value-truetrue-false-test-pool-3-rolling_type:OverrideScaling-max_surge:1-max_unavailable:0-10-"
+	expectedHash := "label1-value1effect-NoSchedulekey-taint1value-truetrue-false-test-pool-3-OverrideScaling-max_surge:1-max_unavailable:0-10-"
 	hash := CommonHash(nodePool).String()
 
 	assert.Equal(t, expectedHash, hash)
@@ -78,13 +78,13 @@ func TestCommonHashRollingUpdateStrategyChangeDetection(t *testing.T) {
 		"update_strategy": "RollingUpdateScaleOut",
 	}
 
-	// Node pool with rolling_update_strategy
-	withRolling := map[string]interface{}{
-		"name":  "test-pool",
-		"count": 3,
-		"rolling_update_strategy": []interface{}{
+	// Node pool with override_scaling
+	withOverrideScaling := map[string]interface{}{
+		"name":            "test-pool",
+		"count":           3,
+		"update_strategy": "OverrideScaling",
+		"override_scaling": []interface{}{
 			map[string]interface{}{
-				"type":            "OverrideScaling",
 				"max_surge":       "1",
 				"max_unavailable": "0",
 			},
@@ -93,11 +93,11 @@ func TestCommonHashRollingUpdateStrategyChangeDetection(t *testing.T) {
 
 	// Node pool with different maxSurge
 	differentMaxSurge := map[string]interface{}{
-		"name":  "test-pool",
-		"count": 3,
-		"rolling_update_strategy": []interface{}{
+		"name":            "test-pool",
+		"count":           3,
+		"update_strategy": "OverrideScaling",
+		"override_scaling": []interface{}{
 			map[string]interface{}{
-				"type":            "OverrideScaling",
 				"max_surge":       "2",
 				"max_unavailable": "0",
 			},
@@ -106,11 +106,11 @@ func TestCommonHashRollingUpdateStrategyChangeDetection(t *testing.T) {
 
 	// Node pool with different maxUnavailable
 	differentMaxUnavailable := map[string]interface{}{
-		"name":  "test-pool",
-		"count": 3,
-		"rolling_update_strategy": []interface{}{
+		"name":            "test-pool",
+		"count":           3,
+		"update_strategy": "OverrideScaling",
+		"override_scaling": []interface{}{
 			map[string]interface{}{
-				"type":            "OverrideScaling",
 				"max_surge":       "1",
 				"max_unavailable": "1",
 			},
@@ -118,18 +118,18 @@ func TestCommonHashRollingUpdateStrategyChangeDetection(t *testing.T) {
 	}
 
 	baseLegacyHash := CommonHash(baseLegacy).String()
-	withRollingHash := CommonHash(withRolling).String()
+	withOverrideScalingHash := CommonHash(withOverrideScaling).String()
 	differentMaxSurgeHash := CommonHash(differentMaxSurge).String()
 	differentMaxUnavailableHash := CommonHash(differentMaxUnavailable).String()
 
-	// Hash should be different when switching to rolling_update_strategy
-	assert.NotEqual(t, baseLegacyHash, withRollingHash, "Adding rolling_update_strategy should change hash")
+	// Hash should be different when switching to override_scaling
+	assert.NotEqual(t, baseLegacyHash, withOverrideScalingHash, "Adding override_scaling should change hash")
 
 	// Hash should be different when maxSurge changes
-	assert.NotEqual(t, withRollingHash, differentMaxSurgeHash, "Changing max_surge should change hash")
+	assert.NotEqual(t, withOverrideScalingHash, differentMaxSurgeHash, "Changing max_surge should change hash")
 
 	// Hash should be different when maxUnavailable changes
-	assert.NotEqual(t, withRollingHash, differentMaxUnavailableHash, "Changing max_unavailable should change hash")
+	assert.NotEqual(t, withOverrideScalingHash, differentMaxUnavailableHash, "Changing max_unavailable should change hash")
 
 	// Hash should be different between different maxSurge and maxUnavailable
 	assert.NotEqual(t, differentMaxSurgeHash, differentMaxUnavailableHash, "Different max values should produce different hashes")

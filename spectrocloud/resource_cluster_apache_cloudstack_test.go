@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
@@ -661,4 +662,400 @@ postKubeadmCommands:
 	// Verify the value matches the original
 	assert.Equal(t, originalInput["override_kubeadm_configuration"], flattenedValue,
 		"override_kubeadm_configuration should match original after round trip")
+}
+
+func TestResourceMachinePoolApacheCloudStackHashOverrideScaling(t *testing.T) {
+	// Base machine pool without override_scaling
+	baseMachinePool := map[string]interface{}{
+		"name":                    "test-pool",
+		"count":                   3,
+		"offering":                "medium-instance",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "RollingUpdateScaleOut",
+	}
+
+	// Machine pool with override_scaling
+	withOverrideScaling := map[string]interface{}{
+		"name":                    "test-pool",
+		"count":                   3,
+		"offering":                "medium-instance",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "OverrideScaling",
+		"override_scaling": []interface{}{
+			map[string]interface{}{
+				"max_surge":       "1",
+				"max_unavailable": "0",
+			},
+		},
+	}
+
+	// Different max_surge
+	differentMaxSurge := map[string]interface{}{
+		"name":                    "test-pool",
+		"count":                   3,
+		"offering":                "medium-instance",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "OverrideScaling",
+		"override_scaling": []interface{}{
+			map[string]interface{}{
+				"max_surge":       "2",
+				"max_unavailable": "0",
+			},
+		},
+	}
+
+	// Different max_unavailable
+	differentMaxUnavailable := map[string]interface{}{
+		"name":                    "test-pool",
+		"count":                   3,
+		"offering":                "medium-instance",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "OverrideScaling",
+		"override_scaling": []interface{}{
+			map[string]interface{}{
+				"max_surge":       "1",
+				"max_unavailable": "1",
+			},
+		},
+	}
+
+	baseHash := resourceMachinePoolApacheCloudStackHash(baseMachinePool)
+	withOverrideScalingHash := resourceMachinePoolApacheCloudStackHash(withOverrideScaling)
+	differentMaxSurgeHash := resourceMachinePoolApacheCloudStackHash(differentMaxSurge)
+	differentMaxUnavailableHash := resourceMachinePoolApacheCloudStackHash(differentMaxUnavailable)
+
+	// Hash should be different when adding override_scaling
+	assert.NotEqual(t, baseHash, withOverrideScalingHash, "Adding override_scaling should change hash")
+
+	// Hash should be different when changing max_surge
+	assert.NotEqual(t, withOverrideScalingHash, differentMaxSurgeHash, "Changing max_surge should change hash")
+
+	// Hash should be different when changing max_unavailable
+	assert.NotEqual(t, withOverrideScalingHash, differentMaxUnavailableHash, "Changing max_unavailable should change hash")
+
+	// Different max values should produce different hashes
+	assert.NotEqual(t, differentMaxSurgeHash, differentMaxUnavailableHash, "Different max values should produce different hashes")
+}
+
+func TestToUpdateStrategyWithOverrideScaling(t *testing.T) {
+	testCases := []struct {
+		name          string
+		input         map[string]interface{}
+		expectedType  string
+		expectedSurge string
+		expectedUnav  string
+	}{
+		{
+			name: "OverrideScaling with values",
+			input: map[string]interface{}{
+				"update_strategy": "OverrideScaling",
+				"override_scaling": []interface{}{
+					map[string]interface{}{
+						"max_surge":       "1",
+						"max_unavailable": "0",
+					},
+				},
+			},
+			expectedType:  "OverrideScaling",
+			expectedSurge: "1",
+			expectedUnav:  "0",
+		},
+		{
+			name: "OverrideScaling with percentage",
+			input: map[string]interface{}{
+				"update_strategy": "OverrideScaling",
+				"override_scaling": []interface{}{
+					map[string]interface{}{
+						"max_surge":       "25%",
+						"max_unavailable": "10%",
+					},
+				},
+			},
+			expectedType:  "OverrideScaling",
+			expectedSurge: "25%",
+			expectedUnav:  "10%",
+		},
+		{
+			name: "RollingUpdateScaleOut without override_scaling",
+			input: map[string]interface{}{
+				"update_strategy": "RollingUpdateScaleOut",
+			},
+			expectedType:  "RollingUpdateScaleOut",
+			expectedSurge: "",
+			expectedUnav:  "",
+		},
+		{
+			name: "Default strategy",
+			input: map[string]interface{}{
+				"name": "pool",
+			},
+			expectedType:  "RollingUpdateScaleOut",
+			expectedSurge: "",
+			expectedUnav:  "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := toUpdateStrategy(tc.input)
+			require.NotNil(t, result)
+			assert.Equal(t, tc.expectedType, result.Type)
+			assert.Equal(t, tc.expectedSurge, result.MaxSurge)
+			assert.Equal(t, tc.expectedUnav, result.MaxUnavailable)
+		})
+	}
+}
+
+func TestFlattenOverrideScaling(t *testing.T) {
+	testCases := []struct {
+		name           string
+		updateStrategy *models.V1UpdateStrategy
+		expectedResult map[string]interface{}
+		shouldHaveKey  bool
+	}{
+		{
+			name: "OverrideScaling with values",
+			updateStrategy: &models.V1UpdateStrategy{
+				Type:           "OverrideScaling",
+				MaxSurge:       "1",
+				MaxUnavailable: "0",
+			},
+			expectedResult: map[string]interface{}{
+				"max_surge":       "1",
+				"max_unavailable": "0",
+			},
+			shouldHaveKey: true,
+		},
+		{
+			name: "OverrideScaling with percentages",
+			updateStrategy: &models.V1UpdateStrategy{
+				Type:           "OverrideScaling",
+				MaxSurge:       "25%",
+				MaxUnavailable: "10%",
+			},
+			expectedResult: map[string]interface{}{
+				"max_surge":       "25%",
+				"max_unavailable": "10%",
+			},
+			shouldHaveKey: true,
+		},
+		{
+			name: "RollingUpdateScaleOut should not set override_scaling",
+			updateStrategy: &models.V1UpdateStrategy{
+				Type: "RollingUpdateScaleOut",
+			},
+			expectedResult: nil,
+			shouldHaveKey:  false,
+		},
+		{
+			name:           "Nil update strategy",
+			updateStrategy: nil,
+			expectedResult: nil,
+			shouldHaveKey:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			oi := make(map[string]interface{})
+			flattenOverrideScaling(tc.updateStrategy, oi)
+
+			if tc.shouldHaveKey {
+				require.Contains(t, oi, "override_scaling")
+				overrideScaling := oi["override_scaling"].([]interface{})
+				require.Len(t, overrideScaling, 1)
+				scalingConfig := overrideScaling[0].(map[string]interface{})
+				assert.Equal(t, tc.expectedResult["max_surge"], scalingConfig["max_surge"])
+				assert.Equal(t, tc.expectedResult["max_unavailable"], scalingConfig["max_unavailable"])
+			} else {
+				assert.NotContains(t, oi, "override_scaling")
+			}
+		})
+	}
+}
+
+func TestToMachinePoolCloudStackWithOverrideScaling(t *testing.T) {
+	input := map[string]interface{}{
+		"name":                    "worker-pool",
+		"count":                   3,
+		"offering":                "medium",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "OverrideScaling",
+		"override_scaling": []interface{}{
+			map[string]interface{}{
+				"max_surge":       "2",
+				"max_unavailable": "1",
+			},
+		},
+		"node_repave_interval": 0,
+	}
+
+	result, err := toMachinePoolCloudStack(input)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, result.PoolConfig)
+	require.NotNil(t, result.PoolConfig.UpdateStrategy)
+
+	assert.Equal(t, "OverrideScaling", result.PoolConfig.UpdateStrategy.Type)
+	assert.Equal(t, "2", result.PoolConfig.UpdateStrategy.MaxSurge)
+	assert.Equal(t, "1", result.PoolConfig.UpdateStrategy.MaxUnavailable)
+}
+
+func TestFlattenMachinePoolConfigsApacheCloudStackWithOverrideScaling(t *testing.T) {
+	input := []*models.V1CloudStackMachinePoolConfig{
+		{
+			V1MachinePoolBaseConfig: models.V1MachinePoolBaseConfig{
+				AdditionalLabels:        map[string]string{},
+				AdditionalAnnotations:   map[string]string{},
+				IsControlPlane:          types.Ptr(false),
+				Name:                    "worker-pool",
+				Size:                    3,
+				UseControlPlaneAsWorker: false,
+				UpdateStrategy: &models.V1UpdateStrategy{
+					Type:           "OverrideScaling",
+					MaxSurge:       "2",
+					MaxUnavailable: "1",
+				},
+			},
+			V1CloudStackMachineConfig: models.V1CloudStackMachineConfig{
+				Offering: &models.V1CloudStackResource{Name: "medium"},
+			},
+		},
+	}
+
+	result := flattenMachinePoolConfigsApacheCloudStack(input)
+	require.Len(t, result, 1)
+
+	pool := result[0].(map[string]interface{})
+	assert.Equal(t, "OverrideScaling", pool["update_strategy"])
+
+	require.Contains(t, pool, "override_scaling")
+	overrideScaling := pool["override_scaling"].([]interface{})
+	require.Len(t, overrideScaling, 1)
+
+	scalingConfig := overrideScaling[0].(map[string]interface{})
+	assert.Equal(t, "2", scalingConfig["max_surge"])
+	assert.Equal(t, "1", scalingConfig["max_unavailable"])
+}
+
+func TestValidateOverrideScaling(t *testing.T) {
+	testCases := []struct {
+		name          string
+		machinePool   map[string]interface{}
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name: "Valid OverrideScaling with all fields",
+			machinePool: map[string]interface{}{
+				"name":            "test-pool",
+				"update_strategy": "OverrideScaling",
+				"override_scaling": []interface{}{
+					map[string]interface{}{
+						"max_surge":       "1",
+						"max_unavailable": "0",
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "Missing override_scaling when using OverrideScaling",
+			machinePool: map[string]interface{}{
+				"name":            "test-pool",
+				"update_strategy": "OverrideScaling",
+			},
+			expectError:   true,
+			errorContains: "override_scaling must be specified",
+		},
+		{
+			name: "Empty override_scaling when using OverrideScaling",
+			machinePool: map[string]interface{}{
+				"name":             "test-pool",
+				"update_strategy":  "OverrideScaling",
+				"override_scaling": []interface{}{},
+			},
+			expectError:   true,
+			errorContains: "override_scaling must be specified",
+		},
+		{
+			name: "Missing max_surge in override_scaling",
+			machinePool: map[string]interface{}{
+				"name":            "test-pool",
+				"update_strategy": "OverrideScaling",
+				"override_scaling": []interface{}{
+					map[string]interface{}{
+						"max_surge":       "",
+						"max_unavailable": "0",
+					},
+				},
+			},
+			expectError:   true,
+			errorContains: "max_surge is required",
+		},
+		{
+			name: "Missing max_unavailable in override_scaling",
+			machinePool: map[string]interface{}{
+				"name":            "test-pool",
+				"update_strategy": "OverrideScaling",
+				"override_scaling": []interface{}{
+					map[string]interface{}{
+						"max_surge":       "1",
+						"max_unavailable": "",
+					},
+				},
+			},
+			expectError:   true,
+			errorContains: "max_unavailable is required",
+		},
+		{
+			name: "RollingUpdateScaleOut without override_scaling is valid",
+			machinePool: map[string]interface{}{
+				"name":            "test-pool",
+				"update_strategy": "RollingUpdateScaleOut",
+			},
+			expectError: false,
+		},
+		{
+			name: "No update_strategy specified is valid",
+			machinePool: map[string]interface{}{
+				"name": "test-pool",
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a mock ResourceData with machine_pool set
+			d := schema.TestResourceDataRaw(t, resourceClusterApacheCloudStack().Schema, map[string]interface{}{
+				"name":             "test-cluster",
+				"cloud_account_id": "test-account",
+				"cloud_config": []interface{}{
+					map[string]interface{}{
+						"zone": []interface{}{
+							map[string]interface{}{
+								"name": "test-zone",
+							},
+						},
+					},
+				},
+				"machine_pool": []interface{}{tc.machinePool},
+			})
+
+			err := validateOverrideScaling(d, "machine_pool")
+
+			if tc.expectError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errorContains)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
