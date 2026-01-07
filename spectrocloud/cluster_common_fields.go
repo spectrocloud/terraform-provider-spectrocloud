@@ -135,7 +135,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 	}
 
 	// Flatten cluster_type from the cluster spec (read-only after creation)
-	if cluster.Spec != nil && cluster.Spec.ClusterType != "" {
+	if _, ok := d.GetOk("cluster_type"); ok && cluster.Spec != nil && cluster.Spec.ClusterType != "" {
 		if err := d.Set("cluster_type", cluster.Spec.ClusterType); err != nil {
 			return diag.FromErr(err), true
 		}
