@@ -224,14 +224,7 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
         - systemctl restart kubelet
     EOT
 
-    # Optional: Rolling update strategy for controlled updates
-    rolling_update_strategy {
-      type            = "OverrideScaling"  # RollingUpdateScaleOut, RollingUpdateScaleIn, or OverrideScaling
-      max_surge       = "25%"              # Max extra nodes during update (integer or percentage)
-      max_unavailable = "1"                # Max unavailable nodes during update (integer or percentage)
-    }
-
-    # Optional: Node repave interval in days (0 = disabled)
+    update_strategy      = "RollingUpdateScaleOut"
     node_repave_interval = 90
   }
 
@@ -463,13 +456,8 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_from_template" {
     additional_annotations = {
       "team.company.io/owner" = "platform-engineering"
     }
-
-    # Optional: Rolling update strategy
-    rolling_update_strategy {
-      type            = "RollingUpdateScaleOut"
-      max_surge       = "1"
-      max_unavailable = "0"
-    }
+    
+    update_strategy = "RollingUpdateScaleOut"
   }
 }
 ```
@@ -564,12 +552,7 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_custom_kubeadm" {
         - systemctl restart kubelet
     EOT
 
-    rolling_update_strategy {
-      type            = "OverrideScaling"
-      max_surge       = "2"
-      max_unavailable = "1"
-    }
-
+    update_strategy      = "RollingUpdateScaleOut"
     node_repave_interval = 60  # Repave nodes every 60 days
   }
 
@@ -617,12 +600,7 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_custom_kubeadm" {
         - echo 'Backend worker node setup complete'
     EOT
 
-    rolling_update_strategy {
-      type            = "RollingUpdateScaleIn"
-      max_surge       = "1"
-      max_unavailable = "2"
-    }
-
+    update_strategy      = "RollingUpdateScaleIn"
     node_repave_interval = 90
   }
 
@@ -633,39 +611,6 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_custom_kubeadm" {
   }
 }
 ```
-
-### Machine Pool Update Strategy Options
-
-The `rolling_update_strategy` block allows fine-grained control over how nodes are updated during cluster upgrades:
-
-- **RollingUpdateScaleOut**: Adds new nodes before removing old ones (safest, requires extra capacity)
-- **RollingUpdateScaleIn**: Removes old nodes before adding new ones (more resource-efficient)
-- **OverrideScaling**: Provides precise control with `max_surge` and `max_unavailable` parameters
-
-```terraform
-# Example 1: Safe updates with extra capacity
-rolling_update_strategy {
-  type            = "RollingUpdateScaleOut"
-  max_surge       = "25%"  # Add 25% extra nodes during update
-  max_unavailable = "0"    # Never have unavailable nodes
-}
-
-# Example 2: Resource-efficient updates
-rolling_update_strategy {
-  type            = "RollingUpdateScaleIn"
-  max_surge       = "0"    # Don't add extra nodes
-  max_unavailable = "1"    # Allow one node to be unavailable at a time
-}
-
-# Example 3: Balanced approach
-rolling_update_strategy {
-  type            = "OverrideScaling"
-  max_surge       = "1"    # Add one extra node
-  max_unavailable = "1"    # Allow one node to be unavailable
-}
-```
-
-**Note**: The deprecated `update_strategy` field is still supported for backward compatibility but will be removed in a future version. Use `rolling_update_strategy` instead.
 
 {{ .SchemaMarkdown | trimspace }}
 

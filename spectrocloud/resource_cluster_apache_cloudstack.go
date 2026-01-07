@@ -355,10 +355,9 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`. This field is deprecated. Use `rolling_update_strategy` instead. If both are specified, `rolling_update_strategy` takes precedence.",
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
 							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
 						},
-						"rolling_update_strategy": schemas.RollingUpdateSchema(),
 						"override_kubeadm_configuration": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -726,14 +725,16 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 	}
 
 	poolConfig := &models.V1MachinePoolConfigEntity{
-		AdditionalLabels:        toAdditionalNodePoolLabels(mp),
-		AdditionalAnnotations:   toAdditionalNodePoolAnnotations(mp),
-		Taints:                  toClusterTaints(mp),
-		IsControlPlane:          controlPlane,
-		Labels:                  labels,
-		Name:                    types.Ptr(mp["name"].(string)),
-		Size:                    types.Ptr(safeInt32Conversion(mp["count"].(int), 1)),
-		UpdateStrategy:          toUpdateStrategy(mp),
+		AdditionalLabels:      toAdditionalNodePoolLabels(mp),
+		AdditionalAnnotations: toAdditionalNodePoolAnnotations(mp),
+		Taints:                toClusterTaints(mp),
+		IsControlPlane:        controlPlane,
+		Labels:                labels,
+		Name:                  types.Ptr(mp["name"].(string)),
+		Size:                  types.Ptr(safeInt32Conversion(mp["count"].(int), 1)),
+		UpdateStrategy: &models.V1UpdateStrategy{
+			Type: getUpdateStrategy(mp),
+		},
 		UseControlPlaneAsWorker: controlPlaneAsWorker,
 	}
 
@@ -1070,7 +1071,11 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 		// Note: AdditionalLabels and Taints are now available in the GET response for CloudStack
 		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
-		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
+		if machinePool.UpdateStrategy != nil {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+		}
+
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
