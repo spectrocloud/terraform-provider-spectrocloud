@@ -396,6 +396,16 @@ func updateClusterTimezone(c *client.V1Client, d *schema.ResourceData) error {
 	return nil
 }
 
+// toClusterType converts the terraform cluster_type value to the API model.
+// Returns nil if cluster_type is not set.
+func toClusterType(d *schema.ResourceData) *models.V1ClusterType {
+	if v, ok := d.GetOk("cluster_type"); ok {
+		clusterType := models.V1ClusterType(v.(string))
+		return &clusterType
+	}
+	return nil
+}
+
 // validateTimezone validates that the provided timezone is in valid IANA format.
 // Valid examples: "America/New_York", "Asia/Kolkata", "Europe/London", "UTC"
 func validateTimezone(val interface{}, key string) (warns []string, errs []error) {
@@ -430,4 +440,16 @@ func validateTimezone(val interface{}, key string) (warns []string, errs []error
 	}
 
 	return warns, errs
+}
+
+// ValidateClusterTypeUpdate checks if cluster_type has been modified during an update operation.
+// Returns an error if the cluster_type field has changed, as it is a create-only field.
+func ValidateClusterTypeUpdate(d *schema.ResourceData) error {
+	if d.HasChange("cluster_type") {
+		oldVal, newVal := d.GetChange("cluster_type")
+		return fmt.Errorf("cluster_type cannot be modified after cluster creation. "+
+			"Current value: %q, attempted new value: %q. "+
+			"To change the cluster type, you must delete and recreate the cluster", oldVal, newVal)
+	}
+	return nil
 }
