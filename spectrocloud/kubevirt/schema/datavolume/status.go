@@ -55,7 +55,6 @@ func dataVolumeStatusSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func expandDataVolumeStatus(dataVolumeStatus []interface{}) cdiv1.DataVolumeStatus {

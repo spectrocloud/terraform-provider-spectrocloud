@@ -263,7 +263,6 @@ func resourceBackupStorageLocationUpdate(ctx context.Context, d *schema.Resource
 	default:
 		return S3BackupStorageLocationUpdate(d, c)
 	}
-
 }
 
 func resourceBackupStorageLocationDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

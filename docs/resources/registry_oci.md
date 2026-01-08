@@ -58,6 +58,7 @@ The import will automatically detect whether the registry is an ECR or basic typ
 - `is_synchronization` (Boolean) Specifies whether the registry is synchronized.
 - `provider_type` (String) The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type="basic"`
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `wait_for_status_message` (String) The status message from the last sync operation. This is a computed field that is populated after sync completes.
 - `wait_for_sync` (Boolean) If `true`, Terraform will wait for the OCI registry to complete its initial synchronization before marking the resource as created or updated. This option is applicable when `provider_type` is set to `zarf` or `helm`. Default value is `false`.
 
 ### Read-Only

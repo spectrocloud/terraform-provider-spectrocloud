@@ -90,7 +90,6 @@ func dataSourcePackReadSimple(_ context.Context, d *schema.ResourceData, m inter
 	}
 
 	if v, ok := d.GetOk("name"); ok {
-
 		/*
 			Cluster profile now supports packs duplication, but pack name has to be unique and will be double dashed
 			and first part would be any random name to make overall pack name unique and 2nd part is actual pack name.

@@ -55,7 +55,6 @@ func dataSourceCloudAccountGcpRead(_ context.Context, d *schema.ResourceData, m 
 	var account *models.V1GcpAccount
 	filteredAccounts := make([]*models.V1GcpAccount, 0)
 	for _, a := range accounts {
-
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break

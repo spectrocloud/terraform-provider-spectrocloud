@@ -59,7 +59,6 @@ func TolerationSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func ExpandTolerations(tolerations []interface{}) ([]v1.Toleration, error) {

@@ -336,6 +336,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 				CloudConfig: edgeHosts,
 				PoolConfig: &models.V1MachinePoolConfigEntity{
 					AdditionalLabels:        toAdditionalNodePoolLabels(tt.input),
+					AdditionalAnnotations:   toAdditionalNodePoolAnnotations(tt.input),
 					Taints:                  toClusterTaints(tt.input),
 					IsControlPlane:          true,
 					Labels:                  []string{"control-plane"},
@@ -362,7 +363,6 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 			if !cmp.Equal(result.PoolConfig.Labels[0], "control-plane") {
 				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(result.PoolConfig.Labels[0], "control-plane"))
 			}
-
 		})
 	}
 }
@@ -428,6 +428,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 			expected: []interface{}{
 				map[string]interface{}{
 					"additional_labels":       map[string]string{"label1": "value1"},
+					"additional_annotations":  map[string]interface{}{},
 					"control_plane_as_worker": false,
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
@@ -456,6 +457,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 				},
 				map[string]interface{}{
 					"additional_labels":       map[string]string{"label2": "value2"},
+					"additional_annotations":  map[string]interface{}{},
 					"control_plane_as_worker": true,
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),

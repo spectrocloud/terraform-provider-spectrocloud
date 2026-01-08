@@ -124,11 +124,9 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 	var cluster_uid interface{}
 	configList := d.Get("config")
 	if configList.([]interface{})[0] != nil {
-
 		config = configList.([]interface{})[0].(map[string]interface{})
 		cluster_uid = config["cluster_uid"]
 		resourceContext = config["cluster_context"].(string)
-
 	} else {
 		return diag.FromErr(val_error)
 	}
@@ -160,7 +158,6 @@ func resourceApplicationCreate(ctx context.Context, d *schema.ResourceData, m in
 		if err != nil {
 			return diag.FromErr(err)
 		}
-
 	}
 
 	d.SetId(uid)

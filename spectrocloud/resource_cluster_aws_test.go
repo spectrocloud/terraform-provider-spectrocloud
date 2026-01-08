@@ -58,8 +58,8 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 				t.Errorf("Machine pool - count is not matching got %v, wanted %v", k["count"].(string), int(machinePoolConfig[i].Size))
 				t.Fail()
 			}
-			if k["instance_type"].(string) != string(machinePoolConfig[i].InstanceType) {
-				t.Errorf("Machine pool - instance_type is not matching got %v, wanted %v", k["instance_type"].(string), string(machinePoolConfig[i].InstanceType))
+			if k["instance_type"].(string) != machinePoolConfig[i].InstanceType {
+				t.Errorf("Machine pool - instance_type is not matching got %v, wanted %v", k["instance_type"].(string), machinePoolConfig[i].InstanceType)
 				t.Fail()
 			}
 			if !validateMapString(addLabels, k["additional_labels"].(map[string]string)) {
@@ -79,7 +79,6 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 					t.Errorf("Machine pool - additional labels is not matching got %v, wanted %v", subnetIdsCP, k["az_subnets"])
 					t.Fail()
 				}
-
 			} else {
 				if !validateMapString(subnetIdsWorker, k["az_subnets"].(map[string]string)) {
 					t.Errorf("Machine pool - additional labels is not matching got %v, wanted %v", subnetIdsWorker, k["az_subnets"])
@@ -88,7 +87,6 @@ func TestFlattenMachinePoolConfigsAwsSubnetIds(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestFlattenMachinePoolConfigsAwsAZ(t *testing.T) {
@@ -138,8 +136,8 @@ func TestFlattenMachinePoolConfigsAwsAZ(t *testing.T) {
 				t.Errorf("Machine pool - count is not matching got %s, wanted %v", k["count"].(string), int(machinePoolConfig[i].Size))
 				t.Fail()
 			}
-			if k["instance_type"].(string) != string(machinePoolConfig[i].InstanceType) {
-				t.Errorf("Machine pool - instance_type is not matching got %s, wanted %s", k["instance_type"].(string), string(machinePoolConfig[i].InstanceType))
+			if k["instance_type"].(string) != machinePoolConfig[i].InstanceType {
+				t.Errorf("Machine pool - instance_type is not matching got %s, wanted %s", k["instance_type"].(string), machinePoolConfig[i].InstanceType)
 				t.Fail()
 			}
 			if !validateMapString(addLabels, k["additional_labels"].(map[string]string)) {

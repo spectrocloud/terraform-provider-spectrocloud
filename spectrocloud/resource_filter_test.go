@@ -64,5 +64,4 @@ func TestResourceFilterDelete(t *testing.T) {
 	var ctx context.Context
 	diags := resourceFilterDelete(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
-
 }

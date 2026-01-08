@@ -53,7 +53,6 @@ func dataSourceCloudAccountApacheCloudStackRead(_ context.Context, d *schema.Res
 	var account *models.V1CloudStackAccount
 	filteredAccounts := make([]*models.V1CloudStackAccount, 0)
 	for _, a := range accounts {
-
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break

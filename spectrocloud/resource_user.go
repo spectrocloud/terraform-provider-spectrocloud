@@ -177,7 +177,6 @@ func resourceUser() *schema.Resource {
 }
 
 func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 	user := toUser(d)
@@ -229,7 +228,6 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
@@ -255,7 +253,6 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 }
 
 func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "tenant")
 	uid := d.Id()
 	var diags diag.Diagnostics
@@ -292,7 +289,6 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 				return diag.FromErr(err)
 			}
 		}
-
 	}
 	if d.HasChanges("resource_role") {
 		err := deleteUserResourceRoles(c, uid)
@@ -312,7 +308,6 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
@@ -391,7 +386,6 @@ func toUserWorkspaceRoleMapping(d *schema.ResourceData) *models.V1WorkspacesRole
 				Roles: roles,
 			})
 		}
-
 	}
 
 	return &models.V1WorkspacesRolesPatch{
@@ -410,7 +404,6 @@ func setToStringArray(ids interface{}) []string {
 func deleteWorkspaceResourceRoles(c *client.V1Client, oldWs interface{}, userUID string) error {
 	oldWorkspaces := oldWs.(*schema.Set).List()
 	for _, p := range oldWorkspaces {
-
 		inWS := make([]*models.V1WorkspaceRolesPatch, 0)
 		for _, ws := range p.(map[string]interface{})["workspace"].(*schema.Set).List() {
 			inWS = append(inWS, &models.V1WorkspaceRolesPatch{

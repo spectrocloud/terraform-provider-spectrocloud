@@ -53,7 +53,6 @@ func dataSourceRegistrationToken() *schema.Resource {
 }
 
 func dataSourceRegistrationTokenRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, tenantString)
 	var diags diag.Diagnostics
 	var err error

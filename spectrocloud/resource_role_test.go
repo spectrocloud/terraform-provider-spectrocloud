@@ -8,7 +8,6 @@ import (
 )
 
 func TestToRole(t *testing.T) {
-
 	d := resourceRole().TestResourceData()
 	err := d.Set("name", "test-role")
 	if err != nil {

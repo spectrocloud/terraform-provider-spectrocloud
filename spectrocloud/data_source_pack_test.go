@@ -47,7 +47,6 @@ func TestDataSourcePacksReadHelmMultiPacks(t *testing.T) {
 	_ = d.Set("filters", "spec.cloudTypes=edge-nativeANDspec.layer=cniANDspec.displayName=CalicoANDspec.version>3.26.9ANDspec.registryUid=${data.spectrocloud_registry.palette_registry_oci.id}")
 	diags := dataSourcePackRead(context.Background(), d, unitTestMockAPINegativeClient)
 	assertFirstDiagMessage(t, diags, "Multiple packs returned")
-
 }
 
 func TestGetLatestVersion(t *testing.T) {

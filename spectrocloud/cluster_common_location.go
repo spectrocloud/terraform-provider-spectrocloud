@@ -17,7 +17,6 @@ func toClusterLocationConfigs(d *schema.ResourceData) *models.V1ClusterLocation 
 }
 
 func toClusterLocationConfig(config map[string]interface{}) *models.V1ClusterLocation {
-
 	countryCode := ""
 	if config["country_code"] != nil {
 		countryCode = config["country_code"].(string)

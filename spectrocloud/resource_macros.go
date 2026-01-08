@@ -189,7 +189,6 @@ func mergeExistingMacros(d *schema.ResourceData, existMacros []*models.V1Macro) 
 }
 
 func GetMacrosId(c *client.V1Client, uid string) (string, error) {
-
 	hashId := ""
 	if uid != "" {
 		hashId = fmt.Sprintf("%s-%s-%s", "project", "macros", uid)
@@ -204,7 +203,6 @@ func GetMacrosId(c *client.V1Client, uid string) (string, error) {
 }
 
 func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-
 	var diags diag.Diagnostics
 
 	rawIDContext := d.Id()
@@ -235,7 +233,6 @@ func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interfa
 		if err != nil {
 			return nil, err
 		}
-
 	} else {
 		actualTenantId, _ := c.GetTenantUID()
 		if contextID != actualTenantId {

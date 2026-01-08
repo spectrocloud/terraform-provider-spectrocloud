@@ -7,3 +7,11 @@ func toAdditionalNodePoolLabels(m map[string]interface{}) map[string]string {
 	}
 	return additionalLabels
 }
+
+func toAdditionalNodePoolAnnotations(m map[string]interface{}) map[string]string {
+	additionalAnnotations := make(map[string]string)
+	if m["additional_annotations"] != nil && len(m["additional_annotations"].(map[string]interface{})) > 0 {
+		additionalAnnotations = expandStringMap(m["additional_annotations"].(map[string]interface{}))
+	}
+	return additionalAnnotations
+}

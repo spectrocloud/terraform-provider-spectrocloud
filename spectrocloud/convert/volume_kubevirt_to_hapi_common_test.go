@@ -116,7 +116,6 @@ func TestToHapiVmStatusM(t *testing.T) {
 
 	// Validate the fields that are mapped
 	assert.Equal(t, "Running", hapiVmStatus.PrintableStatus)
-
 }
 
 func TestToHapiVmSpecM(t *testing.T) {
@@ -192,7 +191,6 @@ func TestToKubevirtVMStatusM(t *testing.T) {
 	kubevirtStatus, err := ToKubevirtVMStatusM(status)
 	assert.NoError(t, err)
 	assert.NotNil(t, kubevirtStatus)
-
 }
 
 func TestToKubevirtVMStatus(t *testing.T) {
@@ -292,7 +290,6 @@ func TestToKubevirtVMSpecM(t *testing.T) {
 
 	// Assert no error occurred
 	assert.NoError(t, err)
-
 }
 
 func TestToKubevirtVM(t *testing.T) {

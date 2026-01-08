@@ -55,6 +55,7 @@ func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfigEntity {
 		Resources:               toClusterResourceConfig(d),
 		HostClusterConfig:       toClusterHostConfigs(d),
 		Location:                toClusterLocationConfigs(d),
+		Timezone:                toClusterTimezone(d),
 	}
 
 	// Set UpdateWorkerPoolsInParallel if specified
@@ -71,6 +72,14 @@ func toClusterMetaAttribute(d *schema.ResourceData) string {
 		clusterMetadataAttribute = v.(string)
 	}
 	return clusterMetadataAttribute
+}
+
+func toClusterTimezone(d *schema.ResourceData) string {
+	timezone := ""
+	if v, ok := d.GetOk("cluster_timezone"); ok {
+		timezone = v.(string)
+	}
+	return timezone
 }
 
 func toMachineManagementConfig(d *schema.ResourceData) *models.V1MachineManagementConfig {
@@ -168,6 +177,12 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return err
+	}
+
+	if cluster.Spec.ClusterConfig.Timezone != "" {
+		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+			return err
+		}
 	}
 
 	if cluster.Metadata.Annotations["description"] != "" {
@@ -288,6 +303,12 @@ func flattenCommonAttributeForCustomClusterImport(c *client.V1Client, d *schema.
 		}
 	}
 
+	if cluster.Spec.ClusterConfig.Timezone != "" {
+		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+			return err
+		}
+	}
+
 	err = d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster))
 	if err != nil {
 		return err
@@ -362,4 +383,51 @@ func flattenTagsMap(labels map[string]string) map[string]string {
 	} else {
 		return nil
 	}
+}
+
+// updateClusterTimezone updates the timezone configuration for a cluster.
+func updateClusterTimezone(c *client.V1Client, d *schema.ResourceData) error {
+	if v, ok := d.GetOk("cluster_timezone"); ok {
+		timezone := v.(string)
+		if err := c.UpdateClusterTimezone(d.Id(), timezone); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateTimezone validates that the provided timezone is in valid IANA format.
+// Valid examples: "America/New_York", "Asia/Kolkata", "Europe/London", "UTC"
+func validateTimezone(val interface{}, key string) (warns []string, errs []error) {
+	timezone := val.(string)
+	if timezone == "" {
+		return warns, errs
+	}
+
+	// Common validation patterns for IANA timezone format
+	// IANA timezones are in format: Area/Location or Area/Location/Sublocation
+	// Examples: America/New_York, Asia/Kolkata, Europe/London, UTC, GMT
+
+	// Check for basic IANA timezone format
+	// Valid patterns: UTC, GMT, or Area/Location format
+	if timezone == "UTC" || timezone == "GMT" {
+		return warns, errs
+	}
+
+	// Check if it contains at least one '/' for Area/Location format
+	if !strings.Contains(timezone, "/") {
+		errs = append(errs, fmt.Errorf(
+			"%q must be a valid IANA timezone string (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London', 'UTC'). Got: %s",
+			key, timezone))
+		return warns, errs
+	}
+
+	// Additional validation: timezone shouldn't have spaces or invalid characters
+	if strings.Contains(timezone, " ") {
+		errs = append(errs, fmt.Errorf(
+			"%q timezone cannot contain spaces. Got: %s", key, timezone))
+		return warns, errs
+	}
+
+	return warns, errs
 }

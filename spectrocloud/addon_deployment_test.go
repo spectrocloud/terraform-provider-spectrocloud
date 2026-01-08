@@ -173,5 +173,4 @@ func TestGetAddonDeploymentDiagPacks(t *testing.T) {
 		assert.Equal(t, "manifest-content-1", pack.Manifests[0].Content)
 		assert.Equal(t, "manifest-1", pack.Manifests[0].Name)
 	})
-
 }

@@ -107,7 +107,6 @@ func TestExpandSpec(t *testing.T) {
 			assert.Equal(t, tt.output, result, "expandSpec() returned unexpected result")
 		})
 	}
-
 }
 
 func TestFlattenMetadata(t *testing.T) {

@@ -188,7 +188,6 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func commonApplianceUpdate(ctx context.Context, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-
 	var diags diag.Diagnostics
 
 	if d.HasChange("tags") {
@@ -266,7 +265,6 @@ func toApplianceMeta(d *schema.ResourceData) *models.V1EdgeHostDeviceMetaUpdateE
 }
 
 func toAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
-
 	if d.Get("tags") != nil {
 		tags := d.Get("tags").(map[string]interface{})
 
@@ -276,7 +274,6 @@ func toAppliance(d *schema.ResourceData) *models.V1EdgeHostDevice {
 	}
 
 	return &models.V1EdgeHostDevice{}
-
 }
 
 func setFields(d *schema.ResourceData, tags map[string]interface{}) models.V1EdgeHostDevice {

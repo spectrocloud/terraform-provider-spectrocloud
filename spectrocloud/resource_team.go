@@ -125,7 +125,6 @@ func resourceTeam() *schema.Resource {
 }
 
 func resourceTeamCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
@@ -159,7 +158,6 @@ func resourceTeamCreate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceTeamRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 
@@ -265,7 +263,6 @@ func setWorkspaceRoles(c *client.V1Client, d *schema.ResourceData) error {
 				projectMap["workspace"] = workspaces
 				projects = append(projects, projectMap)
 			}
-
 		}
 		if err := d.Set("workspace_role_mapping", projects); err != nil {
 			return err
@@ -275,7 +272,6 @@ func setWorkspaceRoles(c *client.V1Client, d *schema.ResourceData) error {
 }
 
 func resourceTeamUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
 

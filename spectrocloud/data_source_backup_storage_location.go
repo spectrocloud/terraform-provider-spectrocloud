@@ -45,7 +45,6 @@ func dataSourceBackupStorageLocationRead(_ context.Context, d *schema.ResourceDa
 
 	var bsl *models.V1UserAssetsLocation
 	for _, a := range bsls {
-
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
 			bsl = a
 			break

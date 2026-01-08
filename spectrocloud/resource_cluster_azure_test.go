@@ -178,7 +178,6 @@ func TestValidateCPPoolCount(t *testing.T) {
 
 	// Test case 1 should return an error, so diagnostics should not be nil
 	assert.NotNil(t, diagnostics, "Test case 1 failed: Expected diagnostics to be non-nil")
-
 }
 
 func TestToMachinePoolAzure(t *testing.T) {
@@ -221,7 +220,6 @@ func TestToMachinePoolAzure(t *testing.T) {
 	assert.Equal(t, machinePool["is_system_node_pool"], result.CloudConfig.IsSystemNodePool)
 	assert.Equal(t, machinePool["node_repave_interval"], int(result.PoolConfig.NodeRepaveInterval))
 	assert.Equal(t, machinePool["count"], int(*result.PoolConfig.Size))
-
 }
 
 func TestFlattenMachinePoolConfigsAzure(t *testing.T) {

@@ -62,7 +62,6 @@ func PodDnsConfigSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func ExpandPodDNSConfig(l []interface{}) (*v1.PodDNSConfig, error) {

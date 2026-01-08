@@ -1,11 +1,12 @@
 package spectrocloud
 
 import (
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestToMachinePoolGcp(t *testing.T) {
@@ -34,12 +35,13 @@ func TestToMachinePoolGcp(t *testing.T) {
 					RootDeviceSize: int64(50),
 				},
 				PoolConfig: &models.V1MachinePoolConfigEntity{
-					AdditionalLabels: map[string]string{},
-					Taints:           nil,
-					IsControlPlane:   true,
-					Labels:           []string{"control-plane"},
-					Name:             types.Ptr("example-name"),
-					Size:             types.Ptr(int32(3)),
+					AdditionalLabels:      map[string]string{},
+					AdditionalAnnotations: map[string]string{},
+					Taints:                nil,
+					IsControlPlane:        true,
+					Labels:                []string{"control-plane"},
+					Name:                  types.Ptr("example-name"),
+					Size:                  types.Ptr(int32(3)),
 					UpdateStrategy: &models.V1UpdateStrategy{
 						Type: "RollingUpdateScaleOut",
 					},
@@ -126,6 +128,7 @@ func TestFlattenMachinePoolConfigsGcp(t *testing.T) {
 						"label1": "value1",
 						"label2": "value2",
 					},
+					"additional_annotations": map[string]interface{}{},
 					"taints": []interface{}{
 						map[string]interface{}{
 							"key":    "taint1",
