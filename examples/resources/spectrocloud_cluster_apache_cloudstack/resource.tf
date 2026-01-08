@@ -198,7 +198,19 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     # - "RollingUpdateScaleIn": Removes old nodes before adding new ones
     # - "OverrideScaling": Custom control with max_surge and max_unavailable
     #   Note: When using "OverrideScaling", you MUST specify override_scaling block
-    update_strategy      = "RollingUpdateScaleOut"
+    update_strategy = "RollingUpdateScaleOut"
+    # IMPORTANT: When update_strategy is set to "OverrideScaling",
+    # the override_scaling block MUST be specified.
+    # update_strategy = "OverrideScaling"
+
+    # Zero-downtime configuration:
+    # - max_surge = "1": Allow 1 extra node to be created during updates
+    # - max_unavailable = "0": Never allow any nodes to be unavailable
+    # This means during an update, a new node is created first, then the old one is removed.
+    # override_scaling {
+    #   max_surge       = "1"
+    #   max_unavailable = "0"
+    # }
     node_repave_interval = 90
   }
 
