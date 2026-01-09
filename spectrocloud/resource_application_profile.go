@@ -35,8 +35,15 @@ func resourceApplicationProfile() *schema.Resource {
 			Delete: schema.DefaultTimeout(20 * time.Second),
 		},
 
-		Description: "Provisions an Application Profile. App Profiles are templates created with preconfigured services. You can create as many profiles as required, with multiple tiers serving different functionalities per use case.",
-
+		Description:   "Provisions an Application Profile. App Profiles are templates created with preconfigured services. You can create as many profiles as required, with multiple tiers serving different functionalities per use case.",
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceApplicationProfileResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceApplicationProfileStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -138,11 +145,11 @@ func resourceApplicationProfileRead(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	diagPacks, diagnostics, done := GetDiagPacks(d, err)
-	if done {
-		return diagnostics
-	}
-	packs, err := flattenAppPacks(c, diagPacks, cp.Spec.Template.AppTiers, tierDetails, d, ctx)
+	// diagPacks, diagnostics, done := GetDiagPacks(d, err)
+	// if done {
+	// 	return diagnostics
+	// }
+	packs, err := flattenAppPacks(c, nil, cp.Spec.Template.AppTiers, tierDetails, d, ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -164,7 +171,11 @@ func getAppTiersContent(c *client.V1Client, d *schema.ResourceData) ([]*models.V
 func getValueInProperties(prop map[string]interface{}, key string) string {
 	for k, v := range prop {
 		if k == key {
-			return v.(string)
+			// Handle both string and interface{} types
+			if strVal, ok := v.(string); ok {
+				return strVal
+			}
+			return fmt.Sprintf("%v", v)
 		}
 	}
 	return ""
@@ -179,10 +190,105 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 	registryNameMap := buildPackRegistryNameMap(d)
 	registryUIDMap := buildPackRegistryUIDMap(d)
 
-	ps := make([]interface{}, len(tiers))
-	for i, tier := range tierDet {
+	// Build pack-by-name map for efficient lookup
+	packMap := make(map[string]map[string]interface{})
+
+	// Build a set of pack names from user's config (CASE 2 FIX)
+	configPackNames := make(map[string]bool)
+
+	if packRaw, ok := d.GetOk("pack"); ok {
+		var packList []interface{}
+		if packSet, ok := packRaw.(*schema.Set); ok {
+			packList = packSet.List()
+		} else if packListRaw, ok := packRaw.([]interface{}); ok {
+			packList = packListRaw
+		}
+
+		for _, packInterface := range packList {
+			pack := packInterface.(map[string]interface{})
+			if packNameVal, ok := pack["name"]; ok && packNameVal != nil {
+				if packName, ok := packNameVal.(string); ok && packName != "" {
+					packMap[packName] = pack
+					configPackNames[packName] = true
+				}
+			}
+		}
+	}
+
+	// CRITICAL FIX: Filter tiers FIRST to only include those with names matching user's config
+	// This prevents tiers without names or with wrong names from being processed
+	validTiers := make([]*models.V1AppTier, 0)
+	for _, tier := range tierDet {
+		if tier != nil && tier.Metadata != nil && tier.Metadata.Name != "" {
+			// Only include tiers that match user's config
+			if configPackNames[tier.Metadata.Name] {
+				validTiers = append(validTiers, tier)
+			} else {
+				log.Printf("[DEBUG] Skipping tier %s (UID: %s) - not in user's config", tier.Metadata.Name, tier.Metadata.UID)
+			}
+		} else {
+			log.Printf("[DEBUG] Skipping tier with missing name (UID: %s)", func() string {
+				if tier != nil && tier.Metadata != nil {
+					return tier.Metadata.UID
+				}
+				return "unknown"
+			}())
+		}
+	}
+
+	// CASE 1 FIX: Deduplicate valid tiers by NAME
+	tierMap := make(map[string]*models.V1AppTier)
+	for _, tier := range validTiers {
+		key := tier.Metadata.Name
+		if existing, found := tierMap[key]; found {
+			// Prefer tier with properties over one without
+			hasProperties := tier.Spec != nil && len(tier.Spec.Properties) > 0
+			existingHasProperties := existing.Spec != nil && len(existing.Spec.Properties) > 0
+
+			if hasProperties && !existingHasProperties {
+				tierMap[key] = tier
+			} else if hasProperties == existingHasProperties {
+				// If both have or don't have properties, prefer the one with type
+				hasType := tier.Spec != nil && tier.Spec.Type != nil
+				existingHasType := existing.Spec != nil && existing.Spec.Type != nil
+				if hasType && !existingHasType {
+					tierMap[key] = tier
+				}
+			}
+		} else {
+			tierMap[key] = tier
+		}
+	}
+
+	ps := make([]interface{}, 0, len(tierMap))
+	for _, tier := range tierMap {
+		// Additional safety check (shouldn't be needed after filtering, but just in case)
+		if tier == nil || tier.Metadata == nil || tier.Metadata.Name == "" {
+			log.Printf("[DEBUG] Skipping tier with missing name after filtering")
+			continue
+		}
+		if tier.Spec == nil || tier.Spec.Type == nil {
+			log.Printf("[DEBUG] Skipping tier %s with missing type", tier.Metadata.Name)
+			continue
+		}
+
+		// Verify this tier matches user's config (double-check)
+		if !configPackNames[tier.Metadata.Name] {
+			log.Printf("[DEBUG] Skipping tier %s - not in user's config (after deduplication)", tier.Metadata.Name)
+			continue
+		}
+
+		// Debug logging at start of processing
+		log.Printf("[DEBUG] Processing tier: name=%s, uid=%s, hasType=%v, hasProperties=%v",
+			tier.Metadata.Name, tier.Metadata.UID,
+			tier.Spec != nil && tier.Spec.Type != nil,
+			tier.Spec != nil && len(tier.Spec.Properties) > 0)
+
 		p := make(map[string]interface{})
 		p["uid"] = tier.Metadata.UID
+
+		// ... rest of the processing code remains the same ...
+		// (Get registry, set name, tag, type, properties, etc.)
 
 		// Get the registry UID from the API response
 		registryUID := tier.Spec.RegistryUID
@@ -195,49 +301,127 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 		usesRegistryUID := registryUIDMap != nil && registryUIDMap[tier.Metadata.Name]
 
 		if usesRegistryName {
-			// User originally specified registry_name, resolve UID back to name
 			if registryUID != "" {
 				registryName, err := resolveRegistryUIDToName(c, registryUID)
 				if err == nil && registryName != "" {
 					p["registry_name"] = registryName
-					// Do NOT set registry_uid - user didn't provide it
 				} else {
-					// Fallback to UID if name resolution fails
 					p["registry_uid"] = registryUID
 				}
 			}
 		} else if usesRegistryUID {
-			// User originally specified registry_uid, set registry_uid
 			if registryUID != "" {
 				p["registry_uid"] = registryUID
 			}
-			// Do NOT set registry_name - user didn't provide it
 		}
-		// else: User didn't specify either registry_uid or registry_name
-		// (they probably used uid directly), so don't set either in state
 
 		p["name"] = tier.Metadata.Name
-		//p["tag"] = tier.Tag
-		p["type"] = tier.Spec.Type
-		p["source_app_tier"] = tier.Spec.SourceAppTierUID
-		prop := make(map[string]string)
-		if len(tier.Spec.Properties) > 0 {
-			for _, pt := range tier.Spec.Properties {
-				if pt.Value != "********" {
-					prop[pt.Name] = pt.Value
-				} else {
-					if _, ok := d.GetOk("pack"); ok {
-						ogProp := d.Get("pack").([]interface{})[i].(map[string]interface{})["properties"]
-						prop[pt.Name] = getValueInProperties(ogProp.(map[string]interface{}), pt.Name)
-					}
+
+		// CASE 3 FIX: Handle tag when config doesn't specify it but API returns it
+		// CRITICAL: If config doesn't specify tag, don't include API tag in state
+		// This ensures hash matches between config and state (both will have no tag in hash)
+		configHasTag := false
+		if pack, found := packMap[tier.Metadata.Name]; found {
+			if tagVal, ok := pack["tag"]; ok && tagVal != nil {
+				if tagStr, ok := tagVal.(string); ok && tagStr != "" {
+					configHasTag = true
+					p["tag"] = tagStr
 				}
 			}
 		}
-		p["properties"] = prop
-		if tier.Spec.Type != nil && string(*tier.Spec.Type) == "container" {
-			p["values"] = tier.Spec.Values
+
+		if !configHasTag {
+			// Config doesn't specify tag - don't include API tag in state
+			// This ensures hash matches (both will have no tag in hash)
+			p["tag"] = ""
+		} else if tier.Spec != nil && tier.Spec.Version != "" {
+			// Config has tag - use config tag (already set above)
+			// If config tag is empty but was specified, keep it empty
+			// This handles the case where user explicitly sets tag to empty string
 		}
-		if tier.Spec.Type != nil && (*tier.Spec.Type == "helm" || *tier.Spec.Type == "manifest") {
+
+		p["type"] = string(*tier.Spec.Type)
+
+		if tier.Spec != nil && tier.Spec.SourceAppTierUID != "" {
+			p["source_app_tier"] = tier.Spec.SourceAppTierUID
+		} else {
+			p["source_app_tier"] = ""
+		}
+
+		if tier.Spec != nil {
+			p["install_order"] = int(tier.Spec.InstallOrder)
+		} else {
+			p["install_order"] = int(0)
+		}
+
+		// Properties handling - ensure type consistency for proper drift detection
+		// Schema expects map[string]string, so use that type instead of map[string]interface{}
+		prop := make(map[string]string)
+
+		// Log API properties for debugging
+		if tier.Spec != nil && len(tier.Spec.Properties) > 0 {
+			log.Printf("[DEBUG] Pack %s API properties count: %d", tier.Metadata.Name, len(tier.Spec.Properties))
+			for _, pt := range tier.Spec.Properties {
+				log.Printf("[DEBUG] Pack %s API property: %s = %s (masked: %v)",
+					tier.Metadata.Name, pt.Name, pt.Value, pt.Value == "********")
+			}
+		}
+
+		if tier.Spec != nil && len(tier.Spec.Properties) > 0 {
+			for _, pt := range tier.Spec.Properties {
+				if pt.Value == "********" {
+					// For masked values, preserve from state (user's original value)
+					if pack, found := packMap[tier.Metadata.Name]; found {
+						if ogProp, ok := pack["properties"]; ok && ogProp != nil {
+							var val string
+							if ogPropMap, ok := ogProp.(map[string]interface{}); ok {
+								// Handle map[string]interface{} from state
+								val = getValueInProperties(ogPropMap, pt.Name)
+							} else if ogPropMap, ok := ogProp.(map[string]string); ok {
+								// Handle case where properties are already map[string]string
+								if v, exists := ogPropMap[pt.Name]; exists {
+									val = v
+								}
+							}
+							if val != "" {
+								prop[pt.Name] = val
+								log.Printf("[DEBUG] Pack %s preserved masked property %s from state", tier.Metadata.Name, pt.Name)
+							}
+						}
+					}
+				} else {
+					// CRITICAL: ALWAYS use API value for non-masked properties
+					// This ensures drift detection works correctly
+					// The API value represents the actual current state of the resource
+					// pt.Value is already a string from the API
+					trimmedValue := strings.TrimSpace(pt.Value)
+					prop[pt.Name] = trimmedValue
+					log.Printf("[DEBUG] Pack %s setting property %s = %s from API",
+						tier.Metadata.Name, pt.Name, trimmedValue)
+				}
+			}
+		}
+
+		// Always set properties map (even if empty) to ensure Terraform can compare properly
+		p["properties"] = prop
+
+		// Debug logging to help diagnose drift detection issues
+		log.Printf("[DEBUG] Pack %s final properties map (type: %T, count: %d): %v",
+			tier.Metadata.Name, prop, len(prop), prop)
+
+		// Values
+		if tier.Spec != nil && tier.Spec.Type != nil && string(*tier.Spec.Type) == "container" {
+			if tier.Spec.Values != "" {
+				p["values"] = tier.Spec.Values
+			} else {
+				p["values"] = ""
+			}
+		} else {
+			p["values"] = ""
+		}
+
+		// Manifest
+		if tier.Spec != nil && tier.Spec.Type != nil && (*tier.Spec.Type == "helm" || *tier.Spec.Type == "manifest") {
 			if len(tier.Spec.Manifests) > 0 {
 				ma := make([]interface{}, len(tier.Spec.Manifests))
 				for j, m := range tier.Spec.Manifests {
@@ -256,9 +440,36 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 					ma[j] = mj
 				}
 				p["manifest"] = ma
+			} else {
+				p["manifest"] = []interface{}{}
 			}
+		} else {
+			p["manifest"] = []interface{}{}
 		}
-		ps[i] = p
+
+		// Final validation (should always pass after filtering, but safety check)
+		nameVal, ok := p["name"].(string)
+		if !ok || nameVal == "" {
+			log.Printf("[ERROR] Attempted to create pack without name (UID: %v). This should never happen after filtering.", p["uid"])
+			continue
+		}
+		typeVal, ok := p["type"].(string)
+		if !ok || typeVal == "" {
+			log.Printf("[ERROR] Attempted to create pack %s without type (UID: %v). This should never happen after filtering.", nameVal, p["uid"])
+			continue
+		}
+
+		// CRITICAL: Ensure the pack name matches user's config
+		if !configPackNames[nameVal] {
+			log.Printf("[ERROR] Pack %s (UID: %v) doesn't match user's config. This should never happen after filtering.", nameVal, p["uid"])
+			continue
+		}
+
+		// Debug logging before appending
+		log.Printf("[DEBUG] Final pack before append: name=%v, type=%v, uid=%v, hasProperties=%v, propertiesCount=%d",
+			p["name"], p["type"], p["uid"], len(prop) > 0, len(prop))
+
+		ps = append(ps, p)
 	}
 
 	return ps, nil
@@ -322,7 +533,18 @@ func toApplicationProfileCreate(d *schema.ResourceData) (*models.V1AppProfileEnt
 	cp := toApplicationProfileBasic(d)
 
 	tiers := make([]*models.V1AppTierEntity, 0)
-	for _, tier := range d.Get("pack").([]interface{}) {
+	// for _, tier := range d.Get("pack").([]interface{}) {
+	// FIX: Handle TypeSet properly (not TypeList)
+	packRaw := d.Get("pack")
+	var packList []interface{}
+	if packSet, ok := packRaw.(*schema.Set); ok {
+		packList = packSet.List()
+	} else if packListRaw, ok := packRaw.([]interface{}); ok {
+		packList = packListRaw // Backward compatibility
+	}
+
+	for _, tier := range packList {
+		// for _, tier := range d.Get("pack").([]interface{}) {
 		if t, e := toApplicationProfilePackCreate(tier); e != nil {
 			return nil, e
 		} else {
@@ -445,7 +667,17 @@ func toApplicationTiersUpdate(d *schema.ResourceData, c *client.V1Client) ([]*mo
 	var deleteTiers []string
 
 	createTiersMap := map[string]*models.V1AppTierEntity{}
-	for _, tier := range d.Get("pack").([]interface{}) {
+	// FIX: Handle TypeSet properly (not TypeList)
+	var packList []interface{}
+	packRaw := d.Get("pack")
+	if packSet, ok := packRaw.(*schema.Set); ok {
+		packList = packSet.List()
+	} else if packListRaw, ok := packRaw.([]interface{}); ok {
+		packList = packListRaw // Backward compatibility during migration
+	}
+
+	for _, tier := range packList {
+		// for _, tier := range d.Get("pack").([]interface{}) {
 		if _, found := previousTiersMap[tier.(map[string]interface{})["name"].(string)]; found {
 			t := toApplicationProfilePackUpdate(tier)
 			updateTiersMap[t.Name] = t
@@ -538,4 +770,146 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 	}
 
 	return pack
+}
+
+func resourceApplicationProfileResourceV2() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"version": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "1.0.0",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant", "system"}, false),
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"description": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"cloud": {
+				Type:     schema.TypeString,
+				Default:  "all",
+				Optional: true,
+			},
+			// Version 2 used TypeList for pack
+			"pack": {
+				Type:        schema.TypeList, // OLD: TypeList
+				Required:    true,
+				Description: "A list of packs to be applied to the application profile.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						// Copy the schema from schemas.AppPackSchema() but keep as TypeList
+						"type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "spectro",
+						},
+						"source_app_tier": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"registry_uid": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"registry_name": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"uid": {
+							Type:     schema.TypeString,
+							Computed: true,
+							Optional: true,
+						},
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"properties": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"install_order": {
+							Type:     schema.TypeInt,
+							Default:  0,
+							Optional: true,
+						},
+						"manifest": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"uid": {
+										Type:     schema.TypeString,
+										Computed: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"content": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+						"tag": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"values": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func resourceApplicationProfileStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading application profile state from version 2 to 3")
+
+	// Convert pack from TypeList to TypeSet
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if packRaw, exists := rawState["pack"]; exists {
+		if packList, ok := packRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping pack as list during state upgrade with %d items", len(packList))
+
+			// Keep the pack data as-is (as a list)
+			// Terraform will convert it to TypeSet when loading the resource using the schema
+			rawState["pack"] = packList
+
+			log.Printf("[DEBUG] Successfully prepared pack for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] pack is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No pack found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
