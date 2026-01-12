@@ -14,7 +14,6 @@ import (
 )
 
 func TestToClusterProfileVariables(t *testing.T) {
-
 	mockResourceData := resourceClusterProfile().TestResourceData()
 	var proVar []interface{}
 	variables := map[string]interface{}{
@@ -169,7 +168,6 @@ func TestFlattenProfileVariables(t *testing.T) {
 }
 
 func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
-
 	mockResourceData := resourceClusterProfile().TestResourceData()
 	var proVar []interface{}
 	variables := map[string]interface{}{
@@ -239,7 +237,6 @@ func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
 	result, err = toClusterProfileVariables(mockResourceData)
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
-
 }
 
 func TestToClusterProfilePackCreate(t *testing.T) {

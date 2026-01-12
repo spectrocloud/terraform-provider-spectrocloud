@@ -249,7 +249,6 @@ func TestResourceTeam(t *testing.T) {
 	testData := prepareTeamTestData("test-id")
 	// assert id is the same
 	assert.Equal(t, "test-id", testData.Id())
-
 }
 
 func TestResourceProject(t *testing.T) {

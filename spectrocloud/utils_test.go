@@ -13,7 +13,6 @@ func TestStringContains(t *testing.T) {
 	assert.Equal(t, true, contains, "Should be true.")
 
 	assert.Equal(t, false, stringContains(ss, "doesnt"), "Should be false.")
-
 }
 
 func TestFilter(t *testing.T) {

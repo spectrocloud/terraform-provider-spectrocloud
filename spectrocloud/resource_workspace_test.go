@@ -138,7 +138,6 @@ func TestResourceWorkspaceCreate(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceWorkspaceRead(t *testing.T) {
@@ -150,7 +149,6 @@ func TestResourceWorkspaceRead(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceWorkspaceUpdate(t *testing.T) {
@@ -162,7 +160,6 @@ func TestResourceWorkspaceUpdate(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceWorkspaceDelete(t *testing.T) {
@@ -175,7 +172,6 @@ func TestResourceWorkspaceDelete(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceWorkspaceCreateNegative(t *testing.T) {
@@ -189,7 +185,6 @@ func TestResourceWorkspaceCreateNegative(t *testing.T) {
 	if assert.NotEmpty(t, diags) { // Check that diags is not empty
 		assert.Contains(t, diags[0].Summary, "workspaces already exist") // Verify the error message
 	}
-
 }
 
 func TestResourceWorkspaceReadNegative(t *testing.T) {
@@ -204,7 +199,6 @@ func TestResourceWorkspaceReadNegative(t *testing.T) {
 	if assert.NotEmpty(t, diags) { // Check that diags is not empty
 		assert.Contains(t, diags[0].Summary, "workspaces not found") // Verify the error message
 	}
-
 }
 
 func TestResourceWorkspaceUpdateNegative(t *testing.T) {

@@ -35,7 +35,6 @@ func virtualMachineStatusSchema() *schema.Schema {
 			Schema: fields,
 		},
 	}
-
 }
 
 func expandVirtualMachineStatus(virtualMachineStatus []interface{}) (kubevirtapiv1.VirtualMachineStatus, error) {

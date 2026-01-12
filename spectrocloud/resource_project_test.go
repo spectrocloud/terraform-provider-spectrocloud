@@ -170,7 +170,6 @@ func TestUpdateProjectNegativeFunc(t *testing.T) {
 	var ctx context.Context
 	diags = resourceProjectUpdate(ctx, d, unitTestMockAPINegativeClient)
 	assertFirstDiagMessage(t, diags, "Operation not allowed")
-
 }
 
 func TestResourceProjectInvalidDelete(t *testing.T) {

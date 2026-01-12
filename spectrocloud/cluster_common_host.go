@@ -59,7 +59,6 @@ func toIngressConfig(config map[string]interface{}) *models.V1IngressConfig {
 }
 
 func toLoadBalancerConfig(config map[string]interface{}) *models.V1LoadBalancerConfig {
-
 	loadBalancerConfig := &models.V1LoadBalancerConfig{}
 
 	if config["external_traffic_policy"] != nil {
@@ -84,7 +83,6 @@ func flattenHostConfig(hostConfig *models.V1HostClusterConfig) []interface{} {
 		if hostConfig.ClusterEndpoint.Config != nil {
 			if hostConfig.ClusterEndpoint.Config.IngressConfig != nil {
 				result["ingress_host"] = hostConfig.ClusterEndpoint.Config.IngressConfig.Host
-
 			}
 			if hostConfig.ClusterEndpoint.Config.LoadBalancerConfig != nil {
 				result["external_traffic_policy"] = hostConfig.ClusterEndpoint.Config.LoadBalancerConfig.ExternalTrafficPolicy

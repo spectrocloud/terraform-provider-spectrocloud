@@ -94,6 +94,15 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	// Flatten cluster_timezone - always set during read (including import)
+	if cluster.Spec.ClusterConfig.Timezone != "" {
+		if _, ok := d.GetOk("cluster_timezone"); ok {
+			if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+				return diag.FromErr(err), true
+			}
+		}
+	}
+
 	// Flatten pause_agent_upgrades - always set during read (including import)
 	if err := d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster)); err != nil {
 		return diag.FromErr(err), true
@@ -217,6 +226,12 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
+	if d.HasChange("cluster_timezone") {
+		if err := updateClusterTimezone(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
 	return diag.Diagnostics{}, false
 }
 
@@ -247,7 +262,6 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 					err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `review_repave_state` to `Approved` to approve the repave operation on the cluster")
 					return err
 				}
-
 			} else {
 				reasons, err := c.GetRepaveReasons(d.Id())
 				if err != nil {
@@ -278,4 +292,46 @@ func validateReviewRepaveValue(val interface{}, key string) (warns []string, err
 		errs = append(errs, fmt.Errorf("expected review_repave_state to be one of [``, `Pending`, `Approved`], got %s", repaveValue))
 	}
 	return warns, errs
+}
+
+// validateOverrideScaling validates that when update_strategy is set to "OverrideScaling",
+// the override_scaling attribute must be specified with both max_surge and max_unavailable.
+func validateOverrideScaling(d *schema.ResourceData, machinePoolKey string) error {
+	if machinePools, ok := d.GetOk(machinePoolKey); ok {
+		machinePoolSet := machinePools.(*schema.Set)
+		for _, mp := range machinePoolSet.List() {
+			machinePool := mp.(map[string]interface{})
+
+			updateStrategy := ""
+			if us, ok := machinePool["update_strategy"].(string); ok {
+				updateStrategy = us
+			}
+
+			// If update_strategy is OverrideScaling, validate override_scaling is present
+			if updateStrategy == "OverrideScaling" {
+				overrideScaling, hasOverrideScaling := machinePool["override_scaling"].([]interface{})
+
+				if !hasOverrideScaling || len(overrideScaling) == 0 {
+					poolName := machinePool["name"].(string)
+					return fmt.Errorf("machine pool '%s': when update_strategy is 'OverrideScaling', override_scaling must be specified with both max_surge and max_unavailable", poolName)
+				}
+
+				// Validate that both max_surge and max_unavailable are provided
+				scalingConfig := overrideScaling[0].(map[string]interface{})
+				maxSurge, hasSurge := scalingConfig["max_surge"].(string)
+				maxUnavailable, hasUnavailable := scalingConfig["max_unavailable"].(string)
+
+				if !hasSurge || maxSurge == "" {
+					poolName := machinePool["name"].(string)
+					return fmt.Errorf("machine pool '%s': override_scaling.max_surge is required when update_strategy is 'OverrideScaling'", poolName)
+				}
+
+				if !hasUnavailable || maxUnavailable == "" {
+					poolName := machinePool["name"].(string)
+					return fmt.Errorf("machine pool '%s': override_scaling.max_unavailable is required when update_strategy is 'OverrideScaling'", poolName)
+				}
+			}
+		}
+	}
+	return nil
 }

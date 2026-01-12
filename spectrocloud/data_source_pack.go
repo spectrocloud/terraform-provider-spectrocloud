@@ -198,7 +198,6 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 	} else if v, ok := d.GetOk("id"); ok {
 		filters = append(filters, fmt.Sprintf("metadata.uid=%s", v.(string)))
 	} else if v, ok := d.GetOk("advance_filters"); ok {
-
 		if v, ok := d.GetOk("name"); ok {
 			packName = v.(string)
 		}
@@ -229,7 +228,6 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 		}
 	} else {
 		if v, ok := d.GetOk("name"); ok {
-
 			/*
 				Cluster profile now supports packs duplication, but pack name has to be unique and will be double dashed
 				and first part would be any random name to make overall pack name unique and 2nd part is actual pack name.
@@ -332,9 +330,7 @@ func dataSourcePackRead(_ context.Context, d *schema.ResourceData, m interface{}
 				} else {
 					filters = []string{fmt.Sprintf("metadata.uid=%s", supportedVersionList.Tags[len(supportedVersionList.Tags)-1].PackUID)}
 				}
-
 			}
-
 		}
 	}
 

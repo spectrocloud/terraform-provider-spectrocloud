@@ -135,6 +135,13 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 				ValidateDiagFunc: validateOsPatchOnDemandAfter,
 				Description:      "The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`",
 			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -306,6 +313,14 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							},
 							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
 						},
+						"additional_annotations": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Additional annotation to be applied to the machine pool. annotation must be in the form of `key:value`.",
+						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"control_plane": {
@@ -340,8 +355,14 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn", "OverrideScaling"}, false),
+						},
+						"override_scaling": schemas.OverrideScalingSchema(),
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"min": {
 							Type:        schema.TypeInt,
@@ -401,7 +422,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Type:        schema.TypeList,
 							Optional:    true,
 							MaxItems:    1,
-							Description: "Apache CloudStack template override for this machine pool. If not specified, inherits cluster default from profile.",
+							Description: "Apache CloudStack template override for this machine pool. If not specified, inherits cluster default.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"id": {
@@ -474,6 +495,11 @@ func resourceClusterApacheCloudStackCreate(ctx context.Context, d *schema.Resour
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
 
+	// Validate override_Scaling configuration
+	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+		return diag.FromErr(err)
+	}
+
 	cluster, err := toCloudStackCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
@@ -533,7 +559,6 @@ func resourceClusterApacheCloudStackRead(_ context.Context, d *schema.ResourceDa
 }
 
 func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
 	var diags diag.Diagnostics
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
@@ -545,6 +570,11 @@ func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.Resour
 	}
 
 	if d.HasChange("machine_pool") {
+		// Validate override_Scaling configuration
+		if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+			return diag.FromErr(err)
+		}
+
 		if err := updateMachinePoolCloudStack(ctx, c, d, cloudConfigId); err != nil {
 			return diag.FromErr(err)
 		}
@@ -667,7 +697,7 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 	controlPlane := mp["control_plane"].(bool)
 	controlPlaneAsWorker := mp["control_plane_as_worker"].(bool)
 	if controlPlane {
-		labels = append(labels, "master")
+		labels = append(labels, "control-plane")
 	}
 
 	cloudConfig := &models.V1CloudStackMachinePoolCloudConfigEntity{
@@ -706,16 +736,22 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 	}
 
 	poolConfig := &models.V1MachinePoolConfigEntity{
-		AdditionalLabels: toAdditionalNodePoolLabels(mp),
-		Taints:           toClusterTaints(mp),
-		IsControlPlane:   controlPlane,
-		Labels:           labels,
-		Name:             types.Ptr(mp["name"].(string)),
-		Size:             types.Ptr(safeInt32Conversion(mp["count"].(int), 1)),
-		UpdateStrategy: &models.V1UpdateStrategy{
-			Type: getUpdateStrategy(mp),
-		},
+		AdditionalLabels:        toAdditionalNodePoolLabels(mp),
+		AdditionalAnnotations:   toAdditionalNodePoolAnnotations(mp),
+		Taints:                  toClusterTaints(mp),
+		IsControlPlane:          controlPlane,
+		Labels:                  labels,
+		Name:                    types.Ptr(mp["name"].(string)),
+		Size:                    types.Ptr(safeInt32Conversion(mp["count"].(int), 1)),
+		UpdateStrategy:          toUpdateStrategy(mp),
 		UseControlPlaneAsWorker: controlPlaneAsWorker,
+	}
+
+	// Handle override_kubeadm_configuration (worker pools only)
+	if !controlPlane {
+		if overrideKubeadm, ok := mp["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
+			poolConfig.OverrideKubeadmConfiguration = overrideKubeadm
+		}
 	}
 
 	// Safe conversion for min size
@@ -760,9 +796,29 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
 
+	if _, ok := m["additional_annotations"]; ok {
+		buf.WriteString(HashStringMap(m["additional_annotations"]))
+	}
+
 	// Add CloudStack-specific fields
 	if val, ok := m["offering"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+		fmt.Fprintf(buf, "%s-", val.(string))
+	}
+
+	// Hash override_kubeadm_configuration
+	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+
+	// Hash override_scaling
+	if overrideScaling, ok := m["override_scaling"].([]interface{}); ok && len(overrideScaling) > 0 {
+		scalingConfig := overrideScaling[0].(map[string]interface{})
+		if maxSurge, ok := scalingConfig["max_surge"].(string); ok && maxSurge != "" {
+			fmt.Fprintf(buf, "max_surge:%s-", maxSurge)
+		}
+		if maxUnavailable, ok := scalingConfig["max_unavailable"].(string); ok && maxUnavailable != "" {
+			fmt.Fprintf(buf, "max_unavailable:%s-", maxUnavailable)
+		}
 	}
 
 	// Note: instance_config is computed and excluded from hash to prevent false change detection
@@ -771,10 +827,10 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	if templateList, ok := m["template"].([]interface{}); ok && len(templateList) > 0 {
 		tmpl := templateList[0].(map[string]interface{})
 		if val, ok := tmpl["id"]; ok {
-			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+			fmt.Fprintf(buf, "%s-", val.(string))
 		}
 		if val, ok := tmpl["name"]; ok {
-			buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+			fmt.Fprintf(buf, "%s-", val.(string))
 		}
 	}
 
@@ -1033,12 +1089,23 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 
 		// Flatten pool configuration (from V1MachinePoolBaseConfig embedded)
 		// Note: AdditionalLabels and Taints are now available in the GET response for CloudStack
-		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
-		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+
+		if machinePool.UpdateStrategy != nil {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+			// Flatten override_Scaling if using OverrideScaling strategy
+			flattenOverrideScaling(machinePool.UpdateStrategy, oi)
+		}
+
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
+
+		// Flatten override_kubeadm_configuration (worker pools only)
+		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
+			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
 
 		if machinePool.MinSize > 0 {
 			oi["min"] = int(machinePool.MinSize)

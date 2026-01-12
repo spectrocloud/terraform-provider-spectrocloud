@@ -82,6 +82,7 @@ func resourceClusterVirtual() *schema.Resource {
 			"resources": {
 				Type:     schema.TypeList,
 				Optional: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"max_cpu": {
@@ -326,7 +327,6 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 				// Processed (if exists)
 				delete(osMap, name)
 			}
-
 		}
 
 		// Deleted old machine pools
@@ -356,7 +356,6 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 				return diag.FromErr(err)
 			}
 		}
-
 	}
 
 	if d.HasChange("pause_cluster") {
@@ -387,7 +386,6 @@ func resourceClusterVirtualUpdate(ctx context.Context, d *schema.ResourceData, m
 				return diagnostics
 			}
 		}
-
 	}
 	resourceClusterVirtualRead(ctx, d, m)
 	return diags

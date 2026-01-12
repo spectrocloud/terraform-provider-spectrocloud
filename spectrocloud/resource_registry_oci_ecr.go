@@ -89,6 +89,12 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Default:     false,
 				Description: "If `true`, Terraform will wait for the OCI registry to complete its initial synchronization before marking the resource as created or updated. This option is applicable when `provider_type` is set to `zarf` or `helm`. Default value is `false`.",
 			},
+			"wait_for_status_message": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "The status message from the last sync operation. This is a computed field that is populated after sync completes.",
+			},
 			"credentials": {
 				Type:        schema.TypeList,
 				Required:    true,
@@ -233,6 +239,19 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 			if len(diagnostics) > 0 {
 				diags = append(diags, diagnostics...)
 			}
+			// Fetch final sync status and set wait_for_status_message
+			syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(uid)
+			if statusErr == nil && syncStatus != nil {
+				statusMessage := ""
+				if syncStatus.Message != "" {
+					statusMessage = syncStatus.Message
+				} else if syncStatus.Status != "" {
+					statusMessage = fmt.Sprintf("Status: %s", syncStatus.Status)
+				}
+				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
+					diags = append(diags, diag.FromErr(err)...)
+				}
+			}
 			if isError {
 				return diagnostics
 			}
@@ -327,36 +346,44 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
-		acc["credential_type"] = "basic" // ← ADD THIS LINE (missing in current code)
-		acc["username"] = registry.Spec.Auth.Username
-		// FIX: Preserve password from state to avoid drift detection when API returns masked/different format
-		// This applies to ALL provider types: helm, zarf, and pack
-		if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
-			if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
-				if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
-					if password, exists := currentCredMap["password"]; exists && password != nil {
-						// Preserve password from state to avoid drift
-						acc["password"] = password
-					} else {
-						acc["password"] = registry.Spec.Auth.Password.String()
+		// Read the actual auth type from the API response
+		switch registry.Spec.Auth.Type {
+		case "noAuth":
+			acc["credential_type"] = "noAuth"
+			acc["username"] = ""
+			acc["password"] = ""
+		case "basic":
+			acc["credential_type"] = "basic"
+			acc["username"] = registry.Spec.Auth.Username
+			// FIX: Preserve password from state to avoid drift detection when API returns masked/different format
+			// This applies to ALL provider types: helm, zarf, and pack
+			if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+				if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+					if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+						if password, exists := currentCredMap["password"]; exists && password != nil {
+							// Preserve password from state to avoid drift
+							acc["password"] = password
+						} else {
+							acc["password"] = registry.Spec.Auth.Password.String()
+						}
 					}
 				}
+			} else {
+				// No existing credentials in state, use API value
+				acc["password"] = registry.Spec.Auth.Password.String()
 			}
-		} else {
-			// No existing credentials in state, use API value
-			acc["password"] = registry.Spec.Auth.Password.String()
+			tlsConfig := make([]interface{}, 0, 1)
+			tls := make(map[string]interface{})
+			tls["certificate"] = registry.Spec.Auth.TLS.Certificate
+			tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
+			tlsConfig = append(tlsConfig, tls)
+			acc["tls_config"] = tlsConfig
+			credentials = append(credentials, acc)
+			if err := d.Set("credentials", credentials); err != nil {
+				return diag.FromErr(err)
+			}
+			return diags
 		}
-		tlsConfig := make([]interface{}, 0, 1)
-		tls := make(map[string]interface{})
-		tls["certificate"] = registry.Spec.Auth.TLS.Certificate
-		tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
-		tlsConfig = append(tlsConfig, tls)
-		acc["tls_config"] = tlsConfig
-		credentials = append(credentials, acc)
-		if err := d.Set("credentials", credentials); err != nil {
-			return diag.FromErr(err)
-		}
-		return diags
 	}
 
 	return diags
@@ -407,6 +434,19 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 			diagnostics, isError := waitForOciRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate)
 			if len(diagnostics) > 0 {
 				diags = append(diags, diagnostics...)
+			}
+			// Fetch final sync status and set wait_for_status_message
+			syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(d.Id())
+			if statusErr == nil && syncStatus != nil {
+				statusMessage := ""
+				if syncStatus.Message != "" {
+					statusMessage = syncStatus.Message
+				} else if syncStatus.Status != "" {
+					statusMessage = fmt.Sprintf("Status: %s", syncStatus.Status)
+				}
+				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
+					diags = append(diags, diag.FromErr(err)...)
+				}
 			}
 			if isError {
 				return diagnostics
@@ -485,10 +525,21 @@ func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 		tlsCertificate = authConfig["tls_config"].([]interface{})[0].(map[string]interface{})["certificate"].(string)
 		tlsSkipVerify = authConfig["tls_config"].([]interface{})[0].(map[string]interface{})["insecure_skip_verify"].(bool)
 	}
+	// Initialize auth with noAuth as default
+	credentialType := authConfig["credential_type"].(string)
+	authType := "noAuth"
 	var username, password string
 
-	username = authConfig["username"].(string)
-	password = authConfig["password"].(string)
+	// Only set username/password if credential_type is "basic"
+	if credentialType == "basic" {
+		authType = "basic"
+		if val, ok := authConfig["username"]; ok && val != nil {
+			username = val.(string)
+		}
+		if val, ok := authConfig["password"]; ok && val != nil {
+			password = val.(string)
+		}
+	}
 
 	return &models.V1BasicOciRegistry{
 		Metadata: &models.V1ObjectMeta{
@@ -502,7 +553,7 @@ func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 			Auth: &models.V1RegistryAuth{
 				Username: username,
 				Password: strfmt.Password(password),
-				Type:     "basic",
+				Type:     authType,
 				TLS: &models.V1TLSConfiguration{
 					Certificate:        tlsCertificate,
 					Enabled:            true,
@@ -512,7 +563,6 @@ func toRegistryBasic(d *schema.ResourceData) *models.V1BasicOciRegistry {
 			IsSyncSupported: isSynchronization,
 		},
 	}
-
 }
 
 func toRegistryAwsAccountCredential(regCred map[string]interface{}) *models.V1AwsCloudAccount {
@@ -601,11 +651,11 @@ func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid str
 				errorDetail += "\n\nPlease check the registry configuration (endpoint, credentials) and try again."
 
 				diags = append(diags, diag.Diagnostic{
-					Severity: diag.Error,
+					Severity: diag.Warning,
 					Summary:  "OCI registry sync failed",
 					Detail:   errorDetail,
 				})
-				return diags, true
+				return diags, false
 			}
 		}
 

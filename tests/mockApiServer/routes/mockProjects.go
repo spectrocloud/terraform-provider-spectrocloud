@@ -30,7 +30,6 @@ func getMockProjectPayload() models.V1Project {
 			IsDisabled:    false,
 		},
 	}
-
 }
 
 func ProjectRoutes() []Route {

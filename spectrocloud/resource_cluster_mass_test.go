@@ -70,6 +70,7 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 				"additional_labels": map[string]string{
 					"TF": "test_label",
 				},
+				"additional_annotations":  map[string]interface{}{},
 				"node_repave_interval":    int32(30),
 				"control_plane_as_worker": true,
 				"min":                     2,
@@ -99,7 +100,6 @@ func TestFlattenMachinePoolConfigsMaas(t *testing.T) {
 }
 
 func TestToMachinePoolMaas(t *testing.T) {
-
 	input := map[string]interface{}{
 		"control_plane":   false,
 		"name":            "mass_mp_worker",
@@ -153,6 +153,7 @@ func TestToMachinePoolMaas(t *testing.T) {
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:        map[string]string{"TF": "test_label"},
+			AdditionalAnnotations:   map[string]string{},
 			Labels:                  []string{"worker"},
 			MaxSize:                 3,
 			MinSize:                 2,

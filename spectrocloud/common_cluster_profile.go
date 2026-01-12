@@ -134,7 +134,6 @@ func resolveRegistryNameToUID(c *client.V1Client, registryName string, registryT
 			registry, err := c.GetPackRegistryCommonByName(registryName)
 			if err != nil {
 				return "", err
-
 			}
 			return registry.UID, nil
 		}

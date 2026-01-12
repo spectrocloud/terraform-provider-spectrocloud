@@ -255,7 +255,6 @@ func TestExpandVirtualMachineStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := expandVirtualMachineStatus(tt.input)
 			assert.NoError(t, err)
-
 		})
 	}
 }
@@ -323,7 +322,6 @@ func TestFlattenVirtualMachineStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			flattenVirtualMachineStatus(tt.input)
-
 		})
 	}
 }

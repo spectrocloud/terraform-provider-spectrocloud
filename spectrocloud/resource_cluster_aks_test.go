@@ -146,5 +146,4 @@ func TestFlattenMachinePoolConfigsAks(t *testing.T) {
 	assert.False(t, m1["is_system_node_pool"].(bool))
 	assert.Equal(t, "Standard_LRS", m1["storage_account_type"])
 	assert.Equal(t, "RollingUpdate", m1["update_strategy"])
-
 }

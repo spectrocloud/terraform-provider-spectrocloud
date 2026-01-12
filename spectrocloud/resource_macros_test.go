@@ -151,7 +151,6 @@ func TestResourceProjectMacrosCreate(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceTenantMacrosCreate(t *testing.T) {
@@ -163,7 +162,6 @@ func TestResourceTenantMacrosCreate(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceProjectMacrosRead(t *testing.T) {
@@ -175,7 +173,6 @@ func TestResourceProjectMacrosRead(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceTenantMacrosRead(t *testing.T) {
@@ -187,7 +184,6 @@ func TestResourceTenantMacrosRead(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceProjectMacrosUpdate(t *testing.T) {
@@ -207,7 +203,6 @@ func TestResourceProjectMacrosUpdate(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceTenantMacrosUpdate(t *testing.T) {
@@ -238,7 +233,6 @@ func TestResourceProjectMacrosDelete(t *testing.T) {
 
 	// Assertions
 	assert.Equal(t, 0, len(diags))
-
 }
 
 func TestResourceTenantMacrosDelete(t *testing.T) {
@@ -289,7 +283,6 @@ func TestResourceProjectMacrosReadNegative(t *testing.T) {
 	if assert.NotEmpty(t, diags) { // Check that diags is not empty
 		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
 	}
-
 }
 
 func TestResourceTenantMacrosReadNegative(t *testing.T) {
@@ -303,7 +296,6 @@ func TestResourceTenantMacrosReadNegative(t *testing.T) {
 	if assert.NotEmpty(t, diags) { // Check that diags is not empty
 		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
 	}
-
 }
 
 func TestResourceProjectMacrosUpdateNegative(t *testing.T) {
@@ -323,7 +315,6 @@ func TestResourceProjectMacrosUpdateNegative(t *testing.T) {
 
 	// Assertions
 	assert.Empty(t, diags)
-
 }
 
 func TestResourceTenantMacrosUpdateNegative(t *testing.T) {
@@ -356,7 +347,6 @@ func TestResourceProjectMacrosDeleteNegative(t *testing.T) {
 	if assert.NotEmpty(t, diags) { // Check that diags is not empty
 		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
 	}
-
 }
 
 func TestResourceTenantMacrosDeleteNegative(t *testing.T) {

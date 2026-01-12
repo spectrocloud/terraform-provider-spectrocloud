@@ -54,7 +54,6 @@ func dataSourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData
 	var account *models.V1VsphereAccount
 	filteredAccounts := make([]*models.V1VsphereAccount, 0)
 	for _, a := range accounts {
-
 		if v, ok := d.GetOk("id"); ok && v.(string) == a.Metadata.UID {
 			account = a
 			break

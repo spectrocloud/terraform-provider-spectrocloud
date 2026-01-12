@@ -24,7 +24,6 @@ type GetMaintenanceStatus func(string, string, string) (*models.V1MachineMainten
 type GetNodeStatusMap func(string, string) (map[string]models.V1CloudMachineStatus, error)
 
 func waitForNodeMaintenanceCompleted(c *client.V1Client, ctx context.Context, fn GetMaintenanceStatus, ConfigUID, MachineName, NodeId string) (error, bool) {
-
 	stateConf := &retry.StateChangeConf{
 		Delay:      30 * time.Second,
 		Pending:    NodeMaintenanceLifecycleStates,
