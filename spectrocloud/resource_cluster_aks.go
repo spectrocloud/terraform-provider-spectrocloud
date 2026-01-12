@@ -252,6 +252,15 @@ func resourceClusterAks() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
+						},
+						"additional_annotations": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.",
 						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
@@ -264,8 +273,14 @@ func resourceClusterAks() *schema.Resource {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn", "OverrideScaling"}, false),
+						},
+						"override_scaling": schemas.OverrideScalingSchema(),
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -332,6 +347,11 @@ func resourceClusterAksCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+
+	// Validate override_Scaling configuration
+	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+		return diag.FromErr(err)
+	}
 
 	cluster, err := toAksCluster(c, d)
 	if err != nil {
@@ -510,7 +530,7 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 
 		if machinePool.IsControlPlane != nil && *machinePool.IsControlPlane {
 			continue
@@ -520,7 +540,16 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		oi["count"] = int(machinePool.Size)
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
-		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+		if machinePool.UpdateStrategy != nil {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+			// Flatten override_Scaling if using OverrideScaling strategy
+			flattenOverrideScaling(machinePool.UpdateStrategy, oi)
+		}
+
+		// Flatten override_kubeadm_configuration (worker pools only)
+		if machinePool.OverrideKubeadmConfiguration != "" {
+			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
 
 		oi["instance_type"] = machinePool.InstanceType
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
@@ -550,6 +579,11 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	if d.HasChange("machine_pool") {
+		// Validate override_Scaling configuration
+		if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+			return diag.FromErr(err)
+		}
+
 		log.Printf("[DEBUG] === MACHINE POOL CHANGE DETECTED ===")
 		oraw, nraw := d.GetChange("machine_pool")
 		if oraw == nil {
@@ -755,87 +789,27 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels: toAdditionalNodePoolLabels(m),
-			Taints:           toClusterTaints(m),
-			IsControlPlane:   controlPlane,
-			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(SafeInt32(m["count"].(int))),
-			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: getUpdateStrategy(m),
-			},
-			MinSize: min,
-			MaxSize: max,
+			AdditionalLabels:      toAdditionalNodePoolLabels(m),
+			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),
+			Taints:                toClusterTaints(m),
+			IsControlPlane:        controlPlane,
+			Labels:                labels,
+			Name:                  types.Ptr(m["name"].(string)),
+			Size:                  types.Ptr(SafeInt32(m["count"].(int))),
+			UpdateStrategy:        toUpdateStrategy(m),
+			MinSize:               min,
+			MaxSize:               max,
 		},
+	}
+
+	// Handle override_kubeadm_configuration (worker pools only)
+	if !controlPlane {
+		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
+			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
+		}
 	}
 
 	return mp
-}
-
-func resourceClusterAksResourceV2() *schema.Resource {
-	return &schema.Resource{
-		Schema: map[string]*schema.Schema{
-			"machine_pool": {
-				Type:     schema.TypeList,
-				Required: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"additional_labels": {
-							Type:     schema.TypeMap,
-							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
-							},
-						},
-						"node":   schemas.NodeSchema(),
-						"taints": schemas.ClusterTaintsSchema(),
-						"count": {
-							Type:        schema.TypeInt,
-							Required:    true,
-							Description: "Number of nodes in the machine pool.",
-						},
-						"update_strategy": {
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
-						},
-						"instance_type": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"min": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
-						},
-						"max": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
-						},
-						"disk_size_gb": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"is_system_node_pool": {
-							Type:     schema.TypeBool,
-							Required: true,
-						},
-						"storage_account_type": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
-				},
-			},
-		},
-	}
 }
 
 func resourceClusterAksStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {

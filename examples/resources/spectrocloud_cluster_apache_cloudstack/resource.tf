@@ -175,6 +175,43 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
       "role"    = "worker"
       "purpose" = "workload-execution"
     }
+
+    additional_annotations = {
+      "custom.io/annotation" = "value"
+      "company.com/owner"    = "platform-team"
+    }
+
+    override_kubeadm_configuration = <<-EOT
+      kubeletExtraArgs:
+        node-labels: "env=production,tier=frontend"
+        max-pods: "110"
+      preKubeadmCommands:
+        - echo 'Starting node setup'
+        - sysctl -w net.ipv4.ip_forward=1
+      postKubeadmCommands:
+        - echo 'Node setup complete'
+        - systemctl restart kubelet
+    EOT
+
+    # Update Strategy Options:
+    # - "RollingUpdateScaleOut" (default): Adds new nodes before removing old ones
+    # - "RollingUpdateScaleIn": Removes old nodes before adding new ones
+    # - "OverrideScaling": Custom control with max_surge and max_unavailable
+    #   Note: When using "OverrideScaling", you MUST specify override_scaling block
+    update_strategy = "RollingUpdateScaleOut"
+    # IMPORTANT: When update_strategy is set to "OverrideScaling",
+    # the override_scaling block MUST be specified.
+    # update_strategy = "OverrideScaling"
+
+    # Zero-downtime configuration:
+    # - max_surge = "1": Allow 1 extra node to be created during updates
+    # - max_unavailable = "0": Never allow any nodes to be unavailable
+    # This means during an update, a new node is created first, then the old one is removed.
+    # override_scaling {
+    #   max_surge       = "1"
+    #   max_unavailable = "0"
+    # }
+    node_repave_interval = 90
   }
 
   # Optional: Additional Worker Pool with Minimum and Maximum Scaling
@@ -193,6 +230,69 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
   #   additional_labels = {
   #     "role"     = "worker"
   #     "scalable" = "true"
+  #   }
+  # }
+
+  # Optional: Worker Pool with Override Scaling Strategy
+  # This example demonstrates the use of override_scaling for fine-grained control
+  # over rolling updates with custom surge and unavailability settings.
+  # machine_pool {
+  #   name  = "worker-pool-override-scaling"
+  #   count = 3
+  #   min   = 2
+  #   max   = 5
+  #
+  #   placement {
+  #     zone         = var.cloudstack_zone_name
+  #     compute      = var.cloudstack_compute_offering_worker
+  #     network_name = var.cloudstack_network_name
+  #   }
+  #
+  #   # Use OverrideScaling strategy to control the rolling update behavior
+  #   # Note: When using OverrideScaling, you MUST specify the override_scaling block
+  #   update_strategy = "OverrideScaling"
+  #
+  #   # Override scaling configuration for rolling updates
+  #   # max_surge: Maximum number of nodes that can be created above the desired count
+  #   # max_unavailable: Maximum number of nodes that can be unavailable during update
+  #   # Values can be absolute numbers (e.g., "1", "2") or percentages (e.g., "25%", "50%")
+  #   override_scaling {
+  #     max_surge       = "1"    # Allow 1 extra node during updates
+  #     max_unavailable = "0"    # Ensure no nodes are unavailable (zero-downtime updates)
+  #   }
+  #
+  #   additional_labels = {
+  #     "role"            = "worker"
+  #     "update-strategy" = "override-scaling"
+  #   }
+  #
+  #   node_repave_interval = 90
+  # }
+  #
+  # Alternative example with percentage-based scaling:
+  # machine_pool {
+  #   name  = "worker-pool-percentage-scaling"
+  #   count = 4
+  #   min   = 2
+  #   max   = 10
+  #
+  #   placement {
+  #     zone         = var.cloudstack_zone_name
+  #     compute      = var.cloudstack_compute_offering_worker
+  #     network_name = var.cloudstack_network_name
+  #   }
+  #
+  #   update_strategy = "OverrideScaling"
+  #
+  #   # Using percentage values for scaling control
+  #   override_scaling {
+  #     max_surge       = "25%"  # Allow up to 25% more nodes during updates
+  #     max_unavailable = "25%"  # Allow up to 25% of nodes to be unavailable
+  #   }
+  #
+  #   additional_labels = {
+  #     "role"            = "worker"
+  #     "update-strategy" = "percentage-scaling"
   #   }
   # }
 
