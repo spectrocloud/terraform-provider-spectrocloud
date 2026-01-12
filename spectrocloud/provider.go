@@ -170,7 +170,8 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_cluster_profile": dataSourceClusterProfile(),
 
-				"spectrocloud_cloudaccount_aws": dataSourceCloudAccountAws(),
+				"spectrocloud_cloudaccount_aws":                dataSourceCloudAccountAws(),
+				"spectrocloud_brownfield_cluster_registration": dataSourceBrownfieldClusterRegistration(),
 
 				"spectrocloud_cloudaccount_azure":             dataSourceCloudAccountAzure(),
 				"spectrocloud_cloudaccount_gcp":               dataSourceCloudAccountGcp(),
