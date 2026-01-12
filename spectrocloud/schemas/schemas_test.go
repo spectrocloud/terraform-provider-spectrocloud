@@ -10,9 +10,10 @@ import (
 func TestAppPackSchema(t *testing.T) {
 	s := AppPackSchema()
 
-	assert.Equal(t, schema.TypeList, s.Type)
+	assert.Equal(t, schema.TypeSet, s.Type)
 	assert.Equal(t, true, s.Required)
 	assert.Equal(t, "A list of packs to be applied to the application profile.", s.Description)
+	assert.NotNil(t, s.Set)
 
 	elemSchema, ok := s.Elem.(*schema.Resource)
 	assert.True(t, ok)

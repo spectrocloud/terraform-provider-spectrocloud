@@ -370,7 +370,7 @@ resource "spectrocloud_application_profile" "app_profile_all_tiers" {
 ### Required
 
 - `name` (String) Name of the application profile
-- `pack` (Block List, Min: 1) A list of packs to be applied to the application profile. (see [below for nested schema](#nestedblock--pack))
+- `pack` (Block Set, Min: 1) A list of packs to be applied to the application profile. (see [below for nested schema](#nestedblock--pack))
 
 ### Optional
 
