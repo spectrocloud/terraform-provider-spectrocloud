@@ -483,6 +483,15 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 	ois := make([]interface{}, 0)
 
 	for _, machinePool := range machinePools {
+
+		// ✅ FIX: Skip machine pools with no hosts (deleted machine pools)
+		// After deleting all nodes, the machine pool may still exist in API but with empty Hosts
+		// This prevents drift detection showing deleted machine pools
+		if len(machinePool.Hosts) == 0 {
+			log.Printf("[DEBUG] Skipping machine pool %s - no hosts (likely deleted)", machinePool.Name)
+			continue
+		}
+
 		oi := make(map[string]interface{})
 
 		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
