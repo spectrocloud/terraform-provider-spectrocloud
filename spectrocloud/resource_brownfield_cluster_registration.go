@@ -86,20 +86,23 @@ func resourceBrownfieldClusterRegistration() *schema.Resource {
 			"manifest_url": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Default:     "",
 				Description: "The URL of the import manifest. This is the actual manifest URL extracted from the kubectl_command.",
 			},
 			"kubectl_command": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Default:     "",
 				Description: "The kubectl command to import the cluster. Format: `kubectl apply -f <manifest_url>`.",
 			},
 			"status": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Default:     "",
 				Description: "The current operational state of the cluster. Possible values include: `Pending`, `Provisioning`, `Running`, `Deleting`, `Deleted`, `Error`, `Importing`.",
+			},
+			"delete_cluster": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to delete the cluster when the resource is destroyed. If `true`, the cluster will be deleted. If `false`, only the Terraform resource will be removed but the cluster will remain in Spectro Cloud. Defaults to `false`.",
 			},
 		},
 	}
@@ -202,26 +205,16 @@ func resourceBrownfieldClusterRegistrationCreate(ctx context.Context, d *schema.
 // Day-2 operations are not supported - updates are not allowed. Returns a warning and refreshes state.
 func resourceBrownfieldClusterRegistrationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Check if any immutable fields have changed
-	immutableFields := []string{"name", "cloud_type", "context", "import_mode", "host_path", "container_mount_path", "proxy", "no_proxy"}
-	changedFields := []string{}
 
-	for _, field := range immutableFields {
-		if d.HasChange(field) {
-			changedFields = append(changedFields, field)
-		}
-	}
+	var diags diag.Diagnostics
 
-	if len(changedFields) > 0 {
-		// ✅ FIX: Return error IMMEDIATELY - DO NOT call Read
-		// This prevents state updates when Update fails
-		return diag.Errorf(
-			"Day-2 operation not supported for update. The following fields cannot be changed: %v. "+
-				"If required, delete and recreate the resource.",
-			changedFields)
-	}
+	diags = append(diags, diag.Diagnostic{
+		Severity: diag.Error,
+		Summary:  "Day-2 operation not supported for update",
+		Detail:   "Day-2 operation not supported for update.",
+	})
 
-	// ✅ Only call Read if no immutable fields changed (only computed fields might have changed)
-	return resourceBrownfieldClusterRegistrationRead(ctx, d, m)
+	return diags
 }
 
 // Helper functions
@@ -381,140 +374,9 @@ func toImportClusterConfig(d *schema.ResourceData) *models.V1ImportClusterConfig
 
 // Read function - reads the current state of the cluster
 func resourceBrownfieldClusterRegistrationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-// 	resourceContext := d.Get("context").(string)
-// 	c := getV1ClientWithResourceContext(m, resourceContext)
-// 	var diags diag.Diagnostics
-
-// 	resourceID := d.Id()
-// 	clusterUID, err := extractClusterUIDFromResourceID(resourceID)
-// 	if err != nil {
-// 		return diag.FromErr(fmt.Errorf("invalid resource ID: %w", err))
-// 	}
-
-// 	cluster, err := c.GetCluster(clusterUID)
-// 	if err != nil {
-// 		return handleReadError(d, err, diags)
-// 	}
-// 	if cluster == nil {
-// 		d.SetId("")
-// 		return diags
-// 	}
-
-// 	// ✅ CRITICAL: Preserve ALL immutable fields from state
-// 	// This prevents state updates when Update fails but Read is called separately
-// 	// We explicitly read from state and set them back to preserve user's configured values
-
-// 	// Name - preserve user's value if already in state
-// 	if name, exists := d.GetOk("name"); exists {
-// 		// Preserve existing state value
-// 		if err := d.Set("name", name); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	} else {
-// 		// First read after create - set from API
-// 		if err := d.Set("name", cluster.Metadata.Name); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	}
-
-// 	// Cloud type - preserve user's value if already in state
-// 	if cloudType, exists := d.GetOk("cloud_type"); exists {
-// 		// Preserve existing state value
-// 		if err := d.Set("cloud_type", cloudType); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	} else {
-// 		// First read after create - set from API
-// 		if cluster.Spec != nil && cluster.Spec.CloudType != "" {
-// 			if err := d.Set("cloud_type", cluster.Spec.CloudType); err != nil {
-// 				return diag.FromErr(err)
-// 			}
-// 		}
-// 	}
-
-// 	// Context - preserve user's value (always preserve, API might not return it)
-// 	if context, exists := d.GetOk("context"); exists {
-// 		if err := d.Set("context", context); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	}
-
-// 	// Import mode - preserve user's value
-// 	if importMode, exists := d.GetOk("import_mode"); exists {
-// 		// Preserve existing state value
-// 		if err := d.Set("import_mode", importMode); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	} else {
-// 		// First read after create - set default
-// 		if err := d.Set("import_mode", "full"); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	}
-
-// 	// ✅ CRITICAL: Explicitly preserve ALL proxy-related immutable fields
-// 	// These must be preserved from state to prevent updates when Update fails
-
-// 	// Host path - preserve user's value if exists in state
-// 	if hostPath, exists := d.GetOk("host_path"); exists {
-// 		if err := d.Set("host_path", hostPath); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	}
-
-// 	// Container mount path - preserve user's value if exists in state
-// 	if containerMountPath, exists := d.GetOk("container_mount_path"); exists {
-// 		if err := d.Set("container_mount_path", containerMountPath); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	}
-
-// 	// Proxy - preserve user's value if exists in state
-// 	if proxy, exists := d.GetOk("proxy"); exists {
-// 		if err := d.Set("proxy", proxy); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	}
-
-// 	// No proxy - preserve user's value if exists in state
-// 	if noProxy, exists := d.GetOk("no_proxy"); exists {
-// 		if err := d.Set("no_proxy", noProxy); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	}
-
-// 	// ✅ Always update computed fields (these reflect current API state)
-// 	if cluster.Status != nil && cluster.Status.State != "" {
-// 		if err := d.Set("status", cluster.Status.State); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	}
-
-// 	// Get the import link and manifest URL from cluster object
-// 	kubectlCommand, manifestURL, err := getClusterImportInfo(cluster)
-// 	if err != nil {
-// 		diags = append(diags, diag.Diagnostic{
-// 			Severity: diag.Warning,
-// 			Summary:  "kubectl_command not available",
-// 			Detail:   fmt.Sprintf("kubectl_command is not yet available for cluster %s: %v", clusterUID, err),
-// 		})
-// 	} else {
-// 		if err := d.Set("kubectl_command", kubectlCommand); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 		if err := d.Set("manifest_url", manifestURL); err != nil {
-// 			return diag.FromErr(err)
-// 		}
-// 	}
-
-// 	return diags
-// }
-
-func resourceBrownfieldClusterRegistrationRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
-
 	resourceID := d.Id()
 	clusterUID, err := extractClusterUIDFromResourceID(resourceID)
 	if err != nil {
@@ -531,21 +393,25 @@ func resourceBrownfieldClusterRegistrationRead(ctx context.Context, d *schema.Re
 		return diags
 	}
 
-	// Set basic fields
-	if err := d.Set("name", cluster.Metadata.Name); err != nil {
-		return diag.FromErr(err)
-	}
-
-	// Set cloud_type from cluster spec
-	if cluster.Spec != nil && cluster.Spec.CloudType != "" {
-		if err := d.Set("cloud_type", cluster.Spec.CloudType); err != nil {
-			return diag.FromErr(err)
+	// Cloud type - preserve user's value if already in state
+	if _, exists := d.GetOk("cloud_type"); !exists {
+		// First read after create - set from API
+		if cluster.Spec != nil && cluster.Spec.CloudType != "" {
+			if err := d.Set("cloud_type", cluster.Spec.CloudType); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
-	// Set status if available
+	// Always update computed fields
+	// Status - always update from API
 	if cluster.Status != nil && cluster.Status.State != "" {
 		if err := d.Set("status", cluster.Status.State); err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		// Set empty string if status is not available
+		if err := d.Set("status", ""); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -555,11 +421,19 @@ func resourceBrownfieldClusterRegistrationRead(ctx context.Context, d *schema.Re
 	if err != nil {
 		// Import link may not be available - this is not necessarily an error
 		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Warning,
+			Severity: diag.Error,
 			Summary:  "kubectl_command not available",
 			Detail:   fmt.Sprintf("kubectl_command is not yet available for cluster %s: %v", clusterUID, err),
 		})
+		// Set empty strings for computed fields when not available
+		if err := d.Set("kubectl_command", ""); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("manifest_url", ""); err != nil {
+			return diag.FromErr(err)
+		}
 	} else {
+		// Set computed fields from API
 		if err := d.Set("kubectl_command", kubectlCommand); err != nil {
 			return diag.FromErr(err)
 		}
@@ -576,6 +450,16 @@ func resourceBrownfieldClusterRegistrationDelete(ctx context.Context, d *schema.
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 	var diags diag.Diagnostics
+
+	// Check if delete_cluster is set to true
+	deleteCluster := d.Get("delete_cluster").(bool)
+	if !deleteCluster {
+		// If delete_cluster is false, return an error preventing deletion
+		return diag.Errorf(
+			"Delete cluster is not allowed. Set `delete_cluster = true` in your Terraform configuration to allow cluster deletion. " +
+				"Current value: `delete_cluster = false`. " +
+				"If you want to remove the resource from Terraform without deleting the cluster, you can use `terraform state rm` instead.")
+	}
 
 	resourceID := d.Id()
 	clusterUID, err := extractClusterUIDFromResourceID(resourceID)
