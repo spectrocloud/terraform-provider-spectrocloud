@@ -529,6 +529,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
+	warningMessageForNodeDeletion := false
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -642,6 +643,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 							if err != nil {
 								return diag.FromErr(err)
 							}
+							warningMessageForNodeDeletion = true
 						}
 					}
 					// Logic for delete machine in node pool ends
@@ -679,6 +681,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 				if err != nil {
 					return diag.FromErr(err)
 				}
+				warningMessageForNodeDeletion = true
 			}
 		}
 	}
@@ -686,6 +689,14 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	diagnostics, errorSet := updateCommonFields(d, c)
 	if errorSet {
 		return diagnostics
+	}
+
+	if warningMessageForNodeDeletion {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "Machine pool nodes deleted",
+			Detail:   "It will take some time to delete the machine pool nodes. The cluster update is in progress.",
+		})
 	}
 
 	diags = resourceClusterEdgeNativeRead(ctx, d, m)
