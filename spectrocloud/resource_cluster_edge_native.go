@@ -643,7 +643,6 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 							if err != nil {
 								return diag.FromErr(err)
 							}
-							warningMessageForNodeDeletion = true
 						}
 					}
 					// Logic for delete machine in node pool ends
