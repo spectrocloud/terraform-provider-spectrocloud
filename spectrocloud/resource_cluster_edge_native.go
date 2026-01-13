@@ -697,8 +697,10 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 			Detail:   "It will take some time to delete the machine pool nodes. The cluster update is in progress.",
 		})
 	}
-
-	diags = resourceClusterEdgeNativeRead(ctx, d, m)
+	readDiags := resourceClusterEdgeNativeRead(ctx, d, m)
+	if len(readDiags) > 0 {
+		diags = append(diags, readDiags...)
+	}
 
 	return diags
 }
