@@ -48,7 +48,7 @@ func resourceBrownfieldClusterRegistration() *schema.Resource {
 			"import_mode": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Default:      "full",
+				Default:      "read_only",
 				ValidateFunc: validation.StringInSlice([]string{"read_only", "full"}, false),
 				Description:  "The import mode for the cluster. Allowed values are `read_only` (imports cluster with read-only permissions) or `full` (imports cluster with full permissions). Defaults to `full`.",
 			},
@@ -182,6 +182,7 @@ func resourceBrownfieldClusterRegistrationCreate(ctx context.Context, d *schema.
 
 	// Get the import link and manifest URL from cluster object
 	kubectlCommand, manifestURL, err := getClusterImportInfo(cluster)
+
 	if err != nil {
 		// Log warning but don't fail - import link may not be available immediately
 		diags = append(diags, diag.Diagnostic{
@@ -203,16 +204,52 @@ func resourceBrownfieldClusterRegistrationCreate(ctx context.Context, d *schema.
 
 // resourceBrownfieldClusterRegistrationUpdate handles update operations for brownfield cluster registration.
 // Day-2 operations are not supported - updates are not allowed. Returns a warning and refreshes state.
-func resourceBrownfieldClusterRegistrationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	// Check if any immutable fields have changed
+// func resourceBrownfieldClusterRegistrationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+// 	// Check if any immutable fields have changed
 
+// 	var diags diag.Diagnostics
+
+// 	diags = append(diags, diag.Diagnostic{
+// 		Severity: diag.Error,
+// 		Summary:  "Day-2 operation not supported for update",
+// 		Detail:   "Day-2 operation not supported for update.",
+// 	})
+
+// 	return diags
+// }
+
+// resourceBrownfieldClusterRegistrationUpdate handles update operations for brownfield cluster registration.
+// Only the `delete_cluster` field can be updated. All other fields are immutable.
+func resourceBrownfieldClusterRegistrationUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	diags = append(diags, diag.Diagnostic{
-		Severity: diag.Error,
-		Summary:  "Day-2 operation not supported for update",
-		Detail:   "Day-2 operation not supported for update.",
-	})
+	// List of immutable fields
+	immutableFields := []string{"name", "cloud_type", "import_mode", "host_path",
+		"container_mount_path", "context", "proxy", "no_proxy"}
+
+	// Check if any immutable field has changed
+	hasImmutableChange := false
+	changedFields := []string{}
+	for _, field := range immutableFields {
+		if d.HasChange(field) {
+			hasImmutableChange = true
+			changedFields = append(changedFields, field)
+		}
+	}
+
+	if hasImmutableChange {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  "Day-2 operation not supported for update",
+			Detail:   fmt.Sprintf("The following fields cannot be updated after creation: %v. Only 'delete_cluster' field can be updated. If you need to change these fields, delete and recreate the resource.", changedFields),
+		})
+		return diags
+	}
+
+	// Only delete_cluster changed (or no changes) - update is allowed
+	// Refresh the state to update computed fields
+	readDiags := resourceBrownfieldClusterRegistrationRead(ctx, d, m)
+	diags = append(diags, readDiags...)
 
 	return diags
 }
@@ -456,9 +493,7 @@ func resourceBrownfieldClusterRegistrationDelete(ctx context.Context, d *schema.
 	if !deleteCluster {
 		// If delete_cluster is false, return an error preventing deletion
 		return diag.Errorf(
-			"Delete cluster is not allowed. Set `delete_cluster = true` in your Terraform configuration to allow cluster deletion. " +
-				"Current value: `delete_cluster = false`. " +
-				"If you want to remove the resource from Terraform without deleting the cluster, you can use `terraform state rm` instead.")
+			"Cluster deletion is disabled by default. Please update your Terraform configuration by setting delete_cluster = true to allow cluster deletion. The default value is false")
 	}
 
 	resourceID := d.Id()
