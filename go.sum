@@ -322,8 +322,6 @@ github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/skeema/knownhosts v1.3.1 h1:X2osQ+RAjK76shCbvhHHHVl3ZlgDm8apHEHFqRjnBY8=
 github.com/skeema/knownhosts v1.3.1/go.mod h1:r7KTdC8l4uxWRyK2TpQZ/1o5HaSzh06ePQNxPwTcfiY=
-github.com/spectrocloud/palette-sdk-go v0.0.0-20260112043953-cbac19293110 h1:uHMCsfgG+tQmyuSzmI/rc/t3L1viwluGhYkJIUy16Ws=
-github.com/spectrocloud/palette-sdk-go v0.0.0-20260112043953-cbac19293110/go.mod h1:izLxNVNnE7JHh7C6piEVo9SLfa4vR8KfX7cEYa1fYXU=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20260112054106-a283911c2334 h1:kdylKzBAnWXK9d4tOVNsTJowBv9UfeiGLa08tzIsCKw=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20260112054106-a283911c2334/go.mod h1:izLxNVNnE7JHh7C6piEVo9SLfa4vR8KfX7cEYa1fYXU=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
