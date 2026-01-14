@@ -1,12 +1,12 @@
 package spectrocloud
 
 import (
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExpandMetadata(t *testing.T) {
@@ -146,12 +146,14 @@ func TestFlattenSpec(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  *models.V1TagFilterSpec
-		output []interface{}
+		verify func(t *testing.T, result []interface{})
 	}{
 		{
-			name:   "nil spec",
-			input:  nil,
-			output: []interface{}{},
+			name:  "nil spec",
+			input: nil,
+			verify: func(t *testing.T, result []interface{}) {
+				assert.Equal(t, []interface{}{}, result)
+			},
 		},
 		{
 			name: "valid spec",
@@ -168,22 +170,28 @@ func TestFlattenSpec(t *testing.T) {
 					},
 				},
 			},
-			output: []interface{}{
-				map[string]interface{}{
-					"filter_group": []interface{}{
-						map[string]interface{}{
-							"conjunction": "and",
-							"filters": []interface{}{
-								map[string]interface{}{
-									"key":      "test_key",
-									"negation": false,
-									"operator": "EQUALS",
-									"values":   []string{"test_value"},
-								},
-							},
-						},
-					},
-				},
+			verify: func(t *testing.T, result []interface{}) {
+				// Verify structure
+				assert.Len(t, result, 1)
+				resultMap := result[0].(map[string]interface{})
+
+				// Verify filter_group
+				filterGroupList := resultMap["filter_group"].([]interface{})
+				assert.Len(t, filterGroupList, 1)
+				filterGroupMap := filterGroupList[0].(map[string]interface{})
+				assert.Equal(t, "and", filterGroupMap["conjunction"])
+
+				// Verify filters is []interface{} (works with both TypeSet and TypeList)
+				filtersList, ok := filterGroupMap["filters"].([]interface{})
+				assert.True(t, ok, "filters should be []interface{}")
+				assert.Len(t, filtersList, 1)
+
+				// Verify filter content
+				filterMap := filtersList[0].(map[string]interface{})
+				assert.Equal(t, "test_key", filterMap["key"])
+				assert.Equal(t, false, filterMap["negation"])
+				assert.Equal(t, "EQUALS", filterMap["operator"])
+				assert.Equal(t, []string{"test_value"}, filterMap["values"])
 			},
 		},
 	}
@@ -191,7 +199,7 @@ func TestFlattenSpec(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := flattenSpec(tt.input)
-			assert.Equal(t, tt.output, result)
+			tt.verify(t, result)
 		})
 	}
 }
