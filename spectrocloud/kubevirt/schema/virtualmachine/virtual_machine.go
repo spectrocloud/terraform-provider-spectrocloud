@@ -296,8 +296,9 @@ func VirtualMachineFields() map[string]*schema.Schema {
 					},
 					"serial": {
 						Type:        schema.TypeString,
-						Description: "The system-serial-number in SMBIOS.",
 						Optional:    true,
+						Computed:    true,
+						Description: "The system-serial-number in SMBIOS.",
 					},
 					"bootloader": {
 						Type:        schema.TypeList,

@@ -578,6 +578,22 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	return cloudConfigFlatten
 }
 
+// isKarpenterManagedPool checks if a machine pool is managed by Karpenter
+// by checking if the Labels array contains "spectrocloud.com/managed-by:karpenter"
+func isKarpenterManagedPool(machinePool *models.V1EksMachinePoolConfig) bool {
+	if machinePool == nil || machinePool.Labels == nil {
+		return false
+	}
+
+	for _, label := range machinePool.Labels {
+		if strings.Contains(label, "spectrocloud.com/managed-by:karpenter") {
+			return true
+		}
+	}
+
+	return false
+}
+
 func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig) []interface{} {
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -588,11 +604,16 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 	for _, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
+		// Skip Karpenter-managed machine pools
+		if isKarpenterManagedPool(machinePool) {
+			continue
+		}
 
 		if machinePool.IsControlPlane != nil && *machinePool.IsControlPlane {
 			continue
 		}
+
+		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 
 		oi["name"] = machinePool.Name
 		oi["count"] = int(machinePool.Size)
