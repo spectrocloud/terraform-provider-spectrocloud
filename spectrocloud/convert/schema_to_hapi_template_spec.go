@@ -482,12 +482,15 @@ func SchemaToHapiDisks(disks []interface{}) ([]*models.V1VMDisk, error) {
 	}
 
 	// Convert Terraform schema to JSON-compatible structure
-	disksJSON := make([]map[string]interface{}, len(disks))
-	for i, disk := range disks {
+	disksJSON := make([]map[string]interface{}, 0, len(disks))
+	for _, disk := range disks {
 		if disk == nil {
 			continue
 		}
-		diskMap := disk.(map[string]interface{})
+		diskMap, ok := disk.(map[string]interface{})
+		if !ok {
+			continue
+		}
 		diskJSON := make(map[string]interface{})
 
 		if v, ok := diskMap["name"].(string); ok {
@@ -502,13 +505,19 @@ func SchemaToHapiDisks(disks []interface{}) ([]*models.V1VMDisk, error) {
 			diskJSON["bootOrder"] = uint(v)
 		}
 
-		// DiskDevice
-		if v, ok := diskMap["disk_device"].([]interface{}); ok && len(v) > 0 {
-			diskDeviceMap := v[0].(map[string]interface{})
+		// DiskDevice - always set if disk_device exists, even if disk doesn't (matches HapiDisksToSchema pattern)
+		if v, ok := diskMap["disk_device"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+			diskDeviceMap, ok := v[0].(map[string]interface{})
+			if !ok {
+				continue
+			}
 			diskDeviceJSON := make(map[string]interface{})
 
-			if diskList, ok := diskDeviceMap["disk"].([]interface{}); ok && len(diskList) > 0 {
-				diskTargetMap := diskList[0].(map[string]interface{})
+			if diskList, ok := diskDeviceMap["disk"].([]interface{}); ok && len(diskList) > 0 && diskList[0] != nil {
+				diskTargetMap, ok := diskList[0].(map[string]interface{})
+				if !ok {
+					continue
+				}
 				diskTargetJSON := make(map[string]interface{})
 
 				if bus, ok := diskTargetMap["bus"].(string); ok {
@@ -523,11 +532,12 @@ func SchemaToHapiDisks(disks []interface{}) ([]*models.V1VMDisk, error) {
 
 				diskDeviceJSON["disk"] = diskTargetJSON
 			}
-
+			// Always set diskDevice if disk_device exists, even if disk doesn't exist inside it
+			// This matches the pattern in HapiDisksToSchema where we always set disk_device
 			diskJSON["diskDevice"] = diskDeviceJSON
 		}
 
-		disksJSON[i] = diskJSON
+		disksJSON = append(disksJSON, diskJSON)
 	}
 
 	// Marshal to JSON and unmarshal to HAPI models
@@ -552,12 +562,15 @@ func SchemaToHapiInterfaces(interfaces []interface{}) ([]*models.V1VMInterface, 
 	}
 
 	// Convert Terraform schema to JSON-compatible structure
-	interfacesJSON := make([]map[string]interface{}, len(interfaces))
-	for i, iface := range interfaces {
+	interfacesJSON := make([]map[string]interface{}, 0, len(interfaces))
+	for _, iface := range interfaces {
 		if iface == nil {
 			continue
 		}
-		ifaceMap := iface.(map[string]interface{})
+		ifaceMap, ok := iface.(map[string]interface{})
+		if !ok {
+			continue
+		}
 		ifaceJSON := make(map[string]interface{})
 
 		if v, ok := ifaceMap["name"].(string); ok {
@@ -584,7 +597,7 @@ func SchemaToHapiInterfaces(interfaces []interface{}) ([]*models.V1VMInterface, 
 			ifaceJSON["interfaceBindingMethod"] = bindingMethodJSON
 		}
 
-		interfacesJSON[i] = ifaceJSON
+		interfacesJSON = append(interfacesJSON, ifaceJSON)
 	}
 
 	// Marshal to JSON and unmarshal to HAPI models
@@ -610,12 +623,15 @@ func SchemaToHapiVolumes(volumes []interface{}) ([]*models.V1VMVolume, error) {
 
 	// Use existing expandVolumes function pattern but convert via JSON
 	// First, expand to a JSON-compatible structure
-	volumesJSON := make([]map[string]interface{}, len(volumes))
-	for i, volume := range volumes {
+	volumesJSON := make([]map[string]interface{}, 0, len(volumes))
+	for _, volume := range volumes {
 		if volume == nil {
 			continue
 		}
-		volumeMap := volume.(map[string]interface{})
+		volumeMap, ok := volume.(map[string]interface{})
+		if !ok {
+			continue
+		}
 		volumeJSON := make(map[string]interface{})
 
 		if v, ok := volumeMap["name"].(string); ok {
@@ -623,24 +639,29 @@ func SchemaToHapiVolumes(volumes []interface{}) ([]*models.V1VMVolume, error) {
 		}
 
 		// VolumeSource - complex nested structure, use JSON marshaling
-		if v, ok := volumeMap["volume_source"].([]interface{}); ok && len(v) > 0 {
-			volumeSourceMap := v[0].(map[string]interface{})
+		if v, ok := volumeMap["volume_source"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+			volumeSourceMap, ok := v[0].(map[string]interface{})
+			if !ok {
+				continue
+			}
 			volumeSourceJSON := make(map[string]interface{})
 
 			// Handle all volume source types
-			if dv, ok := volumeSourceMap["data_volume"].([]interface{}); ok && len(dv) > 0 {
-				dvMap := dv[0].(map[string]interface{})
-				volumeSourceJSON["dataVolume"] = map[string]interface{}{
-					"name": dvMap["name"],
+			if dv, ok := volumeSourceMap["data_volume"].([]interface{}); ok && len(dv) > 0 && dv[0] != nil {
+				if dvMap, ok := dv[0].(map[string]interface{}); ok {
+					volumeSourceJSON["dataVolume"] = map[string]interface{}{
+						"name": dvMap["name"],
+					}
 				}
 			}
 			if cicd, ok := volumeSourceMap["cloud_init_config_drive"].([]interface{}); ok && len(cicd) > 0 {
 				volumeSourceJSON["cloudInitConfigDrive"] = expandCloudInitSource(cicd)
 			}
-			if sa, ok := volumeSourceMap["service_account"].([]interface{}); ok && len(sa) > 0 {
-				saMap := sa[0].(map[string]interface{})
-				volumeSourceJSON["serviceAccount"] = map[string]interface{}{
-					"serviceAccountName": saMap["service_account_name"],
+			if sa, ok := volumeSourceMap["service_account"].([]interface{}); ok && len(sa) > 0 && sa[0] != nil {
+				if saMap, ok := sa[0].(map[string]interface{}); ok {
+					volumeSourceJSON["serviceAccount"] = map[string]interface{}{
+						"serviceAccountName": saMap["service_account_name"],
+					}
 				}
 			}
 			// Handle schema.Set for container_disk and cloud_init_no_cloud
@@ -657,23 +678,27 @@ func SchemaToHapiVolumes(volumes []interface{}) ([]*models.V1VMVolume, error) {
 			if ep, ok := volumeSourceMap["ephemeral"].([]interface{}); ok && len(ep) > 0 {
 				volumeSourceJSON["ephemeral"] = expandEphemeralSource(ep)
 			}
-			if ed, ok := volumeSourceMap["empty_disk"].([]interface{}); ok && len(ed) > 0 {
+			if ed, ok := volumeSourceMap["empty_disk"].([]interface{}); ok && len(ed) > 0 && ed[0] != nil {
 				volumeSourceJSON["emptyDisk"] = expandEmptyDiskSource(ed)
 			}
-			if pvc, ok := volumeSourceMap["persistent_volume_claim"].([]interface{}); ok && len(pvc) > 0 {
+			if pvc, ok := volumeSourceMap["persistent_volume_claim"].([]interface{}); ok && len(pvc) > 0 && pvc[0] != nil {
 				volumeSourceJSON["persistentVolumeClaim"] = expandPVCSource(pvc)
 			}
-			if hd, ok := volumeSourceMap["host_disk"].([]interface{}); ok && len(hd) > 0 {
+			if hd, ok := volumeSourceMap["host_disk"].([]interface{}); ok && len(hd) > 0 && hd[0] != nil {
 				volumeSourceJSON["hostDisk"] = expandHostDiskSource(hd)
 			}
-			if cm, ok := volumeSourceMap["config_map"].([]interface{}); ok && len(cm) > 0 {
+			if cm, ok := volumeSourceMap["config_map"].([]interface{}); ok && len(cm) > 0 && cm[0] != nil {
 				volumeSourceJSON["configMap"] = expandConfigMapSource(cm)
 			}
 
-			volumeJSON["volumeSource"] = volumeSourceJSON
+			// Flatten volume source fields directly onto volumeJSON (not nested under "volumeSource")
+			// HAPI model expects volume source fields directly on the volume object
+			for k, v := range volumeSourceJSON {
+				volumeJSON[k] = v
+			}
 		}
 
-		volumesJSON[i] = volumeJSON
+		volumesJSON = append(volumesJSON, volumeJSON)
 	}
 
 	// Marshal to JSON and unmarshal to HAPI models
@@ -812,12 +837,15 @@ func SchemaToHapiNetworks(networks []interface{}) ([]*models.V1VMNetwork, error)
 	}
 
 	// Convert Terraform schema to JSON-compatible structure
-	networksJSON := make([]map[string]interface{}, len(networks))
-	for i, network := range networks {
+	networksJSON := make([]map[string]interface{}, 0, len(networks))
+	for _, network := range networks {
 		if network == nil {
 			continue
 		}
-		networkMap := network.(map[string]interface{})
+		networkMap, ok := network.(map[string]interface{})
+		if !ok {
+			continue
+		}
 		networkJSON := make(map[string]interface{})
 
 		if v, ok := networkMap["name"].(string); ok {
@@ -825,35 +853,44 @@ func SchemaToHapiNetworks(networks []interface{}) ([]*models.V1VMNetwork, error)
 		}
 
 		// NetworkSource
-		if v, ok := networkMap["network_source"].([]interface{}); ok && len(v) > 0 {
-			networkSourceMap := v[0].(map[string]interface{})
+		if v, ok := networkMap["network_source"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+			networkSourceMap, ok := v[0].(map[string]interface{})
+			if !ok {
+				continue
+			}
 			networkSourceJSON := make(map[string]interface{})
 
-			if pod, ok := networkSourceMap["pod"].([]interface{}); ok && len(pod) > 0 {
-				podMap := pod[0].(map[string]interface{})
-				podJSON := make(map[string]interface{})
-				if vmCIDR, ok := podMap["vm_network_cidr"].(string); ok {
-					podJSON["vmNetworkCIDR"] = vmCIDR
+			if pod, ok := networkSourceMap["pod"].([]interface{}); ok && len(pod) > 0 && pod[0] != nil {
+				podMap, ok := pod[0].(map[string]interface{})
+				if ok {
+					podJSON := make(map[string]interface{})
+					if vmCIDR, ok := podMap["vm_network_cidr"].(string); ok {
+						podJSON["vmNetworkCIDR"] = vmCIDR
+					}
+					networkSourceJSON["pod"] = podJSON
 				}
-				networkSourceJSON["pod"] = podJSON
 			}
 
-			if multus, ok := networkSourceMap["multus"].([]interface{}); ok && len(multus) > 0 {
-				multusMap := multus[0].(map[string]interface{})
-				multusJSON := make(map[string]interface{})
-				if networkName, ok := multusMap["network_name"].(string); ok {
-					multusJSON["networkName"] = networkName
+			if multus, ok := networkSourceMap["multus"].([]interface{}); ok && len(multus) > 0 && multus[0] != nil {
+				multusMap, ok := multus[0].(map[string]interface{})
+				if ok {
+					multusJSON := make(map[string]interface{})
+					if networkName, ok := multusMap["network_name"].(string); ok {
+						multusJSON["networkName"] = networkName
+					}
+					if defaultNet, ok := multusMap["default"].(bool); ok {
+						multusJSON["default"] = defaultNet
+					}
+					networkSourceJSON["multus"] = multusJSON
 				}
-				if defaultNet, ok := multusMap["default"].(bool); ok {
-					multusJSON["default"] = defaultNet
-				}
-				networkSourceJSON["multus"] = multusJSON
 			}
 
-			networkJSON["networkSource"] = networkSourceJSON
+			if len(networkSourceJSON) > 0 {
+				networkJSON["networkSource"] = networkSourceJSON
+			}
 		}
 
-		networksJSON[i] = networkJSON
+		networksJSON = append(networksJSON, networkJSON)
 	}
 
 	// Marshal to JSON and unmarshal to HAPI models

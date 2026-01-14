@@ -1,5 +1,5 @@
 data "spectrocloud_cluster" "vm_enabled_base_cluster" {
-  name    = "tenant-cluster-002"
+  name    = "vmo-rc48-01"
   context = "project"
 }
 
@@ -10,7 +10,7 @@ locals {
 
 // Create a VM with default cloud init disk, container disk , interface and network
 #/*
-resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
+resource "spectrocloud_virtual_machine_v2" "tf-test-vm-basic-type" {
   cluster_uid     = data.spectrocloud_cluster.vm_enabled_base_cluster.id
   cluster_context = data.spectrocloud_cluster.vm_enabled_base_cluster.context
   run_on_launch   = true
@@ -23,8 +23,7 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
     name = "containerdisk"
     volume_source {
       container_disk {
-        image_url = "gcr.io/spectro-images-public/release/vm-dashboard/os/ubuntu-container-disk:20.04"
-
+        image_url = "us-docker.pkg.dev/palette-images/palette/virtual-machine-orchestrator/os/fedora-container-disk:37"
       }
     }
   }
@@ -55,9 +54,9 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
   }
 
   cpu {
-    cores   = 2
+    cores   = 1
     sockets = 1
-    threads = 10
+    threads = 1
   }
   memory {
     guest = "1Gi"
@@ -69,22 +68,22 @@ resource "spectrocloud_virtual_machine" "tf-test-vm-basic-type" {
       cpu    = 1
     }
     limits = {
-      cpu    = 2
+      cpu    = 1
       memory = "1Gi"
     }
   }
 
-  interface {
-    name                     = "default"
-    interface_binding_method = "InterfaceMasquerade"
-  }
+  # interface {
+  #   name                     = "default"
+  #   interface_binding_method = "InterfaceMasquerade"
+  # }
 
-  network {
-    name = "default"
-    network_source {
-      pod {}
-    }
-  }
+  # network {
+  #   name = "default"
+  #   network_source {
+  #     pod {}
+  #   }
+  # }
 }
 #*/
 

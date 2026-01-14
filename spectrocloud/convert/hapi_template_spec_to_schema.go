@@ -538,35 +538,87 @@ func HapiDisksToSchema(disks []*models.V1VMDisk) ([]interface{}, error) {
 			diskMap["boot_order"] = int(bootOrder)
 		}
 
-		// DiskDevice
+		// DiskDevice - always set, even if empty (matches existing code pattern)
+		diskDeviceMap := make(map[string]interface{})
 		if diskDeviceJSON, ok := diskJSON["diskDevice"].(map[string]interface{}); ok {
-			diskDeviceMap := make(map[string]interface{})
-
+			// Check if disk exists in diskDevice
 			if diskTargetJSON, ok := diskDeviceJSON["disk"].(map[string]interface{}); ok {
 				diskTargetMap := make(map[string]interface{})
 
-				if bus, ok := diskTargetJSON["bus"].(string); ok {
+				// Always set these fields, matching existing flattenDiskTarget pattern
+				// Set bus (default to empty string if not present)
+				if bus, ok := diskTargetJSON["bus"].(string); ok && bus != "" {
 					diskTargetMap["bus"] = bus
+				} else {
+					diskTargetMap["bus"] = ""
 				}
 
+				// Set read_only (default to false if not present)
 				if readOnly, ok := diskTargetJSON["readOnly"].(bool); ok {
 					diskTargetMap["read_only"] = readOnly
+				} else {
+					diskTargetMap["read_only"] = false
 				}
 
-				if pciAddress, ok := diskTargetJSON["pciAddress"].(string); ok {
+				// Set pci_address (default to empty string if not present)
+				if pciAddress, ok := diskTargetJSON["pciAddress"].(string); ok && pciAddress != "" {
 					diskTargetMap["pci_address"] = pciAddress
+				} else {
+					diskTargetMap["pci_address"] = ""
 				}
 
+				// Always set disk block if disk exists in JSON (matches existing pattern)
+				diskDeviceMap["disk"] = []interface{}{diskTargetMap}
+			} else {
+				// If diskDevice exists but disk doesn't, create empty disk block
+				// This handles the case where HAPI returns diskDevice but not disk
+				diskTargetMap := make(map[string]interface{})
+				diskTargetMap["bus"] = ""
+				diskTargetMap["read_only"] = false
+				diskTargetMap["pci_address"] = ""
 				diskDeviceMap["disk"] = []interface{}{diskTargetMap}
 			}
-
-			diskMap["disk_device"] = []interface{}{diskDeviceMap}
 		}
+		diskMap["disk_device"] = []interface{}{diskDeviceMap}
 
 		result[i] = diskMap
 	}
 
 	return result, nil
+}
+
+// convertCloudInitSourceToSchema converts cloud init source from HAPI format to Terraform schema format
+func convertCloudInitSourceToSchema(source map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	if userDataSecretRef, ok := source["userDataSecretRef"].(map[string]interface{}); ok {
+		refMap := make(map[string]interface{})
+		if name, ok := userDataSecretRef["name"].(string); ok {
+			refMap["name"] = name
+		}
+		result["user_data_secret_ref"] = []interface{}{refMap}
+	}
+	if userDataBase64, ok := source["userDataBase64"].(string); ok {
+		result["user_data_base64"] = userDataBase64
+	}
+	if userData, ok := source["userData"].(string); ok {
+		result["user_data"] = userData
+	}
+	if networkDataSecretRef, ok := source["networkDataSecretRef"].(map[string]interface{}); ok {
+		refMap := make(map[string]interface{})
+		if name, ok := networkDataSecretRef["name"].(string); ok {
+			refMap["name"] = name
+		}
+		result["network_data_secret_ref"] = []interface{}{refMap}
+	}
+	if networkDataBase64, ok := source["networkDataBase64"].(string); ok {
+		result["network_data_base64"] = networkDataBase64
+	}
+	if networkData, ok := source["networkData"].(string); ok {
+		result["network_data"] = networkData
+	}
+
+	return result
 }
 
 // HapiInterfacesToSchema converts HAPI Interfaces to Terraform schema
@@ -648,44 +700,101 @@ func HapiVolumesToSchema(volumes []*models.V1VMVolume) ([]interface{}, error) {
 			volumeMap["name"] = name
 		}
 
-		// VolumeSource - convert from JSON structure
-		if volumeSourceJSON, ok := volumeJSON["volumeSource"].(map[string]interface{}); ok {
-			volumeSourceMap := make(map[string]interface{})
+		// VolumeSource - volume source fields are flattened directly on the volume object
+		// Always set volume_source, even if empty (matches existing code pattern)
+		volumeSourceMap := make(map[string]interface{})
 
-			// Handle all volume source types
-			if dataVolume, ok := volumeSourceJSON["dataVolume"].(map[string]interface{}); ok {
-				volumeSourceMap["data_volume"] = []interface{}{dataVolume}
+		// Handle all volume source types - they're directly on the volume object
+		if dataVolume, ok := volumeJSON["dataVolume"].(map[string]interface{}); ok {
+			// Convert field names from camelCase to snake_case
+			dataVolumeMap := make(map[string]interface{})
+			if name, ok := dataVolume["name"].(string); ok {
+				dataVolumeMap["name"] = name
 			}
-			if cloudInitConfigDrive, ok := volumeSourceJSON["cloudInitConfigDrive"].(map[string]interface{}); ok {
-				volumeSourceMap["cloud_init_config_drive"] = []interface{}{cloudInitConfigDrive}
-			}
-			if serviceAccount, ok := volumeSourceJSON["serviceAccount"].(map[string]interface{}); ok {
-				volumeSourceMap["service_account"] = []interface{}{serviceAccount}
-			}
-			if containerDisk, ok := volumeSourceJSON["containerDisk"].(map[string]interface{}); ok {
-				volumeSourceMap["container_disk"] = []interface{}{containerDisk}
-			}
-			if cloudInitNoCloud, ok := volumeSourceJSON["cloudInitNoCloud"].(map[string]interface{}); ok {
-				volumeSourceMap["cloud_init_no_cloud"] = []interface{}{cloudInitNoCloud}
-			}
-			if ephemeral, ok := volumeSourceJSON["ephemeral"].(map[string]interface{}); ok {
-				volumeSourceMap["ephemeral"] = []interface{}{ephemeral}
-			}
-			if emptyDisk, ok := volumeSourceJSON["emptyDisk"].(map[string]interface{}); ok {
-				volumeSourceMap["empty_disk"] = []interface{}{emptyDisk}
-			}
-			if persistentVolumeClaim, ok := volumeSourceJSON["persistentVolumeClaim"].(map[string]interface{}); ok {
-				volumeSourceMap["persistent_volume_claim"] = []interface{}{persistentVolumeClaim}
-			}
-			if hostDisk, ok := volumeSourceJSON["hostDisk"].(map[string]interface{}); ok {
-				volumeSourceMap["host_disk"] = []interface{}{hostDisk}
-			}
-			if configMap, ok := volumeSourceJSON["configMap"].(map[string]interface{}); ok {
-				volumeSourceMap["config_map"] = []interface{}{configMap}
-			}
-
-			volumeMap["volume_source"] = []interface{}{volumeSourceMap}
+			volumeSourceMap["data_volume"] = []interface{}{dataVolumeMap}
 		}
+		if cloudInitConfigDrive, ok := volumeJSON["cloudInitConfigDrive"].(map[string]interface{}); ok {
+			// Convert field names
+			cicdMap := convertCloudInitSourceToSchema(cloudInitConfigDrive)
+			volumeSourceMap["cloud_init_config_drive"] = []interface{}{cicdMap}
+		}
+		if serviceAccount, ok := volumeJSON["serviceAccount"].(map[string]interface{}); ok {
+			saMap := make(map[string]interface{})
+			if name, ok := serviceAccount["serviceAccountName"].(string); ok {
+				saMap["service_account_name"] = name
+			}
+			volumeSourceMap["service_account"] = []interface{}{saMap}
+		}
+		if containerDisk, ok := volumeJSON["containerDisk"].(map[string]interface{}); ok {
+			// Convert field names
+			cdMap := make(map[string]interface{})
+			if image, ok := containerDisk["image"].(string); ok {
+				cdMap["image_url"] = image
+			}
+			volumeSourceMap["container_disk"] = []interface{}{cdMap}
+		}
+		if cloudInitNoCloud, ok := volumeJSON["cloudInitNoCloud"].(map[string]interface{}); ok {
+			// Convert field names
+			cinMap := convertCloudInitSourceToSchema(cloudInitNoCloud)
+			volumeSourceMap["cloud_init_no_cloud"] = []interface{}{cinMap}
+		}
+		if ephemeral, ok := volumeJSON["ephemeral"].(map[string]interface{}); ok {
+			ephemeralMap := make(map[string]interface{})
+			if pvc, ok := ephemeral["persistentVolumeClaim"].(map[string]interface{}); ok {
+				pvcMap := make(map[string]interface{})
+				if claimName, ok := pvc["claimName"].(string); ok {
+					pvcMap["claim_name"] = claimName
+				}
+				if readOnly, ok := pvc["readOnly"].(bool); ok {
+					pvcMap["read_only"] = readOnly
+				}
+				ephemeralMap["persistent_volume_claim"] = []interface{}{pvcMap}
+			}
+			volumeSourceMap["ephemeral"] = []interface{}{ephemeralMap}
+		}
+		if emptyDisk, ok := volumeJSON["emptyDisk"].(map[string]interface{}); ok {
+			edMap := make(map[string]interface{})
+			if capacity, ok := emptyDisk["capacity"].(string); ok {
+				edMap["capacity"] = capacity
+			}
+			volumeSourceMap["empty_disk"] = []interface{}{edMap}
+		}
+		if persistentVolumeClaim, ok := volumeJSON["persistentVolumeClaim"].(map[string]interface{}); ok {
+			pvcMap := make(map[string]interface{})
+			if claimName, ok := persistentVolumeClaim["claimName"].(string); ok {
+				pvcMap["claim_name"] = claimName
+			}
+			if readOnly, ok := persistentVolumeClaim["readOnly"].(bool); ok {
+				pvcMap["read_only"] = readOnly
+			}
+			volumeSourceMap["persistent_volume_claim"] = []interface{}{pvcMap}
+		}
+		if hostDisk, ok := volumeJSON["hostDisk"].(map[string]interface{}); ok {
+			hdMap := make(map[string]interface{})
+			if path, ok := hostDisk["path"].(string); ok {
+				hdMap["path"] = path
+			}
+			if diskType, ok := hostDisk["type"].(string); ok {
+				hdMap["type"] = diskType
+			}
+			volumeSourceMap["host_disk"] = []interface{}{hdMap}
+		}
+		if configMap, ok := volumeJSON["configMap"].(map[string]interface{}); ok {
+			cmMap := make(map[string]interface{})
+			if name, ok := configMap["name"].(string); ok {
+				cmMap["name"] = name
+			}
+			if optional, ok := configMap["optional"].(bool); ok {
+				cmMap["optional"] = optional
+			}
+			if volumeLabel, ok := configMap["volumeLabel"].(string); ok {
+				cmMap["volume_label"] = volumeLabel
+			}
+			volumeSourceMap["config_map"] = []interface{}{cmMap}
+		}
+
+		// Always set volume_source, even if empty (matches existing code pattern)
+		volumeMap["volume_source"] = []interface{}{volumeSourceMap}
 
 		result[i] = volumeMap
 	}
