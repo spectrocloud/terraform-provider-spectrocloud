@@ -693,7 +693,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 	if warningMessageForNodeDeletion {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Warning,
-			Detail:   "The machine pool nodes are being deleted, and the cluster update is still in progress. This process may take some time.",
+			Detail:   "The Machine pool node deletion has been triggered. This is an asynchronous operation and may take some time to complete.",
 		})
 	}
 	readDiags := resourceClusterEdgeNativeRead(ctx, d, m)
