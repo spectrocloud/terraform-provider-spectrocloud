@@ -363,9 +363,10 @@ func toImportClusterConfig(d *schema.ResourceData) *models.V1ImportClusterConfig
 	if importMode, ok := d.GetOk("import_mode"); ok {
 		mode := importMode.(string)
 		// Convert "read_only" to "read-only" for API
-		if mode == "read_only" {
-			mode = "read_only"
-		} else if mode == "full" {
+		switch mode {
+		case "read_only":
+			config.ImportMode = "read-only"
+		case "full":
 			// API expects empty string (or not set) for full mode
 			// Leave config.ImportMode as empty string (default)
 			config.ImportMode = ""
