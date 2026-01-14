@@ -529,6 +529,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
+	warningMessageForNodeDeletion := false
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
@@ -679,6 +680,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 				if err != nil {
 					return diag.FromErr(err)
 				}
+				warningMessageForNodeDeletion = true
 			}
 		}
 	}
@@ -688,7 +690,16 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 		return diagnostics
 	}
 
-	diags = resourceClusterEdgeNativeRead(ctx, d, m)
+	if warningMessageForNodeDeletion {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Warning,
+			Detail:   "The Machine pool node deletion has been triggered. This is an asynchronous operation and may take some time to complete.",
+		})
+	}
+	readDiags := resourceClusterEdgeNativeRead(ctx, d, m)
+	if len(readDiags) > 0 {
+		diags = append(diags, readDiags...)
+	}
 
 	return diags
 }
