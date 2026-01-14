@@ -203,6 +203,29 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
       "scalable"    = "true"
       "environment" = "production"
     }
+
+    # Optional: Additional annotations for worker pool nodes
+    additional_annotations = {
+      "custom.io/annotation"                        = "production-workload"
+      "cluster-autoscaler.kubernetes.io/enabled"    = "true"
+    }
+
+    # Optional: Override kubeadm configuration for worker nodes
+    # This is only supported for worker pools (not control plane)
+    override_kubeadm_configuration = <<-EOT
+      kubeletExtraArgs:
+        node-labels: "env=production,tier=backend"
+        max-pods: "110"
+      preKubeadmCommands:
+        - echo 'Starting node customization'
+        - sysctl -w net.ipv4.ip_forward=1
+      postKubeadmCommands:
+        - echo 'Node customization complete'
+        - systemctl restart kubelet
+    EOT
+
+    update_strategy      = "RollingUpdateScaleOut"
+    node_repave_interval = 90
   }
 
   timeouts {
@@ -428,6 +451,163 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_from_template" {
       "workload" = "production"
       "tier"     = "backend"
     }
+
+    # Optional: Additional annotations
+    additional_annotations = {
+      "team.company.io/owner" = "platform-engineering"
+    }
+    
+    update_strategy = "RollingUpdateScaleOut"
+  }
+}
+```
+
+### Apache CloudStack Cluster with Kubeadm Configuration Override
+
+This example demonstrates how to customize kubeadm configuration for worker nodes. This is useful for setting custom kubelet arguments, running pre/post kubeadm commands, and other node-level customizations.
+
+```terraform
+data "spectrocloud_cloudaccount_apache_cloudstack" "account" {
+  name = "apache-cloudstack-account-1"
+}
+
+data "spectrocloud_cluster_profile" "profile" {
+  name = "cloudstack-k8s-profile"
+}
+
+resource "spectrocloud_cluster_apache_cloudstack" "cluster_custom_kubeadm" {
+  name             = "apache-cloudstack-custom-kubeadm"
+  tags             = ["prod", "customized"]
+  cloud_account_id = data.spectrocloud_cloudaccount_apache_cloudstack.account.id
+
+  cloud_config {
+    ssh_key_name = "prod-ssh-key"
+    
+    zone {
+      name = "Zone1"
+      
+      network {
+        id   = "network-id"
+        name = "ProductionNetwork"
+      }
+    }
+  }
+
+  cluster_profile {
+    id = data.spectrocloud_cluster_profile.profile.id
+  }
+
+  machine_pool {
+    control_plane           = true
+    control_plane_as_worker = false
+    name                    = "cp-pool"
+    count                   = 3
+
+    placement {
+      zone         = "Zone1"
+      compute      = "Large Instance"
+      network_name = "ProductionNetwork"
+    }
+
+    additional_labels = {
+      "role" = "control-plane"
+    }
+  }
+
+  # Worker pool with custom kubeadm configuration
+  machine_pool {
+    name  = "worker-pool-frontend"
+    count = 3
+
+    placement {
+      zone         = "Zone1"
+      compute      = "XLarge Instance"
+      network_name = "ProductionNetwork"
+    }
+
+    additional_labels = {
+      "role" = "worker"
+      "tier" = "frontend"
+    }
+
+    additional_annotations = {
+      "custom.io/workload-type" = "web-facing"
+    }
+
+    # Customize kubeadm configuration for this worker pool
+    # Note: override_kubeadm_configuration is only supported for worker pools
+    override_kubeadm_configuration = <<-EOT
+      kubeletExtraArgs:
+        node-labels: "tier=frontend,zone=dmz"
+        max-pods: "110"
+        eviction-hard: "memory.available<500Mi,nodefs.available<10%"
+        feature-gates: "RotateKubeletServerCertificate=true"
+      preKubeadmCommands:
+        - echo 'Configuring frontend worker node'
+        - sysctl -w net.core.somaxconn=32768
+        - sysctl -w net.ipv4.ip_local_port_range="1024 65535"
+        - sysctl -w net.ipv4.tcp_tw_reuse=1
+      postKubeadmCommands:
+        - echo 'Frontend worker node setup complete'
+        - systemctl restart kubelet
+    EOT
+
+    update_strategy      = "RollingUpdateScaleOut"
+    node_repave_interval = 60  # Repave nodes every 60 days
+  }
+
+  # Worker pool for backend services
+  machine_pool {
+    name  = "worker-pool-backend"
+    count = 5
+    min   = 3
+    max   = 10
+
+    placement {
+      zone         = "Zone1"
+      compute      = "XXLarge Instance"
+      network_name = "ProductionNetwork"
+    }
+
+    instance_config {
+      disk_gib   = 500
+      memory_mib = 65536
+      num_cpus   = 16
+    }
+
+    additional_labels = {
+      "role" = "worker"
+      "tier" = "backend"
+    }
+
+    additional_annotations = {
+      "custom.io/workload-type"                     = "backend-services"
+      "cluster-autoscaler.kubernetes.io/enabled"    = "true"
+    }
+
+    # Different kubeadm configuration for backend workers
+    override_kubeadm_configuration = <<-EOT
+      kubeletExtraArgs:
+        node-labels: "tier=backend,compute=high"
+        max-pods: "200"
+        kube-reserved: "cpu=1,memory=2Gi,ephemeral-storage=1Gi"
+        system-reserved: "cpu=500m,memory=1Gi,ephemeral-storage=1Gi"
+      preKubeadmCommands:
+        - echo 'Configuring backend worker node'
+        - sysctl -w vm.max_map_count=262144
+        - sysctl -w fs.file-max=2097152
+      postKubeadmCommands:
+        - echo 'Backend worker node setup complete'
+    EOT
+
+    update_strategy      = "RollingUpdateScaleIn"
+    node_repave_interval = 90
+  }
+
+  timeouts {
+    create = "60m"
+    update = "60m"
+    delete = "30m"
   }
 }
 ```
@@ -556,6 +736,7 @@ Required:
 
 Optional:
 
+- `additional_annotations` (Map of String) Additional annotation to be applied to the machine pool. annotation must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
@@ -564,9 +745,11 @@ Optional:
 - `network` (Block List) Network configuration for the machine pool instances. (see [below for nested schema](#nestedblock--machine_pool--network))
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
+- `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
-- `template` (Block List, Max: 1) Apache CloudStack template override for this machine pool. If not specified, inherits cluster default from profile. (see [below for nested schema](#nestedblock--machine_pool--template))
-- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.
+- `template` (Block List, Max: 1) Apache CloudStack template override for this machine pool. If not specified, inherits cluster default. (see [below for nested schema](#nestedblock--machine_pool--template))
+- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.
 
 Read-Only:
 
@@ -591,6 +774,15 @@ Required:
 
 - `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
 - `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
+
+
+<a id="nestedblock--machine_pool--override_scaling"></a>
+### Nested Schema for `machine_pool.override_scaling`
+
+Optional:
+
+- `max_surge` (String) Max extra nodes during rolling update. Integer or percentage (e.g., '1' or '20%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.
+- `max_unavailable` (String) Max unavailable nodes during rolling update. Integer or percentage (e.g., '0' or '10%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.
 
 
 <a id="nestedblock--machine_pool--taints"></a>

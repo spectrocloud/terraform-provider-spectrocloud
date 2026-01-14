@@ -59,3 +59,22 @@ func FlattenAdditionalLabelsAndTaints(labels map[string]string, intaints []*mode
 		oi["taints"] = taints
 	}
 }
+
+func FlattenAdditionalLabelsAnnotationsAndTaints(labels map[string]string, annotations map[string]string, intaints []*models.V1Taint, oi map[string]interface{}) {
+	if len(labels) == 0 {
+		oi["additional_labels"] = make(map[string]interface{})
+	} else {
+		oi["additional_labels"] = labels
+	}
+
+	if len(annotations) == 0 {
+		oi["additional_annotations"] = make(map[string]interface{})
+	} else {
+		oi["additional_annotations"] = annotations
+	}
+
+	taints := flattenClusterTaints(intaints)
+	if len(taints) > 0 {
+		oi["taints"] = taints
+	}
+}

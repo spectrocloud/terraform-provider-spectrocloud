@@ -58,6 +58,60 @@ func TestToAdditionalNodePoolLabels(t *testing.T) {
 	}
 }
 
+func TestToAdditionalNodePoolAnnotations(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]interface{}
+		expected map[string]string
+	}{
+		{
+			name:     "Nil additional_annotations",
+			input:    map[string]interface{}{"additional_annotations": nil},
+			expected: map[string]string{},
+		},
+		{
+			name:     "Empty additional_annotations",
+			input:    map[string]interface{}{"additional_annotations": map[string]interface{}{}},
+			expected: map[string]string{},
+		},
+		{
+			name: "Valid additional_annotations",
+			input: map[string]interface{}{
+				"additional_annotations": map[string]interface{}{
+					"annotation1": "value1",
+					"annotation2": "value2",
+				},
+			},
+			expected: map[string]string{
+				"annotation1": "value1",
+				"annotation2": "value2",
+			},
+		},
+		{
+			name: "Valid additional_annotations with kubernetes style keys",
+			input: map[string]interface{}{
+				"additional_annotations": map[string]interface{}{
+					"custom.io/annotation1":   "value1",
+					"company.com/annotation2": "value2",
+				},
+			},
+			expected: map[string]string{
+				"custom.io/annotation1":   "value1",
+				"company.com/annotation2": "value2",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := toAdditionalNodePoolAnnotations(tt.input)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
 func TestToClusterTaints(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -260,6 +314,97 @@ func TestFlattenAdditionalLabelsAndTaints(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			oi := make(map[string]interface{})
 			FlattenAdditionalLabelsAndTaints(tt.labels, tt.taints, oi)
+			if !reflect.DeepEqual(oi, tt.expected) {
+				t.Logf("Expected: %#v\n", tt.expected)
+				t.Logf("Actual: %#v\n", oi)
+				t.Errorf("Test %s failed. Expected %#v, got %#v", tt.name, tt.expected, oi)
+			}
+		})
+	}
+}
+
+func TestFlattenAdditionalLabelsAnnotationsAndTaints(t *testing.T) {
+	tests := []struct {
+		name        string
+		labels      map[string]string
+		annotations map[string]string
+		taints      []*models.V1Taint
+		expected    map[string]interface{}
+	}{
+		{
+			name:        "Empty labels, annotations and taints",
+			labels:      make(map[string]string),
+			annotations: make(map[string]string),
+			taints:      []*models.V1Taint{},
+			expected: map[string]interface{}{
+				"additional_labels":      map[string]interface{}{},
+				"additional_annotations": map[string]interface{}{},
+			},
+		},
+		{
+			name:        "Non-empty labels and annotations",
+			labels:      map[string]string{"label1": "value1", "label2": "value2"},
+			annotations: map[string]string{"annotation1": "value1", "annotation2": "value2"},
+			taints:      []*models.V1Taint{},
+			expected: map[string]interface{}{
+				"additional_labels": map[string]string{
+					"label1": "value1",
+					"label2": "value2",
+				},
+				"additional_annotations": map[string]string{
+					"annotation1": "value1",
+					"annotation2": "value2",
+				},
+			},
+		},
+		{
+			name:        "Non-empty labels, annotations and taints",
+			labels:      map[string]string{"label1": "value1"},
+			annotations: map[string]string{"annotation1": "annotationvalue1"},
+			taints: []*models.V1Taint{
+				{
+					Key:    "key1",
+					Value:  "value1",
+					Effect: "NoSchedule",
+				},
+			},
+			expected: map[string]interface{}{
+				"additional_labels": map[string]string{
+					"label1": "value1",
+				},
+				"additional_annotations": map[string]string{
+					"annotation1": "annotationvalue1",
+				},
+				"taints": []interface{}{
+					map[string]interface{}{
+						"key":    "key1",
+						"value":  "value1",
+						"effect": "NoSchedule",
+					},
+				},
+			},
+		},
+		{
+			name:        "Kubernetes-style annotations",
+			labels:      map[string]string{"env": "prod"},
+			annotations: map[string]string{"custom.io/annotation": "value", "company.com/test": "testvalue"},
+			taints:      []*models.V1Taint{},
+			expected: map[string]interface{}{
+				"additional_labels": map[string]string{
+					"env": "prod",
+				},
+				"additional_annotations": map[string]string{
+					"custom.io/annotation": "value",
+					"company.com/test":     "testvalue",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oi := make(map[string]interface{})
+			FlattenAdditionalLabelsAnnotationsAndTaints(tt.labels, tt.annotations, tt.taints, oi)
 			if !reflect.DeepEqual(oi, tt.expected) {
 				t.Logf("Expected: %#v\n", tt.expected)
 				t.Logf("Actual: %#v\n", oi)

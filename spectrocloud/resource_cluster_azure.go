@@ -242,6 +242,15 @@ func resourceClusterAzure() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
+							Description: "Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.",
+						},
+						"additional_annotations": {
+							Type:     schema.TypeMap,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.",
 						},
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
@@ -285,8 +294,14 @@ func resourceClusterAzure() *schema.Resource {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "RollingUpdateScaleOut",
-							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut` and `RollingUpdateScaleIn`.",
-							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn"}, false),
+							Description:  "Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn", "OverrideScaling"}, false),
+						},
+						"override_scaling": schemas.OverrideScalingSchema(),
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"disk": {
 							Type:     schema.TypeList,
@@ -385,6 +400,11 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+
+	// Validate override_Scaling configuration
+	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+		return diag.FromErr(err)
+	}
 
 	cluster, err := toAzureCluster(c, d)
 	if err != nil {
@@ -545,13 +565,22 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 	for i, machinePool := range machinePools {
 		oi := make(map[string]interface{})
 
-		FlattenAdditionalLabelsAndTaints(machinePool.AdditionalLabels, machinePool.Taints, oi)
+		FlattenAdditionalLabelsAnnotationsAndTaints(machinePool.AdditionalLabels, machinePool.AdditionalAnnotations, machinePool.Taints, oi)
 		FlattenControlPlaneAndRepaveInterval(machinePool.IsControlPlane, oi, machinePool.NodeRepaveInterval)
 
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
 		oi["count"] = machinePool.Size
-		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
+		if machinePool.UpdateStrategy != nil {
+			oi["update_strategy"] = machinePool.UpdateStrategy.Type
+			// Flatten override_Scaling if using OverrideScaling strategy
+			flattenOverrideScaling(machinePool.UpdateStrategy, oi)
+		}
+
+		// Flatten override_kubeadm_configuration (worker pools only)
+		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
+			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
 
 		oi["instance_type"] = machinePool.InstanceType
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
@@ -590,6 +619,11 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 	if d.HasChange("machine_pool") {
+		// Validate override_Scaling configuration
+		if err := validateOverrideScaling(d, "machine_pool"); err != nil {
+			return diag.FromErr(err)
+		}
+
 		cluster, err := toAzureCluster(c, d)
 		if err != nil {
 			return diag.FromErr(err)
@@ -823,17 +857,23 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
-			AdditionalLabels: toAdditionalNodePoolLabels(m),
-			Taints:           toClusterTaints(m),
-			IsControlPlane:   controlPlane,
-			Labels:           labels,
-			Name:             types.Ptr(m["name"].(string)),
-			Size:             types.Ptr(SafeInt32(m["count"].(int))),
-			UpdateStrategy: &models.V1UpdateStrategy{
-				Type: getUpdateStrategy(m),
-			},
+			AdditionalLabels:        toAdditionalNodePoolLabels(m),
+			AdditionalAnnotations:   toAdditionalNodePoolAnnotations(m),
+			Taints:                  toClusterTaints(m),
+			IsControlPlane:          controlPlane,
+			Labels:                  labels,
+			Name:                    types.Ptr(m["name"].(string)),
+			Size:                    types.Ptr(SafeInt32(m["count"].(int))),
+			UpdateStrategy:          toUpdateStrategy(m),
 			UseControlPlaneAsWorker: controlPlaneAsWorker,
 		},
+	}
+
+	// Handle override_kubeadm_configuration (worker pools only)
+	if !controlPlane {
+		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
+			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
+		}
 	}
 
 	if !controlPlane {

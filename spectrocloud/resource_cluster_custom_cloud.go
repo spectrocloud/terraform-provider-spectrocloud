@@ -1778,6 +1778,7 @@ func min(a, b int) int {
 	return b
 }
 
+
 // resourceClusterCustomCloudResourceV2 returns the schema for version 2 of the resource
 func resourceClusterCustomCloudResourceV2() *schema.Resource {
 	return &schema.Resource{
@@ -1974,6 +1975,8 @@ func resourceClusterCustomCloudResourceV2() *schema.Resource {
 		},
 	}
 }
+
+
 
 // resourceClusterCustomCloudStateUpgradeV2 migrates state from version 2 to version 3
 func resourceClusterCustomCloudStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
