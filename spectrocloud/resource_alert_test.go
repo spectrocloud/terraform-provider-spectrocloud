@@ -545,12 +545,6 @@ func TestResourceAlertImport(t *testing.T) {
 	}
 }
 
-// TestGetProjectID tests the getProjectID function.
-// This function:
-// 1. Gets a V1Client from the meta interface using getV1ClientWithResourceContext
-// 2. Checks if "project" field exists and is not empty in ResourceData
-// 3. If it exists, calls GetProjectUID with the project name
-// 4. Returns the project UID or an error
 func TestGetProjectID(t *testing.T) {
 	tests := []struct {
 		name        string
