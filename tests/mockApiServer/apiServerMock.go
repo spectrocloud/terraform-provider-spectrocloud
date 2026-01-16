@@ -124,6 +124,7 @@ func init() {
 		routes.IPPoolRoutes,
 		routes.MacrosRoutes,
 		routes.TenantRoutes,
+		routes.DeveloperSettingRoutes,
 		routes.WorkspaceRoutes,
 		routes.AlertRoutes,
 		routes.ClusterGroupRoutes,
