@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -641,6 +642,291 @@ func TestResolvePackUID(t *testing.T) {
 				if err != nil && strings.Contains(err.Error(), "name, tag, and registry_uid are all required") {
 					t.Errorf("unexpected validation error: %v", err)
 				}
+			}
+		})
+	}
+}
+
+// TestFlattenClusterProfileCommon tests the flattenClusterProfileCommon function.
+// This function:
+// 1. Sets the "cloud" field from cp.Spec.Published.CloudType
+// 2. Sets the "type" field from cp.Spec.Published.Type
+// 3. Sets the "version" field from cp.Spec.Published.ProfileVersion
+// 4. Returns an error if any Set operation fails
+func TestFlattenClusterProfileCommon(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func() (*schema.ResourceData, *models.V1ClusterProfile)
+		expectError bool
+		description string
+		verify      func(t *testing.T, d *schema.ResourceData, err error)
+	}{
+		{
+			name: "Successful flattening with all fields",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: &models.V1ClusterProfileSpec{
+						Published: &models.V1ClusterProfileTemplate{
+							CloudType:      "aws",
+							Type:           "add-on",
+							ProfileVersion: "1.0.0",
+						},
+					},
+				}
+				return d, cp
+			},
+			expectError: false,
+			description: "Should successfully set cloud, type, and version fields",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				assert.NoError(t, err, "Should not have error on success")
+				assert.Equal(t, "aws", d.Get("cloud"), "Cloud should be set to 'aws'")
+				assert.Equal(t, "add-on", d.Get("type"), "Type should be set to 'add-on'")
+				assert.Equal(t, "1.0.0", d.Get("version"), "Version should be set to '1.0.0'")
+			},
+		},
+		{
+			name: "Flatten with different cloud types",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: &models.V1ClusterProfileSpec{
+						Published: &models.V1ClusterProfileTemplate{
+							CloudType:      "edge-native",
+							Type:           "cluster",
+							ProfileVersion: "2.5.3",
+						},
+					},
+				}
+				return d, cp
+			},
+			expectError: false,
+			description: "Should handle different cloud types",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.Equal(t, "edge-native", d.Get("cloud"), "Cloud should be set to 'edge-native'")
+				assert.Equal(t, "cluster", d.Get("type"), "Type should be set to 'cluster'")
+				assert.Equal(t, "2.5.3", d.Get("version"), "Version should be set to '2.5.3'")
+			},
+		},
+		{
+			name: "Flatten with different profile types",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: &models.V1ClusterProfileSpec{
+						Published: &models.V1ClusterProfileTemplate{
+							CloudType:      "azure",
+							Type:           "infra",
+							ProfileVersion: "3.1.0",
+						},
+					},
+				}
+				return d, cp
+			},
+			expectError: false,
+			description: "Should handle different profile types",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.Equal(t, "azure", d.Get("cloud"), "Cloud should be set to 'azure'")
+				assert.Equal(t, "infra", d.Get("type"), "Type should be set to 'infra'")
+				assert.Equal(t, "3.1.0", d.Get("version"), "Version should be set to '3.1.0'")
+			},
+		},
+		{
+			name: "Flatten with system profile type",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: &models.V1ClusterProfileSpec{
+						Published: &models.V1ClusterProfileTemplate{
+							CloudType:      "all",
+							Type:           "system",
+							ProfileVersion: "1.2.3",
+						},
+					},
+				}
+				return d, cp
+			},
+			expectError: false,
+			description: "Should handle system profile type",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.Equal(t, "all", d.Get("cloud"), "Cloud should be set to 'all'")
+				assert.Equal(t, "system", d.Get("type"), "Type should be set to 'system'")
+				assert.Equal(t, "1.2.3", d.Get("version"), "Version should be set to '1.2.3'")
+			},
+		},
+		{
+			name: "Flatten with empty string values",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: &models.V1ClusterProfileSpec{
+						Published: &models.V1ClusterProfileTemplate{
+							CloudType:      "",
+							Type:           "add-on",
+							ProfileVersion: "",
+						},
+					},
+				}
+				return d, cp
+			},
+			expectError: false,
+			description: "Should handle empty string values",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				assert.NoError(t, err, "Should not have error with empty strings")
+				assert.Equal(t, "", d.Get("cloud"), "Cloud should be set to empty string")
+				assert.Equal(t, "add-on", d.Get("type"), "Type should still be set")
+				assert.Equal(t, "", d.Get("version"), "Version should be set to empty string")
+			},
+		},
+		{
+			name: "Flatten with nil Spec (should panic)",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: nil,
+				}
+				return d, cp
+			},
+			expectError: true,
+			description: "Should panic when Spec is nil",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				// Function will panic on nil pointer dereference
+				// This test verifies the function doesn't handle nil gracefully
+			},
+		},
+		{
+			name: "Flatten with nil Published (should panic)",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: &models.V1ClusterProfileSpec{
+						Published: nil,
+					},
+				}
+				return d, cp
+			},
+			expectError: true,
+			description: "Should panic when Published is nil",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				// Function will panic on nil pointer dereference
+				// This test verifies the function doesn't handle nil gracefully
+			},
+		},
+		{
+			name: "Flatten with empty Type string",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: &models.V1ClusterProfileSpec{
+						Published: &models.V1ClusterProfileTemplate{
+							CloudType:      "gcp",
+							Type:           "",
+							ProfileVersion: "4.0.0",
+						},
+					},
+				}
+				return d, cp
+			},
+			expectError: false,
+			description: "Should handle empty Type string",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				assert.NoError(t, err, "Should not have error with empty type string")
+				assert.Equal(t, "gcp", d.Get("cloud"), "Cloud should be set correctly")
+				assert.Equal(t, "", d.Get("type"), "Type should be set to empty string")
+				assert.Equal(t, "4.0.0", d.Get("version"), "Version should be set correctly")
+			},
+		},
+		{
+			name: "Flatten with custom cloud type",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: &models.V1ClusterProfileSpec{
+						Published: &models.V1ClusterProfileTemplate{
+							CloudType:      "nutanix",
+							Type:           "add-on",
+							ProfileVersion: "1.0.0",
+						},
+					},
+				}
+				return d, cp
+			},
+			expectError: false,
+			description: "Should handle custom cloud types",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.Equal(t, "nutanix", d.Get("cloud"), "Cloud should be set to custom cloud type 'nutanix'")
+				assert.Equal(t, "add-on", d.Get("type"), "Type should be set correctly")
+				assert.Equal(t, "1.0.0", d.Get("version"), "Version should be set correctly")
+			},
+		},
+		{
+			name: "Flatten with long version string",
+			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
+				d := resourceClusterProfile().TestResourceData()
+				cp := &models.V1ClusterProfile{
+					Spec: &models.V1ClusterProfileSpec{
+						Published: &models.V1ClusterProfileTemplate{
+							CloudType:      "vsphere",
+							Type:           "cluster",
+							ProfileVersion: "10.20.30-beta.1+sha.abc123",
+						},
+					},
+				}
+				return d, cp
+			},
+			expectError: false,
+			description: "Should handle long version strings with metadata",
+			verify: func(t *testing.T, d *schema.ResourceData, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.Equal(t, "vsphere", d.Get("cloud"), "Cloud should be set correctly")
+				assert.Equal(t, "cluster", d.Get("type"), "Type should be set correctly")
+				assert.Equal(t, "10.20.30-beta.1+sha.abc123", d.Get("version"), "Version should preserve full version string")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d, cp := tt.setup()
+
+			var err error
+			var panicked bool
+
+			// Handle potential panics for nil pointer dereferences
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						panicked = true
+						err = fmt.Errorf("panic: %v", r)
+					}
+				}()
+				err = flattenClusterProfileCommon(d, cp)
+			}()
+
+			// Verify results
+			if tt.expectError {
+				if panicked {
+					// Panic is expected for nil pointer cases
+					assert.Error(t, err, "Expected panic/error for test case: %s", tt.description)
+				} else {
+					assert.Error(t, err, "Expected error for test case: %s", tt.description)
+				}
+			} else {
+				if panicked {
+					t.Logf("Unexpected panic occurred: %v", err)
+					assert.Fail(t, "Unexpected panic for test case: %s", tt.description)
+				} else {
+					assert.NoError(t, err, "Should not have error for test case: %s", tt.description)
+				}
+			}
+
+			// Run custom verify function if provided
+			if tt.verify != nil {
+				tt.verify(t, d, err)
 			}
 		})
 	}
