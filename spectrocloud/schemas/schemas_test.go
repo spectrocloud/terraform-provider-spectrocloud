@@ -398,3 +398,334 @@ func TestPackSchema(t *testing.T) {
 	assert.Equal(t, true, manifestContentSchema.Required)
 	assert.Equal(t, "The content of the manifest. The content is the YAML content of the manifest. ", manifestContentSchema.Description)
 }
+
+func TestSubnetSchema(t *testing.T) {
+	subnetSchema := SubnetSchema()
+
+	// Test root schema properties
+	assert.Equal(t, schema.TypeList, subnetSchema.Type, "Subnet schema should be TypeList")
+	assert.True(t, subnetSchema.Optional, "Subnet schema should be optional")
+	assert.Equal(t, 1, subnetSchema.MaxItems, "Subnet schema should have MaxItems of 1")
+	assert.NotNil(t, subnetSchema.RequiredWith, "Subnet schema should have RequiredWith")
+	assert.Contains(t, subnetSchema.RequiredWith, "cloud_config.0.network_resource_group", "RequiredWith should include network_resource_group")
+	assert.Contains(t, subnetSchema.RequiredWith, "cloud_config.0.virtual_network_name", "RequiredWith should include virtual_network_name")
+	assert.Contains(t, subnetSchema.RequiredWith, "cloud_config.0.virtual_network_cidr_block", "RequiredWith should include virtual_network_cidr_block")
+
+	// Test that Elem is a Resource
+	elemResource, ok := subnetSchema.Elem.(*schema.Resource)
+	assert.True(t, ok, "Subnet schema Elem should be a Resource")
+	assert.NotNil(t, elemResource, "Subnet schema Elem Resource should not be nil")
+
+	// Test nested schema fields
+	nestedSchema := elemResource.Schema
+	assert.NotNil(t, nestedSchema, "Nested schema should not be nil")
+
+	// Test "name" field
+	nameSchema, exists := nestedSchema["name"]
+	assert.True(t, exists, "Nested schema should have 'name' field")
+	assert.NotNil(t, nameSchema, "'name' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, nameSchema.Type, "'name' field should be TypeString")
+	assert.True(t, nameSchema.Required, "'name' field should be required")
+	assert.False(t, nameSchema.Optional, "'name' field should not be optional")
+	assert.Equal(t, "Name of the subnet.", nameSchema.Description, "'name' field should have correct description")
+
+	// Test "cidr_block" field
+	cidrBlockSchema, exists := nestedSchema["cidr_block"]
+	assert.True(t, exists, "Nested schema should have 'cidr_block' field")
+	assert.NotNil(t, cidrBlockSchema, "'cidr_block' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, cidrBlockSchema.Type, "'cidr_block' field should be TypeString")
+	assert.True(t, cidrBlockSchema.Required, "'cidr_block' field should be required")
+	assert.False(t, cidrBlockSchema.Optional, "'cidr_block' field should not be optional")
+	assert.Equal(t, "CidrBlock is the CIDR block to be used when the provider creates a managed virtual network.", cidrBlockSchema.Description, "'cidr_block' field should have correct description")
+
+	// Test "security_group_name" field
+	securityGroupNameSchema, exists := nestedSchema["security_group_name"]
+	assert.True(t, exists, "Nested schema should have 'security_group_name' field")
+	assert.NotNil(t, securityGroupNameSchema, "'security_group_name' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, securityGroupNameSchema.Type, "'security_group_name' field should be TypeString")
+	assert.True(t, securityGroupNameSchema.Optional, "'security_group_name' field should be optional")
+	assert.False(t, securityGroupNameSchema.Required, "'security_group_name' field should not be required")
+	assert.Equal(t, "Network Security Group(NSG) to be attached to subnet.", securityGroupNameSchema.Description, "'security_group_name' field should have correct description")
+}
+func TestScanPolicySchema(t *testing.T) {
+	scanPolicySchema := ScanPolicySchema()
+
+	// Test root schema properties
+	assert.Equal(t, schema.TypeList, scanPolicySchema.Type, "ScanPolicy schema should be TypeList")
+	assert.True(t, scanPolicySchema.Optional, "ScanPolicy schema should be optional")
+	assert.Equal(t, 1, scanPolicySchema.MaxItems, "ScanPolicy schema should have MaxItems of 1")
+	assert.Equal(t, "The scan policy for the cluster.", scanPolicySchema.Description, "ScanPolicy schema should have correct description")
+
+	// Test that Elem is a Resource
+	elemResource, ok := scanPolicySchema.Elem.(*schema.Resource)
+	assert.True(t, ok, "ScanPolicy schema Elem should be a Resource")
+	assert.NotNil(t, elemResource, "ScanPolicy schema Elem Resource should not be nil")
+
+	// Test nested schema fields
+	nestedSchema := elemResource.Schema
+	assert.NotNil(t, nestedSchema, "Nested schema should not be nil")
+
+	// Test "configuration_scan_schedule" field
+	configScanSchema, exists := nestedSchema["configuration_scan_schedule"]
+	assert.True(t, exists, "Nested schema should have 'configuration_scan_schedule' field")
+	assert.NotNil(t, configScanSchema, "'configuration_scan_schedule' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, configScanSchema.Type, "'configuration_scan_schedule' field should be TypeString")
+	assert.True(t, configScanSchema.Required, "'configuration_scan_schedule' field should be required")
+	assert.False(t, configScanSchema.Optional, "'configuration_scan_schedule' field should not be optional")
+	assert.Equal(t, "The schedule for configuration scan.", configScanSchema.Description, "'configuration_scan_schedule' field should have correct description")
+
+	// Test "penetration_scan_schedule" field
+	penetrationScanSchema, exists := nestedSchema["penetration_scan_schedule"]
+	assert.True(t, exists, "Nested schema should have 'penetration_scan_schedule' field")
+	assert.NotNil(t, penetrationScanSchema, "'penetration_scan_schedule' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, penetrationScanSchema.Type, "'penetration_scan_schedule' field should be TypeString")
+	assert.True(t, penetrationScanSchema.Required, "'penetration_scan_schedule' field should be required")
+	assert.False(t, penetrationScanSchema.Optional, "'penetration_scan_schedule' field should not be optional")
+	assert.Equal(t, "The schedule for penetration scan.", penetrationScanSchema.Description, "'penetration_scan_schedule' field should have correct description")
+
+	// Test "conformance_scan_schedule" field
+	conformanceScanSchema, exists := nestedSchema["conformance_scan_schedule"]
+	assert.True(t, exists, "Nested schema should have 'conformance_scan_schedule' field")
+	assert.NotNil(t, conformanceScanSchema, "'conformance_scan_schedule' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, conformanceScanSchema.Type, "'conformance_scan_schedule' field should be TypeString")
+	assert.True(t, conformanceScanSchema.Required, "'conformance_scan_schedule' field should be required")
+	assert.False(t, conformanceScanSchema.Optional, "'conformance_scan_schedule' field should not be optional")
+	assert.Equal(t, "The schedule for conformance scan.", conformanceScanSchema.Description, "'conformance_scan_schedule' field should have correct description")
+}
+
+func TestProfileVariables(t *testing.T) {
+	profileVarsSchema := ProfileVariables()
+
+	// Test root schema properties
+	assert.Equal(t, schema.TypeList, profileVarsSchema.Type, "ProfileVariables schema should be TypeList")
+	assert.True(t, profileVarsSchema.Optional, "ProfileVariables schema should be optional")
+	assert.Equal(t, 1, profileVarsSchema.MaxItems, "ProfileVariables schema should have MaxItems of 1")
+	assert.Equal(t, "List of variables for the cluster profile.", profileVarsSchema.Description, "ProfileVariables schema should have correct description")
+
+	// Test that Elem is a Resource
+	elemResource, ok := profileVarsSchema.Elem.(*schema.Resource)
+	assert.True(t, ok, "ProfileVariables schema Elem should be a Resource")
+	assert.NotNil(t, elemResource, "ProfileVariables schema Elem Resource should not be nil")
+
+	// Test first level nested schema - should have "variable" field
+	firstLevelSchema := elemResource.Schema
+	assert.NotNil(t, firstLevelSchema, "First level nested schema should not be nil")
+	assert.Equal(t, 1, len(firstLevelSchema), "First level schema should have exactly 1 field")
+
+	// Test "variable" field
+	variableSchema, exists := firstLevelSchema["variable"]
+	assert.True(t, exists, "First level schema should have 'variable' field")
+	assert.NotNil(t, variableSchema, "'variable' field schema should not be nil")
+	assert.Equal(t, schema.TypeList, variableSchema.Type, "'variable' field should be TypeList")
+	assert.True(t, variableSchema.Required, "'variable' field should be required")
+	assert.False(t, variableSchema.Optional, "'variable' field should not be optional")
+
+	// Test that variable Elem is a Resource
+	variableElemResource, ok := variableSchema.Elem.(*schema.Resource)
+	assert.True(t, ok, "'variable' field Elem should be a Resource")
+	assert.NotNil(t, variableElemResource, "'variable' field Elem Resource should not be nil")
+
+	// Test variable Resource schema fields
+	variableResourceSchema := variableElemResource.Schema
+	assert.NotNil(t, variableResourceSchema, "Variable Resource schema should not be nil")
+	assert.Equal(t, 10, len(variableResourceSchema), "Variable Resource schema should have exactly 10 fields")
+
+	// Test "name" field
+	nameSchema, exists := variableResourceSchema["name"]
+	assert.True(t, exists, "Variable schema should have 'name' field")
+	assert.NotNil(t, nameSchema, "'name' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, nameSchema.Type, "'name' field should be TypeString")
+	assert.True(t, nameSchema.Required, "'name' field should be required")
+	assert.False(t, nameSchema.Optional, "'name' field should not be optional")
+	assert.Equal(t, "The name of the variable should be unique among variables.", nameSchema.Description, "'name' field should have correct description")
+
+	// Test "display_name" field
+	displayNameSchema, exists := variableResourceSchema["display_name"]
+	assert.True(t, exists, "Variable schema should have 'display_name' field")
+	assert.NotNil(t, displayNameSchema, "'display_name' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, displayNameSchema.Type, "'display_name' field should be TypeString")
+	assert.True(t, displayNameSchema.Required, "'display_name' field should be required")
+	assert.False(t, displayNameSchema.Optional, "'display_name' field should not be optional")
+	assert.Equal(t, "The display name of the variable should be unique among variables.", displayNameSchema.Description, "'display_name' field should have correct description")
+
+	// Test "format" field
+	formatSchema, exists := variableResourceSchema["format"]
+	assert.True(t, exists, "Variable schema should have 'format' field")
+	assert.NotNil(t, formatSchema, "'format' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, formatSchema.Type, "'format' field should be TypeString")
+	assert.True(t, formatSchema.Optional, "'format' field should be optional")
+	assert.False(t, formatSchema.Required, "'format' field should not be required")
+	assert.Equal(t, "string", formatSchema.Default, "'format' field should have default value 'string'")
+	assert.NotNil(t, formatSchema.ValidateFunc, "'format' field should have ValidateFunc")
+	assert.Equal(t, "The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Allowed formats include `string`, `number`, `boolean`, `ipv4`, `ipv4cidr`, `ipv6`, `version`.", formatSchema.Description, "'format' field should have correct description")
+
+	// Test "description" field
+	descriptionSchema, exists := variableResourceSchema["description"]
+	assert.True(t, exists, "Variable schema should have 'description' field")
+	assert.NotNil(t, descriptionSchema, "'description' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, descriptionSchema.Type, "'description' field should be TypeString")
+	assert.True(t, descriptionSchema.Optional, "'description' field should be optional")
+	assert.False(t, descriptionSchema.Required, "'description' field should not be required")
+	assert.Equal(t, "The description of the variable.", descriptionSchema.Description, "'description' field should have correct description")
+
+	// Test "default_value" field
+	defaultValueSchema, exists := variableResourceSchema["default_value"]
+	assert.True(t, exists, "Variable schema should have 'default_value' field")
+	assert.NotNil(t, defaultValueSchema, "'default_value' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, defaultValueSchema.Type, "'default_value' field should be TypeString")
+	assert.True(t, defaultValueSchema.Optional, "'default_value' field should be optional")
+	assert.False(t, defaultValueSchema.Required, "'default_value' field should not be required")
+	assert.Equal(t, "The default value of the variable.", defaultValueSchema.Description, "'default_value' field should have correct description")
+
+	// Test "regex" field
+	regexSchema, exists := variableResourceSchema["regex"]
+	assert.True(t, exists, "Variable schema should have 'regex' field")
+	assert.NotNil(t, regexSchema, "'regex' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, regexSchema.Type, "'regex' field should be TypeString")
+	assert.True(t, regexSchema.Optional, "'regex' field should be optional")
+	assert.False(t, regexSchema.Required, "'regex' field should not be required")
+	assert.Equal(t, "Regular expression pattern which the variable value must match.", regexSchema.Description, "'regex' field should have correct description")
+
+	// Test "required" field
+	requiredSchema, exists := variableResourceSchema["required"]
+	assert.True(t, exists, "Variable schema should have 'required' field")
+	assert.NotNil(t, requiredSchema, "'required' field schema should not be nil")
+	assert.Equal(t, schema.TypeBool, requiredSchema.Type, "'required' field should be TypeBool")
+	assert.True(t, requiredSchema.Optional, "'required' field should be optional")
+	assert.False(t, requiredSchema.Required, "'required' field should not be required")
+	assert.Equal(t, "The `required` to specify if the variable is optional or mandatory. If it is mandatory then default value must be provided.", requiredSchema.Description, "'required' field should have correct description")
+
+	// Test "immutable" field
+	immutableSchema, exists := variableResourceSchema["immutable"]
+	assert.True(t, exists, "Variable schema should have 'immutable' field")
+	assert.NotNil(t, immutableSchema, "'immutable' field schema should not be nil")
+	assert.Equal(t, schema.TypeBool, immutableSchema.Type, "'immutable' field should be TypeBool")
+	assert.True(t, immutableSchema.Optional, "'immutable' field should be optional")
+	assert.False(t, immutableSchema.Required, "'immutable' field should not be required")
+	assert.Equal(t, "If `immutable` is set to `true`, then variable value can't be editable. By default the `immutable` flag will be set to `false`.", immutableSchema.Description, "'immutable' field should have correct description")
+
+	// Test "is_sensitive" field
+	isSensitiveSchema, exists := variableResourceSchema["is_sensitive"]
+	assert.True(t, exists, "Variable schema should have 'is_sensitive' field")
+	assert.NotNil(t, isSensitiveSchema, "'is_sensitive' field schema should not be nil")
+	assert.Equal(t, schema.TypeBool, isSensitiveSchema.Type, "'is_sensitive' field should be TypeBool")
+	assert.True(t, isSensitiveSchema.Optional, "'is_sensitive' field should be optional")
+	assert.False(t, isSensitiveSchema.Required, "'is_sensitive' field should not be required")
+	assert.Equal(t, "If `is_sensitive` is set to `true`, then default value will be masked. By default the `is_sensitive` flag will be set to false.", isSensitiveSchema.Description, "'is_sensitive' field should have correct description")
+
+	// Test "hidden" field
+	hiddenSchema, exists := variableResourceSchema["hidden"]
+	assert.True(t, exists, "Variable schema should have 'hidden' field")
+	assert.NotNil(t, hiddenSchema, "'hidden' field schema should not be nil")
+	assert.Equal(t, schema.TypeBool, hiddenSchema.Type, "'hidden' field should be TypeBool")
+	assert.True(t, hiddenSchema.Optional, "'hidden' field should be optional")
+	assert.False(t, hiddenSchema.Required, "'hidden' field should not be required")
+	assert.Equal(t, "If `hidden` is set to `true`, then variable will be hidden for overriding the value. By default the `hidden` flag will be set to `false`.", hiddenSchema.Description, "'hidden' field should have correct description")
+}
+func TestOverrideScalingSchema(t *testing.T) {
+	overrideScalingSchema := OverrideScalingSchema()
+
+	// Test root schema properties
+	assert.Equal(t, schema.TypeList, overrideScalingSchema.Type, "OverrideScaling schema should be TypeList")
+	assert.True(t, overrideScalingSchema.Optional, "OverrideScaling schema should be optional")
+	assert.Equal(t, 1, overrideScalingSchema.MaxItems, "OverrideScaling schema should have MaxItems of 1")
+	assert.Equal(t, "Rolling update strategy for the machine pool.", overrideScalingSchema.Description, "OverrideScaling schema should have correct description")
+
+	// Test that Elem is a Resource
+	elemResource, ok := overrideScalingSchema.Elem.(*schema.Resource)
+	assert.True(t, ok, "OverrideScaling schema Elem should be a Resource")
+	assert.NotNil(t, elemResource, "OverrideScaling schema Elem Resource should not be nil")
+
+	// Test nested schema fields
+	nestedSchema := elemResource.Schema
+	assert.NotNil(t, nestedSchema, "Nested schema should not be nil")
+
+	// Test "max_surge" field
+	maxSurgeSchema, exists := nestedSchema["max_surge"]
+	assert.True(t, exists, "Nested schema should have 'max_surge' field")
+	assert.NotNil(t, maxSurgeSchema, "'max_surge' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, maxSurgeSchema.Type, "'max_surge' field should be TypeString")
+	assert.True(t, maxSurgeSchema.Optional, "'max_surge' field should be optional")
+	assert.False(t, maxSurgeSchema.Required, "'max_surge' field should not be required")
+	assert.Equal(t, "", maxSurgeSchema.Default, "'max_surge' field should have default value of empty string")
+	assert.Equal(t, "Max extra nodes during rolling update. Integer or percentage (e.g., '1' or '20%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.", maxSurgeSchema.Description, "'max_surge' field should have correct description")
+
+	// Test "max_unavailable" field
+	maxUnavailableSchema, exists := nestedSchema["max_unavailable"]
+	assert.True(t, exists, "Nested schema should have 'max_unavailable' field")
+	assert.NotNil(t, maxUnavailableSchema, "'max_unavailable' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, maxUnavailableSchema.Type, "'max_unavailable' field should be TypeString")
+	assert.True(t, maxUnavailableSchema.Optional, "'max_unavailable' field should be optional")
+	assert.False(t, maxUnavailableSchema.Required, "'max_unavailable' field should not be required")
+	assert.Equal(t, "", maxUnavailableSchema.Default, "'max_unavailable' field should have default value of empty string")
+	assert.Equal(t, "Max unavailable nodes during rolling update. Integer or percentage (e.g., '0' or '10%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.", maxUnavailableSchema.Description, "'max_unavailable' field should have correct description")
+}
+func TestAwsLaunchTemplate(t *testing.T) {
+	awsLaunchTemplateSchema := AwsLaunchTemplate()
+
+	// Test root schema properties
+	assert.Equal(t, schema.TypeList, awsLaunchTemplateSchema.Type, "AwsLaunchTemplate schema should be TypeList")
+	assert.True(t, awsLaunchTemplateSchema.Optional, "AwsLaunchTemplate schema should be optional")
+	assert.Equal(t, 1, awsLaunchTemplateSchema.MaxItems, "AwsLaunchTemplate schema should have MaxItems of 1")
+
+	// Test that Elem is a Resource
+	elemResource, ok := awsLaunchTemplateSchema.Elem.(*schema.Resource)
+	assert.True(t, ok, "AwsLaunchTemplate schema Elem should be a Resource")
+	assert.NotNil(t, elemResource, "AwsLaunchTemplate schema Elem Resource should not be nil")
+
+	// Test nested schema fields
+	nestedSchema := elemResource.Schema
+	assert.NotNil(t, nestedSchema, "Nested schema should not be nil")
+
+	// Test "ami_id" field
+	amiIdSchema, exists := nestedSchema["ami_id"]
+	assert.True(t, exists, "Nested schema should have 'ami_id' field")
+	assert.NotNil(t, amiIdSchema, "'ami_id' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, amiIdSchema.Type, "'ami_id' field should be TypeString")
+	assert.True(t, amiIdSchema.Optional, "'ami_id' field should be optional")
+	assert.False(t, amiIdSchema.Required, "'ami_id' field should not be required")
+	assert.Equal(t, "The ID of the custom Amazon Machine Image (AMI). If you do not set an `ami_id`, Palette will repave the cluster when it automatically updates the EKS AMI.", amiIdSchema.Description, "'ami_id' field should have correct description")
+
+	// Test "root_volume_type" field
+	rootVolumeTypeSchema, exists := nestedSchema["root_volume_type"]
+	assert.True(t, exists, "Nested schema should have 'root_volume_type' field")
+	assert.NotNil(t, rootVolumeTypeSchema, "'root_volume_type' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, rootVolumeTypeSchema.Type, "'root_volume_type' field should be TypeString")
+	assert.True(t, rootVolumeTypeSchema.Optional, "'root_volume_type' field should be optional")
+	assert.False(t, rootVolumeTypeSchema.Required, "'root_volume_type' field should not be required")
+	assert.Equal(t, "The type of the root volume.", rootVolumeTypeSchema.Description, "'root_volume_type' field should have correct description")
+
+	// Test "root_volume_iops" field
+	rootVolumeIopsSchema, exists := nestedSchema["root_volume_iops"]
+	assert.True(t, exists, "Nested schema should have 'root_volume_iops' field")
+	assert.NotNil(t, rootVolumeIopsSchema, "'root_volume_iops' field schema should not be nil")
+	assert.Equal(t, schema.TypeInt, rootVolumeIopsSchema.Type, "'root_volume_iops' field should be TypeInt")
+	assert.True(t, rootVolumeIopsSchema.Optional, "'root_volume_iops' field should be optional")
+	assert.False(t, rootVolumeIopsSchema.Required, "'root_volume_iops' field should not be required")
+	assert.Equal(t, "The number of input/output operations per second (IOPS) for the root volume.", rootVolumeIopsSchema.Description, "'root_volume_iops' field should have correct description")
+
+	// Test "root_volume_throughput" field
+	rootVolumeThroughputSchema, exists := nestedSchema["root_volume_throughput"]
+	assert.True(t, exists, "Nested schema should have 'root_volume_throughput' field")
+	assert.NotNil(t, rootVolumeThroughputSchema, "'root_volume_throughput' field schema should not be nil")
+	assert.Equal(t, schema.TypeInt, rootVolumeThroughputSchema.Type, "'root_volume_throughput' field should be TypeInt")
+	assert.True(t, rootVolumeThroughputSchema.Optional, "'root_volume_throughput' field should be optional")
+	assert.False(t, rootVolumeThroughputSchema.Required, "'root_volume_throughput' field should not be required")
+	assert.Equal(t, "The throughput of the root volume in MiB/s.", rootVolumeThroughputSchema.Description, "'root_volume_throughput' field should have correct description")
+
+	// Test "additional_security_groups" field
+	additionalSecurityGroupsSchema, exists := nestedSchema["additional_security_groups"]
+	assert.True(t, exists, "Nested schema should have 'additional_security_groups' field")
+	assert.NotNil(t, additionalSecurityGroupsSchema, "'additional_security_groups' field schema should not be nil")
+	assert.Equal(t, schema.TypeSet, additionalSecurityGroupsSchema.Type, "'additional_security_groups' field should be TypeSet")
+	assert.True(t, additionalSecurityGroupsSchema.Optional, "'additional_security_groups' field should be optional")
+	assert.False(t, additionalSecurityGroupsSchema.Required, "'additional_security_groups' field should not be required")
+	assert.NotNil(t, additionalSecurityGroupsSchema.Set, "'additional_security_groups' field should have Set function")
+	// Note: Cannot directly compare function pointers in Go, but we verify Set is not nil above
+	// The actual function assignment (schema.HashString) is verified by the schema definition in eks_template.go
+	assert.NotNil(t, additionalSecurityGroupsSchema.Elem, "'additional_security_groups' field should have Elem")
+	elemSchema, ok := additionalSecurityGroupsSchema.Elem.(*schema.Schema)
+	assert.True(t, ok, "'additional_security_groups' Elem should be a Schema")
+	assert.Equal(t, schema.TypeString, elemSchema.Type, "'additional_security_groups' Elem should be TypeString")
+	assert.Equal(t, "Additional security groups to attach to the instance.", additionalSecurityGroupsSchema.Description, "'additional_security_groups' field should have correct description")
+}
