@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -21,7 +22,14 @@ func resourceWorkspace() *schema.Resource {
 		UpdateContext: resourceWorkspaceUpdate,
 		DeleteContext: resourceWorkspaceDelete,
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceWorkspaceResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceWorkspaceStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceWorkspaceImport,
 		},
@@ -335,4 +343,150 @@ func resourceWorkspaceImport(ctx context.Context, d *schema.ResourceData, m inte
 	}
 
 	return []*schema.ResourceData{d}, nil
+}
+
+// resourceWorkspaceResourceV2 returns the schema for version 2 of the resource
+// This represents the old schema where "namespaces" was TypeList
+func resourceWorkspaceResourceV2() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"description": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"workspace_quota": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "Workspace quota default limits assigned to the namespace.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cpu": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "CPU that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.",
+						},
+						"memory": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Memory in Mib that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.",
+						},
+						"gpu": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "GPU that the entire workspace is allowed to consume. The default value is 0, which imposes no limit.",
+						},
+					},
+				},
+			},
+			"clusters": {
+				Type:     schema.TypeSet,
+				Required: true,
+				Set:      resourceClusterHash,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"uid": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"cluster_name": {
+							Type:     schema.TypeString,
+							Computed: true,
+						},
+					},
+				},
+			},
+			"backup_policy":        schemas.BackupPolicySchema(),
+			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
+			"namespaces": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "The namespaces for the cluster.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Name of the namespace. This is the name of the Kubernetes namespace in the cluster.",
+						},
+						"resource_allocation": {
+							Type:     schema.TypeMap,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu_limit: '1', gpu_provider: 'nvidia'}`",
+						},
+						"cluster_resource_allocations": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"uid": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"resource_allocation": {
+										Type:     schema.TypeMap,
+										Required: true,
+										Elem: &schema.Schema{
+											Type: schema.TypeString,
+										},
+										Description: "Resource allocation for the cluster. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu_limit: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.",
+									},
+								},
+							},
+						},
+						"images_blacklist": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of images to disallow for the namespace. For example, `['nginx:latest', 'redis:latest']`",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// resourceWorkspaceStateUpgradeV2 migrates state from version 2 to version 3
+func resourceWorkspaceStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading workspace state from version 2 to 3")
+
+	// Convert namespaces from TypeList to TypeSet
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if namespacesRaw, exists := rawState["namespaces"]; exists {
+		if namespacesList, ok := namespacesRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping namespaces as list during state upgrade with %d items", len(namespacesList))
+
+			// Keep the namespaces data as-is (as a list)
+			// Terraform will convert it to TypeSet when loading the resource using the schema
+			rawState["namespaces"] = namespacesList
+
+			log.Printf("[DEBUG] Successfully prepared namespaces for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] namespaces is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No namespaces found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
