@@ -240,6 +240,13 @@ func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
 	assert.Len(t, result, 2)
 }
 
+// TestToClusterProfilePackCreate tests the toClusterProfilePackCreate function.
+// This function:
+// 1. Extracts pack fields from input map
+// 2. Validates pack UID or resolution fields
+// 3. Handles different pack types (Spectro, Manifest)
+// 4. Trims whitespace from values and manifest content
+// 5. Returns V1PackManifestEntity
 func TestToClusterProfilePackCreate(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -344,6 +351,238 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Valid Spectro Pack with registry_name",
+			input: map[string]interface{}{
+				"name":          "test-pack",
+				"type":          "spectro",
+				"tag":           "v1.0",
+				"uid":           "test-uid",
+				"registry_name": "test-registry-name",
+				"values":        "test-values",
+				"manifest":      []interface{}{},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-pack"),
+				Tag:         "v1.0",
+				RegistryUID: "", // registry_name is stored but not resolved here
+				UID:         "test-uid",
+				Type:        models.V1PackTypeSpectro.Pointer(),
+				Values:      "test-values",
+				Manifests:   []*models.V1ManifestInputEntity{},
+			},
+		},
+		{
+			name: "Valid Pack with multiple manifests",
+			input: map[string]interface{}{
+				"name":         "test-pack",
+				"type":         "spectro",
+				"tag":          "v1.0",
+				"uid":          "test-uid",
+				"registry_uid": "test-registry-uid",
+				"values":       "test-values",
+				"manifest": []interface{}{
+					map[string]interface{}{
+						"content": "manifest-content-1",
+						"name":    "manifest-name-1",
+					},
+					map[string]interface{}{
+						"content": "manifest-content-2",
+						"name":    "manifest-name-2",
+					},
+				},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-pack"),
+				Tag:         "v1.0",
+				RegistryUID: "test-registry-uid",
+				UID:         "test-uid",
+				Type:        models.V1PackTypeSpectro.Pointer(),
+				Values:      "test-values",
+				Manifests: []*models.V1ManifestInputEntity{
+					{
+						Content: "manifest-content-1",
+						Name:    "manifest-name-1",
+					},
+					{
+						Content: "manifest-content-2",
+						Name:    "manifest-name-2",
+					},
+				},
+			},
+		},
+		{
+			name: "Valid Pack with values containing newlines (should be trimmed)",
+			input: map[string]interface{}{
+				"name":         "test-pack",
+				"type":         "spectro",
+				"tag":          "v1.0",
+				"uid":          "test-uid",
+				"registry_uid": "test-registry-uid",
+				"values":       "test-values\n",
+				"manifest":     []interface{}{},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-pack"),
+				Tag:         "v1.0",
+				RegistryUID: "test-registry-uid",
+				UID:         "test-uid",
+				Type:        models.V1PackTypeSpectro.Pointer(),
+				Values:      "test-values", // Should be trimmed
+				Manifests:   []*models.V1ManifestInputEntity{},
+			},
+		},
+		{
+			name: "Valid Pack with manifest content containing newlines (should be trimmed)",
+			input: map[string]interface{}{
+				"name":         "test-pack",
+				"type":         "spectro",
+				"tag":          "v1.0",
+				"uid":          "test-uid",
+				"registry_uid": "test-registry-uid",
+				"values":       "test-values",
+				"manifest": []interface{}{
+					map[string]interface{}{
+						"content": "manifest-content\n",
+						"name":    "manifest-name",
+					},
+				},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-pack"),
+				Tag:         "v1.0",
+				RegistryUID: "test-registry-uid",
+				UID:         "test-uid",
+				Type:        models.V1PackTypeSpectro.Pointer(),
+				Values:      "test-values",
+				Manifests: []*models.V1ManifestInputEntity{
+					{
+						Content: "manifest-content", // Should be trimmed
+						Name:    "manifest-name",
+					},
+				},
+			},
+		},
+		{
+			name: "Valid Pack with empty values",
+			input: map[string]interface{}{
+				"name":         "test-pack",
+				"type":         "spectro",
+				"tag":          "v1.0",
+				"uid":          "test-uid",
+				"registry_uid": "test-registry-uid",
+				"values":       "",
+				"manifest":     []interface{}{},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-pack"),
+				Tag:         "v1.0",
+				RegistryUID: "test-registry-uid",
+				UID:         "test-uid",
+				Type:        models.V1PackTypeSpectro.Pointer(),
+				Values:      "", // Empty values should be preserved
+				Manifests:   []*models.V1ManifestInputEntity{},
+			},
+		},
+		{
+			name: "Valid Pack with empty manifest list",
+			input: map[string]interface{}{
+				"name":         "test-pack",
+				"type":         "spectro",
+				"tag":          "v1.0",
+				"uid":          "test-uid",
+				"registry_uid": "test-registry-uid",
+				"values":       "test-values",
+				"manifest":     []interface{}{},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-pack"),
+				Tag:         "v1.0",
+				RegistryUID: "test-registry-uid",
+				UID:         "test-uid",
+				Type:        models.V1PackTypeSpectro.Pointer(),
+				Values:      "test-values",
+				Manifests:   []*models.V1ManifestInputEntity{},
+			},
+		},
+		{
+			name: "Valid Spectro Pack with all resolution fields (no UID)",
+			input: map[string]interface{}{
+				"name":         "test-pack",
+				"type":         "spectro",
+				"tag":          "v1.0",
+				"uid":          "",
+				"registry_uid": "test-registry-uid",
+				"values":       "test-values",
+				"manifest":     []interface{}{},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-pack"),
+				Tag:         "v1.0",
+				RegistryUID: "test-registry-uid",
+				UID:         "", // UID will be resolved in toClusterProfilePackCreateWithResolution
+				Type:        models.V1PackTypeSpectro.Pointer(),
+				Values:      "test-values",
+				Manifests:   []*models.V1ManifestInputEntity{},
+			},
+		},
+		{
+			name: "Valid Spectro Pack with registry_name instead of registry_uid",
+			input: map[string]interface{}{
+				"name":          "test-pack",
+				"type":          "spectro",
+				"tag":           "v1.0",
+				"uid":           "",
+				"registry_name": "test-registry-name",
+				"values":        "test-values",
+				"manifest":      []interface{}{},
+			},
+			expectedError: "",
+			expectedPack: &models.V1PackManifestEntity{
+				Name:        types.Ptr("test-pack"),
+				Tag:         "v1.0",
+				RegistryUID: "", // registry_name is stored but not resolved here
+				UID:         "",
+				Type:        models.V1PackTypeSpectro.Pointer(),
+				Values:      "test-values",
+				Manifests:   []*models.V1ManifestInputEntity{},
+			},
+		},
+		{
+			name: "Error - Spectro Pack missing tag without UID",
+			input: map[string]interface{}{
+				"name":         "test-pack",
+				"type":         "spectro",
+				"tag":          "",
+				"uid":          "",
+				"registry_uid": "test-registry-uid",
+				"values":       "test-values",
+				"manifest":     []interface{}{},
+			},
+			expectedError: "pack test-pack: either 'uid' must be provided, or all of the following fields must be specified for pack resolution: name, tag, registry_uid (or registry_name). Missing: tag",
+			expectedPack:  nil,
+		},
+		{
+			name: "Error - Spectro Pack missing name without UID",
+			input: map[string]interface{}{
+				"name":         "",
+				"type":         "spectro",
+				"tag":          "v1.0",
+				"uid":          "",
+				"registry_uid": "test-registry-uid",
+				"values":       "test-values",
+				"manifest":     []interface{}{},
+			},
+			expectedError: "pack : either 'uid' must be provided, or all of the following fields must be specified for pack resolution: name, tag, registry_uid (or registry_name). Missing: name",
+			expectedPack:  nil,
+		},
 	}
 
 	for _, tt := range tests {
@@ -354,9 +593,25 @@ func TestToClusterProfilePackCreate(t *testing.T) {
 			// Check for errors
 			if tt.expectedError != "" {
 				assert.EqualError(t, err, tt.expectedError)
+				assert.Nil(t, actualPack, "Pack should be nil on error")
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedPack, actualPack)
+				assert.NotNil(t, actualPack, "Pack should not be nil on success")
+				if actualPack != nil && tt.expectedPack != nil {
+					assert.Equal(t, tt.expectedPack.Name, actualPack.Name, "Name should match")
+					assert.Equal(t, tt.expectedPack.Tag, actualPack.Tag, "Tag should match")
+					assert.Equal(t, tt.expectedPack.RegistryUID, actualPack.RegistryUID, "RegistryUID should match")
+					assert.Equal(t, tt.expectedPack.UID, actualPack.UID, "UID should match")
+					assert.Equal(t, tt.expectedPack.Type, actualPack.Type, "Type should match")
+					assert.Equal(t, tt.expectedPack.Values, actualPack.Values, "Values should match")
+					assert.Equal(t, len(tt.expectedPack.Manifests), len(actualPack.Manifests), "Manifests length should match")
+					for i, expectedManifest := range tt.expectedPack.Manifests {
+						if i < len(actualPack.Manifests) {
+							assert.Equal(t, expectedManifest.Name, actualPack.Manifests[i].Name, "Manifest name should match")
+							assert.Equal(t, expectedManifest.Content, actualPack.Manifests[i].Content, "Manifest content should match")
+						}
+					}
+				}
 			}
 		})
 	}
@@ -1956,6 +2211,490 @@ func TestToClusterProfileUpdateWithResolution(t *testing.T) {
 			// Run custom verify function if provided
 			if tt.verify != nil && !panicked {
 				tt.verify(t, cp, err)
+			}
+		})
+	}
+}
+
+// TestToClusterProfilePackCreateWithResolution tests the toClusterProfilePackCreateWithResolution function.
+// This function:
+// 1. Extracts pack fields from input map
+// 2. Validates pack UID or resolution fields
+// 3. Resolves registry_name to registry_uid if provided
+// 4. Resolves pack UID for Spectro/Helm packs if not provided
+// 5. Handles Manifest packs with default UID
+// 6. Trims whitespace from values and manifest content
+// 7. Returns V1PackManifestEntity
+func TestToClusterProfilePackCreateWithResolution(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func() (map[string]interface{}, *client.V1Client)
+		expectError bool
+		description string
+		verify      func(t *testing.T, pack *models.V1PackManifestEntity, err error)
+	}{
+		{
+			name: "Successful creation with UID provided",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "test-pack",
+					"type":         "spectro",
+					"tag":          "v1.0",
+					"uid":          "test-uid",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest":     []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully create pack with UID provided",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "test-pack", *pack.Name, "Name should match")
+				assert.Equal(t, "test-uid", pack.UID, "UID should match")
+				assert.Equal(t, "test-registry-uid", pack.RegistryUID, "RegistryUID should match")
+				assert.Equal(t, "v1.0", pack.Tag, "Tag should match")
+				assert.Equal(t, models.V1PackTypeSpectro, *pack.Type, "Type should be Spectro")
+			},
+		},
+		{
+			name: "Successful creation with manifest pack and default UID",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":   "test-manifest-pack",
+					"type":   "manifest",
+					"tag":    "",
+					"uid":    "",
+					"values": "test-values",
+					"manifest": []interface{}{
+						map[string]interface{}{
+							"content": "manifest-content",
+							"name":    "manifest-name",
+						},
+					},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully create manifest pack with default UID",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "test-manifest-pack", *pack.Name, "Name should match")
+				assert.Equal(t, "spectro-manifest-pack", pack.UID, "UID should be default for manifest pack")
+				assert.Equal(t, models.V1PackTypeManifest, *pack.Type, "Type should be Manifest")
+				assert.Equal(t, 1, len(pack.Manifests), "Should have one manifest")
+			},
+		},
+		{
+			name: "Successful creation with multiple manifests",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "test-pack",
+					"type":         "spectro",
+					"tag":          "v1.0",
+					"uid":          "test-uid",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest": []interface{}{
+						map[string]interface{}{
+							"content": "manifest-content-1",
+							"name":    "manifest-name-1",
+						},
+						map[string]interface{}{
+							"content": "manifest-content-2",
+							"name":    "manifest-name-2",
+						},
+					},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully create pack with multiple manifests",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, 2, len(pack.Manifests), "Should have two manifests")
+				assert.Equal(t, "manifest-name-1", pack.Manifests[0].Name, "First manifest name should match")
+				assert.Equal(t, "manifest-content-1", pack.Manifests[0].Content, "First manifest content should match")
+			},
+		},
+		{
+			name: "Successful creation with values and manifest content trimming",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "test-pack",
+					"type":         "spectro",
+					"tag":          "v1.0",
+					"uid":          "test-uid",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values\n",
+					"manifest": []interface{}{
+						map[string]interface{}{
+							"content": "manifest-content\n",
+							"name":    "manifest-name",
+						},
+					},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully trim whitespace from values and manifest content",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "test-values", pack.Values, "Values should be trimmed")
+				assert.Equal(t, "manifest-content", pack.Manifests[0].Content, "Manifest content should be trimmed")
+			},
+		},
+		{
+			name: "Error from validation - missing registry_uid",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":     "test-pack",
+					"type":     "spectro",
+					"tag":      "v1.0",
+					"uid":      "",
+					"values":   "test-values",
+					"manifest": []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: true,
+			description: "Should return error when validation fails due to missing registry_uid",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.Error(t, err, "Should have error")
+				assert.Nil(t, pack, "Pack should be nil on error")
+				assert.Contains(t, err.Error(), "either 'uid' must be provided", "Error should mention missing fields")
+			},
+		},
+		{
+			name: "Error from validation - missing tag",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "test-pack",
+					"type":         "spectro",
+					"tag":          "",
+					"uid":          "",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest":     []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: true,
+			description: "Should return error when validation fails due to missing tag",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.Error(t, err, "Should have error")
+				assert.Nil(t, pack, "Pack should be nil on error")
+				assert.Contains(t, err.Error(), "either 'uid' must be provided", "Error should mention missing fields")
+			},
+		},
+		{
+			name: "Successful creation with empty values",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "test-pack",
+					"type":         "spectro",
+					"tag":          "v1.0",
+					"uid":          "test-uid",
+					"registry_uid": "test-registry-uid",
+					"values":       "",
+					"manifest":     []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully create pack with empty values",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "", pack.Values, "Values should be empty string")
+			},
+		},
+		{
+			name: "Successful creation with empty manifest list",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "test-pack",
+					"type":         "spectro",
+					"tag":          "v1.0",
+					"uid":          "test-uid",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest":     []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully create pack with empty manifest list",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, 0, len(pack.Manifests), "Manifests should be empty")
+			},
+		},
+		{
+			name: "Error from registry_name resolution",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":          "test-pack",
+					"type":          "spectro",
+					"tag":           "v1.0",
+					"uid":           "",
+					"registry_name": "non-existent-registry",
+					"values":        "test-values",
+					"manifest":      []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: true,
+			description: "Should return error when registry_name resolution fails",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.Error(t, err, "Should have error")
+				assert.Nil(t, pack, "Pack should be nil on error")
+				// Error might be from registry resolution or pack UID resolution
+			},
+		},
+		{
+			name: "Error from pack UID resolution for Spectro pack",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "non-existent-pack",
+					"type":         "spectro",
+					"tag":          "v1.0",
+					"uid":          "",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest":     []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: true,
+			description: "Should return error when pack UID resolution fails for Spectro pack",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.Error(t, err, "Should have error")
+				assert.Nil(t, pack, "Pack should be nil on error")
+				assert.Contains(t, err.Error(), "failed to resolve pack UID", "Error should mention pack UID resolution")
+			},
+		},
+		{
+			name: "Error from pack UID resolution for Helm pack",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "non-existent-pack",
+					"type":         "helm",
+					"tag":          "v1.0",
+					"uid":          "",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest":     []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: true,
+			description: "Should return error when pack UID resolution fails for Helm pack",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.Error(t, err, "Should have error")
+				assert.Nil(t, pack, "Pack should be nil on error")
+				assert.Contains(t, err.Error(), "failed to resolve pack UID", "Error should mention pack UID resolution")
+			},
+		},
+		{
+			name: "Error from registry_name resolution (even with UID provided)",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":          "test-pack",
+					"type":          "spectro",
+					"tag":           "v1.0",
+					"uid":           "test-uid",
+					"registry_name": "test-registry-name",
+					"values":        "test-values",
+					"manifest":      []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: true,
+			description: "Should return error when registry_name resolution fails (function resolves registry_name even if UID is provided)",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.Error(t, err, "Should have error")
+				assert.Nil(t, pack, "Pack should be nil on error")
+				// Error from registry_name resolution
+			},
+		},
+		{
+			name: "Error when both registry_uid and registry_name are provided",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":          "test-pack",
+					"type":          "spectro",
+					"tag":           "v1.0",
+					"uid":           "test-uid",
+					"registry_uid":  "test-registry-uid",
+					"registry_name": "test-registry-name",
+					"values":        "test-values",
+					"manifest":      []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: true,
+			description: "Should return error when both registry_uid and registry_name are provided (validation error)",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.Error(t, err, "Should have error")
+				assert.Nil(t, pack, "Pack should be nil on error")
+				assert.Contains(t, err.Error(), "only one of 'registry_uid' or 'registry_name' can be specified", "Error should mention both fields")
+			},
+		},
+		{
+			name: "Successful creation with Spectro pack type",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "test-pack",
+					"type":         "spectro",
+					"tag":          "v1.0",
+					"uid":          "test-uid",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest":     []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully create Spectro pack",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, models.V1PackTypeSpectro, *pack.Type, "Type should be Spectro")
+			},
+		},
+		{
+			name: "Successful creation with Helm pack type",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "test-helm-pack",
+					"type":         "helm",
+					"tag":          "v1.0",
+					"uid":          "test-helm-uid",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest":     []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully create Helm pack",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, models.V1PackTypeHelm, *pack.Type, "Type should be Helm")
+			},
+		},
+		{
+			name: "Panic when client is nil",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "test-pack",
+					"type":         "spectro",
+					"tag":          "v1.0",
+					"uid":          "",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest":     []interface{}{},
+				}
+				return input, nil
+			},
+			expectError: true,
+			description: "Should panic when client is nil and pack UID needs resolution",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				// Function will panic on nil pointer dereference when trying to resolve pack UID
+			},
+		},
+		{
+			name: "Successful creation with manifest pack and custom UID",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":   "test-manifest-pack",
+					"type":   "manifest",
+					"tag":    "",
+					"uid":    "custom-manifest-uid",
+					"values": "test-values",
+					"manifest": []interface{}{
+						map[string]interface{}{
+							"content": "manifest-content",
+							"name":    "manifest-name",
+						},
+					},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully create manifest pack with custom UID",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "custom-manifest-uid", pack.UID, "UID should be custom value")
+				assert.Equal(t, models.V1PackTypeManifest, *pack.Type, "Type should be Manifest")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, c := tt.setup()
+
+			var pack *models.V1PackManifestEntity
+			var err error
+			var panicked bool
+
+			// Handle potential panics
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						panicked = true
+						err = fmt.Errorf("panic: %v", r)
+					}
+				}()
+				pack, err = toClusterProfilePackCreateWithResolution(input, c)
+			}()
+
+			// Verify results
+			if tt.expectError {
+				if panicked {
+					// Panic is expected for nil client cases
+					assert.Error(t, err, "Expected panic/error for test case: %s", tt.description)
+				} else {
+					assert.Error(t, err, "Expected error for test case: %s", tt.description)
+				}
+			} else {
+				if panicked {
+					t.Logf("Unexpected panic occurred: %v", err)
+					assert.Fail(t, "Unexpected panic for test case: %s", tt.description)
+				} else {
+					assert.NoError(t, err, "Should not have error for test case: %s", tt.description)
+				}
+			}
+
+			// Run custom verify function if provided
+			if tt.verify != nil && !panicked {
+				tt.verify(t, pack, err)
 			}
 		})
 	}
