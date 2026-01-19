@@ -184,7 +184,7 @@ Optional:
 Required:
 
 - `name` (String) Name of the namespace. This is the name of the Kubernetes namespace in the cluster.
-- `resource_allocation` (Map of String) Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1', gpu_provider: 'nvidia'}`
+- `resource_allocation` (Map of String) Resource allocation for the namespace. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration: `cpu_cores`, `memory_MiB`, `gpu`, and `gpu_provider`. Any other field names will not be honored by the system. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1', gpu_provider: 'nvidia'}`
 
 Optional:
 
@@ -196,7 +196,7 @@ Optional:
 
 Required:
 
-- `resource_allocation` (Map of String) Resource allocation for the cluster. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.
+- `resource_allocation` (Map of String) Resource allocation for the cluster. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration: `cpu_cores`, `memory_MiB`, `gpu`. Any other field names will not be honored by the system. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.
 - `uid` (String)
 
 
