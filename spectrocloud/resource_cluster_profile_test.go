@@ -2376,7 +2376,7 @@ func TestToClusterProfilePackCreateWithResolution(t *testing.T) {
 			},
 		},
 		{
-			name: "Error from validation - missing tag",
+			name: "Error from validation - missing uid field",
 			setup: func() (map[string]interface{}, *client.V1Client) {
 				input := map[string]interface{}{
 					"name":         "test-pack",
@@ -2514,7 +2514,7 @@ func TestToClusterProfilePackCreateWithResolution(t *testing.T) {
 			},
 		},
 		{
-			name: "Error from registry_name resolution (even with UID provided)",
+			name: "Successful resolution: registry_name resolved even with UID provided",
 			setup: func() (map[string]interface{}, *client.V1Client) {
 				input := map[string]interface{}{
 					"name":          "test-pack",
@@ -2528,12 +2528,13 @@ func TestToClusterProfilePackCreateWithResolution(t *testing.T) {
 				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
 				return input, c
 			},
-			expectError: true,
-			description: "Should return error when registry_name resolution fails (function resolves registry_name even if UID is provided)",
+			expectError: false,
+			description: "Function resolves registry_name even if UID is provided (tests resolveRegistryNameToUID is called regardless of UID presence)",
 			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				assert.Error(t, err, "Should have error")
-				assert.Nil(t, pack, "Pack should be nil on error")
-				// Error from registry_name resolution
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "test-registry-uid", pack.RegistryUID, "RegistryUID should be resolved from registry_name even when UID is provided")
+				assert.Equal(t, "test-uid", pack.UID, "UID should remain as provided")
 			},
 		},
 		{
@@ -2652,6 +2653,113 @@ func TestToClusterProfilePackCreateWithResolution(t *testing.T) {
 				assert.NotNil(t, pack, "Pack should not be nil")
 				assert.Equal(t, "custom-manifest-uid", pack.UID, "UID should be custom value")
 				assert.Equal(t, models.V1PackTypeManifest, *pack.Type, "Type should be Manifest")
+			},
+		},
+		{
+			name: "Successful resolution: registry_name to registry_uid for Spectro pack",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":          "k8",
+					"type":          "spectro",
+					"tag":           "1.0",
+					"uid":           "",
+					"registry_name": "test-registry-name",
+					"values":        "test-values",
+					"manifest":      []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully resolve registry_name to registry_uid using GetPackRegistryCommonByName, then resolve pack UID",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "k8", *pack.Name, "Name should match")
+				assert.Equal(t, "test-registry-uid", pack.RegistryUID, "RegistryUID should be resolved from registry_name")
+				assert.Equal(t, "test-pack-uid", pack.UID, "Pack UID should be resolved")
+				assert.Equal(t, "1.0", pack.Tag, "Tag should match")
+				assert.Equal(t, models.V1PackTypeSpectro, *pack.Type, "Type should be Spectro")
+			},
+		},
+		{
+			name: "Successful resolution: registry_name to registry_uid for Helm pack",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":          "k8",
+					"type":          "helm",
+					"tag":           "1.0",
+					"uid":           "",
+					"registry_name": "Public",
+					"values":        "test-values",
+					"manifest":      []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully resolve registry_name to registry_uid using GetHelmRegistryByName, then resolve pack UID",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "k8", *pack.Name, "Name should match")
+				assert.Equal(t, "test-registry-uid", pack.RegistryUID, "RegistryUID should be resolved from registry_name")
+				assert.Equal(t, "test-pack-uid", pack.UID, "Pack UID should be resolved")
+				assert.Equal(t, "1.0", pack.Tag, "Tag should match")
+				assert.Equal(t, models.V1PackTypeHelm, *pack.Type, "Type should be Helm")
+			},
+		},
+		{
+			name: "Successful resolution: registry_name to registry_uid for OCI pack (tests GetOciRegistryByName)",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":          "k8",
+					"type":          "oci",
+					"tag":           "1.0",
+					"uid":           "",
+					"registry_name": "test-registry-oci",
+					"values":        "test-values",
+					"manifest":      []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully resolve registry_name to registry_uid using GetOciRegistryByName (tests resolveRegistryNameToUID for OCI type). Note: OCI pack type doesn't resolve pack UID in switch statement, so UID may be empty.",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "k8", *pack.Name, "Name should match")
+				assert.Equal(t, "test-registry-uid", pack.RegistryUID, "RegistryUID should be resolved from registry_name")
+				// Note: Pack UID is not resolved for OCI type as it's not handled in the switch statement
+				assert.Equal(t, "1.0", pack.Tag, "Tag should match")
+			},
+		},
+		{
+			name: "Successful resolution: pack UID resolution with provided registry_uid",
+			setup: func() (map[string]interface{}, *client.V1Client) {
+				input := map[string]interface{}{
+					"name":         "k8",
+					"type":         "spectro",
+					"tag":          "1.0",
+					"uid":          "",
+					"registry_uid": "test-registry-uid",
+					"values":       "test-values",
+					"manifest":     []interface{}{},
+				}
+				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+				return input, c
+			},
+			expectError: false,
+			description: "Should successfully resolve pack UID when registry_uid is directly provided (tests resolvePackUID function)",
+			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.NotNil(t, pack, "Pack should not be nil")
+				assert.Equal(t, "k8", *pack.Name, "Name should match")
+				assert.Equal(t, "test-registry-uid", pack.RegistryUID, "RegistryUID should match provided value")
+				assert.Equal(t, "test-pack-uid", pack.UID, "Pack UID should be resolved via GetPacksByNameAndRegistry")
+				assert.Equal(t, "1.0", pack.Tag, "Tag should match")
+				assert.Equal(t, models.V1PackTypeSpectro, *pack.Type, "Type should be Spectro")
 			},
 		},
 	}

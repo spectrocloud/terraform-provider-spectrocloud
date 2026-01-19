@@ -18,7 +18,7 @@ func getHelmRegistryPayload() *models.V1HelmRegistry {
 			Labels:                nil,
 			LastModifiedTimestamp: models.V1Time{},
 			Name:                  "Public",
-			UID:                   generateRandomStringUID(),
+			UID:                   "test-registry-uid",
 		},
 		Spec: &models.V1HelmRegistrySpec{
 			Auth: &models.V1RegistryAuth{
@@ -204,7 +204,7 @@ func RegistriesRoutes() []Route {
 						{
 							Metadata: &models.V1ObjectMeta{
 								Name: "test-registry-oci",
-								UID:  generateRandomStringUID(),
+								UID:  "test-registry-uid",
 							},
 							Spec:   nil,
 							Status: nil,
@@ -283,6 +283,33 @@ func RegistriesRoutes() []Route {
 							UID:       "test-registry-uid",
 						},
 					},
+				},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/registries/pack",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1PackRegistries{
+					Items: []*models.V1PackRegistry{
+						{
+							APIVersion: "",
+							Kind:       "",
+							Metadata: &models.V1ObjectMeta{
+								Annotations:           nil,
+								CreationTimestamp:     models.V1Time{},
+								DeletionTimestamp:     models.V1Time{},
+								Labels:                nil,
+								LastModifiedTimestamp: models.V1Time{},
+								Name:                  "test-registry-name",
+								UID:                   "test-registry-uid",
+							},
+							Spec:   nil,
+							Status: nil,
+						},
+					},
+					Listmeta: nil,
 				},
 			},
 		},
