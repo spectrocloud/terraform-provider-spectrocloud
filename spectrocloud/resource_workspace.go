@@ -427,7 +427,7 @@ func resourceWorkspaceResourceV2() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "Resource allocation for the namespace. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu_limit: '1', gpu_provider: 'nvidia'}`",
+							Description: "Resource allocation for the namespace. This is a map containing the resource type and the resource value.Only the following field names are supported for resource configuration.Any other field names won’t be honoured by the system. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1', gpu_provider: 'nvidia'}`",
 						},
 						"cluster_resource_allocations": {
 							Type:     schema.TypeList,
@@ -444,7 +444,7 @@ func resourceWorkspaceResourceV2() *schema.Resource {
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},
-										Description: "Resource allocation for the cluster. This is a map containing the resource type and the resource value. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu_limit: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.",
+										Description: "Resource allocation for the cluster. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration.Any other field names won’t be honoured by the system. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.",
 									},
 								},
 							},
