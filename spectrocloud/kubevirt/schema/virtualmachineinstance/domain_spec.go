@@ -246,12 +246,16 @@ func expandEFI(efi []interface{}) (*kubevirtapiv1.EFI, error) {
 	result := &kubevirtapiv1.EFI{}
 	in := efi[0].(map[string]interface{})
 
-	if v, ok := in["secure_boot"].(bool); ok {
-		result.SecureBoot = &v
+	if v, ok := in["secure_boot"]; ok {
+		if secureBoot, ok := v.(bool); ok {
+			result.SecureBoot = &secureBoot
+		}
 	}
 
-	if v, ok := in["persistent"].(bool); ok {
-		result.Persistent = &v
+	if v, ok := in["persistent"]; ok {
+		if persistent, ok := v.(bool); ok {
+			result.Persistent = &persistent
+		}
 	}
 
 	return result, nil
@@ -531,12 +535,20 @@ func flattenBIOS(in *kubevirtapiv1.BIOS) []interface{} {
 func flattenEFI(in *kubevirtapiv1.EFI) []interface{} {
 	att := make(map[string]interface{})
 
+	// Always include secure_boot - use default true if nil
 	if in.SecureBoot != nil {
 		att["secure_boot"] = *in.SecureBoot
+	} else {
+		att["secure_boot"] = false
 	}
 
+	// Always include persistent if it's non-nil (explicitly set by API)
+	// If nil, set to false as default
 	if in.Persistent != nil {
 		att["persistent"] = *in.Persistent
+	} else {
+		// Set default to false when empty/nil
+		att["persistent"] = false
 	}
 
 	if len(att) == 0 {
