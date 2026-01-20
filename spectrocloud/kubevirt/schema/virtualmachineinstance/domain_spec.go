@@ -539,7 +539,7 @@ func flattenEFI(in *kubevirtapiv1.EFI) []interface{} {
 	if in.SecureBoot != nil {
 		att["secure_boot"] = *in.SecureBoot
 	} else {
-		att["secure_boot"] = true
+		att["secure_boot"] = false
 	}
 
 	// Always include persistent if it's non-nil (explicitly set by API)
