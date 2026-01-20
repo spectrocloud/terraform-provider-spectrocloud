@@ -196,6 +196,18 @@ func RegistriesRoutes() []Route {
 		},
 		{
 			Method: "GET",
+			Path:   "/v1/registries/oci/{uid}/basic/sync/status",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1RegistrySyncStatus{
+					IsSyncSupported: true,
+					Status:          "Success",
+					Message:         "Registry synchronized successfully",
+				},
+			},
+		},
+		{
+			Method: "GET",
 			Path:   "/v1/registries/oci/summary",
 			Response: ResponseData{
 				StatusCode: http.StatusOK,
