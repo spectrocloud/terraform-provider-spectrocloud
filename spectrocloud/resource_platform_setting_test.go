@@ -25,7 +25,6 @@ func testValidateContextDependenciesLogic(contextVal string, fields map[string]i
 
 // TestValidateContextDependencies tests the validation logic
 func TestValidateContextDependencies(t *testing.T) {
-
 	tests := []struct {
 		name        string
 		contextVal  string
