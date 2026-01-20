@@ -535,16 +535,20 @@ func flattenBIOS(in *kubevirtapiv1.BIOS) []interface{} {
 func flattenEFI(in *kubevirtapiv1.EFI) []interface{} {
 	att := make(map[string]interface{})
 
-	// Only include secure_boot if it's explicitly set to false (non-default)
-	// Default is true, so we only need to track when it's false
-	if in.SecureBoot != nil && !*in.SecureBoot {
+	// Always include secure_boot - use default true if nil
+	if in.SecureBoot != nil {
 		att["secure_boot"] = *in.SecureBoot
+	} else {
+		att["secure_boot"] = true
 	}
 
-	// Only include persistent if it's explicitly set to true (non-default)
-	// Default is false, so we only need to track when it's true
-	if in.Persistent != nil && *in.Persistent {
+	// Always include persistent if it's non-nil (explicitly set by API)
+	// If nil, set to false as default
+	if in.Persistent != nil {
 		att["persistent"] = *in.Persistent
+	} else {
+		// Set default to false when empty/nil
+		att["persistent"] = false
 	}
 
 	if len(att) == 0 {
