@@ -270,45 +270,45 @@ func extractClusterUIDFromResourceID(resourceID string) (string, error) {
 	return clusterUID, nil
 }
 
-// getClusterImportInfo extracts the kubectl command and manifest URL from a cluster object.
-// Returns kubectl_command, manifest_url, and an error if the import link is not available.
-func getClusterImportInfo(cluster *models.V1SpectroCluster) (kubectlCommand, manifestURL string, err error) {
-	if cluster == nil {
-		return "", "", fmt.Errorf("cluster is nil")
-	}
+// // getClusterImportInfo extracts the kubectl command and manifest URL from a cluster object.
+// // Returns kubectl_command, manifest_url, and an error if the import link is not available.
+// func getClusterImportInfo(cluster *models.V1SpectroCluster) (kubectlCommand, manifestURL string, err error) {
+// 	if cluster == nil {
+// 		return "", "", fmt.Errorf("cluster is nil")
+// 	}
 
-	if cluster.Status == nil {
-		return "", "", fmt.Errorf("cluster status is not available")
-	}
+// 	if cluster.Status == nil {
+// 		return "", "", fmt.Errorf("cluster status is not available")
+// 	}
 
-	if cluster.Status.ClusterImport == nil {
-		return "", "", fmt.Errorf("cluster import information is not available")
-	}
+// 	if cluster.Status.ClusterImport == nil {
+// 		return "", "", fmt.Errorf("cluster import information is not available")
+// 	}
 
-	kubectlCommand = cluster.Status.ClusterImport.ImportLink
-	if kubectlCommand == "" {
-		return "", "", fmt.Errorf("import link is empty")
-	}
+// 	kubectlCommand = cluster.Status.ClusterImport.ImportLink
+// 	if kubectlCommand == "" {
+// 		return "", "", fmt.Errorf("import link is empty")
+// 	}
 
-	// Extract manifest URL from importLink
-	// importLink format: "kubectl apply -f https://api.dev.spectrocloud.com/v1/spectroclusters/{uid}/import/manifest"
-	manifestURL = extractManifestURL(kubectlCommand)
+// 	// Extract manifest URL from importLink
+// 	// importLink format: "kubectl apply -f https://api.dev.spectrocloud.com/v1/spectroclusters/{uid}/import/manifest"
+// 	manifestURL = extractManifestURL(kubectlCommand)
 
-	return kubectlCommand, manifestURL, nil
-}
+// 	return kubectlCommand, manifestURL, nil
+// }
 
-// extractManifestURL extracts the manifest URL from the importLink string.
-// importLink format: "kubectl apply -f https://api.dev.spectrocloud.com/v1/spectroclusters/{uid}/import/manifest"
-// Returns: "https://api.dev.spectrocloud.com/v1/spectroclusters/{uid}/import/manifest"
-func extractManifestURL(importLink string) string {
-	// Remove "kubectl apply -f" prefix and trim whitespace
-	prefix := "kubectl apply -f"
-	if strings.HasPrefix(importLink, prefix) {
-		return strings.TrimSpace(strings.TrimPrefix(importLink, prefix))
-	}
-	// If already a URL or no prefix, return as-is
-	return strings.TrimSpace(importLink)
-}
+// // extractManifestURL extracts the manifest URL from the importLink string.
+// // importLink format: "kubectl apply -f https://api.dev.spectrocloud.com/v1/spectroclusters/{uid}/import/manifest"
+// // Returns: "https://api.dev.spectrocloud.com/v1/spectroclusters/{uid}/import/manifest"
+// func extractManifestURL(importLink string) string {
+// 	// Remove "kubectl apply -f" prefix and trim whitespace
+// 	prefix := "kubectl apply -f"
+// 	if strings.HasPrefix(importLink, prefix) {
+// 		return strings.TrimSpace(strings.TrimPrefix(importLink, prefix))
+// 	}
+// 	// If already a URL or no prefix, return as-is
+// 	return strings.TrimSpace(importLink)
+// }
 
 // Helper functions
 

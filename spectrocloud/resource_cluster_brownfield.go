@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -780,10 +781,18 @@ func getNodeMaintenanceStatusForCloudType(c *client.V1Client, cloudType string) 
 		return c.GetNodeMaintenanceStatusAzure
 	case "gcp":
 		return c.GetNodeMaintenanceStatusGcp
-	case "vsphere":
+	case "vsphere", "openshift":
 		return c.GetNodeMaintenanceStatusVsphere
-	case "generic", "eksa", "openshift":
+	case "generic", "EKS-Anywhere":
 		return c.GetNodeMaintenanceStatusGeneric
+	case "apache-cloudstack":
+		return c.GetNodeMaintenanceStatusCloudStack
+	case "maas":
+		return c.GetNodeMaintenanceStatusMaas
+	case "edge-native":
+		return c.GetNodeMaintenanceStatusEdgeNative
+	case "openstack":
+		return c.GetNodeMaintenanceStatusOpenStack
 	default:
 		return nil
 	}
@@ -798,10 +807,18 @@ func getMachinesListForCloudType(c *client.V1Client, cloudType string) func(stri
 		return c.GetMachinesListAzure
 	case "gcp":
 		return c.GetMachinesListGcp
-	case "vsphere":
+	case "vsphere", "openshift":
 		return c.GetMachinesListVsphere
-	case "generic", "eksa", "openshift":
+	case "generic", "EKS-Anywhere":
 		return c.GetMachinesListGeneric
+	case "apache-cloudstack":
+		return c.GetMachinesListApacheCloudstack
+	case "maas":
+		return c.GetMachinesListMaas
+	case "edge-native":
+		return c.GetMachinesListEdgeNative
+	case "openstack":
+		return c.GetMachinesListOpenStack
 	default:
 		return nil
 	}
@@ -826,4 +843,44 @@ func resolveNodeID(c *client.V1Client, cloudType, cloudConfigUID, machinePoolNam
 	}
 
 	return nodeID, nil
+}
+
+// getClusterImportInfo extracts the kubectl command and manifest URL from a cluster object.
+// Returns kubectl_command, manifest_url, and an error if the import link is not available.
+func getClusterImportInfo(cluster *models.V1SpectroCluster) (kubectlCommand, manifestURL string, err error) {
+	if cluster == nil {
+		return "", "", fmt.Errorf("cluster is nil")
+	}
+
+	if cluster.Status == nil {
+		return "", "", fmt.Errorf("cluster status is not available")
+	}
+
+	if cluster.Status.ClusterImport == nil {
+		return "", "", fmt.Errorf("cluster import information is not available")
+	}
+
+	kubectlCommand = cluster.Status.ClusterImport.ImportLink
+	if kubectlCommand == "" {
+		return "", "", fmt.Errorf("import link is empty")
+	}
+
+	// Extract manifest URL from importLink
+	// importLink format: "kubectl apply -f https://api.dev.spectrocloud.com/v1/spectroclusters/{uid}/import/manifest"
+	manifestURL = extractManifestURL(kubectlCommand)
+
+	return kubectlCommand, manifestURL, nil
+}
+
+// extractManifestURL extracts the manifest URL from the importLink string.
+// importLink format: "kubectl apply -f https://api.dev.spectrocloud.com/v1/spectroclusters/{uid}/import/manifest"
+// Returns: "https://api.dev.spectrocloud.com/v1/spectroclusters/{uid}/import/manifest"
+func extractManifestURL(importLink string) string {
+	// Remove "kubectl apply -f" prefix and trim whitespace
+	prefix := "kubectl apply -f"
+	if strings.HasPrefix(importLink, prefix) {
+		return strings.TrimSpace(strings.TrimPrefix(importLink, prefix))
+	}
+	// If already a URL or no prefix, return as-is
+	return strings.TrimSpace(importLink)
 }
