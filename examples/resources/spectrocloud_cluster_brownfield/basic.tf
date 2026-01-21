@@ -2,16 +2,16 @@
 # This example shows the minimal required fields for registering an existing Kubernetes cluster
 
 resource "spectrocloud_cluster_brownfield" "basic" {
-  name       = "my-existing-cluster"
-  cloud_type = "generic" # Options: aws, eksa, azure, gcp, vsphere, openshift, generic
-  context    = "project" # Optional, defaults to "project"
+  name        = "my-existing-cluster"
+  cloud_type  = "generic" # Options: aws, eksa, azure, gcp, vsphere, openshift, generic
+  context     = "project" # Optional, defaults to "project"
   import_mode = "full"
-  
-  description = "My existing Kubernetes cluster"
+
+  description      = "My existing Kubernetes cluster"
   cluster_timezone = "Etc/UTC"
-  tags = ["environment:production", "team:platform", "managed-by:terraform"]
+  tags             = ["environment:production", "team:platform", "managed-by:terraform"]
   # apply_setting = "DownloadAndInstall"
-  cluster_profile{
+  cluster_profile {
     id = "696e05b775ded194bf2c14c1"
   }
   scan_policy {
@@ -23,16 +23,16 @@ resource "spectrocloud_cluster_brownfield" "basic" {
   pause_agent_upgrades = "lock"
   machine_pool {
     name = "worker-pool"
-    
+
     node {
       node_name = "cp-dev-worker"
-      action  = "uncordon"  # Options: "cordon" or "uncordon"
+      action    = "uncordon" # Options: "cordon" or "uncordon"
     }
   }
 
   #   machine_pool {
   #   name = "master-pool"
-    
+
   #   node {
   #     node_name = "cp-dev-control-plane2"
   #     # node_id = "8f51f6d9-4cce-47fb-9124-2ac7bf760faa-03865"
@@ -55,13 +55,13 @@ resource "spectrocloud_cluster_brownfield" "basic" {
 #     spectrocloud_cluster_brownfield.e2e,
 #     data.http.manifest_content
 #   ]
-  
+
 #   # Apply the manifest fetched from manifest_url
 #   yaml_body = data.http.manifest_content.response_body
-  
+
 #   # Wait for the manifest to be applied successfully
 #   wait = true
-  
+
 #   # Wait for rollouts to complete (for Deployments, StatefulSets, etc.)
 #   wait_for_rollout = true
 # }
