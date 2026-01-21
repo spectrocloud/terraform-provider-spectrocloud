@@ -274,6 +274,25 @@ func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.Resour
 			Spec:     toBrownfieldClusterSpecGeneric(d),
 		}
 		clusterUID, err = c.ImportSpectroClusterGeneric(entity)
+	case "apache-cloudstack":
+		entity := &models.V1SpectroCloudStackClusterImportEntity{
+			Metadata: metadata,
+			Spec:     toBrownfieldClusterSpecCloudStack(d),
+		}
+		clusterUID, err = c.ImportSpectroClusterApacheCloudStack(entity)
+	case "maas":
+		entity := &models.V1SpectroMaasClusterImportEntity{
+			Metadata: metadata,
+			Spec:     toBrownfieldClusterSpecMaas(d),
+		}
+		clusterUID, err = c.ImportSpectroClusterMaas(entity)
+	case "edge-native":
+		entity := &models.V1SpectroEdgeNativeClusterImportEntity{
+			Metadata: metadata,
+			Spec:     toBrownfieldClusterSpecEdgeNative(d),
+		}
+		clusterUID, err = c.ImportSpectroClusterEdgeNative(entity)
+
 	default:
 		return diag.FromErr(fmt.Errorf("unsupported cloud type: %s", cloudType))
 	}
