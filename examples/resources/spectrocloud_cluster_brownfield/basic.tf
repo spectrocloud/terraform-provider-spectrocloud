@@ -39,6 +39,36 @@ resource "spectrocloud_cluster_brownfield" "basic" {
   #     action  = "uncordon"  # Options: "cordon" or "uncordon"
   #   }
   # }
+  # ClusterRoleBinding - Cluster-wide permissions
+  cluster_rbac_binding {
+    type = "ClusterRoleBinding"
+
+    role = {
+      kind = "ClusterRole"
+      name = "cluster-admin"
+    }
+
+    # Subject type: User
+    subjects {
+      type = "User"
+      name = "admin-user@example.com"
+    }
+
+    # Subject type: Group
+    subjects {
+      type = "Group"
+      name = "platform-admins"
+    }
+
+    # Subject type: ServiceAccount (requires namespace)
+    subjects {
+      type      = "ServiceAccount"
+      name      = "cluster-admin-sa"
+      namespace = "kube-system"
+    }
+  }
+
+
   backup_policy {
     schedule                  = "0 0 * * SUN"
     backup_location_id        = "696f2b3d3154a9e6d65f6b54"
@@ -46,6 +76,29 @@ resource "spectrocloud_cluster_brownfield" "basic" {
     expiry_in_hour            = 7200
     include_disks             = true
     include_cluster_resources = true
+  }
+
+  # RoleBinding - Namespace-specific permissions
+  cluster_rbac_binding {
+    type      = "RoleBinding"
+    namespace = "production"
+    role = {
+      kind = "Role"
+      name = "developer-role"
+    }
+    subjects {
+      type = "User"
+      name = "developer@example.com"
+    }
+    subjects {
+      type = "Group"
+      name = "developers"
+    }
+    subjects {
+      type      = "ServiceAccount"
+      name      = "app-service-account"
+      namespace = "production"
+    }
   }
 
 }
@@ -80,4 +133,57 @@ output "kubectl_command" {
 
 output "cluster_status" {
   value = spectrocloud_cluster_brownfield.basic.status
+}
+
+
+
+# ============================================================================
+# AUTOMATIC CLUSTER IMPORT MANIFEST APPLICATION
+# ============================================================================
+#
+# Purpose:
+#   This section automatically applies the cluster import manifest to your
+#   Kubernetes cluster after the brownfield cluster registration is created.
+#   The manifest contains the Spectro Cloud agent components needed to connect
+#   your existing cluster to Spectro Cloud.
+#
+# How it works:
+#   1. The spectrocloud_cluster_brownfield resource provides a manifest_url
+#      (computed output) containing the import manifest URL
+#   2. The http data source fetches the manifest YAML content from the URL
+#   3. The kubectl_manifest resource applies the manifest to your cluster
+#      using the configured kubectl provider
+#
+# Prerequisites:
+#   - kubectl CLI must be installed and configured with access to your cluster
+#   - kubectl provider must be configured in providers.tf (see below)
+#   - http provider must be configured in providers.tf (see below)
+#   - Your kubeconfig must be properly set up to access the target cluster
+#
+
+# Fetch the manifest content from the manifest_url
+data "http" "manifest_content" {
+  url    = spectrocloud_cluster_brownfield.basic.manifest_url
+  method = "GET"
+
+  depends_on = [
+    spectrocloud_cluster_brownfield.basic
+  ]
+}
+
+# Apply the manifest using kubectl provider
+resource "kubectl_manifest" "cluster_import" {
+  depends_on = [
+    spectrocloud_cluster_brownfield.basic,
+    data.http.manifest_content
+  ]
+
+  # Apply the manifest fetched from manifest_url
+  yaml_body = data.http.manifest_content.response_body
+
+  # Wait for the manifest to be applied successfully
+  wait = true
+
+  # Wait for rollouts to complete (for Deployments, StatefulSets, etc.)
+  wait_for_rollout = true
 }
