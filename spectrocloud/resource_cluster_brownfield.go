@@ -340,6 +340,11 @@ func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.Resour
 			Detail:   "Cluster import is submitted. Please apply the manifest using `manifest_url` and run `kubectl_command` on your cluster to start the import process. Once it becomes Running and Healthy, Day-2 operations will be allowed.",
 		})
 	}
+	updateDiags, done := updateCommonFieldsForBrowfieldCluster(d, c)
+	if done {
+		return updateDiags
+	}
+	diags = append(diags, updateDiags...)
 
 	return diags
 }
@@ -486,7 +491,11 @@ func resourceClusterBrownfieldUpdate(ctx context.Context, d *schema.ResourceData
 	if hasDay2Changes {
 		isHealthy, currentState := isClusterRunningHealthy(cluster, c)
 		if !isHealthy {
-			return diag.Errorf("Day-2 operations are only allowed when the cluster is in Running-Healthy state. Current state: %s", currentState)
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "Cluster is not in Running-Healthy state",
+				Detail:   fmt.Sprintf("Day-2 operations may not work as expected when the cluster is not in Running-Healthy state. Current state: %s", currentState),
+			})
 		}
 
 		// Validate system repave approval if review_repave_state changed

@@ -157,6 +157,34 @@ func getSpectroComponentsUpgrade(cluster *models.V1SpectroCluster) string {
 	return "unlock"
 }
 
+func updateCommonFieldsForBrowfieldCluster(d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
+	if err := updateClusterMetadata(c, d); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := updateClusterNamespaces(c, d); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := updateClusterRBAC(c, d); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := updateProfiles(c, d); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := updateBackupPolicy(c, d); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := updateScanPolicy(c, d); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := updateAgentUpgradeSetting(c, d); err != nil {
+		return diag.FromErr(err), true
+	}
+	if err := updateClusterTimezone(c, d); err != nil {
+		return diag.FromErr(err), true
+	}
+	return diag.Diagnostics{}, false
+}
+
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
 func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
 	if d.HasChanges("name", "tags", "description", "tags_map") {
