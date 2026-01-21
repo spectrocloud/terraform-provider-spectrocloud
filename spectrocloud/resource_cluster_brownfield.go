@@ -53,12 +53,16 @@ func resourceClusterBrownfield() *schema.Resource {
 				Required: true,
 				ValidateFunc: validation.StringInSlice([]string{
 					"aws",
-					"eksa",
+					"EKS-Anywhere",
 					"azure",
 					"gcp",
 					"vsphere",
 					"openshift",
 					"generic",
+					"apache-cloudstack",
+					"edge-native",
+					"maas",
+					"openstack",
 				}, false),
 				Description: "The cloud type of the cluster. Supported values: `aws`, `eksa`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`. This field cannot be updated after creation.",
 			},
@@ -258,20 +262,13 @@ func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.Resour
 			Spec:     toBrownfieldClusterSpecGcp(d),
 		}
 		clusterUID, err = c.ImportSpectroClusterGcp(entity)
-	case "vsphere":
+	case "vsphere", "openshift":
 		entity := &models.V1SpectroVsphereClusterImportEntity{
 			Metadata: metadata,
 			Spec:     toBrownfieldClusterSpecVsphere(d),
 		}
 		clusterUID, err = c.ImportSpectroVsphereCluster(entity)
-	case "generic":
-		entity := &models.V1SpectroGenericClusterImportEntity{
-			Metadata: metadata,
-			Spec:     toBrownfieldClusterSpecGeneric(d),
-		}
-		clusterUID, err = c.ImportSpectroClusterGeneric(entity)
-	case "eksa", "openshift":
-		// For EKS-Anywhere and OpenShift, use Generic import
+	case "generic", "EKS-Anywhere":
 		entity := &models.V1SpectroGenericClusterImportEntity{
 			Metadata: metadata,
 			Spec:     toBrownfieldClusterSpecGeneric(d),
