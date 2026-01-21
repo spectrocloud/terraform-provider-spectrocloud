@@ -680,10 +680,8 @@ func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, clus
 
 	// Set cluster_timezone if field exists
 	if cluster.Spec.ClusterConfig.Timezone != "" {
-		if _, ok := d.GetOk("cluster_timezone"); ok {
-			if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
-				return diag.FromErr(err), true
-			}
+		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+			return diag.FromErr(err), true
 		}
 	}
 

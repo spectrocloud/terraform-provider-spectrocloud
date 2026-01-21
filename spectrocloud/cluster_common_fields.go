@@ -96,10 +96,8 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 
 	// Flatten cluster_timezone - always set during read (including import)
 	if cluster.Spec.ClusterConfig.Timezone != "" {
-		if _, ok := d.GetOk("cluster_timezone"); ok {
-			if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
-				return diag.FromErr(err), true
-			}
+		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+			return diag.FromErr(err), true
 		}
 	}
 
@@ -170,11 +168,15 @@ func updateCommonFieldsForBrowfieldCluster(d *schema.ResourceData, c *client.V1C
 	if err := updateProfiles(c, d); err != nil {
 		return diag.FromErr(err), true
 	}
-	if err := updateBackupPolicy(c, d); err != nil {
-		return diag.FromErr(err), true
+	if _, ok := d.GetOk("backup_policy"); ok {
+		if err := updateBackupPolicy(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
 	}
-	if err := updateScanPolicy(c, d); err != nil {
-		return diag.FromErr(err), true
+	if _, ok := d.GetOk("scan_policy"); ok {
+		if err := updateScanPolicy(c, d); err != nil {
+			return diag.FromErr(err), true
+		}
 	}
 	if err := updateAgentUpgradeSetting(c, d); err != nil {
 		return diag.FromErr(err), true
