@@ -187,3 +187,9 @@ resource "kubectl_manifest" "cluster_import" {
   # Wait for rollouts to complete (for Deployments, StatefulSets, etc.)
   wait_for_rollout = true
 }
+
+# Alternative (Manual Application):
+#   If you prefer to apply the manifest manually, you can:
+#   1. Use the output kubectl_command: terraform output kubectl_command
+#   2. Run the command directly on your cluster
+#   3. Or use the manifest_url output to fetch and apply manually
