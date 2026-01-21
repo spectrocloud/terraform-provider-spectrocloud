@@ -27,7 +27,7 @@ variable "kubeconfig_path" {
 variable "wait_timeout_seconds" {
   description = "Maximum time to wait for cluster to reach Running-Healthy state (in seconds)"
   type        = number
-  default     = 300  # 5 minutes
+  default     = 300 # 5 minutes
 }
 
 variable "poll_interval_seconds" {

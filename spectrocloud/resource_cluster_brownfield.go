@@ -54,7 +54,7 @@ func resourceClusterBrownfield() *schema.Resource {
 				Required: true,
 				ValidateFunc: validation.StringInSlice([]string{
 					"aws",
-					"EKS-Anywhere",
+					"Eks-Anywhere",
 					"azure",
 					"gcp",
 					"vsphere",
@@ -65,7 +65,7 @@ func resourceClusterBrownfield() *schema.Resource {
 					"maas",
 					"openstack",
 				}, false),
-				Description: "The cloud type of the cluster. Supported values: `aws`, `eksa`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`. This field cannot be updated after creation.",
+				Description: "The cloud type of the cluster. Supported values: `aws`, `Eks-Anywhere`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`. This field cannot be updated after creation.",
 			},
 			"import_mode": {
 				Type:         schema.TypeString,
@@ -269,7 +269,7 @@ func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.Resour
 			Spec:     toBrownfieldClusterSpecVsphere(d),
 		}
 		clusterUID, err = c.ImportSpectroVsphereCluster(entity)
-	case "generic", "EKS-Anywhere":
+	case "generic", "Eks-Anywhere":
 		entity := &models.V1SpectroGenericClusterImportEntity{
 			Metadata: metadata,
 			Spec:     toBrownfieldClusterSpecGeneric(d),
@@ -604,9 +604,127 @@ func resourceClusterBrownfieldUpdate(ctx context.Context, d *schema.ResourceData
 
 // Helper Functions
 
+// toBrownfieldClusterMetadata converts Terraform schema to V1ObjectMetaInputEntity
+func toBrownfieldClusterMetadata(d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
+	metadata := &models.V1ObjectMetaInputEntity{
+		Name: d.Get("name").(string),
+	}
+	return metadata
+}
+
+// toBrownfieldClusterSpecGeneric converts Terraform schema to V1SpectroGenericClusterImportEntitySpec
+func toBrownfieldClusterSpecGeneric(d *schema.ResourceData) *models.V1SpectroGenericClusterImportEntitySpec {
+	spec := &models.V1SpectroGenericClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// toBrownfieldClusterSpecCloudStack converts Terraform schema to V1SpectroCloudStackClusterImportEntitySpec
+func toBrownfieldClusterSpecCloudStack(d *schema.ResourceData) *models.V1SpectroCloudStackClusterImportEntitySpec {
+	spec := &models.V1SpectroCloudStackClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// toBrownfieldClusterSpecMaas converts Terraform schema to V1SpectroMaasClusterImportEntitySpec
+func toBrownfieldClusterSpecMaas(d *schema.ResourceData) *models.V1SpectroMaasClusterImportEntitySpec {
+	spec := &models.V1SpectroMaasClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// toBrownfieldClusterSpecEdgeNative converts Terraform schema to V1SpectroEdgeNativeClusterImportEntitySpec
+func toBrownfieldClusterSpecEdgeNative(d *schema.ResourceData) *models.V1SpectroEdgeNativeClusterImportEntitySpec {
+	spec := &models.V1SpectroEdgeNativeClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// toBrownfieldClusterSpecAws converts Terraform schema to V1SpectroAwsClusterImportEntitySpec
+func toBrownfieldClusterSpecAws(d *schema.ResourceData) *models.V1SpectroAwsClusterImportEntitySpec {
+	spec := &models.V1SpectroAwsClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// toBrownfieldClusterSpecAzure converts Terraform schema to V1SpectroAzureClusterImportEntitySpec
+func toBrownfieldClusterSpecAzure(d *schema.ResourceData) *models.V1SpectroAzureClusterImportEntitySpec {
+	spec := &models.V1SpectroAzureClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// toBrownfieldClusterSpecGcp converts Terraform schema to V1SpectroGcpClusterImportEntitySpec
+func toBrownfieldClusterSpecGcp(d *schema.ResourceData) *models.V1SpectroGcpClusterImportEntitySpec {
+	spec := &models.V1SpectroGcpClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// toBrownfieldClusterSpecVsphere converts Terraform schema to V1SpectroVsphereClusterImportEntitySpec
+func toBrownfieldClusterSpecVsphere(d *schema.ResourceData) *models.V1SpectroVsphereClusterImportEntitySpec {
+	spec := &models.V1SpectroVsphereClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// / toImportClusterConfig converts Terraform schema to V1ImportClusterConfig
+func toImportClusterConfig(d *schema.ResourceData) *models.V1ImportClusterConfig {
+	config := &models.V1ImportClusterConfig{}
+
+	// Set ImportMode if provided
+	if importMode, ok := d.GetOk("import_mode"); ok {
+		mode := importMode.(string)
+		// Convert "read_only" to "read-only" for API
+		switch mode {
+		case "read_only":
+			config.ImportMode = "read-only"
+		case "full":
+			// API expects empty string (or not set) for full mode
+			// Leave config.ImportMode as empty string (default)
+			config.ImportMode = ""
+		}
+	} else {
+		// Default is "full" - API expects empty string
+		config.ImportMode = ""
+	}
+
+	// Set Proxy if any proxy-related fields are provided (for vsphere and openshift clusters)
+	_, hasProxy := d.GetOk("proxy")
+	_, hasNoProxy := d.GetOk("no_proxy")
+	_, hasHostPath := d.GetOk("host_path")
+	_, hasContainerMountPath := d.GetOk("container_mount_path")
+
+	if hasProxy || hasNoProxy || hasHostPath || hasContainerMountPath {
+		proxySpec := &models.V1ClusterProxySpec{}
+
+		if httpProxy, ok := d.GetOk("proxy"); ok {
+			proxySpec.HTTPProxy = httpProxy.(string)
+		}
+
+		if noProxy, ok := d.GetOk("no_proxy"); ok {
+			proxySpec.NoProxy = noProxy.(string)
+		}
+
+		if hostPath, ok := d.GetOk("host_path"); ok {
+			proxySpec.CaHostPath = hostPath.(string)
+		}
+
+		if containerMountPath, ok := d.GetOk("container_mount_path"); ok {
+			proxySpec.CaContainerMountPath = containerMountPath.(string)
+		}
+
+		// Only set proxy if at least one field is set
+		if proxySpec.HTTPProxy != "" || proxySpec.NoProxy != "" || proxySpec.CaHostPath != "" || proxySpec.CaContainerMountPath != "" {
+			config.Proxy = proxySpec
+		}
+	}
+
+	return config
+}
+
 // readCommonFieldsBrownfield wraps readCommonFields to skip fields that don't exist in brownfield schema
 func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
-
 	// Only set kubeconfig if field exists in schema
 	if _, ok := d.GetOk("kubeconfig"); ok {
 		kubecfg, err := c.GetClusterClientKubeConfig(d.Id())
@@ -790,7 +908,7 @@ func getNodeMaintenanceStatusForCloudType(c *client.V1Client, cloudType string) 
 		return c.GetNodeMaintenanceStatusGcp
 	case "vsphere", "openshift":
 		return c.GetNodeMaintenanceStatusVsphere
-	case "generic", "EKS-Anywhere":
+	case "generic", "Eks-Anywhere":
 		return c.GetNodeMaintenanceStatusGeneric
 	case "apache-cloudstack":
 		return c.GetNodeMaintenanceStatusCloudStack
@@ -816,7 +934,7 @@ func getMachinesListForCloudType(c *client.V1Client, cloudType string) func(stri
 		return c.GetMachinesListGcp
 	case "vsphere", "openshift":
 		return c.GetMachinesListVsphere
-	case "generic", "EKS-Anywhere":
+	case "generic", "Eks-Anywhere":
 		return c.GetMachinesListGeneric
 	case "apache-cloudstack":
 		return c.GetMachinesListApacheCloudstack
