@@ -355,6 +355,27 @@ func toBrownfieldClusterSpecGeneric(d *schema.ResourceData) *models.V1SpectroGen
 	return spec
 }
 
+// toBrownfieldClusterSpecCloudStack converts Terraform schema to V1SpectroCloudStackClusterImportEntitySpec
+func toBrownfieldClusterSpecCloudStack(d *schema.ResourceData) *models.V1SpectroCloudStackClusterImportEntitySpec {
+	spec := &models.V1SpectroCloudStackClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// toBrownfieldClusterSpecMaas converts Terraform schema to V1SpectroMaasClusterImportEntitySpec
+func toBrownfieldClusterSpecMaas(d *schema.ResourceData) *models.V1SpectroMaasClusterImportEntitySpec {
+	spec := &models.V1SpectroMaasClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
+// toBrownfieldClusterSpecEdgeNative converts Terraform schema to V1SpectroEdgeNativeClusterImportEntitySpec
+func toBrownfieldClusterSpecEdgeNative(d *schema.ResourceData) *models.V1SpectroEdgeNativeClusterImportEntitySpec {
+	spec := &models.V1SpectroEdgeNativeClusterImportEntitySpec{}
+	spec.ClusterConfig = toImportClusterConfig(d)
+	return spec
+}
+
 // / toImportClusterConfig converts Terraform schema to V1ImportClusterConfig
 func toImportClusterConfig(d *schema.ResourceData) *models.V1ImportClusterConfig {
 	config := &models.V1ImportClusterConfig{}
