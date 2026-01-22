@@ -30,7 +30,7 @@ func resourceClusterBrownfield() *schema.Resource {
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
-		Description: "Register an existing Kubernetes cluster (brownfield) with Spectro Cloud. This resource creates a cluster registration and provides the import link and manifest URL needed to complete the cluster import process.",
+		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack). This feature is currently in preview.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -111,12 +111,12 @@ func resourceClusterBrownfield() *schema.Resource {
 			"manifest_url": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The URL of the import manifest. This is the actual manifest URL extracted from the kubectl_command.",
+				Description: "The URL of the import manifest that must be applied to your Kubernetes cluster to complete the import into Palette.",
 			},
 			"kubectl_command": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The kubectl command to import the cluster. Format: `kubectl apply -f <manifest_url>`.",
+				Description: "The kubectl command that must be executed on your Kubernetes cluster to complete the import process into Palette.",
 			},
 			"status": {
 				Type:        schema.TypeString,
