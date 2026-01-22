@@ -993,6 +993,12 @@ func extractManifestURL(importLink string) string {
 
 // resourceClusterBrownfieldImport imports an existing brownfield cluster into Terraform state
 func resourceClusterBrownfieldImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	clusterID, scope, customCloudName, err := ParseResourceCustomCloudImportID(d)
+	if err != nil {
+		return nil, err
+	}
+	d.SetId(clusterID + ":" + scope)
+	_ = d.Set("cloud_type", customCloudName)
 	c, err := GetCommonCluster(d, m)
 	if err != nil {
 		return nil, err
