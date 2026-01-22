@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cluster_brownfield Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  Register an existing Kubernetes cluster (brownfield) with Spectro Cloud. This resource creates a cluster registration and provides the import link and manifest URL needed to complete the cluster import process.
+  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack). This feature is currently in preview.
 ---
 
 # spectrocloud_cluster_brownfield (Resource)
 
-  Register an existing Kubernetes cluster (brownfield) with Spectro Cloud. This resource creates a cluster registration and provides the import link and manifest URL needed to complete the cluster import process.
+  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack). This feature is currently in preview.
 
 ~> **Preview Release**: The `spectrocloud_cluster_brownfield` resource provides the ability to import and register existing Kubernetes clusters across different cloud platforms (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack) with Palette. This feature is currently **in preview**, and we are actively working on enhancements that will be released in future versions.
 
@@ -158,9 +158,9 @@ Refer to the [Import section](/docs#import) to learn more.
 - `cloud_config_id` (String) ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.
 - `health_status` (String) The current health status of the cluster. Possible values include: `Healthy`, `UnHealthy`, `Unknown`.
 - `id` (String) The ID of this resource.
-- `kubectl_command` (String) The kubectl command to import the cluster. Format: `kubectl apply -f <manifest_url>`.
+- `kubectl_command` (String) The kubectl command that must be executed on your Kubernetes cluster to complete the import process into Palette.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
-- `manifest_url` (String) The URL of the import manifest. This is the actual manifest URL extracted from the kubectl_command.
+- `manifest_url` (String) The URL of the import manifest that must be applied to your Kubernetes cluster to complete the import into Palette.
 - `status` (String) The current operational state of the cluster. Possible values include: `Pending`, `Provisioning`, `Running`, `Deleting`, `Deleted`, `Error`, `Importing`.
 
 <a id="nestedblock--backup_policy"></a>
