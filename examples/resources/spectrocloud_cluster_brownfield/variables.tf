@@ -17,11 +17,3 @@ variable "sc_project_name" {
 }
 
 
-
-variable "kubeconfig_path" {
-  description = "Path to kubeconfig file (optional, defaults to ~/.kube/config or KUBECONFIG env var)"
-  type        = string
-  default     = ""
-}
-
-

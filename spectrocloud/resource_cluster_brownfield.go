@@ -74,7 +74,7 @@ func resourceClusterBrownfield() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "full",
-				ValidateFunc: validation.StringInSlice([]string{"read_only", "full"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"read_only", "full", ""}, false),
 				Description:  "The import mode for the cluster. Allowed values are `read_only` (imports cluster with read-only permissions) or `full` (imports cluster with full permissions). Defaults to `full`. This field cannot be updated after creation.",
 			},
 			"host_path": {
@@ -1033,6 +1033,7 @@ func flattenCommonAttributeForBrownfieldClusterImport(c *client.V1Client, d *sch
 	if err != nil {
 		return err
 	}
+	_ = d.Set("import_mode", "")
 
 	if cluster.Spec.ClusterConfig.Timezone != "" {
 		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
