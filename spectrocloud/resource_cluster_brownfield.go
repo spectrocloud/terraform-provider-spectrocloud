@@ -729,6 +729,9 @@ func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, clus
 	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
 		return diag.FromErr(err), true
 	}
+	if _, ok := d.GetOk("import_mode"); !ok {
+		d.Set("import_mode", "")
+	}
 
 	// Set backup_policy if field exists
 	if _, ok := d.GetOk("backup_policy"); ok {
