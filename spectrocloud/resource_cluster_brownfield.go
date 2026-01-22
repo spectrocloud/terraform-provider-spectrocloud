@@ -20,6 +20,9 @@ func resourceClusterBrownfield() *schema.Resource {
 		ReadContext:   resourceClusterBrownfieldRead,
 		UpdateContext: resourceClusterBrownfieldUpdate,
 		DeleteContext: resourceClusterDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceClusterBrownfieldImport,
+		},
 		SchemaVersion: 1,
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -725,28 +728,6 @@ func toImportClusterConfig(d *schema.ResourceData) *models.V1ImportClusterConfig
 
 // readCommonFieldsBrownfield wraps readCommonFields to skip fields that don't exist in brownfield schema
 func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) (diag.Diagnostics, bool) {
-	// Only set kubeconfig if field exists in schema
-	if _, ok := d.GetOk("kubeconfig"); ok {
-		kubecfg, err := c.GetClusterClientKubeConfig(d.Id())
-		if err != nil {
-			return diag.FromErr(err), true
-		}
-		if err := d.Set("kubeconfig", kubecfg); err != nil {
-			return diag.FromErr(err), true
-		}
-	}
-
-	// Only set admin_kube_config if field exists in schema
-	if _, ok := d.GetOk("admin_kube_config"); ok {
-		adminKubeConfig, err := c.GetClusterAdminKubeConfig(d.Id())
-		if err != nil {
-			return diag.FromErr(err), true
-		}
-		if err := d.Set("admin_kube_config", adminKubeConfig); err != nil {
-			return diag.FromErr(err), true
-		}
-	}
-
 	// Set tags (always present)
 	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
 		return diag.FromErr(err), true
@@ -1008,4 +989,87 @@ func extractManifestURL(importLink string) string {
 	}
 	// If already a URL or no prefix, return as-is
 	return strings.TrimSpace(importLink)
+}
+
+// resourceClusterBrownfieldImport imports an existing brownfield cluster into Terraform state
+func resourceClusterBrownfieldImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	c, err := GetCommonCluster(d, m)
+	if err != nil {
+		return nil, err
+	}
+
+	diags := resourceClusterBrownfieldRead(ctx, d, m)
+	if diags.HasError() {
+		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
+	}
+
+	// cluster profile and common default cluster attribute is get set here
+	err = flattenCommonAttributeForBrownfieldClusterImport(c, d)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the resource data. In most cases, this method is only used to
+	// import one resource at a time, so you should return the resource data
+	// in a slice with a single element.
+	return []*schema.ResourceData{d}, nil
+}
+
+func flattenCommonAttributeForBrownfieldClusterImport(c *client.V1Client, d *schema.ResourceData) error {
+	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	if err != nil {
+		return err
+	}
+	err = d.Set("cluster_profile", clusterProfiles)
+	if err != nil {
+		return err
+	}
+
+	var diags diag.Diagnostics
+	cluster, err := resourceClusterRead(d, c, diags)
+	if err != nil {
+		return err
+	}
+
+	if cluster.Spec.ClusterConfig.Timezone != "" {
+		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+			return err
+		}
+	}
+
+	if cluster.Metadata.Annotations["description"] != "" {
+		if err := d.Set("description", cluster.Metadata.Annotations["description"]); err != nil {
+			return err
+		}
+	}
+
+	if cluster.Status.SpcApply != nil {
+		err = d.Set("apply_setting", cluster.Status.SpcApply.ActionType)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster))
+	if err != nil {
+		return err
+	}
+	if cluster.Status.Repave != nil {
+		if err = d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
+			return err
+		}
+	}
+	err = d.Set("force_delete", false)
+	if err != nil {
+		return err
+	}
+	err = d.Set("force_delete_delay", 20)
+	if err != nil {
+		return err
+	}
+	err = d.Set("skip_completion", false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
