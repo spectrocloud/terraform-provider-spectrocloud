@@ -73,7 +73,7 @@ func resourceClusterBrownfield() *schema.Resource {
 			"import_mode": {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Default:      "full",
+				Default:      "",
 				ValidateFunc: validation.StringInSlice([]string{"read_only", "full", ""}, false),
 				Description:  "The import mode for the cluster. Allowed values are `read_only` (imports cluster with read-only permissions) or `full` (imports cluster with full permissions). Defaults to `full`. This field cannot be updated after creation.",
 			},
@@ -683,6 +683,9 @@ func toImportClusterConfig(d *schema.ResourceData) *models.V1ImportClusterConfig
 			// API expects empty string (or not set) for full mode
 			// Leave config.ImportMode as empty string (default)
 			config.ImportMode = ""
+
+		default:
+			config.ImportMode = ""
 		}
 	} else {
 		// Default is "full" - API expects empty string
@@ -728,9 +731,6 @@ func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, clus
 	// Set tags (always present)
 	if err := d.Set("tags", flattenTags(cluster.Metadata.Labels)); err != nil {
 		return diag.FromErr(err), true
-	}
-	if _, ok := d.GetOk("import_mode"); !ok {
-		d.Set("import_mode", "")
 	}
 
 	// Set backup_policy if field exists
