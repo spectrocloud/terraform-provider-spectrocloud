@@ -34,10 +34,10 @@ func TestGetAddonDeploymentIdANDReverse(t *testing.T) {
 
 func TestIsProfileAttached(t *testing.T) {
 	tests := []struct {
-		name     string
-		cluster  *models.V1SpectroCluster
-		uid      string
-		expected bool
+		name        string
+		cluster     *models.V1SpectroCluster
+		uid         string
+		expected    bool
 		description string
 	}{
 		{
@@ -50,8 +50,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-123",
-			expected: true,
+			uid:         "profile-123",
+			expected:    true,
 			description: "Should return true when profile is first in the list",
 		},
 		{
@@ -65,8 +65,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-789",
-			expected: true,
+			uid:         "profile-789",
+			expected:    true,
 			description: "Should return true when profile is last in the list",
 		},
 		{
@@ -80,8 +80,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-456",
-			expected: true,
+			uid:         "profile-456",
+			expected:    true,
 			description: "Should return true when profile is in the middle of the list",
 		},
 		{
@@ -94,8 +94,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-789",
-			expected: false,
+			uid:         "profile-789",
+			expected:    false,
 			description: "Should return false when profile is not in the list",
 		},
 		{
@@ -105,8 +105,8 @@ func TestIsProfileAttached(t *testing.T) {
 					ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{},
 				},
 			},
-			uid:      "profile-123",
-			expected: false,
+			uid:         "profile-123",
+			expected:    false,
 			description: "Should return false when profile list is empty",
 		},
 		{
@@ -118,8 +118,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-123",
-			expected: true,
+			uid:         "profile-123",
+			expected:    true,
 			description: "Should return true when single profile matches",
 		},
 		{
@@ -131,8 +131,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-456",
-			expected: false,
+			uid:         "profile-456",
+			expected:    false,
 			description: "Should return false when single profile does not match",
 		},
 		{
@@ -152,8 +152,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-5",
-			expected: true,
+			uid:         "profile-5",
+			expected:    true,
 			description: "Should return true when profile exists in large list",
 		},
 		{
@@ -173,8 +173,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-10",
-			expected: false,
+			uid:         "profile-10",
+			expected:    false,
 			description: "Should return false when profile does not exist in large list",
 		},
 		{
@@ -187,8 +187,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "",
-			expected: false,
+			uid:         "",
+			expected:    false,
 			description: "Should return false when searching for empty UID",
 		},
 		{
@@ -201,8 +201,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "",
-			expected: true,
+			uid:         "",
+			expected:    true,
 			description: "Should return true when empty UID exists in list",
 		},
 		{
@@ -215,8 +215,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-123",
-			expected: false,
+			uid:         "profile-123",
+			expected:    false,
 			description: "Should be case sensitive - Profile-123 != profile-123",
 		},
 		{
@@ -229,8 +229,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "Profile-123",
-			expected: true,
+			uid:         "Profile-123",
+			expected:    true,
 			description: "Should return true for exact case match",
 		},
 		{
@@ -243,8 +243,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-123-abc",
-			expected: true,
+			uid:         "profile-123-abc",
+			expected:    true,
 			description: "Should handle UIDs with special characters",
 		},
 		{
@@ -257,8 +257,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "very-long-profile-uid-12345678901234567890",
-			expected: true,
+			uid:         "very-long-profile-uid-12345678901234567890",
+			expected:    true,
 			description: "Should handle long UIDs",
 		},
 		{
@@ -271,8 +271,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "12345",
-			expected: true,
+			uid:         "12345",
+			expected:    true,
 			description: "Should handle numeric UIDs",
 		},
 		{
@@ -285,8 +285,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "5eea74ed19",
-			expected: true,
+			uid:         "5eea74ed19",
+			expected:    true,
 			description: "Should handle real-world hex format UIDs",
 		},
 		{
@@ -300,8 +300,8 @@ func TestIsProfileAttached(t *testing.T) {
 					},
 				},
 			},
-			uid:      "profile-123",
-			expected: true,
+			uid:         "profile-123",
+			expected:    true,
 			description: "Should return true when duplicate UIDs exist (matches first occurrence)",
 		},
 		{
@@ -309,15 +309,15 @@ func TestIsProfileAttached(t *testing.T) {
 			cluster: &models.V1SpectroCluster{
 				Spec: nil,
 			},
-			uid:      "profile-123",
-			expected: false,
+			uid:         "profile-123",
+			expected:    false,
 			description: "Should handle nil Spec gracefully",
 		},
 		{
-			name: "Nil Cluster",
-			cluster: nil,
-			uid:      "profile-123",
-			expected: false,
+			name:        "Nil Cluster",
+			cluster:     nil,
+			uid:         "profile-123",
+			expected:    false,
 			description: "Should handle nil cluster gracefully",
 		},
 	}
