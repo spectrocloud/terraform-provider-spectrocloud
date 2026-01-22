@@ -736,7 +736,6 @@ func TestParseAddonDeploymentId(t *testing.T) {
 	}
 }
 
-
 func TestToAddonDeployment(t *testing.T) {
 	tests := []struct {
 		name             string
