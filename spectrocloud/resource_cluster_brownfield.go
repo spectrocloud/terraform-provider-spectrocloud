@@ -343,12 +343,9 @@ func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.Resour
 			Detail:   "Cluster import is submitted. Please apply the manifest using `manifest_url` and run `kubectl_command` on your cluster to start the import process. Once it becomes Running and Healthy, Day-2 operations will be allowed.",
 		})
 	}
-	updateDiags, done := updateCommonFieldsForBrowfieldCluster(d, c)
-	if done {
-		return updateDiags
-	}
-	diags = append(diags, updateDiags...)
+	updateCommonFieldsForBrownfieldCluster(d, c)
 
+	resourceClusterBrownfieldRead(ctx, d, m)
 	return diags
 }
 

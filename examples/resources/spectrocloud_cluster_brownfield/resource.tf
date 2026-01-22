@@ -10,7 +10,7 @@ resource "spectrocloud_cluster_brownfield" "basic" {
   description      = "My existing Kubernetes cluster"
   cluster_timezone = "Etc/UTC"
   tags             = ["environment:production", "team:platform", "managed-by:terraform"]
-  apply_setting = "DownloadAndInstall"
+  apply_setting    = "DownloadAndInstall"
   cluster_profile {
     id = "CLUSTER_PROFILE_ID"
   }
@@ -35,8 +35,8 @@ resource "spectrocloud_cluster_brownfield" "basic" {
 
     node {
       node_name = "cp-dev-control-plane2"
-      node_id = "NODE_ID"
-      action  = "uncordon"  # Options: "cordon" or "uncordon"
+      node_id   = "NODE_ID"
+      action    = "uncordon" # Options: "cordon" or "uncordon"
     }
   }
   cluster_rbac_binding {
