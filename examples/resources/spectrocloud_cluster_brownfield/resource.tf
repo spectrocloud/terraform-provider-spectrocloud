@@ -3,14 +3,14 @@
 
 resource "spectrocloud_cluster_brownfield" "basic" {
   name        = "my-existing-cluster"
-  cloud_type  = "generic" # Options: aws, eksa, azure, gcp, vsphere, openshift, generic
+  cloud_type  = "generic" # Options: aws, eks-anywhere, azure, gcp, vsphere, openshift, generic, maas, openstack
   context     = "project" # Optional, defaults to "project"
   import_mode = "full"
 
   description      = "My existing Kubernetes cluster"
   cluster_timezone = "Etc/UTC"
   tags             = ["environment:production", "team:platform", "managed-by:terraform"]
-  # apply_setting = "DownloadAndInstall"
+  apply_setting = "DownloadAndInstall"
   cluster_profile {
     id = "CLUSTER_PROFILE_ID"
   }
@@ -30,25 +30,21 @@ resource "spectrocloud_cluster_brownfield" "basic" {
     }
   }
 
-  #   machine_pool {
-  #   name = "master-pool"
+  machine_pool {
+    name = "master-pool"
 
-  #   node {
-  #     node_name = "cp-dev-control-plane2"
-  #     # node_id = "8f51f6d9-4cce-47fb-9124-2ac7bf760faa-03865"
-  #     action  = "uncordon"  # Options: "cordon" or "uncordon"
-  #   }
-  # }
-  # ClusterRoleBinding - Cluster-wide permissions
+    node {
+      node_name = "cp-dev-control-plane2"
+      node_id = "NODE_ID"
+      action  = "uncordon"  # Options: "cordon" or "uncordon"
+    }
+  }
   cluster_rbac_binding {
     type = "ClusterRoleBinding"
-
     role = {
       kind = "ClusterRole"
-      name = "cluster-admin"
+      name = "CLUSTER_ROLE_NAME"
     }
-
-    # Subject type: User
     subjects {
       type = "User"
       name = "admin-user@example.com"
@@ -71,7 +67,7 @@ resource "spectrocloud_cluster_brownfield" "basic" {
 
   backup_policy {
     schedule                  = "0 0 * * SUN"
-    backup_location_id        = "696f2b3d3154a9e6d65f6b54"
+    backup_location_id        = "BACKUP_LOCATION_ID"
     prefix                    = "test-backup"
     expiry_in_hour            = 7200
     include_disks             = true
