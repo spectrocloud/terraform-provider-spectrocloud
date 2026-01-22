@@ -96,8 +96,10 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 
 	// Flatten cluster_timezone - always set during read (including import)
 	if cluster.Spec.ClusterConfig.Timezone != "" {
-		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
-			return diag.FromErr(err), true
+		if _, ok := d.GetOk("cluster_timezone"); ok {
+			if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
+				return diag.FromErr(err), true
+			}
 		}
 	}
 

@@ -57,7 +57,7 @@ func resourceClusterBrownfield() *schema.Resource {
 				Required: true,
 				ValidateFunc: validation.StringInSlice([]string{
 					"aws",
-					"Eks-Anywhere",
+					"eks-anywhere",
 					"azure",
 					"gcp",
 					"vsphere",
@@ -68,7 +68,7 @@ func resourceClusterBrownfield() *schema.Resource {
 					"maas",
 					"openstack",
 				}, false),
-				Description: "The cloud type of the cluster. Supported values: `aws`, `Eks-Anywhere`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`. This field cannot be updated after creation.",
+				Description: "The cloud type of the cluster. Supported values: `aws`, `eks-anywhere`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`,`apache-cloudstack`,`edge-native`,`maas`,`openstack`. This field cannot be updated after creation.",
 			},
 			"import_mode": {
 				Type:         schema.TypeString,
@@ -272,7 +272,7 @@ func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.Resour
 			Spec:     toBrownfieldClusterSpecVsphere(d),
 		}
 		clusterUID, err = c.ImportSpectroVsphereCluster(entity)
-	case "generic", "Eks-Anywhere":
+	case "generic", "eks-anywhere":
 		entity := &models.V1SpectroGenericClusterImportEntity{
 			Metadata: metadata,
 			Spec:     toBrownfieldClusterSpecGeneric(d),
@@ -889,7 +889,7 @@ func getNodeMaintenanceStatusForCloudType(c *client.V1Client, cloudType string) 
 		return c.GetNodeMaintenanceStatusGcp
 	case "vsphere", "openshift":
 		return c.GetNodeMaintenanceStatusVsphere
-	case "generic", "Eks-Anywhere":
+	case "generic", "eks-anywhere":
 		return c.GetNodeMaintenanceStatusGeneric
 	case "apache-cloudstack":
 		return c.GetNodeMaintenanceStatusCloudStack
@@ -915,7 +915,7 @@ func getMachinesListForCloudType(c *client.V1Client, cloudType string) func(stri
 		return c.GetMachinesListGcp
 	case "vsphere", "openshift":
 		return c.GetMachinesListVsphere
-	case "generic", "Eks-Anywhere":
+	case "generic", "eks-anywhere":
 		return c.GetMachinesListGeneric
 	case "apache-cloudstack":
 		return c.GetMachinesListApacheCloudstack
