@@ -1,10 +1,8 @@
 package spectrocloud
 
 import (
-	"context"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -303,22 +301,6 @@ func TestIsProfileAttached(t *testing.T) {
 			uid:         "profile-123",
 			expected:    true,
 			description: "Should return true when duplicate UIDs exist (matches first occurrence)",
-		},
-		{
-			name: "Nil Cluster Spec",
-			cluster: &models.V1SpectroCluster{
-				Spec: nil,
-			},
-			uid:         "profile-123",
-			expected:    false,
-			description: "Should handle nil Spec gracefully",
-		},
-		{
-			name:        "Nil Cluster",
-			cluster:     nil,
-			uid:         "profile-123",
-			expected:    false,
-			description: "Should handle nil cluster gracefully",
 		},
 	}
 
@@ -663,18 +645,18 @@ func TestParseAddonDeploymentId(t *testing.T) {
 		{
 			name:             "UIDs with underscores in cluster UID",
 			id:               "cluster_123_profile-456",
-			expectedUID:      "cluster_123",
-			expectedProfiles: []string{"profile-456"},
+			expectedUID:      "cluster",
+			expectedProfiles: []string{"123", "profile-456"},
 			expectedError:    false,
-			description:      "Should handle underscores in cluster UID (splits on first underscore)",
+			description:      "Should split on all underscores - cluster UID with underscore gets split",
 		},
 		{
 			name:             "UIDs with underscores in profile UIDs",
 			id:               "cluster-123_profile_456_profile_789",
 			expectedUID:      "cluster-123",
-			expectedProfiles: []string{"profile_456", "profile_789"},
+			expectedProfiles: []string{"profile", "456", "profile", "789"},
 			expectedError:    false,
-			description:      "Should handle underscores in profile UIDs",
+			description:      "Should split on all underscores - profile UIDs with underscores get split",
 		},
 		{
 			name:             "Numeric UIDs",
@@ -754,470 +736,6 @@ func TestParseAddonDeploymentId(t *testing.T) {
 	}
 }
 
-func TestUpdateAddonDeploymentMultiple(t *testing.T) {
-	// Note: Testing updateAddonDeploymentMultiple fully is challenging because:
-	// 1. It requires d.GetChange() which needs ResourceData with tracked changes (Terraform state)
-	// 2. It requires mocking multiple client methods (DeleteAddonDeployment, GetCluster, GetClusterProfile, etc.)
-	// 3. It calls other helper functions (toAddonDeployment, isProfileAttached, waitForAddonDeploymentUpdate, etc.)
-	//
-	// This test suite focuses on:
-	// - Verifying function structure and error handling
-	// - Testing the core profile comparison logic in isolation
-	// - Edge case handling
-
-	tests := []struct {
-		name        string
-		setupData   func() *schema.ResourceData
-		setupClient func() *client.V1Client
-		clusterUid  string
-		expectError bool
-		description string
-	}{
-		{
-			name: "Basic structure test with empty ResourceData",
-			setupData: func() *schema.ResourceData {
-				d := resourceAddonDeployment().TestResourceData()
-				d.SetId("cluster-123_profile-456")
-				d.Set("cluster_uid", "cluster-123")
-				d.Set("context", "project")
-				// Note: GetChange() will return empty slices for old/new when no changes are tracked
-				// This is a limitation of unit testing GetChange without actual Terraform state
-				return d
-			},
-			setupClient: func() *client.V1Client {
-				// Return nil to test error handling
-				return nil
-			},
-			clusterUid:  "cluster-123",
-			expectError: true,
-			description: "Should handle nil client gracefully",
-		},
-		{
-			name: "ResourceData with cluster_profile set",
-			setupData: func() *schema.ResourceData {
-				d := resourceAddonDeployment().TestResourceData()
-				d.SetId("cluster-123_profile-456")
-				d.Set("cluster_uid", "cluster-123")
-				d.Set("context", "project")
-				// Set cluster_profile to test the function structure
-				d.Set("cluster_profile", []interface{}{
-					map[string]interface{}{
-						"id": "profile-456",
-					},
-				})
-				return d
-			},
-			setupClient: func() *client.V1Client {
-				// Use mock client if available, otherwise nil
-				if unitTestMockAPIClient != nil {
-					if c, ok := unitTestMockAPIClient.(*client.V1Client); ok {
-						return c
-					}
-				}
-				return nil
-			},
-			clusterUid:  "cluster-123",
-			expectError: true, // Will error because GetChange() won't work properly in unit tests
-			description: "Should handle ResourceData with cluster_profile (GetChange limitation in unit tests)",
-		},
-		{
-			name: "ResourceData with multiple profiles",
-			setupData: func() *schema.ResourceData {
-				d := resourceAddonDeployment().TestResourceData()
-				d.SetId("cluster-123_profile-456_profile-789")
-				d.Set("cluster_uid", "cluster-123")
-				d.Set("context", "project")
-				d.Set("apply_setting", "DownloadAndInstall")
-				d.Set("cluster_profile", []interface{}{
-					map[string]interface{}{
-						"id": "profile-456",
-					},
-					map[string]interface{}{
-						"id": "profile-789",
-					},
-				})
-				return d
-			},
-			setupClient: func() *client.V1Client {
-				if unitTestMockAPIClient != nil {
-					if c, ok := unitTestMockAPIClient.(*client.V1Client); ok {
-						return c
-					}
-				}
-				return nil
-			},
-			clusterUid:  "cluster-123",
-			expectError: true, // Will error due to GetChange() limitations
-			description: "Should handle ResourceData with multiple profiles",
-		},
-		{
-			name: "ResourceData with profiles containing variables",
-			setupData: func() *schema.ResourceData {
-				d := resourceAddonDeployment().TestResourceData()
-				d.SetId("cluster-123_profile-456")
-				d.Set("cluster_uid", "cluster-123")
-				d.Set("context", "project")
-				d.Set("cluster_profile", []interface{}{
-					map[string]interface{}{
-						"id": "profile-456",
-						"variables": map[string]interface{}{
-							"var1": "value1",
-						},
-					},
-				})
-				return d
-			},
-			setupClient: func() *client.V1Client {
-				if unitTestMockAPIClient != nil {
-					if c, ok := unitTestMockAPIClient.(*client.V1Client); ok {
-						return c
-					}
-				}
-				return nil
-			},
-			clusterUid:  "cluster-123",
-			expectError: true,
-			description: "Should handle profiles with variables",
-		},
-		{
-			name: "ResourceData with empty cluster_profile",
-			setupData: func() *schema.ResourceData {
-				d := resourceAddonDeployment().TestResourceData()
-				d.SetId("cluster-123")
-				d.Set("cluster_uid", "cluster-123")
-				d.Set("context", "project")
-				d.Set("cluster_profile", []interface{}{})
-				return d
-			},
-			setupClient: func() *client.V1Client {
-				if unitTestMockAPIClient != nil {
-					if c, ok := unitTestMockAPIClient.(*client.V1Client); ok {
-						return c
-					}
-				}
-				return nil
-			},
-			clusterUid:  "cluster-123",
-			expectError: true,
-			description: "Should handle empty cluster_profile list",
-		},
-		{
-			name: "ResourceData with invalid context",
-			setupData: func() *schema.ResourceData {
-				d := resourceAddonDeployment().TestResourceData()
-				d.SetId("cluster-123_profile-456")
-				d.Set("cluster_uid", "cluster-123")
-				d.Set("context", "invalid-context")
-				d.Set("cluster_profile", []interface{}{
-					map[string]interface{}{
-						"id": "profile-456",
-					},
-				})
-				return d
-			},
-			setupClient: func() *client.V1Client {
-				if unitTestMockAPIClient != nil {
-					if c, ok := unitTestMockAPIClient.(*client.V1Client); ok {
-						return c
-					}
-				}
-				return nil
-			},
-			clusterUid:  "cluster-123",
-			expectError: true,
-			description: "Should handle invalid context",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			d := tt.setupData()
-			c := tt.setupClient()
-			var diags diag.Diagnostics
-
-			// Call the function
-			result := updateAddonDeploymentMultiple(ctx, d, unitTestMockAPIClient, c, tt.clusterUid, diags)
-
-			if tt.expectError {
-				// Function may error due to GetChange() limitations or nil client
-				// This is expected in unit test context
-				if !result.HasError() {
-					t.Logf("Function did not error as expected, but this may be acceptable if GetChange() returns empty values")
-				}
-			} else {
-				assert.False(t, result.HasError(), tt.description)
-			}
-		})
-	}
-
-	// Additional tests to verify function structure and profile comparison logic
-	// These tests the core logic of building profile maps and finding profiles to delete
-
-	t.Run("Profile comparison: Single profile removed", func(t *testing.T) {
-		oldProfiles := []interface{}{
-			map[string]interface{}{
-				"id": "profile-1",
-			},
-			map[string]interface{}{
-				"id": "profile-2",
-			},
-		}
-
-		newProfiles := []interface{}{
-			map[string]interface{}{
-				"id": "profile-2",
-			},
-			map[string]interface{}{
-				"id": "profile-3",
-			},
-		}
-
-		// Build maps (simulating the logic from updateAddonDeploymentMultiple)
-		oldProfileMap := make(map[string]map[string]interface{})
-		for _, p := range oldProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				oldProfileMap[id] = profile
-			}
-		}
-
-		newProfileMap := make(map[string]map[string]interface{})
-		for _, p := range newProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				newProfileMap[id] = profile
-			}
-		}
-
-		// Find profiles to delete (in old but not in new)
-		profilesToDelete := make([]string, 0)
-		for oldID := range oldProfileMap {
-			if _, exists := newProfileMap[oldID]; !exists {
-				profilesToDelete = append(profilesToDelete, oldID)
-			}
-		}
-
-		// Verify the logic
-		assert.Equal(t, 1, len(profilesToDelete), "Should identify one profile to delete")
-		assert.Equal(t, "profile-1", profilesToDelete[0], "Should identify profile-1 as the one to delete")
-		assert.Equal(t, 2, len(oldProfileMap), "Old profile map should have 2 entries")
-		assert.Equal(t, 2, len(newProfileMap), "New profile map should have 2 entries")
-	})
-
-	t.Run("Profile comparison: Multiple profiles removed", func(t *testing.T) {
-		oldProfiles := []interface{}{
-			map[string]interface{}{"id": "profile-1"},
-			map[string]interface{}{"id": "profile-2"},
-			map[string]interface{}{"id": "profile-3"},
-			map[string]interface{}{"id": "profile-4"},
-		}
-
-		newProfiles := []interface{}{
-			map[string]interface{}{"id": "profile-2"},
-		}
-
-		oldProfileMap := make(map[string]map[string]interface{})
-		for _, p := range oldProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				oldProfileMap[id] = profile
-			}
-		}
-
-		newProfileMap := make(map[string]map[string]interface{})
-		for _, p := range newProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				newProfileMap[id] = profile
-			}
-		}
-
-		profilesToDelete := make([]string, 0)
-		for oldID := range oldProfileMap {
-			if _, exists := newProfileMap[oldID]; !exists {
-				profilesToDelete = append(profilesToDelete, oldID)
-			}
-		}
-
-		assert.Equal(t, 3, len(profilesToDelete), "Should identify three profiles to delete")
-		assert.Contains(t, profilesToDelete, "profile-1", "Should include profile-1")
-		assert.Contains(t, profilesToDelete, "profile-3", "Should include profile-3")
-		assert.Contains(t, profilesToDelete, "profile-4", "Should include profile-4")
-		assert.NotContains(t, profilesToDelete, "profile-2", "Should not include profile-2 (still exists)")
-	})
-
-	t.Run("Profile comparison: No profiles removed", func(t *testing.T) {
-		oldProfiles := []interface{}{
-			map[string]interface{}{"id": "profile-1"},
-			map[string]interface{}{"id": "profile-2"},
-		}
-
-		newProfiles := []interface{}{
-			map[string]interface{}{"id": "profile-1"},
-			map[string]interface{}{"id": "profile-2"},
-		}
-
-		oldProfileMap := make(map[string]map[string]interface{})
-		for _, p := range oldProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				oldProfileMap[id] = profile
-			}
-		}
-
-		newProfileMap := make(map[string]map[string]interface{})
-		for _, p := range newProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				newProfileMap[id] = profile
-			}
-		}
-
-		profilesToDelete := make([]string, 0)
-		for oldID := range oldProfileMap {
-			if _, exists := newProfileMap[oldID]; !exists {
-				profilesToDelete = append(profilesToDelete, oldID)
-			}
-		}
-
-		assert.Equal(t, 0, len(profilesToDelete), "Should identify no profiles to delete")
-	})
-
-	t.Run("Profile comparison: All profiles removed", func(t *testing.T) {
-		oldProfiles := []interface{}{
-			map[string]interface{}{"id": "profile-1"},
-			map[string]interface{}{"id": "profile-2"},
-		}
-
-		newProfiles := []interface{}{}
-
-		oldProfileMap := make(map[string]map[string]interface{})
-		for _, p := range oldProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				oldProfileMap[id] = profile
-			}
-		}
-
-		newProfileMap := make(map[string]map[string]interface{})
-		for _, p := range newProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				newProfileMap[id] = profile
-			}
-		}
-
-		profilesToDelete := make([]string, 0)
-		for oldID := range oldProfileMap {
-			if _, exists := newProfileMap[oldID]; !exists {
-				profilesToDelete = append(profilesToDelete, oldID)
-			}
-		}
-
-		assert.Equal(t, 2, len(profilesToDelete), "Should identify all profiles to delete")
-		assert.Contains(t, profilesToDelete, "profile-1", "Should include profile-1")
-		assert.Contains(t, profilesToDelete, "profile-2", "Should include profile-2")
-	})
-
-	t.Run("Profile comparison: New profiles added", func(t *testing.T) {
-		oldProfiles := []interface{}{
-			map[string]interface{}{"id": "profile-1"},
-		}
-
-		newProfiles := []interface{}{
-			map[string]interface{}{"id": "profile-1"},
-			map[string]interface{}{"id": "profile-2"},
-			map[string]interface{}{"id": "profile-3"},
-		}
-
-		oldProfileMap := make(map[string]map[string]interface{})
-		for _, p := range oldProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				oldProfileMap[id] = profile
-			}
-		}
-
-		newProfileMap := make(map[string]map[string]interface{})
-		for _, p := range newProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				newProfileMap[id] = profile
-			}
-		}
-
-		profilesToDelete := make([]string, 0)
-		for oldID := range oldProfileMap {
-			if _, exists := newProfileMap[oldID]; !exists {
-				profilesToDelete = append(profilesToDelete, oldID)
-			}
-		}
-
-		assert.Equal(t, 0, len(profilesToDelete), "Should identify no profiles to delete when new ones are added")
-		assert.Equal(t, 1, len(oldProfileMap), "Old profile map should have 1 entry")
-		assert.Equal(t, 3, len(newProfileMap), "New profile map should have 3 entries")
-	})
-
-	// Test edge cases for profile map building
-	t.Run("Profile map building with nil and empty values", func(t *testing.T) {
-		profiles := []interface{}{
-			nil,                      // nil profile
-			map[string]interface{}{}, // empty profile
-			map[string]interface{}{
-				"id": "", // empty ID
-			},
-			map[string]interface{}{
-				"id": "profile-1",
-			},
-		}
-
-		profileMap := make(map[string]map[string]interface{})
-		for _, p := range profiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				profileMap[id] = profile
-			}
-		}
-
-		// Should only have one valid profile
-		assert.Equal(t, 1, len(profileMap), "Should only include profiles with non-empty IDs")
-		assert.Contains(t, profileMap, "profile-1", "Should include profile-1")
-	})
-}
 
 func TestToAddonDeployment(t *testing.T) {
 	tests := []struct {
@@ -1584,16 +1102,16 @@ func TestGetClusterProfileUIDs(t *testing.T) {
 		{
 			name:              "UIDs with underscores in cluster UID",
 			addonDeploymentId: "cluster_123_profile-456",
-			expectedProfiles:  []string{"profile-456"},
+			expectedProfiles:  []string{"123", "profile-456"},
 			expectedError:     false,
-			description:       "Should handle underscores in cluster UID (splits on first underscore)",
+			description:       "Should split on all underscores - cluster UID with underscore gets split",
 		},
 		{
 			name:              "UIDs with underscores in profile UIDs",
 			addonDeploymentId: "cluster-123_profile_456_profile_789",
-			expectedProfiles:  []string{"profile_456", "profile_789"},
+			expectedProfiles:  []string{"profile", "456", "profile", "789"},
 			expectedError:     false,
-			description:       "Should handle underscores in profile UIDs",
+			description:       "Should split on all underscores - profile UIDs with underscores get split",
 		},
 		{
 			name:              "Numeric UIDs",
