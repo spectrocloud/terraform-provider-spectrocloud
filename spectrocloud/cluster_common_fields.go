@@ -157,6 +157,22 @@ func getSpectroComponentsUpgrade(cluster *models.V1SpectroCluster) string {
 	return "unlock"
 }
 
+func updateCommonFieldsForBrownfieldCluster(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	_ = updateClusterMetadata(c, d)
+	_ = updateClusterNamespaces(c, d)
+	_ = updateClusterRBAC(c, d)
+	_ = updateProfiles(c, d)
+	if _, ok := d.GetOk("backup_policy"); ok {
+		_ = updateBackupPolicy(c, d)
+	}
+	if _, ok := d.GetOk("scan_policy"); ok {
+		_ = updateScanPolicy(c, d)
+	}
+	_ = updateAgentUpgradeSetting(c, d)
+	_ = updateClusterTimezone(c, d)
+	return diag.Diagnostics{}
+}
+
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
 func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
 	if d.HasChanges("name", "tags", "description", "tags_map") {
