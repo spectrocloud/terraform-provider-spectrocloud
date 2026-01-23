@@ -44,7 +44,7 @@ resource "spectrocloud_workspace" "workspace" {
     resource_allocation = {
       cpu_cores    = "8"
       memory_MiB   = "8192"
-      gpu_limit    = "2"
+      gpu          = "2"
       gpu_provider = "nvidia"
     }
 
@@ -54,7 +54,7 @@ resource "spectrocloud_workspace" "workspace" {
       resource_allocation = {
         cpu_cores  = "4"
         memory_MiB = "4096"
-        gpu_limit  = "1"
+        gpu        = "1"
       }
     }
 

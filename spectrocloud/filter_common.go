@@ -1,6 +1,9 @@
 package spectrocloud
 
-import "github.com/spectrocloud/palette-sdk-go/api/models"
+import (
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+)
 
 func expandMetadata(list []interface{}) *models.V1ObjectMetaInputEntity {
 	if len(list) == 0 || list[0] == nil {
@@ -33,13 +36,25 @@ func expandFilterGroup(list []interface{}) *models.V1TagFilterGroup {
 	}
 
 	m := list[0].(map[string]interface{})
-	filters := m["filters"].([]interface{})
+
+	// Handle both TypeSet and TypeList for backward compatibility
+	var filtersList []interface{}
+	if filtersRaw, ok := m["filters"]; ok && filtersRaw != nil {
+		if filtersSet, ok := filtersRaw.(*schema.Set); ok {
+			filtersList = filtersSet.List()
+		} else if filtersListRaw, ok := filtersRaw.([]interface{}); ok {
+			// Fallback for backward compatibility during migration
+			filtersList = filtersListRaw
+		}
+	}
+
+	// filters := m["filters"].([]interface{})
 
 	conjunction := models.V1SearchFilterConjunctionOperator(m["conjunction"].(string))
 
 	return &models.V1TagFilterGroup{
 		Conjunction: &conjunction,
-		Filters:     expandFilters(filters),
+		Filters:     expandFilters(filtersList),
 	}
 }
 
@@ -116,9 +131,29 @@ func flattenFilterGroup(filterGroup *models.V1TagFilterGroup) []interface{} {
 		return []interface{}{}
 	}
 
+	// Return filters as []interface{} - Terraform will handle conversion
+	// to *schema.Set automatically if the schema is TypeSet
+	var filtersList []interface{}
+	if filterGroup.Filters != nil && len(filterGroup.Filters) > 0 {
+		filtersList = make([]interface{}, len(filterGroup.Filters))
+		for i, filter := range filterGroup.Filters {
+			filtersList[i] = map[string]interface{}{
+				"key":      filter.Key,
+				"negation": filter.Negation,
+				"operator": string(filter.Operator),
+				"values":   filter.Values,
+			}
+		}
+	}
+
+	conjunction := ""
+	if filterGroup.Conjunction != nil {
+		conjunction = string(*filterGroup.Conjunction)
+	}
+
 	m := map[string]interface{}{
-		"conjunction": string(*filterGroup.Conjunction),
-		"filters":     flattenFilters(filterGroup.Filters),
+		"conjunction": conjunction,
+		"filters":     filtersList, // Return []interface{} instead of *schema.Set
 	}
 
 	return []interface{}{m}

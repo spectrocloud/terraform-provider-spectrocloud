@@ -1,23 +1,19 @@
 ---
-page_title: "spectrocloud_cluster_aws Resource - terraform-provider-spectrocloud"
+page_title: "spectrocloud_cluster_brownfield Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  Resource for managing AWS clusters in Spectro Cloud through Palette.
+  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack). This feature is currently in preview.
 ---
 
-# spectrocloud_cluster_aws (Resource)
+# spectrocloud_cluster_brownfield (Resource)
 
-  Resource for managing AWS clusters in Spectro Cloud through Palette.
+  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack). This feature is currently in preview.
+
+~> **Preview Release**: The `spectrocloud_cluster_brownfield` resource provides the ability to import and register existing Kubernetes clusters across different cloud platforms (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack) with Palette. This feature is currently **in preview**, and we are actively working on enhancements that will be released in future versions.
 
 ## Example Usage
 
-
 ```terraform
-data "spectrocloud_cloudaccount_aws" "account" {
-  # id = <uid>
-  name = var.cluster_cloud_account_name
-}
-
 data "spectrocloud_cluster_profile" "profile" {
   # id = <uid>
   name = var.cluster_cluster_profile_name
@@ -27,48 +23,18 @@ data "spectrocloud_backup_storage_location" "bsl" {
   name = var.backup_storage_location_name
 }
 
-resource "spectrocloud_cluster_aws" "cluster" {
-  name             = var.cluster_name
-  tags             = ["dev", "department:devops", "owner:bob"]
-  cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
-
-  cloud_config {
-    ssh_key_name = "spectro2022"
-    region       = "eu-west-1"
-    vpc_id       = "vpc-0a38a86f3bf3c6cf5"
-  }
+resource "spectrocloud_cluster_brownfield" "cluster" {
+  name       = var.cluster_name
+  cloud_type = "generic" # Options: aws, Eks-Anywhere, azure, gcp, vsphere, openshift, generic, apache-cloudstack, edge-native, maas, openstack
+  context    = "project" # Optional, defaults to "project"
+  import_mode = "full"   # Options: "read_only" or "full" (default: "full")
+  
+  description     = "My existing Kubernetes cluster"
+  cluster_timezone = "America/New_York"
+  tags            = ["environment:production", "team:platform", "managed-by:terraform"]
 
   cluster_profile {
     id = data.spectrocloud_cluster_profile.profile.id
-
-    # To override or specify values for a cluster:
-
-    # pack {
-    #   name   = "spectro-byo-manifest"
-    #   tag    = "1.0.x"
-    #   values = <<-EOT
-    #     manifests:
-    #       byo-manifest:
-    #         contents: |
-    #           # Add manifests here
-    #           apiVersion: v1
-    #           kind: Namespace
-    #           metadata:
-    #             labels:
-    #               app: wordpress
-    #               app2: wordpress2
-    #             name: wordpress
-    #   EOT
-    # }
-  }
-
-  backup_policy {
-    schedule                  = "0 0 * * SUN"
-    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
-    prefix                    = "prod-backup"
-    expiry_in_hour            = 7200
-    include_disks             = true
-    include_cluster_resources = true
   }
 
   scan_policy {
@@ -77,64 +43,78 @@ resource "spectrocloud_cluster_aws" "cluster" {
     conformance_scan_schedule   = "0 0 1 * *"
   }
 
-  machine_pool {
-    additional_labels = {
-      "owner"   = "siva"
-      "purpose" = "testing"
-      "type"    = "cp"
+  backup_policy {
+    schedule                  = "0 0 * * SUN"
+    backup_location_id        = data.spectrocloud_backup_storage_location.bsl.id
+    prefix                    = "cluster-backup"
+    expiry_in_hour            = 7200
+    include_disks             = true
+    include_cluster_resources = true
+  }
+
+  cluster_rbac_binding {
+    type = "ClusterRoleBinding"
+    role = {
+      kind = "ClusterRole"
+      name = "cluster-admin"
     }
-    control_plane           = true
-    control_plane_as_worker = true
-    name                    = "cp-pool"
-    count                   = 1
-    instance_type           = "m4.large"
-    disk_size_gb            = 60
-    #    Add azs for dynamic provisioning
-    # azs           = ["eu-west-1c","eu-west-1a"]
-    #     Add az_subnet component for static provisioning
-    az_subnets = {
-      "eu-west-1c" = join(",", var.subnet_ids_eu_west_1c)
-      "eu-west-1a" = "subnet-08c7ad2affe1f1250,subnet-04dbeac9aba098d0e"
+    subjects {
+      type = "User"
+      name = "admin-user@example.com"
+    }
+    subjects {
+      type = "Group"
+      name = "platform-admins"
+    }
+    subjects {
+      type      = "ServiceAccount"
+      name      = "cluster-admin-sa"
+      namespace = "kube-system"
+    }
+  }
+
+  namespaces {
+    name = "production"
+    resource_allocation = {
+      cpu_cores  = "4"
+      memory_MiB = "8192"
     }
   }
 
   machine_pool {
-    additional_labels = {
-      "owner"   = "siva"
-      "purpose" = "testing"
-      "type"    = "worker"
-    }
-    name          = "worker-basic"
-    count         = 1
-    instance_type = "m5.large"
-    #    Add azs for dynamic provisioning
-    # azs           = ["eu-west-1c","eu-west-1a"]
-    #    Add az_subnet component for static provisioning
-    az_subnets = {
-      "eu-west-1c" = "subnet-039c3beb3da69172f"
-      "eu-west-1a" = "subnet-04dbeac9aba098d0e"
+    name = "worker-pool"
+    node {
+      node_name = "worker-node-1"
+      action    = "uncordon" # Options: "cordon" or "uncordon"
     }
   }
+}
 
+# Output the manifest URL and kubectl command for easy access
+output "manifest_url" {
+  value     = spectrocloud_cluster_brownfield.cluster.manifest_url
+  sensitive = false
+}
+
+output "kubectl_command" {
+  value     = spectrocloud_cluster_brownfield.cluster.kubectl_command
+  sensitive = false
 }
 ```
-
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
-to import the resource spectrocloud_cluster_aws by using its `id` with the Palette `context` separated by a colon. For example:
+to import the resource spectrocloud_cluster_brownfield by using its `id` with the Palette `context` and `cloud_type` separated by colons. For example:
 
-```terraform
 import {
-  to = spectrocloud_cluster_aws.example
-  id = "example_id:context"
+  to = spectrocloud_cluster_brownfield.example
+  id = "example_id:context:cloud_type"
 }
 ```
-
-Using `terraform import`, import the cluster using the `id` colon separated with `context`. For example:
+Using `terraform import`, import the cluster using the `id` colon separated with `context` and `cloud_type`. For example:
 
 ```console
-terraform import spectrocloud_cluster_aws.example example_id:project
+terraform import spectrocloud_cluster_brownfield.example cluster_uid:project:cloud_type 
 ```
 
 Refer to the [Import section](/docs#import) to learn more.
@@ -144,118 +124,44 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Required
 
-- `cloud_account_id` (String)
-- `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- `machine_pool` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String)
+- `cloud_type` (String) The cloud type of the cluster. Supported values: `aws`, `eks-anywhere`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`,`apache-cloudstack`,`edge-native`,`maas`,`openstack`. This field cannot be updated after creation.
+- `name` (String) The name of the cluster to be registered. This field cannot be updated after creation.
 
 ### Optional
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
-- `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `cluster_template` (Block List, Max: 1) The cluster template of the cluster. (see [below for nested schema](#nestedblock--cluster_template))
 - `cluster_timezone` (String) Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').
-- `cluster_type` (String) The cluster type. Valid values are `PureManage` and `PureAttach`. This field can only be set during cluster creation and cannot be modified after the cluster is created. If not specified, the cluster will use the default type determined by the system.
-- `context` (String) The context of the AWS cluster. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
+- `container_mount_path` (String) Location to mount Proxy CA cert inside container. This is the file path inside the container where the Proxy CA certificate will be mounted. This field cannot be updated after creation.
+- `context` (String) The context for the cluster registration. Allowed values are `project` or `tenant`. Defaults to `project`. This field cannot be updated after creation.If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster. Default value is empty string.
 - `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
 - `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
 - `host_config` (Block List) The host configuration for the cluster. (see [below for nested schema](#nestedblock--host_config))
+- `host_path` (String) Location for Proxy CA cert on host nodes. This is the file path on the host where the Proxy CA certificate is stored. This field cannot be updated after creation.
+- `import_mode` (String) The import mode for the cluster. Allowed values are `read_only` (imports cluster with read-only permissions) or `full` (imports cluster with full permissions). Defaults to `full`. This field cannot be updated after creation.
+- `machine_pool` (Block Set) Machine pool configuration for Day-2 node maintenance operations. Used to perform node actions like cordon/uncordon on specific nodes. (see [below for nested schema](#nestedblock--machine_pool))
 - `namespaces` (Block List) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
-- `os_patch_after` (String) Date and time after which to patch cluster `RFC3339: 2006-01-02T15:04:05Z07:00`
-- `os_patch_on_boot` (Boolean) Whether to apply OS patch on boot. Default is `false`.
-- `os_patch_schedule` (String) The cron schedule for OS patching. This must be in the form of cron syntax. Ex: `0 0 * * *`.
+- `no_proxy` (String) Location to mount Proxy CA cert inside container. This field supports vsphere and openshift clusters. This field cannot be updated after creation.
 - `pause_agent_upgrades` (String) The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.
+- `proxy` (String) Location to mount Proxy CA cert inside container. This field supports vsphere and openshift clusters. This field cannot be updated after creation.
 - `review_repave_state` (String) To authorize the cluster repave, set the value to `Approved` for approval and `""` to decline. Default value is `""`.
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`. The `tags` attribute will soon be deprecated. It is recommended to use `tags_map` instead.
-- `tags_map` (Map of String) A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive — only one should be used at a time
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
-- `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
+- `cloud_config_id` (String) ID of the cloud config used for the cluster. This is automatically set from the cluster's cloud config reference.
+- `health_status` (String) The current health status of the cluster. Possible values include: `Healthy`, `UnHealthy`, `Unknown`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubectl_command` (String) The kubectl command that must be executed on your Kubernetes cluster to complete the import process into Palette.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
-
-<a id="nestedblock--cloud_config"></a>
-### Nested Schema for `cloud_config`
-
-Required:
-
-- `region` (String) The AWS region to deploy the cluster in.
-- `ssh_key_name` (String) Public SSH key to be used for the cluster nodes.
-
-Optional:
-
-- `control_plane_lb` (String) Control plane load balancer type. Valid values are `Internet-facing` and `internal`. Defaults to `` (empty string).
-- `vpc_id` (String) The VPC ID to deploy the cluster in. If not provided, VPC will be provisioned dynamically.
-
-
-<a id="nestedblock--machine_pool"></a>
-### Nested Schema for `machine_pool`
-
-Required:
-
-- `count` (Number) Number of nodes in the machine pool.
-- `instance_type` (String) The instance type to use for the machine pool nodes.
-- `name` (String) The name of the machine pool.
-
-Optional:
-
-- `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
-- `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
-- `additional_security_groups` (Set of String) Additional security groups to attach to the instance.
-- `az_subnets` (Map of String) Mutually exclusive with `azs`. Use `az_subnets` for Static provisioning.
-- `azs` (Set of String) Mutually exclusive with `az_subnets`. Use `azs` for Dynamic provisioning.
-- `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
-- `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
-- `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
-- `disk_size_gb` (Number) The disk size in GB for the machine pool nodes.
-- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
-- `max_price` (String) Maximum price to bid for spot instances. Only applied when instance type is 'spot'.
-- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
-- `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
-- `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
-- `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
-- `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
-- `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
-- `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.
-
-<a id="nestedblock--machine_pool--node"></a>
-### Nested Schema for `machine_pool.node`
-
-Required:
-
-- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
-- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
-
-
-<a id="nestedblock--machine_pool--override_scaling"></a>
-### Nested Schema for `machine_pool.override_scaling`
-
-Optional:
-
-- `max_surge` (String) Max extra nodes during rolling update. Integer or percentage (e.g., '1' or '20%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.
-- `max_unavailable` (String) Max unavailable nodes during rolling update. Integer or percentage (e.g., '0' or '10%'). Only valid when type=OverrideScaling. Both maxSurge and maxUnavailable are required.
-
-
-<a id="nestedblock--machine_pool--taints"></a>
-### Nested Schema for `machine_pool.taints`
-
-Required:
-
-- `effect` (String) The effect of the taint. Allowed values are: `NoSchedule`, `PreferNoSchedule` or `NoExecute`.
-- `key` (String) The key of the taint.
-- `value` (String) The value of the taint.
-
-
+- `manifest_url` (String) The URL of the import manifest that must be applied to your Kubernetes cluster to complete the import into Palette.
+- `status` (String) The current operational state of the cluster. Possible values include: `Pending`, `Provisioning`, `Running`, `Deleting`, `Deleted`, `Error`, `Importing`.
 
 <a id="nestedblock--backup_policy"></a>
 ### Nested Schema for `backup_policy`
@@ -348,34 +254,6 @@ Optional:
 
 
 
-<a id="nestedblock--cluster_template"></a>
-### Nested Schema for `cluster_template`
-
-Required:
-
-- `id` (String) The ID of the cluster template.
-
-Optional:
-
-- `cluster_profile` (Block Set) The cluster profile of the cluster template. (see [below for nested schema](#nestedblock--cluster_template--cluster_profile))
-
-Read-Only:
-
-- `name` (String) The name of the cluster template.
-
-<a id="nestedblock--cluster_template--cluster_profile"></a>
-### Nested Schema for `cluster_template.cluster_profile`
-
-Required:
-
-- `id` (String) The UID of the cluster profile.
-
-Optional:
-
-- `variables` (Map of String) A map of cluster profile variables, specified as key-value pairs. For example: `priority = "5"`.
-
-
-
 <a id="nestedblock--host_config"></a>
 ### Nested Schema for `host_config`
 
@@ -385,6 +263,31 @@ Optional:
 - `host_endpoint_type` (String) The type of endpoint for the cluster. Can be either 'Ingress' or 'LoadBalancer'. The default is 'Ingress'.
 - `ingress_host` (String) The host for the Ingress endpoint. Required if 'host_endpoint_type' is set to 'Ingress'.
 - `load_balancer_source_ranges` (String) The source ranges for the load balancer. Required if 'host_endpoint_type' is set to 'LoadBalancer'.
+
+
+<a id="nestedblock--machine_pool"></a>
+### Nested Schema for `machine_pool`
+
+Required:
+
+- `name` (String) The name of the machine pool.
+
+Optional:
+
+- `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
+
+<a id="nestedblock--machine_pool--node"></a>
+### Nested Schema for `machine_pool.node`
+
+Required:
+
+- `action` (String) The action to perform on the node. Valid values are: `cordon`, `uncordon`.
+
+Optional:
+
+- `node_id` (String) The node_id of the node, For example `i-07f899a33dee624f7`
+- `node_name` (String) The name of the machine pool.
+
 
 
 <a id="nestedblock--namespaces"></a>
@@ -413,6 +316,7 @@ Optional:
 
 - `create` (String)
 - `delete` (String)
+- `read` (String)
 - `update` (String)
 
 

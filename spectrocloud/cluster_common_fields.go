@@ -134,6 +134,13 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	// Flatten cluster_type from the cluster spec (read-only after creation)
+	if _, ok := d.GetOk("cluster_type"); ok && cluster.Spec != nil && cluster.Spec.ClusterType != "" {
+		if err := d.Set("cluster_type", cluster.Spec.ClusterType); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
 	return diag.Diagnostics{}, false
 }
 
@@ -148,6 +155,22 @@ func getSpectroComponentsUpgrade(cluster *models.V1SpectroCluster) string {
 		}
 	}
 	return "unlock"
+}
+
+func updateCommonFieldsForBrownfieldCluster(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
+	_ = updateClusterMetadata(c, d)
+	_ = updateClusterNamespaces(c, d)
+	_ = updateClusterRBAC(c, d)
+	_ = updateProfiles(c, d)
+	if _, ok := d.GetOk("backup_policy"); ok {
+		_ = updateBackupPolicy(c, d)
+	}
+	if _, ok := d.GetOk("scan_policy"); ok {
+		_ = updateScanPolicy(c, d)
+	}
+	_ = updateAgentUpgradeSetting(c, d)
+	_ = updateClusterTimezone(c, d)
+	return diag.Diagnostics{}
 }
 
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
