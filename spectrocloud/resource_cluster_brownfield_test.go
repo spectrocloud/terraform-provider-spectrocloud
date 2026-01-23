@@ -151,6 +151,7 @@ func TestToBrownfieldClusterSpecGeneric(t *testing.T) {
 		})
 	}
 }
+<<<<<<< HEAD
 
 func TestToBrownfieldClusterSpecCloudStack(t *testing.T) {
 	tests := []struct {
