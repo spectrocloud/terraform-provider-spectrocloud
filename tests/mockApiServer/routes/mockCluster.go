@@ -45,8 +45,12 @@ func ClusterRoutes() []Route {
 					},
 					Spec: nil,
 					Status: &models.V1SpectroClusterStatus{
-
 						State: "Running",
+						Virtual: &models.V1Virtual{
+							LifecycleStatus: &models.V1LifecycleStatus{
+								Status: "Paused",
+							},
+						},
 					},
 				},
 			},

@@ -424,3 +424,193 @@ func TestFlattenClusterConfigsEKSPrivateCIDRS(t *testing.T) {
 		})
 	}
 }
+
+func TestFlattenFargateProfilesEks(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    []*models.V1FargateProfile
+		expected []interface{}
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: []interface{}{},
+		},
+		{
+			name:     "empty input",
+			input:    []*models.V1FargateProfile{},
+			expected: []interface{}{},
+		},
+		{
+			name: "single fargate profile with all fields",
+			input: []*models.V1FargateProfile{
+				{
+					Name:           types.Ptr("fargate-profile-1"),
+					SubnetIds:      []string{"subnet-12345", "subnet-67890"},
+					AdditionalTags: map[string]string{"Environment": "production", "Team": "platform"},
+					Selectors: []*models.V1FargateSelector{
+						{
+							Namespace: types.Ptr("default"),
+							Labels:    map[string]string{"app": "nginx", "version": "1.0"},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-profile-1"),
+					"subnets":         []string{"subnet-12345", "subnet-67890"},
+					"additional_tags": map[string]string{"Environment": "production", "Team": "platform"},
+					"selector": []interface{}{
+						map[string]interface{}{
+							"namespace": types.Ptr("default"),
+							"labels":    map[string]string{"app": "nginx", "version": "1.0"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "fargate profile with multiple selectors",
+			input: []*models.V1FargateProfile{
+				{
+					Name:      types.Ptr("fargate-profile-2"),
+					SubnetIds: []string{"subnet-11111"},
+					Selectors: []*models.V1FargateSelector{
+						{
+							Namespace: types.Ptr("kube-system"),
+							Labels:    map[string]string{"k8s-app": "kube-dns"},
+						},
+						{
+							Namespace: types.Ptr("default"),
+							Labels:    map[string]string{"app": "web"},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-profile-2"),
+					"subnets":         []string{"subnet-11111"},
+					"additional_tags": map[string]string(nil),
+					"selector": []interface{}{
+						map[string]interface{}{
+							"namespace": types.Ptr("kube-system"),
+							"labels":    map[string]string{"k8s-app": "kube-dns"},
+						},
+						map[string]interface{}{
+							"namespace": types.Ptr("default"),
+							"labels":    map[string]string{"app": "web"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "fargate profile with nil selectors",
+			input: []*models.V1FargateProfile{
+				{
+					Name:           types.Ptr("fargate-profile-4"),
+					SubnetIds:      []string{"subnet-33333"},
+					AdditionalTags: map[string]string{},
+					Selectors:      nil,
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-profile-4"),
+					"subnets":         []string{"subnet-33333"},
+					"additional_tags": map[string]string{},
+					"selector":        []interface{}{},
+				},
+			},
+		},
+		{
+			name: "fargate profile with empty subnets",
+			input: []*models.V1FargateProfile{
+				{
+					Name:           types.Ptr("fargate-profile-5"),
+					SubnetIds:      []string{},
+					AdditionalTags: map[string]string{"CostCenter": "engineering"},
+					Selectors: []*models.V1FargateSelector{
+						{
+							Namespace: types.Ptr("production"),
+							Labels:    map[string]string{"env": "prod"},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-profile-5"),
+					"subnets":         []string{},
+					"additional_tags": map[string]string{"CostCenter": "engineering"},
+					"selector": []interface{}{
+						map[string]interface{}{
+							"namespace": types.Ptr("production"),
+							"labels":    map[string]string{"env": "prod"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple fargate profiles",
+			input: []*models.V1FargateProfile{
+				{
+					Name:      types.Ptr("fargate-profile-7"),
+					SubnetIds: []string{"subnet-55555"},
+					Selectors: []*models.V1FargateSelector{
+						{
+							Namespace: types.Ptr("app1"),
+							Labels:    map[string]string{"app": "app1"},
+						},
+					},
+				},
+				{
+					Name:      types.Ptr("fargate-profile-8"),
+					SubnetIds: []string{"subnet-66666"},
+					Selectors: []*models.V1FargateSelector{
+						{
+							Namespace: types.Ptr("app2"),
+							Labels:    map[string]string{"app": "app2"},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-profile-7"),
+					"subnets":         []string{"subnet-55555"},
+					"additional_tags": map[string]string(nil),
+					"selector": []interface{}{
+						map[string]interface{}{
+							"namespace": types.Ptr("app1"),
+							"labels":    map[string]string{"app": "app1"},
+						},
+					},
+				},
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-profile-8"),
+					"subnets":         []string{"subnet-66666"},
+					"additional_tags": map[string]string(nil),
+					"selector": []interface{}{
+						map[string]interface{}{
+							"namespace": types.Ptr("app2"),
+							"labels":    map[string]string{"app": "app2"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := flattenFargateProfilesEks(tc.input)
+			if !cmp.Equal(result, tc.expected) {
+				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
+			}
+		})
+	}
+}

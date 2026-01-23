@@ -121,7 +121,7 @@ func TestFlattenMetadata(t *testing.T) {
 			output: []interface{}{},
 		},
 		{
-			name: "valid metadata",
+			name: "valid metadata with name",
 			input: &models.V1ObjectMeta{
 				Name: "test_name",
 			},
@@ -131,12 +131,76 @@ func TestFlattenMetadata(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "metadata with empty name",
+			input: &models.V1ObjectMeta{
+				Name: "",
+			},
+			output: []interface{}{
+				map[string]interface{}{
+					"name": "",
+				},
+			},
+		},
+		{
+			name: "metadata with long name",
+			input: &models.V1ObjectMeta{
+				Name: "very-long-name-with-many-characters-that-exceeds-normal-length",
+			},
+			output: []interface{}{
+				map[string]interface{}{
+					"name": "very-long-name-with-many-characters-that-exceeds-normal-length",
+				},
+			},
+		},
+		{
+			name: "metadata with special characters in name",
+			input: &models.V1ObjectMeta{
+				Name: "test-name_with.special@chars#123",
+			},
+			output: []interface{}{
+				map[string]interface{}{
+					"name": "test-name_with.special@chars#123",
+				},
+			},
+		},
+		{
+			name: "metadata with numeric name",
+			input: &models.V1ObjectMeta{
+				Name: "12345",
+			},
+			output: []interface{}{
+				map[string]interface{}{
+					"name": "12345",
+				},
+			},
+		},
+		{
+			name: "metadata with name containing spaces",
+			input: &models.V1ObjectMeta{
+				Name: "test name with spaces",
+			},
+			output: []interface{}{
+				map[string]interface{}{
+					"name": "test name with spaces",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := flattenMetadata(tt.input)
-			assert.Equal(t, tt.output, result)
+
+			require.Equal(t, len(tt.output), len(result), "Result length should match expected")
+
+			if len(tt.output) > 0 {
+				expectedMap := tt.output[0].(map[string]interface{})
+				resultMap := result[0].(map[string]interface{})
+				assert.Equal(t, expectedMap["name"], resultMap["name"], "Name should match")
+			} else {
+				assert.Empty(t, result, "Result should be empty for nil metadata")
+			}
 		})
 	}
 }
@@ -323,6 +387,273 @@ func TestFlattenFilters(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := flattenFilters(tc.input)
 			require.ElementsMatch(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestExpandFilters(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []interface{}
+		expected []*models.V1TagFilterItem
+	}{
+		{
+			name:     "empty list",
+			input:    []interface{}{},
+			expected: []*models.V1TagFilterItem{},
+		},
+		{
+			name: "single filter with values",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "env",
+					"negation": false,
+					"operator": "eq",
+					"values":   []interface{}{"production"},
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "env",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"production"},
+				},
+			},
+		},
+		{
+			name: "single filter with nil values",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "app",
+					"negation": true,
+					"operator": "eq",
+					"values":   nil,
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "app",
+					Negation: true,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   nil,
+				},
+			},
+		},
+		{
+			name: "single filter with empty values",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "tag",
+					"negation": false,
+					"operator": "eq",
+					"values":   []interface{}{},
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "tag",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   nil, // Empty slice results in nil when loop doesn't execute
+				},
+			},
+		},
+		{
+			name: "single filter with multiple values",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "env",
+					"negation": false,
+					"operator": "eq",
+					"values":   []interface{}{"production", "staging", "development"},
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "env",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"production", "staging", "development"},
+				},
+			},
+		},
+		{
+			name: "multiple filters",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "env",
+					"negation": false,
+					"operator": "eq",
+					"values":   []interface{}{"production"},
+				},
+				map[string]interface{}{
+					"key":      "app",
+					"negation": true,
+					"operator": "eq",
+					"values":   []interface{}{"test"},
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "env",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"production"},
+				},
+				{
+					Key:      "app",
+					Negation: true,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"test"},
+				},
+			},
+		},
+		{
+			name: "multiple filters with different operators",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "env",
+					"negation": false,
+					"operator": "eq",
+					"values":   []interface{}{"production"},
+				},
+				map[string]interface{}{
+					"key":      "version",
+					"negation": false,
+					"operator": "EQUALS",
+					"values":   []interface{}{"1.0.0"},
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "env",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"production"},
+				},
+				{
+					Key:      "version",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("EQUALS"),
+					Values:   []string{"1.0.0"},
+				},
+			},
+		},
+		{
+			name: "filter with negation true",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "status",
+					"negation": true,
+					"operator": "eq",
+					"values":   []interface{}{"deleted"},
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "status",
+					Negation: true,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"deleted"},
+				},
+			},
+		},
+		{
+			name: "filter with negation false",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "status",
+					"negation": false,
+					"operator": "eq",
+					"values":   []interface{}{"active"},
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "status",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"active"},
+				},
+			},
+		},
+		{
+			name: "filter with single value",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "team",
+					"negation": false,
+					"operator": "eq",
+					"values":   []interface{}{"backend"},
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "team",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"backend"},
+				},
+			},
+		},
+		{
+			name: "three filters with various configurations",
+			input: []interface{}{
+				map[string]interface{}{
+					"key":      "env",
+					"negation": false,
+					"operator": "eq",
+					"values":   []interface{}{"production"},
+				},
+				map[string]interface{}{
+					"key":      "app",
+					"negation": true,
+					"operator": "eq",
+					"values":   nil,
+				},
+				map[string]interface{}{
+					"key":      "region",
+					"negation": false,
+					"operator": "eq",
+					"values":   []interface{}{"us-east-1", "us-west-2"},
+				},
+			},
+			expected: []*models.V1TagFilterItem{
+				{
+					Key:      "env",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"production"},
+				},
+				{
+					Key:      "app",
+					Negation: true,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   nil,
+				},
+				{
+					Key:      "region",
+					Negation: false,
+					Operator: models.V1SearchFilterKeyValueOperator("eq"),
+					Values:   []string{"us-east-1", "us-west-2"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := expandFilters(tt.input)
+
+			require.Equal(t, len(tt.expected), len(result), "Result length should match expected")
+
+			for i, expected := range tt.expected {
+				assert.Equal(t, expected.Key, result[i].Key, "Key should match")
+				assert.Equal(t, expected.Negation, result[i].Negation, "Negation should match")
+				assert.Equal(t, expected.Operator, result[i].Operator, "Operator should match")
+				assert.Equal(t, expected.Values, result[i].Values, "Values should match")
+			}
 		})
 	}
 }

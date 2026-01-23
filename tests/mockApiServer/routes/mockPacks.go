@@ -1,8 +1,9 @@
 package routes
 
 import (
-	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"net/http"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 func getPackSummaryPayload() *models.V1PackSummaries {
@@ -145,7 +146,7 @@ func getPacksNameRegistryUID() *models.V1PackTagEntity {
 				Values:       "test-test",
 			},
 		},
-		RegistryUID: generateRandomStringUID(),
+		RegistryUID: "test-registry-uid",
 		Tags: []*models.V1PackTags{
 			{
 				Group:      "dev",
