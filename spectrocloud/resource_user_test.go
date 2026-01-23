@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -2400,5 +2401,1215 @@ func TestResourceUserWorkspaceRoleMappingHashInternalEdgeCases(t *testing.T) {
 		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace2)
 
 		assert.Equal(t, hash1, hash2, "Duplicate role IDs in set should be handled (schema.Set removes duplicates)")
+	})
+
+	t.Run("Workspace with empty ID and empty role_ids", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Empty ID and empty role_ids should produce consistent hash")
+	})
+
+	t.Run("Workspace with special characters in ID", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "workspace-!@#$%^&*()",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Special characters in ID should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with special characters in role IDs", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-!@#", "role-$%^"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Special characters in role IDs should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with unicode characters", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "workspace-测试-🚀",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-中文", "role-🎯"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Unicode characters should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with very long ID", func(t *testing.T) {
+		longID := strings.Repeat("a", 1000)
+		workspace := map[string]interface{}{
+			"id":       longID,
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Very long ID should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with very long role IDs", func(t *testing.T) {
+		longRole := strings.Repeat("r", 500)
+		workspace := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{longRole}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Very long role IDs should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with single character ID", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "a",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Single character ID should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with single character role ID", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"r"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Single character role ID should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with numeric string ID", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "123456789",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Numeric string ID should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with numeric string role IDs", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"123", "456", "789"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Numeric string role IDs should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with spaces in ID", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "workspace with spaces",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Spaces in ID should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with spaces in role IDs", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role with spaces", "another role"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "Spaces in role IDs should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with URL-like ID", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "https://example.com/workspace/123",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "URL-like ID should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with UUID-like ID", func(t *testing.T) {
+		workspace := map[string]interface{}{
+			"id":       "550e8400-e29b-41d4-a716-446655440000",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace)
+		assert.Equal(t, hash1, hash2, "UUID-like ID should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Workspace with many roles in different order - comprehensive", func(t *testing.T) {
+		workspace1 := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10"}),
+		}
+		workspace2 := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"r10", "r9", "r8", "r7", "r6", "r5", "r4", "r3", "r2", "r1"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace1)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace2)
+		assert.Equal(t, hash1, hash2, "Many roles in different order should produce same hash")
+	})
+
+	t.Run("Different workspace IDs with same roles produce different hashes", func(t *testing.T) {
+		workspace1 := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+		}
+		workspace2 := map[string]interface{}{
+			"id":       "workspace-2",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace1)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace2)
+		assert.NotEqual(t, hash1, hash2, "Different workspace IDs with same roles should produce different hashes")
+	})
+
+	t.Run("Same workspace ID with different roles produce different hashes", func(t *testing.T) {
+		workspace1 := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+		}
+		workspace2 := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-3", "role-4"}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHashInternal(workspace1)
+		hash2 := resourceUserWorkspaceRoleMappingHashInternal(workspace2)
+		assert.NotEqual(t, hash1, hash2, "Same workspace ID with different roles should produce different hashes")
+	})
+}
+
+func TestResourceUserWorkspaceRoleMappingHash(t *testing.T) {
+	tests := []struct {
+		name                  string
+		input                 map[string]interface{}
+		expectedSameAs        *map[string]interface{}
+		expectedDifferentFrom *map[string]interface{}
+		description           string
+	}{
+		{
+			name: "Valid input with project_id and single workspace",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+					},
+				}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+					},
+				}),
+			},
+			description: "Same input should produce same hash",
+		},
+		{
+			name: "Order independence - workspaces",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+					map[string]interface{}{
+						"id":       "workspace-2",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-2"}),
+					},
+				}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-2",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-2"}),
+					},
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+				}),
+			},
+			description: "Order of workspaces should not affect hash",
+		},
+		{
+			name: "Different project_id produces different hash",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+				}),
+			},
+			expectedDifferentFrom: &map[string]interface{}{
+				"project_id": "project-2",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+				}),
+			},
+			description: "Different project_id should produce different hash",
+		},
+		{
+			name: "Different workspace produces different hash",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+				}),
+			},
+			expectedDifferentFrom: &map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-2",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+				}),
+			},
+			description: "Different workspace should produce different hash",
+		},
+		{
+			name: "Empty workspace set",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace":  schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"workspace":  schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{}),
+			},
+			description: "Empty workspace set should be handled correctly",
+		},
+		{
+			name: "Single workspace",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+				}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+				}),
+			},
+			description: "Single workspace should work correctly",
+		},
+		{
+			name: "Multiple workspaces in different order",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+					map[string]interface{}{
+						"id":       "workspace-2",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-2"}),
+					},
+					map[string]interface{}{
+						"id":       "workspace-3",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-3"}),
+					},
+				}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-3",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-3"}),
+					},
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+					map[string]interface{}{
+						"id":       "workspace-2",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-2"}),
+					},
+				}),
+			},
+			description: "Multiple workspaces in different order should produce same hash",
+		},
+		{
+			name: "Workspace with different roles produces different hash",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+					},
+				}),
+			},
+			expectedDifferentFrom: &map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-2"}),
+					},
+				}),
+			},
+			description: "Workspace with different roles should produce different hash",
+		},
+		{
+			name: "Many workspaces in different order",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "ws-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r1"}),
+					},
+					map[string]interface{}{
+						"id":       "ws-2",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r2"}),
+					},
+					map[string]interface{}{
+						"id":       "ws-3",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r3"}),
+					},
+					map[string]interface{}{
+						"id":       "ws-4",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r4"}),
+					},
+					map[string]interface{}{
+						"id":       "ws-5",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r5"}),
+					},
+				}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "ws-5",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r5"}),
+					},
+					map[string]interface{}{
+						"id":       "ws-4",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r4"}),
+					},
+					map[string]interface{}{
+						"id":       "ws-3",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r3"}),
+					},
+					map[string]interface{}{
+						"id":       "ws-2",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r2"}),
+					},
+					map[string]interface{}{
+						"id":       "ws-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"r1"}),
+					},
+				}),
+			},
+			description: "Many workspaces in different order should produce same hash",
+		},
+		{
+			name: "Workspace with multiple roles in different order",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-3", "role-1", "role-2"}),
+					},
+				}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+					map[string]interface{}{
+						"id":       "workspace-1",
+						"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2", "role-3"}),
+					},
+				}),
+			},
+			description: "Workspace with roles in different order should produce same hash (internal function handles sorting)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Calculate hash for the main input
+			hash1 := resourceUserWorkspaceRoleMappingHash(tt.input)
+
+			// Verify hash is not zero (unless empty workspace set and empty project_id)
+			workspaceSet, hasWorkspace := tt.input["workspace"].(*schema.Set)
+			projectID, hasProjectID := tt.input["project_id"].(string)
+			workspaceCount := 0
+			if hasWorkspace {
+				workspaceCount = len(workspaceSet.List())
+			}
+			if hasProjectID && projectID != "" || workspaceCount > 0 {
+				assert.NotEqual(t, 0, hash1, "Hash should not be zero for non-empty input")
+			}
+
+			// Test same input produces same hash (deterministic)
+			if tt.expectedSameAs != nil {
+				hash2 := resourceUserWorkspaceRoleMappingHash(*tt.expectedSameAs)
+				assert.Equal(t, hash1, hash2, tt.description)
+			}
+
+			// Test different input produces different hash
+			if tt.expectedDifferentFrom != nil {
+				hash3 := resourceUserWorkspaceRoleMappingHash(*tt.expectedDifferentFrom)
+				assert.NotEqual(t, hash1, hash3, tt.description)
+			}
+
+			// Verify hash is deterministic - call multiple times
+			hash4 := resourceUserWorkspaceRoleMappingHash(tt.input)
+			hash5 := resourceUserWorkspaceRoleMappingHash(tt.input)
+			assert.Equal(t, hash1, hash4, "Hash should be deterministic (first call)")
+			assert.Equal(t, hash1, hash5, "Hash should be deterministic (second call)")
+			assert.Equal(t, hash4, hash5, "Hash should be deterministic (multiple calls)")
+		})
+	}
+}
+
+// TestResourceUserWorkspaceRoleMappingHashEdgeCases tests edge cases and error conditions
+func TestResourceUserWorkspaceRoleMappingHashEdgeCases(t *testing.T) {
+	t.Run("Empty project_id", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "",
+			"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+				map[string]interface{}{
+					"id":       "workspace-1",
+					"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+				},
+			}),
+		}
+		hash := resourceUserWorkspaceRoleMappingHash(input)
+		// Empty project_id should still produce a valid hash
+		assert.NotEqual(t, 0, hash, "Hash should not be zero even with empty project_id")
+	})
+
+	t.Run("Empty workspace set", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-1",
+			"workspace":  schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{}),
+		}
+		hash1 := resourceUserWorkspaceRoleMappingHash(input)
+		hash2 := resourceUserWorkspaceRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Empty workspace set should produce consistent hash")
+	})
+
+	t.Run("Workspace with empty role_ids", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-1",
+			"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+				map[string]interface{}{
+					"id":       "workspace-1",
+					"role_ids": schema.NewSet(schema.HashString, []interface{}{}),
+				},
+			}),
+		}
+		hash := resourceUserWorkspaceRoleMappingHash(input)
+		assert.NotEqual(t, 0, hash, "Hash should not be zero even with empty role_ids")
+	})
+
+	t.Run("Multiple workspaces with same content in different order", func(t *testing.T) {
+		ws1 := map[string]interface{}{
+			"id":       "workspace-1",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		ws2 := map[string]interface{}{
+			"id":       "workspace-2",
+			"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-2"}),
+		}
+
+		input1 := map[string]interface{}{
+			"project_id": "project-1",
+			"workspace":  schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{ws1, ws2}),
+		}
+
+		input2 := map[string]interface{}{
+			"project_id": "project-1",
+			"workspace":  schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{ws2, ws1}),
+		}
+
+		hash1 := resourceUserWorkspaceRoleMappingHash(input1)
+		hash2 := resourceUserWorkspaceRoleMappingHash(input2)
+		assert.Equal(t, hash1, hash2, "Same workspaces in different order should produce same hash")
+	})
+
+	t.Run("Workspace with duplicate role IDs in set", func(t *testing.T) {
+		// schema.Set automatically handles duplicates, but test that it works
+		input1 := map[string]interface{}{
+			"project_id": "project-1",
+			"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+				map[string]interface{}{
+					"id":       "workspace-1",
+					"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1", "role-1", "role-2"}),
+				},
+			}),
+		}
+
+		input2 := map[string]interface{}{
+			"project_id": "project-1",
+			"workspace": schema.NewSet(resourceUserWorkspaceRoleMappingHashInternal, []interface{}{
+				map[string]interface{}{
+					"id":       "workspace-1",
+					"role_ids": schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+				},
+			}),
+		}
+
+		hash1 := resourceUserWorkspaceRoleMappingHash(input1)
+		hash2 := resourceUserWorkspaceRoleMappingHash(input2)
+		assert.Equal(t, hash1, hash2, "Duplicate role IDs in set should be handled (schema.Set removes duplicates)")
+	})
+}
+
+func TestResourceUserResourceRoleMappingHash(t *testing.T) {
+	tests := []struct {
+		name                  string
+		input                 map[string]interface{}
+		expectedSameAs        *map[string]interface{}
+		expectedDifferentFrom *map[string]interface{}
+		description           string
+	}{
+		{
+			name: "Valid input with all fields",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1", "project-2"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1", "filter-2"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1", "project-2"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1", "filter-2"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+			},
+			description: "Same input should produce same hash",
+		},
+		{
+			name: "Order independence - project_ids",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1", "project-2"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-2", "project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			description: "Order of project_ids should not affect hash",
+		},
+		{
+			name: "Order independence - filter_ids",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1", "filter-2"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-2", "filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			description: "Order of filter_ids should not affect hash",
+		},
+		{
+			name: "Order independence - role_ids",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-2", "role-1"}),
+			},
+			description: "Order of role_ids should not affect hash",
+		},
+		{
+			name: "Order independence - all fields",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1", "project-2"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1", "filter-2"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-2", "project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-2", "filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-2", "role-1"}),
+			},
+			description: "Order of all IDs should not affect hash",
+		},
+		{
+			name: "Empty project_ids",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			description: "Empty project_ids should be handled correctly",
+		},
+		{
+			name: "Empty filter_ids",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			description: "Empty filter_ids should be handled correctly",
+		},
+		{
+			name: "Empty role_ids",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{}),
+			},
+			description: "Empty role_ids should be handled correctly",
+		},
+		{
+			name: "All empty sets",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{}),
+			},
+			description: "All empty sets should produce consistent hash",
+		},
+		{
+			name: "Single values in each set",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			description: "Single values should work correctly",
+		},
+		{
+			name: "Different project_ids produce different hash",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedDifferentFrom: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-2"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			description: "Different project_ids should produce different hash",
+		},
+		{
+			name: "Different filter_ids produce different hash",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedDifferentFrom: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-2"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			description: "Different filter_ids should produce different hash",
+		},
+		{
+			name: "Different role_ids produce different hash",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedDifferentFrom: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"project-1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"filter-1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"role-2"}),
+			},
+			description: "Different role_ids should produce different hash",
+		},
+		{
+			name: "Many values in different order",
+			input: map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"p1", "p2", "p3", "p4", "p5"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"f1", "f2", "f3"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"r1", "r2", "r3", "r4"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_ids": schema.NewSet(schema.HashString, []interface{}{"p5", "p4", "p3", "p2", "p1"}),
+				"filter_ids":  schema.NewSet(schema.HashString, []interface{}{"f3", "f2", "f1"}),
+				"role_ids":    schema.NewSet(schema.HashString, []interface{}{"r4", "r3", "r2", "r1"}),
+			},
+			description: "Many values in different order should produce same hash",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Calculate hash for the main input
+			hash1 := resourceUserResourceRoleMappingHash(tt.input)
+
+			// Verify hash is not zero (unless all sets are empty)
+			projectCount := len(tt.input["project_ids"].(*schema.Set).List())
+			filterCount := len(tt.input["filter_ids"].(*schema.Set).List())
+			roleCount := len(tt.input["role_ids"].(*schema.Set).List())
+			if projectCount > 0 || filterCount > 0 || roleCount > 0 {
+				assert.NotEqual(t, 0, hash1, "Hash should not be zero for non-empty input")
+			}
+
+			// Test same input produces same hash (deterministic)
+			if tt.expectedSameAs != nil {
+				hash2 := resourceUserResourceRoleMappingHash(*tt.expectedSameAs)
+				assert.Equal(t, hash1, hash2, tt.description)
+			}
+
+			// Test different input produces different hash
+			if tt.expectedDifferentFrom != nil {
+				hash3 := resourceUserResourceRoleMappingHash(*tt.expectedDifferentFrom)
+				assert.NotEqual(t, hash1, hash3, tt.description)
+			}
+
+			// Verify hash is deterministic - call multiple times
+			hash4 := resourceUserResourceRoleMappingHash(tt.input)
+			hash5 := resourceUserResourceRoleMappingHash(tt.input)
+			assert.Equal(t, hash1, hash4, "Hash should be deterministic (first call)")
+			assert.Equal(t, hash1, hash5, "Hash should be deterministic (second call)")
+			assert.Equal(t, hash4, hash5, "Hash should be deterministic (multiple calls)")
+		})
+	}
+}
+
+func TestResourceUserProjectRoleMappingHash(t *testing.T) {
+	tests := []struct {
+		name                  string
+		input                 map[string]interface{}
+		expectedSameAs        *map[string]interface{}
+		expectedDifferentFrom *map[string]interface{}
+		description           string
+	}{
+		{
+			name: "Valid input with project_id and single role",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			description: "Same input should produce same hash",
+		},
+		{
+			name: "Order independence - role_ids",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-3", "role-1", "role-2"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2", "role-3"}),
+			},
+			description: "Order of role_ids should not affect hash",
+		},
+		{
+			name: "Different project_id produces different hash",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+			},
+			expectedDifferentFrom: &map[string]interface{}{
+				"project_id": "project-2",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+			},
+			description: "Different project_id should produce different hash",
+		},
+		{
+			name: "Different role_ids produce different hash",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+			},
+			expectedDifferentFrom: &map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-3", "role-4"}),
+			},
+			description: "Different role_ids should produce different hash",
+		},
+		{
+			name: "Single role",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+			},
+			description: "Single role should work correctly",
+		},
+		{
+			name: "Many roles in different order",
+			input: map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2", "role-3", "role-4", "role-5"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-1",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-5", "role-4", "role-3", "role-2", "role-1"}),
+			},
+			description: "Many roles in different order should produce same hash",
+		},
+		{
+			name: "Same project and roles - deterministic",
+			input: map[string]interface{}{
+				"project_id": "project-abc",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-xyz", "role-123"}),
+			},
+			expectedSameAs: &map[string]interface{}{
+				"project_id": "project-abc",
+				"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-xyz", "role-123"}),
+			},
+			description: "Same input should always produce same hash (deterministic)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Calculate hash for the main input
+			hash1 := resourceUserProjectRoleMappingHash(tt.input)
+
+			// Verify hash is not zero (unless both project_id and role_ids are empty)
+			projectID := tt.input["project_id"].(string)
+			roleCount := len(tt.input["role_ids"].(*schema.Set).List())
+			if projectID != "" || roleCount > 0 {
+				assert.NotEqual(t, 0, hash1, "Hash should not be zero for non-empty input")
+			}
+
+			// Test same input produces same hash (deterministic)
+			if tt.expectedSameAs != nil {
+				hash2 := resourceUserProjectRoleMappingHash(*tt.expectedSameAs)
+				assert.Equal(t, hash1, hash2, tt.description)
+			}
+
+			// Test different input produces different hash
+			if tt.expectedDifferentFrom != nil {
+				hash3 := resourceUserProjectRoleMappingHash(*tt.expectedDifferentFrom)
+				assert.NotEqual(t, hash1, hash3, tt.description)
+			}
+
+			// Verify hash is deterministic - call multiple times
+			hash4 := resourceUserProjectRoleMappingHash(tt.input)
+			hash5 := resourceUserProjectRoleMappingHash(tt.input)
+			assert.Equal(t, hash1, hash4, "Hash should be deterministic (first call)")
+			assert.Equal(t, hash1, hash5, "Hash should be deterministic (second call)")
+			assert.Equal(t, hash4, hash5, "Hash should be deterministic (multiple calls)")
+		})
+	}
+}
+
+// TestResourceUserProjectRoleMappingHashEdgeCases tests edge cases and error conditions
+func TestResourceUserProjectRoleMappingHashEdgeCases(t *testing.T) {
+	t.Run("Project with single role ID", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-single",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-single"}),
+		}
+		hash := resourceUserProjectRoleMappingHash(input)
+		assert.NotEqual(t, 0, hash, "Hash should not be zero")
+	})
+
+	t.Run("Project with empty string ID", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash := resourceUserProjectRoleMappingHash(input)
+		// Empty ID should still produce a valid hash
+		assert.NotEqual(t, 0, hash, "Hash should not be zero even with empty project_id")
+	})
+
+	t.Run("Project with empty role_ids set", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-empty-roles",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{}),
+		}
+		hash := resourceUserProjectRoleMappingHash(input)
+		assert.NotEqual(t, 0, hash, "Hash should not be zero even with empty role_ids")
+	})
+
+	t.Run("Project with duplicate role IDs in set", func(t *testing.T) {
+		// schema.Set automatically handles duplicates, but test that it works
+		input1 := map[string]interface{}{
+			"project_id": "project-dup",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-1", "role-2"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input1)
+
+		// Same project without duplicates should produce same hash
+		input2 := map[string]interface{}{
+			"project_id": "project-dup",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+		}
+		hash2 := resourceUserProjectRoleMappingHash(input2)
+
+		assert.Equal(t, hash1, hash2, "Duplicate role IDs in set should be handled (schema.Set removes duplicates)")
+	})
+
+	t.Run("Project with special characters in ID", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-!@#$%^&*()",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Special characters in project_id should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with special characters in role IDs", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-!@#", "role-$%^"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Special characters in role IDs should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with unicode characters", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-测试-🚀",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-中文", "role-🎯"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Unicode characters should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with very long ID", func(t *testing.T) {
+		longID := strings.Repeat("a", 1000)
+		input := map[string]interface{}{
+			"project_id": longID,
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Very long project_id should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with very long role IDs", func(t *testing.T) {
+		longRole := strings.Repeat("r", 500)
+		input := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{longRole}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Very long role IDs should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with single character ID", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "a",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Single character project_id should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with single character role ID", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"r"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Single character role ID should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with numeric string ID", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "123456789",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Numeric string project_id should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with numeric string role IDs", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"123", "456", "789"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Numeric string role IDs should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with spaces in ID", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project with spaces",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Spaces in project_id should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with spaces in role IDs", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role with spaces", "another role"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "Spaces in role IDs should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with URL-like ID", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "https://example.com/project/123",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "URL-like project_id should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with UUID-like ID", func(t *testing.T) {
+		input := map[string]interface{}{
+			"project_id": "550e8400-e29b-41d4-a716-446655440000",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input)
+		hash2 := resourceUserProjectRoleMappingHash(input)
+		assert.Equal(t, hash1, hash2, "UUID-like project_id should produce consistent hash")
+		assert.NotEqual(t, 0, hash1, "Hash should not be zero")
+	})
+
+	t.Run("Project with many roles in different order - comprehensive", func(t *testing.T) {
+		input1 := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10"}),
+		}
+		input2 := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"r10", "r9", "r8", "r7", "r6", "r5", "r4", "r3", "r2", "r1"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input1)
+		hash2 := resourceUserProjectRoleMappingHash(input2)
+		assert.Equal(t, hash1, hash2, "Many roles in different order should produce same hash")
+	})
+
+	t.Run("Different project IDs with same roles produce different hashes", func(t *testing.T) {
+		input1 := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+		}
+		input2 := map[string]interface{}{
+			"project_id": "project-2",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input1)
+		hash2 := resourceUserProjectRoleMappingHash(input2)
+		assert.NotEqual(t, hash1, hash2, "Different project IDs with same roles should produce different hashes")
+	})
+
+	t.Run("Same project ID with different roles produce different hashes", func(t *testing.T) {
+		input1 := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-1", "role-2"}),
+		}
+		input2 := map[string]interface{}{
+			"project_id": "project-1",
+			"role_ids":   schema.NewSet(schema.HashString, []interface{}{"role-3", "role-4"}),
+		}
+		hash1 := resourceUserProjectRoleMappingHash(input1)
+		hash2 := resourceUserProjectRoleMappingHash(input2)
+		assert.NotEqual(t, hash1, hash2, "Same project ID with different roles should produce different hashes")
 	})
 }
