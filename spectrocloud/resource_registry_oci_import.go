@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -27,52 +28,126 @@ func GetCommonRegistryOci(d *schema.ResourceData, m interface{}) (*client.V1Clie
 	// OCI registries are tenant-level resources only
 	c := getV1ClientWithResourceContext(m, "tenant")
 
-	// The import ID should be the registry UID
-	registryUID := d.Id()
-	if registryUID == "" {
+	// The import ID can be either a registry UID or a registry name
+	importID := d.Id()
+	if importID == "" {
 		return nil, fmt.Errorf("OCI registry import ID is required")
 	}
 
-	// Try to retrieve the registry as ECR first (most common)
-	registry, err := c.GetOciEcrRegistry(registryUID)
-	if err != nil {
-		// If ECR retrieval fails, try basic OCI registry
-		basicRegistry, basicErr := c.GetOciBasicRegistry(registryUID)
-		if basicErr != nil {
-			return nil, fmt.Errorf("unable to retrieve OCI registry as either ECR or basic type: ECR error: %s, Basic error: %s", err, basicErr)
-		}
-		if basicRegistry == nil {
-			return nil, fmt.Errorf("OCI registry with ID %s not found", registryUID)
-		}
+	var registryUID string
+	var registryName string
+	var registryType string
+	var isPrivate bool
 
-		// Set required fields for basic registry
-		if err := d.Set("name", basicRegistry.Metadata.Name); err != nil {
-			return nil, err
+	// Step 1: Try to retrieve the registry by UID (maintains backward compatibility)
+	// Try ECR first (most common)
+	ecrRegistry, ecrErr := c.GetOciEcrRegistry(importID)
+	if ecrErr == nil && ecrRegistry != nil {
+		// Found by UID as ECR registry
+		registryUID = importID
+		registryName = ecrRegistry.Metadata.Name
+		registryType = "ecr"
+		if ecrRegistry.Spec.IsPrivate != nil {
+			isPrivate = *ecrRegistry.Spec.IsPrivate
 		}
-		if err := d.Set("type", "basic"); err != nil {
-			return nil, err
-		}
-		// Basic registries are typically private if they have authentication
-		isPrivate := basicRegistry.Spec.Auth != nil
-		if err := d.Set("is_private", isPrivate); err != nil {
-			return nil, err
-		}
-	} else if registry == nil {
-		return nil, fmt.Errorf("OCI registry with ID %s not found", registryUID)
 	} else {
-		// Set required fields for ECR registry
-		if err := d.Set("name", registry.Metadata.Name); err != nil {
-			return nil, err
-		}
-		if err := d.Set("type", "ecr"); err != nil {
-			return nil, err
-		}
-		if err := d.Set("is_private", registry.Spec.IsPrivate); err != nil {
-			return nil, err
+		// Try Basic registry
+		basicRegistry, basicErr := c.GetOciBasicRegistry(importID)
+		if basicErr == nil && basicRegistry != nil {
+			// Found by UID as Basic registry
+			registryUID = importID
+			registryName = basicRegistry.Metadata.Name
+			registryType = "basic"
+			isPrivate = basicRegistry.Spec.Auth != nil
+		} else {
+			// Step 2: UID lookup failed, try to get by name
+			registrySummary, nameErr := c.GetOciRegistryByName(importID)
+			if nameErr != nil {
+				return nil, fmt.Errorf("unable to retrieve OCI registry by UID or name. UID errors (ECR: %s, Basic: %s), Name error: %s", ecrErr, basicErr, nameErr)
+			}
+			if registrySummary == nil || registrySummary.Metadata == nil {
+				return nil, fmt.Errorf("OCI registry '%s' not found", importID)
+			}
+
+			// Extract UID and type from the summary
+			registryUID = registrySummary.Metadata.UID
+			if registryUID == "" {
+				return nil, fmt.Errorf("OCI registry with name '%s' found but has no UID", importID)
+			}
+
+			registryName = registrySummary.Metadata.Name
+
+			// Determine registry type from the summary
+			if registrySummary.Spec != nil && registrySummary.Spec.RegistryType != "" {
+				registryType = strings.ToLower(registrySummary.Spec.RegistryType)
+			} else {
+				// If type is not in summary, try to determine by fetching full details
+				// Try ECR first
+				ecrRegistry, ecrErr = c.GetOciEcrRegistry(registryUID)
+				if ecrErr == nil && ecrRegistry != nil {
+					registryType = "ecr"
+					if ecrRegistry.Spec.IsPrivate != nil {
+						isPrivate = *ecrRegistry.Spec.IsPrivate
+					}
+				} else {
+					// Try Basic
+					basicRegistry, basicErr = c.GetOciBasicRegistry(registryUID)
+					if basicErr == nil && basicRegistry != nil {
+						registryType = "basic"
+						isPrivate = basicRegistry.Spec.Auth != nil
+					} else {
+						return nil, fmt.Errorf("found registry by name but failed to retrieve full details: ECR error: %s, Basic error: %s", ecrErr, basicErr)
+					}
+				}
+			}
+
+			// If we determined type from summary but haven't fetched full details yet, fetch them now
+			// if registryType == "ecr" {
+			// 	ecrRegistry, ecrErr = c.GetOciEcrRegistry(registryUID)
+			// 	if ecrErr != nil || ecrRegistry == nil {
+			// 		return nil, fmt.Errorf("found registry by name but failed to retrieve ECR registry details: %s", ecrErr)
+			// 	}
+			// 	if ecrRegistry.Spec.IsPrivate != nil {
+			// 		isPrivate = *ecrRegistry.Spec.IsPrivate
+			// 	}
+			// } else if registryType == "basic" {
+			// 	basicRegistry, basicErr = c.GetOciBasicRegistry(registryUID)
+			// 	if basicErr != nil || basicRegistry == nil {
+			// 		return nil, fmt.Errorf("found registry by name but failed to retrieve Basic registry details: %s", basicErr)
+			// 	}
+			// 	isPrivate = basicRegistry.Spec.Auth != nil
+			// }
+			switch registryType {
+			case "ecr":
+				ecrRegistry, ecrErr = c.GetOciEcrRegistry(registryUID)
+				if ecrErr != nil || ecrRegistry == nil {
+					return nil, fmt.Errorf("found registry by name but failed to retrieve ECR registry details: %s", ecrErr)
+				}
+				if ecrRegistry.Spec.IsPrivate != nil {
+					isPrivate = *ecrRegistry.Spec.IsPrivate
+				}
+			case "basic":
+				basicRegistry, basicErr = c.GetOciBasicRegistry(registryUID)
+				if basicErr != nil || basicRegistry == nil {
+					return nil, fmt.Errorf("found registry by name but failed to retrieve Basic registry details: %s", basicErr)
+				}
+				isPrivate = basicRegistry.Spec.Auth != nil
+			}
 		}
 	}
 
-	// Set the ID to the registry ID
+	// Set required fields
+	if err := d.Set("name", registryName); err != nil {
+		return nil, err
+	}
+	if err := d.Set("type", registryType); err != nil {
+		return nil, err
+	}
+	if err := d.Set("is_private", isPrivate); err != nil {
+		return nil, err
+	}
+
+	// Set the ID to the registry UID
 	d.SetId(registryUID)
 
 	return c, nil
