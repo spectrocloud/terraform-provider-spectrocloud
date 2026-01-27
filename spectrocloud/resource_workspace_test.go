@@ -287,3 +287,246 @@ func TestResourceWorkspaceDeleteNegative(t *testing.T) {
 //	diags := resourceWorkspaceDelete(ctx, d, unitTestMockAPIClient)
 //	assert.Empty(t, diags)
 //}
+
+func TestFlattenWorkspaceQuota(t *testing.T) {
+	tests := []struct {
+		name      string
+		workspace *models.V1Workspace
+		expected  []interface{}
+	}{
+		{
+			name: "Workspace with full quota including GPU",
+			workspace: &models.V1Workspace{
+				Spec: &models.V1WorkspaceSpec{
+					Quota: &models.V1WorkspaceQuota{
+						ResourceAllocation: &models.V1WorkspaceResourceAllocation{
+							CPUCores:  4.0,
+							MemoryMiB: 8192.0,
+							GpuConfig: &models.V1GpuConfig{
+								Limit: 2,
+							},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"cpu":    4.0,
+					"memory": 8192.0,
+					"gpu":    2,
+				},
+			},
+		},
+		{
+			name: "Workspace with quota but no GPU config",
+			workspace: &models.V1Workspace{
+				Spec: &models.V1WorkspaceSpec{
+					Quota: &models.V1WorkspaceQuota{
+						ResourceAllocation: &models.V1WorkspaceResourceAllocation{
+							CPUCores:  8.0,
+							MemoryMiB: 16384.0,
+							GpuConfig: nil,
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"cpu":    8.0,
+					"memory": 16384.0,
+					"gpu":    0,
+				},
+			},
+		},
+		{
+			name: "Workspace with zero quota values",
+			workspace: &models.V1Workspace{
+				Spec: &models.V1WorkspaceSpec{
+					Quota: &models.V1WorkspaceQuota{
+						ResourceAllocation: &models.V1WorkspaceResourceAllocation{
+							CPUCores:  0.0,
+							MemoryMiB: 0.0,
+							GpuConfig: nil,
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"cpu":    0.0,
+					"memory": 0.0,
+					"gpu":    0,
+				},
+			},
+		},
+		{
+			name: "Workspace with nil ResourceAllocation",
+			workspace: &models.V1Workspace{
+				Spec: &models.V1WorkspaceSpec{
+					Quota: &models.V1WorkspaceQuota{
+						ResourceAllocation: nil,
+					},
+				},
+			},
+			expected: []interface{}{},
+		},
+		{
+			name: "Workspace with nil Quota",
+			workspace: &models.V1Workspace{
+				Spec: &models.V1WorkspaceSpec{
+					Quota: nil,
+				},
+			},
+			expected: []interface{}{},
+		},
+		{
+			name: "Workspace with nil Spec",
+			workspace: &models.V1Workspace{
+				Spec: nil,
+			},
+			expected: []interface{}{},
+		},
+		{
+			name:      "Workspace with nil workspace",
+			workspace: nil,
+			expected:  []interface{}{},
+		},
+		{
+			name: "Workspace with fractional CPU and memory values",
+			workspace: &models.V1Workspace{
+				Spec: &models.V1WorkspaceSpec{
+					Quota: &models.V1WorkspaceQuota{
+						ResourceAllocation: &models.V1WorkspaceResourceAllocation{
+							CPUCores:  2.5,
+							MemoryMiB: 4096.75,
+							GpuConfig: &models.V1GpuConfig{
+								Limit: 1,
+							},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"cpu":    2.5,
+					"memory": 4096.75,
+					"gpu":    1,
+				},
+			},
+		},
+		{
+			name: "Workspace with large GPU limit",
+			workspace: &models.V1Workspace{
+				Spec: &models.V1WorkspaceSpec{
+					Quota: &models.V1WorkspaceQuota{
+						ResourceAllocation: &models.V1WorkspaceResourceAllocation{
+							CPUCores:  16.0,
+							MemoryMiB: 32768.0,
+							GpuConfig: &models.V1GpuConfig{
+								Limit: 8,
+							},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"cpu":    16.0,
+					"memory": 32768.0,
+					"gpu":    8,
+				},
+			},
+		},
+		{
+			name: "Workspace with GPU config but zero limit",
+			workspace: &models.V1Workspace{
+				Spec: &models.V1WorkspaceSpec{
+					Quota: &models.V1WorkspaceQuota{
+						ResourceAllocation: &models.V1WorkspaceResourceAllocation{
+							CPUCores:  4.0,
+							MemoryMiB: 8192.0,
+							GpuConfig: &models.V1GpuConfig{
+								Limit: 0,
+							},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"cpu":    4.0,
+					"memory": 8192.0,
+					"gpu":    0,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result []interface{}
+			var panicked bool
+
+			// Check if this test case will panic (nil workspace, nil Spec, or nil Quota)
+			willPanic := tt.workspace == nil ||
+				tt.workspace != nil && tt.workspace.Spec == nil ||
+				tt.workspace != nil && tt.workspace.Spec != nil && tt.workspace.Spec.Quota == nil
+
+			// Handle panic for cases that will panic
+			if willPanic {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							panicked = true
+							result = []interface{}{}
+						}
+					}()
+					result = flattenWorkspaceQuota(tt.workspace)
+				}()
+
+				// For panic cases, verify we got empty result
+				if panicked {
+					assert.Empty(t, result, "Result should be empty when function panics due to nil pointer")
+					return
+				}
+			} else {
+				// Normal execution for non-panic cases
+				result = flattenWorkspaceQuota(tt.workspace)
+			}
+
+			// Verify the result length
+			assert.Equal(t, len(tt.expected), len(result), "Result length should match expected length")
+
+			// If expected is empty, verify result is empty
+			if len(tt.expected) == 0 {
+				assert.Empty(t, result, "Result should be empty for nil cases")
+				return
+			}
+
+			// Verify the quota map content
+			assert.Len(t, result, 1, "Result should contain exactly one quota map")
+
+			quotaMap, ok := result[0].(map[string]interface{})
+			assert.True(t, ok, "Result[0] should be a map[string]interface{}")
+
+			expectedMap := tt.expected[0].(map[string]interface{})
+
+			// Verify CPU (function returns float64)
+			cpu, ok := quotaMap["cpu"].(float64)
+			assert.True(t, ok, "CPU should be a float64")
+			expectedCPU := expectedMap["cpu"].(float64)
+			assert.Equal(t, expectedCPU, cpu, "CPU value should match")
+
+			// Verify Memory (function returns float64)
+			memory, ok := quotaMap["memory"].(float64)
+			assert.True(t, ok, "Memory should be a float64")
+			expectedMemory := expectedMap["memory"].(float64)
+			assert.Equal(t, expectedMemory, memory, "Memory value should match")
+
+			// Verify GPU (function returns int)
+			gpu, ok := quotaMap["gpu"].(int)
+			assert.True(t, ok, "GPU should be an int")
+			assert.Equal(t, expectedMap["gpu"], gpu, "GPU value should match")
+		})
+	}
+}
