@@ -372,8 +372,10 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("endpoint_suffix", registry.Spec.BasePath); err != nil {
-			return diag.FromErr(err)
+		if providerType == "helm" {
+			if err := d.Set("endpoint_suffix", registry.Spec.BasePath); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 		isSyncSupported := false
 		if registry.Status != nil && registry.Status.SyncStatus != nil {
