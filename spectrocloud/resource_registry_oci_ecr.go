@@ -290,21 +290,10 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
-		isSyncSupported := false
-		if registry.Status != nil && registry.Status.SyncStatus != nil {
-			isSyncSupported = registry.Status.SyncStatus.IsSyncSupported
-		} else if registry.Spec.IsSyncSupported {
-			// Fallback to Spec if Status is not available (for backward compatibility)
-			isSyncSupported = registry.Spec.IsSyncSupported
-		}
-		if err := d.Set("is_synchronization", isSyncSupported); err != nil {
+		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
-		providerType := "helm" // default per schema
-		if registry.Spec.ProviderType != nil {
-			providerType = *registry.Spec.ProviderType
-		}
-		if err := d.Set("provider_type", providerType); err != nil {
+		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set("wait_for_sync", false); err != nil {
@@ -352,39 +341,27 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("name", registry.Metadata.Name); err != nil {
 			return diag.FromErr(err)
 		}
+
 		if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
 			return diag.FromErr(err)
 		}
-		isPrivate := false
-		if registry.Spec.Auth != nil && registry.Spec.Auth.Type == "basic" {
-			isPrivate = true
-		}
+
+		isPrivate := registry.Spec.Auth.Type != "noAuth"
 		if err := d.Set("is_private", isPrivate); err != nil {
 			return diag.FromErr(err)
 		}
-		providerType := "helm" // default per schema
-		if registry.Spec.ProviderType != nil {
-			providerType = *registry.Spec.ProviderType
-		}
-		if err := d.Set("provider_type", providerType); err != nil {
+
+		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
-		if providerType == "helm" {
-			if err := d.Set("endpoint_suffix", registry.Spec.BasePath); err != nil {
-				return diag.FromErr(err)
-			}
+		if err := d.Set("endpoint_suffix", registry.Spec.BasePath); err != nil {
+			return diag.FromErr(err)
 		}
-		isSyncSupported := false
-		if registry.Status != nil && registry.Status.SyncStatus != nil {
-			isSyncSupported = registry.Status.SyncStatus.IsSyncSupported
-		} else if registry.Spec.IsSyncSupported {
-			// Fallback to Spec if Status is not available (for backward compatibility)
-			isSyncSupported = registry.Spec.IsSyncSupported
-		}
-		if err := d.Set("is_synchronization", isSyncSupported); err != nil {
+
+		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set("wait_for_sync", false); err != nil {
@@ -398,6 +375,22 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			acc["credential_type"] = "noAuth"
 			acc["username"] = ""
 			acc["password"] = ""
+			tlsConfig := make([]interface{}, 0, 1)
+			tls := make(map[string]interface{})
+			if registry.Spec.Auth.TLS != nil {
+				tls["certificate"] = registry.Spec.Auth.TLS.Certificate
+				tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
+			} else {
+				tls["certificate"] = ""
+				tls["insecure_skip_verify"] = false
+			}
+			tlsConfig = append(tlsConfig, tls)
+			acc["tls_config"] = tlsConfig
+			credentials = append(credentials, acc)
+			if err := d.Set("credentials", credentials); err != nil {
+				return diag.FromErr(err)
+			}
+			return diags
 		case "basic":
 			acc["credential_type"] = "basic"
 			acc["username"] = registry.Spec.Auth.Username
