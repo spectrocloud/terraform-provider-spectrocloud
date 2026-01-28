@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
-	"sort"
 	"strings"
 	"time"
 
@@ -37,7 +35,7 @@ func resourceAddonDeployment() *schema.Resource {
 			"cluster_uid": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The UID of the cluster to attach the addon profile(s) to.",
+				Description: "The UID of the cluster to attach the addon profile to.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -61,7 +59,24 @@ func resourceAddonDeployment() *schema.Resource {
 	}
 }
 
+// validateSingleClusterProfile validates that exactly one cluster_profile is specified
+func validateSingleClusterProfile(d *schema.ResourceData) error {
+	profiles := d.Get("cluster_profile").([]interface{})
+	if len(profiles) == 0 {
+		return errors.New("exactly one cluster_profile is required, but none was specified")
+	}
+	if len(profiles) > 1 {
+		return fmt.Errorf("exactly one cluster_profile is allowed per addon deployment, but %d were specified. Use separate spectrocloud_addon_deployment resources for each profile", len(profiles))
+	}
+	return nil
+}
+
 func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	// Validate exactly one cluster_profile is specified
+	if err := validateSingleClusterProfile(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
@@ -79,10 +94,6 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	if len(addonDeployment.Profiles) == 0 {
-		return diag.FromErr(errors.New("at least one cluster_profile is required"))
-	}
-
 	diagnostics, isError := waitForClusterCreation(ctx, d, clusterUid, diags, c, false)
 	if isError {
 		return diagnostics
@@ -90,104 +101,45 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 	// Clear the ID to skip resource tainted
 	d.SetId("")
 
-	// Collect profile UIDs for the resource ID
-	profileUIDs := make([]string, 0, len(addonDeployment.Profiles))
-
-	// Process each profile - check if already attached, if so update, otherwise create
-	for _, profile := range addonDeployment.Profiles {
-		if isProfileAttached(cluster, profile.UID) {
-			// Profile already attached, update it
-			log.Printf("Profile %s already attached to cluster %s, updating", profile.UID, clusterUid)
-			singleProfileBody := &models.V1SpectroClusterProfiles{
-				Profiles:         []*models.V1SpectroClusterProfileEntity{profile},
-				SpcApplySettings: addonDeployment.SpcApplySettings,
-			}
-			clusterProfile, err := c.GetClusterProfile(profile.UID)
-			if err != nil {
-				d.SetId("")
-				return diag.FromErr(err)
-			}
-			err = c.UpdateAddonDeployment(cluster, singleProfileBody, clusterProfile)
-			if err != nil {
-				d.SetId("")
-				return diag.FromErr(err)
-			}
-		} else {
-			// Create new profile attachment
-			log.Printf("Attaching profile %s to cluster %s", profile.UID, clusterUid)
-			singleProfileBody := &models.V1SpectroClusterProfiles{
-				Profiles:         []*models.V1SpectroClusterProfileEntity{profile},
-				SpcApplySettings: addonDeployment.SpcApplySettings,
-			}
-			err = c.CreateAddonDeployment(cluster, singleProfileBody)
-			if err != nil {
-				d.SetId("")
-				return diag.FromErr(err)
-			}
-		}
-		profileUIDs = append(profileUIDs, profile.UID)
+	if isProfileAttached(cluster, addonDeployment.Profiles[0].UID) {
+		return updateAddonDeployment(ctx, d, m, c, cluster, clusterUid, diags)
 	}
 
-	// Set the resource ID with cluster UID and all profile UIDs
-	d.SetId(buildAddonDeploymentId(clusterUid, profileUIDs))
+	err = c.CreateAddonDeployment(cluster, addonDeployment)
+	if err != nil {
+		// Clear the ID to skip resource tainted
+		d.SetId("")
+		return diag.FromErr(err)
+	}
 
-	// Wait for all profiles to be deployed
-	for _, profile := range addonDeployment.Profiles {
-		diagnostics, isError = waitForAddonDeploymentCreation(ctx, d, *cluster, profile.UID, diags, c)
-		if isError {
-			return diagnostics
-		}
+	clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
+
+	diagnostics, isError = waitForAddonDeploymentCreation(ctx, d, *cluster, addonDeployment.Profiles[0].UID, diags, c)
+	if isError {
+		return diagnostics
 	}
 
 	return resourceAddonDeploymentRead(ctx, d, m)
 }
 
-// buildAddonDeploymentId creates a resource ID from cluster UID and profile UIDs
-// Format: {clusterUID}_{profileUID1}_{profileUID2}...
-func buildAddonDeploymentId(clusterUid string, profileUIDs []string) string {
-	// Sort profile UIDs for consistent ID generation
-	sortedUIDs := make([]string, len(profileUIDs))
-	copy(sortedUIDs, profileUIDs)
-	sort.Strings(sortedUIDs)
-
-	parts := []string{clusterUid}
-	parts = append(parts, sortedUIDs...)
-	return strings.Join(parts, "_")
-}
-
-// getAddonDeploymentId creates a resource ID from cluster UID and a single profile (legacy compatibility)
-// Format: {clusterUID}_{profileUID}
 func getAddonDeploymentId(clusterUid string, clusterProfile *models.V1ClusterProfile) string {
 	return clusterUid + "_" + clusterProfile.Metadata.UID
 }
 
-// parseAddonDeploymentId extracts cluster UID and profile UIDs from resource ID
-func parseAddonDeploymentId(id string) (clusterUID string, profileUIDs []string, err error) {
-	parts := strings.Split(id, "_")
-	if len(parts) < 2 {
-		return "", nil, fmt.Errorf("invalid addon deployment ID format: %s", id)
-	}
-	return parts[0], parts[1:], nil
-}
-
-// getClusterUID extracts cluster UID from resource ID (legacy support)
 func getClusterUID(addonDeploymentId string) string {
 	return strings.Split(addonDeploymentId, "_")[0]
 }
 
-// getClusterProfileUID extracts the first profile UID from resource ID (legacy support)
 func getClusterProfileUID(addonDeploymentId string) (string, error) {
 	sp := strings.Split(addonDeploymentId, "_")
 	if len(sp) < 2 {
 		return "", errors.New("invalid addon deployment ID format")
 	}
 	return sp[1], nil
-}
-
-// getClusterProfileUIDs extracts all profile UIDs from resource ID
-func getClusterProfileUIDs(addonDeploymentId string) ([]string, error) {
-	_, profileUIDs, err := parseAddonDeploymentId(addonDeploymentId)
-	return profileUIDs, err
 }
 
 func isProfileAttached(cluster *models.V1SpectroCluster, uid string) bool {
@@ -218,7 +170,7 @@ func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
-	diagnostics, done := readAddonDeploymentMultiple(c, d, cluster)
+	diagnostics, done := readAddonDeployment(c, d, cluster)
 	if done {
 		return diagnostics
 	}
@@ -227,6 +179,11 @@ func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m in
 }
 
 func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	// Validate exactly one cluster_profile is specified
+	if err := validateSingleClusterProfile(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	var diags diag.Diagnostics
 
 	if d.HasChanges("cluster_uid", "cluster_profile") {
@@ -235,120 +192,43 @@ func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, 
 
 		clusterUid := d.Get("cluster_uid").(string)
 
-		return updateAddonDeploymentMultiple(ctx, d, m, c, clusterUid, diags)
+		cluster, err := c.GetCluster(clusterUid)
+		if err != nil && cluster == nil {
+			return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
+		}
+
+		return updateAddonDeployment(ctx, d, m, c, cluster, clusterUid, diags)
 	}
 
 	return diags
 }
 
-func updateAddonDeploymentMultiple(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
-	// Get old and new profile configurations
-	oldProfilesRaw, newProfilesRaw := d.GetChange("cluster_profile")
-	oldProfiles := oldProfilesRaw.([]interface{})
-	newProfiles := newProfilesRaw.([]interface{})
-
-	// Build maps for comparison
-	oldProfileMap := make(map[string]map[string]interface{})
-	for _, p := range oldProfiles {
-		if p == nil {
-			continue
-		}
-		profile := p.(map[string]interface{})
-		if id, ok := profile["id"].(string); ok && id != "" {
-			oldProfileMap[id] = profile
-		}
-	}
-
-	newProfileMap := make(map[string]map[string]interface{})
-	for _, p := range newProfiles {
-		if p == nil {
-			continue
-		}
-		profile := p.(map[string]interface{})
-		if id, ok := profile["id"].(string); ok && id != "" {
-			newProfileMap[id] = profile
-		}
-	}
-
-	// Find profiles to delete (in old but not in new)
-	profilesToDelete := make([]string, 0)
-	for oldID := range oldProfileMap {
-		if _, exists := newProfileMap[oldID]; !exists {
-			profilesToDelete = append(profilesToDelete, oldID)
-		}
-	}
-
-	// Delete removed profiles
-	if len(profilesToDelete) > 0 {
-		log.Printf("Deleting %d profiles from cluster %s: %v", len(profilesToDelete), clusterUid, profilesToDelete)
-		deleteBody := &models.V1SpectroClusterProfilesDeleteEntity{
-			ProfileUids: profilesToDelete,
-		}
-		if err := c.DeleteAddonDeployment(clusterUid, deleteBody); err != nil {
-			return diag.FromErr(fmt.Errorf("failed to delete profiles: %w", err))
-		}
-	}
-
-	// Get the addon deployment for new/updated profiles
+func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interface{}, c *client.V1Client, cluster *models.V1SpectroCluster, clusterUid string, diags diag.Diagnostics) diag.Diagnostics {
 	addonDeployment, err := toAddonDeployment(c, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	if len(addonDeployment.Profiles) == 0 {
+		return diag.FromErr(errors.New("cannot convert addon deployment: zero profiles found"))
+	}
 
-	// Get cluster state for profile operations
-	cluster, err := c.GetCluster(clusterUid)
+	newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	if cluster == nil {
-		return diag.FromErr(fmt.Errorf("cluster not found: %s", clusterUid))
+	err = c.UpdateAddonDeployment(cluster, addonDeployment, newProfile)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 
-	// Process each profile - add new or update existing
-	newProfileUIDs := make([]string, 0, len(addonDeployment.Profiles))
-	for _, profile := range addonDeployment.Profiles {
-		newProfileUIDs = append(newProfileUIDs, profile.UID)
-
-		// Get the cluster profile details
-		clusterProfile, err := c.GetClusterProfile(profile.UID)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-
-		if isProfileAttached(cluster, profile.UID) {
-			// Profile exists, update it
-			log.Printf("Updating profile %s on cluster %s", profile.UID, clusterUid)
-			singleProfileBody := &models.V1SpectroClusterProfiles{
-				Profiles:         []*models.V1SpectroClusterProfileEntity{profile},
-				SpcApplySettings: addonDeployment.SpcApplySettings,
-			}
-			err = c.UpdateAddonDeployment(cluster, singleProfileBody, clusterProfile)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		} else {
-			// New profile, create it
-			log.Printf("Adding profile %s to cluster %s", profile.UID, clusterUid)
-			singleProfileBody := &models.V1SpectroClusterProfiles{
-				Profiles:         []*models.V1SpectroClusterProfileEntity{profile},
-				SpcApplySettings: addonDeployment.SpcApplySettings,
-			}
-			err = c.CreateAddonDeployment(cluster, singleProfileBody)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
+	clusterProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
+	if err != nil {
+		return diag.FromErr(err)
 	}
-
-	// Update resource ID with new profile UIDs
-	d.SetId(buildAddonDeploymentId(clusterUid, newProfileUIDs))
-
-	// Wait for all profiles to be deployed
-	for _, profile := range addonDeployment.Profiles {
-		diagnostics, isError := waitForAddonDeploymentUpdate(ctx, d, *cluster, profile.UID, diags, c)
-		if isError {
-			return diagnostics
-		}
+	d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
+	diagnostics, isError := waitForAddonDeploymentUpdate(ctx, d, *cluster, addonDeployment.Profiles[0].UID, diags, c)
+	if isError {
+		return diagnostics
 	}
 
 	return resourceAddonDeploymentRead(ctx, d, m)
