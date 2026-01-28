@@ -375,22 +375,6 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			acc["credential_type"] = "noAuth"
 			acc["username"] = ""
 			acc["password"] = ""
-			tlsConfig := make([]interface{}, 0, 1)
-			tls := make(map[string]interface{})
-			if registry.Spec.Auth.TLS != nil {
-				tls["certificate"] = registry.Spec.Auth.TLS.Certificate
-				tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
-			} else {
-				tls["certificate"] = ""
-				tls["insecure_skip_verify"] = false
-			}
-			tlsConfig = append(tlsConfig, tls)
-			acc["tls_config"] = tlsConfig
-			credentials = append(credentials, acc)
-			if err := d.Set("credentials", credentials); err != nil {
-				return diag.FromErr(err)
-			}
-			return diags
 		case "basic":
 			acc["credential_type"] = "basic"
 			acc["username"] = registry.Spec.Auth.Username
@@ -411,18 +395,18 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 				// No existing credentials in state, use API value
 				acc["password"] = registry.Spec.Auth.Password.String()
 			}
-			tlsConfig := make([]interface{}, 0, 1)
-			tls := make(map[string]interface{})
-			tls["certificate"] = registry.Spec.Auth.TLS.Certificate
-			tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
-			tlsConfig = append(tlsConfig, tls)
-			acc["tls_config"] = tlsConfig
-			credentials = append(credentials, acc)
-			if err := d.Set("credentials", credentials); err != nil {
-				return diag.FromErr(err)
-			}
-			return diags
 		}
+		tlsConfig := make([]interface{}, 0, 1)
+		tls := make(map[string]interface{})
+		tls["certificate"] = registry.Spec.Auth.TLS.Certificate
+		tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
+		tlsConfig = append(tlsConfig, tls)
+		acc["tls_config"] = tlsConfig
+		credentials = append(credentials, acc)
+		if err := d.Set("credentials", credentials); err != nil {
+			return diag.FromErr(err)
+		}
+		return diags
 	}
 
 	return diags
