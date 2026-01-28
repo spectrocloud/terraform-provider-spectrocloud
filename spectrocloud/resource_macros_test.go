@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -421,3 +422,78 @@ func TestResourceTenantMacrosDeleteNegative(t *testing.T) {
 //	assert.Nil(t, importedData)
 //	assert.Contains(t, err.Error(), "context must be either 'project' or 'tenant'")
 //}
+
+func TestGetMacrosId(t *testing.T) {
+	tests := []struct {
+		name        string
+		uid         string
+		setupClient func() *client.V1Client
+		expectError bool
+		expectedID  string
+		description string
+		verify      func(t *testing.T, id string, err error)
+	}{
+		{
+			name: "Project UID provided - returns project-macros-{uid}",
+			uid:  "test-project-uid-123",
+			setupClient: func() *client.V1Client {
+				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+			},
+			expectError: false,
+			expectedID:  "project-macros-test-project-uid-123",
+			description: "Should return project-macros-{uid} format when UID is provided",
+			verify: func(t *testing.T, id string, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.Equal(t, "project-macros-test-project-uid-123", id, "Should return correct project macro ID format")
+			},
+		},
+		{
+			name: "Empty UID - calls GetTenantUID and returns tenant-macros-{tenantID}",
+			uid:  "",
+			setupClient: func() *client.V1Client {
+				return getV1ClientWithResourceContext(unitTestMockAPIClient, "tenant")
+			},
+			expectError: false,
+			description: "Should call GetTenantUID and return tenant-macros-{tenantID} format when UID is empty",
+			verify: func(t *testing.T, id string, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.Contains(t, id, "tenant-macros-", "Should return tenant macro ID format")
+				// The actual tenant ID will be from the mock API response
+			},
+		},
+		{
+			name: "Empty string UID (not nil) - calls GetTenantUID",
+			uid:  "",
+			setupClient: func() *client.V1Client {
+				return getV1ClientWithResourceContext(unitTestMockAPIClient, "tenant")
+			},
+			expectError: false,
+			description: "Should treat empty string as tenant context and call GetTenantUID",
+			verify: func(t *testing.T, id string, err error) {
+				assert.NoError(t, err, "Should not have error")
+				assert.Contains(t, id, "tenant-macros-", "Should return tenant macro ID format")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := tt.setupClient()
+
+			id, err := GetMacrosId(c, tt.uid)
+
+			if tt.verify != nil {
+				tt.verify(t, id, err)
+			} else {
+				if tt.expectError {
+					assert.Error(t, err, tt.description)
+				} else {
+					assert.NoError(t, err, tt.description)
+					if tt.expectedID != "" {
+						assert.Equal(t, tt.expectedID, id, tt.description)
+					}
+				}
+			}
+		})
+	}
+}
