@@ -290,6 +290,26 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
+		isSyncSupported := false
+		if registry.Status != nil && registry.Status.SyncStatus != nil {
+			isSyncSupported = registry.Status.SyncStatus.IsSyncSupported
+		} else if registry.Spec.IsSyncSupported {
+			// Fallback to Spec if Status is not available (for backward compatibility)
+			isSyncSupported = registry.Spec.IsSyncSupported
+		}
+		if err := d.Set("is_synchronization", isSyncSupported); err != nil {
+			return diag.FromErr(err)
+		}
+		providerType := "helm" // default per schema
+		if registry.Spec.ProviderType != nil {
+			providerType = *registry.Spec.ProviderType
+		}
+		if err := d.Set("provider_type", providerType); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("wait_for_sync", false); err != nil {
+			return diag.FromErr(err)
+		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		switch *registry.Spec.Credentials.CredentialType {
@@ -335,13 +355,37 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
+		isPrivate := false
+		if registry.Spec.Auth != nil && registry.Spec.Auth.Type == "basic" {
+			isPrivate = true
+		}
+		if err := d.Set("is_private", isPrivate); err != nil {
+			return diag.FromErr(err)
+		}
+		providerType := "helm" // default per schema
+		if registry.Spec.ProviderType != nil {
+			providerType = *registry.Spec.ProviderType
+		}
+		if err := d.Set("provider_type", providerType); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set("endpoint_suffix", registry.Spec.BasePath); err != nil {
+			return diag.FromErr(err)
+		}
+		isSyncSupported := false
+		if registry.Status != nil && registry.Status.SyncStatus != nil {
+			isSyncSupported = registry.Status.SyncStatus.IsSyncSupported
+		} else if registry.Spec.IsSyncSupported {
+			// Fallback to Spec if Status is not available (for backward compatibility)
+			isSyncSupported = registry.Spec.IsSyncSupported
+		}
+		if err := d.Set("is_synchronization", isSyncSupported); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("wait_for_sync", false); err != nil {
 			return diag.FromErr(err)
 		}
 		credentials := make([]interface{}, 0, 1)
