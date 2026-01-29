@@ -176,7 +176,7 @@ Required:
 
 Optional:
 
-- `enable_lxd_vm` (Boolean) Whether to enable LXD VM. Default is `false`. Available once **Palette with LXD support** is released.
+- `enable_lxd_vm` (Boolean) Whether to enable LXD VM. Default is `false`.
 - `ntp_servers` (Set of String) A list of NTP servers to use instead of the machine image's default NTP server list.
 
 
