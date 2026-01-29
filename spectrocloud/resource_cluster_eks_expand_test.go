@@ -930,3 +930,97 @@ func TestResourceClusterEksImport(t *testing.T) {
 		})
 	}
 }
+
+func TestSetAdditionalSecurityGroups(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    map[string]interface{}
+		expected []*models.V1AwsResourceReference
+	}{
+		{
+			name:     "nil additional_security_groups",
+			input:    map[string]interface{}{},
+			expected: nil,
+		},
+		{
+			name: "empty additional_security_groups set",
+			input: map[string]interface{}{
+				"additional_security_groups": schema.NewSet(schema.HashString, []interface{}{}),
+			},
+			expected: []*models.V1AwsResourceReference{},
+		},
+		{
+			name: "single security group",
+			input: map[string]interface{}{
+				"additional_security_groups": schema.NewSet(schema.HashString, []interface{}{"sg-12345678"}),
+			},
+			expected: []*models.V1AwsResourceReference{
+				{
+					ID: "sg-12345678",
+				},
+			},
+		},
+		{
+			name: "security groups in different order",
+			input: map[string]interface{}{
+				"additional_security_groups": schema.NewSet(schema.HashString, []interface{}{"sg-zzz", "sg-aaa", "sg-mmm"}),
+			},
+			expected: []*models.V1AwsResourceReference{
+				{
+					ID: "sg-zzz",
+				},
+				{
+					ID: "sg-aaa",
+				},
+				{
+					ID: "sg-mmm",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := setAdditionalSecurityGroups(tc.input)
+
+			// For tests with multiple security groups, schema.Set doesn't preserve order
+			// So we need to compare by checking that all expected IDs are present
+			if len(tc.expected) > 1 && tc.name != "single security group" && tc.name != "security group with empty string" && tc.name != "security group with special characters" {
+				// Build maps of IDs for comparison (order-independent)
+				expectedIDs := make(map[string]bool)
+				for _, ref := range tc.expected {
+					expectedIDs[ref.ID] = true
+				}
+
+				resultIDs := make(map[string]bool)
+				for _, ref := range result {
+					resultIDs[ref.ID] = true
+				}
+
+				if len(expectedIDs) != len(resultIDs) {
+					t.Errorf("Unexpected number of security groups: expected %d, got %d", len(expectedIDs), len(resultIDs))
+					return
+				}
+
+				for id := range expectedIDs {
+					if !resultIDs[id] {
+						t.Errorf("Missing security group ID: %s", id)
+						return
+					}
+				}
+
+				for id := range resultIDs {
+					if !expectedIDs[id] {
+						t.Errorf("Unexpected security group ID: %s", id)
+						return
+					}
+				}
+			} else {
+				// For single item or nil cases, use direct comparison
+				if !reflect.DeepEqual(result, tc.expected) {
+					t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
+				}
+			}
+		})
+	}
+}
