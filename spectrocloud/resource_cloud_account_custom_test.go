@@ -3,8 +3,12 @@ package spectrocloud
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -169,8 +173,6 @@ func TestResourceCustomCloudAccountDelete(t *testing.T) {
 	diags := resourceCloudAccountCustomDelete(ctx, d, unitTestMockAPIClient)
 	assert.Len(t, diags, 0)
 }
-<<<<<<< Updated upstream
-=======
 
 func TestToCloudAccountCustom(t *testing.T) {
 	tests := []struct {
@@ -637,4 +639,3 @@ func TestResourceAccountCustomImport(t *testing.T) {
 		})
 	}
 }
->>>>>>> Stashed changes
