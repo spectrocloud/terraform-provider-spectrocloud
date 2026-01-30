@@ -27,13 +27,22 @@ resource "spectrocloud_registry_oci" "r1" {
 
 ## Import
 
-OCI registries can be imported using the registry ID. This is a tenant-level resource.
+OCI registries can be imported either using the registry ID or the registry name. This is a tenant-level resource.
 
+**Import by UID:**
 ```bash
 terraform import spectrocloud_registry_oci.example <registry_id>
 ```
 
 Where `<registry_id>` is the OCI registry ID.
+
+**Import by Name:**
+```bash
+terraform import spectrocloud_registry_oci.example <registry_name>
+```
+```bash
+terraform import spectrocloud_registry_oci.example "Pack Registry"
+```
 
 The import will automatically detect whether the registry is an ECR or basic type and populate all configuration fields from the Spectro Cloud API. After import, you can run `terraform plan` to see the current configuration and make any necessary adjustments.
 

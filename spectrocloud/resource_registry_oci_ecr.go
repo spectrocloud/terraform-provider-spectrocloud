@@ -290,6 +290,15 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
+		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("wait_for_sync", false); err != nil {
+			return diag.FromErr(err)
+		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		switch *registry.Spec.Credentials.CredentialType {
@@ -332,9 +341,16 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("name", registry.Metadata.Name); err != nil {
 			return diag.FromErr(err)
 		}
+
 		if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
 			return diag.FromErr(err)
 		}
+
+		isPrivate := registry.Spec.Auth.Type != "noAuth"
+		if err := d.Set("is_private", isPrivate); err != nil {
+			return diag.FromErr(err)
+		}
+
 		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
 			return diag.FromErr(err)
 		}
@@ -342,6 +358,13 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			return diag.FromErr(err)
 		}
 		if err := d.Set("endpoint_suffix", registry.Spec.BasePath); err != nil {
+			return diag.FromErr(err)
+		}
+
+		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("wait_for_sync", false); err != nil {
 			return diag.FromErr(err)
 		}
 		credentials := make([]interface{}, 0, 1)
@@ -372,18 +395,18 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 				// No existing credentials in state, use API value
 				acc["password"] = registry.Spec.Auth.Password.String()
 			}
-			tlsConfig := make([]interface{}, 0, 1)
-			tls := make(map[string]interface{})
-			tls["certificate"] = registry.Spec.Auth.TLS.Certificate
-			tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
-			tlsConfig = append(tlsConfig, tls)
-			acc["tls_config"] = tlsConfig
-			credentials = append(credentials, acc)
-			if err := d.Set("credentials", credentials); err != nil {
-				return diag.FromErr(err)
-			}
-			return diags
 		}
+		tlsConfig := make([]interface{}, 0, 1)
+		tls := make(map[string]interface{})
+		tls["certificate"] = registry.Spec.Auth.TLS.Certificate
+		tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
+		tlsConfig = append(tlsConfig, tls)
+		acc["tls_config"] = tlsConfig
+		credentials = append(credentials, acc)
+		if err := d.Set("credentials", credentials); err != nil {
+			return diag.FromErr(err)
+		}
+		return diags
 	}
 
 	return diags

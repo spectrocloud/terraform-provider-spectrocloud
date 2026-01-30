@@ -9,3 +9,10 @@ resource "spectrocloud_registry_oci" "r1" {
     external_id     = "sofiwhgowbrgiornM="
   }
 }
+# 
+# Import by Name:
+# terraform import spectrocloud_registry_oci.example "Pack Registry"
+# terraform import spectrocloud_registry_oci.example "REGISTRY-NAME"
+
+# Import by UID:
+# terraform import spectrocloud_registry_oci.example "IMPORT-UID"

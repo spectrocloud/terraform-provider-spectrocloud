@@ -157,7 +157,7 @@ func resourceClusterMaas() *schema.Resource {
 							Type:        schema.TypeBool,
 							Optional:    true,
 							Default:     false,
-							Description: "Whether to enable LXD VM. Default is `false`. Available once **Palette with LXD support** is released.",
+							Description: "Whether to enable LXD VM. Default is `false`.",
 						},
 						"ntp_servers": {
 							Type:     schema.TypeSet,
