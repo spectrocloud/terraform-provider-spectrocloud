@@ -104,8 +104,10 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 	}
 
 	// Flatten pause_agent_upgrades - always set during read (including import)
-	if err := d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster)); err != nil {
-		return diag.FromErr(err), true
+	if _, ok := d.GetOk("pause_agent_upgrades"); ok {
+		if err := d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster)); err != nil {
+			return diag.FromErr(err), true
+		}
 	}
 
 	hostConfig := cluster.Spec.ClusterConfig.HostClusterConfig
