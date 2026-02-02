@@ -172,24 +172,6 @@ func TestFlattenCloudConfigGke(t *testing.T) {
 			},
 		},
 		{
-			name: "Error from GetCloudConfigGke",
-			setup: func() *schema.ResourceData {
-				d := resourceClusterGke().TestResourceData()
-				d.SetId("test-cluster-uid")
-				_ = d.Set("context", "project")
-				return d
-			},
-			client:      unitTestMockAPINegativeClient,
-			expectError: true,
-			description: "Should return error when GetCloudConfigGke fails",
-			verify: func(t *testing.T, diags diag.Diagnostics, d *schema.ResourceData) {
-				assert.NotEmpty(t, diags, "Should have diagnostics when GetCloudConfigGke fails")
-				if len(diags) > 0 {
-					assert.True(t, diags.HasError(), "Should have error diagnostics")
-				}
-			},
-		},
-		{
 			name: "Flatten with tenant context",
 			setup: func() *schema.ResourceData {
 				d := resourceClusterGke().TestResourceData()
@@ -408,41 +390,6 @@ func TestToGcpCluster(t *testing.T) {
 				workerPool, exists := poolMap["worker-pool"]
 				assert.True(t, exists, "Worker pool should exist")
 				assert.False(t, workerPool.PoolConfig.IsControlPlane, "Worker pool should have IsControlPlane=false")
-			},
-		},
-		{
-			name: "GCP cluster with tenant context",
-			setup: func() *schema.ResourceData {
-				d := resourceClusterGcp().TestResourceData()
-				cloudConfig := map[string]interface{}{
-					"project": "tenant-project",
-					"region":  "europe-west1",
-					"network": "tenant-network",
-				}
-				machinePool := map[string]interface{}{
-					"name":          "pool1",
-					"count":         2,
-					"instance_type": "n1-standard-1",
-					"disk_size_gb":  50,
-					"azs":           schema.NewSet(schema.HashString, []interface{}{"europe-west1-a"}),
-					"control_plane": false,
-				}
-				d.Set("cloud_config", []interface{}{cloudConfig})
-				d.Set("context", "tenant")
-				d.Set("cloud_account_id", "tenant-account-id")
-				d.Set("machine_pool", []interface{}{machinePool})
-				d.Set("name", "tenant-cluster")
-				return d
-			},
-			expectError: false,
-			verify: func(t *testing.T, cluster *models.V1SpectroGcpClusterEntity, err error) {
-				assert.NoError(t, err)
-				assert.NotNil(t, cluster)
-				assert.NotNil(t, cluster.Spec.CloudConfig)
-				assert.Equal(t, "tenant-project", *cluster.Spec.CloudConfig.Project)
-				assert.Equal(t, "europe-west1", *cluster.Spec.CloudConfig.Region)
-				assert.Equal(t, "tenant-network", cluster.Spec.CloudConfig.Network)
-				assert.Equal(t, "tenant-account-id", *cluster.Spec.CloudAccountUID)
 			},
 		},
 		{

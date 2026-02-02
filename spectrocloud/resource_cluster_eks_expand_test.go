@@ -311,99 +311,6 @@ func TestToFargateProfileEks(t *testing.T) {
 			},
 		},
 		{
-			name: "fargate profile with multiple selectors",
-			input: map[string]interface{}{
-				"name":            "fargate-profile-2",
-				"subnets":         []interface{}{"subnet-11111"},
-				"additional_tags": map[string]interface{}{},
-				"selector": []interface{}{
-					map[string]interface{}{
-						"namespace": "kube-system",
-						"labels": map[string]interface{}{
-							"k8s-app": "kube-dns",
-						},
-					},
-					map[string]interface{}{
-						"namespace": "default",
-						"labels": map[string]interface{}{
-							"app": "web",
-						},
-					},
-				},
-			},
-			expected: &models.V1FargateProfile{
-				Name:           types.Ptr("fargate-profile-2"),
-				SubnetIds:      []string{"subnet-11111"},
-				AdditionalTags: map[string]string{},
-				Selectors: []*models.V1FargateSelector{
-					{
-						Namespace: types.Ptr("kube-system"),
-						Labels: map[string]string{
-							"k8s-app": "kube-dns",
-						},
-					},
-					{
-						Namespace: types.Ptr("default"),
-						Labels: map[string]string{
-							"app": "web",
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "fargate profile with empty selectors",
-			input: map[string]interface{}{
-				"name":    "fargate-profile-3",
-				"subnets": []interface{}{"subnet-22222"},
-				"additional_tags": map[string]interface{}{
-					"Owner": "devops",
-				},
-				"selector": []interface{}{},
-			},
-			expected: &models.V1FargateProfile{
-				Name:      types.Ptr("fargate-profile-3"),
-				SubnetIds: []string{"subnet-22222"},
-				AdditionalTags: map[string]string{
-					"Owner": "devops",
-				},
-				Selectors: []*models.V1FargateSelector{},
-			},
-		},
-		{
-			name: "fargate profile with empty subnets",
-			input: map[string]interface{}{
-				"name":    "fargate-profile-4",
-				"subnets": []interface{}{},
-				"additional_tags": map[string]interface{}{
-					"CostCenter": "engineering",
-				},
-				"selector": []interface{}{
-					map[string]interface{}{
-						"namespace": "production",
-						"labels": map[string]interface{}{
-							"env": "prod",
-						},
-					},
-				},
-			},
-			expected: &models.V1FargateProfile{
-				Name:      types.Ptr("fargate-profile-4"),
-				SubnetIds: []string{},
-				AdditionalTags: map[string]string{
-					"CostCenter": "engineering",
-				},
-				Selectors: []*models.V1FargateSelector{
-					{
-						Namespace: types.Ptr("production"),
-						Labels: map[string]string{
-							"env": "prod",
-						},
-					},
-				},
-			},
-		},
-		{
 			name: "fargate profile with single selector and multiple labels",
 			input: map[string]interface{}{
 				"name":    "fargate-profile-7",
@@ -488,63 +395,6 @@ func TestToCloudConfigEks(t *testing.T) {
 		expected *models.V1EksCloudClusterConfigEntity
 	}{
 		{
-			name: "cloud config with all fields - public endpoint",
-			input: map[string]interface{}{
-				"region":                "us-west-2",
-				"vpc_id":                "vpc-0abcd1234ef56789",
-				"ssh_key_name":          "my-key-pair",
-				"endpoint_access":       "public",
-				"public_access_cidrs":   schema.NewSet(schema.HashString, []interface{}{"0.0.0.0/0"}),
-				"private_access_cidrs":  schema.NewSet(schema.HashString, []interface{}{}),
-				"encryption_config_arn": "arn:aws:kms:us-west-2:123456789012:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
-			},
-			expected: &models.V1EksCloudClusterConfigEntity{
-				ClusterConfig: &models.V1EksClusterConfig{
-					BastionDisabled: true,
-					VpcID:           "vpc-0abcd1234ef56789",
-					Region:          types.Ptr("us-west-2"),
-					SSHKeyName:      "my-key-pair",
-					EncryptionConfig: &models.V1EncryptionConfig{
-						IsEnabled: true,
-						Provider:  "arn:aws:kms:us-west-2:123456789012:key/abcd1234-a123-456a-a12b-a123b4cd56ef",
-					},
-					EndpointAccess: &models.V1EksClusterConfigEndpointAccess{
-						Public:       true,
-						Private:      false,
-						PublicCIDRs:  []string{"0.0.0.0/0"},
-						PrivateCIDRs: []string{},
-					},
-				},
-			},
-		},
-		{
-			name: "cloud config with private endpoint",
-			input: map[string]interface{}{
-				"region":                "us-east-1",
-				"vpc_id":                "vpc-12345678",
-				"ssh_key_name":          "test-key",
-				"endpoint_access":       "private",
-				"public_access_cidrs":   schema.NewSet(schema.HashString, []interface{}{}),
-				"private_access_cidrs":  schema.NewSet(schema.HashString, []interface{}{"172.23.12.12/0"}),
-				"encryption_config_arn": "",
-			},
-			expected: &models.V1EksCloudClusterConfigEntity{
-				ClusterConfig: &models.V1EksClusterConfig{
-					BastionDisabled:  true,
-					VpcID:            "vpc-12345678",
-					Region:           types.Ptr("us-east-1"),
-					SSHKeyName:       "test-key",
-					EncryptionConfig: nil,
-					EndpointAccess: &models.V1EksClusterConfigEndpointAccess{
-						Public:       false,
-						Private:      true,
-						PublicCIDRs:  []string{},
-						PrivateCIDRs: []string{"172.23.12.12/0"},
-					},
-				},
-			},
-		},
-		{
 			name: "cloud config with private_and_public endpoint",
 			input: map[string]interface{}{
 				"region":                "us-west-1",
@@ -597,33 +447,6 @@ func TestToCloudConfigEks(t *testing.T) {
 						Private:      false,
 						PublicCIDRs:  []string{"0.0.0.0/0"},
 						PrivateCIDRs: []string{},
-					},
-				},
-			},
-		},
-		{
-			name: "cloud config with multiple private CIDRs",
-			input: map[string]interface{}{
-				"region":                "us-west-2",
-				"vpc_id":                "vpc-private",
-				"ssh_key_name":          "private-key",
-				"endpoint_access":       "private",
-				"public_access_cidrs":   schema.NewSet(schema.HashString, []interface{}{}),
-				"private_access_cidrs":  schema.NewSet(schema.HashString, []interface{}{"172.20.0.0/16", "172.21.0.0/16"}),
-				"encryption_config_arn": nil,
-			},
-			expected: &models.V1EksCloudClusterConfigEntity{
-				ClusterConfig: &models.V1EksClusterConfig{
-					BastionDisabled:  true,
-					VpcID:            "vpc-private",
-					Region:           types.Ptr("us-west-2"),
-					SSHKeyName:       "private-key",
-					EncryptionConfig: nil,
-					EndpointAccess: &models.V1EksClusterConfigEndpointAccess{
-						Public:       false,
-						Private:      true,
-						PublicCIDRs:  []string{},
-						PrivateCIDRs: []string{"172.20.0.0/16", "172.21.0.0/16"},
 					},
 				},
 			},

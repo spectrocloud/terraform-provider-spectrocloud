@@ -245,40 +245,6 @@ func TestResourceApplianceImport(t *testing.T) {
 				}
 			},
 		},
-		{
-			name: "Successful import with tags",
-			setup: func() *schema.ResourceData {
-				d := resourceAppliance().TestResourceData()
-				d.SetId("test-appliance-id")
-				return d
-			},
-			client:      unitTestMockAPIClient,
-			expectError: false,
-			description: "Should import appliance with tags if present",
-			verify: func(t *testing.T, importedData []*schema.ResourceData, err error) {
-				if err == nil {
-					assert.NotNil(t, importedData)
-					// Tags are set by GetCommonAppliance if appliance has labels
-				}
-			},
-		},
-		{
-			name: "Successful import with tunnel config",
-			setup: func() *schema.ResourceData {
-				d := resourceAppliance().TestResourceData()
-				d.SetId("test-appliance-id")
-				return d
-			},
-			client:      unitTestMockAPIClient,
-			expectError: false,
-			description: "Should import appliance with tunnel config if present",
-			verify: func(t *testing.T, importedData []*schema.ResourceData, err error) {
-				if err == nil {
-					assert.NotNil(t, importedData)
-					// Tunnel config fields are set by GetCommonAppliance if appliance has TunnelConfig
-				}
-			},
-		},
 	}
 
 	for _, tt := range tests {

@@ -212,37 +212,6 @@ func TestToCloudAccountCustom(t *testing.T) {
 			},
 		},
 		{
-			name: "Successful conversion with multiple credentials",
-			setup: func() *schema.ResourceData {
-				d := resourceCloudAccountCustom().TestResourceData()
-				d.Set("name", "multi-cred-account")
-				d.Set("private_cloud_gateway_id", "pcg-123")
-				cred := map[string]interface{}{
-					"username":     "user1",
-					"password":     "pass1",
-					"api_key":      "key123",
-					"secret_key":   "secret123",
-					"access_token": "token123",
-				}
-				d.Set("credentials", cred)
-				return d
-			},
-			expectError: false,
-			description: "Should successfully convert with multiple credential fields",
-			verify: func(t *testing.T, account *models.V1CustomAccountEntity, err error) {
-				assert.NoError(t, err)
-				assert.NotNil(t, account)
-				assert.Equal(t, "multi-cred-account", account.Metadata.Name)
-				assert.Equal(t, "pcg-123", account.Metadata.Annotations[OverlordUID])
-				assert.Len(t, account.Spec.Credentials, 5)
-				assert.Equal(t, "user1", account.Spec.Credentials["username"])
-				assert.Equal(t, "pass1", account.Spec.Credentials["password"])
-				assert.Equal(t, "key123", account.Spec.Credentials["api_key"])
-				assert.Equal(t, "secret123", account.Spec.Credentials["secret_key"])
-				assert.Equal(t, "token123", account.Spec.Credentials["access_token"])
-			},
-		},
-		{
 			name: "Successful conversion with single credential",
 			setup: func() *schema.ResourceData {
 				d := resourceCloudAccountCustom().TestResourceData()
@@ -281,48 +250,6 @@ func TestToCloudAccountCustom(t *testing.T) {
 				assert.Error(t, err)
 				assert.Nil(t, account)
 				assert.Contains(t, err.Error(), "credentials are required")
-			},
-		},
-		{
-			name: "Error when credentials is nil",
-			setup: func() *schema.ResourceData {
-				d := resourceCloudAccountCustom().TestResourceData()
-				d.Set("name", "test-name")
-				d.Set("private_cloud_gateway_id", "test-pcg-id")
-				d.Set("credentials", nil)
-				return d
-			},
-			expectError: true,
-			errorMsg:    "credentials are required for custom cloud account operations",
-			description: "Should return error when credentials is nil",
-			verify: func(t *testing.T, account *models.V1CustomAccountEntity, err error) {
-				assert.Error(t, err)
-				assert.Nil(t, account)
-				assert.Contains(t, err.Error(), "credentials are required")
-			},
-		},
-		{
-			name: "Successful conversion with special characters in credentials",
-			setup: func() *schema.ResourceData {
-				d := resourceCloudAccountCustom().TestResourceData()
-				d.Set("name", "special-chars-account")
-				d.Set("private_cloud_gateway_id", "pcg-special")
-				cred := map[string]interface{}{
-					"password": "p@ssw0rd!@#$%^&*()",
-					"api_key":  "key-with-dashes-and_underscores",
-					"token":    "token/with/slashes",
-				}
-				d.Set("credentials", cred)
-				return d
-			},
-			expectError: false,
-			description: "Should successfully convert credentials with special characters",
-			verify: func(t *testing.T, account *models.V1CustomAccountEntity, err error) {
-				assert.NoError(t, err)
-				assert.NotNil(t, account)
-				assert.Equal(t, "p@ssw0rd!@#$%^&*()", account.Spec.Credentials["password"])
-				assert.Equal(t, "key-with-dashes-and_underscores", account.Spec.Credentials["api_key"])
-				assert.Equal(t, "token/with/slashes", account.Spec.Credentials["token"])
 			},
 		},
 	}

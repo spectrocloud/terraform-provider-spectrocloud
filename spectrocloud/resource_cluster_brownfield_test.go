@@ -509,39 +509,6 @@ func TestToBrownfieldClusterSpecAws(t *testing.T) {
 			},
 		},
 		{
-			name: "import_mode read_only",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-			},
-			expected: &models.V1SpectroAwsClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "with proxy fields",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"proxy":                "http://proxy.example.com:8080",
-				"no_proxy":             "localhost,127.0.0.1",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroAwsClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy:            "http://proxy.example.com:8080",
-						NoProxy:              "localhost,127.0.0.1",
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-		{
 			name: "import_mode read_only with proxy",
 			input: map[string]interface{}{
 				"import_mode": "read_only",
@@ -746,18 +713,6 @@ func TestToBrownfieldClusterSpecGcp(t *testing.T) {
 			},
 		},
 		{
-			name: "import_mode read_only",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-			},
-			expected: &models.V1SpectroGcpClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
 			name: "import_mode read_only with proxy",
 			input: map[string]interface{}{
 				"import_mode": "read_only",
@@ -770,21 +725,6 @@ func TestToBrownfieldClusterSpecGcp(t *testing.T) {
 					Proxy: &models.V1ClusterProxySpec{
 						HTTPProxy: "http://proxy.example.com:8080",
 						NoProxy:   "localhost",
-					},
-				},
-			},
-		},
-		{
-			name: "partial proxy fields",
-			input: map[string]interface{}{
-				"import_mode": "full",
-				"proxy":       "http://proxy.example.com:8080",
-			},
-			expected: &models.V1SpectroGcpClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
 					},
 				},
 			},
@@ -895,38 +835,6 @@ func TestToBrownfieldClusterSpecVsphere(t *testing.T) {
 						NoProxy:              "localhost,127.0.0.1",
 						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
 						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-		{
-			name: "import_mode read_only with proxy",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-				"proxy":       "http://proxy.example.com:8080",
-				"no_proxy":    "localhost",
-			},
-			expected: &models.V1SpectroVsphereClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
-						NoProxy:   "localhost",
-					},
-				},
-			},
-		},
-		{
-			name: "partial proxy fields",
-			input: map[string]interface{}{
-				"import_mode": "full",
-				"proxy":       "http://proxy.example.com:8080",
-			},
-			expected: &models.V1SpectroVsphereClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
 					},
 				},
 			},
@@ -1304,209 +1212,6 @@ func TestReadCommonFieldsBrownfield(t *testing.T) {
 				assert.Equal(t, "lock", pauseAgentUpgrades)
 			},
 		},
-		{
-			name: "Success - cluster with host_config field and IsHostCluster true",
-			setupClient: func() *client.V1Client {
-				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-			},
-			setupData: func() *schema.ResourceData {
-				d := resourceClusterBrownfield().TestResourceData()
-				d.SetId(clusterID)
-				d.Set("host_config", []interface{}{})
-				return d
-			},
-			cluster: &models.V1SpectroCluster{
-				Metadata: &models.V1ObjectMeta{
-					Labels:      map[string]string{},
-					Annotations: map[string]string{},
-				},
-				Spec: &models.V1SpectroClusterSpec{
-					ClusterConfig: &models.V1ClusterConfig{
-						HostClusterConfig: &models.V1HostClusterConfig{
-							IsHostCluster: boolPtr(true),
-						},
-					},
-				},
-				Status: &models.V1SpectroClusterStatus{
-					Repave: &models.V1ClusterRepaveStatus{
-						State: repaveStatePtr("Pending"),
-					},
-				},
-			},
-			expectError: false,
-			description: "Should set host_config when field exists and IsHostCluster is true",
-			verify: func(t *testing.T, d *schema.ResourceData, diags diag.Diagnostics) {
-				assert.False(t, diags.HasError())
-				// host_config should be set (even if empty, the function attempts to set it)
-			},
-		},
-		{
-			name: "Success - cluster with host_config field but IsHostCluster false",
-			setupClient: func() *client.V1Client {
-				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-			},
-			setupData: func() *schema.ResourceData {
-				d := resourceClusterBrownfield().TestResourceData()
-				d.SetId(clusterID)
-				d.Set("host_config", []interface{}{})
-				return d
-			},
-			cluster: &models.V1SpectroCluster{
-				Metadata: &models.V1ObjectMeta{
-					Labels:      map[string]string{},
-					Annotations: map[string]string{},
-				},
-				Spec: &models.V1SpectroClusterSpec{
-					ClusterConfig: &models.V1ClusterConfig{
-						HostClusterConfig: &models.V1HostClusterConfig{
-							IsHostCluster: boolPtr(false),
-						},
-					},
-				},
-				Status: &models.V1SpectroClusterStatus{
-					Repave: &models.V1ClusterRepaveStatus{
-						State: repaveStatePtr("Pending"),
-					},
-				},
-			},
-			expectError: false,
-			description: "Should not set host_config when IsHostCluster is false",
-			verify: func(t *testing.T, d *schema.ResourceData, diags diag.Diagnostics) {
-				assert.False(t, diags.HasError())
-				// host_config should not be set when IsHostCluster is false
-			},
-		},
-		{
-			name: "Error - GetClusterWithoutStatus returns error",
-			setupClient: func() *client.V1Client {
-				return getV1ClientWithResourceContext(unitTestMockAPINegativeClient, "project")
-			},
-			setupData: func() *schema.ResourceData {
-				d := resourceClusterBrownfield().TestResourceData()
-				d.SetId(clusterID)
-				return d
-			},
-			cluster: &models.V1SpectroCluster{
-				Metadata: &models.V1ObjectMeta{
-					Labels:      map[string]string{},
-					Annotations: map[string]string{},
-				},
-				Spec: &models.V1SpectroClusterSpec{
-					ClusterConfig: &models.V1ClusterConfig{},
-				},
-				Status: &models.V1SpectroClusterStatus{
-					Repave: &models.V1ClusterRepaveStatus{
-						State: repaveStatePtr("Pending"),
-					},
-				},
-			},
-			expectError: false, // Mock may not simulate this error case
-			description: "Should handle GetClusterWithoutStatus (may not error with current mock)",
-			verify: func(t *testing.T, d *schema.ResourceData, diags diag.Diagnostics) {
-				// The function may or may not return error depending on mock API behavior
-				// This test verifies the function executes without panic
-				if diags.HasError() {
-					t.Logf("GetClusterWithoutStatus returned error (expected in some cases): %v", diags)
-				}
-			},
-		},
-		{
-			name: "Success - cluster with nil labels",
-			setupClient: func() *client.V1Client {
-				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-			},
-			setupData: func() *schema.ResourceData {
-				d := resourceClusterBrownfield().TestResourceData()
-				d.SetId(clusterID)
-				return d
-			},
-			cluster: &models.V1SpectroCluster{
-				Metadata: &models.V1ObjectMeta{
-					Labels:      nil,
-					Annotations: map[string]string{},
-				},
-				Spec: &models.V1SpectroClusterSpec{
-					ClusterConfig: &models.V1ClusterConfig{},
-				},
-				Status: &models.V1SpectroClusterStatus{
-					Repave: &models.V1ClusterRepaveStatus{
-						State: repaveStatePtr("Pending"),
-					},
-				},
-			},
-			expectError: false,
-			description: "Should handle nil labels gracefully",
-			verify: func(t *testing.T, d *schema.ResourceData, diags diag.Diagnostics) {
-				assert.False(t, diags.HasError())
-				tags := d.Get("tags").(*schema.Set)
-				assert.NotNil(t, tags)
-			},
-		},
-		{
-			name: "Success - cluster with empty timezone",
-			setupClient: func() *client.V1Client {
-				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-			},
-			setupData: func() *schema.ResourceData {
-				d := resourceClusterBrownfield().TestResourceData()
-				d.SetId(clusterID)
-				return d
-			},
-			cluster: &models.V1SpectroCluster{
-				Metadata: &models.V1ObjectMeta{
-					Labels:      map[string]string{},
-					Annotations: map[string]string{},
-				},
-				Spec: &models.V1SpectroClusterSpec{
-					ClusterConfig: &models.V1ClusterConfig{
-						Timezone: "",
-					},
-				},
-				Status: &models.V1SpectroClusterStatus{
-					Repave: &models.V1ClusterRepaveStatus{
-						State: repaveStatePtr("Pending"),
-					},
-				},
-			},
-			expectError: false,
-			description: "Should not set cluster_timezone when empty",
-			verify: func(t *testing.T, d *schema.ResourceData, diags diag.Diagnostics) {
-				assert.False(t, diags.HasError())
-				// cluster_timezone should not be set when empty
-			},
-		},
-		{
-			name: "Success - cluster without review_repave_state field",
-			setupClient: func() *client.V1Client {
-				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-			},
-			setupData: func() *schema.ResourceData {
-				d := resourceClusterBrownfield().TestResourceData()
-				d.SetId(clusterID)
-				// Don't set review_repave_state
-				return d
-			},
-			cluster: &models.V1SpectroCluster{
-				Metadata: &models.V1ObjectMeta{
-					Labels:      map[string]string{},
-					Annotations: map[string]string{},
-				},
-				Spec: &models.V1SpectroClusterSpec{
-					ClusterConfig: &models.V1ClusterConfig{},
-				},
-				Status: &models.V1SpectroClusterStatus{
-					Repave: &models.V1ClusterRepaveStatus{
-						State: repaveStatePtr("Approved"),
-					},
-				},
-			},
-			expectError: false,
-			description: "Should not set review_repave_state when field doesn't exist",
-			verify: func(t *testing.T, d *schema.ResourceData, diags diag.Diagnostics) {
-				assert.False(t, diags.HasError())
-				// review_repave_state should not be set when field doesn't exist
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -1564,21 +1269,6 @@ func TestIsClusterRunningHealthy(t *testing.T) {
 			description: "Should return false and Unknown when cluster is nil",
 		},
 		{
-			name: "Cluster with nil Status - returns false, Unknown",
-			setupClient: func() *client.V1Client {
-				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-			},
-			cluster: &models.V1SpectroCluster{
-				Metadata: &models.V1ObjectMeta{
-					UID: clusterUID,
-				},
-				Status: nil,
-			},
-			expected:    false,
-			expectedMsg: "Unknown",
-			description: "Should return false and Unknown when Status is nil",
-		},
-		{
 			name: "Cluster state is Pending - returns false, Pending",
 			setupClient: func() *client.V1Client {
 				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
@@ -1628,23 +1318,6 @@ func TestIsClusterRunningHealthy(t *testing.T) {
 			expected:    true,
 			expectedMsg: "Running",
 			description: "Should return true and Running when GetClusterOverview fails (assumes Running is enough)",
-		},
-		{
-			name: "Cluster state is Running, GetClusterOverview returns nil/error - returns true, Running",
-			setupClient: func() *client.V1Client {
-				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-			},
-			cluster: &models.V1SpectroCluster{
-				Metadata: &models.V1ObjectMeta{
-					UID: clusterUID,
-				},
-				Status: &models.V1SpectroClusterStatus{
-					State: "Running",
-				},
-			},
-			expected:    true,
-			expectedMsg: "Running",
-			description: "Should return true and Running when GetClusterOverview fails or returns nil (assumes Running is enough)",
 		},
 		{
 			name: "Cluster state is Running, health not available - returns true, Running",

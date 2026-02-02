@@ -11,21 +11,6 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
-// prepareBaseAwsAccountDataForCRUD returns resource data for testResourceCRUD (no Id; Create sets it).
-// func prepareBaseAwsAccountDataForCRUD() *schema.ResourceData {
-// 	d := resourceCloudAccountAws().TestResourceData()
-// 	_ = d.Set("name", "test-aws-account")
-// 	_ = d.Set("context", "project")
-// 	_ = d.Set("aws_access_key", "test-access-key")
-// 	_ = d.Set("aws_secret_key", "test-secret-key")
-// 	_ = d.Set("type", "secret")
-// 	_ = d.Set("arn", "test-arn")
-// 	_ = d.Set("external_id", "test-external-id")
-// 	_ = d.Set("partition", "aws")
-// 	_ = d.Set("policy_arns", []string{"test-policy-arn"})
-// 	return d
-// }
-
 func TestToAwsAccountCTXProjectSecret(t *testing.T) {
 	rd := resourceCloudAccountAws().TestResourceData()
 	rd.Set("name", "aws_unit_test_acc")
