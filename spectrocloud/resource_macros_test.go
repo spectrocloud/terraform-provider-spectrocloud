@@ -247,55 +247,31 @@ func TestResourceTenantMacrosDelete(t *testing.T) {
 	assert.Equal(t, 0, len(diags))
 }
 
-func TestResourceProjectMacrosCreateNegative(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseProjectMacrosSchema() // Assuming this prepares the schema data correctly
+func TestResourceMacrosNegative_TableDriven(t *testing.T) {
+	meta := unitTestMockAPINegativeClient
+	create := resourceMacrosCreate
+	read := resourceMacrosRead
+	update := resourceMacrosUpdate
+	delete := resourceMacrosDelete
 
-	// Call the function
-	diags := resourceMacrosCreate(ctx, resourceData, unitTestMockAPINegativeClient)
-
-	// Assertions
-	if assert.NotEmpty(t, diags) { // Check that diags is not empty
-		assert.Contains(t, diags[0].Summary, "Macro already exists") // Verify the error message
+	tests := []struct {
+		name      string
+		op        string
+		prepare   func() *schema.ResourceData
+		setID     bool
+		msgSubstr string
+	}{
+		{"Project_Create", "Create", prepareBaseProjectMacrosSchema, false, "Macro already exists"},
+		{"Tenant_Create", "Create", prepareBaseTenantMacrosSchema, false, "Macro already exists"},
+		{"Project_Read", "Read", prepareBaseProjectMacrosSchema, true, "Macro not found"},
+		{"Tenant_Read", "Read", prepareBaseTenantMacrosSchema, true, "Macro not found"},
+		{"Project_Delete", "Delete", prepareBaseProjectMacrosSchema, true, "Macro not found"},
+		{"Tenant_Delete", "Delete", prepareBaseTenantMacrosSchema, true, "Macro not found"},
 	}
-}
-
-func TestResourceTenantMacrosCreateNegative(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseTenantMacrosSchema()
-
-	// Call the function
-	diags := resourceMacrosCreate(ctx, resourceData, unitTestMockAPINegativeClient)
-
-	// Assertions
-	if assert.NotEmpty(t, diags) { // Check that diags is not empty
-		assert.Contains(t, diags[0].Summary, "Macro already exists") // Verify the error message
-	}
-}
-
-func TestResourceProjectMacrosReadNegative(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseProjectMacrosSchema()
-
-	// Call the function
-	diags := resourceMacrosRead(ctx, resourceData, unitTestMockAPINegativeClient)
-
-	// Assertions
-	if assert.NotEmpty(t, diags) { // Check that diags is not empty
-		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
-	}
-}
-
-func TestResourceTenantMacrosReadNegative(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseTenantMacrosSchema()
-
-	// Call the function
-	diags := resourceMacrosRead(ctx, resourceData, unitTestMockAPINegativeClient)
-
-	// Assertions
-	if assert.NotEmpty(t, diags) { // Check that diags is not empty
-		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testResourceCRUDNegative(t, tt.op, tt.prepare, meta, create, read, update, delete, tt.setID, tt.msgSubstr)
+		})
 	}
 }
 
@@ -336,92 +312,6 @@ func TestResourceTenantMacrosUpdateNegative(t *testing.T) {
 	// Assertions
 	assert.Empty(t, diags)
 }
-
-func TestResourceProjectMacrosDeleteNegative(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseProjectMacrosSchema()
-
-	// Call the function
-	diags := resourceMacrosDelete(ctx, resourceData, unitTestMockAPINegativeClient)
-
-	// Assertions
-	if assert.NotEmpty(t, diags) { // Check that diags is not empty
-		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
-	}
-}
-
-func TestResourceTenantMacrosDeleteNegative(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseTenantMacrosSchema()
-
-	// Call the function
-	diags := resourceMacrosDelete(ctx, resourceData, unitTestMockAPINegativeClient)
-
-	// Assertions
-	if assert.NotEmpty(t, diags) { // Check that diags is not empty
-		assert.Contains(t, diags[0].Summary, "Macro not found") // Verify the error message
-	}
-}
-
-//func TestResourceTenantMacrosImportState(t *testing.T) {
-//	ctx := context.Background()
-//	resourceData := resourceMacros().TestResourceData()
-//	resourceData.SetId("test-tenant-id:tenant")
-//
-//	// Call the function
-//	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
-//
-//	// Assertions
-//	assert.NoError(t, err)
-//	assert.NotNil(t, importedData)
-//	assert.Equal(t, 1, len(importedData))
-//	assert.Equal(t, "test-tenant-id", importedData[0].Id())
-//	assert.Equal(t, "tenant", importedData[0].Get("context"))
-//}
-
-//func TestResourceProjectMacrosImportState(t *testing.T) {
-//	ctx := context.Background()
-//	resourceData := resourceMacros().TestResourceData()
-//	resourceData.SetId("test-project-id:project")
-//
-//	// Call the function
-//	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
-//
-//	// Assertions
-//	assert.NoError(t, err)
-//	assert.NotNil(t, importedData)
-//	assert.Equal(t, 1, len(importedData))
-//	assert.Equal(t, "test-project-id", importedData[0].Id())
-//	assert.Equal(t, "project", importedData[0].Get("context"))
-//}
-
-//func TestResourceMacrosImportStateInvalidID(t *testing.T) {
-//	ctx := context.Background()
-//	resourceData := resourceMacros().TestResourceData()
-//	resourceData.SetId("invalid-id") // Missing context
-//
-//	// Call the function
-//	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
-//
-//	// Assertions
-//	assert.Error(t, err)
-//	assert.Nil(t, importedData)
-//	assert.Contains(t, err.Error(), "import ID must be in the format 'id:context'")
-//}
-//
-//func TestResourceMacrosImportStateInvalidContext(t *testing.T) {
-//	ctx := context.Background()
-//	resourceData := resourceMacros().TestResourceData()
-//	resourceData.SetId("test-id:invalid-context")
-//
-//	// Call the function
-//	importedData, err := resourceMacrosImport(ctx, resourceData, unitTestMockAPIClient)
-//
-//	// Assertions
-//	assert.Error(t, err)
-//	assert.Nil(t, importedData)
-//	assert.Contains(t, err.Error(), "context must be either 'project' or 'tenant'")
-//}
 
 func TestGetMacrosId(t *testing.T) {
 	tests := []struct {
