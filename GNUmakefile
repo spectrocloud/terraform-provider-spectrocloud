@@ -43,9 +43,59 @@ generate:
 	go generate ./...
 
 ##@ Test Targets
+
+# Test variables
+TEST ?= ./spectrocloud/...
+TESTARGS ?=
+TEST_COUNT ?= 1
+PARALLEL ?= 4
+ACCTEST_TIMEOUT ?= 120m
+UNITTEST_TIMEOUT ?= 30m
+
+.PHONY: test
+test: ## Run unit tests only (excludes TestAcc* tests)
+	@echo "Running unit tests..."
+	go test $(TEST) -v -count=$(TEST_COUNT) -parallel=$(PARALLEL) \
+		-run '^Test[^A]|^TestA[^c]|^TestAc[^c]' \
+		-timeout $(UNITTEST_TIMEOUT) $(TESTARGS)
+
+.PHONY: test-unit
+test-unit: test ## Alias for 'test' target
+
 .PHONY: testacc
-testacc: ## Run acceptance tests
-	TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m
+testacc: ## Run acceptance tests (requires TF_ACC=1 and API credentials)
+	@echo "Running acceptance tests..."
+	TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... \
+		-coverprofile=profile.cov $(TEST) -timeout $(ACCTEST_TIMEOUT)
+
+.PHONY: testacc-vcr
+testacc-vcr: ## Run acceptance tests with VCR replay mode
+	@echo "Running acceptance tests with VCR replay..."
+	TF_ACC=1 go test -v $(TEST) -run 'TestAcc' -timeout $(ACCTEST_TIMEOUT) $(TESTARGS)
+
+.PHONY: testacc-vcr-record
+testacc-vcr-record: ## Run acceptance tests in VCR record mode (requires API credentials)
+	@echo "Running acceptance tests with VCR record mode..."
+	@echo "WARNING: This will make real API calls and record them to cassette files"
+	VCR_RECORD=true TF_ACC=1 go test -v $(TEST) -run 'TestAcc' -timeout $(ACCTEST_TIMEOUT) $(TESTARGS)
+
+.PHONY: test-vcr
+test-vcr: ## Run VCR-enabled unit tests
+	@echo "Running VCR unit tests..."
+	go test $(TEST) -v -run 'TestVCR' -timeout $(UNITTEST_TIMEOUT) $(TESTARGS)
+
+.PHONY: test-vcr-record
+test-vcr-record: ## Record VCR cassettes for unit tests (requires API credentials)
+	@echo "Recording VCR cassettes..."
+	VCR_RECORD=true go test $(TEST) -v -run 'TestVCR' -timeout $(UNITTEST_TIMEOUT) $(TESTARGS)
+
+.PHONY: test-project
+test-project: ## Run all project resource tests
+	@echo "Running project resource tests..."
+	go test ./spectrocloud/... -v -run 'Project' -timeout $(UNITTEST_TIMEOUT)
+
+.PHONY: test-all
+test-all: test testacc ## Run all tests (unit + acceptance)
 
 ##@ Development Targets
 DEV_PROVIDER_VERSION=100.100.100
