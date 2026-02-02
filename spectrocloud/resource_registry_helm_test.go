@@ -84,6 +84,7 @@ func TestResourceRegistryHelmCreateWithWaitForSync(t *testing.T) {
 
 func TestResourceRegistryHelmUpdateWithWaitForSync(t *testing.T) {
 	d := prepareResourceRegistryHelm()
+	d.SetId("test-registry-uid") // Update and wait_for_sync require an existing resource ID (mock uses this UID)
 	_ = d.Set("wait_for_sync", true)
 	var diags diag.Diagnostics
 	ctx := context.Background()
