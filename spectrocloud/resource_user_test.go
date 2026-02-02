@@ -10,6 +10,99 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Shared schema definitions for user role tests (match resource_user.go)
+var (
+	testUserResourceRoleSchema = map[string]*schema.Schema{
+		"resource_role": {
+			Type: schema.TypeSet,
+			Set:  resourceUserResourceRoleMappingHash,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"project_ids": {
+						Type:     schema.TypeSet,
+						Set:      schema.HashString,
+						Required: true,
+						Elem:     &schema.Schema{Type: schema.TypeString},
+					},
+					"filter_ids": {
+						Type:     schema.TypeSet,
+						Set:      schema.HashString,
+						Required: true,
+						Elem:     &schema.Schema{Type: schema.TypeString},
+					},
+					"role_ids": {
+						Type:     schema.TypeSet,
+						Set:      schema.HashString,
+						Required: true,
+						Elem:     &schema.Schema{Type: schema.TypeString},
+					},
+				},
+			},
+		},
+	}
+	testUserProjectRoleSchema = map[string]*schema.Schema{
+		"project_role": {
+			Type: schema.TypeSet,
+			Set:  resourceUserProjectRoleMappingHash,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"project_id": {
+						Type:     schema.TypeString,
+						Required: true,
+					},
+					"role_ids": {
+						Type:     schema.TypeSet,
+						Set:      schema.HashString,
+						Required: true,
+						Elem:     &schema.Schema{Type: schema.TypeString},
+					},
+				},
+			},
+		},
+	}
+	testUserTenantRoleSchema = map[string]*schema.Schema{
+		"tenant_role": {
+			Type:     schema.TypeSet,
+			Set:      schema.HashString,
+			Optional: true,
+			Elem:     &schema.Schema{Type: schema.TypeString},
+		},
+	}
+	testUserWorkspaceRoleSchema = map[string]*schema.Schema{
+		"workspace_role": {
+			Type: schema.TypeSet,
+			Set:  resourceUserWorkspaceRoleMappingHash,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"project_id": {
+						Type:     schema.TypeString,
+						Required: true,
+					},
+					"workspace": {
+						Type:     schema.TypeSet,
+						Set:      resourceUserWorkspaceRoleMappingHashInternal,
+						Required: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"id": {
+									Type:     schema.TypeString,
+									Required: true,
+								},
+								"role_ids": {
+									Type:     schema.TypeSet,
+									Set:      schema.HashString,
+									Required: true,
+									Elem:     &schema.Schema{Type: schema.TypeString},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+)
+
 func TestConvertSummaryToIDS(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -181,24 +274,7 @@ func TestSetToStringArrayEmptySet(t *testing.T) {
 }
 
 func TestToUserWorkspaceRoleMappingEmpty(t *testing.T) {
-	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"workspace_role": {
-			Type: schema.TypeSet,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"workspace": {
-						Type: schema.TypeSet,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"id":       {Type: schema.TypeString},
-								"role_ids": {Type: schema.TypeSet, Elem: &schema.Schema{Type: schema.TypeString}},
-							},
-						},
-					},
-				},
-			},
-		},
-	}, map[string]interface{}{"workspace_role": []interface{}{}})
+	d := schema.TestResourceDataRaw(t, testUserWorkspaceRoleSchema, map[string]interface{}{"workspace_role": []interface{}{}})
 
 	result := toUserWorkspaceRoleMapping(d)
 	expected := &models.V1WorkspacesRolesPatch{Workspaces: []*models.V1WorkspaceRolesPatch{}}
@@ -215,34 +291,7 @@ func TestToUserResourceRoleMapping(t *testing.T) {
 		{
 			name: "Multiple resource roles",
 			setup: func() *schema.ResourceData {
-				resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-					"resource_role": {
-						Type: schema.TypeSet,
-						Set:  resourceUserResourceRoleMappingHash,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"project_ids": {
-									Type:     schema.TypeSet,
-									Set:      schema.HashString,
-									Required: true,
-									Elem:     &schema.Schema{Type: schema.TypeString},
-								},
-								"filter_ids": {
-									Type:     schema.TypeSet,
-									Set:      schema.HashString,
-									Required: true,
-									Elem:     &schema.Schema{Type: schema.TypeString},
-								},
-								"role_ids": {
-									Type:     schema.TypeSet,
-									Set:      schema.HashString,
-									Required: true,
-									Elem:     &schema.Schema{Type: schema.TypeString},
-								},
-							},
-						},
-					},
-				}, map[string]interface{}{
+				return schema.TestResourceDataRaw(t, testUserResourceRoleSchema, map[string]interface{}{
 					"resource_role": []interface{}{
 						map[string]interface{}{
 							"project_ids": []interface{}{"project1"},
@@ -256,7 +305,6 @@ func TestToUserResourceRoleMapping(t *testing.T) {
 						},
 					},
 				})
-				return resourceData
 			},
 			expected: []*models.V1ResourceRolesUpdateEntity{
 				{
@@ -274,34 +322,7 @@ func TestToUserResourceRoleMapping(t *testing.T) {
 		{
 			name: "Single project, multiple filters and roles",
 			setup: func() *schema.ResourceData {
-				resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-					"resource_role": {
-						Type: schema.TypeSet,
-						Set:  resourceUserResourceRoleMappingHash,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"project_ids": {
-									Type:     schema.TypeSet,
-									Set:      schema.HashString,
-									Required: true,
-									Elem:     &schema.Schema{Type: schema.TypeString},
-								},
-								"filter_ids": {
-									Type:     schema.TypeSet,
-									Set:      schema.HashString,
-									Required: true,
-									Elem:     &schema.Schema{Type: schema.TypeString},
-								},
-								"role_ids": {
-									Type:     schema.TypeSet,
-									Set:      schema.HashString,
-									Required: true,
-									Elem:     &schema.Schema{Type: schema.TypeString},
-								},
-							},
-						},
-					},
-				}, map[string]interface{}{
+				return schema.TestResourceDataRaw(t, testUserResourceRoleSchema, map[string]interface{}{
 					"resource_role": []interface{}{
 						map[string]interface{}{
 							"project_ids": []interface{}{"project1"},
@@ -310,7 +331,6 @@ func TestToUserResourceRoleMapping(t *testing.T) {
 						},
 					},
 				})
-				return resourceData
 			},
 			expected: []*models.V1ResourceRolesUpdateEntity{
 				{
@@ -420,26 +440,7 @@ func TestToUserProjectRoleMapping(t *testing.T) {
 		{
 			name: "Single project role with multiple roles",
 			setup: func() *schema.ResourceData {
-				resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-					"project_role": {
-						Type: schema.TypeSet,
-						Set:  resourceUserProjectRoleMappingHash,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"project_id": {
-									Type:     schema.TypeString,
-									Required: true,
-								},
-								"role_ids": {
-									Type:     schema.TypeSet,
-									Set:      schema.HashString,
-									Required: true,
-									Elem:     &schema.Schema{Type: schema.TypeString},
-								},
-							},
-						},
-					},
-				}, map[string]interface{}{
+				return schema.TestResourceDataRaw(t, testUserProjectRoleSchema, map[string]interface{}{
 					"project_role": []interface{}{
 						map[string]interface{}{
 							"project_id": "project1",
@@ -447,7 +448,6 @@ func TestToUserProjectRoleMapping(t *testing.T) {
 						},
 					},
 				})
-				return resourceData
 			},
 			expected: &models.V1ProjectRolesPatch{
 				Projects: []*models.V1ProjectRolesPatchProjectsItems0{
@@ -461,26 +461,7 @@ func TestToUserProjectRoleMapping(t *testing.T) {
 		{
 			name: "Multiple project roles",
 			setup: func() *schema.ResourceData {
-				resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-					"project_role": {
-						Type: schema.TypeSet,
-						Set:  resourceUserProjectRoleMappingHash,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"project_id": {
-									Type:     schema.TypeString,
-									Required: true,
-								},
-								"role_ids": {
-									Type:     schema.TypeSet,
-									Set:      schema.HashString,
-									Required: true,
-									Elem:     &schema.Schema{Type: schema.TypeString},
-								},
-							},
-						},
-					},
-				}, map[string]interface{}{
+				return schema.TestResourceDataRaw(t, testUserProjectRoleSchema, map[string]interface{}{
 					"project_role": []interface{}{
 						map[string]interface{}{
 							"project_id": "project1",
@@ -492,7 +473,6 @@ func TestToUserProjectRoleMapping(t *testing.T) {
 						},
 					},
 				})
-				return resourceData
 			},
 			expected: &models.V1ProjectRolesPatch{
 				Projects: []*models.V1ProjectRolesPatchProjectsItems0{
@@ -627,31 +607,7 @@ func TestFlattenUserResourceRoleMapping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock ResourceData with correct schema
-			d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-				"resource_role": {
-					Type: schema.TypeSet,
-					Set:  resourceUserResourceRoleMappingHash,
-					Elem: &schema.Resource{
-						Schema: map[string]*schema.Schema{
-							"project_ids": {
-								Type: schema.TypeSet,
-								Set:  schema.HashString,
-								Elem: &schema.Schema{Type: schema.TypeString},
-							},
-							"filter_ids": {
-								Type: schema.TypeSet,
-								Set:  schema.HashString,
-								Elem: &schema.Schema{Type: schema.TypeString},
-							},
-							"role_ids": {
-								Type: schema.TypeSet,
-								Set:  schema.HashString,
-								Elem: &schema.Schema{Type: schema.TypeString},
-							},
-						},
-					},
-				},
-			}, map[string]interface{}{})
+			d := schema.TestResourceDataRaw(t, testUserResourceRoleSchema, map[string]interface{}{})
 
 			// Set the user UID
 			d.SetId(tt.userUID)
@@ -752,17 +708,9 @@ func TestToUserTenantRoleMapping(t *testing.T) {
 		{
 			name: "Single tenant role",
 			setup: func() *schema.ResourceData {
-				resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-					"tenant_role": {
-						Type:     schema.TypeSet,
-						Set:      schema.HashString,
-						Optional: true,
-						Elem:     &schema.Schema{Type: schema.TypeString},
-					},
-				}, map[string]interface{}{
+				return schema.TestResourceDataRaw(t, testUserTenantRoleSchema, map[string]interface{}{
 					"tenant_role": []interface{}{"role1"},
 				})
-				return resourceData
 			},
 			expected: &models.V1UserRoleUIDs{
 				Roles: []string{"role1"},
@@ -771,17 +719,9 @@ func TestToUserTenantRoleMapping(t *testing.T) {
 		{
 			name: "Multiple tenant roles",
 			setup: func() *schema.ResourceData {
-				resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-					"tenant_role": {
-						Type:     schema.TypeSet,
-						Set:      schema.HashString,
-						Optional: true,
-						Elem:     &schema.Schema{Type: schema.TypeString},
-					},
-				}, map[string]interface{}{
+				return schema.TestResourceDataRaw(t, testUserTenantRoleSchema, map[string]interface{}{
 					"tenant_role": []interface{}{"role1", "role2", "role3"},
 				})
-				return resourceData
 			},
 			expected: &models.V1UserRoleUIDs{
 				Roles: []string{"role1", "role2", "role3"},
@@ -830,39 +770,7 @@ func TestToUserWorkspaceRoleMapping(t *testing.T) {
 		{
 			name: "Single workspace role with single workspace and multiple roles",
 			setup: func() *schema.ResourceData {
-				resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-					"workspace_role": {
-						Type: schema.TypeSet,
-						Set:  resourceUserWorkspaceRoleMappingHash,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"project_id": {
-									Type:     schema.TypeString,
-									Required: true,
-								},
-								"workspace": {
-									Type:     schema.TypeSet,
-									Set:      resourceUserWorkspaceRoleMappingHashInternal,
-									Required: true,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											"id": {
-												Type:     schema.TypeString,
-												Required: true,
-											},
-											"role_ids": {
-												Type:     schema.TypeSet,
-												Set:      schema.HashString,
-												Required: true,
-												Elem:     &schema.Schema{Type: schema.TypeString},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}, map[string]interface{}{
+				return schema.TestResourceDataRaw(t, testUserWorkspaceRoleSchema, map[string]interface{}{
 					"workspace_role": []interface{}{
 						map[string]interface{}{
 							"project_id": "project1",
@@ -875,7 +783,6 @@ func TestToUserWorkspaceRoleMapping(t *testing.T) {
 						},
 					},
 				})
-				return resourceData
 			},
 			expected: &models.V1WorkspacesRolesPatch{
 				Workspaces: []*models.V1WorkspaceRolesPatch{
@@ -889,39 +796,7 @@ func TestToUserWorkspaceRoleMapping(t *testing.T) {
 		{
 			name: "Multiple workspace roles (different projects)",
 			setup: func() *schema.ResourceData {
-				resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-					"workspace_role": {
-						Type: schema.TypeSet,
-						Set:  resourceUserWorkspaceRoleMappingHash,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"project_id": {
-									Type:     schema.TypeString,
-									Required: true,
-								},
-								"workspace": {
-									Type:     schema.TypeSet,
-									Set:      resourceUserWorkspaceRoleMappingHashInternal,
-									Required: true,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											"id": {
-												Type:     schema.TypeString,
-												Required: true,
-											},
-											"role_ids": {
-												Type:     schema.TypeSet,
-												Set:      schema.HashString,
-												Required: true,
-												Elem:     &schema.Schema{Type: schema.TypeString},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}, map[string]interface{}{
+				return schema.TestResourceDataRaw(t, testUserWorkspaceRoleSchema, map[string]interface{}{
 					"workspace_role": []interface{}{
 						map[string]interface{}{
 							"project_id": "project1",
@@ -943,7 +818,6 @@ func TestToUserWorkspaceRoleMapping(t *testing.T) {
 						},
 					},
 				})
-				return resourceData
 			},
 			expected: &models.V1WorkspacesRolesPatch{
 				Workspaces: []*models.V1WorkspaceRolesPatch{
@@ -1241,39 +1115,7 @@ func TestFlattenUserWorkspaceRoleMapping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock ResourceData with correct schema
-			d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-				"workspace_role": {
-					Type: schema.TypeSet,
-					Set:  resourceUserWorkspaceRoleMappingHash,
-					Elem: &schema.Resource{
-						Schema: map[string]*schema.Schema{
-							"project_id": {
-								Type:     schema.TypeString,
-								Required: true,
-							},
-							"workspace": {
-								Type:     schema.TypeSet,
-								Set:      resourceUserWorkspaceRoleMappingHashInternal,
-								Required: true,
-								Elem: &schema.Resource{
-									Schema: map[string]*schema.Schema{
-										"id": {
-											Type:     schema.TypeString,
-											Required: true,
-										},
-										"role_ids": {
-											Type:     schema.TypeSet,
-											Set:      schema.HashString,
-											Required: true,
-											Elem:     &schema.Schema{Type: schema.TypeString},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			}, map[string]interface{}{})
+			d := schema.TestResourceDataRaw(t, testUserWorkspaceRoleSchema, map[string]interface{}{})
 
 			// Set the user UID
 			d.SetId(tt.userUID)
@@ -1385,14 +1227,7 @@ func TestFlattenUserTenantRoleMapping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock ResourceData with correct schema
-			d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-				"tenant_role": {
-					Type:     schema.TypeSet,
-					Set:      schema.HashString,
-					Optional: true,
-					Elem:     &schema.Schema{Type: schema.TypeString},
-				},
-			}, map[string]interface{}{})
+			d := schema.TestResourceDataRaw(t, testUserTenantRoleSchema, map[string]interface{}{})
 
 			// Set the user UID
 			d.SetId(tt.userUID)
@@ -1504,27 +1339,7 @@ func TestFlattenUserProjectRoleMapping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock ResourceData with correct schema
-			d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-				"project_role": {
-					Type:     schema.TypeSet,
-					Set:      resourceUserProjectRoleMappingHash,
-					Optional: true,
-					Elem: &schema.Resource{
-						Schema: map[string]*schema.Schema{
-							"project_id": {
-								Type:     schema.TypeString,
-								Required: true,
-							},
-							"role_ids": {
-								Type:     schema.TypeSet,
-								Set:      schema.HashString,
-								Required: true,
-								Elem:     &schema.Schema{Type: schema.TypeString},
-							},
-						},
-					},
-				},
-			}, map[string]interface{}{})
+			d := schema.TestResourceDataRaw(t, testUserProjectRoleSchema, map[string]interface{}{})
 
 			// Set the user UID
 			d.SetId(tt.userUID)
