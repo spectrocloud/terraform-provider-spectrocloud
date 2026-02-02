@@ -451,13 +451,9 @@ func prepareBaseClusterProfileTestData() *schema.ResourceData {
 	return d
 }
 
-func TestResourceClusterProfileCreate(t *testing.T) {
-	d := prepareBaseClusterProfileTestData()
-	var ctx context.Context
-	_ = d.Set("type", "add-on")
-	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "cluster-profile-1", d.Id())
+func TestResourceClusterProfileCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareBaseClusterProfileTestData, unitTestMockAPIClient,
+		resourceClusterProfileCreate, resourceClusterProfileRead, resourceClusterProfileUpdate, resourceClusterProfileDelete)
 }
 
 func TestResourceClusterProfileCreateError(t *testing.T) {
@@ -465,29 +461,6 @@ func TestResourceClusterProfileCreateError(t *testing.T) {
 	var ctx context.Context
 	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPINegativeClient)
 	assert.NotEmpty(t, diags)
-}
-
-func TestResourceClusterProfileRead(t *testing.T) {
-	d := prepareBaseClusterProfileTestData()
-	var ctx context.Context
-	diags := resourceClusterProfileRead(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "cluster-profile-1", d.Id())
-}
-
-func TestResourceClusterProfileUpdate(t *testing.T) {
-	d := prepareBaseClusterProfileTestData()
-	var ctx context.Context
-	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "cluster-profile-1", d.Id())
-}
-
-func TestResourceClusterProfileDelete(t *testing.T) {
-	d := prepareBaseClusterProfileTestData()
-	var ctx context.Context
-	diags := resourceClusterProfileDelete(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
 }
 
 func TestValidatePackUIDOrResolutionFields(t *testing.T) {

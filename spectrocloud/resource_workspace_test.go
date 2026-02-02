@@ -133,49 +133,9 @@ func prepareBaseWorkspaceSchema() *schema.ResourceData {
 	return d
 }
 
-func TestResourceWorkspaceCreate(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseWorkspaceSchema()
-
-	// Call the function
-	diags := resourceWorkspaceCreate(ctx, resourceData, unitTestMockAPIClient)
-
-	// Assertions
-	assert.Equal(t, 0, len(diags))
-}
-
-func TestResourceWorkspaceRead(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseWorkspaceSchema()
-
-	// Call the function
-	diags := resourceWorkspaceRead(ctx, resourceData, unitTestMockAPIClient)
-
-	// Assertions
-	assert.Equal(t, 0, len(diags))
-}
-
-func TestResourceWorkspaceUpdate(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseWorkspaceSchema()
-
-	// Call the function
-	diags := resourceWorkspaceUpdate(ctx, resourceData, unitTestMockAPIClient)
-
-	// Assertions
-	assert.Equal(t, 0, len(diags))
-}
-
-func TestResourceWorkspaceDelete(t *testing.T) {
-	ctx := context.Background()
-	resourceData := prepareBaseWorkspaceSchema()
-	resourceData.SetId("12763471256725")
-
-	// Call the function
-	diags := resourceWorkspaceDelete(ctx, resourceData, unitTestMockAPIClient)
-
-	// Assertions
-	assert.Equal(t, 0, len(diags))
+func TestResourceWorkspaceCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareBaseWorkspaceSchema, unitTestMockAPIClient,
+		resourceWorkspaceCreate, resourceWorkspaceRead, resourceWorkspaceUpdate, resourceWorkspaceDelete)
 }
 
 func TestResourceWorkspaceCreateNegative(t *testing.T) {
