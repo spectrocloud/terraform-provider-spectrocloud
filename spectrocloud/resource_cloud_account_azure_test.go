@@ -83,42 +83,13 @@ func prepareResourceCloudAccountAzureTestData() *schema.ResourceData {
 	_ = d.Set("tenant_name", "azure-tenant")
 	_ = d.Set("disable_properties_request", false)
 	_ = d.Set("cloud", "AzurePublicCloud")
+	_ = d.Set("private_cloud_gateway_id", "test-pcg-id")
 	return d
 }
 
-func TestResourceCloudAccountAzureCreate(t *testing.T) {
-	// Mock context and resource data
-	d := prepareResourceCloudAccountAzureTestData()
-	ctx := context.Background()
-	diags := resourceCloudAccountAzureCreate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-aws-account-1", d.Id())
-}
-
-func TestResourceCloudAccountAzureRead(t *testing.T) {
-	// Mock context and resource data
-	d := prepareResourceCloudAccountAzureTestData()
-	ctx := context.Background()
-	diags := resourceCloudAccountAzureRead(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-azure-account-id-1", d.Id())
-}
-
-func TestResourceCloudAccountAzureUpdate(t *testing.T) {
-	// Mock context and resource data
-	d := prepareResourceCloudAccountAzureTestData()
-	ctx := context.Background()
-	diags := resourceCloudAccountAzureUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-azure-account-id-1", d.Id())
-}
-
-func TestResourceCloudAccountAzureDelete(t *testing.T) {
-	// Mock context and resource data
-	d := prepareResourceCloudAccountAzureTestData()
-	ctx := context.Background()
-	diags := resourceCloudAccountAzureDelete(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
+func TestResourceCloudAccountAzureCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareResourceCloudAccountAzureTestData, unitTestMockAPIClient,
+		resourceCloudAccountAzureCreate, resourceCloudAccountAzureRead, resourceCloudAccountAzureUpdate, resourceCloudAccountAzureDelete)
 }
 
 // Test for validateTlsCertConfiguration function

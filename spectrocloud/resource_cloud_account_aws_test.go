@@ -11,6 +11,21 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
+// prepareBaseAwsAccountDataForCRUD returns resource data for testResourceCRUD (no Id; Create sets it).
+// func prepareBaseAwsAccountDataForCRUD() *schema.ResourceData {
+// 	d := resourceCloudAccountAws().TestResourceData()
+// 	_ = d.Set("name", "test-aws-account")
+// 	_ = d.Set("context", "project")
+// 	_ = d.Set("aws_access_key", "test-access-key")
+// 	_ = d.Set("aws_secret_key", "test-secret-key")
+// 	_ = d.Set("type", "secret")
+// 	_ = d.Set("arn", "test-arn")
+// 	_ = d.Set("external_id", "test-external-id")
+// 	_ = d.Set("partition", "aws")
+// 	_ = d.Set("policy_arns", []string{"test-policy-arn"})
+// 	return d
+// }
+
 func TestToAwsAccountCTXProjectSecret(t *testing.T) {
 	rd := resourceCloudAccountAws().TestResourceData()
 	rd.Set("name", "aws_unit_test_acc")
@@ -415,35 +430,10 @@ func prepareSecuredAwsAccountTestData() *schema.ResourceData {
 	return d
 }
 
-func TestResourceCloudAccountAwsCreate(t *testing.T) {
-	ctx := context.Background()
-	d := prepareBaseAwsAccountTestData()
-	diags := resourceCloudAccountAwsCreate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-aws-account-1", d.Id())
+func TestResourceAwsAccountCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareSecuredAwsAccountTestData, unitTestMockAPIClient,
+		resourceCloudAccountAwsCreate, resourceCloudAccountAwsRead, resourceCloudAccountAwsUpdate, resourceCloudAccountAwsDelete)
 }
-
-func TestResourceCloudAccountAwsRead(t *testing.T) {
-	ctx := context.Background()
-	d := prepareBaseAwsAccountTestData()
-	diags := resourceCloudAccountAwsRead(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-aws-account-1", d.Id())
-}
-func TestResourceCloudAccountAwsUpdate(t *testing.T) {
-	ctx := context.Background()
-	d := prepareBaseAwsAccountTestData()
-	diags := resourceCloudAccountAwsUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-aws-account-1", d.Id())
-}
-func TestResourceCloudAccountAwsDelete(t *testing.T) {
-	ctx := context.Background()
-	d := prepareBaseAwsAccountTestData()
-	diags := resourceCloudAccountAwsDelete(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-}
-
 func TestResourceCloudAccountAwsImport(t *testing.T) {
 	ctx := context.Background()
 	d := prepareBaseAwsAccountTestData()
