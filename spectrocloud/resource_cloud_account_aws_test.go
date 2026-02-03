@@ -131,7 +131,7 @@ func TestToAwsAccount(t *testing.T) {
 			name: "CTX project pod identity",
 			input: map[string]interface{}{
 				"name": "aws_unit_test_acc_pod_identity", "type": "pod-identity",
-				"role_arn": "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
+				"role_arn":                "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
 				"permission_boundary_arn": "arn:aws:iam::123456789012:policy/PermissionBoundary", "context": "project",
 			},
 			verify: func(t *testing.T, acc *models.V1AwsAccount) {
@@ -146,9 +146,9 @@ func TestToAwsAccount(t *testing.T) {
 			name: "CTX tenant pod identity",
 			input: map[string]interface{}{
 				"name": "aws_unit_test_acc_pod_identity_tenant", "type": "pod-identity",
-				"role_arn": "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
+				"role_arn":                "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
 				"permission_boundary_arn": "arn:aws:iam::123456789012:policy/PermissionBoundary",
-				"context": "tenant", "partition": "aws",
+				"context":                 "tenant", "partition": "aws",
 			},
 			verify: func(t *testing.T, acc *models.V1AwsAccount) {
 				assert.Equal(t, "aws_unit_test_acc_pod_identity_tenant", acc.Metadata.Name)
@@ -223,7 +223,7 @@ func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
 			name: "STS",
 			account: &models.V1AwsAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name: "aws_test_account",
+					Name:        "aws_test_account",
 					Annotations: map[string]string{"scope": "aws_scope_test"},
 				},
 				Spec: &models.V1AwsCloudAccount{
@@ -244,7 +244,7 @@ func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
 			name: "secret (non-STS)",
 			account: &models.V1AwsAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name: "aws_test_account_secret",
+					Name:        "aws_test_account_secret",
 					Annotations: map[string]string{"scope": "aws_scope_test_secret"},
 				},
 				Spec: &models.V1AwsCloudAccount{
@@ -265,7 +265,7 @@ func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
 			name: "secret with secured access key (rd pre-set)",
 			account: &models.V1AwsAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name: "aws_test_account_secured",
+					Name:        "aws_test_account_secured",
 					Annotations: map[string]string{"scope": "aws_scope_test_secured"},
 				},
 				Spec: &models.V1AwsCloudAccount{
@@ -287,7 +287,7 @@ func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
 			name: "legacy access key",
 			account: &models.V1AwsAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name: "aws_test_account_legacy",
+					Name:        "aws_test_account_legacy",
 					Annotations: map[string]string{"scope": "project"},
 				},
 				Spec: &models.V1AwsCloudAccount{
@@ -306,7 +306,7 @@ func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
 			name: "switch from secured to legacy (keeps secured in state)",
 			account: &models.V1AwsAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name: "aws_test_account_switch",
+					Name:        "aws_test_account_switch",
 					Annotations: map[string]string{"scope": "project"},
 				},
 				Spec: &models.V1AwsCloudAccount{
@@ -326,7 +326,7 @@ func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
 			name: "clear conflicting field legacy",
 			account: &models.V1AwsAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name: "aws_test_account_clear",
+					Name:        "aws_test_account_clear",
 					Annotations: map[string]string{"scope": "project"},
 				},
 				Spec: &models.V1AwsCloudAccount{
@@ -345,7 +345,7 @@ func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
 			name: "pod identity with permission boundary",
 			account: &models.V1AwsAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name: "aws_test_account_pod_identity",
+					Name:        "aws_test_account_pod_identity",
 					Annotations: map[string]string{"scope": "project"},
 				},
 				Spec: &models.V1AwsCloudAccount{
@@ -359,16 +359,16 @@ func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
 			},
 			expect: map[string]*string{
 				"name": types.Ptr("aws_test_account_pod_identity"), "context": types.Ptr("project"),
-				"role_arn": types.Ptr("arn:aws:iam::123456789012:role/EKSPodIdentityRole"),
+				"role_arn":                types.Ptr("arn:aws:iam::123456789012:role/EKSPodIdentityRole"),
 				"permission_boundary_arn": types.Ptr("arn:aws:iam::123456789012:policy/PermissionBoundary"),
-				"partition": types.Ptr("aws"), "type": types.Ptr(string(models.V1AwsCloudAccountCredentialTypePodDashIdentity)),
+				"partition":               types.Ptr("aws"), "type": types.Ptr(string(models.V1AwsCloudAccountCredentialTypePodDashIdentity)),
 			},
 		},
 		{
 			name: "pod identity without permission boundary",
 			account: &models.V1AwsAccount{
 				Metadata: &models.V1ObjectMeta{
-					Name: "aws_test_account_pod_identity_no_boundary",
+					Name:        "aws_test_account_pod_identity_no_boundary",
 					Annotations: map[string]string{"scope": "tenant"},
 				},
 				Spec: &models.V1AwsCloudAccount{
@@ -382,7 +382,7 @@ func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
 			},
 			expect: map[string]*string{
 				"name": types.Ptr("aws_test_account_pod_identity_no_boundary"), "context": types.Ptr("tenant"),
-				"role_arn": types.Ptr("arn:aws:iam::123456789012:role/EKSPodIdentityRole"),
+				"role_arn":                types.Ptr("arn:aws:iam::123456789012:role/EKSPodIdentityRole"),
 				"permission_boundary_arn": types.Ptr(""), "partition": types.Ptr("aws-us-gov"),
 				"type": types.Ptr(string(models.V1AwsCloudAccountCredentialTypePodDashIdentity)),
 			},

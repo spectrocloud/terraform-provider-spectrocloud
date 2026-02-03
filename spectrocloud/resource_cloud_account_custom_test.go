@@ -34,144 +34,97 @@ func TestResourceCustomCloudAccount(t *testing.T) {
 	assert.NotNil(t, deleteCtx)
 }
 
-func TestToCustomCloudAccount(t *testing.T) {
-	// Mock resource data
-	d := resourceCloudAccountCustom().TestResourceData()
-	d.Set("name", "test-name")
-	d.Set("cloud", "testcloud")
-	d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
-	cred := map[string]interface{}{
-		"username": "test-username",
-		"password": "test-password",
-	}
-	d.Set("credentials", cred)
-
-	account, err := toCloudAccountCustom(d)
-
-	// Assert that no error occurred during conversion
-	assert.NoError(t, err)
-	// Assert the metadata
-	assert.Equal(t, "test-name", account.Metadata.Name)
-	assert.Equal(t, "test-private-cloud-gateway-id", account.Metadata.Annotations[OverlordUID])
-	// Assert the credentials
-	assert.Equal(t, "test-username", account.Spec.Credentials["username"])
-	assert.Equal(t, "test-password", account.Spec.Credentials["password"])
-}
-
-func TestFlattenCustomCloudAccount(t *testing.T) {
-	// Create a mock resource data
-	d := resourceCloudAccountCustom().TestResourceData()
-	d.Set("name", "test-name")
-	d.Set("cloud", "test-cloud")
-	d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
-	cred := map[string]interface{}{
-		"username": "test-username",
-		"password": "test-password",
-	}
-	d.Set("credentials", cred)
-	account := &models.V1CustomAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name: "test-name",
-			Annotations: map[string]string{
-				"scope":     "project",
-				OverlordUID: "test-private-cloud-gateway-id",
-			},
-		},
-		Kind: "test-cloud",
-	}
-	diags, hasErrors := flattenCloudAccountCustom(d, account)
-	assert.False(t, hasErrors)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-name", d.Get("name"))
-	assert.Equal(t, "project", d.Get("context"))
-	assert.Equal(t, "test-private-cloud-gateway-id", d.Get("private_cloud_gateway_id"))
-	assert.Equal(t, "test-cloud", d.Get("cloud"))
-}
-
 // mock
-func TestResourceCustomCloudAccountCreate(t *testing.T) {
-	// Mock context and resource data
+func TestResourceCustomCloudAccountCRUD_TableDriven(t *testing.T) {
 	ctx := context.Background()
-	d := resourceCloudAccountCustom().TestResourceData()
-	_ = d.Set("name", "test-name")
-	_ = d.Set("cloud", "test-cloud")
-	_ = d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
-	cred := map[string]interface{}{
-		"username": "test-username",
-		"password": "test-password",
+	baseSet := func(d *schema.ResourceData) {
+		_ = d.Set("name", "test-name")
+		_ = d.Set("cloud", "test-cloud")
+		_ = d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
+		_ = d.Set("credentials", map[string]interface{}{"username": "test-username", "password": "test-password"})
+		_ = d.Set("context", "test-context")
 	}
-	_ = d.Set("credentials", cred)
-
-	_ = d.Set("context", "test-context")
-	_ = d.Set("cloud", "test-cloud")
-	diags := resourceCloudAccountCustomCreate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "mock-uid", d.Id())
+	tests := []struct {
+		name      string
+		op        func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics
+		setup     func() *schema.ResourceData
+		wantID    string
+		wantDiags int
+	}{
+		{
+			name: "Create",
+			op:   resourceCloudAccountCustomCreate,
+			setup: func() *schema.ResourceData {
+				d := resourceCloudAccountCustom().TestResourceData()
+				baseSet(d)
+				return d
+			},
+			wantID: "mock-uid", wantDiags: 0,
+		},
+		{
+			name: "Read",
+			op:   resourceCloudAccountCustomRead,
+			setup: func() *schema.ResourceData {
+				d := resourceCloudAccountCustom().TestResourceData()
+				d.SetId("mock-uid")
+				_ = d.Set("context", "test-context")
+				_ = d.Set("cloud", "test-cloud")
+				return d
+			},
+			wantID: "mock-uid", wantDiags: 0,
+		},
+		{
+			name: "Update",
+			op:   resourceCloudAccountCustomUpdate,
+			setup: func() *schema.ResourceData {
+				d := resourceCloudAccountCustom().TestResourceData()
+				d.SetId("existing-id")
+				_ = d.Set("name", "test-name")
+				_ = d.Set("context", "updated-context")
+				_ = d.Set("cloud", "updated-cloud")
+				_ = d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
+				_ = d.Set("credentials", map[string]interface{}{"username": "test-username", "password": "test-password"})
+				return d
+			},
+			wantDiags: 0,
+		},
+		{
+			name: "Delete",
+			op:   resourceCloudAccountCustomDelete,
+			setup: func() *schema.ResourceData {
+				d := resourceCloudAccountCustom().TestResourceData()
+				d.SetId("existing-id")
+				_ = d.Set("context", "test-context")
+				_ = d.Set("cloud", "test-cloud")
+				return d
+			},
+			wantDiags: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := tt.setup()
+			diags := tt.op(ctx, d, unitTestMockAPIClient)
+			assert.Len(t, diags, tt.wantDiags)
+			if tt.wantID != "" {
+				assert.Equal(t, tt.wantID, d.Id())
+			}
+		})
+	}
 }
 
 func TestResourceCustomCloudAccountCreateError(t *testing.T) {
-	// Mock context and resource data
 	ctx := context.Background()
 	d := resourceCloudAccountCustom().TestResourceData()
 	_ = d.Set("name", "test-name")
 	_ = d.Set("cloud", "test-cloud")
 	_ = d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
-	cred := map[string]interface{}{
-		"username": "test-username",
-		"password": "test-password",
-	}
-	_ = d.Set("credentials", cred)
-
-	// Set up mock client
+	_ = d.Set("credentials", map[string]interface{}{"username": "test-username", "password": "test-password"})
 	_ = d.Set("context", "test-context")
-	_ = d.Set("cloud", "test-cloud")
 	diags := resourceCloudAccountCustomCreate(ctx, d, unitTestMockAPINegativeClient)
 	assert.Error(t, errors.New("unable to find account"))
 	assert.Len(t, diags, 1)
 	assert.Equal(t, "", d.Id())
-}
-
-func TestResourceCustomCloudAccountRead(t *testing.T) {
-	ctx := context.Background()
-	d := resourceCloudAccountCustom().TestResourceData()
-
-	d.SetId("mock-uid")
-	_ = d.Set("context", "test-context")
-	_ = d.Set("cloud", "test-cloud")
-	diags := resourceCloudAccountCustomRead(ctx, d, unitTestMockAPIClient)
-
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "mock-uid", d.Id())
-}
-
-func TestResourceCustomCloudAccountUpdate(t *testing.T) {
-	ctx := context.Background()
-	d := resourceCloudAccountCustom().TestResourceData()
-
-	d.SetId("existing-id")
-	_ = d.Set("name", "test-name")
-	_ = d.Set("context", "updated-context")
-	_ = d.Set("cloud", "updated-cloud")
-	_ = d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
-	cred := map[string]interface{}{
-		"username": "test-username",
-		"password": "test-password",
-	}
-	_ = d.Set("credentials", cred)
-	diags := resourceCloudAccountCustomUpdate(ctx, d, unitTestMockAPIClient)
-
-	assert.Len(t, diags, 0)
-}
-
-func TestResourceCustomCloudAccountDelete(t *testing.T) {
-	ctx := context.Background()
-	d := resourceCloudAccountCustom().TestResourceData()
-
-	d.SetId("existing-id")
-	_ = d.Set("context", "test-context")
-	_ = d.Set("cloud", "test-cloud")
-	diags := resourceCloudAccountCustomDelete(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
 }
 
 func TestToCloudAccountCustom(t *testing.T) {
@@ -183,6 +136,25 @@ func TestToCloudAccountCustom(t *testing.T) {
 		description string
 		verify      func(t *testing.T, account *models.V1CustomAccountEntity, err error)
 	}{
+		{
+			name: "Successful conversion with name, cloud and credentials",
+			setup: func() *schema.ResourceData {
+				d := resourceCloudAccountCustom().TestResourceData()
+				d.Set("name", "test-name")
+				d.Set("cloud", "testcloud")
+				d.Set("private_cloud_gateway_id", "test-private-cloud-gateway-id")
+				d.Set("credentials", map[string]interface{}{"username": "test-username", "password": "test-password"})
+				return d
+			},
+			expectError: false,
+			verify: func(t *testing.T, account *models.V1CustomAccountEntity, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "test-name", account.Metadata.Name)
+				assert.Equal(t, "test-private-cloud-gateway-id", account.Metadata.Annotations[OverlordUID])
+				assert.Equal(t, "test-username", account.Spec.Credentials["username"])
+				assert.Equal(t, "test-password", account.Spec.Credentials["password"])
+			},
+		},
 		{
 			name: "Successful conversion with all fields",
 			setup: func() *schema.ResourceData {
