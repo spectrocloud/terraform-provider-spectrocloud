@@ -290,15 +290,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
-			return diag.FromErr(err)
-		}
-
-		isSync := registry.Spec.IsSyncSupported
-		if registry.Status != nil && registry.Status.SyncStatus != nil {
-			isSync = registry.Status.SyncStatus.IsSyncSupported
-		}
-		if err := d.Set("is_synchronization", isSync); err != nil {
+		if err := d.Set("is_synchronization", registry.Status.SyncStatus.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
 
@@ -319,6 +311,18 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		case models.V1AwsCloudAccountCredentialTypeSecret:
 			acc["access_key"] = registry.Spec.Credentials.AccessKey
 			acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
+			if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+				if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+					if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+						if secretKey, exists := currentCredMap["secret_key"]; exists && secretKey != nil && secretKey != "" {
+							acc["secret_key"] = secretKey
+						}
+					}
+				}
+			}
+			if _, set := acc["secret_key"]; !set && registry.Spec.Credentials.SecretKey != "" {
+				acc["secret_key"] = registry.Spec.Credentials.SecretKey
+			}
 		default:
 			errMsg := fmt.Sprintf("Registry type %s not implemented.", *registry.Spec.Credentials.CredentialType)
 			err = errors.New(errMsg)
@@ -371,11 +375,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			return diag.FromErr(err)
 		}
 
-		isSync := registry.Spec.IsSyncSupported
-		if registry.Status != nil && registry.Status.SyncStatus != nil {
-			isSync = registry.Status.SyncStatus.IsSyncSupported
-		}
-		if err := d.Set("is_synchronization", isSync); err != nil {
+		if err := d.Set("is_synchronization", registry.Status.SyncStatus.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
 
