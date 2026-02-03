@@ -14,230 +14,120 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestToClusterProfileVariables(t *testing.T) {
-	mockResourceData := resourceClusterProfile().TestResourceData()
-	var proVar []interface{}
-	variables := map[string]interface{}{
-		"variable": []interface{}{
-			map[string]interface{}{
-				"default_value": "default_value_1",
-				"description":   "description_1",
-				"display_name":  "display_name_1",
-				"format":        "string",
-				"hidden":        false,
-				"immutable":     true,
-				"name":          "variable_name_1",
-				"regex":         "regex_1",
-				"required":      true,
-				"is_sensitive":  false,
-			},
-			map[string]interface{}{
-				"default_value": "default_value_2",
-				"description":   "description_2",
-				"display_name":  "display_name_2",
-				"format":        "integer",
-				"hidden":        true,
-				"immutable":     false,
-				"name":          "variable_name_2",
-				"regex":         "regex_2",
-				"required":      false,
-				"is_sensitive":  true,
-			},
-		},
-	}
-	proVar = append(proVar, variables)
-	_ = mockResourceData.Set("cloud", "edge-native")
-	_ = mockResourceData.Set("type", "add-on")
-	_ = mockResourceData.Set("profile_variables", proVar)
-	result, err := toClusterProfileVariables(mockResourceData)
-
-	// Assertions for valid profile variables
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
-
-	// Test case 2: Empty profile variables
-	mockResourceDataEmpty := resourceClusterProfile().TestResourceData()
-	_ = mockResourceDataEmpty.Set("cloud", "edge-native")
-	_ = mockResourceDataEmpty.Set("type", "add-on")
-	_ = mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
-	resultEmpty, errEmpty := toClusterProfileVariables(mockResourceDataEmpty)
-
-	// Assertions for empty profile variables
-	assert.NoError(t, errEmpty)
-	assert.Len(t, resultEmpty, 0)
-
-	// Test case 3: Invalid profile variables format
-	mockResourceDataInvalid := resourceClusterProfile().TestResourceData()
-	_ = mockResourceDataInvalid.Set("cloud", "edge-native")
-	_ = mockResourceDataInvalid.Set("profile_variables", []interface{}{
+// testProfileVariablesTwoVars is shared by ToClusterProfileVariables and restriction tests.
+var testProfileVariablesTwoVars = map[string]interface{}{
+	"variable": []interface{}{
 		map[string]interface{}{
-			"variable": []interface{}{}, // Invalid format, should be a list
+			"default_value": "default_value_1", "description": "description_1", "display_name": "display_name_1",
+			"format": "string", "hidden": false, "immutable": true, "name": "variable_name_1",
+			"regex": "regex_1", "required": true, "is_sensitive": false,
 		},
-	})
-	resultInvalid, _ := toClusterProfileVariables(mockResourceDataInvalid)
+		map[string]interface{}{
+			"default_value": "default_value_2", "description": "description_2", "display_name": "display_name_2",
+			"format": "integer", "hidden": true, "immutable": false, "name": "variable_name_2",
+			"regex": "regex_2", "required": false, "is_sensitive": true,
+		},
+	},
+}
 
-	// Assertions for invalid profile variables format
-	assert.Len(t, resultInvalid, 0) // No variables should be extracted on error
+func TestToClusterProfileVariables(t *testing.T) {
+	tests := []struct {
+		name          string
+		cloud         string
+		typeStr       string
+		profileVars   []interface{}
+		expectLen     int
+		expectNoError bool
+	}{
+		{"valid two variables", "edge-native", "add-on", []interface{}{testProfileVariablesTwoVars}, 2, true},
+		{"empty profile_variables", "edge-native", "add-on", []interface{}{map[string]interface{}{}}, 0, true},
+		{"invalid format", "edge-native", "add-on", []interface{}{map[string]interface{}{"variable": []interface{}{}}}, 0, true},
+		{"restriction cloud all type infra", "all", "infra", []interface{}{testProfileVariablesTwoVars}, 2, true},
+		{"restriction cloud edge-native type infra", "edge-native", "infra", []interface{}{testProfileVariablesTwoVars}, 2, true},
+		{"restriction cloud aws type add-on", "aws", "add-on", []interface{}{testProfileVariablesTwoVars}, 2, true},
+		{"restriction cloud all type add-on", "all", "add-on", []interface{}{testProfileVariablesTwoVars}, 2, true},
+		{"restriction cloud aws type infra", "aws", "infra", []interface{}{testProfileVariablesTwoVars}, 2, true},
+		{"restriction cloud edge-native type add-on", "edge-native", "add-on", []interface{}{testProfileVariablesTwoVars}, 2, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := resourceClusterProfile().TestResourceData()
+			_ = d.Set("cloud", tt.cloud)
+			_ = d.Set("type", tt.typeStr)
+			_ = d.Set("profile_variables", tt.profileVars)
+			result, err := toClusterProfileVariables(d)
+			if tt.expectNoError {
+				assert.NoError(t, err)
+			}
+			assert.Len(t, result, tt.expectLen)
+		})
+	}
+}
+
+// testFlattenProfileVariablesPV is the API model slice for flatten tests.
+var testFlattenProfileVariablesPV = []*models.V1Variable{
+	{Name: StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: models.NewV1VariableFormat("string"), DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
+	{Name: StringPtr("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: models.NewV1VariableFormat("integer"), DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
 }
 
 func TestFlattenProfileVariables(t *testing.T) {
-	// Test case 1: Valid profile variables and pv
-	mockResourceData := resourceClusterProfile().TestResourceData()
-	var proVar []interface{}
-	variables := map[string]interface{}{
+	validVariablesMap := map[string]interface{}{
 		"variable": []interface{}{
-			map[string]interface{}{
-				"name":          "variable_name_1",
-				"display_name":  "display_name_1",
-				"description":   "description_1",
-				"format":        "string",
-				"default_value": "default_value_1",
-				"regex":         "regex_1",
-				"required":      true,
-				"immutable":     false,
-				"hidden":        false,
+			map[string]interface{}{"name": "variable_name_1", "display_name": "display_name_1", "description": "description_1", "format": "string", "default_value": "default_value_1", "regex": "regex_1", "required": true, "immutable": false, "hidden": false},
+			map[string]interface{}{"name": "variable_name_2", "display_name": "display_name_2", "description": "description_2", "format": "integer", "default_value": "default_value_2", "regex": "regex_2", "required": false, "immutable": true, "hidden": true},
+		},
+	}
+	tests := []struct {
+		name      string
+		setup     func() (*schema.ResourceData, []*models.V1Variable)
+		expectLen int
+		verify    func(t *testing.T, result []interface{})
+	}{
+		{
+			name: "valid profile variables and pv",
+			setup: func() (*schema.ResourceData, []*models.V1Variable) {
+				d := resourceClusterProfile().TestResourceData()
+				_ = d.Set("cloud", "edge-native")
+				_ = d.Set("profile_variables", []interface{}{validVariablesMap})
+				return d, testFlattenProfileVariablesPV
 			},
-			map[string]interface{}{
-				"name":          "variable_name_2",
-				"display_name":  "display_name_2",
-				"description":   "description_2",
-				"format":        "integer",
-				"default_value": "default_value_2",
-				"regex":         "regex_2",
-				"required":      false,
-				"immutable":     true,
-				"hidden":        true,
+			expectLen: 1,
+			verify: func(t *testing.T, result []interface{}) {
+				assert.Equal(t, []interface{}{
+					map[string]interface{}{
+						"variable": []interface{}{
+							map[string]interface{}{"name": StringPtr("variable_name_1"), "display_name": "display_name_1", "description": "description_1", "format": models.NewV1VariableFormat("string"), "default_value": "default_value_1", "regex": "regex_1", "required": true, "immutable": false, "hidden": false, "is_sensitive": false},
+							map[string]interface{}{"name": StringPtr("variable_name_2"), "display_name": "display_name_2", "description": "description_2", "format": models.NewV1VariableFormat("integer"), "default_value": "default_value_2", "regex": "regex_2", "required": false, "immutable": true, "hidden": true, "is_sensitive": false},
+						},
+					},
+				}, result)
+			},
+		},
+		{
+			name: "empty profile variables and pv",
+			setup: func() (*schema.ResourceData, []*models.V1Variable) {
+				d := resourceClusterProfile().TestResourceData()
+				_ = d.Set("cloud", "edge-native")
+				_ = d.Set("profile_variables", []interface{}{map[string]interface{}{}})
+				return d, nil
+			},
+			expectLen: 0,
+			verify: func(t *testing.T, result []interface{}) {
+				assert.Equal(t, []interface{}{}, result)
 			},
 		},
 	}
-	proVar = append(proVar, variables)
-	_ = mockResourceData.Set("cloud", "edge-native")
-	_ = mockResourceData.Set("profile_variables", proVar)
-
-	pv := []*models.V1Variable{
-		{Name: StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: models.NewV1VariableFormat("string"), DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
-		{Name: StringPtr("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: models.NewV1VariableFormat("integer"), DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d, pv := tt.setup()
+			result, err := flattenProfileVariables(d, pv)
+			assert.NoError(t, err)
+			assert.Len(t, result, tt.expectLen)
+			if tt.verify != nil {
+				tt.verify(t, result)
+			}
+		})
 	}
-
-	result, err := flattenProfileVariables(mockResourceData, pv)
-
-	// Assertions for valid profile variables and pv
-	assert.NoError(t, err)
-	assert.Len(t, result, 1)
-	assert.Equal(t, []interface{}{
-		map[string]interface{}{
-			"variable": []interface{}{
-				map[string]interface{}{
-					"name":          StringPtr("variable_name_1"),
-					"display_name":  "display_name_1",
-					"description":   "description_1",
-					"format":        models.NewV1VariableFormat("string"),
-					"default_value": "default_value_1",
-					"regex":         "regex_1",
-					"required":      true,
-					"immutable":     false,
-					"hidden":        false,
-					"is_sensitive":  false,
-				},
-				map[string]interface{}{
-					"name":          StringPtr("variable_name_2"),
-					"display_name":  "display_name_2",
-					"description":   "description_2",
-					"format":        models.NewV1VariableFormat("integer"),
-					"default_value": "default_value_2",
-					"regex":         "regex_2",
-					"required":      false,
-					"immutable":     true,
-					"hidden":        true,
-					"is_sensitive":  false,
-				},
-			},
-		},
-	}, result)
-
-	// Test case 2: Empty profile variables and pv
-	//mockResourceDataEmpty := schema.TestResourceDataRaw(t, resourceClusterProfileVariables().Schema, map[string]interface{}{})
-	mockResourceDataEmpty := resourceClusterProfile().TestResourceData()
-	_ = mockResourceDataEmpty.Set("cloud", "edge-native")
-	_ = mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
-	resultEmpty, errEmpty := flattenProfileVariables(mockResourceDataEmpty, nil)
-
-	// Assertions for empty profile variables and pv
-	assert.NoError(t, errEmpty)
-	assert.Len(t, resultEmpty, 0)
-	assert.Equal(t, []interface{}{}, resultEmpty)
-}
-
-func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
-	mockResourceData := resourceClusterProfile().TestResourceData()
-	var proVar []interface{}
-	variables := map[string]interface{}{
-		"variable": []interface{}{
-			map[string]interface{}{
-				"default_value": "default_value_1",
-				"description":   "description_1",
-				"display_name":  "display_name_1",
-				"format":        "string",
-				"hidden":        false,
-				"immutable":     true,
-				"name":          "variable_name_1",
-				"regex":         "regex_1",
-				"required":      true,
-				"is_sensitive":  false,
-			},
-			map[string]interface{}{
-				"default_value": "default_value_2",
-				"description":   "description_2",
-				"display_name":  "display_name_2",
-				"format":        "integer",
-				"hidden":        true,
-				"immutable":     false,
-				"name":          "variable_name_2",
-				"regex":         "regex_2",
-				"required":      false,
-				"is_sensitive":  true,
-			},
-		},
-	}
-	proVar = append(proVar, variables)
-	_ = mockResourceData.Set("cloud", "all")
-	_ = mockResourceData.Set("type", "infra")
-	_ = mockResourceData.Set("profile_variables", proVar)
-	result, err := toClusterProfileVariables(mockResourceData)
-
-	// Assertions for valid profile variables
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
-
-	_ = mockResourceData.Set("cloud", "edge-native")
-	_ = mockResourceData.Set("type", "infra")
-	result, err = toClusterProfileVariables(mockResourceData)
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
-
-	_ = mockResourceData.Set("cloud", "aws")
-	_ = mockResourceData.Set("type", "add-on")
-	result, err = toClusterProfileVariables(mockResourceData)
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
-
-	_ = mockResourceData.Set("cloud", "all")
-	_ = mockResourceData.Set("type", "add-on")
-	result, err = toClusterProfileVariables(mockResourceData)
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
-
-	_ = mockResourceData.Set("cloud", "aws")
-	_ = mockResourceData.Set("type", "infra")
-	result, err = toClusterProfileVariables(mockResourceData)
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
-
-	_ = mockResourceData.Set("cloud", "edge-native")
-	_ = mockResourceData.Set("type", "add-on")
-	result, err = toClusterProfileVariables(mockResourceData)
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
 }
 
 func TestToClusterProfilePackCreate(t *testing.T) {

@@ -11,380 +11,396 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
-func TestToAwsAccountCTXProjectSecret(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc")
-	rd.Set("aws_access_key", "ABCDEFGHIJKLMNOPQRST")
-	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
-	rd.Set("context", "project")
-	rd.Set("type", "secret")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("aws_access_key"), acc.Spec.AccessKey)
-	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
-	assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
-}
-
-func TestToAwsAccountCTXTenantSecret(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc")
-	rd.Set("aws_access_key", "ABCDEFGHIJKLMNOPQRST")
-	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
-	rd.Set("context", "tenant")
-	rd.Set("type", "secret")
-	rd.Set("partition", "test_partition")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("aws_access_key"), acc.Spec.AccessKey)
-	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
-	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
-	assert.Equal(t, rd.Get("partition"), *acc.Spec.Partition)
-}
-
-func TestToAwsAccountCTXProjectSecuredAccessKey(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc_secured")
-	rd.Set("aws_secured_access_key", "ABCDEFGHIJKLMNOPQRST")
-	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
-	rd.Set("context", "project")
-	rd.Set("type", "secret")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("aws_secured_access_key"), acc.Spec.AccessKey)
-	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
-	assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
-}
-
-func TestToAwsAccountCTXTenantSecuredAccessKey(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc_secured")
-	rd.Set("aws_secured_access_key", "ABCDEFGHIJKLMNOPQRST")
-	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
-	rd.Set("context", "tenant")
-	rd.Set("type", "secret")
-	rd.Set("partition", "test_partition")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("aws_secured_access_key"), acc.Spec.AccessKey)
-	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
-	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
-	assert.Equal(t, rd.Get("partition"), *acc.Spec.Partition)
-}
-
-func TestToAwsAccountSecuredAccessKeyPriority(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc_priority")
-	// Set only secured key
-	rd.Set("aws_secured_access_key", "SECURED_ACCESS_KEY_123")
-	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
-	rd.Set("context", "project")
-	rd.Set("type", "secret")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, "SECURED_ACCESS_KEY_123", acc.Spec.AccessKey)
-	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
-}
-
-func TestToAwsAccountBothAccessKeysSet(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc_priority")
-	// Set both keys - secured key should take priority for Crossplane compatibility during transitions
-	rd.Set("aws_access_key", "LEGACY_ACCESS_KEY_123")
-	rd.Set("aws_secured_access_key", "SECURED_ACCESS_KEY_123")
-	rd.Set("aws_secret_key", "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$")
-	rd.Set("context", "project")
-	rd.Set("type", "secret")
-
-	acc, err := toAwsAccount(rd)
-
-	// Should not error - secured key takes priority during transitions
-	assert.NoError(t, err)
-	assert.NotNil(t, acc)
-	// Verify that secured key takes priority
-	assert.Equal(t, "SECURED_ACCESS_KEY_123", acc.Spec.AccessKey)
-	assert.Equal(t, rd.Get("aws_secret_key"), acc.Spec.SecretKey)
-}
-
-func TestToAwsAccountCTXProjectSTS(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc")
-	rd.Set("type", "sts")
-	rd.Set("arn", "ARN::AWSAD:12312sdTEd")
-	rd.Set("external_id", "TEST-External23423ID")
-	rd.Set("context", "project")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("arn"), acc.Spec.Sts.Arn)
-	assert.Equal(t, rd.Get("external_id"), acc.Spec.Sts.ExternalID)
-	assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
-}
-
-func TestToAwsAccountCTXTenantSTS(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc")
-	rd.Set("type", "sts")
-	rd.Set("arn", "ARN::AWSAD:12312sdTEd")
-	rd.Set("external_id", "TEST-External23423ID")
-	rd.Set("context", "tenant")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("arn"), acc.Spec.Sts.Arn)
-	assert.Equal(t, rd.Get("external_id"), acc.Spec.Sts.ExternalID)
-	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
-}
-
-func TestFlattenCloudAccountAwsSTS(t *testing.T) {
-	// Create a mock ResourceData object
-	rd := resourceCloudAccountAws().TestResourceData() // Assuming this method exists
-
-	// Create a mock AWS account model
-	account := &models.V1AwsAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name: "aws_test_account",
-			Annotations: map[string]string{
-				"scope": "aws_scope_test",
+func TestToAwsAccount(t *testing.T) {
+	secretKey := "sasf1424aqsfsdf123423SDFs23412sadf@#$@#$"
+	tests := []struct {
+		name   string
+		input  map[string]interface{}
+		verify func(t *testing.T, acc *models.V1AwsAccount)
+	}{
+		{
+			name: "CTX project secret",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc", "aws_access_key": "ABCDEFGHIJKLMNOPQRST", "aws_secret_key": secretKey,
+				"context": "project", "type": "secret",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "aws_unit_test_acc", acc.Metadata.Name)
+				assert.Equal(t, "ABCDEFGHIJKLMNOPQRST", acc.Spec.AccessKey)
+				assert.Equal(t, secretKey, acc.Spec.SecretKey)
+				assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, "secret", string(*acc.Spec.CredentialType))
 			},
 		},
-		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypeSts.Pointer(),
-			Sts:            &models.V1AwsStsCredentials{Arn: "test_arn"},
-			Partition:      types.Ptr("test_partition"),
-			PolicyARNs:     []string{"arn:aws:test_policy1", "arn:aws:test_policy2"},
-		},
-	}
-
-	// Call the flatten function
-	diags, hasError := flattenCloudAccountAws(rd, account)
-
-	// Assertions
-	assert.Nil(t, diags)
-	assert.False(t, hasError)
-	assert.Equal(t, "aws_test_account", rd.Get("name"))
-	assert.Equal(t, "aws_scope_test", rd.Get("context"))
-	assert.Equal(t, "test_arn", rd.Get("arn"))
-	assert.Equal(t, "test_partition", rd.Get("partition"))
-	assert.Equal(t, string(models.V1AwsCloudAccountCredentialTypeSts), rd.Get("type"))
-
-	// Handle policy_arns as a *schema.Set
-	policyARNs, ok := rd.Get("policy_arns").(*schema.Set)
-	if !ok {
-		t.Fatalf("Expected policy_arns to be a *schema.Set")
-	}
-
-	var actualARNs []string
-	for _, v := range policyARNs.List() {
-		actualARNs = append(actualARNs, v.(string))
-	}
-
-	expectedARNs := []string{"arn:aws:test_policy1", "arn:aws:test_policy2"}
-	assert.ElementsMatch(t, expectedARNs, actualARNs)
-}
-
-func TestFlattenCloudAccountAws_NonStsType(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-
-	account := &models.V1AwsAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name: "aws_test_account_secret",
-			Annotations: map[string]string{
-				"scope": "aws_scope_test_secret",
+		{
+			name: "CTX tenant secret",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc", "aws_access_key": "ABCDEFGHIJKLMNOPQRST", "aws_secret_key": secretKey,
+				"context": "tenant", "type": "secret", "partition": "test_partition",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "aws_unit_test_acc", acc.Metadata.Name)
+				assert.Equal(t, "ABCDEFGHIJKLMNOPQRST", acc.Spec.AccessKey)
+				assert.Equal(t, secretKey, acc.Spec.SecretKey)
+				assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, "secret", string(*acc.Spec.CredentialType))
+				assert.Equal(t, "test_partition", *acc.Spec.Partition)
 			},
 		},
-		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
-			AccessKey:      "test_access_key_secret",
-			Partition:      types.Ptr("test_partition_secret"),
-			PolicyARNs:     []string{"arn:aws:test_policy_secret1", "arn:aws:test_policy_secret2"},
-		},
-	}
-
-	// Call the flatten function
-	diags, hasError := flattenCloudAccountAws(rd, account)
-
-	// Assertions
-	assert.Nil(t, diags)
-	assert.False(t, hasError)
-	assert.Equal(t, "aws_test_account_secret", rd.Get("name"))
-	assert.Equal(t, "aws_scope_test_secret", rd.Get("context"))
-	assert.Equal(t, "test_access_key_secret", rd.Get("aws_access_key"))
-	assert.Empty(t, rd.Get("arn")) // Asserting that arn is not set
-	assert.Equal(t, "test_partition_secret", rd.Get("partition"))
-
-	// Handle policy_arns as a *schema.Set
-	policyARNs, ok := rd.Get("policy_arns").(*schema.Set)
-	if !ok {
-		t.Fatalf("Expected policy_arns to be a *schema.Set")
-	}
-
-	var actualARNs []string
-	for _, v := range policyARNs.List() {
-		actualARNs = append(actualARNs, v.(string))
-	}
-
-	expectedARNs := []string{"arn:aws:test_policy_secret1", "arn:aws:test_policy_secret2"}
-	assert.ElementsMatch(t, expectedARNs, actualARNs)
-}
-
-func TestFlattenCloudAccountAws_WithSecuredAccessKey(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	// Simulate that aws_secured_access_key was set in the state
-	rd.Set("aws_secured_access_key", "existing_secured_key")
-
-	account := &models.V1AwsAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name: "aws_test_account_secured",
-			Annotations: map[string]string{
-				"scope": "aws_scope_test_secured",
+		{
+			name: "CTX project secured access key",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc_secured", "aws_secured_access_key": "ABCDEFGHIJKLMNOPQRST", "aws_secret_key": secretKey,
+				"context": "project", "type": "secret",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "aws_unit_test_acc_secured", acc.Metadata.Name)
+				assert.Equal(t, "ABCDEFGHIJKLMNOPQRST", acc.Spec.AccessKey)
+				assert.Equal(t, secretKey, acc.Spec.SecretKey)
+				assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, "secret", string(*acc.Spec.CredentialType))
 			},
 		},
-		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
-			AccessKey:      "test_secured_access_key",
-			Partition:      types.Ptr("test_partition_secured"),
-			PolicyARNs:     []string{"arn:aws:test_policy_secured1"},
-		},
-	}
-
-	// Call the flatten function
-	diags, hasError := flattenCloudAccountAws(rd, account)
-
-	// Assertions
-	assert.Nil(t, diags)
-	assert.False(t, hasError)
-	assert.Equal(t, "aws_test_account_secured", rd.Get("name"))
-	assert.Equal(t, "aws_scope_test_secured", rd.Get("context"))
-	assert.Equal(t, "test_secured_access_key", rd.Get("aws_secured_access_key"))
-	assert.Empty(t, rd.Get("aws_access_key")) // Legacy field should not be set
-	assert.Equal(t, "test_partition_secured", rd.Get("partition"))
-
-	// Handle policy_arns as a *schema.Set
-	policyARNs, ok := rd.Get("policy_arns").(*schema.Set)
-	if !ok {
-		t.Fatalf("Expected policy_arns to be a *schema.Set")
-	}
-
-	var actualARNs []string
-	for _, v := range policyARNs.List() {
-		actualARNs = append(actualARNs, v.(string))
-	}
-
-	expectedARNs := []string{"arn:aws:test_policy_secured1"}
-	assert.ElementsMatch(t, expectedARNs, actualARNs)
-}
-
-func TestFlattenCloudAccountAws_LegacyAccessKey(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	// Simulate legacy behavior - aws_secured_access_key is empty/not set
-
-	account := &models.V1AwsAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name: "aws_test_account_legacy",
-			Annotations: map[string]string{
-				"scope": "project",
+		{
+			name: "CTX tenant secured access key",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc_secured", "aws_secured_access_key": "ABCDEFGHIJKLMNOPQRST", "aws_secret_key": secretKey,
+				"context": "tenant", "type": "secret", "partition": "test_partition",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "aws_unit_test_acc_secured", acc.Metadata.Name)
+				assert.Equal(t, "ABCDEFGHIJKLMNOPQRST", acc.Spec.AccessKey)
+				assert.Equal(t, secretKey, acc.Spec.SecretKey)
+				assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, "secret", string(*acc.Spec.CredentialType))
+				assert.Equal(t, "test_partition", *acc.Spec.Partition)
 			},
 		},
-		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
-			AccessKey:      "test_legacy_access_key",
-			Partition:      types.Ptr("aws"),
-		},
-	}
-
-	// Call the flatten function
-	diags, hasError := flattenCloudAccountAws(rd, account)
-
-	// Assertions
-	assert.Nil(t, diags)
-	assert.False(t, hasError)
-	assert.Equal(t, "aws_test_account_legacy", rd.Get("name"))
-	assert.Equal(t, "project", rd.Get("context"))
-	assert.Equal(t, "test_legacy_access_key", rd.Get("aws_access_key"))
-	assert.Empty(t, rd.Get("aws_secured_access_key")) // Secured field should not be set
-	assert.Equal(t, "aws", rd.Get("partition"))
-}
-
-func TestFlattenCloudAccountAws_SwitchFromSecuredToLegacy(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	// Simulate scenario where aws_secured_access_key was previously set
-	// but now we're reading back an account that should use aws_access_key
-	rd.Set("aws_secured_access_key", "old_secured_key")
-
-	account := &models.V1AwsAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name: "aws_test_account_switch",
-			Annotations: map[string]string{
-				"scope": "project",
+		{
+			name: "secured access key priority",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc_priority", "aws_secured_access_key": "SECURED_ACCESS_KEY_123", "aws_secret_key": secretKey,
+				"context": "project", "type": "secret",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "SECURED_ACCESS_KEY_123", acc.Spec.AccessKey)
+				assert.Equal(t, secretKey, acc.Spec.SecretKey)
 			},
 		},
-		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
-			AccessKey:      "new_access_key",
-			Partition:      types.Ptr("aws"),
-		},
-	}
-
-	// Call the flatten function - it should keep using aws_secured_access_key since it was already set
-	diags, hasError := flattenCloudAccountAws(rd, account)
-
-	// Assertions
-	assert.Nil(t, diags)
-	assert.False(t, hasError)
-	assert.Equal(t, "aws_test_account_switch", rd.Get("name"))
-	assert.Equal(t, "project", rd.Get("context"))
-	assert.Equal(t, "new_access_key", rd.Get("aws_secured_access_key"))
-	assert.Empty(t, rd.Get("aws_access_key")) // Legacy field should be cleared to avoid conflicts
-	assert.Equal(t, "aws", rd.Get("partition"))
-}
-
-func TestFlattenCloudAccountAws_ClearConflictingFieldLegacy(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	// Simulate scenario where aws_secured_access_key is NOT set,
-	// so aws_access_key should be used and aws_secured_access_key should be cleared
-
-	account := &models.V1AwsAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name: "aws_test_account_clear",
-			Annotations: map[string]string{
-				"scope": "project",
+		{
+			name: "both access keys set",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc_priority", "aws_access_key": "LEGACY_ACCESS_KEY_123", "aws_secured_access_key": "SECURED_ACCESS_KEY_123",
+				"aws_secret_key": secretKey, "context": "project", "type": "secret",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.NotNil(t, acc)
+				assert.Equal(t, "SECURED_ACCESS_KEY_123", acc.Spec.AccessKey)
+				assert.Equal(t, secretKey, acc.Spec.SecretKey)
 			},
 		},
-		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
-			AccessKey:      "legacy_access_key",
-			Partition:      types.Ptr("aws"),
+		{
+			name: "CTX project STS",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc", "type": "sts", "arn": "ARN::AWSAD:12312sdTEd",
+				"external_id": "TEST-External23423ID", "context": "project",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "aws_unit_test_acc", acc.Metadata.Name)
+				assert.Equal(t, "ARN::AWSAD:12312sdTEd", acc.Spec.Sts.Arn)
+				assert.Equal(t, "TEST-External23423ID", acc.Spec.Sts.ExternalID)
+				assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, "sts", string(*acc.Spec.CredentialType))
+			},
+		},
+		{
+			name: "CTX tenant STS",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc", "type": "sts", "arn": "ARN::AWSAD:12312sdTEd",
+				"external_id": "TEST-External23423ID", "context": "tenant",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "aws_unit_test_acc", acc.Metadata.Name)
+				assert.Equal(t, "ARN::AWSAD:12312sdTEd", acc.Spec.Sts.Arn)
+				assert.Equal(t, "TEST-External23423ID", acc.Spec.Sts.ExternalID)
+				assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, "sts", string(*acc.Spec.CredentialType))
+			},
+		},
+		{
+			name: "CTX project pod identity",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc_pod_identity", "type": "pod-identity",
+				"role_arn": "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
+				"permission_boundary_arn": "arn:aws:iam::123456789012:policy/PermissionBoundary", "context": "project",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "aws_unit_test_acc_pod_identity", acc.Metadata.Name)
+				assert.Equal(t, "arn:aws:iam::123456789012:role/EKSPodIdentityRole", acc.Spec.PodIdentity.RoleArn)
+				assert.Equal(t, "arn:aws:iam::123456789012:policy/PermissionBoundary", acc.Spec.PodIdentity.PermissionBoundaryArn)
+				assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, "pod-identity", string(*acc.Spec.CredentialType))
+			},
+		},
+		{
+			name: "CTX tenant pod identity",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc_pod_identity_tenant", "type": "pod-identity",
+				"role_arn": "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
+				"permission_boundary_arn": "arn:aws:iam::123456789012:policy/PermissionBoundary",
+				"context": "tenant", "partition": "aws",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "aws_unit_test_acc_pod_identity_tenant", acc.Metadata.Name)
+				assert.Equal(t, "arn:aws:iam::123456789012:role/EKSPodIdentityRole", acc.Spec.PodIdentity.RoleArn)
+				assert.Equal(t, "arn:aws:iam::123456789012:policy/PermissionBoundary", acc.Spec.PodIdentity.PermissionBoundaryArn)
+				assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, "pod-identity", string(*acc.Spec.CredentialType))
+				assert.Equal(t, "aws", *acc.Spec.Partition)
+			},
+		},
+		{
+			name: "pod identity without permission boundary",
+			input: map[string]interface{}{
+				"name": "aws_unit_test_acc_pod_identity_no_boundary", "type": "pod-identity",
+				"role_arn": "arn:aws:iam::123456789012:role/EKSPodIdentityRole", "context": "project",
+			},
+			verify: func(t *testing.T, acc *models.V1AwsAccount) {
+				assert.Equal(t, "aws_unit_test_acc_pod_identity_no_boundary", acc.Metadata.Name)
+				assert.Equal(t, "arn:aws:iam::123456789012:role/EKSPodIdentityRole", acc.Spec.PodIdentity.RoleArn)
+				assert.Empty(t, acc.Spec.PodIdentity.PermissionBoundaryArn)
+				assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
+				assert.Equal(t, "pod-identity", string(*acc.Spec.CredentialType))
+			},
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rd := resourceCloudAccountAws().TestResourceData()
+			for k, v := range tt.input {
+				rd.Set(k, v)
+			}
+			acc, err := toAwsAccount(rd)
+			assert.NoError(t, err)
+			tt.verify(t, acc)
+		})
+	}
+}
 
-	// Call the flatten function
-	diags, hasError := flattenCloudAccountAws(rd, account)
+// assertFlattenResult checks expected fields on rd after flatten; expect keys with nil are skipped, *string "" means assert empty.
+func assertFlattenResult(t *testing.T, rd *schema.ResourceData, expect map[string]*string, policyARNs []string) {
+	t.Helper()
+	for k, v := range expect {
+		if v == nil {
+			continue
+		}
+		if *v == "" {
+			assert.Empty(t, rd.Get(k), "field %s", k)
+		} else {
+			assert.Equal(t, *v, rd.Get(k), "field %s", k)
+		}
+	}
+	if policyARNs != nil {
+		set, ok := rd.Get("policy_arns").(*schema.Set)
+		assert.True(t, ok, "policy_arns should be *schema.Set")
+		var actual []string
+		for _, x := range set.List() {
+			actual = append(actual, x.(string))
+		}
+		assert.ElementsMatch(t, policyARNs, actual)
+	}
+}
 
-	// Assertions
-	assert.Nil(t, diags)
-	assert.False(t, hasError)
-	assert.Equal(t, "aws_test_account_clear", rd.Get("name"))
-	assert.Equal(t, "project", rd.Get("context"))
-	assert.Equal(t, "legacy_access_key", rd.Get("aws_access_key"))
-	assert.Empty(t, rd.Get("aws_secured_access_key")) // Should be explicitly cleared to avoid conflicts
-	assert.Equal(t, "aws", rd.Get("partition"))
+func TestFlattenCloudAccountAws_TableDriven(t *testing.T) {
+	scenarios := []struct {
+		name             string
+		account          *models.V1AwsAccount
+		rdPreSet         map[string]interface{}
+		expect           map[string]*string
+		expectPolicyARNs []string
+	}{
+		{
+			name: "STS",
+			account: &models.V1AwsAccount{
+				Metadata: &models.V1ObjectMeta{
+					Name: "aws_test_account",
+					Annotations: map[string]string{"scope": "aws_scope_test"},
+				},
+				Spec: &models.V1AwsCloudAccount{
+					CredentialType: models.V1AwsCloudAccountCredentialTypeSts.Pointer(),
+					Sts:            &models.V1AwsStsCredentials{Arn: "test_arn"},
+					Partition:      types.Ptr("test_partition"),
+					PolicyARNs:     []string{"arn:aws:test_policy1", "arn:aws:test_policy2"},
+				},
+			},
+			expect: map[string]*string{
+				"name": types.Ptr("aws_test_account"), "context": types.Ptr("aws_scope_test"),
+				"arn": types.Ptr("test_arn"), "partition": types.Ptr("test_partition"),
+				"type": types.Ptr(string(models.V1AwsCloudAccountCredentialTypeSts)),
+			},
+			expectPolicyARNs: []string{"arn:aws:test_policy1", "arn:aws:test_policy2"},
+		},
+		{
+			name: "secret (non-STS)",
+			account: &models.V1AwsAccount{
+				Metadata: &models.V1ObjectMeta{
+					Name: "aws_test_account_secret",
+					Annotations: map[string]string{"scope": "aws_scope_test_secret"},
+				},
+				Spec: &models.V1AwsCloudAccount{
+					CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
+					AccessKey:      "test_access_key_secret",
+					Partition:      types.Ptr("test_partition_secret"),
+					PolicyARNs:     []string{"arn:aws:test_policy_secret1", "arn:aws:test_policy_secret2"},
+				},
+			},
+			expect: map[string]*string{
+				"name": types.Ptr("aws_test_account_secret"), "context": types.Ptr("aws_scope_test_secret"),
+				"aws_access_key": types.Ptr("test_access_key_secret"), "arn": types.Ptr(""),
+				"partition": types.Ptr("test_partition_secret"), "type": types.Ptr(string(models.V1AwsCloudAccountCredentialTypeSecret)),
+			},
+			expectPolicyARNs: []string{"arn:aws:test_policy_secret1", "arn:aws:test_policy_secret2"},
+		},
+		{
+			name: "secret with secured access key (rd pre-set)",
+			account: &models.V1AwsAccount{
+				Metadata: &models.V1ObjectMeta{
+					Name: "aws_test_account_secured",
+					Annotations: map[string]string{"scope": "aws_scope_test_secured"},
+				},
+				Spec: &models.V1AwsCloudAccount{
+					CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
+					AccessKey:      "test_secured_access_key",
+					Partition:      types.Ptr("test_partition_secured"),
+					PolicyARNs:     []string{"arn:aws:test_policy_secured1"},
+				},
+			},
+			rdPreSet: map[string]interface{}{"aws_secured_access_key": "existing_secured_key"},
+			expect: map[string]*string{
+				"name": types.Ptr("aws_test_account_secured"), "context": types.Ptr("aws_scope_test_secured"),
+				"aws_secured_access_key": types.Ptr("test_secured_access_key"), "aws_access_key": types.Ptr(""),
+				"partition": types.Ptr("test_partition_secured"),
+			},
+			expectPolicyARNs: []string{"arn:aws:test_policy_secured1"},
+		},
+		{
+			name: "legacy access key",
+			account: &models.V1AwsAccount{
+				Metadata: &models.V1ObjectMeta{
+					Name: "aws_test_account_legacy",
+					Annotations: map[string]string{"scope": "project"},
+				},
+				Spec: &models.V1AwsCloudAccount{
+					CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
+					AccessKey:      "test_legacy_access_key",
+					Partition:      types.Ptr("aws"),
+				},
+			},
+			expect: map[string]*string{
+				"name": types.Ptr("aws_test_account_legacy"), "context": types.Ptr("project"),
+				"aws_access_key": types.Ptr("test_legacy_access_key"), "aws_secured_access_key": types.Ptr(""),
+				"partition": types.Ptr("aws"),
+			},
+		},
+		{
+			name: "switch from secured to legacy (keeps secured in state)",
+			account: &models.V1AwsAccount{
+				Metadata: &models.V1ObjectMeta{
+					Name: "aws_test_account_switch",
+					Annotations: map[string]string{"scope": "project"},
+				},
+				Spec: &models.V1AwsCloudAccount{
+					CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
+					AccessKey:      "new_access_key",
+					Partition:      types.Ptr("aws"),
+				},
+			},
+			rdPreSet: map[string]interface{}{"aws_secured_access_key": "old_secured_key"},
+			expect: map[string]*string{
+				"name": types.Ptr("aws_test_account_switch"), "context": types.Ptr("project"),
+				"aws_secured_access_key": types.Ptr("new_access_key"), "aws_access_key": types.Ptr(""),
+				"partition": types.Ptr("aws"),
+			},
+		},
+		{
+			name: "clear conflicting field legacy",
+			account: &models.V1AwsAccount{
+				Metadata: &models.V1ObjectMeta{
+					Name: "aws_test_account_clear",
+					Annotations: map[string]string{"scope": "project"},
+				},
+				Spec: &models.V1AwsCloudAccount{
+					CredentialType: models.V1AwsCloudAccountCredentialTypeSecret.Pointer(),
+					AccessKey:      "legacy_access_key",
+					Partition:      types.Ptr("aws"),
+				},
+			},
+			expect: map[string]*string{
+				"name": types.Ptr("aws_test_account_clear"), "context": types.Ptr("project"),
+				"aws_access_key": types.Ptr("legacy_access_key"), "aws_secured_access_key": types.Ptr(""),
+				"partition": types.Ptr("aws"),
+			},
+		},
+		{
+			name: "pod identity with permission boundary",
+			account: &models.V1AwsAccount{
+				Metadata: &models.V1ObjectMeta{
+					Name: "aws_test_account_pod_identity",
+					Annotations: map[string]string{"scope": "project"},
+				},
+				Spec: &models.V1AwsCloudAccount{
+					CredentialType: models.V1AwsCloudAccountCredentialTypePodDashIdentity.Pointer(),
+					PodIdentity: &models.V1AwsPodIdentityCredentials{
+						RoleArn:               "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
+						PermissionBoundaryArn: "arn:aws:iam::123456789012:policy/PermissionBoundary",
+					},
+					Partition: types.Ptr("aws"),
+				},
+			},
+			expect: map[string]*string{
+				"name": types.Ptr("aws_test_account_pod_identity"), "context": types.Ptr("project"),
+				"role_arn": types.Ptr("arn:aws:iam::123456789012:role/EKSPodIdentityRole"),
+				"permission_boundary_arn": types.Ptr("arn:aws:iam::123456789012:policy/PermissionBoundary"),
+				"partition": types.Ptr("aws"), "type": types.Ptr(string(models.V1AwsCloudAccountCredentialTypePodDashIdentity)),
+			},
+		},
+		{
+			name: "pod identity without permission boundary",
+			account: &models.V1AwsAccount{
+				Metadata: &models.V1ObjectMeta{
+					Name: "aws_test_account_pod_identity_no_boundary",
+					Annotations: map[string]string{"scope": "tenant"},
+				},
+				Spec: &models.V1AwsCloudAccount{
+					CredentialType: models.V1AwsCloudAccountCredentialTypePodDashIdentity.Pointer(),
+					PodIdentity: &models.V1AwsPodIdentityCredentials{
+						RoleArn: "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
+					},
+					Partition:  types.Ptr("aws-us-gov"),
+					PolicyARNs: []string{"arn:aws:iam::123456789012:policy/CustomPolicy"},
+				},
+			},
+			expect: map[string]*string{
+				"name": types.Ptr("aws_test_account_pod_identity_no_boundary"), "context": types.Ptr("tenant"),
+				"role_arn": types.Ptr("arn:aws:iam::123456789012:role/EKSPodIdentityRole"),
+				"permission_boundary_arn": types.Ptr(""), "partition": types.Ptr("aws-us-gov"),
+				"type": types.Ptr(string(models.V1AwsCloudAccountCredentialTypePodDashIdentity)),
+			},
+			expectPolicyARNs: []string{"arn:aws:iam::123456789012:policy/CustomPolicy"},
+		},
+	}
+	for _, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			rd := resourceCloudAccountAws().TestResourceData()
+			for k, v := range s.rdPreSet {
+				rd.Set(k, v)
+			}
+			diags, hasError := flattenCloudAccountAws(rd, s.account)
+			assert.Nil(t, diags)
+			assert.False(t, hasError)
+			assertFlattenResult(t, rd, s.expect, s.expectPolicyARNs)
+		})
+	}
 }
 
 func prepareBaseAwsAccountTestData() *schema.ResourceData {
@@ -460,135 +476,6 @@ func TestResourceCloudAccountAwsDeleteWithSecuredAccessKey(t *testing.T) {
 }
 
 // ==================== Pod Identity Tests ====================
-
-func TestToAwsAccountCTXProjectPodIdentity(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc_pod_identity")
-	rd.Set("type", "pod-identity")
-	rd.Set("role_arn", "arn:aws:iam::123456789012:role/EKSPodIdentityRole")
-	rd.Set("permission_boundary_arn", "arn:aws:iam::123456789012:policy/PermissionBoundary")
-	rd.Set("context", "project")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("role_arn"), acc.Spec.PodIdentity.RoleArn)
-	assert.Equal(t, rd.Get("permission_boundary_arn"), acc.Spec.PodIdentity.PermissionBoundaryArn)
-	assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
-}
-
-func TestToAwsAccountCTXTenantPodIdentity(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc_pod_identity_tenant")
-	rd.Set("type", "pod-identity")
-	rd.Set("role_arn", "arn:aws:iam::123456789012:role/EKSPodIdentityRole")
-	rd.Set("permission_boundary_arn", "arn:aws:iam::123456789012:policy/PermissionBoundary")
-	rd.Set("context", "tenant")
-	rd.Set("partition", "aws")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("role_arn"), acc.Spec.PodIdentity.RoleArn)
-	assert.Equal(t, rd.Get("permission_boundary_arn"), acc.Spec.PodIdentity.PermissionBoundaryArn)
-	assert.Equal(t, "tenant", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
-	assert.Equal(t, rd.Get("partition"), *acc.Spec.Partition)
-}
-
-func TestToAwsAccountPodIdentityWithoutPermissionBoundary(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-	rd.Set("name", "aws_unit_test_acc_pod_identity_no_boundary")
-	rd.Set("type", "pod-identity")
-	rd.Set("role_arn", "arn:aws:iam::123456789012:role/EKSPodIdentityRole")
-	rd.Set("context", "project")
-	acc, err := toAwsAccount(rd)
-	assert.NoError(t, err)
-
-	assert.Equal(t, rd.Get("name"), acc.Metadata.Name)
-	assert.Equal(t, rd.Get("role_arn"), acc.Spec.PodIdentity.RoleArn)
-	assert.Empty(t, acc.Spec.PodIdentity.PermissionBoundaryArn)
-	assert.Equal(t, "project", acc.Metadata.Annotations["scope"])
-	assert.Equal(t, rd.Get("type"), string(*acc.Spec.CredentialType))
-}
-
-func TestFlattenCloudAccountAwsPodIdentity(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-
-	account := &models.V1AwsAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name: "aws_test_account_pod_identity",
-			Annotations: map[string]string{
-				"scope": "project",
-			},
-		},
-		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypePodDashIdentity.Pointer(),
-			PodIdentity: &models.V1AwsPodIdentityCredentials{
-				RoleArn:               "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
-				PermissionBoundaryArn: "arn:aws:iam::123456789012:policy/PermissionBoundary",
-			},
-			Partition: types.Ptr("aws"),
-		},
-	}
-
-	diags, hasError := flattenCloudAccountAws(rd, account)
-
-	assert.Nil(t, diags)
-	assert.False(t, hasError)
-	assert.Equal(t, "aws_test_account_pod_identity", rd.Get("name"))
-	assert.Equal(t, "project", rd.Get("context"))
-	assert.Equal(t, "arn:aws:iam::123456789012:role/EKSPodIdentityRole", rd.Get("role_arn"))
-	assert.Equal(t, "arn:aws:iam::123456789012:policy/PermissionBoundary", rd.Get("permission_boundary_arn"))
-	assert.Equal(t, "aws", rd.Get("partition"))
-	assert.Equal(t, string(models.V1AwsCloudAccountCredentialTypePodDashIdentity), rd.Get("type"))
-}
-
-func TestFlattenCloudAccountAwsPodIdentityWithoutPermissionBoundary(t *testing.T) {
-	rd := resourceCloudAccountAws().TestResourceData()
-
-	account := &models.V1AwsAccount{
-		Metadata: &models.V1ObjectMeta{
-			Name: "aws_test_account_pod_identity_no_boundary",
-			Annotations: map[string]string{
-				"scope": "tenant",
-			},
-		},
-		Spec: &models.V1AwsCloudAccount{
-			CredentialType: models.V1AwsCloudAccountCredentialTypePodDashIdentity.Pointer(),
-			PodIdentity: &models.V1AwsPodIdentityCredentials{
-				RoleArn: "arn:aws:iam::123456789012:role/EKSPodIdentityRole",
-			},
-			Partition:  types.Ptr("aws-us-gov"),
-			PolicyARNs: []string{"arn:aws:iam::123456789012:policy/CustomPolicy"},
-		},
-	}
-
-	diags, hasError := flattenCloudAccountAws(rd, account)
-
-	assert.Nil(t, diags)
-	assert.False(t, hasError)
-	assert.Equal(t, "aws_test_account_pod_identity_no_boundary", rd.Get("name"))
-	assert.Equal(t, "tenant", rd.Get("context"))
-	assert.Equal(t, "arn:aws:iam::123456789012:role/EKSPodIdentityRole", rd.Get("role_arn"))
-	assert.Empty(t, rd.Get("permission_boundary_arn"))
-	assert.Equal(t, "aws-us-gov", rd.Get("partition"))
-	assert.Equal(t, string(models.V1AwsCloudAccountCredentialTypePodDashIdentity), rd.Get("type"))
-
-	policyARNs, ok := rd.Get("policy_arns").(*schema.Set)
-	if !ok {
-		t.Fatalf("Expected policy_arns to be a *schema.Set")
-	}
-
-	var actualARNs []string
-	for _, v := range policyARNs.List() {
-		actualARNs = append(actualARNs, v.(string))
-	}
-
-	expectedARNs := []string{"arn:aws:iam::123456789012:policy/CustomPolicy"}
-	assert.ElementsMatch(t, expectedARNs, actualARNs)
-}
 
 func preparePodIdentityAwsAccountTestData() *schema.ResourceData {
 	d := resourceCloudAccountAws().TestResourceData()
