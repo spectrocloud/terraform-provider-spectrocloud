@@ -10,879 +10,126 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestToBrownfieldClusterSpecGeneric(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]interface{}
-		expected *models.V1SpectroGenericClusterImportEntitySpec
-	}{
-		{
-			name:  "default values",
-			input: map[string]interface{}{},
-			expected: &models.V1SpectroGenericClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode full",
-			input: map[string]interface{}{
-				"import_mode": "full",
-			},
-			expected: &models.V1SpectroGenericClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode read_only",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-			},
-			expected: &models.V1SpectroGenericClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "with proxy fields",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"proxy":                "http://proxy.example.com:8080",
-				"no_proxy":             "localhost,127.0.0.1",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroGenericClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy:            "http://proxy.example.com:8080",
-						NoProxy:              "localhost,127.0.0.1",
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-		{
-			name: "import_mode read_only with proxy",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-				"proxy":       "http://proxy.example.com:8080",
-				"no_proxy":    "localhost",
-			},
-			expected: &models.V1SpectroGenericClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
-						NoProxy:   "localhost",
-					},
-				},
-			},
-		},
-		{
-			name: "partial proxy fields",
-			input: map[string]interface{}{
-				"import_mode": "full",
-				"proxy":       "http://proxy.example.com:8080",
-			},
-			expected: &models.V1SpectroGenericClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
-					},
-				},
-			},
-		},
-		{
-			name: "only host_path and container_mount_path",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroGenericClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create schema for brownfield cluster resource
-			schemaMap := resourceClusterBrownfield().Schema
-
-			// Create ResourceData from input
-			d := schema.TestResourceDataRaw(t, schemaMap, tt.input)
-
-			// Call the function under test
-			result := toBrownfieldClusterSpecGeneric(d)
-
-			// Assert the result
-			assert.NotNil(t, result)
-			assert.NotNil(t, result.ClusterConfig)
-			assert.Equal(t, tt.expected.ClusterConfig.ImportMode, result.ClusterConfig.ImportMode)
-
-			// Assert proxy configuration
-			if tt.expected.ClusterConfig.Proxy == nil {
-				assert.Nil(t, result.ClusterConfig.Proxy)
-			} else {
-				assert.NotNil(t, result.ClusterConfig.Proxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.HTTPProxy, result.ClusterConfig.Proxy.HTTPProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.NoProxy, result.ClusterConfig.Proxy.NoProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaHostPath, result.ClusterConfig.Proxy.CaHostPath)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaContainerMountPath, result.ClusterConfig.Proxy.CaContainerMountPath)
-			}
-		})
-	}
+// brownfieldImportScenario defines input and expected ClusterConfig for ToBrownfield* and ToImportClusterConfig.
+type brownfieldImportScenario struct {
+	name       string
+	input      map[string]interface{}
+	importMode string
+	proxy      *models.V1ClusterProxySpec
 }
 
-func TestToBrownfieldClusterSpecCloudStack(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]interface{}
-		expected *models.V1SpectroCloudStackClusterImportEntitySpec
-	}{
-		{
-			name:  "default values",
-			input: map[string]interface{}{},
-			expected: &models.V1SpectroCloudStackClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
+var brownfieldImportScenarios = []brownfieldImportScenario{
+	{name: "default values", input: map[string]interface{}{}, importMode: "", proxy: nil},
+	{name: "import_mode full", input: map[string]interface{}{"import_mode": "full"}, importMode: "", proxy: nil},
+	{name: "import_mode read_only", input: map[string]interface{}{"import_mode": "read_only"}, importMode: "read-only", proxy: nil},
+	{
+		name: "with proxy fields",
+		input: map[string]interface{}{
+			"import_mode": "full", "proxy": "http://proxy.example.com:8080", "no_proxy": "localhost,127.0.0.1",
+			"host_path": "/etc/ssl/certs/proxy-ca.pem", "container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
 		},
-		{
-			name: "import_mode full",
-			input: map[string]interface{}{
-				"import_mode": "full",
-			},
-			expected: &models.V1SpectroCloudStackClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
+		importMode: "",
+		proxy: &models.V1ClusterProxySpec{
+			HTTPProxy: "http://proxy.example.com:8080", NoProxy: "localhost,127.0.0.1",
+			CaHostPath: "/etc/ssl/certs/proxy-ca.pem", CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
 		},
-		{
-			name: "with proxy fields",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"proxy":                "http://proxy.example.com:8080",
-				"no_proxy":             "localhost,127.0.0.1",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroCloudStackClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy:            "http://proxy.example.com:8080",
-						NoProxy:              "localhost,127.0.0.1",
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
+	},
+	{
+		name:       "import_mode read_only with proxy",
+		input:      map[string]interface{}{"import_mode": "read_only", "proxy": "http://proxy.example.com:8080", "no_proxy": "localhost"},
+		importMode: "read-only",
+		proxy:      &models.V1ClusterProxySpec{HTTPProxy: "http://proxy.example.com:8080", NoProxy: "localhost"},
+	},
+	{
+		name:       "partial proxy fields",
+		input:      map[string]interface{}{"import_mode": "full", "proxy": "http://proxy.example.com:8080"},
+		importMode: "",
+		proxy:      &models.V1ClusterProxySpec{HTTPProxy: "http://proxy.example.com:8080"},
+	},
+	{
+		name: "only host_path and container_mount_path",
+		input: map[string]interface{}{
+			"import_mode": "full", "host_path": "/etc/ssl/certs/proxy-ca.pem", "container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
 		},
-		{
-			name: "import_mode read_only with proxy",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-				"proxy":       "http://proxy.example.com:8080",
-				"no_proxy":    "localhost",
-			},
-			expected: &models.V1SpectroCloudStackClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
-						NoProxy:   "localhost",
-					},
-				},
-			},
-		},
-		{
-			name: "only host_path and container_mount_path",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroCloudStackClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create schema for brownfield cluster resource
-			schemaMap := resourceClusterBrownfield().Schema
-
-			// Create ResourceData from input
-			d := schema.TestResourceDataRaw(t, schemaMap, tt.input)
-
-			// Call the function under test
-			result := toBrownfieldClusterSpecCloudStack(d)
-
-			// Assert the result
-			assert.NotNil(t, result)
-			assert.NotNil(t, result.ClusterConfig)
-			assert.Equal(t, tt.expected.ClusterConfig.ImportMode, result.ClusterConfig.ImportMode)
-
-			// Assert proxy configuration
-			if tt.expected.ClusterConfig.Proxy == nil {
-				assert.Nil(t, result.ClusterConfig.Proxy)
-			} else {
-				assert.NotNil(t, result.ClusterConfig.Proxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.HTTPProxy, result.ClusterConfig.Proxy.HTTPProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.NoProxy, result.ClusterConfig.Proxy.NoProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaHostPath, result.ClusterConfig.Proxy.CaHostPath)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaContainerMountPath, result.ClusterConfig.Proxy.CaContainerMountPath)
-			}
-		})
-	}
+		importMode: "",
+		proxy:      &models.V1ClusterProxySpec{CaHostPath: "/etc/ssl/certs/proxy-ca.pem", CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem"},
+	},
 }
 
-func TestToBrownfieldClusterSpecMaas(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]interface{}
-		expected *models.V1SpectroMaasClusterImportEntitySpec
-	}{
-		{
-			name:  "default values",
-			input: map[string]interface{}{},
-			expected: &models.V1SpectroMaasClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "with proxy fields",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"proxy":                "http://proxy.example.com:8080",
-				"no_proxy":             "localhost,127.0.0.1",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroMaasClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy:            "http://proxy.example.com:8080",
-						NoProxy:              "localhost,127.0.0.1",
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-		{
-			name: "import_mode read_only with proxy",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-				"proxy":       "http://proxy.example.com:8080",
-				"no_proxy":    "localhost",
-			},
-			expected: &models.V1SpectroMaasClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
-						NoProxy:   "localhost",
-					},
-				},
-			},
-		},
-		{
-			name: "only host_path and container_mount_path",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroMaasClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create schema for brownfield cluster resource
-			schemaMap := resourceClusterBrownfield().Schema
-
-			// Create ResourceData from input
-			d := schema.TestResourceDataRaw(t, schemaMap, tt.input)
-
-			// Call the function under test
-			result := toBrownfieldClusterSpecMaas(d)
-
-			// Assert the result
-			assert.NotNil(t, result)
-			assert.NotNil(t, result.ClusterConfig)
-			assert.Equal(t, tt.expected.ClusterConfig.ImportMode, result.ClusterConfig.ImportMode)
-
-			// Assert proxy configuration
-			if tt.expected.ClusterConfig.Proxy == nil {
-				assert.Nil(t, result.ClusterConfig.Proxy)
-			} else {
-				assert.NotNil(t, result.ClusterConfig.Proxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.HTTPProxy, result.ClusterConfig.Proxy.HTTPProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.NoProxy, result.ClusterConfig.Proxy.NoProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaHostPath, result.ClusterConfig.Proxy.CaHostPath)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaContainerMountPath, result.ClusterConfig.Proxy.CaContainerMountPath)
-			}
-		})
-	}
+// scenariosByCloud lists which brownfieldImportScenarios indices run per cloud type (preserves original coverage).
+var scenariosByCloud = map[string][]int{
+	"Generic":    {0, 1, 2, 3, 4, 5, 6},
+	"CloudStack": {0, 1, 3, 4, 6},
+	"Maas":       {0, 3, 4, 6},
+	"EdgeNative": {0, 1, 2, 3, 4},
+	"Aws":        {0, 1, 4, 6},
+	"Azure":      {0, 1, 2, 3, 6},
+	"Gcp":        {0, 1, 4, 6},
+	"Vsphere":    {0, 1, 2, 3, 6},
 }
 
-func TestToBrownfieldClusterSpecEdgeNative(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]interface{}
-		expected *models.V1SpectroEdgeNativeClusterImportEntitySpec
-	}{
-		{
-			name:  "default values",
-			input: map[string]interface{}{},
-			expected: &models.V1SpectroEdgeNativeClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode full",
-			input: map[string]interface{}{
-				"import_mode": "full",
-			},
-			expected: &models.V1SpectroEdgeNativeClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode read_only",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-			},
-			expected: &models.V1SpectroEdgeNativeClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "with proxy fields",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"proxy":                "http://proxy.example.com:8080",
-				"no_proxy":             "localhost,127.0.0.1",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroEdgeNativeClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy:            "http://proxy.example.com:8080",
-						NoProxy:              "localhost,127.0.0.1",
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-		{
-			name: "import_mode read_only with proxy",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-				"proxy":       "http://proxy.example.com:8080",
-				"no_proxy":    "localhost",
-			},
-			expected: &models.V1SpectroEdgeNativeClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
-						NoProxy:   "localhost",
-					},
-				},
-			},
-		},
+func assertClusterConfig(t *testing.T, config *models.V1ImportClusterConfig, expectedMode string, expectedProxy *models.V1ClusterProxySpec) {
+	t.Helper()
+	assert.NotNil(t, config)
+	assert.Equal(t, expectedMode, config.ImportMode)
+	if expectedProxy == nil {
+		assert.Nil(t, config.Proxy)
+		return
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create schema for brownfield cluster resource
-			schemaMap := resourceClusterBrownfield().Schema
-
-			// Create ResourceData from input
-			d := schema.TestResourceDataRaw(t, schemaMap, tt.input)
-
-			// Call the function under test
-			result := toBrownfieldClusterSpecEdgeNative(d)
-
-			// Assert the result
-			assert.NotNil(t, result)
-			assert.NotNil(t, result.ClusterConfig)
-			assert.Equal(t, tt.expected.ClusterConfig.ImportMode, result.ClusterConfig.ImportMode)
-
-			// Assert proxy configuration
-			if tt.expected.ClusterConfig.Proxy == nil {
-				assert.Nil(t, result.ClusterConfig.Proxy)
-			} else {
-				assert.NotNil(t, result.ClusterConfig.Proxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.HTTPProxy, result.ClusterConfig.Proxy.HTTPProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.NoProxy, result.ClusterConfig.Proxy.NoProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaHostPath, result.ClusterConfig.Proxy.CaHostPath)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaContainerMountPath, result.ClusterConfig.Proxy.CaContainerMountPath)
-			}
-		})
-	}
+	assert.NotNil(t, config.Proxy)
+	assert.Equal(t, expectedProxy.HTTPProxy, config.Proxy.HTTPProxy)
+	assert.Equal(t, expectedProxy.NoProxy, config.Proxy.NoProxy)
+	assert.Equal(t, expectedProxy.CaHostPath, config.Proxy.CaHostPath)
+	assert.Equal(t, expectedProxy.CaContainerMountPath, config.Proxy.CaContainerMountPath)
 }
 
-func TestToBrownfieldClusterSpecAws(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]interface{}
-		expected *models.V1SpectroAwsClusterImportEntitySpec
-	}{
-		{
-			name:  "default values",
-			input: map[string]interface{}{},
-			expected: &models.V1SpectroAwsClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode full",
-			input: map[string]interface{}{
-				"import_mode": "full",
-			},
-			expected: &models.V1SpectroAwsClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode read_only with proxy",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-				"proxy":       "http://proxy.example.com:8080",
-				"no_proxy":    "localhost",
-			},
-			expected: &models.V1SpectroAwsClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
-						NoProxy:   "localhost",
-					},
-				},
-			},
-		},
-		{
-			name: "only host_path and container_mount_path",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroAwsClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create schema for brownfield cluster resource
-			schemaMap := resourceClusterBrownfield().Schema
-
-			// Create ResourceData from input
-			d := schema.TestResourceDataRaw(t, schemaMap, tt.input)
-
-			// Call the function under test
-			result := toBrownfieldClusterSpecAws(d)
-
-			// Assert the result
-			assert.NotNil(t, result)
-			assert.NotNil(t, result.ClusterConfig)
-			assert.Equal(t, tt.expected.ClusterConfig.ImportMode, result.ClusterConfig.ImportMode)
-
-			// Assert proxy configuration
-			if tt.expected.ClusterConfig.Proxy == nil {
-				assert.Nil(t, result.ClusterConfig.Proxy)
-			} else {
-				assert.NotNil(t, result.ClusterConfig.Proxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.HTTPProxy, result.ClusterConfig.Proxy.HTTPProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.NoProxy, result.ClusterConfig.Proxy.NoProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaHostPath, result.ClusterConfig.Proxy.CaHostPath)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaContainerMountPath, result.ClusterConfig.Proxy.CaContainerMountPath)
-			}
-		})
-	}
-}
-
-func TestToBrownfieldClusterSpecAzure(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]interface{}
-		expected *models.V1SpectroAzureClusterImportEntitySpec
-	}{
-		{
-			name:  "default values",
-			input: map[string]interface{}{},
-			expected: &models.V1SpectroAzureClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode full",
-			input: map[string]interface{}{
-				"import_mode": "full",
-			},
-			expected: &models.V1SpectroAzureClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode read_only",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-			},
-			expected: &models.V1SpectroAzureClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "with proxy fields",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"proxy":                "http://proxy.example.com:8080",
-				"no_proxy":             "localhost,127.0.0.1",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroAzureClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy:            "http://proxy.example.com:8080",
-						NoProxy:              "localhost,127.0.0.1",
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-		{
-			name: "only host_path and container_mount_path",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroAzureClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create schema for brownfield cluster resource
-			schemaMap := resourceClusterBrownfield().Schema
-
-			// Create ResourceData from input
-			d := schema.TestResourceDataRaw(t, schemaMap, tt.input)
-
-			// Call the function under test
-			result := toBrownfieldClusterSpecAzure(d)
-
-			// Assert the result
-			assert.NotNil(t, result)
-			assert.NotNil(t, result.ClusterConfig)
-			assert.Equal(t, tt.expected.ClusterConfig.ImportMode, result.ClusterConfig.ImportMode)
-
-			// Assert proxy configuration
-			if tt.expected.ClusterConfig.Proxy == nil {
-				assert.Nil(t, result.ClusterConfig.Proxy)
-			} else {
-				assert.NotNil(t, result.ClusterConfig.Proxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.HTTPProxy, result.ClusterConfig.Proxy.HTTPProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.NoProxy, result.ClusterConfig.Proxy.NoProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaHostPath, result.ClusterConfig.Proxy.CaHostPath)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaContainerMountPath, result.ClusterConfig.Proxy.CaContainerMountPath)
-			}
-		})
-	}
-}
-
-func TestToBrownfieldClusterSpecGcp(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]interface{}
-		expected *models.V1SpectroGcpClusterImportEntitySpec
-	}{
-		{
-			name:  "default values",
-			input: map[string]interface{}{},
-			expected: &models.V1SpectroGcpClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode full",
-			input: map[string]interface{}{
-				"import_mode": "full",
-			},
-			expected: &models.V1SpectroGcpClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode read_only with proxy",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-				"proxy":       "http://proxy.example.com:8080",
-				"no_proxy":    "localhost",
-			},
-			expected: &models.V1SpectroGcpClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy: "http://proxy.example.com:8080",
-						NoProxy:   "localhost",
-					},
-				},
-			},
-		},
-		{
-			name: "only host_path and container_mount_path",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroGcpClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create schema for brownfield cluster resource
-			schemaMap := resourceClusterBrownfield().Schema
-
-			// Create ResourceData from input
-			d := schema.TestResourceDataRaw(t, schemaMap, tt.input)
-
-			// Call the function under test
-			result := toBrownfieldClusterSpecGcp(d)
-
-			// Assert the result
-			assert.NotNil(t, result)
-			assert.NotNil(t, result.ClusterConfig)
-			assert.Equal(t, tt.expected.ClusterConfig.ImportMode, result.ClusterConfig.ImportMode)
-
-			// Assert proxy configuration
-			if tt.expected.ClusterConfig.Proxy == nil {
-				assert.Nil(t, result.ClusterConfig.Proxy)
-			} else {
-				assert.NotNil(t, result.ClusterConfig.Proxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.HTTPProxy, result.ClusterConfig.Proxy.HTTPProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.NoProxy, result.ClusterConfig.Proxy.NoProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaHostPath, result.ClusterConfig.Proxy.CaHostPath)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaContainerMountPath, result.ClusterConfig.Proxy.CaContainerMountPath)
-			}
-		})
-	}
-}
-
-func TestToBrownfieldClusterSpecVsphere(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]interface{}
-		expected *models.V1SpectroVsphereClusterImportEntitySpec
-	}{
-		{
-			name:  "default values",
-			input: map[string]interface{}{},
-			expected: &models.V1SpectroVsphereClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode full",
-			input: map[string]interface{}{
-				"import_mode": "full",
-			},
-			expected: &models.V1SpectroVsphereClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "import_mode read_only",
-			input: map[string]interface{}{
-				"import_mode": "read_only",
-			},
-			expected: &models.V1SpectroVsphereClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "read-only",
-					Proxy:      nil,
-				},
-			},
-		},
-		{
-			name: "with proxy fields",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"proxy":                "http://proxy.example.com:8080",
-				"no_proxy":             "localhost,127.0.0.1",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroVsphereClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						HTTPProxy:            "http://proxy.example.com:8080",
-						NoProxy:              "localhost,127.0.0.1",
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-		{
-			name: "only host_path and container_mount_path",
-			input: map[string]interface{}{
-				"import_mode":          "full",
-				"host_path":            "/etc/ssl/certs/proxy-ca.pem",
-				"container_mount_path": "/etc/ssl/certs/proxy-ca.pem",
-			},
-			expected: &models.V1SpectroVsphereClusterImportEntitySpec{
-				ClusterConfig: &models.V1ImportClusterConfig{
-					ImportMode: "",
-					Proxy: &models.V1ClusterProxySpec{
-						CaHostPath:           "/etc/ssl/certs/proxy-ca.pem",
-						CaContainerMountPath: "/etc/ssl/certs/proxy-ca.pem",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create schema for brownfield cluster resource
-			schemaMap := resourceClusterBrownfield().Schema
-
-			// Create ResourceData from input
-			d := schema.TestResourceDataRaw(t, schemaMap, tt.input)
-
-			// Call the function under test
-			result := toBrownfieldClusterSpecVsphere(d)
-
-			// Assert the result
-			assert.NotNil(t, result)
-			assert.NotNil(t, result.ClusterConfig)
-			assert.Equal(t, tt.expected.ClusterConfig.ImportMode, result.ClusterConfig.ImportMode)
-
-			// Assert proxy configuration
-			if tt.expected.ClusterConfig.Proxy == nil {
-				assert.Nil(t, result.ClusterConfig.Proxy)
-			} else {
-				assert.NotNil(t, result.ClusterConfig.Proxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.HTTPProxy, result.ClusterConfig.Proxy.HTTPProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.NoProxy, result.ClusterConfig.Proxy.NoProxy)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaHostPath, result.ClusterConfig.Proxy.CaHostPath)
-				assert.Equal(t, tt.expected.ClusterConfig.Proxy.CaContainerMountPath, result.ClusterConfig.Proxy.CaContainerMountPath)
+func TestToBrownfieldClusterSpec_AllClouds(t *testing.T) {
+	schemaMap := resourceClusterBrownfield().Schema
+	for cloudType, indices := range scenariosByCloud {
+		t.Run(cloudType, func(t *testing.T) {
+			for _, idx := range indices {
+				sc := brownfieldImportScenarios[idx]
+				t.Run(sc.name, func(t *testing.T) {
+					d := schema.TestResourceDataRaw(t, schemaMap, sc.input)
+					var config *models.V1ImportClusterConfig
+					switch cloudType {
+					case "Generic":
+						result := toBrownfieldClusterSpecGeneric(d)
+						assert.NotNil(t, result)
+						config = result.ClusterConfig
+					case "CloudStack":
+						result := toBrownfieldClusterSpecCloudStack(d)
+						assert.NotNil(t, result)
+						config = result.ClusterConfig
+					case "Maas":
+						result := toBrownfieldClusterSpecMaas(d)
+						assert.NotNil(t, result)
+						config = result.ClusterConfig
+					case "EdgeNative":
+						result := toBrownfieldClusterSpecEdgeNative(d)
+						assert.NotNil(t, result)
+						config = result.ClusterConfig
+					case "Aws":
+						result := toBrownfieldClusterSpecAws(d)
+						assert.NotNil(t, result)
+						config = result.ClusterConfig
+					case "Azure":
+						result := toBrownfieldClusterSpecAzure(d)
+						assert.NotNil(t, result)
+						config = result.ClusterConfig
+					case "Gcp":
+						result := toBrownfieldClusterSpecGcp(d)
+						assert.NotNil(t, result)
+						config = result.ClusterConfig
+					case "Vsphere":
+						result := toBrownfieldClusterSpecVsphere(d)
+						assert.NotNil(t, result)
+						config = result.ClusterConfig
+					default:
+						t.Fatalf("unknown cloud type %s", cloudType)
+					}
+					assertClusterConfig(t, config, sc.importMode, sc.proxy)
+				})
 			}
 		})
 	}
@@ -1029,29 +276,10 @@ func TestToImportClusterConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create schema for brownfield cluster resource
 			schemaMap := resourceClusterBrownfield().Schema
-
-			// Create ResourceData from input
 			d := schema.TestResourceDataRaw(t, schemaMap, tt.input)
-
-			// Call the function under test
 			result := toImportClusterConfig(d)
-
-			// Assert the result
-			assert.NotNil(t, result)
-			assert.Equal(t, tt.expected.ImportMode, result.ImportMode)
-
-			// Assert proxy configuration
-			if tt.expected.Proxy == nil {
-				assert.Nil(t, result.Proxy, "Proxy should be nil")
-			} else {
-				assert.NotNil(t, result.Proxy, "Proxy should not be nil")
-				assert.Equal(t, tt.expected.Proxy.HTTPProxy, result.Proxy.HTTPProxy)
-				assert.Equal(t, tt.expected.Proxy.NoProxy, result.Proxy.NoProxy)
-				assert.Equal(t, tt.expected.Proxy.CaHostPath, result.Proxy.CaHostPath)
-				assert.Equal(t, tt.expected.Proxy.CaContainerMountPath, result.Proxy.CaContainerMountPath)
-			}
+			assertClusterConfig(t, result, tt.expected.ImportMode, tt.expected.Proxy)
 		})
 	}
 }

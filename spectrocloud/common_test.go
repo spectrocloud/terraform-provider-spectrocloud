@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -229,6 +230,36 @@ func testResourceCRUD(t *testing.T, prepareData func() *schema.ResourceData, met
 
 	diags = delete(ctx, d, meta)
 	assert.Empty(t, diags, "Delete should not return diagnostics")
+}
+
+// testResourceCRUDNegative runs one CRUD op with negative client and asserts diags contain msgSubstr.
+func testResourceCRUDNegative(t *testing.T, op string, prepare func() *schema.ResourceData, meta interface{},
+	create, read, update, delete resourceCRUDFunc, setID bool, msgSubstr string) {
+	ctx := context.Background()
+	d := prepare()
+	if setID {
+		d.SetId("12763471256725")
+	}
+	var diags diag.Diagnostics
+	switch op {
+	case "Create":
+		diags = create(ctx, d, meta)
+	case "Read":
+		diags = read(ctx, d, meta)
+	case "Update":
+		diags = update(ctx, d, meta)
+	case "Delete":
+		diags = delete(ctx, d, meta)
+	default:
+		t.Fatalf("unknown op %s", op)
+	}
+	if len(diags) == 0 {
+		t.Errorf("expected diagnostics containing %q", msgSubstr)
+		return
+	}
+	if !strings.Contains(diags[0].Summary, msgSubstr) {
+		t.Errorf("diag summary %q does not contain %q", diags[0].Summary, msgSubstr)
+	}
 }
 
 func TestHandleReadError_NotFound(t *testing.T) {
