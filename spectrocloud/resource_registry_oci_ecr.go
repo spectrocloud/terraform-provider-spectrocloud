@@ -293,9 +293,19 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
+
+		isSync := registry.Spec.IsSyncSupported
+		if registry.Status != nil && registry.Status.SyncStatus != nil {
+			isSync = registry.Status.SyncStatus.IsSyncSupported
+		}
+		if err := d.Set("is_synchronization", isSync); err != nil {
+			return diag.FromErr(err)
+		}
+
 		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
 			return diag.FromErr(err)
 		}
+
 		if err := d.Set("wait_for_sync", false); err != nil {
 			return diag.FromErr(err)
 		}
@@ -361,9 +371,14 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
+		isSync := registry.Spec.IsSyncSupported
+		if registry.Status != nil && registry.Status.SyncStatus != nil {
+			isSync = registry.Status.SyncStatus.IsSyncSupported
+		}
+		if err := d.Set("is_synchronization", isSync); err != nil {
 			return diag.FromErr(err)
 		}
+
 		if err := d.Set("wait_for_sync", false); err != nil {
 			return diag.FromErr(err)
 		}
