@@ -1,9 +1,10 @@
 package spectrocloud
 
 import (
+	"testing"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestToDeveloperSetting(t *testing.T) {

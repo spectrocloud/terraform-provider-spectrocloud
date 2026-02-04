@@ -2,236 +2,107 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
-func prepareBaseDataSourceAWSAccountSchema() *schema.ResourceData {
-	d := dataSourceCloudAccountAws().TestResourceData()
-	return d
-}
-func TestReadAWSAccountFuncName(t *testing.T) {
-	d := prepareBaseDataSourceAWSAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-aws-account-1")
-	_ = d.Set("context", "project")
-	diags = dataSourceCloudAccountAwsRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadAWSAccountFuncID(t *testing.T) {
-	d := prepareBaseDataSourceAWSAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("id", "test-aws-account-id-1")
-	diags = dataSourceCloudAccountAwsRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadAWSAccountFuncNegative(t *testing.T) {
-	d := prepareBaseDataSourceAWSAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-aws-account-1")
-	diags = dataSourceCloudAccountAwsRead(ctx, d, unitTestMockAPINegativeClient)
-	assertFirstDiagMessage(t, diags, "Unable to find aws cloud account")
+type cloudAccountReadTestCase struct {
+	name                   string
+	prepareData            func() *schema.ResourceData
+	readFunc               func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics
+	setupAttrs             map[string]interface{} // name or id, plus optional context/cloud
+	useNegativeClient      bool
+	expectedErrorSubstring string // only for negative case
 }
 
-func prepareBaseDataSourceAzureAccountSchema() *schema.ResourceData {
-	d := dataSourceCloudAccountAzure().TestResourceData()
-	return d
-}
-func TestReadAzureAccountFuncName(t *testing.T) {
-	d := prepareBaseDataSourceAzureAccountSchema()
-	var diags diag.Diagnostics
+func TestDataSourceCloudAccountRead_TableDriven(t *testing.T) {
+	ctx := context.Background()
 
-	var ctx context.Context
-	_ = d.Set("name", "test-azure-account-1")
-	diags = dataSourceCloudAccountAzureRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadAzureAccountFuncID(t *testing.T) {
-	d := prepareBaseDataSourceAzureAccountSchema()
-	var diags diag.Diagnostics
+	// Define configs per cloud type (nameSlug for test data, prepare + read + error message).
+	configs := []struct {
+		name     string
+		nameSlug string // lowercase for "test-<slug>-account-1" to match mock
+		prepare  func() *schema.ResourceData
+		read     func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics
+		errorMsg string
+	}{
+		{"AWS", "aws", dataSourceCloudAccountAws().TestResourceData, dataSourceCloudAccountAwsRead, "Unable to find aws cloud account"},
+		{"Azure", "azure", dataSourceCloudAccountAzure().TestResourceData, dataSourceCloudAccountAzureRead, "Unable to find azure cloud account"},
+		{"GCP", "gcp", dataSourceCloudAccountGcp().TestResourceData, dataSourceCloudAccountGcpRead, "Unable to find gcp cloud account"},
+		{"Vsphere", "vsphere", dataSourceCloudAccountVsphere().TestResourceData, dataSourceCloudAccountVsphereRead, "Unable to find vsphere cloud account"},
+		{"Openstack", "openstack", dataSourceCloudAccountOpenStack().TestResourceData, dataSourceCloudAccountOpenStackRead, "Unable to find openstack cloud account"},
+		{"Maas", "maas", dataSourceCloudAccountMaas().TestResourceData, dataSourceCloudAccountMaasRead, "Unable to find maas cloud account"},
+		{"Custom", "custom", dataSourceCloudAccountCustom().TestResourceData, dataSourceCloudAccountCustomRead, "Unable to find cloud account"},
+	}
 
-	var ctx context.Context
-	_ = d.Set("id", "test-azure-account-id-1")
-	diags = dataSourceCloudAccountAzureRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadAzureAccountFuncNegative(t *testing.T) {
-	d := prepareBaseDataSourceAzureAccountSchema()
-	var diags diag.Diagnostics
+	var testCases []cloudAccountReadTestCase
+	for _, c := range configs {
+		// ReadByName: set name (AWS also needs context)
+		attrsByName := map[string]interface{}{"name": "test-" + c.nameSlug + "-account-1"}
+		if c.name == "AWS" {
+			attrsByName["context"] = "project"
+		}
+		if c.name == "Custom" {
+			attrsByName["cloud"] = "nutanix"
+		}
+		testCases = append(testCases, cloudAccountReadTestCase{
+			name:              c.name + "_ReadByName",
+			prepareData:       c.prepare,
+			readFunc:          c.read,
+			setupAttrs:        attrsByName,
+			useNegativeClient: false,
+		})
 
-	var ctx context.Context
-	_ = d.Set("name", "test-azure-account-1")
-	diags = dataSourceCloudAccountAzureRead(ctx, d, unitTestMockAPINegativeClient)
-	assertFirstDiagMessage(t, diags, "Unable to find azure cloud account")
-}
+		// ReadByID: set id (Custom also needs cloud)
+		attrsByID := map[string]interface{}{"id": "test-" + c.nameSlug + "-account-id-1"}
+		if c.name == "Custom" {
+			attrsByID["cloud"] = "nutanix"
+		}
+		testCases = append(testCases, cloudAccountReadTestCase{
+			name:              c.name + "_ReadByID",
+			prepareData:       c.prepare,
+			readFunc:          c.read,
+			setupAttrs:        attrsByID,
+			useNegativeClient: false,
+		})
 
-func prepareBaseDataSourceGcpAccountSchema() *schema.ResourceData {
-	d := dataSourceCloudAccountGcp().TestResourceData()
-	return d
-}
-func TestReadGcpAccountFuncName(t *testing.T) {
-	d := prepareBaseDataSourceGcpAccountSchema()
-	var diags diag.Diagnostics
+		// ReadNegative: set name, use negative client
+		attrsNeg := map[string]interface{}{"name": "test-" + c.nameSlug + "-account-1"}
+		if c.name == "Custom" {
+			attrsNeg["cloud"] = "nutanix"
+		}
+		testCases = append(testCases, cloudAccountReadTestCase{
+			name:                   c.name + "_ReadNegative",
+			prepareData:            c.prepare,
+			readFunc:               c.read,
+			setupAttrs:             attrsNeg,
+			useNegativeClient:      true,
+			expectedErrorSubstring: c.errorMsg,
+		})
+	}
 
-	var ctx context.Context
-	_ = d.Set("name", "test-gcp-account-1")
-	diags = dataSourceCloudAccountGcpRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadGcpAccountFuncID(t *testing.T) {
-	d := prepareBaseDataSourceGcpAccountSchema()
-	var diags diag.Diagnostics
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := tc.prepareData()
+			for k, v := range tc.setupAttrs {
+				_ = d.Set(k, v)
+			}
 
-	var ctx context.Context
-	_ = d.Set("id", "test-gcp-account-id-1")
-	diags = dataSourceCloudAccountGcpRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadGcpAccountFuncNegative(t *testing.T) {
-	d := prepareBaseDataSourceGcpAccountSchema()
-	var diags diag.Diagnostics
+			meta := unitTestMockAPIClient
+			if tc.useNegativeClient {
+				meta = unitTestMockAPINegativeClient
+			}
 
-	var ctx context.Context
-	_ = d.Set("name", "test-gcp-account-1")
-	diags = dataSourceCloudAccountGcpRead(ctx, d, unitTestMockAPINegativeClient)
-	assertFirstDiagMessage(t, diags, "Unable to find gcp cloud account")
-}
+			diags := tc.readFunc(ctx, d, meta)
 
-func prepareBaseDataSourceVsphereAccountSchema() *schema.ResourceData {
-	d := dataSourceCloudAccountVsphere().TestResourceData()
-	return d
-}
-func TestReadVsphereAccountFuncName(t *testing.T) {
-	d := prepareBaseDataSourceVsphereAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-vsphere-account-1")
-	diags = dataSourceCloudAccountVsphereRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadVsphereAccountFuncID(t *testing.T) {
-	d := prepareBaseDataSourceVsphereAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("id", "test-vsphere-account-id-1")
-	diags = dataSourceCloudAccountVsphereRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadVsphereAccountFuncNegative(t *testing.T) {
-	d := prepareBaseDataSourceVsphereAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-vsphere-account-1")
-	diags = dataSourceCloudAccountVsphereRead(ctx, d, unitTestMockAPINegativeClient)
-	assertFirstDiagMessage(t, diags, "Unable to find vsphere cloud account")
-}
-
-func prepareBaseDataSourceOpenstackAccountSchema() *schema.ResourceData {
-	d := dataSourceCloudAccountOpenStack().TestResourceData()
-	return d
-}
-func TestReadOpenstackAccountFuncName(t *testing.T) {
-	d := prepareBaseDataSourceOpenstackAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-openstack-account-1")
-	diags = dataSourceCloudAccountOpenStackRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadOpenstackAccountFuncID(t *testing.T) {
-	d := prepareBaseDataSourceOpenstackAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("id", "test-openstack-account-id-1")
-	diags = dataSourceCloudAccountOpenStackRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadOpenstackAccountFuncNegative(t *testing.T) {
-	d := prepareBaseDataSourceOpenstackAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-openstack-account-1")
-	diags = dataSourceCloudAccountOpenStackRead(ctx, d, unitTestMockAPINegativeClient)
-	assertFirstDiagMessage(t, diags, "Unable to find openstack cloud account")
-}
-
-func prepareBaseDataSourceMaasAccountSchema() *schema.ResourceData {
-	d := dataSourceCloudAccountMaas().TestResourceData()
-	return d
-}
-func TestReadMaasAccountFuncName(t *testing.T) {
-	d := prepareBaseDataSourceMaasAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-maas-account-1")
-	diags = dataSourceCloudAccountMaasRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadMaasAccountFuncID(t *testing.T) {
-	d := prepareBaseDataSourceMaasAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("id", "test-maas-account-id-1")
-	diags = dataSourceCloudAccountMaasRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadMaasAccountFuncNegative(t *testing.T) {
-	d := prepareBaseDataSourceMaasAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-maas-account-1")
-	diags = dataSourceCloudAccountMaasRead(ctx, d, unitTestMockAPINegativeClient)
-	assertFirstDiagMessage(t, diags, "Unable to find maas cloud account")
-}
-
-func prepareBaseDataSourceCustomAccountSchema() *schema.ResourceData {
-	d := dataSourceCloudAccountCustom().TestResourceData()
-	return d
-}
-func TestReadCustomAccountFuncName(t *testing.T) {
-	d := prepareBaseDataSourceCustomAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-custom-account-1")
-	_ = d.Set("cloud", "nutanix")
-	diags = dataSourceCloudAccountCustomRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadCustomAccountFuncID(t *testing.T) {
-	d := prepareBaseDataSourceCustomAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("id", "test-custom-account-id-1")
-	_ = d.Set("cloud", "nutanix")
-	diags = dataSourceCloudAccountCustomRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadCustomAccountFuncNegative(t *testing.T) {
-	d := prepareBaseDataSourceCustomAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-custom-account-1")
-	_ = d.Set("cloud", "nutanix")
-	diags = dataSourceCloudAccountCustomRead(ctx, d, unitTestMockAPINegativeClient)
-	assertFirstDiagMessage(t, diags, "Unable to find cloud account")
+			if tc.useNegativeClient {
+				assertFirstDiagMessage(t, diags, tc.expectedErrorSubstring)
+			} else {
+				assert.Empty(t, diags, "expected no diagnostics")
+			}
+		})
+	}
 }

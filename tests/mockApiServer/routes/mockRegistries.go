@@ -7,6 +7,29 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 )
 
+func getPackRegistryPayload() *models.V1PackRegistry {
+	return &models.V1PackRegistry{
+		APIVersion: "",
+		Kind:       "",
+		Metadata: &models.V1ObjectMeta{
+			Annotations:           nil,
+			CreationTimestamp:     models.V1Time{},
+			DeletionTimestamp:     models.V1Time{},
+			Labels:                nil,
+			LastModifiedTimestamp: models.V1Time{},
+			Name:                  "test-registry-name",
+			UID:                   "test-registry-uid",
+		},
+		Spec: &models.V1PackRegistrySpec{
+			Auth:     &models.V1RegistryAuth{Type: "basic"},
+			Endpoint: spectrocloud.StringPtr("https://pack.example.com"),
+			Name:     "test-registry-name",
+			Scope:    "project",
+		},
+		Status: nil,
+	}
+}
+
 func getHelmRegistryPayload() *models.V1HelmRegistry {
 	return &models.V1HelmRegistry{
 		APIVersion: "",
@@ -18,7 +41,7 @@ func getHelmRegistryPayload() *models.V1HelmRegistry {
 			Labels:                nil,
 			LastModifiedTimestamp: models.V1Time{},
 			Name:                  "Public",
-			UID:                   generateRandomStringUID(),
+			UID:                   "test-registry-uid",
 		},
 		Spec: &models.V1HelmRegistrySpec{
 			Auth: &models.V1RegistryAuth{
@@ -239,6 +262,16 @@ func RegistriesRoutes() []Route {
 		},
 		{
 			Method: "GET",
+			Path:   "/v1/registries/pack",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1PackRegistries{
+					Items: []*models.V1PackRegistry{getPackRegistryPayload()},
+				},
+			},
+		},
+		{
+			Method: "GET",
 			Path:   "/v1/registries/helm",
 			Response: ResponseData{
 				StatusCode: http.StatusOK,
@@ -258,6 +291,18 @@ func RegistriesRoutes() []Route {
 		{
 			Method: "GET",
 			Path:   "/v1/registries/helm/{uid}/sync/status",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1RegistrySyncStatus{
+					IsSyncSupported: true,
+					Status:          "Success",
+					Message:         "Registry synchronized successfully",
+				},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/registries/oci/{uid}/basic/sync/status",
 			Response: ResponseData{
 				StatusCode: http.StatusOK,
 				Payload: &models.V1RegistrySyncStatus{

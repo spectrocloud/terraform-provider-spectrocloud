@@ -1,7 +1,6 @@
 package spectrocloud
 
 import (
-	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -271,31 +270,13 @@ func TestToHostClusterConfigs(t *testing.T) {
 	assert.Equal(t, clusterUid, hostClusterConfigs[0].ClusterUID)
 	assert.Equal(t, hostDns, hostClusterConfigs[0].EndpointConfig.IngressConfig.Host)
 }
-
-func TestResourceClusterGroupCreate(t *testing.T) {
-	d, _ := prepareClusterGroupTestData()
-	ctx := context.Background()
-	diags := resourceClusterGroupCreate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-}
-
-func TestResourceClusterGroupRead(t *testing.T) {
-	d, _ := prepareClusterGroupTestData()
-	ctx := context.Background()
-	diags := resourceClusterGroupRead(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-}
-
-func TestResourceClusterGroupUpdate(t *testing.T) {
-	d, _ := prepareClusterGroupTestData()
-	ctx := context.Background()
-	diags := resourceClusterGroupUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-}
-
-func TestResourceClusterGroupDelete(t *testing.T) {
-	d, _ := prepareClusterGroupTestData()
-	ctx := context.Background()
-	diags := resourceClusterGroupDelete(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
+func TestResourceClusterGroupCRUD(t *testing.T) {
+	testResourceCRUD(t, func() *schema.ResourceData {
+		d, err := prepareClusterGroupTestData()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d
+	}, unitTestMockAPIClient,
+		resourceClusterGroupCreate, resourceClusterGroupRead, resourceClusterGroupUpdate, resourceClusterGroupDelete)
 }

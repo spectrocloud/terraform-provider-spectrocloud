@@ -1,7 +1,6 @@
 package spectrocloud
 
 import (
-	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
@@ -318,36 +317,7 @@ func prepareBaseTeamTestdata() *schema.ResourceData {
 	return d
 }
 
-func TestResourceTeamCreate(t *testing.T) {
-	d := prepareBaseTeamTestdata()
-	var ctx context.Context
-	diags := resourceTeamCreate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "team-123", d.Id())
-}
-
-func TestResourceTeamRead(t *testing.T) {
-	d := prepareBaseTeamTestdata()
-	d.SetId("team-123")
-	var ctx context.Context
-	diags := resourceTeamRead(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "team-123", d.Id())
-}
-
-func TestResourceTeamUpdate(t *testing.T) {
-	d := prepareBaseTeamTestdata()
-	d.SetId("team-123")
-	var ctx context.Context
-	diags := resourceTeamUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "team-123", d.Id())
-}
-
-func TestResourceTeamDelete(t *testing.T) {
-	d := prepareBaseTeamTestdata()
-	d.SetId("team-123")
-	var ctx context.Context
-	diags := resourceTeamDelete(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
+func TestResourceTeamCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareBaseTeamTestdata, unitTestMockAPIClient,
+		resourceTeamCreate, resourceTeamRead, resourceTeamUpdate, resourceTeamDelete)
 }

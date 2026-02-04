@@ -1,9 +1,7 @@
 package spectrocloud
 
 import (
-	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -35,33 +33,7 @@ func prepareBaseFilterTestData() *schema.ResourceData {
 	return d
 }
 
-func TestResourceFilterCreate(t *testing.T) {
-	d := prepareBaseFilterTestData()
-	var ctx context.Context
-	diags := resourceFilterCreate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "test-filter-id", d.Id())
-}
-
-func TestResourceFilterRead(t *testing.T) {
-	d := prepareBaseFilterTestData()
-	var ctx context.Context
-	diags := resourceFilterRead(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "test-filter-id", d.Id())
-}
-
-func TestResourceFilterUpdate(t *testing.T) {
-	d := prepareBaseFilterTestData()
-	var ctx context.Context
-	diags := resourceFilterUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "test-filter-id", d.Id())
-}
-
-func TestResourceFilterDelete(t *testing.T) {
-	d := prepareBaseFilterTestData()
-	var ctx context.Context
-	diags := resourceFilterDelete(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
+func TestResourceFilterCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareBaseFilterTestData, unitTestMockAPIClient,
+		resourceFilterCreate, resourceFilterRead, resourceFilterUpdate, resourceFilterDelete)
 }
