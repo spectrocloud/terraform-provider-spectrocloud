@@ -15,6 +15,18 @@
     },
     {
       "request": {
+        "method": "POST",
+        "url": "/v1/spectroclusters/vsphere",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 201,
+        "headers": {"Content-Type": "application/json"},
+        "body": "{\"uid\":\"vsphere-cluster-uid-12345\"}"
+      }
+    },
+    {
+      "request": {
         "method": "GET",
         "url": "/v1/spectroclusters/vsphere-cluster-uid-12345",
         "headers": {}
@@ -22,7 +34,7 @@
       "response": {
         "status_code": 200,
         "headers": {"Content-Type": "application/json"},
-        "body": "{\"metadata\":{\"name\":\"test-vsphere-cluster\",\"uid\":\"vsphere-cluster-uid-12345\",\"labels\":{\"env\":\"test\"},\"annotations\":{}},\"spec\":{\"cloudConfigRef\":{\"uid\":\"cloud-config-uid-123\"},\"cloudType\":\"vsphere\",\"clusterConfig\":{\"clusterMetaAttribute\":\"\",\"hostClusterConfig\":null,\"updateWorkerPoolsInParallel\":false},\"clusterProfileTemplates\":[]},\"status\":{\"state\":\"Running\"}}"
+        "body": "{\"metadata\":{\"name\":\"test-vsphere-cluster\",\"uid\":\"vsphere-cluster-uid-12345\",\"labels\":{\"env\":\"test\"},\"annotations\":{}},\"spec\":{\"cloudConfigRef\":{\"uid\":\"cloud-config-uid-123\"},\"cloudType\":\"vsphere\",\"clusterConfig\":{\"clusterMetaAttribute\":\"\",\"hostClusterConfig\":null,\"updateWorkerPoolsInParallel\":false},\"clusterProfileTemplates\":[]},\"status\":{\"state\":\"Running\",\"repave\":{}}}"
       }
     },
     {

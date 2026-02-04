@@ -4,12 +4,14 @@
 package spectrocloud
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -25,6 +27,91 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/testutil/vcr"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
+
+// prepareClusterVsphereTestData returns ResourceData populated for vSphere cluster unit tests.
+func prepareClusterVsphereTestData() *schema.ResourceData {
+	d := resourceClusterVsphere().TestResourceData()
+
+	d.SetId("")
+	d.Set("name", "vsphere-picard-2")
+	cConfig := make([]map[string]interface{}, 0)
+	cConfig = append(cConfig, map[string]interface{}{
+		"id": "vmware-basic-infra-profile-id",
+	})
+	d.Set("cluster_meta_attribute", "{'nic_name': 'test', 'env': 'stage'}")
+	d.Set("cluster_profile", cConfig)
+	d.Set("cloud_account_id", "vmware-basic-account-id")
+
+	keys := []string{"SSHKey1", "SSHKey2"}
+	cloudConfig := make([]map[string]interface{}, 0)
+	con := map[string]interface{}{
+		"ssh_keys":              keys,
+		"datacenter":            "Datacenter",
+		"folder":                "sc_test/terraform",
+		"network_type":          "DDNS",
+		"network_search_domain": "spectrocloud.dev",
+	}
+	cloudConfig = append(cloudConfig, con)
+	d.Set("cloud_config", cloudConfig)
+
+	mPools := make([]map[string]interface{}, 0)
+
+	cpPlacement := make([]interface{}, 0)
+	cpPlacement = append(cpPlacement, map[string]interface{}{
+		"id":                "",
+		"cluster":           "test cluster",
+		"resource_pool":     "Default",
+		"datastore":         "datastore55_2",
+		"network":           "VM Network",
+		"static_ip_pool_id": "testpoolid",
+	})
+	cpInstance := make([]interface{}, 0)
+	cpInstance = append(cpInstance, map[string]interface{}{
+		"disk_size_gb": 40,
+		"memory_mb":    8192,
+		"cpu":          4,
+	})
+	mPools = append(mPools, map[string]interface{}{
+		"control_plane":           true,
+		"control_plane_as_worker": true,
+		"name":                    "cp-pool",
+		"count":                   1,
+		"placement":               cpPlacement,
+		"instance_type":           cpInstance,
+		"node":                    []interface{}{},
+	})
+
+	workerPlacement := make([]interface{}, 0)
+	workerPlacement = append(workerPlacement, map[string]interface{}{
+		"id":                "",
+		"cluster":           "test cluster",
+		"resource_pool":     "Default",
+		"datastore":         "datastore55_2",
+		"network":           "VM Network",
+		"static_ip_pool_id": "testpoolid",
+	})
+
+	workerInstance := make([]interface{}, 0)
+	workerInstance = append(workerInstance, map[string]interface{}{
+		"disk_size_gb": 40,
+		"memory_mb":    8192,
+		"cpu":          4,
+	})
+
+	mPools = append(mPools, map[string]interface{}{
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"name":                    "worker-basic",
+		"count":                   1,
+		"min":                     1,
+		"max":                     3,
+		"placement":               workerPlacement,
+		"instance_type":           workerInstance,
+		"node":                    []interface{}{},
+	})
+	d.Set("machine_pool", mPools)
+	return d
+}
 
 // =============================================================================
 // UNIT TESTS - No network calls, fast execution
@@ -375,6 +462,51 @@ func TestUnit_ToCloudConfigCreate(t *testing.T) {
 	assert.Equal(t, "cluster.example.com", result.ControlPlaneEndpoint.Host)
 }
 
+// TestUnit_ToVsphereCluster tests the toVsphereCluster function (lines 808-845)
+func TestUnit_ToVsphereCluster(t *testing.T) {
+	t.Parallel()
+
+	// Minimal mock server so toProfiles (or any client call) does not fail
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if strings.Contains(r.URL.Path, "/v1/dashboard/projects/metadata") {
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"items": []map[string]interface{}{{"metadata": map[string]interface{}{"name": "Default", "uid": "default-project-uid"}}},
+			})
+		} else {
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{})
+		}
+	}))
+	defer server.Close()
+
+	c := createVsphereTestClient(t, server.URL)
+	client.WithScopeProject("default-project-uid")(c)
+
+	d := prepareClusterVsphereTestData()
+	d.Set("context", "project")
+
+	cluster, err := toVsphereCluster(c, d)
+
+	require.NoError(t, err)
+	require.NotNil(t, cluster)
+	require.NotNil(t, cluster.Metadata)
+	require.NotNil(t, cluster.Spec)
+
+	assert.Equal(t, "vsphere-picard-2", cluster.Metadata.Name)
+	assert.Equal(t, "vmware-basic-account-id", cluster.Spec.CloudAccountUID)
+	require.NotNil(t, cluster.Spec.CloudConfig)
+	assert.Equal(t, "Datacenter", cluster.Spec.CloudConfig.Placement.Datacenter)
+	assert.Equal(t, "sc_test/terraform", cluster.Spec.CloudConfig.Placement.Folder)
+
+	require.Len(t, cluster.Spec.Machinepoolconfig, 2, "expect control plane + worker pool")
+	// toVsphereCluster sorts so control plane is first
+	assert.True(t, cluster.Spec.Machinepoolconfig[0].PoolConfig.IsControlPlane, "first pool should be control plane")
+	assert.Equal(t, "cp-pool", *cluster.Spec.Machinepoolconfig[0].PoolConfig.Name)
+	assert.False(t, cluster.Spec.Machinepoolconfig[1].PoolConfig.IsControlPlane, "second pool should be worker")
+	assert.Equal(t, "worker-basic", *cluster.Spec.Machinepoolconfig[1].PoolConfig.Name)
+}
+
 // TestUnit_ValidateMachinePoolChange tests the ValidateMachinePoolChange function
 func TestUnit_ValidateMachinePoolChange(t *testing.T) {
 	t.Parallel()
@@ -468,19 +600,297 @@ func TestVCR_ClusterVsphereCRUD(t *testing.T) {
 	}()
 
 	t.Run("create_cluster", func(t *testing.T) {
-		t.Log("VCR create vSphere cluster test")
+		// 1. VCR recorder (already created in parent) and http.Client with Transport: recorder
+		httpClient := &http.Client{Transport: recorder}
+		_ = httpClient // When palette-sdk-go adds WithHTTPClient, use: client.New(..., client.WithHTTPClient(httpClient))
+
+		// 2. Build Palette client: SDK does not accept custom HTTP client, so use cassette replay via httptest.Server
+		cassette, err := vcr.LoadCassette("spectrocloud/testdata/cassettes/cluster_vsphere_crud.json")
+		if err != nil {
+			cassette, err = vcr.LoadCassette("testdata/cassettes/cluster_vsphere_crud.json")
+		}
+		require.NoError(t, err, "load cassette for create_cluster")
+		server := newVsphereCassetteReplayServer(t, cassette)
+		defer server.Close()
+
+		c := createVsphereTestClient(t, server.URL)
+		client.WithScopeProject("default-project-uid")(c)
+
+		// 3. Prepare ResourceData and call resourceClusterVsphereCreate
+		d := prepareClusterVsphereTestData()
+		d.Set("context", "project")
+		d.Set("skip_completion", true) // skip wait for Running-Healthy; cassette has no GetClusterOverview
+
+		diags := resourceClusterVsphereCreate(context.Background(), d, c)
+
+		require.False(t, diags.HasError(), "resourceClusterVsphereCreate should not return errors: %v", diags)
+		assert.Equal(t, "vsphere-cluster-uid-12345", d.Id(), "cluster UID from VCR cassette")
 	})
 
 	t.Run("read_cluster", func(t *testing.T) {
-		t.Log("VCR read vSphere cluster test")
+		// 1. Load VCR cassette (same as create_cluster)
+		cassette, err := vcr.LoadCassette("spectrocloud/testdata/cassettes/cluster_vsphere_crud.json")
+		if err != nil {
+			cassette, err = vcr.LoadCassette("testdata/cassettes/cluster_vsphere_crud.json")
+		}
+		require.NoError(t, err, "load cassette for read_cluster")
+
+		// 2. Replay cassette via httptest.Server (method+path matching)
+		server := newVsphereCassetteReplayServer(t, cassette)
+		defer server.Close()
+
+		c := createVsphereTestClient(t, server.URL)
+		client.WithScopeProject("default-project-uid")(c)
+
+		// 3. Prepare ResourceData for Read (cluster UID and context from cassette)
+		d := resourceClusterVsphere().TestResourceData()
+		d.SetId("vsphere-cluster-uid-12345")
+		d.Set("context", "project")
+
+		diags := resourceClusterVsphereRead(context.Background(), d, c)
+
+		require.False(t, diags.HasError(), "resourceClusterVsphereRead should not return errors: %v", diags)
+		assert.Equal(t, "cloud-config-uid-123", d.Get("cloud_config_id"), "cloud_config_id from cassette")
+		assert.Equal(t, "cloud-account-uid-123", d.Get("cloud_account_id"), "cloud_account_id from cassette")
 	})
 
 	t.Run("update_cluster", func(t *testing.T) {
-		t.Log("VCR update vSphere cluster test")
+		// 1. Load VCR cassette (same as create_cluster / read_cluster)
+		cassette, err := vcr.LoadCassette("spectrocloud/testdata/cassettes/cluster_vsphere_crud.json")
+		if err != nil {
+			cassette, err = vcr.LoadCassette("testdata/cassettes/cluster_vsphere_crud.json")
+		}
+		require.NoError(t, err, "load cassette for update_cluster")
+
+		// 2. Replay cassette via httptest.Server (method+path matching)
+		server := newVsphereCassetteReplayServer(t, cassette)
+		defer server.Close()
+
+		c := createVsphereTestClient(t, server.URL)
+		client.WithScopeProject("default-project-uid")(c)
+
+		// 3. Prepare ResourceData for Update (cluster UID, cloud_config_id, cloud_config, machine_pool from cassette; no changes so only GetCloudConfig + updateCommonFields + Read run)
+		d := resourceClusterVsphere().TestResourceData()
+		d.SetId("vsphere-cluster-uid-12345")
+		d.Set("context", "project")
+		d.Set("cloud_config_id", "cloud-config-uid-123")
+		d.Set("review_repave_state", "")
+
+		cloudConfig := []map[string]interface{}{
+			{
+				"datacenter":            "DC1",
+				"folder":                "/test/folder",
+				"ssh_keys":              []string{"ssh-rsa AAAAB3..."},
+				"static_ip":             false,
+				"network_type":          "DDNS",
+				"network_search_domain": "spectrocloud.dev",
+			},
+		}
+		d.Set("cloud_config", cloudConfig)
+
+		cpPlacement := []interface{}{
+			map[string]interface{}{
+				"id":                "placement-1",
+				"cluster":           "vsphere-cluster",
+				"resource_pool":     "default-pool",
+				"datastore":         "datastore1",
+				"network":           "VM Network",
+				"static_ip_pool_id": "",
+			},
+		}
+		cpInstance := []interface{}{
+			map[string]interface{}{"disk_size_gb": 60, "memory_mb": 8192, "cpu": 4},
+		}
+		mPools := []interface{}{
+			map[string]interface{}{
+				"control_plane":           true,
+				"control_plane_as_worker": true,
+				"name":                    "cp-pool",
+				"count":                   1,
+				"placement":               cpPlacement,
+				"instance_type":           cpInstance,
+				"node":                    []interface{}{},
+			},
+		}
+		d.Set("machine_pool", mPools)
+
+		diags := resourceClusterVsphereUpdate(context.Background(), d, c)
+
+		require.False(t, diags.HasError(), "resourceClusterVsphereUpdate should not return errors: %v", diags)
+		assert.Equal(t, "vsphere-cluster-uid-12345", d.Id(), "cluster UID unchanged after update")
+		assert.Equal(t, "cloud-config-uid-123", d.Get("cloud_config_id"), "cloud_config_id from cassette after Read")
 	})
 
+	// // 1) validateOverrideScaling: machine_pool with update_strategy "OverrideScaling" and missing override_scaling must return error.
+	// // We test the validation function directly (same code path Update uses when machine_pool changes) because TestResourceData
+	// // cannot simulate state vs config, so HasChange("machine_pool") is not true when only Set() is used.
+	// t.Run("update_validateOverrideScaling_error", func(t *testing.T) {
+	// 	d := resourceClusterVsphere().TestResourceData()
+	// 	cpPlacement := []interface{}{
+	// 		map[string]interface{}{
+	// 			"id":                "placement-1",
+	// 			"cluster":           "vsphere-cluster",
+	// 			"resource_pool":     "default-pool",
+	// 			"datastore":         "datastore1",
+	// 			"network":           "VM Network",
+	// 			"static_ip_pool_id": "",
+	// 		},
+	// 	}
+	// 	cpInstance := []interface{}{
+	// 		map[string]interface{}{"disk_size_gb": 60, "memory_mb": 8192, "cpu": 4},
+	// 	}
+	// 	// Machine pool with OverrideScaling but missing override_scaling (invalid)
+	// 	invalidPools := []interface{}{
+	// 		map[string]interface{}{
+	// 			"control_plane":           true,
+	// 			"control_plane_as_worker": true,
+	// 			"name":                    "cp-pool",
+	// 			"count":                   1,
+	// 			"placement":               cpPlacement,
+	// 			"instance_type":           cpInstance,
+	// 			"node":                    []interface{}{},
+	// 			"update_strategy":         "OverrideScaling",
+	// 			// override_scaling missing -> validateOverrideScaling must error
+	// 		},
+	// 	}
+	// 	d.Set("machine_pool", schema.NewSet(resourceMachinePoolVsphereHash, invalidPools))
+
+	// 	err := validateOverrideScaling(d, "machine_pool")
+	// 	require.Error(t, err)
+	// 	assert.Contains(t, err.Error(), "override_scaling", "error should mention override_scaling")
+	// })
+
+	// // 2) updateCommonFields: change description (or tags) and mock UpdateClusterMetadata
+	// t.Run("update_common_fields_description", func(t *testing.T) {
+	// 	clusterBody := `{"metadata":{"name":"test-vsphere-cluster","uid":"vsphere-cluster-uid-12345","labels":{"env":"test"},"annotations":{}},"spec":{"cloudConfigRef":{"uid":"cloud-config-uid-123"},"cloudType":"vsphere","clusterConfig":{}},"status":{"state":"Running","repave":{}}}`
+	// 	// Use full structure so resourceClusterVsphereRead -> flattenMachinePoolConfigsVsphere does not nil-deref (placements[].network.networkName)
+	// 	cloudConfigBody := `{"metadata":{"uid":"cloud-config-uid-123"},"spec":{"cloudAccountRef":{"uid":"cloud-account-uid-123"},"clusterConfig":{"placement":{"datacenter":"DC1","folder":"/test/folder"},"sshKeys":["ssh-rsa AAAAB3..."],"staticIp":false,"ntpServers":[]},"machinePoolConfig":[{"name":"cp-pool","size":1,"minSize":1,"maxSize":3,"isControlPlane":true,"useControlPlaneAsWorker":true,"instanceType":{"diskGiB":60,"memoryMiB":8192,"numCPUs":4},"placements":[{"uid":"placement-1","cluster":"vsphere-cluster","resourcePool":"default-pool","datastore":"datastore1","network":{"networkName":"VM Network"}}]}]}}`
+
+	// 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// 		w.Header().Set("Content-Type", "application/json")
+	// 		path := r.URL.Path
+	// 		switch {
+	// 		case strings.Contains(path, "/v1/dashboard/projects/metadata"):
+	// 			json.NewEncoder(w).Encode(map[string]interface{}{
+	// 				"items": []map[string]interface{}{
+	// 					{"metadata": map[string]interface{}{"name": "Default", "uid": "default-project-uid"}},
+	// 				},
+	// 			})
+	// 			return
+	// 		case strings.Contains(path, "/v1/spectroclusters/vsphere-cluster-uid-12345"):
+	// 			if r.Method == http.MethodGet {
+	// 				w.Write([]byte(clusterBody))
+	// 			} else if r.Method == http.MethodPut || r.Method == http.MethodPatch {
+	// 				w.WriteHeader(http.StatusOK)
+	// 				w.Write([]byte(clusterBody))
+	// 			} else {
+	// 				w.WriteHeader(http.StatusMethodNotAllowed)
+	// 			}
+	// 			return
+	// 		case strings.Contains(path, "/v1/cloudconfigs/vsphere/cloud-config-uid-123"):
+	// 			w.Write([]byte(cloudConfigBody))
+	// 			return
+	// 		case strings.Contains(path, "/assets/kubeconfig"):
+	// 			w.Write([]byte("apiVersion: v1\nkind: Config\nclusters: []"))
+	// 			return
+	// 		case strings.Contains(path, "/assets/adminKubeconfig"):
+	// 			w.Write([]byte("apiVersion: v1\nkind: Config\nclusters: []"))
+	// 			return
+	// 		case strings.Contains(path, "/config/rbacs"):
+	// 			w.Write([]byte(`{"items":[]}`))
+	// 			return
+	// 		case strings.Contains(path, "/config/namespaces"):
+	// 			w.Write([]byte(`{"items":[]}`))
+	// 			return
+	// 		case strings.Contains(path, "/variables"):
+	// 			w.Write([]byte(`{"variables":[]}`))
+	// 			return
+	// 		case strings.Contains(path, "/machinePools/") && strings.Contains(path, "/machines"):
+	// 			w.Write([]byte(`{"items":[]}`))
+	// 			return
+	// 		}
+	// 		t.Logf("Mock server: no handler for %s %s", r.Method, path)
+	// 		w.WriteHeader(http.StatusNotFound)
+	// 	}))
+	// 	defer server.Close()
+
+	// 	c := createVsphereTestClient(t, server.URL)
+	// 	client.WithScopeProject("default-project-uid")(c)
+
+	// 	d := resourceClusterVsphere().TestResourceData()
+	// 	d.SetId("vsphere-cluster-uid-12345")
+	// 	d.Set("context", "project")
+	// 	d.Set("cloud_config_id", "cloud-config-uid-123")
+	// 	d.Set("review_repave_state", "")
+	// 	d.Set("description", "updated-description")
+
+	// 	cloudConfig := []map[string]interface{}{
+	// 		{
+	// 			"datacenter":            "DC1",
+	// 			"folder":                "/test/folder",
+	// 			"ssh_keys":              []string{"ssh-rsa AAAAB3..."},
+	// 			"static_ip":             false,
+	// 			"network_type":          "DDNS",
+	// 			"network_search_domain": "spectrocloud.dev",
+	// 		},
+	// 	}
+	// 	d.Set("cloud_config", cloudConfig)
+
+	// 	cpPlacement := []interface{}{
+	// 		map[string]interface{}{
+	// 			"id":                "placement-1",
+	// 			"cluster":           "vsphere-cluster",
+	// 			"resource_pool":     "default-pool",
+	// 			"datastore":         "datastore1",
+	// 			"network":           "VM Network",
+	// 			"static_ip_pool_id": "",
+	// 		},
+	// 	}
+	// 	cpInstance := []interface{}{
+	// 		map[string]interface{}{"disk_size_gb": 60, "memory_mb": 8192, "cpu": 4},
+	// 	}
+	// 	mPools := []interface{}{
+	// 		map[string]interface{}{
+	// 			"control_plane":           true,
+	// 			"control_plane_as_worker": true,
+	// 			"name":                    "cp-pool",
+	// 			"count":                   1,
+	// 			"placement":               cpPlacement,
+	// 			"instance_type":           cpInstance,
+	// 			"node":                    []interface{}{},
+	// 		},
+	// 	}
+	// 	d.Set("machine_pool", schema.NewSet(resourceMachinePoolVsphereHash, mPools))
+
+	// 	diags := resourceClusterVsphereUpdate(context.Background(), d, c)
+
+	// 	require.False(t, diags.HasError(), "resourceClusterVsphereUpdate should not return errors: %v", diags)
+	// 	assert.Equal(t, "vsphere-cluster-uid-12345", d.Id())
+	// })
+
 	t.Run("delete_cluster", func(t *testing.T) {
-		t.Log("VCR delete vSphere cluster test")
+		// 1. Load VCR cassette for delete (GET 200, DELETE 204, GET 404 in order for DeleteCluster + waitForClusterDeletion)
+		cassette, err := vcr.LoadCassette("spectrocloud/testdata/cassettes/cluster_vsphere_delete.json")
+		if err != nil {
+			cassette, err = vcr.LoadCassette("testdata/cassettes/cluster_vsphere_delete.json")
+		}
+		require.NoError(t, err, "load cassette for delete_cluster")
+
+		// 2. Ordered replay so first GET returns 200 (DeleteCluster checks exists), DELETE returns 204, next GET returns 404 (wait sees deleted)
+		server := newOrderedVsphereCassetteReplayServer(t, cassette)
+		defer server.Close()
+
+		c := createVsphereTestClient(t, server.URL)
+		client.WithScopeProject("default-project-uid")(c)
+
+		// 3. Prepare ResourceData and call resourceClusterDelete (shared delete used by vsphere resource)
+		d := resourceClusterVsphere().TestResourceData()
+		d.SetId("vsphere-cluster-uid-12345")
+		d.Set("context", "project")
+
+		diags := resourceClusterDelete(context.Background(), d, c)
+
+		require.False(t, diags.HasError(), "resourceClusterDelete should not return errors: %v", diags)
 	})
 }
 
@@ -548,6 +958,56 @@ func createVsphereTestClient(t *testing.T, serverURL string) *client.V1Client {
 	return c
 }
 
+// newVsphereCassetteReplayServer creates an httptest.Server that replays cassette interactions with method+path matching.
+// Used for Create flow where POST /v1/spectroclusters/vsphere must be distinguished from GETs.
+func newVsphereCassetteReplayServer(t *testing.T, cassette *vcr.Cassette) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, interaction := range cassette.Interactions {
+			matchMethod := r.Method == interaction.Request.Method
+			matchPath := strings.Contains(r.URL.Path, interaction.Request.URL) || interaction.Request.URL == r.URL.Path
+			if matchMethod && matchPath {
+				for key, value := range interaction.Response.Headers {
+					w.Header().Set(key, value)
+				}
+				w.WriteHeader(interaction.Response.StatusCode)
+				w.Write([]byte(interaction.Response.Body))
+				return
+			}
+		}
+		t.Logf("VCR: No cassette match for %s %s", r.Method, r.URL.Path)
+		w.WriteHeader(http.StatusNotFound)
+	}))
+}
+
+// newOrderedVsphereCassetteReplayServer creates an httptest.Server that replays cassette interactions in order.
+// Each request gets the next matching (method+path) interaction. Used for Delete where we need GET 200, DELETE 204, GET 404 in sequence.
+func newOrderedVsphereCassetteReplayServer(t *testing.T, cassette *vcr.Cassette) *httptest.Server {
+	t.Helper()
+	var mu sync.Mutex
+	idx := 0
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		for i := idx; i < len(cassette.Interactions); i++ {
+			in := &cassette.Interactions[i]
+			matchMethod := r.Method == in.Request.Method
+			matchPath := strings.Contains(r.URL.Path, in.Request.URL) || in.Request.URL == r.URL.Path
+			if matchMethod && matchPath {
+				idx = i + 1
+				for key, value := range in.Response.Headers {
+					w.Header().Set(key, value)
+				}
+				w.WriteHeader(in.Response.StatusCode)
+				w.Write([]byte(in.Response.Body))
+				return
+			}
+		}
+		t.Logf("VCR ordered: no match for %s %s at index %d", r.Method, r.URL.Path, idx)
+		w.WriteHeader(http.StatusNotFound)
+	}))
+}
+
 // TestVCR_ClusterVsphereRead tests reading a vSphere cluster using VCR cassettes
 // This test loads the cassette and creates an httptest.Server to serve the recorded responses
 func TestVCR_ClusterVsphereRead(t *testing.T) {
@@ -561,25 +1021,8 @@ func TestVCR_ClusterVsphereRead(t *testing.T) {
 		}
 	}
 
-	// Create httptest.Server that serves responses from the cassette
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Find matching interaction in cassette
-		for _, interaction := range cassette.Interactions {
-			if strings.Contains(r.URL.Path, interaction.Request.URL) ||
-				interaction.Request.URL == r.URL.Path {
-				// Set response headers
-				for key, value := range interaction.Response.Headers {
-					w.Header().Set(key, value)
-				}
-				w.WriteHeader(interaction.Response.StatusCode)
-				w.Write([]byte(interaction.Response.Body))
-				return
-			}
-		}
-		// No match found
-		t.Logf("VCR: No cassette match for %s %s", r.Method, r.URL.Path)
-		w.WriteHeader(http.StatusNotFound)
-	}))
+	// Create httptest.Server that serves responses from the cassette (method+path matching so POST create is distinct from GETs)
+	server := newVsphereCassetteReplayServer(t, cassette)
 	defer server.Close()
 
 	// Validate VCR server is working
