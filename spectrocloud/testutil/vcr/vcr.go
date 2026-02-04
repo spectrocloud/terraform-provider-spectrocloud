@@ -61,9 +61,6 @@ type Response struct {
 type Cassette struct {
 	Name         string        `json:"name"`
 	Interactions []Interaction `json:"interactions"`
-
-	mu    sync.Mutex
-	index int
 }
 
 // Recorder is the main VCR recorder/player
@@ -151,7 +148,7 @@ func (r *Recorder) record(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	resp.Body = io.NopCloser(bytes.NewReader(respBody))
 
 	// Record interaction

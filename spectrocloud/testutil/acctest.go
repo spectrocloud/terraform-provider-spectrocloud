@@ -27,7 +27,7 @@ func TestAccPreCheck(t *testing.T) {
 	}
 	if v := os.Getenv("SPECTROCLOUD_HOST"); v == "" {
 		// Set default if not provided
-		os.Setenv("SPECTROCLOUD_HOST", "api.spectrocloud.com")
+		_ = os.Setenv("SPECTROCLOUD_HOST", "api.spectrocloud.com")
 	}
 }
 
