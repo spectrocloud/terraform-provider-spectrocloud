@@ -1,0 +1,23 @@
+{
+    "name": "registry_helm_create_basic",
+    "interactions": [
+        {
+            "request": {
+                "method": "POST",
+                "url": "https://api.spectrocloud.com/v1/registries/helm",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": "{\"metadata\":{\"name\":\"test-reg-name\",\"labels\":{},\"annotations\":{}},\"spec\":{\"name\":\"test-reg-name\",\"auth\":{\"type\":\"basic\",\"username\":\"test-username\",\"password\":\"test-password\"},\"endpoint\":\"test.com\",\"isPrivate\":true}}"
+            },
+            "response": {
+                "status_code": 201,
+                "status": "201 Created",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": "{\"uid\":\"helm-create-basic-vcr-uid\"}"
+            }
+        }
+    ]
+}

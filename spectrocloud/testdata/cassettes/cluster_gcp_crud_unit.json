@@ -1,0 +1,151 @@
+{
+  "name": "cluster_gcp_crud_unit",
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/dashboard/projects/metadata",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"items\":[{\"metadata\":{\"name\":\"Default\",\"uid\":\"default-project-uid\"}}]}"
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "url": "/v1/spectroclusters/gcp",
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"metadata\":{\"name\":\"test-vcr-gcp-cluster\",\"labels\":{},\"annotations\":{}},\"spec\":{\"cloudAccountUid\":\"gcp-cloud-account-uid-123\",\"cloudConfig\":{\"network\":\"\",\"project\":\"my-gcp-project\",\"region\":\"us-central1\"},\"machinepoolconfig\":[{\"cloudConfig\":{\"azs\":[\"us-central1-a\"],\"instanceType\":\"n2-standard-4\",\"rootDeviceSize\":65},\"poolConfig\":{\"name\":\"cp-pool\",\"size\":1,\"isControlPlane\":true,\"useControlPlaneAsWorker\":false,\"labels\":[\"control-plane\"],\"additionalLabels\":{},\"additionalAnnotations\":{},\"taints\":[]}},{\"cloudConfig\":{\"azs\":[\"us-central1-a\"],\"instanceType\":\"n2-standard-2\",\"rootDeviceSize\":65},\"poolConfig\":{\"name\":\"worker-pool\",\"size\":2,\"isControlPlane\":false,\"useControlPlaneAsWorker\":false,\"labels\":[\"worker\"],\"additionalLabels\":{},\"additionalAnnotations\":{},\"taints\":[],\"nodeRepaveInterval\":0}}],\"profiles\":[],\"clusterTemplate\":null,\"policies\":null}}"
+      },
+      "response": {
+        "status_code": 201,
+        "status": "201 Created",
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"uid\":\"gcp-cluster-uid-001\"}"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/spectroclusters/gcp-cluster-uid-001",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"metadata\":{\"name\":\"test-vcr-gcp-cluster\",\"uid\":\"gcp-cluster-uid-001\",\"labels\":{},\"annotations\":{}},\"spec\":{\"cloudConfigRef\":{\"uid\":\"gcp-cloud-config-uid-001\"},\"cloudType\":\"gcp\",\"clusterConfig\":{\"clusterMetaAttribute\":\"\",\"hostClusterConfig\":null,\"updateWorkerPoolsInParallel\":false},\"clusterProfileTemplates\":[]},\"status\":{\"state\":\"Running\"}}"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/cloudconfigs/gcp/gcp-cloud-config-uid-001",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"metadata\":{\"uid\":\"gcp-cloud-config-uid-001\"},\"spec\":{\"cloudAccountRef\":{\"uid\":\"gcp-cloud-account-uid-123\"},\"clusterConfig\":{\"project\":\"my-gcp-project\",\"region\":\"us-central1\",\"network\":\"\"},\"machinePoolConfig\":[{\"name\":\"cp-pool\",\"size\":1,\"minSize\":1,\"maxSize\":3,\"isControlPlane\":true,\"useControlPlaneAsWorker\":false,\"instanceType\":\"n2-standard-4\",\"rootDeviceSize\":65,\"azs\":[\"us-central1-a\"],\"additionalLabels\":{},\"additionalAnnotations\":{},\"taints\":[]},{\"name\":\"worker-pool\",\"size\":2,\"minSize\":1,\"maxSize\":5,\"isControlPlane\":false,\"useControlPlaneAsWorker\":false,\"instanceType\":\"n2-standard-2\",\"rootDeviceSize\":65,\"azs\":[\"us-central1-a\"],\"nodeRepaveInterval\":0,\"additionalLabels\":{},\"additionalAnnotations\":{},\"taints\":[]}]}}"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/spectroclusters/gcp-cluster-uid-001/assets/kubeconfig",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "text/plain" },
+        "body": "apiVersion: v1\nkind: Config\nclusters: []"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/spectroclusters/gcp-cluster-uid-001/assets/kubeconfigclient",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/octet-stream" },
+        "body": "apiVersion: v1\nkind: Config\nclusters: []"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/spectroclusters/gcp-cluster-uid-001/assets/adminKubeconfig",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/octet-stream" },
+        "body": "apiVersion: v1\nkind: Config\nclusters: []"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/spectroclusters/gcp-cluster-uid-001/config/rbacs",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"items\":[]}"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/spectroclusters/gcp-cluster-uid-001/config/namespaces",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"items\":[]}"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/spectroclusters/gcp-cluster-uid-001/variables",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"variables\":[]}"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/cloudconfigs/gcp/gcp-cloud-config-uid-001/machinePools/cp-pool/machines",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"items\":[]}"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/cloudconfigs/gcp/gcp-cloud-config-uid-001/machinePools/worker-pool/machines",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": { "Content-Type": "application/json" },
+        "body": "{\"items\":[]}"
+      }
+    }
+  ]
+}

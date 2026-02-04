@@ -1,0 +1,38 @@
+{
+    "name": "registry_helm_update_wait_sync",
+    "interactions": [
+        {
+            "request": {
+                "method": "PUT",
+                "url": "https://api.spectrocloud.com/v1/registries/helm/test-registry-uid",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": "{\"metadata\":{\"name\":\"test-reg-name\",\"uid\":\"test-registry-uid\",\"labels\":{},\"annotations\":{}},\"spec\":{\"name\":\"test-reg-name\",\"auth\":{\"type\":\"noAuth\"},\"endpoint\":\"test.com\",\"isPrivate\":true,\"registryUid\":\"test-registry-uid\"}}"
+            },
+            "response": {
+                "status_code": 204,
+                "status": "204 No Content",
+                "headers": {},
+                "body": ""
+            }
+        },
+        {
+            "request": {
+                "method": "GET",
+                "url": "https://api.spectrocloud.com/v1/registries/helm/test-registry-uid/sync/status",
+                "headers": {
+                    "Content-Type": "application/json"
+                }
+            },
+            "response": {
+                "status_code": 200,
+                "status": "200 OK",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": "{\"status\":\"Success\",\"message\":\"\",\"isSyncSupported\":true}"
+            }
+        }
+    ]
+}
