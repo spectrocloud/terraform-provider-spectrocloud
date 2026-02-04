@@ -1,0 +1,41 @@
+{
+  "name": "cluster_vsphere_delete",
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/spectroclusters/vsphere-cluster-uid-12345",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 200,
+        "headers": {"Content-Type": "application/json"},
+        "body": "{\"metadata\":{\"name\":\"test-vsphere-cluster\",\"uid\":\"vsphere-cluster-uid-12345\"},\"spec\":{\"cloudConfigRef\":{\"uid\":\"cloud-config-uid-123\"},\"cloudType\":\"vsphere\"},\"status\":{\"state\":\"Running\"}}"
+      }
+    },
+    {
+      "request": {
+        "method": "DELETE",
+        "url": "/v1/spectroclusters/vsphere-cluster-uid-12345",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 204,
+        "headers": {},
+        "body": ""
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "/v1/spectroclusters/vsphere-cluster-uid-12345",
+        "headers": {}
+      },
+      "response": {
+        "status_code": 404,
+        "headers": {"Content-Type": "application/json"},
+        "body": "{\"message\":\"cluster not found\"}"
+      }
+    }
+  ]
+}
