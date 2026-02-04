@@ -14,15 +14,11 @@ type ResponseData struct {
 	Payload    interface{}
 }
 
-// Handler optionally handles the request. If set and returns true, the response was written and default Payload is not used.
-type Handler func(http.ResponseWriter, *http.Request) bool
-
 // Route defines a mock route with method, path, and response
 type Route struct {
 	Method   string
 	Path     string
 	Response ResponseData
-	Handler  Handler // optional; if set and returns true, response was written
 }
 
 func generateRandomStringUID() string {
