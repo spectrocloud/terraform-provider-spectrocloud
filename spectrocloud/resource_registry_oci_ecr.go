@@ -290,12 +290,14 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
+		if err := d.Set("is_synchronization", registry.Status.SyncStatus.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
+
 		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
 			return diag.FromErr(err)
 		}
+
 		if err := d.Set("wait_for_sync", false); err != nil {
 			return diag.FromErr(err)
 		}
@@ -361,9 +363,10 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
+		if err := d.Set("is_synchronization", registry.Status.SyncStatus.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
+
 		if err := d.Set("wait_for_sync", false); err != nil {
 			return diag.FromErr(err)
 		}
