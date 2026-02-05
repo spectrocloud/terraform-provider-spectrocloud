@@ -1,0 +1,71 @@
+{
+  "name": "project_crud_unit",
+  "interactions": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://api.spectrocloud.com/v1/projects",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"metadata\":{\"name\":\"test-vcr-project\",\"labels\":{},\"annotations\":{\"description\":\"VCR test project\"}}}"
+      },
+      "response": {
+        "status_code": 201,
+        "status": "201 Created",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"uid\":\"vcr-project-uid-001\"}"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.spectrocloud.com/v1/projects/vcr-project-uid-001",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "response": {
+        "status_code": 200,
+        "status": "200 OK",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"metadata\":{\"name\":\"test-vcr-project\",\"uid\":\"vcr-project-uid-001\",\"labels\":{},\"annotations\":{\"description\":\"VCR test project\"}},\"spec\":{\"logoUrl\":\"\"},\"status\":{\"isDisabled\":false}}"
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "https://api.spectrocloud.com/v1/projects/vcr-project-uid-001",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"metadata\":{\"name\":\"test-vcr-project\",\"uid\":\"vcr-project-uid-001\",\"labels\":{\"env\":\"test\"},\"annotations\":{\"description\":\"Updated VCR test project\"}}}"
+      },
+      "response": {
+        "status_code": 204,
+        "status": "204 No Content",
+        "headers": {},
+        "body": ""
+      }
+    },
+    {
+      "request": {
+        "method": "DELETE",
+        "url": "https://api.spectrocloud.com/v1/projects/vcr-project-uid-001",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "response": {
+        "status_code": 204,
+        "status": "204 No Content",
+        "headers": {},
+        "body": ""
+      }
+    }
+  ]
+}

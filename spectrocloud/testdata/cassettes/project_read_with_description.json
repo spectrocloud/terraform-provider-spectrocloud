@@ -1,0 +1,22 @@
+{
+  "name": "project_read_with_description",
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "url": "https://api.spectrocloud.com/v1/projects/project-desc-uid-123",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "response": {
+        "status_code": 200,
+        "status": "200 OK",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"metadata\":{\"name\":\"test-project-with-desc\",\"uid\":\"project-desc-uid-123\",\"labels\":{\"env\":\"test\"},\"annotations\":{\"description\":\"This is a test project description\"}},\"spec\":{\"logoUrl\":\"\"},\"status\":{\"isDisabled\":false}}"
+      }
+    }
+  ]
+}
