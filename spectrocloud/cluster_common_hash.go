@@ -247,8 +247,8 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
-	if val, ok := m["skip_worker_node_update"].(bool); ok {
-		fmt.Fprintf(buf, "%t-", val)
+	if val, ok := m["skip_worker_node_update"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
 	}
 	if m["min"] != nil {
 		fmt.Fprintf(buf, "%d-", m["min"].(int))
