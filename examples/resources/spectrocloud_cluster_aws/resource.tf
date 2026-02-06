@@ -94,9 +94,10 @@ resource "spectrocloud_cluster_aws" "cluster" {
       "purpose" = "testing"
       "type"    = "worker"
     }
-    name          = "worker-basic"
-    count         = 1
-    instance_type = "m5.large"
+    name                    = "worker-basic"
+    count                   = 1
+    instance_type           = "m5.large"
+    skip_worker_node_update = "disabled" # optional: "enabled" to skip OS/K8s upgrade (N-3 skew)
     #    Add azs for dynamic provisioning
     # azs           = ["eu-west-1c","eu-west-1a"]
     #    Add az_subnet component for static provisioning

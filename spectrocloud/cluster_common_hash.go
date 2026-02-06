@@ -256,6 +256,9 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	if m["max"] != nil {
 		fmt.Fprintf(buf, "%d-", m["max"].(int))
 	}
+	if m["disk_size_gb"] != nil {
+		fmt.Fprintf(buf, "%d-", m["disk_size_gb"].(int))
+	}
 	fmt.Fprintf(buf, "%s-", m["instance_type"].(string))
 	fmt.Fprintf(buf, "%s-", m["capacity_type"].(string))
 	fmt.Fprintf(buf, "%s-", m["max_price"].(string))

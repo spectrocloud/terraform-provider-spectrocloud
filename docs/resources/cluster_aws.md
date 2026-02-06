@@ -106,6 +106,8 @@ resource "spectrocloud_cluster_aws" "cluster" {
     }
     name          = "worker-basic"
     count         = 1
+    # optional: "enabled" to skip OS/K8s upgrade (N-3 skew)
+    skip_worker_node_update = "disabled" 
     instance_type = "m5.large"
     #    Add azs for dynamic provisioning
     # azs           = ["eu-west-1c","eu-west-1a"]
@@ -225,6 +227,7 @@ Optional:
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
+- `skip_worker_node_update` (String) Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
 - `update_strategy` (String) Update strategy for the machine pool. Valid values are `RollingUpdateScaleOut`, `RollingUpdateScaleIn` and `OverrideScaling`. If `OverrideScaling` is used, `override_scaling` must be specified with both `max_surge` and `max_unavailable`.
 
