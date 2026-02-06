@@ -60,6 +60,7 @@ func TestFlattenMachinePoolConfigsAws(t *testing.T) {
 					"disk_size_gb":               8,
 					"az_subnets":                 map[string]string{"us-west-2d": "subnet-87654321"},
 					"update_strategy":            "RollingUpdateScaleOut",
+					"skip_worker_node_update":    "disabled",
 					"additional_security_groups": []string{"sg-1234567890"},
 				},
 			},
