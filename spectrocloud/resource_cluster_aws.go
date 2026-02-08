@@ -34,7 +34,14 @@ func resourceClusterAws() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterAwsResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterAwsStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -847,4 +854,322 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 	}
 
 	return mp, nil
+}
+
+func resourceClusterAwsStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading cluster AWS state from version 2 to 3")
+
+	if machinePoolRaw, exists := rawState["machine_pool"]; exists {
+		if machinePoolList, ok := machinePoolRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping machine_pool as list during state upgrade with %d items", len(machinePoolList))
+			rawState["machine_pool"] = machinePoolList
+		}
+	}
+
+	return rawState, nil
+}
+
+// resourceClusterAwsResourceV2 returns the V2 schema with machine_pool as TypeList for state migration.
+func resourceClusterAwsResourceV2() *schema.Resource {
+	return &schema.Resource{
+		SchemaVersion: 2,
+		Schema: map[string]*schema.Schema{
+			"name": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "project",
+				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
+				Description:  "The context of the AWS cluster. Allowed values are `project` or `tenant`. Default is `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Set:      schema.HashString,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
+			},
+			"tags_map": {
+				Type:          schema.TypeMap,
+				Optional:      true,
+				ConflictsWith: []string{"tags"},
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive.",
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "The description of the cluster. Default value is empty string.",
+			},
+			"cluster_meta_attribute": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information.",
+			},
+			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_template": schemas.ClusterTemplateSchema(),
+			"cluster_type":     schemas.ClusterTypeSchema(),
+			"apply_setting": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description:  "The setting to apply the cluster profile.",
+			},
+			"cloud_account_id": {
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"cloud_config_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "ID of the cloud config used for the cluster.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+			},
+			"review_repave_state": {
+				Type:         schema.TypeString,
+				Default:      "",
+				Optional:     true,
+				ValidateFunc: validateReviewRepaveValue,
+				Description:  "To authorize the cluster repave, set the value to `Approved` or `\"\"` to decline.",
+			},
+			"pause_agent_upgrades": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "unlock",
+				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
+				Description:  "The pause agent upgrades setting for the cluster.",
+			},
+			"os_patch_on_boot": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Whether to apply OS patch on boot. Default is `false`.",
+			},
+			"os_patch_schedule": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchSchedule,
+				Description:      "The cron schedule for OS patching.",
+			},
+			"os_patch_after": {
+				Type:             schema.TypeString,
+				Optional:         true,
+				ValidateDiagFunc: validateOsPatchOnDemandAfter,
+				Description:      "Date and time after which to patch cluster.",
+			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster.",
+			},
+			"kubeconfig": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Kubeconfig for the cluster.",
+			},
+			"admin_kube_config": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Admin Kube-config for the cluster.",
+			},
+			"cloud_config": {
+				Type:     schema.TypeList,
+				ForceNew: true,
+				Required: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"ssh_key_name": {
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Required:    true,
+							Description: "Public SSH key to be used for the cluster nodes.",
+						},
+						"region": {
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Required:    true,
+							Description: "The AWS region to deploy the cluster in.",
+						},
+						"vpc_id": {
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Optional:    true,
+							Description: "The VPC ID to deploy the cluster in.",
+						},
+						"control_plane_lb": {
+							Type:         schema.TypeString,
+							ForceNew:     true,
+							Default:      "",
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"", "Internet-facing", "internal"}, false),
+							Description:  "Control plane load balancer type.",
+						},
+					},
+				},
+			},
+			"machine_pool": {
+				Type:     schema.TypeList,
+				Required: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"additional_labels": {
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "Additional labels to be applied to the machine pool.",
+						},
+						"additional_annotations": {
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "Additional annotations to be applied to the machine pool.",
+						},
+						"taints": schemas.ClusterTaintsSchema(),
+						"control_plane": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether this machine pool is a control plane.",
+						},
+						"control_plane_as_worker": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether this machine pool is a control plane and a worker.",
+						},
+						"name": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of the machine pool.",
+						},
+						"count": {
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Number of nodes in the machine pool.",
+						},
+						"instance_type": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The instance type to use for the machine pool nodes.",
+						},
+						"min": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum number of nodes in the machine pool.",
+						},
+						"max": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum number of nodes in the machine pool.",
+						},
+						"node_repave_interval": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     0,
+							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave.",
+						},
+						"skip_worker_node_update": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "disabled",
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description:  "Skip Kubernetes version upgrade for this worker pool.",
+						},
+						"capacity_type": {
+							Type:         schema.TypeString,
+							Default:      "on-demand",
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"on-demand", "spot"}, false),
+							Description:  "Capacity type: 'on-demand' or 'spot'.",
+						},
+						"max_price": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Maximum price to bid for spot instances.",
+						},
+						"update_strategy": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "RollingUpdateScaleOut",
+							ValidateFunc: validation.StringInSlice([]string{"RollingUpdateScaleOut", "RollingUpdateScaleIn", "OverrideScaling"}, false),
+							Description:  "Update strategy for the machine pool.",
+						},
+						"override_scaling": schemas.OverrideScalingSchema(),
+						"override_kubeadm_configuration": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Worker pools only.",
+						},
+						"disk_size_gb": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     65,
+							Description: "The disk size in GB for the machine pool nodes.",
+						},
+						"azs": {
+							Type:        schema.TypeSet,
+							Optional:    true,
+							MinItems:    1,
+							Set:         schema.HashString,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "Use `azs` for Dynamic provisioning.",
+						},
+						"az_subnets": {
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Description: "Use `az_subnets` for Static provisioning.",
+							Elem:        &schema.Schema{Type: schema.TypeString, Required: true},
+						},
+						"additional_security_groups": {
+							Type:        schema.TypeSet,
+							Set:         schema.HashString,
+							Optional:    true,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "Additional security groups to attach to the instance.",
+						},
+						"node": schemas.NodeSchema(),
+					},
+				},
+			},
+			"backup_policy":        schemas.BackupPolicySchema(),
+			"scan_policy":          schemas.ScanPolicySchema(),
+			"cluster_rbac_binding": schemas.ClusterRbacBindingSchema(),
+			"namespaces":           schemas.ClusterNamespacesSchema(),
+			"host_config":          schemas.ClusterHostConfigSchema(),
+			"location_config":      schemas.ClusterLocationSchemaComputed(),
+			"skip_completion": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If true, the cluster will be created asynchronously.",
+			},
+			"force_delete": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "If set to true, the cluster will be force deleted.",
+			},
+			"force_delete_delay": {
+				Type:             schema.TypeInt,
+				Optional:         true,
+				Default:          20,
+				Description:      "Delay duration in minutes before invoking cluster force delete. Default and minimum is 20.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.IntAtLeast(20)),
+			},
+		},
+	}
 }
