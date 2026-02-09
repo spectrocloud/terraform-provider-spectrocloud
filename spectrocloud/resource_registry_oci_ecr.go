@@ -221,6 +221,30 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
+
+		// Wait for sync if requested and provider_type is helm (ECR supports helm only for wait_for_sync)
+		if providerType == "helm" && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+			diagnostics, isError := waitForOciEcrRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate)
+			if len(diagnostics) > 0 {
+				diags = append(diags, diagnostics...)
+			}
+			// Fetch final sync status and set wait_for_status_message
+			registry, statusErr := c.GetOciEcrRegistry(uid)
+			if statusErr == nil && registry != nil && registry.Status != nil && registry.Status.SyncStatus != nil {
+				statusMessage := ""
+				if registry.Status.SyncStatus.Message != "" {
+					statusMessage = registry.Status.SyncStatus.Message
+				} else if registry.Status.SyncStatus.Status != "" {
+					statusMessage = fmt.Sprintf("Status: %s", registry.Status.SyncStatus.Status)
+				}
+				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
+					diags = append(diags, diag.FromErr(err)...)
+				}
+			}
+			if isError {
+				return diagnostics
+			}
+		}
 	case "basic":
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
@@ -325,7 +349,7 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		// tls configuration handling
 		tlsConfig := make([]interface{}, 0, 1)
-		if registry.Spec.TLS != nil && (registry.Spec.TLS.Certificate != "" || registry.Spec.TLS.InsecureSkipVerify) {
+		if registry.Spec.TLS != nil {
 			tls := make(map[string]interface{})
 			tls["certificate"] = registry.Spec.TLS.Certificate
 			tls["insecure_skip_verify"] = registry.Spec.TLS.InsecureSkipVerify
@@ -450,6 +474,30 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 		err := c.UpdateOciEcrRegistry(d.Id(), registry)
 		if err != nil {
 			return diag.FromErr(err)
+		}
+
+		// Wait for sync if requested and provider_type is helm
+		if providerType == "helm" && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+			diagnostics, isError := waitForOciEcrRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate)
+			if len(diagnostics) > 0 {
+				diags = append(diags, diagnostics...)
+			}
+			// Fetch final sync status and set wait_for_status_message
+			registry, statusErr := c.GetOciEcrRegistry(d.Id())
+			if statusErr == nil && registry != nil && registry.Status != nil && registry.Status.SyncStatus != nil {
+				statusMessage := ""
+				if registry.Status.SyncStatus.Message != "" {
+					statusMessage = registry.Status.SyncStatus.Message
+				} else if registry.Status.SyncStatus.Status != "" {
+					statusMessage = fmt.Sprintf("Status: %s", registry.Status.SyncStatus.Status)
+				}
+				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
+					diags = append(diags, diag.FromErr(err)...)
+				}
+			}
+			if isError {
+				return diagnostics
+			}
 		}
 	case "basic":
 		registry := toRegistryBasic(d)
@@ -729,6 +777,111 @@ func resourceOciRegistrySyncRefreshFunc(c *client.V1Client, uid string) retry.St
 			return syncStatus, "InProgress", nil
 		default:
 			// Unknown status, treat as pending
+			return syncStatus, status, nil
+		}
+	}
+}
+
+// waitForOciEcrRegistrySync waits for an OCI ECR registry to complete its synchronization by polling GetOciEcrRegistry.
+func waitForOciEcrRegistrySync(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, timeoutType string) (diag.Diagnostics, bool) {
+	stateConf := &retry.StateChangeConf{
+		Pending: []string{
+			"InProgress",
+			"Pending",
+			"Unknown",
+			"",
+		},
+		Target: []string{
+			"Success",
+			"Completed",
+		},
+		Refresh:    resourceOciEcrRegistrySyncRefreshFunc(c, uid),
+		Timeout:    d.Timeout(timeoutType) - 1*time.Minute,
+		MinTimeout: 10 * time.Second,
+		Delay:      30 * time.Second,
+	}
+
+	_, err := stateConf.WaitForStateContext(ctx)
+	if err != nil {
+		var timeoutErr *retry.TimeoutError
+		if errors.As(err, &timeoutErr) {
+			currentStatus := timeoutErr.LastState
+			statusMessage := ""
+			registry, statusErr := c.GetOciEcrRegistry(uid)
+			if statusErr == nil && registry != nil && registry.Status != nil && registry.Status.SyncStatus != nil {
+				if registry.Status.SyncStatus.Status != "" {
+					currentStatus = registry.Status.SyncStatus.Status
+				}
+				if registry.Status.SyncStatus.Message != "" {
+					statusMessage = fmt.Sprintf(" Message: %s", registry.Status.SyncStatus.Message)
+				}
+			}
+			if currentStatus == "" {
+				currentStatus = "Unknown"
+			}
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "OCI ECR registry sync timeout",
+				Detail: fmt.Sprintf(
+					"OCI ECR registry synchronization timed out after waiting for %v. Current sync status is '%s'.%s "+
+						"The registry sync may still be in progress. You may need to increase the timeout or wait for the sync to complete manually.",
+					d.Timeout(timeoutType)-1*time.Minute, currentStatus, statusMessage),
+			})
+			return diags, false
+		}
+
+		registry, statusErr := c.GetOciEcrRegistry(uid)
+		if statusErr == nil && registry != nil && registry.Status != nil && registry.Status.SyncStatus != nil {
+			status := registry.Status.SyncStatus.Status
+			if status == "Failed" || status == "Error" || status == "failed" || status == "error" {
+				errorDetail := fmt.Sprintf("OCI ECR registry synchronization failed with status '%s'.", status)
+				if registry.Status.SyncStatus.Message != "" {
+					errorDetail += fmt.Sprintf("\n\nError details: %s", registry.Status.SyncStatus.Message)
+				}
+				errorDetail += "\n\nPlease check the registry configuration (endpoint, credentials) and try again."
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Warning,
+					Summary:  "OCI ECR registry sync failed",
+					Detail:   errorDetail,
+				})
+				return diags, false
+			}
+		}
+
+		return diag.FromErr(err), true
+	}
+	return nil, false
+}
+
+// resourceOciEcrRegistrySyncRefreshFunc returns a retry.StateRefreshFunc that checks the sync status of an OCI ECR registry via GetOciEcrRegistry.
+func resourceOciEcrRegistrySyncRefreshFunc(c *client.V1Client, uid string) retry.StateRefreshFunc {
+	return func() (interface{}, string, error) {
+		registry, err := c.GetOciEcrRegistry(uid)
+		if err != nil {
+			return nil, "", err
+		}
+		if registry == nil || registry.Status == nil || registry.Status.SyncStatus == nil {
+			return nil, "", nil
+		}
+		syncStatus := registry.Status.SyncStatus
+		if !syncStatus.IsSyncSupported {
+			return syncStatus, "Success", nil
+		}
+		status := syncStatus.Status
+		if status == "" {
+			return syncStatus, "", nil
+		}
+		switch status {
+		case "Success", "Completed", "success", "completed":
+			return syncStatus, "Success", nil
+		case "Failed", "Error", "failed", "error":
+			if syncStatus.Message != "" {
+				return syncStatus, status, fmt.Errorf("registry sync failed: %s", syncStatus.Message)
+			}
+			return syncStatus, status, fmt.Errorf("registry sync failed")
+		case "InProgress", "Running", "Syncing", "inprogress", "running", "syncing":
+			return syncStatus, "InProgress", nil
+		default:
 			return syncStatus, status, nil
 		}
 	}
