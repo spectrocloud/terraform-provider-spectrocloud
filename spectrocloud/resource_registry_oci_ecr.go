@@ -446,25 +446,9 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		// Wait for sync if requested and provider_type is helm
 		if providerType == "helm" && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
-			diagnostics, isError := waitForOciEcrRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate)
-			if len(diagnostics) > 0 {
-				diags = append(diags, diagnostics...)
-			}
-			// Fetch final sync status and set wait_for_status_message
-			registry, statusErr := c.GetOciEcrRegistry(d.Id())
-			if statusErr == nil && registry != nil && registry.Status != nil && registry.Status.SyncStatus != nil {
-				statusMessage := ""
-				if registry.Status.SyncStatus.Message != "" {
-					statusMessage = registry.Status.SyncStatus.Message
-				} else if registry.Status.SyncStatus.Status != "" {
-					statusMessage = fmt.Sprintf("Status: %s", registry.Status.SyncStatus.Status)
-				}
-				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
-					diags = append(diags, diag.FromErr(err)...)
-				}
-			}
+			diags, isError := waitForOCIRegistrySyncAndSetStatus(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate, "ecr")
 			if isError {
-				return diagnostics
+				return diags
 			}
 		}
 	case "basic":
