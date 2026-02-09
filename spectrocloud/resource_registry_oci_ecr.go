@@ -293,9 +293,6 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("is_synchronization", registry.Status.SyncStatus.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("wait_for_sync", false); err != nil {
-			return diag.FromErr(err)
-		}
 
 		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
 			return diag.FromErr(err)
@@ -379,9 +376,6 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("wait_for_sync", false); err != nil {
-			return diag.FromErr(err)
-		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		// Read the actual auth type from the API response
