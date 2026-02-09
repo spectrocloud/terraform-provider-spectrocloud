@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/palette-sdk-go/client/herr"
 )
 
 var (
@@ -233,35 +234,41 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 }
 
 func GetCommonCluster(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
-	// parse resource ID and scope
-	resourceContext, clusterID, err := ParseResourceID(d)
+	// Parse resource ID and scope (import ID format: id_or_name:context e.g. "my-cluster:project" or "uid-123:project")
+	resourceContext, clusterIDOrName, err := ParseResourceID(d)
 	if err != nil {
 		return nil, err
 	}
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
-	// Use the IDs to retrieve the cluster data from the API
-	cluster, err := c.GetCluster(clusterID)
-	if err != nil {
+	// Try by UID first, then by name (physical then virtual)
+	cluster, err := c.GetCluster(clusterIDOrName)
+	if err == nil && cluster != nil {
+		return setClusterImportState(d, c, cluster.Metadata.UID, cluster)
+	}
+	if err != nil && !herr.IsNotFound(err) {
 		return c, fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}
-	if cluster != nil {
-		err = d.Set("name", cluster.Metadata.Name)
-		if err != nil {
-			return c, err
-		}
-		err = d.Set("context", cluster.Metadata.Annotations["scope"])
-		if err != nil {
-			return c, err
-		}
-
-		// Set the ID of the resource in the state. This ID is used to track the
-		// resource and must be set in the state during the import.
-		d.SetId(clusterID)
-	} else {
-		return c, fmt.Errorf("couldn’t find cluster. Kindly check the cluster UID and context")
+	cluster, err = c.GetClusterByName(clusterIDOrName, false)
+	if err == nil && cluster != nil {
+		return setClusterImportState(d, c, cluster.Metadata.UID, cluster)
 	}
+	cluster, err = c.GetClusterByName(clusterIDOrName, true)
+	if err == nil && cluster != nil {
+		return setClusterImportState(d, c, cluster.Metadata.UID, cluster)
+	}
+	return c, fmt.Errorf("unable to retrieve cluster by UID or name '%s': not found in context %s", clusterIDOrName, resourceContext)
+}
 
+// setClusterImportState sets name, context, and ID on d after a successful cluster lookup (import).
+func setClusterImportState(d *schema.ResourceData, c *client.V1Client, clusterUID string, cluster *models.V1SpectroCluster) (*client.V1Client, error) {
+	if err := d.Set("name", cluster.Metadata.Name); err != nil {
+		return c, err
+	}
+	if err := d.Set("context", cluster.Metadata.Annotations["scope"]); err != nil {
+		return c, err
+	}
+	d.SetId(clusterUID)
 	return c, nil
 }
 
