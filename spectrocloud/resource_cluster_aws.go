@@ -260,7 +260,7 @@ func resourceClusterAws() *schema.Resource {
 							Default:     0,
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
-						"skip_worker_node_update": {
+						"skip_k8s_upgrade": {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "disabled",
@@ -526,12 +526,12 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
 
-		// Flatten skip_worker_node_update (worker pools only); default "disabled" for backward compat when API omits field
+		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" for backward compat when API omits field
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane &&
 			machinePool.SkipK8sUpgrade != nil && *machinePool.SkipK8sUpgrade != "" {
-			oi["skip_worker_node_update"] = *machinePool.SkipK8sUpgrade
+			oi["skip_k8s_upgrade"] = *machinePool.SkipK8sUpgrade
 		} else {
-			oi["skip_worker_node_update"] = "disabled"
+			oi["skip_k8s_upgrade"] = "disabled"
 		}
 
 		oi["min"] = int(machinePool.MinSize)
@@ -832,7 +832,7 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 	}
 	if !controlPlane {
 		skipK8sUpgrade := "disabled"
-		if v, ok := m["skip_worker_node_update"].(string); ok && v != "" {
+		if v, ok := m["skip_k8s_upgrade"].(string); ok && v != "" {
 			skipK8sUpgrade = v
 		}
 		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
