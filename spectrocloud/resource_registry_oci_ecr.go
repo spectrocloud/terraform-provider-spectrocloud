@@ -308,6 +308,16 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		case models.V1AwsCloudAccountCredentialTypeSecret:
 			acc["access_key"] = registry.Spec.Credentials.AccessKey
 			acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
+			// Preserve secret_key from state to avoid drift when API does not return it
+			if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+				if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+					if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+						if secretKey, exists := currentCredMap["secret_key"]; exists && secretKey != nil {
+							acc["secret_key"] = secretKey
+						}
+					}
+				}
+			}
 		default:
 			errMsg := fmt.Sprintf("Registry type %s not implemented.", *registry.Spec.Credentials.CredentialType)
 			err = errors.New(errMsg)
