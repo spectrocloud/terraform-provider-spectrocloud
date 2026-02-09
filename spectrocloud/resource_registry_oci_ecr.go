@@ -224,25 +224,9 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 
 		// Wait for sync if requested and provider_type is helm (ECR supports helm only for wait_for_sync)
 		if providerType == "helm" && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
-			diagnostics, isError := waitForOciEcrRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate)
-			if len(diagnostics) > 0 {
-				diags = append(diags, diagnostics...)
-			}
-			// Fetch final sync status and set wait_for_status_message
-			registry, statusErr := c.GetOciEcrRegistry(uid)
-			if statusErr == nil && registry != nil && registry.Status != nil && registry.Status.SyncStatus != nil {
-				statusMessage := ""
-				if registry.Status.SyncStatus.Message != "" {
-					statusMessage = registry.Status.SyncStatus.Message
-				} else if registry.Status.SyncStatus.Status != "" {
-					statusMessage = fmt.Sprintf("Status: %s", registry.Status.SyncStatus.Status)
-				}
-				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
-					diags = append(diags, diag.FromErr(err)...)
-				}
-			}
+			diags, isError := waitForOCIRegistrySyncAndSetStatus(ctx, d, uid, diags, c, schema.TimeoutCreate, "ecr")
 			if isError {
-				return diagnostics
+				return diags
 			}
 		}
 	case "basic":
@@ -259,25 +243,9 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 
 		// Wait for sync if requested and provider_type is zarf or helm
 		if (providerType == "zarf" || providerType == "helm") && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
-			diagnostics, isError := waitForOciRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate)
-			if len(diagnostics) > 0 {
-				diags = append(diags, diagnostics...)
-			}
-			// Fetch final sync status and set wait_for_status_message
-			syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(uid)
-			if statusErr == nil && syncStatus != nil {
-				statusMessage := ""
-				if syncStatus.Message != "" {
-					statusMessage = syncStatus.Message
-				} else if syncStatus.Status != "" {
-					statusMessage = fmt.Sprintf("Status: %s", syncStatus.Status)
-				}
-				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
-					diags = append(diags, diag.FromErr(err)...)
-				}
-			}
+			diags, isError := waitForOCIRegistrySyncAndSetStatus(ctx, d, uid, diags, c, schema.TimeoutCreate, "basic")
 			if isError {
-				return diagnostics
+				return diags
 			}
 		}
 	}
@@ -884,5 +852,50 @@ func resourceOciEcrRegistrySyncRefreshFunc(c *client.V1Client, uid string) retry
 		default:
 			return syncStatus, status, nil
 		}
+	}
+}
+
+// waitForOCIRegistrySyncAndSetStatus runs the appropriate wait-for-sync for the given registry type,
+// then sets wait_for_status_message from the API. Returns (combined diagnostics, true if caller should return).
+func waitForOCIRegistrySyncAndSetStatus(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, timeoutType string, registryType string) (diag.Diagnostics, bool) {
+	switch registryType {
+	case "ecr":
+		diagnostics, isError := waitForOciEcrRegistrySync(ctx, d, uid, diags, c, timeoutType)
+		if len(diagnostics) > 0 {
+			diags = append(diags, diagnostics...)
+		}
+		registry, statusErr := c.GetOciEcrRegistry(uid)
+		if statusErr == nil && registry != nil && registry.Status != nil && registry.Status.SyncStatus != nil {
+			statusMessage := ""
+			if registry.Status.SyncStatus.Message != "" {
+				statusMessage = registry.Status.SyncStatus.Message
+			} else if registry.Status.SyncStatus.Status != "" {
+				statusMessage = fmt.Sprintf("Status: %s", registry.Status.SyncStatus.Status)
+			}
+			if err := d.Set("wait_for_status_message", statusMessage); err != nil {
+				diags = append(diags, diag.FromErr(err)...)
+			}
+		}
+		return diags, isError
+	case "basic":
+		diagnostics, isError := waitForOciRegistrySync(ctx, d, uid, diags, c, timeoutType)
+		if len(diagnostics) > 0 {
+			diags = append(diags, diagnostics...)
+		}
+		syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(uid)
+		if statusErr == nil && syncStatus != nil {
+			statusMessage := ""
+			if syncStatus.Message != "" {
+				statusMessage = syncStatus.Message
+			} else if syncStatus.Status != "" {
+				statusMessage = fmt.Sprintf("Status: %s", syncStatus.Status)
+			}
+			if err := d.Set("wait_for_status_message", statusMessage); err != nil {
+				diags = append(diags, diag.FromErr(err)...)
+			}
+		}
+		return diags, isError
+	default:
+		return diags, false
 	}
 }
