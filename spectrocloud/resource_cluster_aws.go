@@ -2,7 +2,6 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sort"
 	"time"
@@ -256,6 +255,7 @@ func resourceClusterAws() *schema.Resource {
 						},
 						"skip_k8s_upgrade": {
 							Type:         schema.TypeString,
+							Optional:     true,
 							Default:      "disabled",
 							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
 							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
@@ -408,9 +408,6 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 	err = ValidateCloudType("spectrocloud_cluster_aws", cluster)
 	if err != nil {
 		return diag.FromErr(err)
-	}
-	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
-		fmt.Fprintf(buf, "%s-", val)
 	}
 
 	diagnostics, done := readCommonFields(c, d, cluster)
