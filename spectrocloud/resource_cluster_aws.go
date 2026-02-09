@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sort"
 	"time"
@@ -253,6 +254,12 @@ func resourceClusterAws() *schema.Resource {
 							Default:     0,
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
+						"skip_k8s_upgrade": {
+							Type:         schema.TypeString,
+							Default:      "disabled",
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
+						},
 						"capacity_type": {
 							Type:         schema.TypeString,
 							Default:      "on-demand",
@@ -402,6 +409,9 @@ func resourceClusterAwsRead(_ context.Context, d *schema.ResourceData, m interfa
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	diagnostics, done := readCommonFields(c, d, cluster)
 
@@ -520,6 +530,10 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		}
 		if machinePool.SpotMarketOptions != nil {
 			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
+		}
+		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" for backward compat when API omits field
+		if machinePool.SkipK8sUpgrade != nil {
+			oi["skip_k8s_upgrade"] = *machinePool.SkipK8sUpgrade
 		}
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 		if machinePool.SubnetIds != nil {
@@ -818,6 +832,14 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 		mp.CloudConfig.SpotMarketOptions = &models.V1SpotMarketOptions{
 			MaxPrice: maxPrice,
 		}
+	}
+
+	if !controlPlane {
+		skipK8sUpgrade := "disabled"
+		if v, ok := m["skip_k8s_upgrade"].(string); ok && v != "" {
+			skipK8sUpgrade = v
+		}
+		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
 
 	if m["additional_security_groups"] != nil {

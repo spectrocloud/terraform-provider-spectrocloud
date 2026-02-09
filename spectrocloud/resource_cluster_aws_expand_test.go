@@ -91,6 +91,7 @@ func TestToMachinePoolAws(t *testing.T) {
 					IsControlPlane:        false,
 					Labels:                []string{"worker"},
 					NodeRepaveInterval:    10,
+					SkipK8sUpgrade:        types.Ptr("disabled"),
 					UpdateStrategy:        &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
 					AdditionalLabels:      map[string]string{},
 					AdditionalAnnotations: map[string]string{},
