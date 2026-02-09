@@ -1790,7 +1790,7 @@ func resourceClusterAwsResourceV2() *schema.Resource {
 							Default:     0,
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave.",
 						},
-						"skip_worker_node_update": {
+						"skip_k8s_upgrade": {
 							Type:         schema.TypeString,
 							Optional:     true,
 							Default:      "disabled",
