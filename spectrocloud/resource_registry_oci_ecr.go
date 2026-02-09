@@ -298,9 +298,6 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("wait_for_sync", false); err != nil {
-			return diag.FromErr(err)
-		}
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		switch *registry.Spec.Credentials.CredentialType {
@@ -318,10 +315,12 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		// tls configuration handling
 		tlsConfig := make([]interface{}, 0, 1)
-		tls := make(map[string]interface{})
-		tls["certificate"] = registry.Spec.TLS.Certificate
-		tls["insecure_skip_verify"] = registry.Spec.TLS.InsecureSkipVerify
-		tlsConfig = append(tlsConfig, tls)
+		if registry.Spec.TLS != nil && (registry.Spec.TLS.Certificate != "" || registry.Spec.TLS.InsecureSkipVerify) {
+			tls := make(map[string]interface{})
+			tls["certificate"] = registry.Spec.TLS.Certificate
+			tls["insecure_skip_verify"] = registry.Spec.TLS.InsecureSkipVerify
+			tlsConfig = append(tlsConfig, tls)
+		}
 		acc["tls_config"] = tlsConfig
 		credentials = append(credentials, acc)
 
