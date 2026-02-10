@@ -253,10 +253,7 @@ func GetCommonCluster(d *schema.ResourceData, m interface{}) (*client.V1Client, 
 	if err == nil && cluster != nil {
 		return setClusterImportState(d, c, cluster.Metadata.UID, cluster)
 	}
-	// cluster, err = c.GetClusterByName(clusterIDOrName, true)
-	// if err == nil && cluster != nil {
-	// 	return setClusterImportState(d, c, cluster.Metadata.UID, cluster)
-	// }
+
 	return c, fmt.Errorf("unable to retrieve cluster by UID or name '%s': not found in context %s", clusterIDOrName, resourceContext)
 }
 
