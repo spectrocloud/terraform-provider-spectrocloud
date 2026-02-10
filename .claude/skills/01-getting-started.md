@@ -1,3 +1,15 @@
+---
+skill: Getting Started with Terraform Provider Spectrocloud
+type: onboarding
+repository: terraform-provider-spectrocloud
+team: tools
+topics: [terraform, provider, setup, development, spectrocloud, iac]
+difficulty: beginner
+last_updated: 2026-02-09
+related_skills: [02-provider-architecture.md, 03-resource-patterns.md]
+memory_references: []
+---
+
 # Getting Started with Terraform Provider Spectrocloud
 
 ## Overview

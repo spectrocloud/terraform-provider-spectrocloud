@@ -246,3 +246,95 @@ constraints:
   - Must provide clear documentation
   - Must handle errors gracefully
   - Must manage state correctly
+
+  ## Memory System
+
+  You have access to a memory system to capture and reuse learnings:
+
+  **Memory Location:** `.claude/memory/`
+  - `MEMORY.md` - Quick reference (auto-loaded, <200 lines)
+  - `patterns.md` - Code patterns you discover
+  - `gotchas.md` - Common mistakes and solutions
+  - `decisions.md` - Architecture decisions
+  - `solutions.md` - Problem-solution pairs
+
+  **When to Update Memory:**
+
+  ### During Planning
+  - User provides new requirements → Add to `decisions.md`
+  - Discover architectural constraints → Add to `MEMORY.md`
+  - Learn about dependencies or integration points → Add to `patterns.md`
+  - Identify trade-offs → Document in `decisions.md`
+
+  ### During Development
+  - Find a code pattern that works well → Add to `patterns.md`
+  - Hit an unexpected issue or edge case → Add to `gotchas.md`
+  - Make an architecture or design decision → Add to `decisions.md`
+  - Solve a tricky problem → Add to `solutions.md`
+  - Discover API quirks → Add to `gotchas.md`
+
+  ### During Code Review
+  - Notice repeated mistakes → Add to `gotchas.md`
+  - Identify best practices → Add to `patterns.md`
+  - See better approaches → Update existing patterns
+
+  ### After Problem Solving
+  - Solved a tricky bug → Add to `solutions.md`
+  - Found a workaround → Add to `gotchas.md`
+  - Implemented a fix → Document in `solutions.md`
+
+  **How to Update Memory:**
+
+  Use the Edit or Write tool to append to memory files. Always include:
+  - Date of the learning
+  - Specific details and examples
+  - Links to related code, PRs, or other memory entries
+
+  Example:
+  ```
+  Edit(
+    file_path=".claude/memory/patterns.md",
+    old_string="## Patterns\n\n(Patterns will be added below",
+    new_string="## Patterns\n\n## API Client Retry Pattern\n\n**Context:** When making HTTP API calls that can fail transiently\n\n**Problem:** API calls fail due to network issues, rate limits, or server problems\n\n**Solution:**\n```go\nfunc callWithRetry(fn func() error) error {\n    for i := 0; i < 3; i++ {\n        if err := fn(); err == nil {\n            return nil\n        }\n        time.Sleep(time.Duration(math.Pow(2, float64(i))) * time.Second)\n    }\n    return fmt.Errorf(\"max retries exceeded\")\n}\n```\n\n**Learned:** 2026-02-09\n**Used In:** api/client.go\n\n(Patterns will be added below"
+  )
+  ```
+
+  **Memory Quality Guidelines:**
+
+  1. **Be Specific:** Include concrete examples, not vague descriptions
+  2. **Be Actionable:** Provide clear steps or code that can be applied
+  3. **Include Context:** Explain when/why to use the pattern
+  4. **Date Everything:** Track when learnings were captured
+  5. **Cross-Reference:** Link related patterns, gotchas, and decisions
+  6. **Keep MEMORY.md Lean:** Only most important quick-reference items
+  7. **Update, Don't Duplicate:** Enhance existing entries when relevant
+  8. **Use Examples:** Show real code from the repository
+  9. **Document Trade-offs:** Explain pros/cons of approaches
+  10. **Link to Code:** Reference specific files where patterns are used
+
+  **Memory File Purposes:**
+
+  - **MEMORY.md:** Quick reference, most important items only (<200 lines)
+  - **patterns.md:** Reusable code patterns and best practices
+  - **gotchas.md:** Things that don't work as expected, common mistakes
+  - **decisions.md:** Why we chose certain approaches over alternatives
+  - **solutions.md:** How we fixed specific problems
+
+  **When User Provides Information:**
+
+  If the user tells you something you didn't know about the codebase:
+  1. Thank them for the information
+  2. Immediately document it in the appropriate memory file
+  3. Reference the memory in your response
+
+  Example:
+  ```
+  User: "The API uses OAuth 2.0 with PKCE flow"
+
+  Agent:
+  - Thanks for clarifying! Let me document this.
+  - [Updates decisions.md with OAuth decision]
+  - "I've documented the OAuth flow decision in .claude/memory/decisions.md"
+  ```
+
+  **Remember:** Good memory is specific, actionable, and maintained. Keep it updated!

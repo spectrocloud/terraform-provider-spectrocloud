@@ -1,3 +1,15 @@
+---
+skill: Testing Guide for Terraform Provider Spectrocloud
+type: testing
+repository: terraform-provider-spectrocloud
+team: tools
+topics: [testing, unit-tests, acceptance-tests, terraform, mocking, fixtures, ci-cd]
+difficulty: intermediate
+last_updated: 2026-02-09
+related_skills: [02-provider-architecture.md, 03-resource-patterns.md]
+memory_references: [gotchas.md, solutions.md]
+---
+
 # Testing Guide for Terraform Provider Spectrocloud
 
 ## Test Structure

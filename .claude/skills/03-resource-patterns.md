@@ -1,3 +1,15 @@
+---
+skill: Terraform Provider Resource Patterns
+type: patterns
+repository: terraform-provider-spectrocloud
+team: tools
+topics: [terraform, patterns, resources, validation, schema, state-management, best-practices]
+difficulty: intermediate
+last_updated: 2026-02-09
+related_skills: [02-provider-architecture.md, 50-testing.md]
+memory_references: [patterns.md, gotchas.md]
+---
+
 # Terraform Provider Resource Patterns
 
 ## Common Resource Patterns

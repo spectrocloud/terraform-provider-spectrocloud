@@ -1,3 +1,15 @@
+---
+skill: Terraform Provider Architecture
+type: architecture
+repository: terraform-provider-spectrocloud
+team: tools
+topics: [terraform, provider, framework, architecture, crud, resources, data-sources]
+difficulty: intermediate
+last_updated: 2026-02-09
+related_skills: [01-getting-started.md, 03-resource-patterns.md, 50-testing.md]
+memory_references: [patterns.md, decisions.md]
+---
+
 # Terraform Provider Architecture
 
 ## Provider Framework
