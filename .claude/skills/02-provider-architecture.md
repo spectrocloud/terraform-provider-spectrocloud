@@ -1,13 +1,14 @@
 ---
 skill: Terraform Provider Architecture
+description: Deep dive into the Terraform Plugin Framework architecture for Spectro Cloud provider. Details provider structure, resource/data source implementation patterns, CRUD operations (Create, Read, Update, Delete), API client integration, state management, and the complete lifecycle of Terraform resource operations.
 type: architecture
 repository: terraform-provider-spectrocloud
 team: tools
-topics: [terraform, provider, framework, architecture, crud, resources, data-sources]
+topics: [terraform, framework, architecture, crud, api, golang, plugin, sdk, state-management]
 difficulty: intermediate
 last_updated: 2026-02-09
 related_skills: [01-getting-started.md, 03-resource-patterns.md, 50-testing.md]
-memory_references: [patterns.md, decisions.md]
+memory_references: []
 ---
 
 # Terraform Provider Architecture

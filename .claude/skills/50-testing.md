@@ -1,13 +1,14 @@
 ---
 skill: Testing Guide for Terraform Provider Spectrocloud
+description: Comprehensive testing strategies for the Terraform provider including unit tests for individual functions, acceptance tests for full resource lifecycle against real API, test configuration helpers, and patterns for testing create/read/update/delete/import operations with proper assertions and cleanup.
 type: testing
 repository: terraform-provider-spectrocloud
 team: tools
-topics: [testing, unit-tests, acceptance-tests, terraform, mocking, fixtures, ci-cd]
+topics: [testing, terraform, acceptance, unit, go, integration, api, lifecycle, assertions]
 difficulty: intermediate
 last_updated: 2026-02-09
-related_skills: [02-provider-architecture.md, 03-resource-patterns.md]
-memory_references: [gotchas.md, solutions.md]
+related_skills: [02-provider-architecture.md, 03-resource-patterns.md, 01-getting-started.md]
+memory_references: []
 ---
 
 # Testing Guide for Terraform Provider Spectrocloud

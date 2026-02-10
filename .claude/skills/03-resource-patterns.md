@@ -1,13 +1,14 @@
 ---
 skill: Terraform Provider Resource Patterns
+description: Common patterns and best practices for implementing Terraform resources in the Spectro Cloud provider. Covers standard resource templates, schema patterns (required/optional/computed attributes), nested objects, complex types (maps, lists), validation patterns, and reusable code structures for consistent resource implementation.
 type: patterns
 repository: terraform-provider-spectrocloud
 team: tools
-topics: [terraform, patterns, resources, validation, schema, state-management, best-practices]
+topics: [terraform, patterns, schema, resource, design, golang, validation, attributes, nested-objects]
 difficulty: intermediate
 last_updated: 2026-02-09
-related_skills: [02-provider-architecture.md, 50-testing.md]
-memory_references: [patterns.md, gotchas.md]
+related_skills: [02-provider-architecture.md, 01-getting-started.md, 50-testing.md]
+memory_references: []
 ---
 
 # Terraform Provider Resource Patterns

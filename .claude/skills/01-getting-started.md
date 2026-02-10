@@ -1,12 +1,13 @@
 ---
 skill: Getting Started with Terraform Provider Spectrocloud
+description: Comprehensive guide to setting up and using the Terraform provider for Spectro Cloud. Covers development environment setup, provider configuration, resource types (clusters, profiles, projects), data sources, and common workflows for managing Spectro Cloud infrastructure as code.
 type: onboarding
 repository: terraform-provider-spectrocloud
 team: tools
-topics: [terraform, provider, setup, development, spectrocloud, iac]
+topics: [terraform, provider, iac, go, spectrocloud, cluster, api, setup, development, sdk]
 difficulty: beginner
 last_updated: 2026-02-09
-related_skills: [02-provider-architecture.md, 03-resource-patterns.md]
+related_skills: [02-provider-architecture.md, 03-resource-patterns.md, 50-testing.md]
 memory_references: []
 ---
 
