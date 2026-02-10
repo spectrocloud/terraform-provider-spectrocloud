@@ -28,3 +28,6 @@ MockBuild
 mock_api_server.log
 # Credentials
 .netrc
+# Autodoc
+.autodoc/
+autodoc.config.json
