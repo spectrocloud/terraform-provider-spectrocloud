@@ -288,6 +288,14 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
 			return diag.FromErr(err)
 		}
+		// wait_for_sync is not returned by the API; on import default to false, otherwise preserve from state
+		waitForSync := false
+		if v, ok := d.GetOk("wait_for_sync"); ok {
+			waitForSync = v.(bool)
+		}
+		if err := d.Set("wait_for_sync", waitForSync); err != nil {
+			return diag.FromErr(err)
+		}
 
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
@@ -354,6 +362,14 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 
 		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
+			return diag.FromErr(err)
+		}
+		// wait_for_sync is not returned by the API; on import default to false, otherwise preserve from state
+		waitForSync := false
+		if v, ok := d.GetOk("wait_for_sync"); ok {
+			waitForSync = v.(bool)
+		}
+		if err := d.Set("wait_for_sync", waitForSync); err != nil {
 			return diag.FromErr(err)
 		}
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
