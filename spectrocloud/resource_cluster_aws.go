@@ -529,9 +529,11 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
 		}
 		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" for backward compat when API omits field
+		skipK8sUpgrade := "disabled"
 		if machinePool.SkipK8sUpgrade != nil && *machinePool.SkipK8sUpgrade != "" {
-			oi["skip_k8s_upgrade"] = *machinePool.SkipK8sUpgrade
+			skipK8sUpgrade = *machinePool.SkipK8sUpgrade
 		}
+		oi["skip_k8s_upgrade"] = skipK8sUpgrade
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 		if machinePool.SubnetIds != nil {
 			oi["az_subnets"] = machinePool.SubnetIds
