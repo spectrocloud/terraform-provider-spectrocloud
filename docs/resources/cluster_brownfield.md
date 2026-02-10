@@ -104,17 +104,21 @@ output "kubectl_command" {
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
-to import the resource spectrocloud_cluster_brownfield by using its `id` with the Palette `context` and `cloud_type` separated by colons. For example:
+to import the resource spectrocloud_cluster_brownfield by using its  `id` with the Palette `context` and `cloud_type` separated by colons. For example:
 
 import {
   to = spectrocloud_cluster_brownfield.example
   id = "example_id:context:cloud_type"
 }
 ```
-Using `terraform import`, import the cluster using the `id` colon separated with `context` and `cloud_type`. For example:
+Using `terraform import`, import the cluster using the `cluster_name` or `id` colon separated with `context` and `cloud_type`. For example:
 
 ```console
 terraform import spectrocloud_cluster_brownfield.example cluster_uid:project:cloud_type 
+```
+
+```console
+terraform import spectrocloud_cluster_brownfield.example cluster_name:project:cloud_type 
 ```
 
 Refer to the [Import section](/docs#import) to learn more.
