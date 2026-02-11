@@ -213,7 +213,7 @@ func resourceAccountCustomImport(ctx context.Context, d *schema.ResourceData, m 
 	_ = d.Set("cloud", customCloudName)
 	c := getV1ClientWithResourceContext(m, scope)
 
-	err = GetCommonAccount(d, c)
+	err = GetCommonAccount(d, c, "")
 	if err != nil {
 		return nil, err
 	}
