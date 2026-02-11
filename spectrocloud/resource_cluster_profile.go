@@ -690,22 +690,22 @@ func resolvePackUID(c *client.V1Client, name, tag, registryUID string) (string, 
 	}
 
 	// Fallback: SearchPacks (resolves latest version only when tag matches).
-	searchFilter := &models.V1PackFilterSpec{
-		Name:        &models.V1FilterString{Eq: StringPtr(name)},
-		RegistryUID: []string{registryUID},
-		Type: []*models.V1PackType{
-			types.Ptr(models.V1PackTypeHelm),
-			types.Ptr(models.V1PackTypeOci),
-		},
-	}
-	searchResults, searchErr := c.SearchPacks(searchFilter, nil)
-	if searchErr == nil && len(searchResults) == 1 && searchResults[0].Spec != nil {
-		for _, reg := range searchResults[0].Spec.Registries {
-			if reg != nil && reg.UID == registryUID && reg.LatestVersion == tag && reg.LatestPackUID != "" {
-				return reg.LatestPackUID, nil
-			}
-		}
-	}
+	// searchFilter := &models.V1PackFilterSpec{
+	// 	Name:        &models.V1FilterString{Eq: StringPtr(name)},
+	// 	RegistryUID: []string{registryUID},
+	// 	Type: []*models.V1PackType{
+	// 		types.Ptr(models.V1PackTypeHelm),
+	// 		types.Ptr(models.V1PackTypeOci),
+	// 	},
+	// }
+	// searchResults, searchErr := c.SearchPacks(searchFilter, nil)
+	// if searchErr == nil && len(searchResults) == 1 && searchResults[0].Spec != nil {
+	// 	for _, reg := range searchResults[0].Spec.Registries {
+	// 		if reg != nil && reg.UID == registryUID && reg.LatestVersion == tag && reg.LatestPackUID != "" {
+	// 			return reg.LatestPackUID, nil
+	// 		}
+	// 	}
+	// }
 
 	return "", fmt.Errorf("no pack found with name %s, tag %s in registry %s", name, tag, registryUID)
 }
