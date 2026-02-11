@@ -324,6 +324,8 @@ github.com/skeema/knownhosts v1.3.1 h1:X2osQ+RAjK76shCbvhHHHVl3ZlgDm8apHEHFqRjnB
 github.com/skeema/knownhosts v1.3.1/go.mod h1:r7KTdC8l4uxWRyK2TpQZ/1o5HaSzh06ePQNxPwTcfiY=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20260205062126-c4a2668955ec h1:DrhFYn9/83DzS7VjHl8HqKF+HDH16HStSiDckMeOKZc=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20260205062126-c4a2668955ec/go.mod h1:izLxNVNnE7JHh7C6piEVo9SLfa4vR8KfX7cEYa1fYXU=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20260209154431-4e969cc38478 h1:dlyDhjK5NSKdyM7DZA5bQce1Y0h0LjbsWDMPnkw0+GY=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20260209154431-4e969cc38478/go.mod h1:izLxNVNnE7JHh7C6piEVo9SLfa4vR8KfX7cEYa1fYXU=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
 github.com/spf13/cast v1.3.1/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
