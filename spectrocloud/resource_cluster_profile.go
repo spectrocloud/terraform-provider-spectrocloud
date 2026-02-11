@@ -665,14 +665,45 @@ func resolvePackUID(c *client.V1Client, name, tag, registryUID string) (string, 
 		return "", fmt.Errorf("failed to get pack versions for name %s in registry %s: %w", name, registryUID, err)
 	}
 
-	if packVersions == nil || len(packVersions.Tags) == 0 {
-		return "", fmt.Errorf("no pack found with name %s in registry %s", name, registryUID)
+	// Path 1: Public registry — has Tags; resolve from Tags only.
+	if packVersions != nil && len(packVersions.Tags) > 0 {
+		for _, packTag := range packVersions.Tags {
+			if packTag.Version == tag {
+				return packTag.PackUID, nil
+			}
+		}
+		return "", fmt.Errorf("no pack found with name %s, tag %s in registry %s", name, tag, registryUID)
 	}
 
-	// Find the pack with matching tag/version
-	for _, packTag := range packVersions.Tags {
-		if packTag.Version == tag {
-			return packTag.PackUID, nil
+	// Path 2: Private registry — no Tags; do not use packVersions.Tags. Resolve via list/search.
+	registryFilter := "spec.registryUid=" + registryUID
+	packs, listErr := c.GetPacks([]string{registryFilter}, registryUID)
+	if listErr != nil {
+		return "", fmt.Errorf("no pack found with name %s in registry %s (list failed: %w)", name, registryUID, listErr)
+	}
+	for _, pack := range packs {
+		if pack.Spec != nil && pack.Spec.Name == name && pack.Spec.Version == tag {
+			if pack.Metadata != nil && pack.Metadata.UID != "" {
+				return pack.Metadata.UID, nil
+			}
+		}
+	}
+
+	// Fallback: SearchPacks (resolves latest version only when tag matches).
+	searchFilter := &models.V1PackFilterSpec{
+		Name:        &models.V1FilterString{Eq: StringPtr(name)},
+		RegistryUID: []string{registryUID},
+		Type: []*models.V1PackType{
+			types.Ptr(models.V1PackTypeHelm),
+			types.Ptr(models.V1PackTypeOci),
+		},
+	}
+	searchResults, searchErr := c.SearchPacks(searchFilter, nil)
+	if searchErr == nil && len(searchResults) == 1 && searchResults[0].Spec != nil {
+		for _, reg := range searchResults[0].Spec.Registries {
+			if reg != nil && reg.UID == registryUID && reg.LatestVersion == tag && reg.LatestPackUID != "" {
+				return reg.LatestPackUID, nil
+			}
 		}
 	}
 
