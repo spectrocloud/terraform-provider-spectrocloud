@@ -80,7 +80,10 @@ func dataSourceCloudAccountVsphereRead(_ context.Context, d *schema.ResourceData
 			return diags
 		}
 	} else if len(filteredAccounts) == 1 {
-		account = filteredAccounts[:1][0]
+		for _, a := range filteredAccounts {
+			account = a
+			break
+		}
 	}
 
 	if account == nil {
