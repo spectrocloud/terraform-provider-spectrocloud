@@ -10,7 +10,6 @@ require (
 	github.com/hashicorp/go-cty v1.5.0
 	github.com/hashicorp/terraform-plugin-docs v0.24.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.2
-	github.com/hashicorp/terraform-plugin-testing v1.14.0
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/palette-sdk-go v0.0.0-20260209154431-4e969cc38478
 	github.com/stretchr/testify v1.11.1

@@ -333,7 +333,7 @@ func ExpandDisks(disks []interface{}) []kubevirtapiv1.Disk {
 			result[i].Serial = v
 		}
 		if v, ok := in["boot_order"].(int); ok && v > 0 {
-			bootOrder := uint(v)
+			bootOrder := common.SafeIntToUint(v)
 			result[i].BootOrder = &bootOrder
 		}
 	}
@@ -634,10 +634,7 @@ func flattenDisks(in []kubevirtapiv1.Disk) []interface{} {
 		c["disk_device"] = flattenDiskDevice(v.DiskDevice)
 		c["serial"] = v.Serial
 		if v.BootOrder != nil {
-			// Safe conversion from uint to int to avoid potential overflow
-			if *v.BootOrder <= math.MaxInt32 {
-				c["boot_order"] = int(*v.BootOrder)
-			}
+			c["boot_order"] = common.SafeUintToInt(*v.BootOrder)
 		}
 
 		att[i] = c
