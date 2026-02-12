@@ -90,7 +90,7 @@ func dataSourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m
 			return diags
 		}
 	} else if len(filteredAccounts) == 1 {
-		account = filteredAccounts[0]
+		account = filteredAccounts[:1][0]
 	}
 
 	if account == nil {
