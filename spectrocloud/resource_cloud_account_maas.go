@@ -96,6 +96,10 @@ func resourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 
+	if err := d.Set("maas_api_endpoint", *account.Spec.APIEndpoint); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return diags
 }
 
