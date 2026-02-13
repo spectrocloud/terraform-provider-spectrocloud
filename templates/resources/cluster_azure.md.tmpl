@@ -103,7 +103,7 @@ resource "spectrocloud_cluster_azure" "cluster" {
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
-to import the resource {{ .Name }} by using its `id` with the Palette `context` separated by a colon. For example:
+to import the resource {{ .Name }} by using its  `id` with the Palette `context` separated by a colon. For example:
 
 ```terraform
 import {
@@ -112,10 +112,14 @@ import {
 }
 ```
 
-Using `terraform import`, import the cluster using the `id` colon separated with `context`. For example:
+Using `terraform import`, import the cluster using the `cluster_name` or `id` colon separated with `context`. For example:
 
 ```console
 terraform import {{ .Name }}.example example_id:project
+```
+
+```console
+terraform import {{ .Name }}.example cluster_name:project
 ```
 
 Refer to the [Import section](/docs#import) to learn more.

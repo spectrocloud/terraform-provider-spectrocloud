@@ -58,6 +58,7 @@ func TestFlattenMachinePoolConfigsAws(t *testing.T) {
 					"max":                        5,
 					"instance_type":              "t2.micro",
 					"disk_size_gb":               8,
+					"skip_k8s_upgrade":           "disabled",
 					"az_subnets":                 map[string]string{"us-west-2d": "subnet-87654321"},
 					"update_strategy":            "RollingUpdateScaleOut",
 					"additional_security_groups": []string{"sg-1234567890"},

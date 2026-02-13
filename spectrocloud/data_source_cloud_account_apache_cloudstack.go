@@ -79,7 +79,10 @@ func dataSourceCloudAccountApacheCloudStackRead(_ context.Context, d *schema.Res
 			return diags
 		}
 	} else if len(filteredAccounts) == 1 {
-		account = filteredAccounts[0]
+		for _, a := range filteredAccounts {
+			account = a
+			break
+		}
 	}
 
 	if account == nil {

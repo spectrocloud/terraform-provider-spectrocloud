@@ -221,6 +221,7 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
+
 	case "basic":
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
@@ -257,7 +258,6 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 			}
 		}
 	}
-
 	return diags
 }
 
@@ -290,15 +290,22 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
+		if err := d.Set("is_synchronization", registry.Status.SyncStatus.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
+
 		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("wait_for_sync", false); err != nil {
+		// wait_for_sync is not returned by the API; on import default to false, otherwise preserve from state
+		waitForSync := false
+		if v, ok := d.GetOk("wait_for_sync"); ok {
+			waitForSync = v.(bool)
+		}
+		if err := d.Set("wait_for_sync", waitForSync); err != nil {
 			return diag.FromErr(err)
 		}
+
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		switch *registry.Spec.Credentials.CredentialType {
@@ -309,6 +316,16 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		case models.V1AwsCloudAccountCredentialTypeSecret:
 			acc["access_key"] = registry.Spec.Credentials.AccessKey
 			acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
+			// Preserve secret_key from state to avoid drift when API does not return it
+			if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+				if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+					if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+						if secretKey, exists := currentCredMap["secret_key"]; exists && secretKey != nil {
+							acc["secret_key"] = secretKey
+						}
+					}
+				}
+			}
 		default:
 			errMsg := fmt.Sprintf("Registry type %s not implemented.", *registry.Spec.Credentials.CredentialType)
 			err = errors.New(errMsg)
@@ -316,10 +333,12 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		}
 		// tls configuration handling
 		tlsConfig := make([]interface{}, 0, 1)
-		tls := make(map[string]interface{})
-		tls["certificate"] = registry.Spec.TLS.Certificate
-		tls["insecure_skip_verify"] = registry.Spec.TLS.InsecureSkipVerify
-		tlsConfig = append(tlsConfig, tls)
+		if registry.Spec.TLS != nil {
+			tls := make(map[string]interface{})
+			tls["certificate"] = registry.Spec.TLS.Certificate
+			tls["insecure_skip_verify"] = registry.Spec.TLS.InsecureSkipVerify
+			tlsConfig = append(tlsConfig, tls)
+		}
 		acc["tls_config"] = tlsConfig
 		credentials = append(credentials, acc)
 
@@ -354,6 +373,14 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		if err := d.Set("provider_type", registry.Spec.ProviderType); err != nil {
 			return diag.FromErr(err)
 		}
+		// wait_for_sync is not returned by the API; on import default to false, otherwise preserve from state
+		waitForSync := false
+		if v, ok := d.GetOk("wait_for_sync"); ok {
+			waitForSync = v.(bool)
+		}
+		if err := d.Set("wait_for_sync", waitForSync); err != nil {
+			return diag.FromErr(err)
+		}
 		if err := d.Set("base_content_path", registry.Spec.BaseContentPath); err != nil {
 			return diag.FromErr(err)
 		}
@@ -361,12 +388,10 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 			return diag.FromErr(err)
 		}
 
-		if err := d.Set("is_synchronization", registry.Spec.IsSyncSupported); err != nil {
+		if err := d.Set("is_synchronization", registry.Status.SyncStatus.IsSyncSupported); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("wait_for_sync", false); err != nil {
-			return diag.FromErr(err)
-		}
+
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		// Read the actual auth type from the API response
@@ -442,6 +467,7 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 		if err != nil {
 			return diag.FromErr(err)
 		}
+
 	case "basic":
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {

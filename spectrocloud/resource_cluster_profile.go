@@ -108,7 +108,6 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	// Create
 	uid, err := c.CreateClusterProfile(clusterProfile)
 	if err != nil {
 		return diag.FromErr(err)
@@ -416,20 +415,8 @@ func toClusterProfilePackCreateWithResolution(pSrc interface{}, c *client.V1Clie
 	}
 
 	switch pType {
-	case models.V1PackTypeSpectro:
+	case models.V1PackTypeOci, models.V1PackTypeSpectro, models.V1PackTypeHelm:
 		if pUID == "" {
-			// UID not provided, validation already passed, so we have all resolution fields
-			// Resolve the pack UID
-			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
-			}
-			pUID = resolvedUID
-		}
-	case models.V1PackTypeHelm:
-		if pUID == "" {
-			// UID not provided, validation already passed, so we have all resolution fields
-			// Resolve the pack UID
 			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
