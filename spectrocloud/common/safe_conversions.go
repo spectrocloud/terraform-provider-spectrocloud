@@ -19,13 +19,11 @@ func SafeUint32(value int) uint32 {
 		return 0
 	}
 	// 64-bit system: check against uint32 max
-	if value > math.MaxUint32 {
-		return maxUint32
+	// Avoid comparing against an untyped constant as `int` on 32-bit targets.
+	if uint64(value) > uint64(math.MaxUint32) {
+		return uint32(math.MaxUint32)
 	}
-	if value >= 0 {
-		return uint32(value)
-	}
-	return 0
+	return uint32(value) // #nosec G115 -- value is non-negative and bounded by MaxUint32 above
 }
 
 // SafeUintToInt converts uint to int with bounds checking to prevent overflow (G115).
