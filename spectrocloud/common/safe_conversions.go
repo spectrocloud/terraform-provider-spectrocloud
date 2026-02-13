@@ -2,7 +2,7 @@ package common
 
 import "math"
 
-const maxUint32 = 0xFFFFFFFF
+// const maxUint32 = 0xFFFFFFFF
 
 // SafeUint32 converts int to uint32 with bounds checking to prevent overflow
 func SafeUint32(value int) uint32 {
