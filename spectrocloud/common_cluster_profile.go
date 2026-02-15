@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -156,6 +157,73 @@ func resolveRegistryUIDToName(c *client.V1Client, registryUID string) (string, e
 		}
 	}
 	return "", fmt.Errorf("registry with UID '%s' not found", registryUID)
+}
+
+// isRegistryPrivate returns true if the registry with the given UID is private.
+// Private is determined from type-specific API fields so it matches backend classification:
+//   - OCI: spec.registryMeta.isPrivate (or spec.isPrivate for ECR); for Basic OCI we use common metadata.
+//   - Pack: spec.private
+//   - Helm: spec.isPrivate
+//
+// Used to skip pack UID resolution for private registries (they do not expose packs via the same resolution API).
+func isRegistryPrivate(c *client.V1Client, registryUID string) (bool, error) {
+	if registryUID == "" {
+		return false, nil
+	}
+	registries, err := c.SearchPackRegistryCommon()
+	if err != nil {
+		return false, fmt.Errorf("failed to search registries: %w", err)
+	}
+	var meta *models.V1RegistryMetadata
+	for _, r := range registries {
+		if r.UID == registryUID {
+			meta = r
+			break
+		}
+	}
+	if meta == nil {
+		return false, fmt.Errorf("registry with UID '%s' not found", registryUID)
+	}
+	kind := strings.ToLower(meta.Kind)
+	switch kind {
+	case "helm":
+		reg, err := c.GetHelmRegistry(registryUID)
+		if err != nil {
+			return false, fmt.Errorf("failed to get helm registry %s: %w", registryUID, err)
+		}
+		if reg != nil && reg.Spec != nil {
+			return reg.Spec.IsPrivate, nil
+		}
+		return meta.IsPrivate, nil
+	case "pack":
+		list, err := c.ListPackRegistries()
+		if err != nil {
+			return false, fmt.Errorf("failed to list pack registries: %w", err)
+		}
+		for _, s := range list {
+			if s.Metadata != nil && s.Metadata.UID == registryUID {
+				if s.Spec != nil {
+					return s.Spec.Private, nil
+				}
+				return meta.IsPrivate, nil
+			}
+		}
+		return false, fmt.Errorf("registry with UID '%s' not found", registryUID)
+	case "oci":
+		// OCI ECR: spec.isPrivate
+		ecr, err := c.GetOciEcrRegistry(registryUID)
+		if err == nil && ecr != nil && ecr.Spec != nil && ecr.Spec.IsPrivate != nil {
+			return *ecr.Spec.IsPrivate, nil
+		}
+		// OCI Basic (Helm/Zarf/Pack provider): use common metadata (backend: spec.registryMeta.isPrivate)
+		basic, err := c.GetOciBasicRegistry(registryUID)
+		if err == nil && basic != nil {
+			return meta.IsPrivate, nil
+		}
+		return meta.IsPrivate, nil
+	default:
+		return meta.IsPrivate, nil
+	}
 }
 
 func getPacksContent(packs []*models.V1PackRef, c *client.V1Client, d *schema.ResourceData) (map[string]map[string]string, diag.Diagnostics, bool) {
