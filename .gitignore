@@ -5,6 +5,7 @@ terraform-provider-spectrocloud.code-workspace
 
 # Internal knowledge base documentation
 knowledge_base/
+.cache/
 
 bin
 __debug_bin*

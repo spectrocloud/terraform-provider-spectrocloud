@@ -222,6 +222,7 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 		}
 		d.SetId(uid)
 
+<<<<<<< HEAD
 		// Wait for sync if requested and provider_type is helm (ECR supports helm only for wait_for_sync)
 		if providerType == "helm" && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
 			diags, isError := waitForOCIRegistrySyncAndSetStatus(ctx, d, uid, diags, c, schema.TimeoutCreate, "ecr")
@@ -229,6 +230,8 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 				return diags
 			}
 		}
+=======
+>>>>>>> ps-week-08-2026
 	case "basic":
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
@@ -459,6 +462,7 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 
+<<<<<<< HEAD
 		// Wait for sync if requested and provider_type is helm
 		if providerType == "helm" && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
 			diags, isError := waitForOCIRegistrySyncAndSetStatus(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate, "ecr")
@@ -466,6 +470,8 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 				return diags
 			}
 		}
+=======
+>>>>>>> ps-week-08-2026
 	case "basic":
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
