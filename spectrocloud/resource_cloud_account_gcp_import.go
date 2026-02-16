@@ -67,96 +67,76 @@ func GetCommonAccount(d *schema.ResourceData, c *client.V1Client, accountType st
 }
 
 // resolveAccountByName finds a cloud account by name and scope using the type-specific list API.
+// resolveAccountByName finds a cloud account by name and scope using the SDK Get*ByName helpers.
 func resolveAccountByName(c *client.V1Client, accountType, name, scope string) (string, error) {
-	matchScope := func(annotations map[string]string) bool {
-		return scope == "" || (annotations != nil && annotations["scope"] == scope)
-	}
+	var uid string
+	var err error
 	switch accountType {
 	case "gcp":
-		accounts, err := c.GetCloudAccountsGcp()
+		acc, err := c.GetCloudAccountGcpByName(name, scope)
 		if err != nil {
 			return "", err
 		}
-		for _, a := range accounts {
-			if a.Metadata.Name == name && matchScope(a.Metadata.Annotations) {
-				return a.Metadata.UID, nil
-			}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
 		}
-		return "", fmt.Errorf("no GCP cloud account found with name %q in scope %q", name, scope)
-
 	case "aws":
-		accounts, err := c.GetCloudAccountsAws()
+		acc, err := c.GetCloudAccountAwsByName(name, scope)
 		if err != nil {
 			return "", err
 		}
-		for _, a := range accounts {
-			if a.Metadata.Name == name && matchScope(a.Metadata.Annotations) {
-				return a.Metadata.UID, nil
-			}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
 		}
-		return "", fmt.Errorf("no AWS cloud account found with name %q in scope %q", name, scope)
-
 	case "azure":
-		accounts, err := c.GetCloudAccountsAzure()
+		acc, err := c.GetCloudAccountAzureByName(name, scope)
 		if err != nil {
 			return "", err
 		}
-		for _, a := range accounts {
-			if a.Metadata.Name == name && matchScope(a.Metadata.Annotations) {
-				return a.Metadata.UID, nil
-			}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
 		}
-		return "", fmt.Errorf("no Azure cloud account found with name %q in scope %q", name, scope)
-
 	case "openstack":
-		accounts, err := c.GetCloudAccountsOpenStack()
+		acc, err := c.GetCloudAccountOpenStackByName(name, scope)
 		if err != nil {
 			return "", err
 		}
-		for _, a := range accounts {
-			if a.Metadata.Name == name && matchScope(a.Metadata.Annotations) {
-				return a.Metadata.UID, nil
-			}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
 		}
-		return "", fmt.Errorf("no OpenStack cloud account found with name %q in scope %q", name, scope)
-
 	case "vsphere":
-		accounts, err := c.GetCloudAccountsVsphere()
+		acc, err := c.GetCloudAccountVsphereByName(name, scope)
 		if err != nil {
 			return "", err
 		}
-		for _, a := range accounts {
-			if a.Metadata.Name == name && matchScope(a.Metadata.Annotations) {
-				return a.Metadata.UID, nil
-			}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
 		}
-		return "", fmt.Errorf("no vSphere cloud account found with name %q in scope %q", name, scope)
-
 	case "maas":
-		accounts, err := c.GetCloudAccountsMaas()
+		acc, err := c.GetCloudAccountMaasByName(name, scope)
 		if err != nil {
 			return "", err
 		}
-		for _, a := range accounts {
-			if a.Metadata.Name == name && matchScope(a.Metadata.Annotations) {
-				return a.Metadata.UID, nil
-			}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
 		}
-		return "", fmt.Errorf("no MAAS cloud account found with name %q in scope %q", name, scope)
-
-	case "cloudstack":
-		accounts, err := c.GetCloudAccountsCloudStack()
+	case "apache-cloudstack":
+		acc, err := c.GetCloudAccountCloudStackByName(name, scope)
 		if err != nil {
 			return "", err
 		}
-		for _, a := range accounts {
-			if a.Metadata.Name == name && matchScope(a.Metadata.Annotations) {
-				return a.Metadata.UID, nil
-			}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
 		}
-		return "", fmt.Errorf("no Apache CloudStack cloud account found with name %q in scope %q", name, scope)
-
 	default:
-		return "", fmt.Errorf("import by name not supported for account type %q", accountType)
+		// Custom cloud: accountType is the custom cloud type (e.g. "nutanix")
+		acc, err := c.GetCloudAccountCustomByName(accountType, name, scope)
+		if err != nil {
+			return "", fmt.Errorf("import by name not supported for account type %q: %w", accountType, err)
+		}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
+		}
 	}
+	return "", fmt.Errorf("no cloud account found with name %q in scope %q", name, scope)
 }
