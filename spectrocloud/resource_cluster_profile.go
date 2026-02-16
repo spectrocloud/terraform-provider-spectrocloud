@@ -414,27 +414,15 @@ func toClusterProfilePackCreateWithResolution(pSrc interface{}, c *client.V1Clie
 		pRegistryUID = resolvedUID
 	}
 
-	// Pack UID resolution is only done for public registries. For private registries
-	// (OCI: spec.registryMeta.isPrivate / ECR spec.isPrivate; Pack: spec.private; Helm: spec.isPrivate),
-	// packs are not resolved the same way; the API accepts name+tag+registry_uid without UID.
 	switch pType {
-	case models.V1PackTypeOci:
+	case models.V1PackTypeOci, models.V1PackTypeSpectro, models.V1PackTypeHelm:
 		if pUID == "" {
-			isPrivate, err := isRegistryPrivate(c, pRegistryUID)
+			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
 			if err != nil {
-				return nil, fmt.Errorf("pack %s: %w", pName, err)
+				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
 			}
-			if !isPrivate {
-				resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-				if err != nil {
-					return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
-				}
-				pUID = resolvedUID
-			}
+			pUID = resolvedUID
 		}
-	case models.V1PackTypeSpectro, models.V1PackTypeHelm:
-		// Skip pack UID resolution for Helm and Spectro (private registries).
-		// resolveRegistryNameToUID is still used above when registry_name is provided.
 	case models.V1PackTypeManifest:
 		if pUID == "" {
 			pUID = "spectro-manifest-pack"
@@ -531,24 +519,27 @@ func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.
 		return nil, err
 	}
 
-	// Pack UID resolution only for public OCI registries. Skip for private OCI and for Helm/Spectro.
 	switch pType {
-	case models.V1PackTypeOci:
+	case models.V1PackTypeSpectro:
 		if pUID == "" {
-			isPrivate, err := isRegistryPrivate(c, pRegistryUID)
+			// UID not provided, validation already passed, so we have all resolution fields
+			// Resolve the pack UID
+			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
 			if err != nil {
-				return nil, fmt.Errorf("pack %s: %w", pName, err)
+				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
 			}
-			if !isPrivate {
-				resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-				if err != nil {
-					return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
-				}
-				pUID = resolvedUID
-			}
+			pUID = resolvedUID
 		}
-	case models.V1PackTypeSpectro, models.V1PackTypeHelm:
-		// Skip pack UID resolution for private registries.
+	case models.V1PackTypeHelm:
+		if pUID == "" {
+			// UID not provided, validation already passed, so we have all resolution fields
+			// Resolve the pack UID
+			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			}
+			pUID = resolvedUID
+		}
 	case models.V1PackTypeManifest:
 		if pUID == "" {
 			pUID = "spectro-manifest-pack"
