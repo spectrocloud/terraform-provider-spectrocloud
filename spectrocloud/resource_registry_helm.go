@@ -141,13 +141,6 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
-	waitForSync := false
-	if v, ok := d.GetOk("wait_for_sync"); ok {
-		waitForSync = v.(bool)
-	}
-	if err := d.Set("wait_for_sync", waitForSync); err != nil {
-		return diag.FromErr(err)
-	}
 	switch registry.Spec.Auth.Type {
 	case "noAuth":
 		credentials := make([]interface{}, 0, 1)
