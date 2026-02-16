@@ -341,12 +341,24 @@ func setReplaceWithProfileForExisting(c *client.V1Client, cluster *models.V1Spec
 		if clusterProfile == nil || clusterProfile.Metadata == nil {
 			continue
 		}
-
 		// Check if a profile with the same name is already attached to the cluster
 		existingUID := findAttachedProfileByName(cluster, clusterProfile.Metadata.Name)
+		// Infra swap: if no same-name match but this profile is infra, replace the existing attached infra (different name)
+		if existingUID == "" && clusterProfile.Spec != nil {
+			var profileType string
+			if clusterProfile.Spec.Published != nil {
+				profileType = clusterProfile.Spec.Published.Type
+			}
+			if profileType == "infra" {
+				existingUID = findAttachedProfileByType(cluster, "infra")
+				if existingUID != "" {
+					log.Printf("Profile %s (name: %s) is infra - will replace existing infra %s via PATCH",
+						profile.UID, clusterProfile.Metadata.Name, existingUID)
+				}
+			}
+		}
 		if existingUID != "" && existingUID != profile.UID {
 			// Only set ReplaceWithProfile if the existing profile has a DIFFERENT UID
-			// If the UIDs match, the profile is already attached and doesn't need replacement
 			log.Printf("Profile %s (name: %s) will replace existing attached profile %s",
 				profile.UID, clusterProfile.Metadata.Name, existingUID)
 			profile.ReplaceWithProfile = existingUID
@@ -357,6 +369,20 @@ func setReplaceWithProfileForExisting(c *client.V1Client, cluster *models.V1Spec
 	}
 
 	return nil
+}
+
+// findAttachedProfileByType returns the UID of the first attached profile with the given type (e.g. "infra").
+// Used when replacing an infra profile with another of a different name.
+func findAttachedProfileByType(cluster *models.V1SpectroCluster, profileType string) string {
+	if cluster == nil || cluster.Spec == nil || profileType == "" {
+		return ""
+	}
+	for _, template := range cluster.Spec.ClusterProfileTemplates {
+		if template != nil && template.Type == profileType {
+			return template.UID
+		}
+	}
+	return ""
 }
 
 // findAttachedProfileByName finds a profile attached to the cluster by its name.
@@ -427,6 +453,10 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
 				if clusterProfile != nil && clusterProfile.Metadata != nil {
 					profileName := clusterProfile.Metadata.Name
 					if !newProfileNames[profileName] {
+						if clusterProfile.Spec.Published != nil && clusterProfile.Spec.Published.Type == "infra" {
+							log.Printf("Profile %s (name: %s) is infra - skip delete, will be replaced via PATCH", id, profileName)
+							continue
+						}
 						// This profile name is not in the new state - it's a real deletion
 						log.Printf("Profile %s (name: %s) will be deleted (name removed from cluster_profile)", id, profileName)
 						profilesToDelete = append(profilesToDelete, id)
