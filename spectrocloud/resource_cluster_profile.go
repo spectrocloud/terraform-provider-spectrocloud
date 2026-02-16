@@ -417,11 +417,15 @@ func toClusterProfilePackCreateWithResolution(pSrc interface{}, c *client.V1Clie
 	switch pType {
 	case models.V1PackTypeOci, models.V1PackTypeSpectro, models.V1PackTypeHelm:
 		if pUID == "" {
-			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			isSyncSupported, found := getRegistryIsSyncSupported(c, pRegistryUID, pType)
+			if found && isSyncSupported {
+				resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+				}
+				pUID = resolvedUID
 			}
-			pUID = resolvedUID
+			// Else skip pack UID resolution when sync is not supported or registry not found
 		}
 	case models.V1PackTypeManifest:
 		if pUID == "" {
@@ -522,23 +526,27 @@ func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.
 	switch pType {
 	case models.V1PackTypeSpectro:
 		if pUID == "" {
-			// UID not provided, validation already passed, so we have all resolution fields
-			// Resolve the pack UID
-			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			isSyncSupported, found := getRegistryIsSyncSupported(c, pRegistryUID, pType)
+			if found && isSyncSupported {
+				resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+				}
+				pUID = resolvedUID
 			}
-			pUID = resolvedUID
+			// Else skip pack UID resolution when sync is not supported or registry not found
 		}
 	case models.V1PackTypeHelm:
 		if pUID == "" {
-			// UID not provided, validation already passed, so we have all resolution fields
-			// Resolve the pack UID
-			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			isSyncSupported, found := getRegistryIsSyncSupported(c, pRegistryUID, pType)
+			if found && isSyncSupported {
+				resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+				}
+				pUID = resolvedUID
 			}
-			pUID = resolvedUID
+			// Else skip pack UID resolution when sync is not supported or registry not found
 		}
 	case models.V1PackTypeManifest:
 		if pUID == "" {
@@ -651,6 +659,27 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 		"variable": sortedVariables,
 	}
 	return flattenProVariables, nil
+}
+
+// getRegistryIsSyncSupported returns (isSyncSupported, found). Resolve pack UID only when found and isSyncSupported is true.
+func getRegistryIsSyncSupported(c *client.V1Client, registryUID string, packType models.V1PackType) (isSyncSupported bool, found bool) {
+	if registryUID == "" {
+		return false, false
+	}
+	var status *models.V1RegistrySyncStatus
+	var err error
+	switch packType {
+	case models.V1PackTypeHelm:
+		status, err = c.GetHelmRegistrySyncStatus(registryUID)
+	case models.V1PackTypeOci, models.V1PackTypeSpectro:
+		status, err = c.GetOciBasicRegistrySyncStatus(registryUID)
+	default:
+		return false, false
+	}
+	if err != nil || status == nil {
+		return false, false
+	}
+	return status.IsSyncSupported, true
 }
 
 // resolvePackUID resolves the pack UID based on name, tag, and registry_uid
