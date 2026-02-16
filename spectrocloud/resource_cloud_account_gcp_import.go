@@ -69,8 +69,6 @@ func GetCommonAccount(d *schema.ResourceData, c *client.V1Client, accountType st
 // resolveAccountByName finds a cloud account by name and scope using the type-specific list API.
 // resolveAccountByName finds a cloud account by name and scope using the SDK Get*ByName helpers.
 func resolveAccountByName(c *client.V1Client, accountType, name, scope string) (string, error) {
-	var uid string
-	var err error
 	switch accountType {
 	case "gcp":
 		acc, err := c.GetCloudAccountGcpByName(name, scope)
