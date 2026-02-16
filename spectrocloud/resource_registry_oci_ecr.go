@@ -221,7 +221,6 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
-
 	case "basic":
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
@@ -231,31 +230,12 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 		if err != nil {
 			return diag.FromErr(err)
 		}
-
 		d.SetId(uid)
-
-		// Wait for sync if requested and provider_type is zarf or helm
-		if (providerType == "zarf" || providerType == "helm") && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
-			diagnostics, isError := waitForOciRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate)
-			if len(diagnostics) > 0 {
-				diags = append(diags, diagnostics...)
-			}
-			// Fetch final sync status and set wait_for_status_message
-			syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(uid)
-			if statusErr == nil && syncStatus != nil {
-				statusMessage := ""
-				if syncStatus.Message != "" {
-					statusMessage = syncStatus.Message
-				} else if syncStatus.Status != "" {
-					statusMessage = fmt.Sprintf("Status: %s", syncStatus.Status)
-				}
-				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
-					diags = append(diags, diag.FromErr(err)...)
-				}
-			}
-			if isError {
-				return diagnostics
-			}
+	}
+	if (providerType == "zarf" || providerType == "helm") && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+		diags, isError := runOciRegistryWaitForSync(ctx, d, c, diags, schema.TimeoutCreate)
+		if isError {
+			return diags
 		}
 	}
 	return diags
@@ -478,27 +458,10 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 
-		// Wait for sync if requested and provider_type is zarf or helm
 		if (providerType == "zarf" || providerType == "helm") && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
-			diagnostics, isError := waitForOciRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate)
-			if len(diagnostics) > 0 {
-				diags = append(diags, diagnostics...)
-			}
-			// Fetch final sync status and set wait_for_status_message
-			syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(d.Id())
-			if statusErr == nil && syncStatus != nil {
-				statusMessage := ""
-				if syncStatus.Message != "" {
-					statusMessage = syncStatus.Message
-				} else if syncStatus.Status != "" {
-					statusMessage = fmt.Sprintf("Status: %s", syncStatus.Status)
-				}
-				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
-					diags = append(diags, diag.FromErr(err)...)
-				}
-			}
+			diags, isError := runOciRegistryWaitForSync(ctx, d, c, diags, schema.TimeoutUpdate)
 			if isError {
-				return diagnostics
+				return diags
 			}
 		}
 	}
@@ -628,6 +591,29 @@ func toRegistryAwsAccountCredential(regCred map[string]interface{}) *models.V1Aw
 		}
 	}
 	return account
+}
+
+// runOciRegistryWaitForSync runs wait-for-sync and sets wait_for_status_message. Call from Create or Update when provider_type is zarf or helm and wait_for_sync is true.
+// Returns (diagnostics from wait, true if caller should return those diagnostics as error).
+func runOciRegistryWaitForSync(ctx context.Context, d *schema.ResourceData, c *client.V1Client, diags diag.Diagnostics, timeoutType string) (diag.Diagnostics, bool) {
+	uid := d.Id()
+	diagnostics, isError := waitForOciRegistrySync(ctx, d, uid, diags, c, timeoutType)
+	if len(diagnostics) > 0 {
+		diags = append(diags, diagnostics...)
+	}
+	syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(uid)
+	if statusErr == nil && syncStatus != nil {
+		statusMessage := ""
+		if syncStatus.Message != "" {
+			statusMessage = syncStatus.Message
+		} else if syncStatus.Status != "" {
+			statusMessage = fmt.Sprintf("Status: %s", syncStatus.Status)
+		}
+		if err := d.Set("wait_for_status_message", statusMessage); err != nil {
+			diags = append(diags, diag.FromErr(err)...)
+		}
+	}
+	return diags, isError
 }
 
 // waitForOciRegistrySync waits for an OCI registry to complete its synchronization
