@@ -172,10 +172,6 @@ func toProfiles(c *client.V1Client, d *schema.ResourceData, clusterContext strin
 	return toProfilesCommon(c, d, d.Id(), clusterContext)
 }
 
-func toProfilesV2(c *client.V1Client, d *schema.ResourceData, clusterContext string) ([]*models.V1SpectroClusterProfileEntity, error) {
-	return toProfilesCommon(c, d, d.Id(), clusterContext)
-}
-
 func toAddonDeplProfiles(c *client.V1Client, d *schema.ResourceData) ([]*models.V1SpectroClusterProfileEntity, error) {
 	clusterUid := ""
 	clusterContext := ""
