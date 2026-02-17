@@ -221,7 +221,29 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 		d.SetId(uid)
-
+		// Wait for sync if requested and provider_type is zarf or helm
+		if (providerType == "zarf" || providerType == "helm") && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+			diagnostics, isError := waitForOciRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate, "ecr")
+			if len(diagnostics) > 0 {
+				diags = append(diags, diagnostics...)
+			}
+			// Fetch final sync status and set wait_for_status_message
+			syncStatus, statusErr := getOciRegistrySyncStatus(c, uid, "ecr")
+			if statusErr == nil && syncStatus != nil {
+				statusMessage := ""
+				if syncStatus.Message != "" {
+					statusMessage = syncStatus.Message
+				} else if syncStatus.Status != "" {
+					statusMessage = fmt.Sprintf("Status: %s", syncStatus.Status)
+				}
+				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
+					diags = append(diags, diag.FromErr(err)...)
+				}
+			}
+			if isError {
+				return diagnostics
+			}
+		}
 	case "basic":
 		registry := toRegistryBasic(d)
 		if err := validateRegistryCred(c, registryType, providerType, isSync, registry.Spec, nil); err != nil {
@@ -231,17 +253,15 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 		if err != nil {
 			return diag.FromErr(err)
 		}
-
 		d.SetId(uid)
-
 		// Wait for sync if requested and provider_type is zarf or helm
 		if (providerType == "zarf" || providerType == "helm") && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
-			diagnostics, isError := waitForOciRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate)
+			diagnostics, isError := waitForOciRegistrySync(ctx, d, uid, diags, c, schema.TimeoutCreate, "basic")
 			if len(diagnostics) > 0 {
 				diags = append(diags, diagnostics...)
 			}
 			// Fetch final sync status and set wait_for_status_message
-			syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(uid)
+			syncStatus, statusErr := getOciRegistrySyncStatus(c, uid, "basic")
 			if statusErr == nil && syncStatus != nil {
 				statusMessage := ""
 				if syncStatus.Message != "" {
@@ -467,6 +487,29 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 		if err != nil {
 			return diag.FromErr(err)
 		}
+		// Wait for sync if requested and provider_type is zarf or helm
+		if (providerType == "zarf" || providerType == "helm") && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
+			diagnostics, isError := waitForOciRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate, "ecr")
+			if len(diagnostics) > 0 {
+				diags = append(diags, diagnostics...)
+			}
+			// Fetch final sync status and set wait_for_status_message
+			syncStatus, statusErr := getOciRegistrySyncStatus(c, d.Id(), "ecr")
+			if statusErr == nil && syncStatus != nil {
+				statusMessage := ""
+				if syncStatus.Message != "" {
+					statusMessage = syncStatus.Message
+				} else if syncStatus.Status != "" {
+					statusMessage = fmt.Sprintf("Status: %s", syncStatus.Status)
+				}
+				if err := d.Set("wait_for_status_message", statusMessage); err != nil {
+					diags = append(diags, diag.FromErr(err)...)
+				}
+			}
+			if isError {
+				return diagnostics
+			}
+		}
 
 	case "basic":
 		registry := toRegistryBasic(d)
@@ -480,12 +523,12 @@ func resourceRegistryEcrUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 		// Wait for sync if requested and provider_type is zarf or helm
 		if (providerType == "zarf" || providerType == "helm") && d.Get("wait_for_sync") != nil && d.Get("wait_for_sync").(bool) {
-			diagnostics, isError := waitForOciRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate)
+			diagnostics, isError := waitForOciRegistrySync(ctx, d, d.Id(), diags, c, schema.TimeoutUpdate, "basic")
 			if len(diagnostics) > 0 {
 				diags = append(diags, diagnostics...)
 			}
 			// Fetch final sync status and set wait_for_status_message
-			syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(d.Id())
+			syncStatus, statusErr := getOciRegistrySyncStatus(c, d.Id(), "basic")
 			if statusErr == nil && syncStatus != nil {
 				statusMessage := ""
 				if syncStatus.Message != "" {
@@ -630,8 +673,16 @@ func toRegistryAwsAccountCredential(regCred map[string]interface{}) *models.V1Aw
 	return account
 }
 
+// getOciRegistrySyncStatus returns sync status using the correct API for the registry type.
+func getOciRegistrySyncStatus(c *client.V1Client, uid, registryType string) (*models.V1RegistrySyncStatus, error) {
+	if registryType == "ecr" {
+		return c.GetOciEcrRegistrySyncStatus(uid)
+	}
+	return c.GetOciBasicRegistrySyncStatus(uid)
+}
+
 // waitForOciRegistrySync waits for an OCI registry to complete its synchronization
-func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, timeoutType string) (diag.Diagnostics, bool) {
+func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid string, diags diag.Diagnostics, c *client.V1Client, timeoutType, registryType string) (diag.Diagnostics, bool) {
 	stateConf := &retry.StateChangeConf{
 		Pending: []string{
 			"InProgress",
@@ -643,7 +694,7 @@ func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid str
 			"Success",
 			"Completed",
 		},
-		Refresh:    resourceOciRegistrySyncRefreshFunc(c, uid),
+		Refresh:    resourceOciRegistrySyncRefreshFunc(c, uid, registryType),
 		Timeout:    d.Timeout(timeoutType) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
 		Delay:      30 * time.Second,
@@ -656,7 +707,7 @@ func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid str
 		var timeoutErr *retry.TimeoutError
 		if errors.As(err, &timeoutErr) {
 			// Get current sync status for warning message
-			syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(uid)
+			syncStatus, statusErr := getOciRegistrySyncStatus(c, uid, registryType)
 			currentStatus := timeoutErr.LastState
 			statusMessage := ""
 
@@ -688,7 +739,7 @@ func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid str
 
 		// Check if this is a sync failure (not a timeout or API error)
 		// Get current sync status to provide detailed error information
-		syncStatus, statusErr := c.GetOciBasicRegistrySyncStatus(uid)
+		syncStatus, statusErr := getOciRegistrySyncStatus(c, uid, registryType)
 		if statusErr == nil && syncStatus != nil {
 			status := syncStatus.Status
 			// Check if the sync explicitly failed
@@ -715,9 +766,9 @@ func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid str
 }
 
 // resourceOciRegistrySyncRefreshFunc returns a retry.StateRefreshFunc that checks the sync status of an OCI registry
-func resourceOciRegistrySyncRefreshFunc(c *client.V1Client, uid string) retry.StateRefreshFunc {
+func resourceOciRegistrySyncRefreshFunc(c *client.V1Client, uid, registryType string) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
-		syncStatus, err := c.GetOciBasicRegistrySyncStatus(uid)
+		syncStatus, err := getOciRegistrySyncStatus(c, uid, registryType)
 		if err != nil {
 			return nil, "", err
 		}
