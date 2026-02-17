@@ -254,7 +254,7 @@ func resourceRegistryEcrCreate(ctx context.Context, d *schema.ResourceData, m in
 				}
 			}
 			if isError {
-				return diags
+				return diagnostics
 			}
 		}
 	}
