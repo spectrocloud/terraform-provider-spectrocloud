@@ -659,8 +659,10 @@ func getRegistryIsSyncSupported(c *client.V1Client, registryUID string, packType
 	switch packType {
 	case models.V1PackTypeHelm:
 		status, err = c.GetHelmRegistrySyncStatus(registryUID)
-	case models.V1PackTypeOci, models.V1PackTypeSpectro:
+	case models.V1PackTypeOci:
 		status, err = c.GetOciBasicRegistrySyncStatus(registryUID)
+	case models.V1PackTypeSpectro:
+		status, err = c.GetPackRegistrySyncStatus(registryUID)
 	default:
 		return false, false
 	}
