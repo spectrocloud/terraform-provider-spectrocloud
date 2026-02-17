@@ -524,19 +524,7 @@ func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.
 	}
 
 	switch pType {
-	case models.V1PackTypeSpectro:
-		if pUID == "" {
-			isSyncSupported, found := getRegistryIsSyncSupported(c, pRegistryUID, pType)
-			if found && isSyncSupported {
-				resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-				if err != nil {
-					return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
-				}
-				pUID = resolvedUID
-			}
-			// Else skip pack UID resolution when sync is not supported or registry not found
-		}
-	case models.V1PackTypeHelm:
+	case models.V1PackTypeOci, models.V1PackTypeSpectro, models.V1PackTypeHelm:
 		if pUID == "" {
 			isSyncSupported, found := getRegistryIsSyncSupported(c, pRegistryUID, pType)
 			if found && isSyncSupported {
