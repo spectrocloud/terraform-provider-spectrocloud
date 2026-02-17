@@ -119,7 +119,7 @@ func resolveAccountByName(c *client.V1Client, accountType, name, scope string) (
 			return acc.Metadata.UID, nil
 		}
 	case "apache-cloudstack":
-		acc, err := c.GetCloudAccountCloudStackByName(name, scope)
+		acc, err := c.GetCloudAccountApacheCloudStackByName(name, scope)
 		if err != nil {
 			return "", err
 		}
