@@ -192,7 +192,7 @@ func resourceAccountApacheCloudStackImport(ctx context.Context, d *schema.Resour
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
-	err := GetCommonAccount(d, c)
+	err := GetCommonAccount(d, c, "apache-cloudstack")
 	if err != nil {
 		return nil, err
 	}

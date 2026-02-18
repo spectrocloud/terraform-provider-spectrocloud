@@ -12,7 +12,7 @@ func resourceAccountGcpImport(ctx context.Context, d *schema.ResourceData, m int
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
-	err := GetCommonAccount(d, c)
+	err := GetCommonAccount(d, c, "gcp")
 	if err != nil {
 		return nil, err
 	}
@@ -28,15 +28,23 @@ func resourceAccountGcpImport(ctx context.Context, d *schema.ResourceData, m int
 	return []*schema.ResourceData{d}, nil
 }
 
-func GetCommonAccount(d *schema.ResourceData, c *client.V1Client) error {
-	// parse resource ID and scope
+func GetCommonAccount(d *schema.ResourceData, c *client.V1Client, accountType string) error {
+	// Parse resource ID and scope (import format: "id_or_name:scope" e.g. "my-account:project")
 	scope, accountID, err := ParseResourceID(d)
 	if err != nil {
 		return err
 	}
 
-	// Use the IDs to retrieve the cluster data from the API
+	// Try by UID first, then by name when accountType is set
 	cluster, err := c.GetCloudAccount(accountID)
+	if err != nil && accountType != "" {
+		uid, resolveErr := resolveAccountByName(c, accountType, accountID, scope)
+		if resolveErr != nil {
+			return fmt.Errorf("unable to retrieve cloud account by id or name: %s", resolveErr)
+		}
+		accountID = uid
+		cluster, err = c.GetCloudAccount(accountID)
+	}
 	if err != nil {
 		return fmt.Errorf("unable to retrieve cluster data: %s", err)
 	}
@@ -54,8 +62,79 @@ func GetCommonAccount(d *schema.ResourceData, c *client.V1Client) error {
 			return err
 		}
 	}
-	// Set the ID of the resource in the state. This ID is used to track the
-	// resource and must be set in the state during the import.
 	d.SetId(accountID)
 	return nil
+}
+
+// resolveAccountByName finds a cloud account by name and scope using the type-specific list API.
+// resolveAccountByName finds a cloud account by name and scope using the SDK Get*ByName helpers.
+func resolveAccountByName(c *client.V1Client, accountType, name, scope string) (string, error) {
+	switch accountType {
+	case "gcp":
+		acc, err := c.GetCloudAccountGcpByName(name, scope)
+		if err != nil {
+			return "", err
+		}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
+		}
+	case "aws":
+		acc, err := c.GetCloudAccountAwsByName(name, scope)
+		if err != nil {
+			return "", err
+		}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
+		}
+	case "azure":
+		acc, err := c.GetCloudAccountAzureByName(name, scope)
+		if err != nil {
+			return "", err
+		}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
+		}
+	case "openstack":
+		acc, err := c.GetCloudAccountOpenStackByName(name, scope)
+		if err != nil {
+			return "", err
+		}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
+		}
+	case "vsphere":
+		acc, err := c.GetCloudAccountVsphereByName(name, scope)
+		if err != nil {
+			return "", err
+		}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
+		}
+	case "maas":
+		acc, err := c.GetCloudAccountMaasByName(name, scope)
+		if err != nil {
+			return "", err
+		}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
+		}
+	case "apache-cloudstack":
+		acc, err := c.GetCloudAccountApacheCloudStackByName(name, scope)
+		if err != nil {
+			return "", err
+		}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
+		}
+	default:
+		// Custom cloud: accountType is the custom cloud type (e.g. "nutanix")
+		acc, err := c.GetCloudAccountCustomByName(accountType, name, scope)
+		if err != nil {
+			return "", fmt.Errorf("import by name not supported for account type %q: %w", accountType, err)
+		}
+		if acc != nil && acc.Metadata != nil {
+			return acc.Metadata.UID, nil
+		}
+	}
+	return "", fmt.Errorf("no cloud account found with name %q in scope %q", name, scope)
 }
