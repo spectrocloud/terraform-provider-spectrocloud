@@ -14,19 +14,27 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
+func normalizeInterfaceSliceFromListOrSet(v interface{}) []interface{} {
+	switch t := v.(type) {
+	case nil:
+		return []interface{}{}
+	case []interface{}:
+		return t
+	case *schema.Set:
+		if t == nil {
+			return []interface{}{}
+		}
+		return t.List()
+	default:
+		return []interface{}{}
+	}
+}
+
 // validateProfileSource checks that only one of cluster_template or cluster_profile is specified
 func validateProfileSource(d *schema.ResourceData) error {
 	// cluster_template may not exist in all schemas (e.g., cluster_group)
-	clusterTemplateRaw := d.Get("cluster_template")
-	clusterProfileRaw := d.Get("cluster_profile")
-
-	var clusterTemplate, clusterProfile []interface{}
-	if clusterTemplateRaw != nil {
-		clusterTemplate = clusterTemplateRaw.([]interface{})
-	}
-	if clusterProfileRaw != nil {
-		clusterProfile = clusterProfileRaw.([]interface{})
-	}
+	clusterTemplate := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template"))
+	clusterProfile := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
 
 	if len(clusterTemplate) > 0 && len(clusterProfile) > 0 {
 		return errors.New("cannot specify both cluster_template and cluster_profile. Please use only one")
@@ -138,16 +146,8 @@ func resolveProfileSource(d *schema.ResourceData) ([]interface{}, string, error)
 		return nil, "", err
 	}
 
-	clusterTemplateRaw := d.Get("cluster_template")
-	clusterProfileRaw := d.Get("cluster_profile")
-
-	var clusterTemplate, clusterProfile []interface{}
-	if clusterTemplateRaw != nil {
-		clusterTemplate = clusterTemplateRaw.([]interface{})
-	}
-	if clusterProfileRaw != nil {
-		clusterProfile = clusterProfileRaw.([]interface{})
-	}
+	clusterTemplate := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_template"))
+	clusterProfile := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
 
 	// Check cluster_template first
 	if len(clusterTemplate) > 0 {
@@ -341,12 +341,24 @@ func setReplaceWithProfileForExisting(c *client.V1Client, cluster *models.V1Spec
 		if clusterProfile == nil || clusterProfile.Metadata == nil {
 			continue
 		}
-
 		// Check if a profile with the same name is already attached to the cluster
 		existingUID := findAttachedProfileByName(cluster, clusterProfile.Metadata.Name)
+		// Infra swap: if no same-name match but this profile is infra, replace the existing attached infra (different name)
+		if existingUID == "" && clusterProfile.Spec != nil {
+			var profileType string
+			if clusterProfile.Spec.Published != nil {
+				profileType = clusterProfile.Spec.Published.Type
+			}
+			if profileType == "infra" {
+				existingUID = findAttachedProfileByType(cluster, "infra")
+				if existingUID != "" {
+					log.Printf("Profile %s (name: %s) is infra - will replace existing infra %s via PATCH",
+						profile.UID, clusterProfile.Metadata.Name, existingUID)
+				}
+			}
+		}
 		if existingUID != "" && existingUID != profile.UID {
 			// Only set ReplaceWithProfile if the existing profile has a DIFFERENT UID
-			// If the UIDs match, the profile is already attached and doesn't need replacement
 			log.Printf("Profile %s (name: %s) will replace existing attached profile %s",
 				profile.UID, clusterProfile.Metadata.Name, existingUID)
 			profile.ReplaceWithProfile = existingUID
@@ -357,6 +369,20 @@ func setReplaceWithProfileForExisting(c *client.V1Client, cluster *models.V1Spec
 	}
 
 	return nil
+}
+
+// findAttachedProfileByType returns the UID of the first attached profile with the given type (e.g. "infra").
+// Used when replacing an infra profile with another of a different name.
+func findAttachedProfileByType(cluster *models.V1SpectroCluster, profileType string) string {
+	if cluster == nil || cluster.Spec == nil || profileType == "" {
+		return ""
+	}
+	for _, template := range cluster.Spec.ClusterProfileTemplates {
+		if template != nil && template.Type == profileType {
+			return template.UID
+		}
+	}
+	return ""
 }
 
 // findAttachedProfileByName finds a profile attached to the cluster by its name.
@@ -382,12 +408,14 @@ func findAttachedProfileByName(cluster *models.V1SpectroCluster, profileName str
 // name stays the same (version upgrade), it's NOT a deletion - it's handled by ReplaceWithProfile.
 func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
 	oldProfilesRaw, newProfilesRaw := d.GetChange("cluster_profile")
+	oldProfiles := normalizeInterfaceSliceFromListOrSet(oldProfilesRaw)
+	newProfiles := normalizeInterfaceSliceFromListOrSet(newProfilesRaw)
 
 	// Build a set of new profile NAMES (not just IDs)
 	// This is important: version upgrades change the ID but keep the same name
 	newProfileNames := make(map[string]bool)
-	if newProfilesRaw != nil {
-		for _, p := range newProfilesRaw.([]interface{}) {
+	if len(newProfiles) > 0 {
+		for _, p := range newProfiles {
 			if p == nil {
 				continue
 			}
@@ -409,8 +437,8 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
 	// Find profiles in old state whose NAME is not in new state
 	// Only these are actual deletions; ID changes with same name are version upgrades
 	var profilesToDelete []string
-	if oldProfilesRaw != nil {
-		for _, p := range oldProfilesRaw.([]interface{}) {
+	if len(oldProfiles) > 0 {
+		for _, p := range oldProfiles {
 			if p == nil {
 				continue
 			}
@@ -425,6 +453,10 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
 				if clusterProfile != nil && clusterProfile.Metadata != nil {
 					profileName := clusterProfile.Metadata.Name
 					if !newProfileNames[profileName] {
+						if clusterProfile.Spec.Published != nil && clusterProfile.Spec.Published.Type == "infra" {
+							log.Printf("Profile %s (name: %s) is infra - skip delete, will be replaced via PATCH", id, profileName)
+							continue
+						}
 						// This profile name is not in the new state - it's a real deletion
 						log.Printf("Profile %s (name: %s) will be deleted (name removed from cluster_profile)", id, profileName)
 						profilesToDelete = append(profilesToDelete, id)
@@ -444,7 +476,8 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 
 	// Capture old cluster_profile value at the start to restore on any error
 	// This prevents Terraform state from getting out of sync with API when updates fail
-	oldProfile, _ := d.GetChange("cluster_profile")
+	oldProfileRaw, _ := d.GetChange("cluster_profile")
+	oldProfile := normalizeInterfaceSliceFromListOrSet(oldProfileRaw)
 	restoreOldProfile := func() {
 		_ = d.Set("cluster_profile", oldProfile)
 	}
@@ -521,7 +554,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	var newProfiles []interface{}
 	if d.HasChange("cluster_profile") {
 		_, newProfilesRaw := d.GetChange("cluster_profile")
-		newProfiles = newProfilesRaw.([]interface{})
+		newProfiles = normalizeInterfaceSliceFromListOrSet(newProfilesRaw)
 	}
 
 	for _, newProfile := range newProfiles {

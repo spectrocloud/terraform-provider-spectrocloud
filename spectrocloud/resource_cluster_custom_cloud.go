@@ -37,12 +37,17 @@ func resourceClusterCustomCloud() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 3,
+		SchemaVersion: 4,
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Type:    resourceClusterCustomCloudResourceV2().CoreConfigSchema().ImpliedType(),
 				Upgrade: resourceClusterCustomCloudStateUpgradeV2,
 				Version: 2,
+			},
+			{
+				Type:    resourceClusterCustomCloudResourceV3().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterCustomCloudStateUpgradeV3,
+				Version: 3,
 			},
 		},
 		Schema: map[string]*schema.Schema{
@@ -81,7 +86,7 @@ func resourceClusterCustomCloud() *schema.Resource {
 				Default:     "",
 				Description: "The description of the cluster. Default value is empty string.",
 			},
-			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchemaV2(),
 			"cluster_template": schemas.ClusterTemplateSchema(),
 			"cluster_type":     schemas.ClusterTypeSchema(),
 			"apply_setting": {
@@ -272,6 +277,29 @@ func resourceClusterCustomCloud() *schema.Resource {
 			// Planned for support on future release's - "review_repave_state",
 		},
 	}
+}
+
+func resourceClusterCustomCloudStateUpgradeV3(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading Custom Cloud cluster state from version 3 to 4")
+
+	// Convert cluster_profile from TypeList (v3) to TypeSet (v4).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
 
 func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
