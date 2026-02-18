@@ -70,3 +70,25 @@ func TestResourceClusterEksStateUpgradeV3_ClusterProfileListPreserved(t *testing
 		t.Fatalf("expected 2 cluster_profile items, got %d", len(cp))
 	}
 }
+
+func TestResourceClusterAwsStateUpgradeV2_ClusterProfileListPreserved(t *testing.T) {
+	raw := map[string]interface{}{
+		"cluster_profile": []interface{}{
+			map[string]interface{}{"id": "profile-1"},
+			map[string]interface{}{"id": "profile-2"},
+		},
+	}
+
+	out, err := resourceClusterAwsStateUpgradeV2(context.Background(), raw, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cp, ok := out["cluster_profile"].([]interface{})
+	if !ok {
+		t.Fatalf("expected cluster_profile to be []interface{}, got %T", out["cluster_profile"])
+	}
+	if len(cp) != 2 {
+		t.Fatalf("expected 2 cluster_profile items, got %d", len(cp))
+	}
+}

@@ -33,12 +33,17 @@ func resourceClusterOpenStack() *schema.Resource {
 			Update: schema.DefaultTimeout(180 * time.Minute),
 			Delete: schema.DefaultTimeout(180 * time.Minute),
 		},
-		SchemaVersion: 1,
+		SchemaVersion: 2,
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Type:    resourceClusterOpenStackResourceV1().CoreConfigSchema().ImpliedType(),
 				Upgrade: resourceClusterOpenStackStateUpgradeV1,
 				Version: 0,
+			},
+			{
+				Type:    resourceClusterOpenStackResourceV1().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterOpenStackStateUpgradeV2,
+				Version: 1,
 			},
 		},
 
@@ -76,7 +81,7 @@ func resourceClusterOpenStack() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchemaV2(),
 			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
@@ -305,6 +310,29 @@ func resourceClusterOpenStack() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceClusterOpenStackStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading OpenStack cluster state from version 1 to 2")
+
+	// Convert cluster_profile from TypeList (v1) to TypeSet (v2).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
 
 func resourceClusterOpenStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

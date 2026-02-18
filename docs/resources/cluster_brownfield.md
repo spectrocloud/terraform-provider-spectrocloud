@@ -135,7 +135,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
-- `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
+- `cluster_profile` (Block Set) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `cluster_timezone` (String) Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').
 - `container_mount_path` (String) Location to mount Proxy CA cert inside container. This is the file path inside the container where the Proxy CA certificate will be mounted. This field cannot be updated after creation.
