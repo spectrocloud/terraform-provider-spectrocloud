@@ -30,14 +30,14 @@ import {
 }
 ```
 
-Using `terraform import`, import the cloud account using the `cloudaccount_name` or  `id` colon separated with `context`. For example:
+Using `terraform import`, import the cloud account using the `cloud_account_name` or  `id` colon separated with `context`. For example:
 
 ```console
-terraform import spectrocloud_cloudaccount_gcp.example example_id:project
+terraform import spectrocloud_cloudaccount_gcp.cloud_account_id:project
 ```
 
 ```console
-terraform import spectrocloud_cloudaccount_gcp.example cluster_name:project
+terraform import spectrocloud_cloudaccount_gcp.cloud_account_name:project
 ```
 
 

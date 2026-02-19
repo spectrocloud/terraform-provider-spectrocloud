@@ -627,11 +627,11 @@ import {
 Using `terraform import`, import the cluster using the `cluster_apache_cloudstack_name` or  `id` colon separated with `context`. For example:
 
 ```console
-terraform import spectrocloud_cluster_apache_cloudstack.example example_id:project
+terraform import spectrocloud_cluster_apache_cloudstack.cluster_id:project
 ```
 
 ```console
-terraform import spectrocloud_cluster_apache_cloudstack.example cluster_name:project
+terraform import spectrocloud_cluster_apache_cloudstack.cluster_name:project
 ```
 
 
