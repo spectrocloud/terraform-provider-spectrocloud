@@ -41,11 +41,7 @@ import {
 Using `terraform import`, import the cloud account using the `cloud_account_name` or  `id` colon separated with `context`. For example:
 
 ```console
-terraform import spectrocloud_cloudaccount_custom.cloud_account_id:project
-```
-
-```console
-terraform import spectrocloud_cloudaccount_custom.cloud_account_name:project:custom_cloud_name
+terraform import spectrocloud_cloudaccount_custom.{cloud_account_uid}/{cloud_account_name}:project
 ```
 
 
