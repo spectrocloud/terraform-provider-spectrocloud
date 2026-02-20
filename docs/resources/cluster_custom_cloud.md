@@ -134,11 +134,7 @@ import {
 Using `terraform import`, import the cluster using the `cluster_name` or `id` colon separated with `context` colon separated with `custom_cloud_name`. For example:
 
 ```console
-terraform import spectrocloud_cluster_custom_cloud.example example_id:project:nutanix
-```
-
-```console
-terraform import spectrocloud_cluster_custom_cloud.example cluster_name:project:nutanix
+terraform import spectrocloud_cluster_custom_cloud.{cloud_account_uid}/{cloud_account_name}:project:custom_cloud_name
 ```
 
 Refer to the [Import section](/docs#import) to learn more.

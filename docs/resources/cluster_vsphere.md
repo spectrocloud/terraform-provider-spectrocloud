@@ -95,11 +95,7 @@ import {
 Using `terraform import`, import the cluster using the `cluster_name` or `id` colon separated with `context`. For example:
 
 ```console
-terraform import spectrocloud_cluster_vsphere.example example_id:project
-```
-
-```console
-terraform import spectrocloud_cluster_vsphere.example cluster_name:project
+terraform import spectrocloud_cluster_vsphere.{cluster_uid}/{cluster_name}:project
 ```
 
 Refer to the [Import section](/docs#import) to learn more.

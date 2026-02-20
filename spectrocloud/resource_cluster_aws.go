@@ -271,7 +271,7 @@ func resourceClusterAws() *schema.Resource {
 							Optional:     true,
 							Default:      "disabled",
 							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
-							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools. The skip_k8s_upgrade field is available from Palette 4.8.b.",
+							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
 						},
 						"capacity_type": {
 							Type:         schema.TypeString,
