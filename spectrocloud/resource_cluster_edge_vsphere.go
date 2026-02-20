@@ -126,6 +126,12 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"update_worker_pools_in_parallel": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
