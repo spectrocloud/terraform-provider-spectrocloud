@@ -213,7 +213,7 @@ func resourceAccountOpenstackImport(ctx context.Context, d *schema.ResourceData,
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
-	err := GetCommonAccount(d, c)
+	err := GetCommonAccount(d, c, "openstack")
 	if err != nil {
 		return nil, err
 	}

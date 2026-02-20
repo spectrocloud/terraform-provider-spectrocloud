@@ -134,11 +134,7 @@ import {
 Using `terraform import`, import the cluster using the `cluster_name` or `id` colon separated with `context` colon separated with `custom_cloud_name`. For example:
 
 ```console
-terraform import spectrocloud_cluster_custom_cloud.example example_id:project:nutanix
-```
-
-```console
-terraform import spectrocloud_cluster_custom_cloud.example cluster_name:project:nutanix
+terraform import spectrocloud_cluster_custom_cloud.{cloud_account_uid}/{cloud_account_name}:project:custom_cloud_name
 ```
 
 Refer to the [Import section](/docs#import) to learn more.
@@ -158,7 +154,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
-- `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
+- `cluster_profile` (Block Set) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `cluster_template` (Block List, Max: 1) The cluster template of the cluster. (see [below for nested schema](#nestedblock--cluster_template))
 - `cluster_timezone` (String) Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').
@@ -177,6 +173,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
 ### Read-Only
 

@@ -83,7 +83,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
 - `cloud_config` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - `cluster_group_uid` (String)
-- `cluster_profile` (Block List) (see [below for nested schema](#nestedblock--cluster_profile))
+- `cluster_profile` (Block Set) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `context` (String) The context of the virtual cluster. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster. Default value is empty string.
