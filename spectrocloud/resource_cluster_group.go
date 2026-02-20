@@ -215,26 +215,40 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 	if err := d.Set("tags", flattenTags(clusterGroup.Metadata.Labels)); err != nil {
 		return diag.FromErr(err)
 	}
+	// description is stored in metadata annotations
+	if clusterGroup.Metadata != nil && clusterGroup.Metadata.Annotations != nil {
+		if desc, ok := clusterGroup.Metadata.Annotations["description"]; ok {
+			if err := d.Set("description", desc); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
 
 	clusterGroupSpec := clusterGroup.Spec
 	if clusterGroupSpec != nil {
 		clusterConfig := clusterGroupSpec.ClustersConfig
 		if clusterConfig != nil {
+			// Build config from clusterConfig regardless of limitConfig so endpoint_type, values, k8s_distribution are always set
+			configMap := map[string]interface{}{
+				"host_endpoint_type": clusterConfig.EndpointType,
+				"values":             clusterConfig.Values,
+			}
+			k8sDistro := "vcluster-generic"
+			if clusterConfig.KubernetesDistroType != nil {
+				k8sDistro = string(*clusterConfig.KubernetesDistroType)
+			}
+			configMap["k8s_distribution"] = k8sDistro
+
 			limitConfig := clusterConfig.LimitConfig
 			if limitConfig != nil {
-				err := d.Set("config", []map[string]interface{}{
-					{
-						"host_endpoint_type":       clusterConfig.EndpointType,
-						"cpu_millicore":            limitConfig.CPUMilliCore,
-						"memory_in_mb":             limitConfig.MemoryMiB,
-						"storage_in_gb":            limitConfig.StorageGiB,
-						"oversubscription_percent": limitConfig.OverSubscription,
-						"k8s_distribution":         clusterConfig.KubernetesDistroType,
-					},
-				})
-				if err != nil {
-					return diag.FromErr(err)
-				}
+				configMap["cpu_millicore"] = limitConfig.CPUMilliCore
+				configMap["memory_in_mb"] = limitConfig.MemoryMiB
+				configMap["storage_in_gb"] = limitConfig.StorageGiB
+				configMap["oversubscription_percent"] = limitConfig.OverSubscription
+			}
+
+			if err := d.Set("config", []map[string]interface{}{configMap}); err != nil {
+				return diag.FromErr(err)
 			}
 		}
 	}
@@ -249,7 +263,7 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 				for _, cluster := range hostConfig {
 					// if it's ingress config set ingress if it's loadbalancer set loadbalancer
 					var host string
-					if cluster.EndpointConfig.IngressConfig != nil {
+					if cluster.EndpointConfig != nil && cluster.EndpointConfig.IngressConfig != nil {
 						host = cluster.EndpointConfig.IngressConfig.Host
 					}
 					clusters = append(clusters, map[string]interface{}{
@@ -264,9 +278,64 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 				}
 			}
 		}
+
+		// cluster_profile: flatten from Spec.ClusterProfileTemplates and set back so state matches API.
+		profiles := flattenClusterGroupProfiles(clusterGroupSpec.ClusterProfileTemplates)
+		if err := d.Set("cluster_profile", profiles); err != nil {
+			return diag.FromErr(err)
+		}
+	} else {
+		// Spec is nil; set cluster_profile to empty so state does not retain stale values
+		if err := d.Set("cluster_profile", []interface{}{}); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return diag.Diagnostics{}
+}
+
+// flattenClusterGroupProfiles converts API ClusterProfileTemplates to the cluster_profile schema (id, pack, variables).
+// Pack map includes all PackSchema keys (registry_name, registry_uid, type, uid, manifest) with empty defaults
+// so that state matches the schema and avoids drift when config uses null for optional pack fields.
+func flattenClusterGroupProfiles(templates []*models.V1ClusterProfileTemplate) []interface{} {
+	out := make([]interface{}, 0, len(templates))
+	for _, t := range templates {
+		if t == nil {
+			continue
+		}
+		profile := map[string]interface{}{
+			"id":        t.UID,
+			"variables": map[string]interface{}{},
+		}
+		packs := make([]interface{}, 0, len(t.Packs))
+		for _, p := range t.Packs {
+			if p == nil {
+				continue
+			}
+			packName := ""
+			if p.Name != nil {
+				packName = *p.Name
+			}
+			packType := p.Type
+			if packType == "" {
+				packType = "spectro"
+			}
+			pack := map[string]interface{}{
+				"tag":    p.Tag,
+				"values": p.Values,
+				// "registry_name": "",
+				"registry_uid": p.RegistryUID,
+				"type":         packType,
+				"uid":          p.PackUID,
+				"manifest":     []interface{}{},
+			}
+			pack["name"] = packName
+			packs = append(packs, pack)
+		}
+		profile["pack"] = packs
+		out = append(out, profile)
+	}
+	return out
 }
 
 func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
