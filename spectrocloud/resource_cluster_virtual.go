@@ -32,7 +32,14 @@ func resourceClusterVirtual() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterVirtualResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterVirtualStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -119,7 +126,7 @@ func resourceClusterVirtual() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
 				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile": schemas.ClusterProfileSchemaV2(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -219,6 +226,29 @@ func resourceClusterVirtual() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceClusterVirtualStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading virtual cluster state from version 2 to 3")
+
+	// Convert cluster_profile from TypeList (v2) to TypeSet (v3).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
 
 func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

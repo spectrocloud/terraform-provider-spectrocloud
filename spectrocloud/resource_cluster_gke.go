@@ -31,12 +31,17 @@ func resourceClusterGke() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Type:    resourceClusterGkeResourceV1().CoreConfigSchema().ImpliedType(),
 				Upgrade: resourceClusterGkeStateUpgradeV1,
 				Version: 1,
+			},
+			{
+				Type:    resourceClusterGkeResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterGkeStateUpgradeV2,
+				Version: 2,
 			},
 		},
 		Schema: map[string]*schema.Schema{
@@ -74,7 +79,7 @@ func resourceClusterGke() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchemaV2(),
 			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
@@ -119,17 +124,28 @@ func resourceClusterGke() *schema.Resource {
 					},
 				},
 			},
-			"update_worker_pool_in_parallel": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
-			},
+
 			"cluster_timezone": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "",
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
+			"update_worker_pools_in_parallel": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+			},
+			// we will depricate it opearional is update_worker_pools_in_parallel
+			"update_worker_pool_in_parallel": {
+				Type:          schema.TypeBool,
+				Optional:      true,
+				ConflictsWith: []string{"update_worker_pools_in_parallel"},
+				Default:       false,
+				Description:   "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Deprecated:    "This field is deprecated and will be removed in the future. Use `update_worker_pools_in_parallel` instead.",
 			},
 			"machine_pool": {
 				Type:        schema.TypeSet,
@@ -259,6 +275,29 @@ func resourceClusterGke() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceClusterGkeStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading GKE cluster state from version 2 to 3")
+
+	// Convert cluster_profile from TypeList (v2) to TypeSet (v3).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
 
 func resourceClusterGkeCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

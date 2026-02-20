@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -23,7 +24,14 @@ func resourceClusterBrownfield() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterBrownfieldImport,
 		},
-		SchemaVersion: 1,
+		SchemaVersion: 2,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterBrownfieldResourceV1().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterBrownfieldStateUpgradeV1,
+				Version: 1,
+			},
+		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Read:   schema.DefaultTimeout(5 * time.Minute),
@@ -149,7 +157,7 @@ func resourceClusterBrownfield() *schema.Resource {
 					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
 					"Default value is `DownloadAndInstall`.",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile": schemas.ClusterProfileSchemaV2(),
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -230,6 +238,29 @@ func resourceClusterBrownfield() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceClusterBrownfieldStateUpgradeV1(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading brownfield cluster state from version 1 to 2")
+
+	// Convert cluster_profile from TypeList (v1) to TypeSet (v2).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
 
 func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
