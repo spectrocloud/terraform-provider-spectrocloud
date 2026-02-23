@@ -137,6 +137,8 @@ func TestFlattenProfileVariables(t *testing.T) {
 					"immutable":     false,
 					"hidden":        false,
 					"is_sensitive":  false,
+					"input_type":    "text",
+					"options":       []interface{}(nil),
 				},
 				map[string]interface{}{
 					"name":          StringPtr("variable_name_2"),
@@ -149,6 +151,8 @@ func TestFlattenProfileVariables(t *testing.T) {
 					"immutable":     true,
 					"hidden":        true,
 					"is_sensitive":  false,
+					"input_type":    "text",
+					"options":       []interface{}(nil),
 				},
 			},
 		},
@@ -165,6 +169,132 @@ func TestFlattenProfileVariables(t *testing.T) {
 	assert.NoError(t, errEmpty)
 	assert.Len(t, resultEmpty, 0)
 	assert.Equal(t, []interface{}{}, resultEmpty)
+}
+
+func TestToClusterProfileVariablesInputTypeAndOptions(t *testing.T) {
+	// Test input_type and options (dropdown with options list)
+	mockResourceData := resourceClusterProfile().TestResourceData()
+	proVar := []interface{}{
+		map[string]interface{}{
+			"variable": []interface{}{
+				map[string]interface{}{
+					"name":          "env_var",
+					"display_name":  "Environment",
+					"format":        "string",
+					"description":   "Select environment",
+					"default_value": "dev",
+					"required":      true,
+					"immutable":     false,
+					"hidden":        false,
+					"is_sensitive":  false,
+					"input_type":    "dropdown",
+					"options": []interface{}{
+						map[string]interface{}{
+							"label":       "Development",
+							"value":       "dev",
+							"description": "Dev environment",
+							"default":     true,
+						},
+						map[string]interface{}{
+							"label":       "Production",
+							"value":       "prod",
+							"description": "Prod environment",
+							"default":     false,
+						},
+					},
+				},
+				map[string]interface{}{
+					"name":          "notes",
+					"display_name":  "Notes",
+					"format":        "string",
+					"description":   "Multiline notes",
+					"default_value": "",
+					"required":      false,
+					"immutable":     false,
+					"hidden":        false,
+					"is_sensitive":  false,
+					"input_type":    "multiline",
+				},
+			},
+		},
+	}
+	_ = mockResourceData.Set("cloud", "all")
+	_ = mockResourceData.Set("type", "add-on")
+	_ = mockResourceData.Set("profile_variables", proVar)
+
+	result, err := toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	// First variable: dropdown with options
+	assert.Equal(t, "env_var", *result[0].Name)
+	assert.NotNil(t, result[0].InputType)
+	assert.Equal(t, models.V1VariableInputTypeDropdown, *result[0].InputType)
+	assert.Len(t, result[0].Options, 2)
+	assert.Equal(t, "dev", *result[0].Options[0].Value)
+	assert.Equal(t, "Development", result[0].Options[0].Label)
+	assert.Equal(t, "Dev environment", result[0].Options[0].Description)
+	assert.True(t, result[0].Options[0].Default)
+	assert.Equal(t, "prod", *result[0].Options[1].Value)
+	assert.Equal(t, "Production", result[0].Options[1].Label)
+	assert.False(t, result[0].Options[1].Default)
+
+	// Second variable: multiline, no options
+	assert.Equal(t, "notes", *result[1].Name)
+	assert.NotNil(t, result[1].InputType)
+	assert.Equal(t, models.V1VariableInputTypeMultiline, *result[1].InputType)
+	assert.Nil(t, result[1].Options)
+}
+
+func TestFlattenProfileVariablesInputTypeAndOptions(t *testing.T) {
+	// Test flatten with input_type and options from API
+	mockResourceData := resourceClusterProfile().TestResourceData()
+	proVar := []interface{}{
+		map[string]interface{}{
+			"variable": []interface{}{
+				map[string]interface{}{
+					"name":         "env_var",
+					"display_name": "Environment",
+				},
+			},
+		},
+	}
+	_ = mockResourceData.Set("profile_variables", proVar)
+
+	pv := []*models.V1Variable{
+		{
+			Name:         StringPtr("env_var"),
+			DisplayName:  "Environment",
+			Description:  "Select env",
+			Format:       models.NewV1VariableFormat("string"),
+			DefaultValue: "dev",
+			InputType:    models.V1VariableInputTypeDropdown.Pointer(),
+			Options: []*models.V1VariableOption{
+				{Value: types.Ptr("dev"), Label: "Development", Description: "Dev", Default: true},
+				{Value: types.Ptr("prod"), Label: "Production", Description: "Prod", Default: false},
+			},
+		},
+	}
+
+	result, err := flattenProfileVariables(mockResourceData, pv)
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	outer := result[0].(map[string]interface{})
+	variables := outer["variable"].([]interface{})
+	assert.Len(t, variables, 1)
+	flat := variables[0].(map[string]interface{})
+	assert.Equal(t, "dropdown", flat["input_type"])
+	opts := flat["options"].([]interface{})
+	assert.Len(t, opts, 2)
+	opt0 := opts[0].(map[string]interface{})
+	assert.Equal(t, "dev", opt0["value"])
+	assert.Equal(t, "Development", opt0["label"])
+	assert.Equal(t, "Dev", opt0["description"])
+	assert.True(t, opt0["default"].(bool))
+	opt1 := opts[1].(map[string]interface{})
+	assert.Equal(t, "prod", opt1["value"])
+	assert.Equal(t, "Production", opt1["label"])
+	assert.False(t, opt1["default"].(bool))
 }
 
 func TestToClusterProfileVariablesRestrictionError(t *testing.T) {

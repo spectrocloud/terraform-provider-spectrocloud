@@ -265,6 +265,48 @@ resource "spectrocloud_cluster_profile" "profile" {
       immutable = false
     }
   }
+  profile_variables {
+    variable {
+      default_value = "test2"
+      description   = null
+      display_name  = "Type List"
+      format        = "string"
+      hidden        = false
+      immutable     = false
+      input_type    = "dropdown"
+      is_sensitive  = false
+      name          = "type_list"
+      regex         = null
+      required      = false
+      options {
+        description = "test 1 description"
+        label       = "test1"
+        value       = "value1"
+      }
+      options {
+        description = "test 2 description"
+        label       = "test2"
+        value       = "value2"
+      }
+    }
+    variable {
+      default_value = <<-EOT
+      sdfsdfdsf
+      sdfsdf
+      sdfdsf
+      EOT      
+      description   = null
+      display_name  = "Type Multiline"
+      format        = "string"
+      hidden        = false
+      immutable     = false
+      input_type    = "multiline"
+      is_sensitive  = false
+      name          = "test_multiline"
+      regex         = null
+      required      = false
+    }
+  }
   */
 }
 ```
@@ -438,14 +480,33 @@ Required:
 
 Optional:
 
-- `default_value` (String) The default value of the variable.
+- `default_value` (String) The default value of the variable. If the format is `multiline`, then the default value should be a multi-line string. If the input type is `dropdown`, then the default value should be a option label.
 - `description` (String) The description of the variable.
-- `format` (String) The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Allowed formats include `string`, `number`, `boolean`, `ipv4`, `ipv4cidr`, `ipv6`, `version`.
+- `format` (String) The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Allowed formats include `string`, `number`, `boolean`, `ipv4`, `ipv4cidr`, `ipv6`, `version`, `base64`.
 - `hidden` (Boolean) If `hidden` is set to `true`, then variable will be hidden for overriding the value. By default the `hidden` flag will be set to `false`.
 - `immutable` (Boolean) If `immutable` is set to `true`, then variable value can't be editable. By default the `immutable` flag will be set to `false`.
+- `input_type` (String) The input type of the variable. Defaults to `text` for backward compatibility. Allowed input types include `text`, `dropdown`, `multiline`.
 - `is_sensitive` (Boolean) If `is_sensitive` is set to `true`, then default value will be masked. By default the `is_sensitive` flag will be set to false.
+- `options` (Block List) The options of the variable. Only applicable for dropdown input type. (see [below for nested schema](#nestedblock--profile_variables--variable--options))
 - `regex` (String) Regular expression pattern which the variable value must match.
 - `required` (Boolean) The `required` to specify if the variable is optional or mandatory. If it is mandatory then default value must be provided.
+
+<a id="nestedblock--profile_variables--variable--options"></a>
+### Nested Schema for `profile_variables.variable.options`
+
+Required:
+
+- `label` (String) The label of the option.
+- `value` (String) The value of the option.
+
+Optional:
+
+- `description` (String) The description of the option.
+
+Read-Only:
+
+- `default` (Boolean) The default value of the option.
+
 
 
 

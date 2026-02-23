@@ -49,7 +49,7 @@ func flattenAddonDeployment(c *client.V1Client, d *schema.ResourceData, profile 
 
 	// Check if user has defined packs in their config
 	hasPacksInConfig := false
-	profiles := d.Get("cluster_profile").([]interface{})
+	profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
 	if len(profiles) > 0 {
 		for _, p := range profiles {
 			profileMap := p.(map[string]interface{})
@@ -123,7 +123,7 @@ func flattenAddonDeployment(c *client.V1Client, d *schema.ResourceData, profile 
 
 func GetAddonDeploymentDiagPacks(d *schema.ResourceData, err error) ([]*models.V1PackManifestEntity, diag.Diagnostics, bool) {
 	diagPacks := make([]*models.V1PackManifestEntity, 0)
-	profiles := d.Get("cluster_profile").([]interface{})
+	profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
 	if len(profiles) > 0 {
 		for _, profile := range profiles {
 			p := profile.(map[string]interface{})
