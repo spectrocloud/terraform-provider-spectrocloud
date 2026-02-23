@@ -15,6 +15,7 @@ import (
 // ParseClusterProfileImportID parses import ID in format:
 //   - UID:CONTEXT or NAME:CONTEXT (2 parts)
 //   - UID:CONTEXT:VERSION or NAME:CONTEXT:VERSION (3 parts, VERSION optional)
+//
 // Returns idOrName, context, version (version is "" if not provided).
 func ParseClusterProfileImportID(importID string) (idOrName, resourceContext, version string, err error) {
 	parts := strings.Split(importID, ":")
