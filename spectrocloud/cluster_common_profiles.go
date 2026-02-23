@@ -511,6 +511,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 				ProfileUids: profilesToDelete,
 			}
 			if err := c.DeleteAddonDeployment(d.Id(), deleteBody); err != nil {
+				restoreOldProfile()
 				return fmt.Errorf("failed to delete removed profiles: %w", err)
 			}
 		}
