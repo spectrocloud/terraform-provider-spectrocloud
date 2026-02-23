@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/palette-sdk-go/client/herr"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
@@ -316,24 +317,54 @@ func toWorkspace(d *schema.ResourceData, c *client.V1Client) (*models.V1Workspac
 	return workspace, nil
 }
 
+// isWorkspaceNotFound returns true if the error indicates the workspace was not found,
+// so the importer can fall back to name lookup (same pattern as project/user import).
+func isWorkspaceNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	if herr.IsNotFound(err) {
+		return true
+	}
+	s := err.Error()
+	return strings.Contains(s, "not found") || strings.Contains(s, "NotFound") || strings.Contains(s, "WorkspaceNotFound")
+}
+
 func resourceWorkspaceImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	c := getV1ClientWithResourceContext(m, "")
 
-	// The import ID should be the workspace UID
-	workspaceUID := d.Id()
+	importID := d.Id()
+	if importID == "" {
+		return nil, fmt.Errorf("workspace import ID or name is required")
+	}
 
-	// Validate that the workspace exists and we can access it
-	workspace, err := c.GetWorkspace(workspaceUID)
+	// Try to get by UID first (same pattern as resource_project_import)
+	workspace, err := c.GetWorkspace(importID)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve workspace for import: %s", err)
-	}
-	if workspace == nil {
-		return nil, fmt.Errorf("workspace with ID %s not found", workspaceUID)
-	}
-
-	// Set the workspace name from the retrieved workspace
-	if err := d.Set("name", workspace.Metadata.Name); err != nil {
-		return nil, err
+		if !isWorkspaceNotFound(err) {
+			return nil, fmt.Errorf("unable to retrieve workspace '%s': %w", importID, err)
+		}
+		// Not found by UID — try by name
+		wsByName, nameErr := c.GetWorkspaceByName(importID)
+		if nameErr != nil {
+			return nil, fmt.Errorf("unable to retrieve workspace by name or id '%s': %w", importID, nameErr)
+		}
+		if wsByName == nil || wsByName.Metadata == nil || wsByName.Metadata.UID == "" {
+			return nil, fmt.Errorf("workspace '%s' not found", importID)
+		}
+		d.SetId(wsByName.Metadata.UID)
+	} else if workspace != nil {
+		d.SetId(importID)
+	} else {
+		// UID lookup returned nil workspace (e.g. import by name) — try by name
+		wsByName, nameErr := c.GetWorkspaceByName(importID)
+		if nameErr != nil {
+			return nil, fmt.Errorf("unable to retrieve workspace by name or id '%s': %w", importID, nameErr)
+		}
+		if wsByName == nil || wsByName.Metadata == nil || wsByName.Metadata.UID == "" {
+			return nil, fmt.Errorf("workspace '%s' not found", importID)
+		}
+		d.SetId(wsByName.Metadata.UID)
 	}
 
 	// Read all workspace data to populate the state
