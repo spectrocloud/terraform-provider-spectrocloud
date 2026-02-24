@@ -277,8 +277,22 @@ func resourceClusterAws() *schema.Resource {
 							Type:         schema.TypeString,
 							Default:      "on-demand",
 							Optional:     true,
-							ValidateFunc: validation.StringInSlice([]string{"on-demand", "spot"}, false),
-							Description:  "Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.",
+							ValidateFunc: validation.StringInSlice([]string{"on-demand", "spot", "host-resource-group"}, false),
+							Description:  "Capacity type: 'on-demand', 'spot', or 'host-resource-group' (dedicated hosts). Defaults to 'on-demand'.",
+						},
+						"host_resource_group_arn": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "ARN of AWS Host Resource Group for node placement on dedicated hosts.",
+						},
+						"license_configuration_arns": {
+							Type:        schema.TypeSet,
+							Optional:    true,
+							Description: "List of AWS License Configuration ARNs (required when hostResourceGroupArn is specified, max 10)",
+							Set:         schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
 						},
 						"max_price": {
 							Type:        schema.TypeString,
@@ -536,7 +550,15 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
 		if machinePool.CapacityType != nil {
-			oi["capacity_type"] = machinePool.CapacityType
+			oi["capacity_type"] = *machinePool.CapacityType
+			if *machinePool.CapacityType == "host-resource-group" {
+				if machinePool.HostResourceGroupArn != "" {
+					oi["host_resource_group_arn"] = machinePool.HostResourceGroupArn
+				}
+				if len(machinePool.LicenseConfigurationArns) > 0 {
+					oi["license_configuration_arns"] = machinePool.LicenseConfigurationArns
+				}
+			}
 		}
 		if machinePool.SpotMarketOptions != nil {
 			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
@@ -843,6 +865,20 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 
 		mp.CloudConfig.SpotMarketOptions = &models.V1SpotMarketOptions{
 			MaxPrice: maxPrice,
+		}
+	}
+
+	if capacityType == "host-resource-group" {
+		if m["host_resource_group_arn"] != nil && m["host_resource_group_arn"].(string) != "" {
+			mp.CloudConfig.HostResourceGroupArn = m["host_resource_group_arn"].(string)
+		}
+		if m["license_configuration_arns"] != nil {
+			arnsSet := m["license_configuration_arns"].(*schema.Set)
+			arns := make([]string, 0, arnsSet.Len())
+			for _, v := range arnsSet.List() {
+				arns = append(arns, v.(string))
+			}
+			mp.CloudConfig.LicenseConfigurationArns = arns
 		}
 	}
 

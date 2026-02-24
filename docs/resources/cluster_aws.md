@@ -219,10 +219,12 @@ Optional:
 - `additional_security_groups` (Set of String) Additional security groups to attach to the instance.
 - `az_subnets` (Map of String) Mutually exclusive with `azs`. Use `az_subnets` for Static provisioning.
 - `azs` (Set of String) Mutually exclusive with `az_subnets`. Use `azs` for Dynamic provisioning.
-- `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
+- `capacity_type` (String) Capacity type: 'on-demand', 'spot', or 'host-resource-group' (dedicated hosts). Defaults to 'on-demand'.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `disk_size_gb` (Number) The disk size in GB for the machine pool nodes.
+- `host_resource_group_arn` (String) ARN of AWS Host Resource Group for node placement on dedicated hosts.
+- `license_configuration_arns` (Set of String) List of AWS License Configuration ARNs (required when hostResourceGroupArn is specified, max 10)
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `max_price` (String) Maximum price to bid for spot instances. Only applied when instance type is 'spot'.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.

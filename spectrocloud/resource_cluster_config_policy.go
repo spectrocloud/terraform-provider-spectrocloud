@@ -128,7 +128,10 @@ func resourceClusterConfigPolicyRead(ctx context.Context, d *schema.ResourceData
 	if err := d.Set("tags", flattenTags(policy.Metadata.Labels)); err != nil {
 		return diag.FromErr(err)
 	}
-
+	// currently only maintenance policy is supported, hence setting it to maintenance directly
+	if err := d.Set("policy_type", "maintenance"); err != nil {
+		return diag.FromErr(err)
+	}
 	if policy.Spec != nil {
 		if err := d.Set("schedules", flattenClusterConfigPolicySchedules(policy.Spec.Schedules)); err != nil {
 			return diag.FromErr(err)
