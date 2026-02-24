@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client/herr"
 )
 
 func resourceClusterConfigTemplate() *schema.Resource {
@@ -348,14 +349,51 @@ func resourceClusterConfigTemplateDelete(ctx context.Context, d *schema.Resource
 }
 
 func resourceClusterConfigTemplateImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	// The ID passed in is the UID
-	d.SetId(d.Id())
+	// Import ID format: id_or_name:context (e.g. "test-tf-template:tenant" or "699d56ee625c44429c6c8b53:tenant")
+	scope, templateID, err := ParseResourceID(d)
+	if err != nil {
+		return nil, err
+	}
+	c := getV1ClientWithResourceContext(m, scope)
 
+	// Try by UID first
+	template, err := c.GetClusterConfigTemplate(templateID)
+	if err == nil && template != nil {
+		d.SetId(template.Metadata.UID)
+		if err := d.Set("context", scope); err != nil {
+			return nil, err
+		}
+		diags := resourceClusterConfigTemplateRead(ctx, d, m)
+		if diags.HasError() {
+			return nil, diags[0].Validate()
+		}
+		return []*schema.ResourceData{d}, nil
+	}
+	if err != nil && !herr.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to retrieve cluster config template '%s': %w", templateID, err)
+	}
+
+	// Try by name
+	templateSummary, nameErr := c.GetClusterConfigTemplateByName(templateID)
+	if nameErr != nil {
+		return nil, fmt.Errorf("unable to retrieve cluster config template by name or id '%s': %w", templateID, nameErr)
+	}
+	if templateSummary == nil || templateSummary.Metadata == nil {
+		return nil, fmt.Errorf("cluster config template '%s' not found in context %s", templateID, scope)
+	}
+	templateUID := templateSummary.Metadata.UID
+	if templateUID == "" {
+		return nil, fmt.Errorf("cluster config template with name '%s' has no UID", templateID)
+	}
+
+	d.SetId(templateUID)
+	if err := d.Set("context", scope); err != nil {
+		return nil, err
+	}
 	diags := resourceClusterConfigTemplateRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, diags[0].Validate()
 	}
-
 	return []*schema.ResourceData{d}, nil
 }
 
