@@ -1022,7 +1022,10 @@ func extractManifestURL(importLink string) string {
 	return strings.TrimSpace(importLink)
 }
 
-// resourceClusterBrownfieldImport imports an existing brownfield cluster into Terraform state
+// resourceClusterBrownfieldImport imports an existing brownfield cluster into Terraform state.
+// Import ID format: id_or_name:context:cloud_type (e.g. "my-cluster:project:aws"). Uses the same
+// parser as custom cloud (ParseResourceCustomCloudImportID). Import by UID or name is supported:
+// GetCommonCluster resolves the first segment (id_or_name) by UID then by name.
 func resourceClusterBrownfieldImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	clusterID, scope, customCloudName, err := ParseResourceCustomCloudImportID(d)
 	if err != nil {
@@ -1040,15 +1043,11 @@ func resourceClusterBrownfieldImport(ctx context.Context, d *schema.ResourceData
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
 
-	// cluster profile and common default cluster attribute is get set here
 	err = flattenCommonAttributeForBrownfieldClusterImport(c, d)
 	if err != nil {
 		return nil, err
 	}
 
-	// Return the resource data. In most cases, this method is only used to
-	// import one resource at a time, so you should return the resource data
-	// in a slice with a single element.
 	return []*schema.ResourceData{d}, nil
 }
 
