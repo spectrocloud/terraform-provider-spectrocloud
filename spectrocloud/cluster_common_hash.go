@@ -260,6 +260,19 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	fmt.Fprintf(buf, "%s-", m["instance_type"].(string))
 	fmt.Fprintf(buf, "%s-", m["capacity_type"].(string))
 	fmt.Fprintf(buf, "%s-", m["max_price"].(string))
+	if val, ok := m["host_resource_group_arn"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+	if m["license_configuration_arns"] != nil {
+		arnsSet := m["license_configuration_arns"].(*schema.Set)
+		arnsList := arnsSet.List()
+		arnsListStr := make([]string, len(arnsList))
+		for i, v := range arnsList {
+			arnsListStr[i] = v.(string)
+		}
+		sort.Strings(arnsListStr)
+		fmt.Fprintf(buf, "%s-", strings.Join(arnsListStr, "-"))
+	}
 	if m["azs"] != nil {
 		azsSet := m["azs"].(*schema.Set)
 		azsList := azsSet.List()
