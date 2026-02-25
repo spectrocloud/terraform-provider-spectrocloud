@@ -161,29 +161,18 @@ func resolveProfileSource(d *schema.ResourceData) ([]interface{}, string, error)
 
 	// Fall back to cluster_profile
 	if len(clusterProfile) > 0 {
-		// Filter out zero-value entries that the TypeSet SDK materialises when a profile
-		// with variables is removed from config. The diff produces a ghost element with
-		// id="" and the old variables intact — skip those here at the source so they never
-		// reach toProfilesCommon or the PATCH API.
-		validProfiles := make([]interface{}, 0, len(clusterProfile))
+		// Fall back to cluster_profile — filter out TypeSet zero-value artefacts (empty id)
+		filtered := clusterProfile[:0]
 		for _, p := range clusterProfile {
-			if p == nil {
-				continue
+			if entry, ok := p.(map[string]interface{}); ok {
+				if id, _ := entry["id"]; id != nil && id.(string) != "" {
+					filtered = append(filtered, p)
+				}
 			}
-			entry, ok := p.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			profileID, hasID := entry["id"]
-			if !hasID || profileID == nil || profileID.(string) == "" {
-				log.Printf("resolveProfileSource: skipping cluster_profile entry with empty id (TypeSet diff artefact)")
-				continue
-			}
-			validProfiles = append(validProfiles, p)
 		}
-		if len(validProfiles) > 0 {
+		if len(filtered) > 0 {
 			log.Printf("Using profiles from cluster_profile")
-			return validProfiles, "cluster_profile", nil
+			return filtered, "cluster_profile", nil
 		}
 	}
 
