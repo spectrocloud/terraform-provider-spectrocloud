@@ -29,5 +29,11 @@ resource "spectrocloud_project" "project" {
 }
 ```
 
+Using `terraform import`, import the cloud account using the `project_name` or  `id` colon separated with `context`. For example:
+
+```console
+terraform import {{ .Name }}.{project_uid}/{project_name}
+```
+
 
 {{ .SchemaMarkdown | trimspace }}

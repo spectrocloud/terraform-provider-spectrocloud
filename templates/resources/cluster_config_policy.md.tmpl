@@ -63,5 +63,11 @@ resource "spectrocloud_cluster_config_policy" "tenant_policy" {
 }
 ```
 
+Using `terraform import`, import the cluster config policy using the `cluster_config_policy_name` or `id` colon separated with `context`. For example:
+
+```console
+terraform import {{ .Name }}.{cluster_config_policy_uid}/{cluster_config_policy_name}:project
+```
+
 {{ .SchemaMarkdown | trimspace }}
 

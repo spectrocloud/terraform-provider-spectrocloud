@@ -73,10 +73,10 @@ resource "spectrocloud_cluster_config_template" "tenant_template" {
 
 ## Import
 
-Cluster config templates can be imported using the template ID:
+Cluster config templates can be imported using the template ID or template name:
 
 ```shell
-terraform import spectrocloud_cluster_config_template.example <template-id>
+terraform import spectrocloud_cluster_config_template.example <template_uid>/<template_name>
 ```
 
 {{ .SchemaMarkdown | trimspace }}
