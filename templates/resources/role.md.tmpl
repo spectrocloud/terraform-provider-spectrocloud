@@ -45,7 +45,7 @@ resource "spectrocloud_role" "custom_role" {
 # To generate TF configuration.
   terraform plan -generate-config-out=test_role.tf
 
-# To import State file
+```bash
   terraform import spectrocloud_role.test_role {roleUID}/{role_name}
 ```
 

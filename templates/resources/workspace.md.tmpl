@@ -107,7 +107,7 @@ data "spectrocloud_backup_storage_location" "bsl" {
 # To generate TF configuration.
   terraform plan -generate-config-out=test_workspace.tf
 
-# To import State file
+```bash
   terraform import spectrocloud_user.test_workspace {workspaceUID}/{workspace_name}
 ```
 

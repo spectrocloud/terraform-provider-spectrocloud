@@ -57,8 +57,7 @@ terraform import spectrocloud_backup_storage_location.example {bsl_id}/{bsl_name
 ### Context-specific Import
 
 ```bash
-terraform import spectrocloud_backup_storage_location.example <bsl_id>/<bsl_name>:project
-terraform import spectrocloud_backup_storage_location.example <bsl_id>/<bsl_name>:tenant
+terraform import spectrocloud_backup_storage_location.example <bsl_id>/<bsl_name>: <project>/<tenant>
 ```
 
 Where:

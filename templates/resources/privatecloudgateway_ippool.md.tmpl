@@ -59,8 +59,6 @@ Private Cloud Gateway IP pools can be imported using the composite ID format: `p
 ```bash
 terraform import spectrocloud_privatecloudgateway_ippool.example <pcg_id>:<ippool_id>
 terraform import spectrocloud_privatecloudgateway_ippool.example <pcg_name>:<ippool_name>
-terraform import spectrocloud_privatecloudgateway_ippool.example <pcg_name>:<ippool_id>
-terraform import spectrocloud_privatecloudgateway_ippool.example <pcg_id>:<ippool_name>
 ```
 
 Where:
