@@ -322,8 +322,8 @@ func resourceClusterAws() *schema.Resource {
 							Type:        schema.TypeSet,
 							Optional:    true,
 							Description: "Mutually exclusive with `az_subnets`. Use `azs` for Dynamic provisioning.",
-							MinItems:    1,
-							Set:         schema.HashString,
+							// MinItems:    1,
+							Set: schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
