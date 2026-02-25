@@ -51,14 +51,14 @@ Backup Storage Locations can be imported using either a simple ID format or with
 ### Simple Import (defaults to project context)
 
 ```bash
-terraform import spectrocloud_backup_storage_location.example <bsl_id>:project
+terraform import spectrocloud_backup_storage_location.example {bsl_id}/{bsl_name}:project
 ```
 
 ### Context-specific Import
 
 ```bash
-terraform import spectrocloud_backup_storage_location.example <bsl_id>:project
-terraform import spectrocloud_backup_storage_location.example <bsl_id>:tenant
+terraform import spectrocloud_backup_storage_location.example <bsl_id>/<bsl_name>:project
+terraform import spectrocloud_backup_storage_location.example <bsl_id>/<bsl_name>:tenant
 ```
 
 Where:
