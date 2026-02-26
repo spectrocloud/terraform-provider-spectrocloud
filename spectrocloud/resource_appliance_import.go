@@ -25,7 +25,7 @@ func resourceApplianceImport(ctx context.Context, d *schema.ResourceData, m inte
 
 func GetCommonAppliance(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
 	// Appliances are project-level resources
-	c := getV1ClientWithResourceContext(m, "project")
+	c := getV1ClientWithResourceContext(m, "")
 
 	// The import ID should be the appliance UID
 	idOrName := d.Id()
