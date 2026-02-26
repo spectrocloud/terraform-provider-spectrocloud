@@ -161,8 +161,19 @@ func resolveProfileSource(d *schema.ResourceData) ([]interface{}, string, error)
 
 	// Fall back to cluster_profile
 	if len(clusterProfile) > 0 {
-		log.Printf("Using profiles from cluster_profile")
-		return clusterProfile, "cluster_profile", nil
+		// Fall back to cluster_profile — filter out TypeSet zero-value artefacts (empty id)
+		filtered := clusterProfile[:0]
+		for _, p := range clusterProfile {
+			if entry, ok := p.(map[string]interface{}); ok {
+				if id, _ := entry["id"]; id != nil && id.(string) != "" {
+					filtered = append(filtered, p)
+				}
+			}
+		}
+		if len(filtered) > 0 {
+			log.Printf("Using profiles from cluster_profile")
+			return filtered, "cluster_profile", nil
+		}
 	}
 
 	return []interface{}{}, "", nil
