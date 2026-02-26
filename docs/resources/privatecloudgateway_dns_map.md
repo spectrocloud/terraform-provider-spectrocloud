@@ -33,11 +33,14 @@ Private Cloud Gateway DNS maps can be imported using the composite ID format: `p
 
 ```bash
 terraform import spectrocloud_privatecloudgateway_dns_map.example <pcg_id>:<dns_map_id>
+terraform import spectrocloud_privatecloudgateway_dns_map.example <pcg_name>:<dns_map_name>
 ```
 
 Where:
 - `<pcg_id>` is the Private Cloud Gateway ID
 - `<dns_map_id>` is the DNS map ID
+- `<pcg_name>` is the Private Cloud Gateway name
+- `<dns_map_name>` is the DNS map name
 
 The import will automatically populate all configuration fields from the Spectro Cloud API, including the associated Private Cloud Gateway ID, search domain name, data center, and network. After import, you can run `terraform plan` to see the current configuration and make any necessary adjustments.
 
