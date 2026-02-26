@@ -28,21 +28,29 @@ func GetCommonAppliance(d *schema.ResourceData, m interface{}) (*client.V1Client
 	c := getV1ClientWithResourceContext(m, "project")
 
 	// The import ID should be the appliance UID
-	applianceUID := d.Id()
-	if applianceUID == "" {
-		return nil, fmt.Errorf("appliance import ID is required")
+	idOrName := d.Id()
+	if idOrName == "" {
+		return nil, fmt.Errorf("appliance import ID or name is required")
 	}
 
 	// Validate that the appliance exists and we can access it
-	appliance, err := c.GetAppliance(applianceUID)
+	appliance, err := c.GetAppliance(idOrName)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve appliance: %s", err)
 	}
-	if appliance == nil {
-		return nil, fmt.Errorf("appliance with ID %s not found", applianceUID)
+
+	// Fall back to lookup by name
+	if err != nil || appliance == nil {
+		appliance, err = c.GetApplianceByName(idOrName, nil, "", "", "")
+		if err != nil {
+			return nil, fmt.Errorf("unable to retrieve appliance by name '%s': %w", idOrName, err)
+		}
+		if appliance == nil {
+			return nil, fmt.Errorf("appliance with id or name '%s' not found", idOrName)
+		}
 	}
 
-	// Set the required uid field (this is what the resource uses internally)
+	// Set required uid field
 	if err := d.Set("uid", appliance.Metadata.UID); err != nil {
 		return nil, err
 	}
@@ -54,14 +62,10 @@ func GetCommonAppliance(d *schema.ResourceData, m interface{}) (*client.V1Client
 		}
 	}
 
-	// Set other optional fields with default values to prevent validation errors
 	if appliance.Spec != nil {
-		// Set wait to false as default (this is likely what users expect for import)
 		if err := d.Set("wait", false); err != nil {
 			return nil, err
 		}
-
-		// Set remote shell access if configured
 		if appliance.Spec.TunnelConfig != nil {
 			if err := d.Set("remote_shell", appliance.Spec.TunnelConfig.RemoteSSH); err != nil {
 				return nil, err
@@ -73,7 +77,7 @@ func GetCommonAppliance(d *schema.ResourceData, m interface{}) (*client.V1Client
 	}
 
 	// Set the ID to the appliance UID
-	d.SetId(applianceUID)
+	d.SetId(appliance.Metadata.UID)
 
 	return c, nil
 }
