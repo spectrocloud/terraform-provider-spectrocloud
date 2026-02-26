@@ -3,13 +3,15 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"time"
+
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"regexp"
-	"time"
+	"github.com/spectrocloud/palette-sdk-go/client/herr"
 )
 
 func resourceRegistrationToken() *schema.Resource {
@@ -243,9 +245,37 @@ func resourceRegistrationTokenDelete(ctx context.Context, d *schema.ResourceData
 }
 
 func resourceRegistrationTokenImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	c := getV1ClientWithResourceContext(m, tenantString)
+
+	idOrName := d.Id()
+	if idOrName == "" {
+		return nil, fmt.Errorf("registration token import ID or name is required")
+	}
+
+	// Try lookup by UID first
+	tokenEntity, err := c.GetRegistrationTokenByUID(idOrName)
+	if err != nil && !herr.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to retrieve registration token '%s': %w", idOrName, err)
+	}
+
+	// Fall back to lookup by name
+	if err != nil || tokenEntity == nil {
+		tokenEntity, err = c.GetRegistrationTokenByName(idOrName)
+		if err != nil {
+			return nil, fmt.Errorf("unable to retrieve registration token by name '%s': %w", idOrName, err)
+		}
+		if tokenEntity == nil {
+			return nil, fmt.Errorf("registration token with id or name '%s' not found", idOrName)
+		}
+	}
+
+	// Always set the ID to the resolved UID for stable resource identity
+	d.SetId(tokenEntity.Metadata.UID)
+
 	diags := resourceRegistrationTokenRead(ctx, d, m)
 	if diags.HasError() {
-		return nil, fmt.Errorf("could not read regiatration token for import: %v", diags)
+		return nil, fmt.Errorf("could not read registration token for import: %v", diags)
 	}
+
 	return []*schema.ResourceData{d}, nil
 }
