@@ -85,6 +85,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `cluster_group_uid` (String)
 - `cluster_profile` (Block Set) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
+- `cluster_timezone` (String) Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').
 - `context` (String) The context of the virtual cluster. Allowed values are `project` or `tenant`. Default is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
 - `description` (String) The description of the cluster. Default value is empty string.
 - `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
@@ -101,6 +102,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
 ### Read-Only
 
