@@ -136,6 +136,12 @@ func resourceClusterVirtual() *schema.Resource {
 					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
 					"Default value is `DownloadAndInstall`.",
 			},
+			"update_worker_pools_in_parallel": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -473,6 +479,7 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 						UID: hostClusterUid,
 					},
 				},
+				UpdateWorkerPoolsInParallel: d.Get("update_worker_pools_in_parallel").(bool),
 			},
 			Machinepoolconfig: nil,
 			Profiles:          profiles,
