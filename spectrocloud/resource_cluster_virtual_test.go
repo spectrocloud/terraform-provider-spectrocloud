@@ -123,6 +123,8 @@ func TestToVirtualCluster(t *testing.T) {
 								UID: "host-cluster-uid-123",
 							},
 						},
+						UpdateWorkerPoolsInParallel: true, // schema default
+						Timezone:                    "",
 					},
 					Profiles:          []*models.V1SpectroClusterProfileEntity{}, // Adjust according to expected output of toProfiles
 					Policies:          &models.V1SpectroClusterPolicies{},        // Adjust according to expected output of toPolicies
@@ -167,6 +169,8 @@ func TestToVirtualCluster(t *testing.T) {
 								UID: "host-cluster-uid-123",
 							},
 						},
+						UpdateWorkerPoolsInParallel: true, // schema default
+						Timezone:                    "",
 					},
 					Profiles:          []*models.V1SpectroClusterProfileEntity{}, // Adjust according to expected output of toProfiles
 					Policies:          &models.V1SpectroClusterPolicies{},        // Adjust according to expected output of toPolicies
