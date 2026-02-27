@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/palette-sdk-go/client/herr"
 )
 
 func resourceSSHKeyImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
@@ -26,76 +27,79 @@ func resourceSSHKeyImport(ctx context.Context, d *schema.ResourceData, m interfa
 
 func GetCommonSSHKey(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
 	// Parse the import ID which can be either:
-	// 1. Simple format: ssh_key_id (defaults to project context)
-	// 2. Context format: ssh_key_id:context (explicit context)
+	// 1. Simple format: id_or_name (defaults to project context)
+	// 2. Context format: id_or_name:context (explicit context)
+	// id_or_name can be the SSH key UID or the SSH key name (import by name).
 	importID := d.Id()
 	if importID == "" {
 		return nil, fmt.Errorf("SSH key import ID is required")
 	}
 
-	var context string
-	var sshKeyID string
+	var resCtx string
+	var idOrName string
 
-	// Check if the import ID contains context specification
 	parts := strings.Split(importID, ":")
 	if len(parts) == 2 {
-		// Format: ssh_key_id:context
-		sshKeyID = parts[0]
-		context = parts[1]
-
-		// Validate context
-		if context != "project" && context != "tenant" {
-			return nil, fmt.Errorf("invalid context '%s'. Expected 'project' or 'tenant'", context)
+		idOrName = parts[0]
+		resCtx = parts[1]
+		if resCtx != "project" && resCtx != "tenant" {
+			return nil, fmt.Errorf("invalid context '%s'. Expected 'project' or 'tenant'", resCtx)
 		}
 	} else if len(parts) == 1 {
-		// Format: ssh_key_id (default to project context)
-		context = "project"
-		sshKeyID = parts[0]
+		resCtx = "project"
+		idOrName = parts[0]
 	} else {
-		return nil, fmt.Errorf("invalid import ID format. Expected 'ssh_key_id' or 'ssh_key_id:context', got: %s", importID)
+		return nil, fmt.Errorf("invalid import ID format. Expected 'id_or_name' or 'id_or_name:context', got: %s", importID)
 	}
 
-	// Try the specified context first
-	c := getV1ClientWithResourceContext(m, context)
-	sshKey, err := c.GetSSHKey(sshKeyID)
-
+	// Try specified context first: by UID then by name
+	c := getV1ClientWithResourceContext(m, resCtx)
+	sshKey, err := c.GetSSHKey(idOrName)
+	if err != nil && !herr.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to retrieve SSH key '%s': %w", idOrName, err)
+	}
 	if err != nil || sshKey == nil {
-		// If not found in specified context, try the other context
-		otherContext := "tenant"
-		if context == "tenant" {
-			otherContext = "project"
-		}
-
-		c = getV1ClientWithResourceContext(m, otherContext)
-		sshKey, err = c.GetSSHKey(sshKeyID)
-
+		sshKey, err = c.GetSSHKeyByName(idOrName)
 		if err != nil {
-			return nil, fmt.Errorf("unable to retrieve SSH key in either project or tenant context: %s", err)
+			return nil, fmt.Errorf("unable to retrieve SSH key by name '%s': %w", idOrName, err)
 		}
 		if sshKey == nil {
-			return nil, fmt.Errorf("SSH key with ID %s not found in either project or tenant context", sshKeyID)
+			// Try other context: by UID then by name
+			otherContext := "tenant"
+			if resCtx == "tenant" {
+				otherContext = "project"
+			}
+			c = getV1ClientWithResourceContext(m, otherContext)
+			sshKey, err = c.GetSSHKey(idOrName)
+			if err != nil && !herr.IsNotFound(err) {
+				return nil, fmt.Errorf("unable to retrieve SSH key '%s': %w", idOrName, err)
+			}
+			if err == nil && sshKey != nil {
+				resCtx = otherContext
+			} else {
+				sshKey, err = c.GetSSHKeyByName(idOrName)
+				if err != nil {
+					return nil, fmt.Errorf("unable to retrieve SSH key by name '%s': %w", idOrName, err)
+				}
+				if sshKey == nil {
+					return nil, fmt.Errorf("SSH key with id or name '%s' not found in either project or tenant context", idOrName)
+				}
+				resCtx = otherContext
+			}
 		}
-
-		// Update context to the one where we found the resource
-		context = otherContext
 	}
 
-	// Set the required fields for the resource
 	if err := d.Set("name", sshKey.Metadata.Name); err != nil {
 		return nil, err
 	}
-
-	if err := d.Set("context", context); err != nil {
+	if err := d.Set("context", resCtx); err != nil {
 		return nil, err
 	}
+	// Always set ID to UID so import by name results in stable resource id
+	d.SetId(sshKey.Metadata.UID)
 
 	// Note: We don't set the 'ssh_key' field during import because it's marked as sensitive.
-	// This follows the same pattern as other sensitive fields (like credentials in cloud accounts).
 	// The user will need to provide the ssh_key value in their Terraform configuration after import.
-	// This is a security best practice to prevent sensitive data from being stored in state during import.
-
-	// Set the ID to the SSH key ID
-	d.SetId(sshKeyID)
 
 	return c, nil
 }
