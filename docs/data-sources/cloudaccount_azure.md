@@ -51,4 +51,5 @@ output "azure_account_details" {
 - `azure_client_id` (String) The unique client ID from Azure Management Portal.
 - `azure_tenant_id` (String) The tenant ID of the Azure cloud account registered in Palette.
 - `disable_properties_request` (Boolean) The status of the disable properties option.
+- `private_cloud_gateway_id` (String) The ID of the Private Cloud Gateway associated with this Azure cloud account, if any.
 - `tenant_name` (String) The name of the Azure tenant.
