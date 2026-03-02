@@ -208,10 +208,10 @@ func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interfa
 	rawIDContext := d.Id()
 	parts := strings.Split(rawIDContext, ":")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("import ID must be in the format '{projectUID/tenanatUID}:{project/tenant}'")
+		return nil, fmt.Errorf("import ID must be in the format '{UID_or_Name}:{project/tenant}'")
 	}
 
-	contextID := parts[0]
+	inputID := parts[0]
 	macrosContext := parts[1]
 	err := ValidateContext(macrosContext)
 	if err != nil {
@@ -223,6 +223,18 @@ func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interfa
 	}
 
 	c := getV1ClientWithResourceContext(m, macrosContext)
+
+	// Resolve name → UID if a name was provided instead of a UID
+	contextID, err := resolveUidorNameToContextID(m, c, inputID, macrosContext)
+	if err != nil {
+		return nil, err
+	}
+
+	// Re-acquire the client with the correct scope after name resolution.
+	// resolveUidorNameToContextID internally calls getV1ClientWithResourceContext(m, "tenant")
+	// which mutates the shared client pointer — so we must reset it back to the intended scope.
+	c = getV1ClientWithResourceContext(m, macrosContext)
+
 	var macros []*models.V1Macro
 
 	if macrosContext == "project" {
@@ -259,7 +271,59 @@ func resourceMacrosImport(ctx context.Context, d *schema.ResourceData, m interfa
 	d.SetId(macrosId)
 
 	if diags.HasError() {
-		return nil, fmt.Errorf("could not read password policy for import: %v", diags)
+		return nil, fmt.Errorf("could not read macros for import: %v", diags)
 	}
 	return []*schema.ResourceData{d}, nil
+}
+
+// resolveUidorNameToContextID resolves a name or UID to the actual context UID.
+// macrosContext is optional — if empty or not provided, defaults to "tenant".
+//
+// For project context: uses a tenant-scoped client to resolve project name → UID
+// via GetProjectUID (GetProjects is tenant-scoped and requires a tenant client).
+//
+// For tenant context: resolves org name → tenant UID via GetUsersInfo.
+func resolveUidorNameToContextID(m interface{}, c *client.V1Client, inputID string, macrosContext ...string) (string, error) {
+	ctx := "tenant"
+	if len(macrosContext) > 0 && macrosContext[0] != "" {
+		ctx = macrosContext[0]
+	}
+
+	if ctx == "project" {
+		// GetProjects is tenant-scoped — must use a tenant client to list/search projects
+		tc := getV1ClientWithResourceContext(m, "tenant")
+		// Try as UID first
+		project, err := tc.GetProject(inputID)
+		if err == nil && project != nil {
+			return inputID, nil
+		}
+		// Treat as project name — resolve to UID
+		uid, err := tc.GetProjectUID(inputID)
+		if err != nil {
+			return "", fmt.Errorf("project %q not found: %w", inputID, err)
+		}
+		return uid, nil
+	}
+
+	// Tenant context: check if inputID is already the tenant UID
+	actualTenantUID, err := c.GetTenantUID()
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve tenant UID: %w", err)
+	}
+	if inputID == actualTenantUID {
+		return inputID, nil
+	}
+
+	// Treat as org name — resolve via GetUsersInfo
+	info, err := c.GetUsersInfo()
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve tenant info: %w", err)
+	}
+	if info == nil {
+		return "", fmt.Errorf("no tenant info returned from API")
+	}
+	if info.OrgName != inputID {
+		return "", fmt.Errorf("tenant name %q does not match your authorized tenant %q", inputID, info.OrgName)
+	}
+	return info.TenantUID, nil
 }
