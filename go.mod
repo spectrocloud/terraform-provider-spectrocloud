@@ -17,7 +17,7 @@ require (
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.35.1
 	k8s.io/apimachinery v0.35.1
-	kubevirt.io/api v1.7.0
+	kubevirt.io/api v1.7.1
 	kubevirt.io/containerized-data-importer-api v1.64.0
 )
 
