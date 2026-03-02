@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -35,6 +36,11 @@ func dataSourceCloudAccountOpenStack() *schema.Resource {
 				Default:      "",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description:  "The context of the cluster. Allowed values are `project` or `tenant` or ``. ",
+			},
+			"private_cloud_gateway_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The ID of the Private Cloud Gateway associated with this OpenStack cloud account.",
 			},
 		},
 	}
@@ -97,6 +103,9 @@ func dataSourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceDa
 
 	d.SetId(account.Metadata.UID)
 	if err := d.Set("name", account.Metadata.Name); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
 		return diag.FromErr(err)
 	}
 

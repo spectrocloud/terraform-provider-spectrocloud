@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -39,6 +40,11 @@ func dataSourceCloudAccountCustom() *schema.Resource {
 				Default:      "",
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description:  "The context of the cluster. Allowed values are `project` or `tenant` or ``. ",
+			},
+			"private_cloud_gateway_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The ID of the Private Cloud Gateway associated with this custom cloud account.",
 			},
 		},
 	}
@@ -99,6 +105,9 @@ func dataSourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData,
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
+	err = d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID])
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return diags
 }

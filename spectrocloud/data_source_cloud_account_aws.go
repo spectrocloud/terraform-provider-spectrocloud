@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -41,6 +42,11 @@ func dataSourceCloudAccountAws() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
+			},
+			"private_cloud_gateway_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The ID of the Private Cloud Gateway associated with this AWS cloud account, if any.",
 			},
 		},
 	}
@@ -98,6 +104,10 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 
 	d.SetId(fAccount.Metadata.UID)
 	err = d.Set("name", fAccount.Metadata.Name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	err = d.Set("private_cloud_gateway_id", fAccount.Metadata.Annotations[OverlordUID])
 	if err != nil {
 		return diag.FromErr(err)
 	}
