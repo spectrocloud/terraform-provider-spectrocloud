@@ -105,7 +105,14 @@ func dataSourceCloudAccountOpenStackRead(_ context.Context, d *schema.ResourceDa
 	if err := d.Set("name", account.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
+
+	privateCloudGatewayID := ""
+	if account.Metadata != nil && account.Metadata.Annotations != nil {
+		if v, ok := account.Metadata.Annotations[OverlordUID]; ok {
+			privateCloudGatewayID = v
+		}
+	}
+	if err := d.Set("private_cloud_gateway_id", privateCloudGatewayID); err != nil {
 		return diag.FromErr(err)
 	}
 

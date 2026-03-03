@@ -107,8 +107,13 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = d.Set("private_cloud_gateway_id", fAccount.Metadata.Annotations[OverlordUID])
-	if err != nil {
+	privateCloudGatewayID := ""
+	if fAccount.Metadata != nil && fAccount.Metadata.Annotations != nil {
+		if v, ok := fAccount.Metadata.Annotations[OverlordUID]; ok {
+			privateCloudGatewayID = v
+		}
+	}
+	if err := d.Set("private_cloud_gateway_id", privateCloudGatewayID); err != nil {
 		return diag.FromErr(err)
 	}
 
