@@ -589,36 +589,43 @@ func resourcePlatformSettingImport(ctx context.Context, d *schema.ResourceData, 
 	if err != nil {
 		return nil, err
 	}
+
 	c := getV1ClientWithResourceContext(m, platformContext)
-	var diags diag.Diagnostics
+
+	// Resolve name → UID for both tenant and project contexts
+	resolvedID, err := resolveUidorNameToContextID(m, c, strings.TrimPrefix(uid, "platformsetting-"), platformContext)
+	if err != nil {
+		return nil, err
+	}
+
+	// Re-acquire the client after name resolution (resolveUidorNameToContextID may mutate the shared client scope)
+	c = getV1ClientWithResourceContext(m, platformContext)
 
 	if platformContext == tenantString {
-		givenTenantId := strings.TrimPrefix(uid, "platformsetting-")
 		actualTenantId, err := c.GetTenantUID()
 		if err != nil {
 			return nil, err
 		}
-		if givenTenantId != actualTenantId {
-			return nil, fmt.Errorf("tenant id is not valid with current user or invalid tenant uid provided: %v", diags)
+		if resolvedID != actualTenantId {
+			return nil, fmt.Errorf("invalid import: tenant %q does not match your authorized tenant UID %q", uid, actualTenantId)
 		}
 		if err = d.Set("context", tenantString); err != nil {
 			return nil, err
 		}
 		d.SetId(fmt.Sprintf("platformsetting-%s", actualTenantId))
 	} else {
-		givenProjectId := strings.TrimPrefix(uid, "platformsetting-")
-		actualProjectId := ProviderInitProjectUid
-		if givenProjectId != actualProjectId {
-			return nil, fmt.Errorf("project id is not valid with provider initialization: %v", diags)
+		if resolvedID != ProviderInitProjectUid {
+			return nil, fmt.Errorf("invalid import: given project %q and provider project UID %q are different — project must match the provider configuration", uid, ProviderInitProjectUid)
 		}
-		if err = d.Set("context", tenantString); err != nil {
+		if err = d.Set("context", "project"); err != nil {
 			return nil, err
 		}
-		d.SetId(fmt.Sprintf("platformsetting-%s", actualProjectId))
+		d.SetId(fmt.Sprintf("platformsetting-%s", ProviderInitProjectUid))
 	}
-	diags = resourcePlatformSettingRead(ctx, d, m)
+
+	diags := resourcePlatformSettingRead(ctx, d, m)
 	if diags.HasError() {
-		return nil, fmt.Errorf("could not read developer settings for import: %v", diags)
+		return nil, fmt.Errorf("could not read platform settings for import: %v", diags)
 	}
 	return []*schema.ResourceData{d}, nil
 }
