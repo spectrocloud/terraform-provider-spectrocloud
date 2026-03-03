@@ -41,11 +41,6 @@ func dataSourceCloudAccountCustom() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description:  "The context of the cluster. Allowed values are `project` or `tenant` or ``. ",
 			},
-			"private_cloud_gateway_id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The ID of the Private Cloud Gateway associated with this custom cloud account.",
-			},
 		},
 	}
 }
@@ -103,15 +98,6 @@ func dataSourceCloudAccountCustomRead(_ context.Context, d *schema.ResourceData,
 	d.SetId(account.Metadata.UID)
 	err = d.Set("name", account.Metadata.Name)
 	if err != nil {
-		return diag.FromErr(err)
-	}
-	privateCloudGatewayID := ""
-	if account.Metadata != nil && account.Metadata.Annotations != nil {
-		if v, ok := account.Metadata.Annotations[OverlordUID]; ok {
-			privateCloudGatewayID = v
-		}
-	}
-	if err := d.Set("private_cloud_gateway_id", privateCloudGatewayID); err != nil {
 		return diag.FromErr(err)
 	}
 	return diags

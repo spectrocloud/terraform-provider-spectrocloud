@@ -43,11 +43,6 @@ func dataSourceCloudAccountAws() *schema.Resource {
 				Computed:     true,
 				ExactlyOneOf: []string{"id", "name"},
 			},
-			"private_cloud_gateway_id": {
-				Type:        schema.TypeString,
-				Computed:    true,
-				Description: "The ID of the Private Cloud Gateway associated with this AWS cloud account, if any.",
-			},
 		},
 	}
 }
@@ -107,15 +102,5 @@ func dataSourceCloudAccountAwsRead(_ context.Context, d *schema.ResourceData, m 
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	privateCloudGatewayID := ""
-	if fAccount.Metadata != nil && fAccount.Metadata.Annotations != nil {
-		if v, ok := fAccount.Metadata.Annotations[OverlordUID]; ok {
-			privateCloudGatewayID = v
-		}
-	}
-	if err := d.Set("private_cloud_gateway_id", privateCloudGatewayID); err != nil {
-		return diag.FromErr(err)
-	}
-
 	return diags
 }
