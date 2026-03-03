@@ -112,8 +112,5 @@ func dataSourceCloudAccountApacheCloudStackRead(_ context.Context, d *schema.Res
 	if err := d.Set("private_cloud_gateway_id", privateCloudGatewayID); err != nil {
 		return diag.FromErr(err)
 	}
-	// if err := d.Set("private_cloud_gateway_id", account.Metadata.Annotations[OverlordUID]); err != nil {
-	// 	return diag.FromErr(err)
-	// }
 	return diags
 }
