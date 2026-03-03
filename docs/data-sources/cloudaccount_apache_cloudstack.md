@@ -79,3 +79,7 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
 - `id` (String) The unique ID of the Apache CloudStack cloud account. Either `id` or `name` must be provided, but not both.
 - `name` (String) The name of the Apache CloudStack cloud account. Either `id` or `name` must be provided, but not both.
 
+### Read-Only
+
+- `private_cloud_gateway_id` (String) The ID of the Private Cloud Gateway associated with this Apache CloudStack cloud account.
+
