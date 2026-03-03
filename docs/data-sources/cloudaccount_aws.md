@@ -57,7 +57,3 @@ data "spectrocloud_cloudaccount_aws" "aws_account" {
 - `depends` (String)
 - `id` (String) ID of the AWS cloud account registered in Palette.
 - `name` (String) Name of the AWS cloud account registered in Palette.
-
-### Read-Only
-
-- `private_cloud_gateway_id` (String) The ID of the Private Cloud Gateway associated with this AWS cloud account, if any.

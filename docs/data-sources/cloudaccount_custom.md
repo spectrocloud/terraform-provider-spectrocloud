@@ -24,7 +24,3 @@ description: |-
 - `context` (String) The context of the cluster. Allowed values are `project` or `tenant` or ``.
 - `id` (String) The unique identifier of the cloud account. Either `id` or `name` must be provided.
 - `name` (String) The name of the cloud account. Either `id` or `name` must be provided.
-
-### Read-Only
-
-- `private_cloud_gateway_id` (String) The ID of the Private Cloud Gateway associated with this custom cloud account.
