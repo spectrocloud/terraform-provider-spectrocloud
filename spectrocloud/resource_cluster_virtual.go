@@ -315,13 +315,85 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 		return diagnostics
 	}
 
-	return flattenCloudConfigVirtual(cluster.Spec.CloudConfigRef.UID, d, c)
+	configUID := ""
+	if cluster.Spec != nil && cluster.Spec.CloudConfigRef != nil {
+		configUID = cluster.Spec.CloudConfigRef.UID
+	}
+	if configUID != "" {
+		if diagErr := flattenCloudConfigVirtual(configUID, d, c); diagErr != nil {
+			return diagErr
+		}
+	}
+
+	// Populate cluster_profile (profile IDs + variables) for read/import
+	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	if err != nil {
+		log.Printf("[WARN] failed to flatten cluster profiles: %v", err)
+	} else if len(clusterProfiles) > 0 {
+		clusterVars, err := c.GetClusterVariables(d.Id())
+		if err != nil {
+			log.Printf("[WARN] failed to get cluster variables: %v", err)
+		} else {
+			profileVariablesMap := make(map[string]map[string]interface{})
+			for _, cv := range clusterVars {
+				if cv.ProfileUID != nil && cv.Variables != nil {
+					vars := make(map[string]interface{})
+					for _, v := range cv.Variables {
+						if v.Name != nil && v.Value != "" {
+							vars[*v.Name] = v.Value
+						}
+					}
+					if len(vars) > 0 {
+						profileVariablesMap[*cv.ProfileUID] = vars
+					}
+				}
+			}
+			for i := range clusterProfiles {
+				p := clusterProfiles[i].(map[string]interface{})
+				if uid, ok := p["id"].(string); ok && uid != "" {
+					if vars, has := profileVariablesMap[uid]; has {
+						p["variables"] = vars
+					}
+				}
+			}
+		}
+		if err := d.Set("cluster_profile", clusterProfiles); err != nil {
+			log.Printf("[WARN] failed to set cluster_profile: %v", err)
+		}
+	}
+
+	return diag.Diagnostics{}
 }
 
 func flattenCloudConfigVirtual(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	err := d.Set("cloud_config_id", configUID)
-	if err != nil {
+	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
+	}
+
+	// Populate resources (cluster size) from virtual cloud config for read/import
+	config, err := c.GetCloudConfigVirtual(configUID)
+	if err != nil {
+		log.Printf("[WARN] failed to get virtual cloud config for resources: %v", err)
+		return diag.Diagnostics{}
+	}
+	if config != nil && config.Spec != nil && len(config.Spec.MachinePoolConfig) > 0 {
+		pool := config.Spec.MachinePoolConfig[0]
+		if pool != nil && pool.InstanceType != nil {
+			inst := pool.InstanceType
+			resources := []interface{}{
+				map[string]interface{}{
+					"max_cpu":           int(inst.MaxCPU),
+					"max_mem_in_mb":     int(inst.MaxMemInMiB),
+					"max_storage_in_gb": int(inst.MaxStorageGiB),
+					"min_cpu":           int(inst.MinCPU),
+					"min_mem_in_mb":     int(inst.MinMemInMiB),
+					"min_storage_in_gb": int(inst.MinStorageGiB),
+				},
+			}
+			if err := d.Set("resources", resources); err != nil {
+				log.Printf("[WARN] failed to set resources: %v", err)
+			}
+		}
 	}
 
 	return diag.Diagnostics{}
