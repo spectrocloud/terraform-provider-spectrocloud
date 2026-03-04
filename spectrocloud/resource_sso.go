@@ -323,30 +323,41 @@ func resourceSSOImport(ctx context.Context, d *schema.ResourceData, m interface{
 	ssoIdParts := strings.Split(d.Id(), ":")
 
 	if len(ssoIdParts) != 2 || (ssoIdParts[1] != "saml" && ssoIdParts[1] != "oidc") {
-		return nil, fmt.Errorf("invalid sso type provided, kindly use saml/oidc")
+		return nil, fmt.Errorf("invalid import ID format: expected '{tenantUID_or_orgName}:{saml|oidc}', got %q", d.Id())
 	}
 
-	givenTenantId, ssoType := ssoIdParts[0], ssoIdParts[1]
+	inputID, ssoType := ssoIdParts[0], ssoIdParts[1]
+
+	// Resolve org name → tenant UID if a name was provided instead of a UID
+	resolvedTenantUID, err := resolveUidorNameToContextID(m, c, inputID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Re-acquire the client after name resolution (resolveUidorNameToContextID may mutate the shared client scope)
+	c = getV1ClientWithResourceContext(m, tenantString)
 
 	actualTenantId, err := c.GetTenantUID()
 	if err != nil {
 		return nil, err
 	}
-
-	if givenTenantId != actualTenantId {
-		return nil, fmt.Errorf("tenant id is not valid with current user or invalid tenant uid provided")
+	if resolvedTenantUID != actualTenantId {
+		return nil, fmt.Errorf("invalid import: tenant %q does not match your authorized tenant UID %q", inputID, actualTenantId)
 	}
 
 	if err := d.Set("sso_auth_type", ssoType); err != nil {
 		return nil, err
 	}
 
+	// Set the canonical ID so resourceSSORead passes its singleton check
+	d.SetId("sso_settings")
+
 	diags := resourceSSORead(ctx, d, m)
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read sso settings for import: %v", diags)
 	}
 
-	domainsEntity, err := c.GetDomains(givenTenantId)
+	domainsEntity, err := c.GetDomains(resolvedTenantUID)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +365,7 @@ func resourceSSOImport(ctx context.Context, d *schema.ResourceData, m interface{
 		return nil, err
 	}
 
-	authEntity, err := c.GetProviders(givenTenantId)
+	authEntity, err := c.GetProviders(resolvedTenantUID)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +373,6 @@ func resourceSSOImport(ctx context.Context, d *schema.ResourceData, m interface{
 		return nil, err
 	}
 
-	d.SetId("sso_settings")
 	return []*schema.ResourceData{d}, nil
 }
 

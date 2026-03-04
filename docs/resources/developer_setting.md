@@ -26,11 +26,24 @@ resource "spectrocloud_developer_setting" "dev_setting" {
   hide_system_cluster_group = false
 }
 
-## import existing developer settings
-#import {
-#  to = spectrocloud_developer_setting.dev_setting
-#  id = "{tenantUID}" // tenant-uid
-#}
+
+## import existing developer setting## Import
+
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+to import the resource spectrocloud_developer_setting by using its `id` with the Palette `context` separated by a colon. For example:
+
+```terraform
+import {
+  to = spectrocloud_developer_setting.dev_setting
+  id = "{tenantUID}" // tenant-uid
+}
+```
+
+Using `terraform import`, import the cluster group using the `tenant_uid` or `tenant_name` colon separated with `context`. For example:
+
+```console
+terraform import spectrocloud_developer_setting.example tenant_uid/tenant_name
+```
 
 ```
 

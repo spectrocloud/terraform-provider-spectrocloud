@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -122,6 +123,5 @@ func dataSourceCloudAccountAzureRead(_ context.Context, d *schema.ResourceData, 
 	if err := d.Set("azure_client_id", *account.Spec.ClientID); err != nil {
 		return diag.FromErr(err)
 	}
-
 	return diags
 }

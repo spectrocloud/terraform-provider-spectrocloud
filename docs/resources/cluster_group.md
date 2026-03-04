@@ -52,10 +52,10 @@ import {
 }
 ```
 
-Using `terraform import`, import the cluster group using the `id` colon separated with `context`. For example:
+Using `terraform import`, import the cluster group using the `cluster_group_uid` or `cluster_group_name` colon separated with `context`. For example:
 
 ```console
-terraform import spectrocloud_cluster_group.example example_id:project
+terraform import spectrocloud_cluster_group.example cluster_group_uid/cluster_group_name:<project|tenant>
 ```
 
 Refer to the [Import section](/docs#import) to learn more.

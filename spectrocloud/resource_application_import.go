@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
 
@@ -14,7 +15,6 @@ func resourceApplicationImport(ctx context.Context, d *schema.ResourceData, m in
 		return nil, err
 	}
 
-	// Read all application data to populate the state
 	diags := resourceApplicationRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read application for import: %v", diags)
@@ -24,58 +24,83 @@ func resourceApplicationImport(ctx context.Context, d *schema.ResourceData, m in
 }
 
 func GetCommonApplication(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
-	// Applications can work in both tenant and project context, so we'll try project first
-	applicationID := d.Id()
-	if applicationID == "" {
-		return nil, fmt.Errorf("application ID is required for import")
+	idOrName := d.Id()
+	if idOrName == "" {
+		return nil, fmt.Errorf("application ID or name is required for import")
 	}
 
-	// Try project context first
-	c := getV1ClientWithResourceContext(m, "project")
+	// Try project context first, then tenant — works for both UID and name lookups
+	for _, resourceContext := range []string{"project", "tenant"} {
+		c := getV1ClientWithResourceContext(m, resourceContext)
 
-	// Use the ID to retrieve the application data from the API
-	appDeployment, err := c.GetApplication(applicationID)
-	if err != nil {
-		// If not found in project context, try tenant context
-		c = getV1ClientWithResourceContext(m, "tenant")
-		appDeployment, err = c.GetApplication(applicationID)
+		// 1) Try as UID
+		app, err := c.GetApplication(idOrName)
+		if err == nil && app != nil {
+			return setApplicationImportState(d, app, resourceContext, c)
+		}
+
+		// 2) Try as name via search
+		app, err = getApplicationByName(c, idOrName)
 		if err != nil {
-			return nil, fmt.Errorf("unable to retrieve application data in either project or tenant context: %s", err)
+			continue
+		}
+		if app != nil {
+			return setApplicationImportState(d, app, resourceContext, c)
 		}
 	}
 
-	if appDeployment == nil {
-		return nil, fmt.Errorf("application with ID %s not found", applicationID)
-	}
+	return nil, fmt.Errorf("application %q not found in project or tenant context", idOrName)
+}
 
-	// Set the application name from the retrieved application
-	if err := d.Set("name", appDeployment.Metadata.Name); err != nil {
+func getApplicationByName(c *client.V1Client, name string) (*models.V1AppDeployment, error) {
+	ignoreCase := false
+	summaries, err := c.SearchAppDeploymentSummaries(
+		&models.V1AppDeploymentFilterSpec{
+			AppDeploymentName: &models.V1FilterString{
+				Eq:         &name,
+				IgnoreCase: &ignoreCase,
+			},
+		},
+		nil,
+	)
+	if err != nil {
 		return nil, err
 	}
 
-	// Set placeholder values for required fields to prevent validation errors during import
-	// These will be properly populated by the read function
-	if appDeployment.Spec != nil && appDeployment.Spec.Profile != nil && appDeployment.Spec.Profile.Metadata != nil {
-		if err := d.Set("application_profile_uid", appDeployment.Spec.Profile.Metadata.UID); err != nil {
-			return nil, err
+	var uid string
+	for _, s := range summaries {
+		if s != nil && s.Metadata != nil && s.Metadata.Name == name {
+			if uid != "" {
+				return nil, fmt.Errorf("multiple applications found with name %q; use UID to import instead", name)
+			}
+			uid = s.Metadata.UID
 		}
 	}
 
-	// Set placeholder config with required cluster_context
-	// The resource context will be determined and set properly in the read function
-	if appDeployment.Spec != nil && appDeployment.Spec.Config != nil && appDeployment.Spec.Config.Target != nil {
-		config := make(map[string]interface{})
-		// Default to project context, will be adjusted in read function if needed
-		config["cluster_context"] = "project"
+	if uid == "" {
+		return nil, nil
+	}
+	return c.GetApplication(uid)
+}
 
+func setApplicationImportState(d *schema.ResourceData, app *models.V1AppDeployment, resourceContext string, c *client.V1Client) (*client.V1Client, error) {
+	if err := d.Set("name", app.Metadata.Name); err != nil {
+		return nil, err
+	}
+	if app.Spec != nil && app.Spec.Profile != nil && app.Spec.Profile.Metadata != nil {
+		if err := d.Set("application_profile_uid", app.Spec.Profile.Metadata.UID); err != nil {
+			return nil, err
+		}
+	}
+	if app.Spec != nil && app.Spec.Config != nil && app.Spec.Config.Target != nil {
+		config := map[string]interface{}{"cluster_context": resourceContext}
 		if err := d.Set("config", []interface{}{config}); err != nil {
 			return nil, err
 		}
 	}
+	// Set placeholder config with required cluster_context
+	// The resource context will be determined and set properly in the read function
 
-	// Set the ID of the resource in the state. This ID is used to track the
-	// resource and must be set in the state during the import.
-	d.SetId(appDeployment.Metadata.UID)
-
+	d.SetId(app.Metadata.UID)
 	return c, nil
 }
