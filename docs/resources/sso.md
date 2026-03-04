@@ -115,10 +115,13 @@ Read-Only:
 
 Required:
 
-- `email` (String) The name of the claim that returns the user's email address from the identity provider.
 - `first_name` (String) The name of the claim that returns the user's first name from the identity provider.
 - `last_name` (String) The name of the claim that returns the user's last name from the identity provider.
 - `spectro_team` (String) The name of the claim that returns the user's group memberships from the Identity Provider. The values of this claim will map to SpectroCloud teams.
+
+Optional:
+
+- `email` (String) The name of the claim that returns the user's email address from the identity provider.
 
 
 
