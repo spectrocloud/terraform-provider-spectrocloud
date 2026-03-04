@@ -321,15 +321,28 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 	}
 	if configUID != "" {
 		if diagErr := flattenCloudConfigVirtual(configUID, d, c); diagErr != nil {
-			return diagErr
+			log.Printf("[WARN] failed to flatten virtual cloud config: %v", diagErr)
+			// return diagErr
 		}
 	}
 
-	// Populate cluster_profile (profile IDs + variables) for read/import
+	// Populate cluster_profile (profile IDs + variables) for read/import — same pattern as resources
 	clusterProfiles, err := flattenClusterProfileForImport(c, d)
 	if err != nil {
 		log.Printf("[WARN] failed to flatten cluster profiles: %v", err)
-	} else if len(clusterProfiles) > 0 {
+		clusterProfiles = make([]interface{}, 0)
+	}
+	// Virtual cluster: when Spec.ClusterProfileTemplates is empty, use Status.Packs (like resources use GetCloudConfigVirtual)
+	if len(clusterProfiles) == 0 && cluster.Status != nil && len(cluster.Status.Packs) > 0 {
+		seen := make(map[string]bool)
+		for _, p := range cluster.Status.Packs {
+			if p != nil && p.ProfileUID != "" && !seen[p.ProfileUID] {
+				seen[p.ProfileUID] = true
+				clusterProfiles = append(clusterProfiles, map[string]interface{}{"id": p.ProfileUID})
+			}
+		}
+	}
+	if len(clusterProfiles) > 0 {
 		clusterVars, err := c.GetClusterVariables(d.Id())
 		if err != nil {
 			log.Printf("[WARN] failed to get cluster variables: %v", err)
@@ -357,9 +370,9 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 				}
 			}
 		}
-		if err := d.Set("cluster_profile", clusterProfiles); err != nil {
-			log.Printf("[WARN] failed to set cluster_profile: %v", err)
-		}
+	}
+	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
+		log.Printf("[WARN] failed to set cluster_profile: %v", err)
 	}
 
 	return diag.Diagnostics{}
