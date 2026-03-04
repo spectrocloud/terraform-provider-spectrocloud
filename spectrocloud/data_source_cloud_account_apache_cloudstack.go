@@ -36,6 +36,11 @@ func dataSourceCloudAccountApacheCloudStack() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"", "project", "tenant"}, false),
 				Description:  "The context of the account. Allowed values are `project` or `tenant` or ``. ",
 			},
+			"private_cloud_gateway_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The ID of the Private Cloud Gateway associated with this Apache CloudStack cloud account.",
+			},
 		},
 	}
 }
@@ -98,6 +103,14 @@ func dataSourceCloudAccountApacheCloudStackRead(_ context.Context, d *schema.Res
 	if err := d.Set("name", account.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
-
+	privateCloudGatewayID := ""
+	if account.Metadata != nil && account.Metadata.Annotations != nil {
+		if v, ok := account.Metadata.Annotations[OverlordUID]; ok {
+			privateCloudGatewayID = v
+		}
+	}
+	if err := d.Set("private_cloud_gateway_id", privateCloudGatewayID); err != nil {
+		return diag.FromErr(err)
+	}
 	return diags
 }

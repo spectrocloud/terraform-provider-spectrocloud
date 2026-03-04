@@ -25,3 +25,4 @@ description: |-
 
 - `maas_api_endpoint` (String) The API endpoint of the MaaS account. This value is computed based on the cloud account's configuration and is used for interaction with the MaaS service.
 - `maas_api_key` (String) The API key associated with the MaaS account. This is used to authenticate API requests to the MaaS service and is computed from the cloud account's credentials.
+- `private_cloud_gateway_id` (String) The ID of the Private Cloud Gateway associated with this MaaS cloud account.
