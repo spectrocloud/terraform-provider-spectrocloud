@@ -627,12 +627,6 @@ func flattenClusterProfileForImport(c *client.V1Client, d *schema.ResourceData) 
 	if err != nil {
 		return clusterProfiles, err
 	}
-	// if cluster == nil || cluster.Spec == nil {
-	// 	return clusterProfiles, nil
-	// }
-	// if cluster.Spec.ClusterProfileTemplates == nil {
-	// 	return clusterProfiles, nil
-	// }
 
 	for _, profileTemplate := range cluster.Spec.ClusterProfileTemplates {
 		profile := make(map[string]interface{})
