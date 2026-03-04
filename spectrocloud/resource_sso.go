@@ -196,16 +196,8 @@ func resourceSSO() *schema.Resource {
 									},
 									"email": {
 										Type:        schema.TypeString,
-										Required:    true,
+										Optional:    true,
 										Description: "The name of the claim that returns the user's email address from the identity provider.",
-										ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-											v := val.(string)
-											if v == "" {
-												errs = append(errs, fmt.Errorf("%q must not be empty", key))
-												return
-											}
-											return
-										},
 									},
 									"spectro_team": {
 										Type:        schema.TypeString,
