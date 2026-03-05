@@ -351,6 +351,11 @@ func resourcePlatformSettingRead(ctx context.Context, d *schema.ResourceData, m 
 					return nil
 				}
 			}
+			// enable auto remediation is project context only attribute to make schema compatible with tenant context we need to set it to true always
+			err := d.Set("enable_auto_remediation", true)
+			if err != nil {
+				return nil
+			}
 		}
 	} else {
 		// get cluster_auto_remediation project
