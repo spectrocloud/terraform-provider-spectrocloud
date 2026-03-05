@@ -62,8 +62,7 @@ func dataSourceCloudAccountApacheCloudStackRead(_ context.Context, d *schema.Res
 			account = a
 			break
 		} else if v, ok := d.GetOk("name"); ok && v.(string) == a.Metadata.Name {
-			account = a
-			break
+			filteredAccounts = append(filteredAccounts, a)
 		}
 	}
 
