@@ -20,3 +20,7 @@ description: |-
 - `context` (String) The context of the cluster. Allowed values are `project` or `tenant` or ``.
 - `id` (String) The unique ID of the OpenStack cloud account. Either `id` or `name` must be provided, but not both.
 - `name` (String) The name of the OpenStack cloud account. Either `id` or `name` must be provided, but not both.
+
+### Read-Only
+
+- `private_cloud_gateway_id` (String) The ID of the Private Cloud Gateway associated with this OpenStack cloud account.
