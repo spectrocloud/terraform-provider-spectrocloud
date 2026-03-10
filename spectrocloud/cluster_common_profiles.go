@@ -354,13 +354,14 @@ func setReplaceWithProfileForExisting(c *client.V1Client, cluster *models.V1Spec
 		}
 		// Check if a profile with the same name is already attached to the cluster
 		existingUID := findAttachedProfileByName(cluster, clusterProfile.Metadata.Name)
-		// Infra swap: if no same-name match but this profile is infra, replace the existing attached infra (different name)
+		// (1) Different name, same type (Infra or Full): if no same-name match, replace existing attached profile of that type via PATCH
 		if existingUID == "" && clusterProfile.Spec != nil {
 			var profileType string
 			if clusterProfile.Spec.Published != nil {
 				profileType = clusterProfile.Spec.Published.Type
 			}
-			if profileType == "infra" {
+			// Infra mode and Full mode (cluster): replace-by-type so PATCH works instead of delete
+			if profileType == "infra" || profileType == "cluster" || profileType == "system" {
 				existingUID = findAttachedProfileByType(cluster, "infra")
 				if existingUID != "" {
 					log.Printf("Profile %s (name: %s) is infra - will replace existing infra %s via PATCH",
@@ -463,9 +464,15 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
 				}
 				if clusterProfile != nil && clusterProfile.Metadata != nil {
 					profileName := clusterProfile.Metadata.Name
+					profileType := ""
+					if clusterProfile.Spec.Published != nil {
+						profileType = clusterProfile.Spec.Published.Type
+					}
 					if !newProfileNames[profileName] {
-						if clusterProfile.Spec.Published != nil && clusterProfile.Spec.Published.Type == "infra" {
-							log.Printf("Profile %s (name: %s) is infra - skip delete, will be replaced via PATCH", id, profileName)
+						// Only add-on profiles can be deleted via DeleteAddonDeployment. Infra/cluster/system
+						// must be replaced via PATCH (setReplaceWithProfileForExisting); deleting them returns MissingClusterInfraProfile.
+						if profileType != "add-on" {
+							log.Printf("Profile %s (name: %s) is type %q - skip delete, will be replaced via PATCH", id, profileName, profileType)
 							continue
 						}
 						// This profile name is not in the new state - it's a real deletion
