@@ -360,8 +360,8 @@ func setReplaceWithProfileForExisting(c *client.V1Client, cluster *models.V1Spec
 			if clusterProfile.Spec.Published != nil {
 				profileType = clusterProfile.Spec.Published.Type
 			}
-			if profileType == "infra" {
-				existingUID = findAttachedProfileByType(cluster, "infra")
+			if profileType != "add-on" {
+				existingUID = findAttachedProfileByType(cluster, profileType)
 				if existingUID != "" {
 					log.Printf("Profile %s (name: %s) is infra - will replace existing infra %s via PATCH",
 						profile.UID, clusterProfile.Metadata.Name, existingUID)
