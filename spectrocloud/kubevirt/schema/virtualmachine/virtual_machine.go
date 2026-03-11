@@ -3,10 +3,14 @@ package virtualmachine
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/convert"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
+
+	// "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachine"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachineinstance"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
-
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
 
@@ -465,6 +469,153 @@ func VirtualMachineFields() map[string]*schema.Schema {
 
 		"status": virtualMachineStatusSchema(),
 	}
+}
+
+// ResourceDataToHapiVmMeta builds Spectro HAPI VM object metadata from Terraform resource data only (HAPI model, no KubeVirt/Kubernetes types).
+func ResourceDataToHapiVmMeta(d *schema.ResourceData) *models.V1VMObjectMeta {
+	out := &models.V1VMObjectMeta{}
+	if v, ok := d.GetOk("name"); ok {
+		out.Name = v.(string)
+	}
+	if v, ok := d.GetOk("namespace"); ok {
+		out.Namespace = v.(string)
+	} else {
+		out.Namespace = "default"
+	}
+	if v, ok := d.GetOk("labels"); ok && len(v.(map[string]interface{})) > 0 {
+		out.Labels = utils.ExpandStringMap(v.(map[string]interface{}))
+	}
+	if v, ok := d.GetOk("annotations"); ok && len(v.(map[string]interface{})) > 0 {
+		out.Annotations = utils.ExpandStringMap(v.(map[string]interface{}))
+	}
+	if v, ok := d.GetOk("generate_name"); ok {
+		out.GenerateName = v.(string)
+	}
+	if v, ok := d.GetOk("resource_version"); ok {
+		out.ResourceVersion = v.(string)
+	}
+	if v, ok := d.GetOk("uid"); ok {
+		out.UID = v.(string)
+	}
+	if v, ok := d.GetOk("generation"); ok {
+		out.Generation = int64(v.(int))
+	}
+	return out
+}
+
+// ResourceDataToHapiVm builds a Spectro HAPI VM directly from Terraform resource data using only HAPI model types (no KubeVirt VM in between).
+func ResourceDataToHapiVm(d *schema.ResourceData) (*models.V1ClusterVirtualMachine, error) {
+	hapiSpec, err := ExpandVirtualMachineSpecToHapi(d)
+	if err != nil {
+		return nil, err
+	}
+	var statusList []interface{}
+	if v := d.Get("status"); v != nil {
+		if sl, ok := v.([]interface{}); ok {
+			statusList = sl
+		}
+	}
+	hapiStatus, err := expandVirtualMachineStatusToHapi(statusList)
+	if err != nil {
+		return nil, err
+	}
+	hapiVM := &models.V1ClusterVirtualMachine{
+		Metadata: ResourceDataToHapiVmMeta(d),
+		Spec:     hapiSpec,
+		Status:   hapiStatus,
+	}
+	if v, ok := d.GetOk("run_on_launch"); ok {
+		if !v.(bool) {
+			hapiVM.Spec.RunStrategy = "Manual"
+		} else {
+			hapiVM.Spec.Running = v.(bool)
+		}
+	}
+	return hapiVM, nil
+}
+
+// ExpandVirtualMachineSpecToHapi returns HAPI VM spec from Terraform resource data (HAPI model only; KubeVirt used only internally for conversion).
+func ExpandVirtualMachineSpecToHapi(d *schema.ResourceData) (*models.V1ClusterVirtualMachineSpec, error) {
+	spec, err := ExpandVirtualMachineSpec(d)
+	if err != nil {
+		return nil, err
+	}
+	return convert.ToHapiVmSpecM(spec)
+}
+
+// expandVirtualMachineStatusToHapi builds HAPI VM status from Terraform status list using only HAPI models (no KubeVirt types).
+func expandVirtualMachineStatusToHapi(virtualMachineStatus []interface{}) (*models.V1ClusterVirtualMachineStatus, error) {
+	out := &models.V1ClusterVirtualMachineStatus{}
+	if len(virtualMachineStatus) == 0 || virtualMachineStatus[0] == nil {
+		return out, nil
+	}
+	in := virtualMachineStatus[0].(map[string]interface{})
+	if v, ok := in["created"].(bool); ok {
+		out.Created = v
+	}
+	if v, ok := in["ready"].(bool); ok {
+		out.Ready = v
+	}
+	if v, ok := in["conditions"].([]interface{}); ok {
+		out.Conditions = expandConditionsToHapi(v)
+	}
+	if v, ok := in["state_change_requests"].([]interface{}); ok {
+		out.StateChangeRequests = expandStateChangeRequestsToHapi(v)
+	}
+	return out, nil
+}
+
+func expandConditionsToHapi(conditions []interface{}) []*models.V1VMVirtualMachineCondition {
+	if len(conditions) == 0 {
+		return nil
+	}
+	result := make([]*models.V1VMVirtualMachineCondition, 0, len(conditions))
+	for _, c := range conditions {
+		if c == nil {
+			continue
+		}
+		m := c.(map[string]interface{})
+		cond := &models.V1VMVirtualMachineCondition{}
+		if v, ok := m["type"].(string); ok {
+			cond.Type = types.Ptr(v)
+		}
+		if v, ok := m["status"].(string); ok {
+			cond.Status = types.Ptr(v)
+		}
+		if v, ok := m["reason"].(string); ok {
+			cond.Reason = v
+		}
+		if v, ok := m["message"].(string); ok {
+			cond.Message = v
+		}
+		result = append(result, cond)
+	}
+	return result
+}
+
+func expandStateChangeRequestsToHapi(requests []interface{}) []*models.V1VMVirtualMachineStateChangeRequest {
+	if len(requests) == 0 {
+		return nil
+	}
+	result := make([]*models.V1VMVirtualMachineStateChangeRequest, 0, len(requests))
+	for _, r := range requests {
+		if r == nil {
+			continue
+		}
+		m := r.(map[string]interface{})
+		req := &models.V1VMVirtualMachineStateChangeRequest{}
+		if v, ok := m["action"].(string); ok {
+			req.Action = v
+		}
+		if v, ok := m["data"].(map[string]interface{}); ok && len(v) > 0 {
+			req.Data = utils.ExpandStringMap(v)
+		}
+		if v, ok := m["uid"].(string); ok {
+			req.UID = types.Ptr(v)
+		}
+		result = append(result, req)
+	}
+	return result
 }
 
 func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.VirtualMachine, error) {

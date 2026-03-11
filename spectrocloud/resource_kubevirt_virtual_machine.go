@@ -33,6 +33,7 @@ func resourceKubevirtVirtualMachine() *schema.Resource {
 		Schema: virtualmachine.VirtualMachineFields(),
 	}
 }
+
 func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	ClusterContext := d.Get("cluster_context").(string)
 	c := getV1ClientWithResourceContext(m, ClusterContext)
