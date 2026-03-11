@@ -464,11 +464,15 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
 				if clusterProfile != nil && clusterProfile.Metadata != nil {
 					profileName := clusterProfile.Metadata.Name
 					if !newProfileNames[profileName] {
-						if clusterProfile.Spec.Published != nil && clusterProfile.Spec.Published.Type == "infra" {
-							log.Printf("Profile %s (name: %s) is infra - skip delete, will be replaced via PATCH", id, profileName)
+						profileType := ""
+						if clusterProfile.Spec.Published != nil {
+							profileType = clusterProfile.Spec.Published.Type
+						}
+						if profileType != "add-on" {
+							log.Printf("Profile %s (name: %s) is type %q - skip delete, only add-on profiles are eligible for delete; will be replaced via PATCH", id, profileName, profileType)
 							continue
 						}
-						// This profile name is not in the new state - it's a real deletion
+						// This profile name is not in the new state and is add-on - it's a real deletion
 						log.Printf("Profile %s (name: %s) will be deleted (name removed from cluster_profile)", id, profileName)
 						profilesToDelete = append(profilesToDelete, id)
 					} else {
