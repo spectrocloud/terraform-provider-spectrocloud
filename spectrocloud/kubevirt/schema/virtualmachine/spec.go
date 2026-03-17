@@ -2,18 +2,18 @@ package virtualmachine
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
+	// kubevirtapiv1 "kubevirt.io/api/core/v1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachineinstance"
 )
 
-func ExpandVirtualMachineSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineSpec, error) {
-	result := kubevirtapiv1.VirtualMachineSpec{}
+func ExpandVirtualMachineSpec(d *schema.ResourceData) (*models.V1ClusterVirtualMachineSpec, error) {
+	result := &models.V1ClusterVirtualMachineSpec{}
 
 	if v, ok := d.GetOk("run_strategy"); ok {
 		if v.(string) != "" {
-			runStrategy := kubevirtapiv1.VirtualMachineRunStrategy(v.(string))
-			result.RunStrategy = &runStrategy
+			result.RunStrategy = v.(string)
 		}
 	}
 

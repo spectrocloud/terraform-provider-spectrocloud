@@ -9,12 +9,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/common"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
-func ExpandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) {
-	result := kubevirtapiv1.DomainSpec{}
+func ExpandDomainSpec(d *schema.ResourceData) (*models.V1VMDomainSpec, error) {
+	result := &models.V1VMDomainSpec{}
 
 	if v, ok := d.GetOk("resources"); ok {
 		resources, err := expandResources(v.([]interface{}))
@@ -60,8 +61,8 @@ func ExpandDomainSpec(d *schema.ResourceData) (kubevirtapiv1.DomainSpec, error) 
 	return result, nil
 }
 
-func expandResources(resources []interface{}) (kubevirtapiv1.ResourceRequirements, error) {
-	result := kubevirtapiv1.ResourceRequirements{}
+func expandResources(resources []interface{}) (*models.V1VMResourceRequirements, error) {
+	result := &models.V1VMResourceRequirements{}
 
 	if len(resources) == 0 || resources[0] == nil {
 		return result, nil

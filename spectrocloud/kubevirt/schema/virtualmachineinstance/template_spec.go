@@ -2,15 +2,14 @@ package virtualmachineinstance
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	// kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
 
-func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*kubevirtapiv1.VirtualMachineInstanceTemplateSpec, error) {
-	result := &kubevirtapiv1.VirtualMachineInstanceTemplateSpec{}
-
-	// we have removed metadata for template hence set empty metadata object (TBD)***
-	result.ObjectMeta = metav1.ObjectMeta{}
+func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*models.V1VMVirtualMachineInstanceTemplateSpec, error) {
+	result := &models.V1VMVirtualMachineInstanceTemplateSpec{}
+	// Template metadata not used (removed for template).
+	result.Metadata = nil
 
 	if spec, err := expandVirtualMachineInstanceSpec(d); err == nil {
 		result.Spec = spec

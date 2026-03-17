@@ -3,15 +3,17 @@ package virtualmachineinstance
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	k8sv1 "k8s.io/api/core/v1"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
+	// kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
-func expandVirtualMachineInstanceSpec(d *schema.ResourceData) (kubevirtapiv1.VirtualMachineInstanceSpec, error) {
-	result := kubevirtapiv1.VirtualMachineInstanceSpec{}
+func expandVirtualMachineInstanceSpec(d *schema.ResourceData) (*models.V1VMVirtualMachineInstanceSpec, error) {
+	result := &models.V1VMVirtualMachineInstanceSpec{}
 
 	if v, ok := d.GetOk("priority_class_name"); ok {
 		result.PriorityClassName = v.(string)

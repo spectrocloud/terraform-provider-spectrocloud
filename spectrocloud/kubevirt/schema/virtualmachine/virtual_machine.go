@@ -3,11 +3,11 @@ package virtualmachine
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachineinstance"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
-
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
+	// kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
 
 func VirtualMachineFields() map[string]*schema.Schema {
@@ -467,10 +467,19 @@ func VirtualMachineFields() map[string]*schema.Schema {
 	}
 }
 
-func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.VirtualMachine, error) {
-	result := &kubevirtapiv1.VirtualMachine{}
+func FromResourceData(resourceData *schema.ResourceData) (*models.V1ClusterVirtualMachine, error) {
+	result := &models.V1ClusterVirtualMachine{}
 
-	result.ObjectMeta = k8s.ConvertToBasicMetadata(resourceData)
+	// result.ObjectMeta = k8s.ConvertToBasicMetadata(resourceData)
+	meta := k8s.ConvertToBasicMetadata(resourceData)
+	result.Metadata = &models.V1VMObjectMeta{
+		Name:            meta.Name,
+		Namespace:       meta.Namespace,
+		GenerateName:    meta.GenerateName,
+		Labels:          meta.Labels,
+		Annotations:     meta.Annotations,
+		ResourceVersion: meta.ResourceVersion,
+	}
 	spec, err := ExpandVirtualMachineSpec(resourceData)
 	if err != nil {
 		return result, err
