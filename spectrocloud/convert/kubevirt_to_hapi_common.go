@@ -7,46 +7,45 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
-func ToHapiVm(vm *kubevirtapiv1.VirtualMachine) (*models.V1ClusterVirtualMachine, error) {
-	var GracePeriodSeconds int64
-	if vm.DeletionGracePeriodSeconds != nil {
-		GracePeriodSeconds = *vm.DeletionGracePeriodSeconds
-	}
+// func ToHapiVm(vm *kubevirtapiv1.VirtualMachine) (*models.V1ClusterVirtualMachine, error) {
+// 	var GracePeriodSeconds int64
+// 	if vm.DeletionGracePeriodSeconds != nil {
+// 		GracePeriodSeconds = *vm.DeletionGracePeriodSeconds
+// 	}
 
-	Spec, err := ToHapiVmSpecM(vm.Spec)
-	if err != nil {
-		return nil, err
-	}
-	Status, err := ToHapiVmStatusM(vm.Status)
-	if err != nil {
-		return nil, err
-	}
+// 	Spec, err := ToHapiVmSpecM(vm.Spec)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	Status, err := ToHapiVmStatusM(vm.Status)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	hapiVM := &models.V1ClusterVirtualMachine{
-		Metadata: &models.V1VMObjectMeta{
-			Annotations:                vm.Annotations,
-			DeletionGracePeriodSeconds: GracePeriodSeconds,
-			Finalizers:                 vm.Finalizers,
-			GenerateName:               vm.GenerateName,
-			Generation:                 vm.Generation,
-			Labels:                     vm.Labels,
-			ManagedFields:              ToHapiVmManagedFields(vm.ManagedFields),
-			Name:                       vm.Name,
-			Namespace:                  vm.Namespace,
-			OwnerReferences:            ToHapiVmOwnerReferences(vm.OwnerReferences),
-			ResourceVersion:            vm.ResourceVersion,
-			UID:                        string(vm.UID),
-		},
-		Spec:   Spec,
-		Status: Status,
-	}
-	return hapiVM, nil
-}
+// 	hapiVM := &models.V1ClusterVirtualMachine{
+// 		Metadata: &models.V1VMObjectMeta{
+// 			Annotations:                vm.Annotations,
+// 			DeletionGracePeriodSeconds: GracePeriodSeconds,
+// 			Finalizers:                 vm.Finalizers,
+// 			GenerateName:               vm.GenerateName,
+// 			Generation:                 vm.Generation,
+// 			Labels:                     vm.Labels,
+// 			ManagedFields:              ToHapiVmManagedFields(vm.ManagedFields),
+// 			Name:                       vm.Name,
+// 			Namespace:                  vm.Namespace,
+// 			OwnerReferences:            ToHapiVmOwnerReferences(vm.OwnerReferences),
+// 			ResourceVersion:            vm.ResourceVersion,
+// 			UID:                        string(vm.UID),
+// 		},
+// 		Spec:   Spec,
+// 		Status: Status,
+// 	}
+// 	return hapiVM, nil
+// }
 
 func ToHapiVmOwnerReferences(references []metav1.OwnerReference) []*models.V1VMOwnerReference {
 	ret := make([]*models.V1VMOwnerReference, len(references))

@@ -38,8 +38,8 @@ func DataVolumeFields() map[string]*schema.Schema {
 func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, error) {
 	result := &cdiv1.DataVolume{}
 
-	result.ObjectMeta = k8s.ExpandMetadata(resourceData.Get("metadata").([]interface{}))
-	spec, err := ExpandDataVolumeSpec(resourceData.Get("spec").([]interface{}))
+	result.ObjectMeta = k8s.ExpandMetadataToObjectMeta(resourceData.Get("metadata").([]interface{}))
+	spec, err := ExpandDataVolumeSpecToK8s(resourceData.Get("spec").([]interface{}))
 	if err != nil {
 		return result, err
 	}

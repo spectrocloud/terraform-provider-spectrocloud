@@ -2,7 +2,9 @@ package virtualmachineinstance
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
 func networkFields() map[string]*schema.Schema {
@@ -74,121 +76,142 @@ func NetworksSchema() *schema.Schema {
 	}
 }
 
-func expandNetworks(networks []interface{}) []kubevirtapiv1.Network {
-	result := make([]kubevirtapiv1.Network, len(networks))
-
+// expandNetworksToVM expands the network schema into []*models.V1VMNetwork for VM spec.
+func expandNetworksToVM(networks []interface{}) []*models.V1VMNetwork {
+	result := make([]*models.V1VMNetwork, len(networks))
 	if len(networks) == 0 || networks[0] == nil {
 		return result
 	}
-
 	for i, network := range networks {
 		in := network.(map[string]interface{})
-
+		item := &models.V1VMNetwork{}
 		if v, ok := in["name"].(string); ok {
-			result[i].Name = v
+			item.Name = types.Ptr(v)
 		}
-		if v, ok := in["network_source"].([]interface{}); ok {
-			result[i].NetworkSource = expandNetworkSource(v)
+		if v, ok := in["network_source"].([]interface{}); ok && len(v) > 0 {
+			if src, ok := v[0].(map[string]interface{}); ok {
+				if p, ok := src["pod"].([]interface{}); ok && len(p) == 1 {
+					item.Pod = expandPodNetworkToVM(p)
+				}
+				if m, ok := src["multus"].([]interface{}); ok && len(m) == 1 {
+					item.Multus = expandMultusNetworkToVM(m)
+				}
+			}
 		}
+		result[i] = item
 	}
-
 	return result
 }
 
-func expandNetworkSource(networkSource []interface{}) kubevirtapiv1.NetworkSource {
-	result := kubevirtapiv1.NetworkSource{}
-
-	if len(networkSource) == 0 || networkSource[0] == nil {
-		return result
-	}
-
-	in := networkSource[0].(map[string]interface{})
-
-	if v, ok := in["pod"].([]interface{}); ok && len(v) == 1 {
-		result.Pod = expandPodNetwork(v)
-	}
-	if v, ok := in["multus"].([]interface{}); ok && len(v) == 1 {
-		result.Multus = expandMultusNetwork(v)
-	}
-
-	return result
-}
-
-func expandPodNetwork(pod []interface{}) *kubevirtapiv1.PodNetwork {
-	result := &kubevirtapiv1.PodNetwork{}
-
+func expandPodNetworkToVM(pod []interface{}) *models.V1VMPodNetwork {
 	if len(pod) == 0 || pod[0] == nil {
-		return result
+		return nil
 	}
-
+	result := &models.V1VMPodNetwork{}
 	in := pod[0].(map[string]interface{})
-
 	if v, ok := in["vm_network_cidr"].(string); ok {
 		result.VMNetworkCIDR = v
 	}
-
+	if v, ok := in["vm_ipv6_network_cidr"].(string); ok {
+		result.VMIPV6NetworkCIDR = v
+	}
 	return result
 }
 
-func expandMultusNetwork(multus []interface{}) *kubevirtapiv1.MultusNetwork {
+func expandMultusNetworkToVM(multus []interface{}) *models.V1VMMultusNetwork {
 	if len(multus) == 0 || multus[0] == nil {
 		return nil
 	}
-
-	result := &kubevirtapiv1.MultusNetwork{}
+	result := &models.V1VMMultusNetwork{}
 	in := multus[0].(map[string]interface{})
-
 	if v, ok := in["network_name"].(string); ok {
-		result.NetworkName = v
+		result.NetworkName = types.Ptr(v)
 	}
 	if v, ok := in["default"].(bool); ok {
 		result.Default = v
 	}
-
 	return result
 }
 
-func flattenNetworks(in []kubevirtapiv1.Network) []interface{} {
+// func flattenNetworks(in []kubevirtapiv1.Network) []interface{} {
+// 	att := make([]interface{}, len(in))
+
+// 	for i, v := range in {
+// 		c := make(map[string]interface{})
+
+// 		c["name"] = v.Name
+// 		c["network_source"] = flattenNetworkSource(v.NetworkSource)
+
+// 		att[i] = c
+// 	}
+
+// 	return att
+// }
+
+// flattenNetworksFromVM flattens []*models.V1VMNetwork to the same shape as flattenNetworks.
+func flattenNetworksFromVM(in []*models.V1VMNetwork) []interface{} {
+	if len(in) == 0 {
+		return nil
+	}
 	att := make([]interface{}, len(in))
-
 	for i, v := range in {
+		if v == nil {
+			continue
+		}
 		c := make(map[string]interface{})
-
-		c["name"] = v.Name
-		c["network_source"] = flattenNetworkSource(v.NetworkSource)
-
+		if v.Name != nil {
+			c["name"] = *v.Name
+		}
+		c["network_source"] = flattenNetworkSourceFromVM(v)
 		att[i] = c
 	}
-
 	return att
 }
 
-func flattenNetworkSource(in kubevirtapiv1.NetworkSource) []interface{} {
+func flattenNetworkSourceFromVM(in *models.V1VMNetwork) []interface{} {
+	if in == nil {
+		return []interface{}{map[string]interface{}{}}
+	}
 	att := make(map[string]interface{})
-
 	if in.Pod != nil {
-		att["pod"] = flattenPodNetwork(*in.Pod)
+		att["pod"] = []interface{}{map[string]interface{}{"vm_network_cidr": in.Pod.VMNetworkCIDR, "vm_ipv6_network_cidr": in.Pod.VMIPV6NetworkCIDR}}
 	}
 	if in.Multus != nil {
-		att["multus"] = flattenMultusNetwork(*in.Multus)
+		networkName := ""
+		if in.Multus.NetworkName != nil {
+			networkName = *in.Multus.NetworkName
+		}
+		att["multus"] = []interface{}{map[string]interface{}{"network_name": networkName, "default": in.Multus.Default}}
 	}
-
 	return []interface{}{att}
 }
 
-func flattenPodNetwork(in kubevirtapiv1.PodNetwork) []interface{} {
-	att := make(map[string]interface{})
+// func flattenNetworkSource(in kubevirtapiv1.NetworkSource) []interface{} {
+// 	att := make(map[string]interface{})
 
-	att["vm_network_cidr"] = in.VMNetworkCIDR
+// 	if in.Pod != nil {
+// 		att["pod"] = flattenPodNetwork(*in.Pod)
+// 	}
+// 	if in.Multus != nil {
+// 		att["multus"] = flattenMultusNetwork(*in.Multus)
+// 	}
 
-	return []interface{}{att}
-}
+// 	return []interface{}{att}
+// }
 
-func flattenMultusNetwork(in kubevirtapiv1.MultusNetwork) []interface{} {
-	att := make(map[string]interface{})
+// func flattenPodNetwork(in kubevirtapiv1.PodNetwork) []interface{} {
+// 	att := make(map[string]interface{})
 
-	att["network_name"] = in.NetworkName
-	att["default"] = in.Default
+// 	att["vm_network_cidr"] = in.VMNetworkCIDR
 
-	return []interface{}{att}
-}
+// 	return []interface{}{att}
+// }
+
+// func flattenMultusNetwork(in kubevirtapiv1.MultusNetwork) []interface{} {
+// 	att := make(map[string]interface{})
+
+// 	att["network_name"] = in.NetworkName
+// 	att["default"] = in.Default
+
+// 	return []interface{}{att}
+// }

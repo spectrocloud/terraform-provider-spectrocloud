@@ -3,8 +3,8 @@ package virtualmachine
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	k8sv1 "k8s.io/api/core/v1"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
 func virtualMachineConditionsFields() map[string]*schema.Schema {
@@ -68,45 +68,70 @@ func virtualMachineConditionsSchema() *schema.Schema {
 	}
 }
 
-func expandVirtualMachineConditions(conditions []interface{}) ([]kubevirtapiv1.VirtualMachineCondition, error) {
-	result := make([]kubevirtapiv1.VirtualMachineCondition, len(conditions))
-
+func expandVirtualMachineConditions(conditions []interface{}) ([]*models.V1VMVirtualMachineCondition, error) {
 	if len(conditions) == 0 || conditions[0] == nil {
-		return result, nil
+		return []*models.V1VMVirtualMachineCondition{}, nil
 	}
 
+	result := make([]*models.V1VMVirtualMachineCondition, len(conditions))
 	for i, condition := range conditions {
 		in := condition.(map[string]interface{})
+		cond := &models.V1VMVirtualMachineCondition{}
 
 		if v, ok := in["type"].(string); ok {
-			result[i].Type = kubevirtapiv1.VirtualMachineConditionType(v)
+			cond.Type = utils.PtrToString(v)
 		}
 		if v, ok := in["status"].(string); ok {
-			result[i].Status = k8sv1.ConditionStatus(v)
+			cond.Status = utils.PtrToString(v)
 		}
 		if v, ok := in["reason"].(string); ok {
-			result[i].Reason = v
+			cond.Reason = v
 		}
 		if v, ok := in["message"].(string); ok {
-			result[i].Message = v
+			cond.Message = v
 		}
+
+		result[i] = cond
 	}
 
 	return result, nil
 }
 
-func flattenVirtualMachineConditions(in []kubevirtapiv1.VirtualMachineCondition) []interface{} {
-	att := make([]interface{}, len(in))
+// func flattenVirtualMachineConditions(in []kubevirtapiv1.VirtualMachineCondition) []interface{} {
+// 	att := make([]interface{}, len(in))
 
-	for i, v := range in {
+// 	for i, v := range in {
+// 		c := make(map[string]interface{})
+// 		c["type"] = string(v.Type)
+// 		c["status"] = string(v.Status)
+// 		c["reason"] = v.Reason
+// 		c["message"] = v.Message
+
+// 		att[i] = c
+// 	}
+
+// 	return att
+// }
+
+func flattenVirtualMachineConditionsFromVM(in []*models.V1VMVirtualMachineCondition) []interface{} {
+	if len(in) == 0 {
+		return nil
+	}
+	att := make([]interface{}, 0, len(in))
+	for _, v := range in {
+		if v == nil {
+			continue
+		}
 		c := make(map[string]interface{})
-		c["type"] = string(v.Type)
-		c["status"] = string(v.Status)
+		if v.Type != nil {
+			c["type"] = *v.Type
+		}
+		if v.Status != nil {
+			c["status"] = *v.Status
+		}
 		c["reason"] = v.Reason
 		c["message"] = v.Message
-
-		att[i] = c
+		att = append(att, c)
 	}
-
 	return att
 }

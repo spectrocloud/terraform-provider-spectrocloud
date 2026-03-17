@@ -3,9 +3,8 @@ package virtualmachine
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	k8stypes "k8s.io/apimachinery/pkg/types"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
@@ -48,45 +47,68 @@ func virtualMachineStateChangeRequestsSchema() *schema.Schema {
 	}
 }
 
-func expandVirtualMachineStateChangeRequests(virtualMachineStateChangeRequests []interface{}) []kubevirtapiv1.VirtualMachineStateChangeRequest {
-	result := make([]kubevirtapiv1.VirtualMachineStateChangeRequest, len(virtualMachineStateChangeRequests))
-
+func expandVirtualMachineStateChangeRequests(virtualMachineStateChangeRequests []interface{}) []*models.V1VMVirtualMachineStateChangeRequest {
 	if len(virtualMachineStateChangeRequests) == 0 || virtualMachineStateChangeRequests[0] == nil {
-		return result
+		return []*models.V1VMVirtualMachineStateChangeRequest{}
 	}
 
+	result := make([]*models.V1VMVirtualMachineStateChangeRequest, len(virtualMachineStateChangeRequests))
 	for i, virtualMachineStateChangeRequest := range virtualMachineStateChangeRequests {
 		in := virtualMachineStateChangeRequest.(map[string]interface{})
+		req := &models.V1VMVirtualMachineStateChangeRequest{}
 
 		if v, ok := in["action"].(string); ok {
-			result[i].Action = kubevirtapiv1.StateChangeRequestAction(v)
+			req.Action = utils.PtrToString(v)
 		}
 		if v, ok := in["data"].(map[string]interface{}); ok && len(v) > 0 {
-			result[i].Data = utils.ExpandStringMap(v)
+			req.Data = utils.ExpandStringMap(v)
 		}
 		if v, ok := in["uid"].(string); ok {
-			uid := k8stypes.UID(v)
-			result[i].UID = &uid
+			req.UID = v
 		}
+
+		result[i] = req
 	}
 
 	return result
 }
 
-func flattenVirtualMachineStateChangeRequests(in []kubevirtapiv1.VirtualMachineStateChangeRequest) []interface{} {
-	att := make([]interface{}, len(in))
+// func flattenVirtualMachineStateChangeRequests(in []kubevirtapiv1.VirtualMachineStateChangeRequest) []interface{} {
+// 	att := make([]interface{}, len(in))
 
-	for i, v := range in {
-		c := make(map[string]interface{})
+// 	for i, v := range in {
+// 		c := make(map[string]interface{})
 
-		c["action"] = string(v.Action)
-		c["data"] = v.Data
-		if v.UID != nil {
-			c["uid"] = string(*v.UID)
-		}
+// 		c["action"] = string(v.Action)
+// 		c["data"] = v.Data
+// 		if v.UID != nil {
+// 			c["uid"] = string(*v.UID)
+// 		}
 
-		att[i] = c
+// 		att[i] = c
+// 	}
+
+// 	return att
+// }
+
+func flattenVirtualMachineStateChangeRequestsFromVM(in []*models.V1VMVirtualMachineStateChangeRequest) []interface{} {
+	if len(in) == 0 {
+		return nil
 	}
-
+	att := make([]interface{}, 0, len(in))
+	for _, v := range in {
+		if v == nil {
+			continue
+		}
+		c := make(map[string]interface{})
+		if v.Action != nil {
+			c["action"] = *v.Action
+		}
+		c["data"] = v.Data
+		if v.UID != "" {
+			c["uid"] = v.UID
+		}
+		att = append(att, c)
+	}
 	return att
 }

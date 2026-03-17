@@ -1,27 +1,19 @@
 package convert
 
-import (
-	"encoding/json"
-	"fmt"
+// func ToHapiVmStatusM(status kubevirtapiv1.VirtualMachineStatus) (*models.V1ClusterVirtualMachineStatus, error) {
+// 	var hapiVmStatus models.V1ClusterVirtualMachineStatus
 
-	"github.com/spectrocloud/palette-sdk-go/api/models"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
-)
+// 	// Marshal the input spec to JSON
+// 	specJson, err := json.Marshal(status)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to marshal kubevirtapiv1.VirtualMachineSpec to JSON: %v", err)
+// 	}
 
-func ToHapiVmStatusM(status kubevirtapiv1.VirtualMachineStatus) (*models.V1ClusterVirtualMachineStatus, error) {
-	var hapiVmStatus models.V1ClusterVirtualMachineStatus
+// 	// Unmarshal the JSON to the desired HAPI VM spec
+// 	err = json.Unmarshal(specJson, &hapiVmStatus)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to unmarshal JSON to models.V1ClusterVirtualMachineSpec: %v", err)
+// 	}
 
-	// Marshal the input spec to JSON
-	specJson, err := json.Marshal(status)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal kubevirtapiv1.VirtualMachineSpec to JSON: %v", err)
-	}
-
-	// Unmarshal the JSON to the desired HAPI VM spec
-	err = json.Unmarshal(specJson, &hapiVmStatus)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON to models.V1ClusterVirtualMachineSpec: %v", err)
-	}
-
-	return &hapiVmStatus, nil
-}
+// 	return &hapiVmStatus, nil
+// }
