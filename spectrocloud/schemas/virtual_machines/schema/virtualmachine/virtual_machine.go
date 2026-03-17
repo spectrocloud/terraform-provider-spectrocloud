@@ -1,6 +1,8 @@
 package virtualmachine
 
 import (
+	"encoding/json"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas/virtual_machines/schema/k8s"
@@ -463,6 +465,24 @@ func VirtualMachineFields() map[string]*schema.Schema {
 
 		"status": virtualMachineStatusSchema(),
 	}
+}
+
+// VirtualMachineResourceDataToJSON converts Terraform resource data for the VM resource into JSON.
+// It reads all attributes defined in the VM schema and returns their JSON representation,
+// without using KubeVirt types.
+func VirtualMachineResourceDataToJSON(d *schema.ResourceData) ([]byte, error) {
+	fields := VirtualMachineFields()
+	m := make(map[string]interface{})
+	for key := range fields {
+		if v, ok := d.GetOk(key); ok {
+			m[key] = v
+		}
+	}
+	data, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.VirtualMachine, error) {
