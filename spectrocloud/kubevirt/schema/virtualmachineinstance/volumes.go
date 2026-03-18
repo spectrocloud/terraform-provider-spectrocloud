@@ -271,9 +271,12 @@ func expandVolumes(volumes []interface{}) []*models.V1VMVolume {
 
 	for i, condition := range volumes {
 		in := condition.(map[string]interface{})
-
+		result[i] = &models.V1VMVolume{}
 		if v, ok := in["name"].(string); ok {
 			result[i].Name = &v
+		}
+		if vs, ok := in["volume_source"].([]interface{}); ok && len(vs) > 0 {
+			expandVolumeSourceForHapi(vs[0].(map[string]interface{}), result[i])
 		}
 		// Hapi missing volume source
 		// if v, ok := in["volume_source"].([]interface{}); ok {
@@ -282,6 +285,50 @@ func expandVolumes(volumes []interface{}) []*models.V1VMVolume {
 	}
 
 	return result
+}
+
+// expandVolumeSourceForHapi sets exactly one volume source on vol from Terraform volume_source map (container_disk, cloud_init_config_drive, etc.).
+func expandVolumeSourceForHapi(m map[string]interface{}, vol *models.V1VMVolume) {
+	if vol == nil {
+		return
+	}
+	// container_disk (TypeSet) -> list of one map with image_url
+	if v, ok := m["container_disk"]; ok && v != nil {
+		var list []interface{}
+		switch t := v.(type) {
+		case *schema.Set:
+			list = t.List()
+		case []interface{}:
+			list = t
+		}
+		if len(list) > 0 {
+			cd := list[0].(map[string]interface{})
+			if img, ok := cd["image_url"].(string); ok && img != "" {
+				vol.ContainerDisk = &models.V1VMContainerDiskSource{Image: &img}
+			}
+		}
+	}
+	if vol.ContainerDisk != nil {
+		return
+	}
+	// cloud_init_config_drive (TypeList)
+	if v, ok := m["cloud_init_config_drive"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+		cc := v[0].(map[string]interface{})
+		src := &models.V1VMCloudInitConfigDriveSource{}
+		if u, ok := cc["user_data"].(string); ok {
+			src.UserData = u
+		}
+		if u, ok := cc["user_data_base64"].(string); ok {
+			src.UserDataBase64 = u
+		}
+		if n, ok := cc["network_data"].(string); ok {
+			src.NetworkData = n
+		}
+		if n, ok := cc["network_data_base64"].(string); ok {
+			src.NetworkDataBase64 = n
+		}
+		vol.CloudInitConfigDrive = src
+	}
 }
 
 // func expandCloudInitNoCloud(cloudInitNoCloudSource []interface{}) *kubevirtapiv1.CloudInitNoCloudSource {
@@ -362,10 +409,24 @@ func flattenVolumeSourceFromVM(in *models.V1VMVolume) []interface{} {
 		att["data_volume"] = []interface{}{map[string]interface{}{"name": name}}
 	}
 	if in.ContainerDisk != nil {
-		att["container_disk"] = []interface{}{map[string]interface{}{"image": in.ContainerDisk.Image}}
+		// att["container_disk"] = []interface{}{map[string]interface{}{"image": in.ContainerDisk.Image}}
+		att["container_disk"] = []interface{}{map[string]interface{}{"image_url": in.ContainerDisk.Image}}
 	}
 	if in.CloudInitNoCloud != nil {
 		att["cloud_init_no_cloud"] = []interface{}{map[string]interface{}{"user_data": in.CloudInitNoCloud.UserData, "user_data_base64": in.CloudInitNoCloud.UserDataBase64}}
+	}
+	if in.CloudInitConfigDrive != nil {
+		c := in.CloudInitConfigDrive
+		cc := map[string]interface{}{
+			"user_data":           c.UserData,
+			"user_data_base64":    c.UserDataBase64,
+			"network_data":        c.NetworkData,
+			"network_data_base64": c.NetworkDataBase64,
+		}
+		// Optional: flatten secret refs if your schema uses them and you have a helper:
+		// if c.SecretRef != nil { cc["user_data_secret_ref"] = ... }
+		// if c.NetworkDataSecretRef != nil { cc["network_data_secret_ref"] = ... }
+		att["cloud_init_config_drive"] = []interface{}{cc}
 	}
 	if in.Ephemeral != nil {
 		att["ephemeral"] = []interface{}{map[string]interface{}{}}

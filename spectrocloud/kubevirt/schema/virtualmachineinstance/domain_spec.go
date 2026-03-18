@@ -207,18 +207,30 @@ func expandInterfacesToVM(interfaces []interface{}) []*models.V1VMInterface {
 
 func setVMInterfaceBindingMethod(method string, iface *models.V1VMInterface) {
 	switch method {
-	case "bridge":
-		iface.Bridge = nil
-	case "masquerade":
-		iface.Masquerade = nil
-	case "slirp":
-		iface.Slirp = nil
-	case "sriov":
-		iface.Sriov = nil
+	// case "bridge":
+	// 	iface.Bridge = nil
+	// case "masquerade":
+	// 	iface.Masquerade = nil
+	// case "slirp":
+	// 	iface.Slirp = nil
+	// case "sriov":
+	// 	iface.Sriov = nil
+	// case "macvtap":
+	// 	iface.Macvtap = nil
+	// case "passt":
+	// 	iface.Passt = nil
+	case "InterfaceBridge", "bridge":
+		iface.Bridge = struct{}{}
+	case "InterfaceMasquerade", "masquerade":
+		iface.Masquerade = struct{}{}
+	case "InterfaceSlirp", "slirp":
+		iface.Slirp = struct{}{}
+	case "InterfaceSRIOV", "sriov":
+		iface.Sriov = struct{}{}
 	case "macvtap":
-		iface.Macvtap = nil
+		iface.Macvtap = struct{}{}
 	case "passt":
-		iface.Passt = nil
+		iface.Passt = struct{}{}
 	}
 }
 
@@ -587,6 +599,12 @@ func flattenFirmwareFromVM(in *models.V1VMFirmware) []interface{} {
 	if in == nil {
 		return []interface{}{}
 	}
+
+	// Don't persist server-generated firmware (uuid/serial only) to state when the user didn't
+	// configure firmware — avoids drift on plan (config has no firmware block).
+	if in.Bootloader == nil && in.KernelBoot == nil && (in.UUID != "" || in.Serial != "") {
+		return []interface{}{}
+	}
 	att := make(map[string]interface{})
 	if in.UUID != "" {
 		att["uuid"] = in.UUID
@@ -598,6 +616,9 @@ func flattenFirmwareFromVM(in *models.V1VMFirmware) []interface{} {
 		if bl := flattenBootloaderFromVM(in.Bootloader); len(bl) > 0 {
 			att["bootloader"] = bl
 		}
+	}
+	if len(att) == 0 {
+		return []interface{}{}
 	}
 	return []interface{}{att}
 }
@@ -746,14 +767,36 @@ func flattenInterfacesFromVM(in []*models.V1VMInterface) []interface{} {
 	return att
 }
 
-func flattenVMInterfaceBindingMethod(in *models.V1VMInterface) []interface{} {
+// func flattenVMInterfaceBindingMethod(in *models.V1VMInterface) []interface{} {
+func flattenVMInterfaceBindingMethod(in *models.V1VMInterface) string {
+
 	if in == nil {
-		return nil
+		return ""
 	}
-	att := make(map[string]interface{})
-	// V1VMInterface has Bridge, Slirp, Masquerade, Sriov as value structs - add placeholder for the one that would be set from API
-	att["bridge"] = []interface{}{map[string]interface{}{}}
-	return []interface{}{att}
+	// Hapi uses interface{} for binding types; check which is set (non-nil after JSON unmarshal).
+	if in.Masquerade != nil {
+		return "InterfaceMasquerade"
+	}
+	if in.Bridge != nil {
+		return "InterfaceBridge"
+	}
+	if in.Slirp != nil {
+		return "InterfaceSlirp"
+	}
+	if in.Sriov != nil {
+		return "InterfaceSRIOV"
+	}
+	if in.Macvtap != nil {
+		return "macvtap"
+	}
+	if in.Passt != nil {
+		return "passt"
+	}
+	return ""
+	// att := make(map[string]interface{})
+	// // V1VMInterface has Bridge, Slirp, Masquerade, Sriov as value structs - add placeholder for the one that would be set from API
+	// att["bridge"] = []interface{}{map[string]interface{}{}}
+	// return []interface{}{att}
 }
 
 // func flattenCPU(in *kubevirtapiv1.CPU) []interface{} {

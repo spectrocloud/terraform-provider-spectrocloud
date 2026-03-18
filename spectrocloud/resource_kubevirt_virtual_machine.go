@@ -175,7 +175,13 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 			vm.Spec.Running = d.Get("run_on_launch").(bool)
 		}
 	}
-	_, err = c.UpdateVirtualMachine(cluster, vmName, hapiVM)
+	// _, err = c.UpdateVirtualMachine(cluster, vmName, hapiVM)
+	// Send the VM built from Terraform (vm), not the one read from API (hapiVM).
+	// Preserve resourceVersion so the API can perform optimistic concurrency.
+	if hapiVM.Metadata != nil && hapiVM.Metadata.ResourceVersion != "" {
+		vm.Metadata.ResourceVersion = hapiVM.Metadata.ResourceVersion
+	}
+	_, err = c.UpdateVirtualMachine(cluster, vmName, vm)
 	if err != nil {
 		return diag.FromErr(err)
 	}

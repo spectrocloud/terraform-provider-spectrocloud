@@ -33,6 +33,11 @@ func networkFields() map[string]*schema.Schema {
 									Description: "CIDR for vm network.",
 									Optional:    true,
 								},
+								"vm_ipv6_network_cidr": {
+									Type:        schema.TypeString,
+									Description: "CIDR for IPv6 vm network.",
+									Optional:    true,
+								},
 							},
 						},
 					},
@@ -90,10 +95,13 @@ func expandNetworksToVM(networks []interface{}) []*models.V1VMNetwork {
 		}
 		if v, ok := in["network_source"].([]interface{}); ok && len(v) > 0 {
 			if src, ok := v[0].(map[string]interface{}); ok {
-				if p, ok := src["pod"].([]interface{}); ok && len(p) == 1 {
+				// if p, ok := src["pod"].([]interface{}); ok && len(p) == 1 {
+
+				if p, ok := src["pod"].([]interface{}); ok {
 					item.Pod = expandPodNetworkToVM(p)
 				}
-				if m, ok := src["multus"].([]interface{}); ok && len(m) == 1 {
+				// if m, ok := src["multus"].([]interface{}); ok && len(m) == 1 {
+				if m, ok := src["multus"].([]interface{}); ok {
 					item.Multus = expandMultusNetworkToVM(m)
 				}
 			}
@@ -104,10 +112,11 @@ func expandNetworksToVM(networks []interface{}) []*models.V1VMNetwork {
 }
 
 func expandPodNetworkToVM(pod []interface{}) *models.V1VMPodNetwork {
-	if len(pod) == 0 || pod[0] == nil {
-		return nil
-	}
 	result := &models.V1VMPodNetwork{}
+	if len(pod) == 0 || pod[0] == nil {
+		return result
+	}
+	// result := &models.V1VMPodNetwork{}
 	in := pod[0].(map[string]interface{})
 	if v, ok := in["vm_network_cidr"].(string); ok {
 		result.VMNetworkCIDR = v
