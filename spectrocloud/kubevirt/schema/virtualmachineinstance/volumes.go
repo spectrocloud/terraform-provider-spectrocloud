@@ -329,6 +329,80 @@ func expandVolumeSourceForHapi(m map[string]interface{}, vol *models.V1VMVolume)
 		}
 		vol.CloudInitConfigDrive = src
 	}
+	// cloud_init_no_cloud (TypeSet)
+	// if v, ok := m["cloud_init_no_cloud"]; ok && v != nil {
+	// 	var list []interface{}
+	// 	switch t := v.(type) {
+	// 	case *schema.Set:
+	// 		list = t.List()
+	// 	case []interface{}:
+	// 		list = t
+	// 	}
+	// 	if len(list) > 0 && list[0] != nil {
+	// 		nc := list[0].(map[string]interface{})
+	// 		src := &models.V1VMCloudInitNoCloudSource{}
+	// 		if u, ok := nc["user_data"].(string); ok {
+	// 			src.UserData = u
+	// 		}
+	// 		if u, ok := nc["user_data_base64"].(string); ok {
+	// 			src.UserDataBase64 = u
+	// 		}
+	// 		if n, ok := nc["network_data"].(string); ok {
+	// 			src.NetworkData = n
+	// 		}
+	// 		if n, ok := nc["network_data_base64"].(string); ok {
+	// 			src.NetworkDataBase64 = n
+	// 		}
+	// 		vol.CloudInitNoCloud = src
+	// 	}
+	// }
+
+	// cloud_init_config_drive (TypeList)
+	if v, ok := m["cloud_init_config_drive"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+		cc := v[0].(map[string]interface{})
+		src := &models.V1VMCloudInitConfigDriveSource{}
+		if u, ok := cc["user_data"].(string); ok {
+			src.UserData = u
+		}
+		if u, ok := cc["user_data_base64"].(string); ok {
+			src.UserDataBase64 = u
+		}
+		if n, ok := cc["network_data"].(string); ok {
+			src.NetworkData = n
+		}
+		if n, ok := cc["network_data_base64"].(string); ok {
+			src.NetworkDataBase64 = n
+		}
+		vol.CloudInitConfigDrive = src
+		return
+	}
+	// cloud_init_no_cloud (TypeSet)
+	if v, ok := m["cloud_init_no_cloud"]; ok && v != nil {
+		var list []interface{}
+		switch t := v.(type) {
+		case *schema.Set:
+			list = t.List()
+		case []interface{}:
+			list = t
+		}
+		if len(list) > 0 && list[0] != nil {
+			nc := list[0].(map[string]interface{})
+			src := &models.V1VMCloudInitNoCloudSource{}
+			if u, ok := nc["user_data"].(string); ok {
+				src.UserData = u
+			}
+			if u, ok := nc["user_data_base64"].(string); ok {
+				src.UserDataBase64 = u
+			}
+			if n, ok := nc["network_data"].(string); ok {
+				src.NetworkData = n
+			}
+			if n, ok := nc["network_data_base64"].(string); ok {
+				src.NetworkDataBase64 = n
+			}
+			vol.CloudInitNoCloud = src
+		}
+	}
 }
 
 // func expandCloudInitNoCloud(cloudInitNoCloudSource []interface{}) *kubevirtapiv1.CloudInitNoCloudSource {
