@@ -2,8 +2,9 @@ package datavolume
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+	// cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
 )
 
@@ -35,30 +36,66 @@ func DataVolumeFields() map[string]*schema.Schema {
 	}
 }
 
-func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, error) {
-	result := &cdiv1.DataVolume{}
+// func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, error) {
+// 	result := &cdiv1.DataVolume{}
 
-	result.ObjectMeta = k8s.ExpandMetadataToObjectMeta(resourceData.Get("metadata").([]interface{}))
+// 	result.ObjectMeta = k8s.ExpandMetadataToObjectMeta(resourceData.Get("metadata").([]interface{}))
+// 	spec, err := ExpandDataVolumeSpecToK8s(resourceData.Get("spec").([]interface{}))
+// 	if err != nil {
+// 		return result, err
+// 	}
+// 	result.Spec = spec
+// 	result.Status = expandDataVolumeStatus(resourceData.Get("status").([]interface{}))
+
+// 	return result, nil
+// }
+
+func FromResourceData(resourceData *schema.ResourceData) (*models.V1VMAddVolumeEntity, error) {
+	result := &models.V1VMAddVolumeEntity{}
+
+	result.DataVolumeTemplate.Metadata = k8s.ExpandMetadataToObjectMeta(resourceData.Get("metadata").([]interface{}))
 	spec, err := ExpandDataVolumeSpecToK8s(resourceData.Get("spec").([]interface{}))
 	if err != nil {
 		return result, err
 	}
-	result.Spec = spec
-	result.Status = expandDataVolumeStatus(resourceData.Get("status").([]interface{}))
+	return &models.V1VMAddVolumeEntity{
+		DataVolumeTemplate: &models.V1VMDataVolumeTemplateSpec{
+			Metadata: result.DataVolumeTemplate.Metadata,
+			Spec:     spec,
+		},
+		Persist: true,
+	}, nil
+	// result.Spec = spec
+	// result.Status = expandDataVolumeStatus(resourceData.Get("status").([]interface{}))
 
-	return result, nil
+	// return result, nil
 }
 
-func ToResourceData(dv cdiv1.DataVolume, resourceData *schema.ResourceData) error {
-	if err := resourceData.Set("metadata", k8s.FlattenMetadataDataVolume(dv.ObjectMeta)); err != nil {
+// func ToResourceData(dv cdiv1.DataVolume, resourceData *schema.ResourceData) error {
+// 	if err := resourceData.Set("metadata", k8s.FlattenMetadataDataVolume(dv.ObjectMeta)); err != nil {
+// 		return err
+// 	}
+// 	if err := resourceData.Set("spec", FlattenDataVolumeSpec(dv.Spec)); err != nil {
+// 		return err
+// 	}
+// 	if err := resourceData.Set("status", flattenDataVolumeStatus(dv.Status)); err != nil {
+// 		return err
+// 	}
+
+// 	return nil
+// }
+
+func ToResourceData(dv *models.V1VMAddVolumeEntity, resourceData *schema.ResourceData) error {
+	if err := resourceData.Set("metadata", k8s.FlattenMetadataDataVolumeFromVM(dv.DataVolumeTemplate.Metadata)); err != nil {
 		return err
 	}
-	if err := resourceData.Set("spec", FlattenDataVolumeSpec(dv.Spec)); err != nil {
+	if err := resourceData.Set("spec", FlattenDataVolumeSpec(dv.DataVolumeTemplate.Spec)); err != nil {
 		return err
 	}
-	if err := resourceData.Set("status", flattenDataVolumeStatus(dv.Status)); err != nil {
-		return err
-	}
+	// Commenting out status for now as it is not supported in the API
+	// if err := resourceData.Set("status", flattenDataVolumeStatus(dv.Status)); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }

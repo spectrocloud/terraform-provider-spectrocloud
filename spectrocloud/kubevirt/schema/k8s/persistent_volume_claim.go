@@ -131,7 +131,6 @@ func flattenResourceRequirements(in v1.ResourceRequirements) []interface{} {
 }
 
 // Expanders
-
 func ExpandPersistentVolumeClaimSpec(l []interface{}) (*v1.PersistentVolumeClaimSpec, error) {
 	obj := &v1.PersistentVolumeClaimSpec{}
 	if len(l) == 0 || l[0] == nil {

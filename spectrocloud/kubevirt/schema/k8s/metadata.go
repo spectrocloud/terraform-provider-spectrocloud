@@ -175,11 +175,43 @@ func ExpandMetadata(in []interface{}) *models.V1VMObjectMeta {
 
 // ExpandMetadataToObjectMeta expands the metadata schema into Kubernetes metav1.ObjectMeta.
 // Use this when building native K8s/CDI resources (e.g. cdiv1.DataVolume) that expect metav1.ObjectMeta.
-func ExpandMetadataToObjectMeta(in []interface{}) metav1.ObjectMeta {
-	var meta metav1.ObjectMeta
+// func ExpandMetadataToObjectMeta(in []interface{}) metav1.ObjectMeta {
+// 	var meta metav1.ObjectMeta
+// 	if len(in) < 1 {
+// 		return meta
+// 	}
+// 	m := in[0].(map[string]interface{})
+
+//		if v, ok := m["annotations"].(map[string]string); ok && len(v) > 0 {
+//			meta.Annotations = v
+//		} else if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 {
+//			meta.Annotations = utils.ExpandStringMap(v)
+//		}
+//		if v, ok := m["labels"].(map[string]string); ok && len(v) > 0 {
+//			meta.Labels = v
+//		} else if v, ok := m["labels"].(map[string]interface{}); ok && len(v) > 0 {
+//			meta.Labels = utils.ExpandStringMap(v)
+//		}
+//		if v, ok := m["generate_name"]; ok && v.(string) != "" {
+//			meta.GenerateName = v.(string)
+//		}
+//		if v, ok := m["name"]; ok && v != nil {
+//			meta.Name = v.(string)
+//		}
+//		if v, ok := m["namespace"]; ok && v != nil {
+//			meta.Namespace = v.(string)
+//		}
+//		if v, ok := m["resource_version"]; ok && v != nil {
+//			meta.ResourceVersion = v.(string)
+//		}
+//		return meta
+//	}
+func ExpandMetadataToObjectMeta(in []interface{}) *models.V1VMObjectMeta {
+	var meta *models.V1VMObjectMeta
 	if len(in) < 1 {
 		return meta
 	}
+	meta = &models.V1VMObjectMeta{}
 	m := in[0].(map[string]interface{})
 
 	if v, ok := m["annotations"].(map[string]string); ok && len(v) > 0 {

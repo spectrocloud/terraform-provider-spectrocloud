@@ -157,16 +157,25 @@ func expandDataVolumeSource(dataVolumeSource []interface{}) *models.V1VMDataVolu
 	return result
 }
 
-func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) *cdiv1.DataVolumeBlankImage {
+// func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) *cdiv1.DataVolumeBlankImage {
+// 	if len(dataVolumeSourceBlank) == 0 {
+// 		return nil
+// 	}
+
+// 	// When blank {} is present in Terraform config, we should return a DataVolumeBlankImage
+// 	// even if the first element is nil or an empty map
+// 	result := &cdiv1.DataVolumeBlankImage{}
+
+//		return result
+//	}
+func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) *models.V1VMDataVolumeBlankImage {
 	if len(dataVolumeSourceBlank) == 0 {
 		return nil
 	}
+	return &models.V1VMDataVolumeBlankImage{}
+	// result := &models.V1VMDataVolumeBlankImage{}
 
-	// When blank {} is present in Terraform config, we should return a DataVolumeBlankImage
-	// even if the first element is nil or an empty map
-	result := &cdiv1.DataVolumeBlankImage{}
-
-	return result
+	// return result
 }
 
 func expandDataVolumeSourceHTTP(dataVolumeSourceHTTP []interface{}) *models.V1VMDataVolumeSourceHTTP {

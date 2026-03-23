@@ -190,22 +190,54 @@ func ExpandDataVolumeSpec(dataVolumeSpec []interface{}) (*models.V1VMDataVolumeS
 }
 
 // ExpandDataVolumeSpecToK8s expands the spec schema into CDI cdiv1.DataVolumeSpec for native DataVolume resources.
-func ExpandDataVolumeSpecToK8s(dataVolumeSpec []interface{}) (cdiv1.DataVolumeSpec, error) {
-	var result cdiv1.DataVolumeSpec
+// func ExpandDataVolumeSpecToK8s(dataVolumeSpec []interface{}) (cdiv1.DataVolumeSpec, error) {
+// 	var result cdiv1.DataVolumeSpec
+// 	if len(dataVolumeSpec) == 0 || dataVolumeSpec[0] == nil {
+// 		return result, nil
+// 	}
+// 	in := dataVolumeSpec[0].(map[string]interface{})
+
+// 	if v, ok := in["source"].([]interface{}); ok {
+// 		result.Source = expandDataVolumeSourceToK8s(v)
+// 	}
+// 	if v, ok := in["pvc"].([]interface{}); ok && len(v) > 0 {
+// 		p, err := k8s.ExpandPersistentVolumeClaimSpec(v)
+// 		if err != nil {
+// 			return result, err
+// 		}
+// 		result.PVC = p
+// 	}
+// 	if v, ok := in["storage"].([]interface{}); ok && len(v) > 0 {
+// 		storage, err := expandDataVolumeStorageToK8s(v)
+// 		if err != nil {
+// 			return result, err
+// 		}
+// 		result.Storage = storage
+// 	}
+// 	if v, ok := in["content_type"].(string); ok {
+// 		result.ContentType = cdiv1.DataVolumeContentType(v)
+// 	}
+// 	return result, nil
+// }
+
+// ExpandDataVolumeSpecToK8s expands the spec schema into CDI cdiv1.DataVolumeSpec for native DataVolume resources.
+func ExpandDataVolumeSpecToK8s(dataVolumeSpec []interface{}) (*models.V1VMDataVolumeSpec, error) {
+	var result *models.V1VMDataVolumeSpec
 	if len(dataVolumeSpec) == 0 || dataVolumeSpec[0] == nil {
 		return result, nil
 	}
 	in := dataVolumeSpec[0].(map[string]interface{})
 
 	if v, ok := in["source"].([]interface{}); ok {
-		result.Source = expandDataVolumeSourceToK8s(v)
+		result.Source = expandDataVolumeSource(v)
 	}
 	if v, ok := in["pvc"].([]interface{}); ok && len(v) > 0 {
 		p, err := k8s.ExpandPersistentVolumeClaimSpec(v)
 		if err != nil {
 			return result, err
 		}
-		result.PVC = p
+		// result.PVC = p
+		result.Pvc = pvcSpecK8sToModel(p)
 	}
 	if v, ok := in["storage"].([]interface{}); ok && len(v) > 0 {
 		storage, err := expandDataVolumeStorageToK8s(v)
@@ -215,12 +247,30 @@ func ExpandDataVolumeSpecToK8s(dataVolumeSpec []interface{}) (cdiv1.DataVolumeSp
 		result.Storage = storage
 	}
 	if v, ok := in["content_type"].(string); ok {
-		result.ContentType = cdiv1.DataVolumeContentType(v)
+		result.ContentType = v
 	}
 	return result, nil
 }
 
-func expandDataVolumeStorageToK8s(storage []interface{}) (*cdiv1.StorageSpec, error) {
+// func expandDataVolumeStorageToK8s(storage []interface{}) (*cdiv1.StorageSpec, error) {
+// 	if len(storage) == 0 || storage[0] == nil {
+// 		return nil, nil
+// 	}
+// 	pvc, err := k8s.ExpandPersistentVolumeClaimSpec(storage)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return &cdiv1.StorageSpec{
+// 		AccessModes:      pvc.AccessModes,
+// 		Resources:        pvc.Resources,
+// 		Selector:         pvc.Selector,
+// 		VolumeName:       pvc.VolumeName,
+// 		StorageClassName: pvc.StorageClassName,
+// 		VolumeMode:       pvc.VolumeMode,
+// 	}, nil
+// }
+
+func expandDataVolumeStorageToK8s(storage []interface{}) (*models.V1VMStorageSpec, error) {
 	if len(storage) == 0 || storage[0] == nil {
 		return nil, nil
 	}
@@ -228,13 +278,17 @@ func expandDataVolumeStorageToK8s(storage []interface{}) (*cdiv1.StorageSpec, er
 	if err != nil {
 		return nil, err
 	}
-	return &cdiv1.StorageSpec{
-		AccessModes:      pvc.AccessModes,
-		Resources:        pvc.Resources,
-		Selector:         pvc.Selector,
-		VolumeName:       pvc.VolumeName,
-		StorageClassName: pvc.StorageClassName,
-		VolumeMode:       pvc.VolumeMode,
+	m := pvcSpecK8sToModel(pvc)
+	if m == nil {
+		return nil, nil
+	}
+	return &models.V1VMStorageSpec{
+		AccessModes:      m.AccessModes,
+		Resources:        m.Resources,
+		Selector:         m.Selector,
+		VolumeName:       m.VolumeName,
+		StorageClassName: m.StorageClassName,
+		VolumeMode:       m.VolumeMode,
 	}, nil
 }
 
@@ -410,18 +464,36 @@ func expandLabelSelectorRequirement(l []interface{}) []*models.V1VMLabelSelector
 	return obj
 }
 
-func FlattenDataVolumeSpec(spec cdiv1.DataVolumeSpec) []interface{} {
+// func FlattenDataVolumeSpec(spec cdiv1.DataVolumeSpec) []interface{} {
+// 	att := map[string]interface{}{
+// 		"source":       flattenDataVolumeSource(spec.Source),
+// 		"content_type": string(spec.ContentType),
+// 	}
+
+// 	if spec.PVC != nil {
+// 		att["pvc"] = k8s.FlattenPersistentVolumeClaimSpec(*spec.PVC)
+// 	}
+
+// 	if spec.Storage != nil {
+// 		att["storage"] = flattenDataVolumeStorage(*spec.Storage)
+// 	}
+
+// 	return []interface{}{att}
+// }
+
+// FlattenDataVolumeSpec flattens Palette HAPI models.V1VMDataVolumeSpec to Terraform state.
+func FlattenDataVolumeSpec(spec *models.V1VMDataVolumeSpec) []interface{} {
 	att := map[string]interface{}{
-		"source":       flattenDataVolumeSource(spec.Source),
+		"source":       flattenDataVolumeSourceFromVM(spec.Source),
 		"content_type": string(spec.ContentType),
 	}
 
-	if spec.PVC != nil {
-		att["pvc"] = k8s.FlattenPersistentVolumeClaimSpec(*spec.PVC)
+	if spec.Pvc != nil {
+		att["pvc"] = flattenPVCSpecFromVM(spec.Pvc)
 	}
 
 	if spec.Storage != nil {
-		att["storage"] = flattenDataVolumeStorage(*spec.Storage)
+		att["storage"] = flattenDataVolumeStorageFromVM(spec.Storage)
 	}
 
 	return []interface{}{att}
