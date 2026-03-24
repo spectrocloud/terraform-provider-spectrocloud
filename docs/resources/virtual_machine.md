@@ -1130,6 +1130,7 @@ Optional:
 
 Optional:
 
+- `vm_ipv6_network_cidr` (String) CIDR for IPv6 vm network.
 - `vm_network_cidr` (String) CIDR for vm network.
 
 

@@ -769,7 +769,6 @@ func flattenInterfacesFromVM(in []*models.V1VMInterface) []interface{} {
 
 // func flattenVMInterfaceBindingMethod(in *models.V1VMInterface) []interface{} {
 func flattenVMInterfaceBindingMethod(in *models.V1VMInterface) string {
-
 	if in == nil {
 		return ""
 	}
