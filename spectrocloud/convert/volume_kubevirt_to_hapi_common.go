@@ -1,6 +1,8 @@
 package convert
 
 import (
+	"math"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/datavolume"
@@ -77,6 +79,9 @@ func expandInt64FromInterface(v interface{}) int64 {
 	case int32:
 		return int64(g)
 	case uint64:
+		if g > uint64(math.MaxInt64) {
+			return math.MaxInt64
+		}
 		return int64(g)
 	default:
 		return 0
