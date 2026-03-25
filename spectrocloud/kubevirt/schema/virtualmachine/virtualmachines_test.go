@@ -6,7 +6,6 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 	"github.com/stretchr/testify/assert"
-	k8sv1 "k8s.io/api/core/v1"
 	// kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
 
@@ -53,8 +52,8 @@ func TestExpandVirtualMachineConditions(t *testing.T) {
 			},
 			expected: []*models.V1VMVirtualMachineCondition{
 				{
-					Type:   kubevirtapiv1.VirtualMachineConditionType("InvalidType"),
-					Status: k8sv1.ConditionStatus("InvalidStatus"),
+					Type:   utils.PtrToString("InvalidType"),
+					Status: utils.PtrToString("InvalidStatus"),
 				},
 			},
 			wantErr: false,
@@ -76,15 +75,15 @@ func TestExpandVirtualMachineConditions(t *testing.T) {
 func TestFlattenVirtualMachineConditions(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    []kubevirtapiv1.VirtualMachineCondition
+		input    []*models.V1VMVirtualMachineCondition
 		expected []interface{}
 	}{
 		{
 			name: "valid input",
-			input: []kubevirtapiv1.VirtualMachineCondition{
+			input: []*models.V1VMVirtualMachineCondition{
 				{
-					Type:    kubevirtapiv1.VirtualMachineConditionType("Ready"),
-					Status:  k8sv1.ConditionStatus("True"),
+					Type:    utils.PtrToString("Ready"),
+					Status:  utils.PtrToString("True"),
 					Reason:  "Initialized",
 					Message: "VM is ready",
 				},
@@ -100,14 +99,14 @@ func TestFlattenVirtualMachineConditions(t *testing.T) {
 		},
 		{
 			name:     "empty input",
-			input:    []kubevirtapiv1.VirtualMachineCondition{},
-			expected: []interface{}{},
+			input:    []*models.V1VMVirtualMachineCondition{},
+			expected: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := flattenVirtualMachineConditions(tt.input)
+			result := flattenVirtualMachineConditionsFromVM(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -169,19 +168,19 @@ func TestExpandVirtualMachineStateChangeRequests(t *testing.T) {
 func TestFlattenVirtualMachineStateChangeRequests(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    []kubevirtapiv1.VirtualMachineStateChangeRequest
+		input    []*models.V1VMVirtualMachineStateChangeRequest
 		expected []interface{}
 	}{
 		{
 			name:     "empty input",
-			input:    []kubevirtapiv1.VirtualMachineStateChangeRequest{},
-			expected: []interface{}{},
+			input:    []*models.V1VMVirtualMachineStateChangeRequest{},
+			expected: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := flattenVirtualMachineStateChangeRequests(tt.input)
+			result := flattenVirtualMachineStateChangeRequestsFromVM(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -191,7 +190,7 @@ func TestExpandVirtualMachineStatus(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []interface{}
-		expected kubevirtapiv1.VirtualMachineStatus
+		expected models.V1ClusterVirtualMachineStatus
 	}{
 		{
 			name: "full input",
@@ -216,18 +215,18 @@ func TestExpandVirtualMachineStatus(t *testing.T) {
 					},
 				},
 			},
-			expected: kubevirtapiv1.VirtualMachineStatus{
+			expected: models.V1ClusterVirtualMachineStatus{
 				Created: true,
 				Ready:   false,
-				Conditions: []kubevirtapiv1.VirtualMachineCondition{
+				Conditions: []*models.V1VMVirtualMachineCondition{
 					{
-						Type:   kubevirtapiv1.VirtualMachineConditionType("Ready"),
-						Status: k8sv1.ConditionStatus("True"),
+						Type:   utils.PtrToString("Ready"),
+						Status: utils.PtrToString("True"),
 					},
 				},
-				StateChangeRequests: []kubevirtapiv1.VirtualMachineStateChangeRequest{
+				StateChangeRequests: []*models.V1VMVirtualMachineStateChangeRequest{
 					{
-						Action: kubevirtapiv1.StateChangeRequestAction("Start"),
+						Action: utils.PtrToString("Start"),
 						Data:   utils.ExpandStringMap(map[string]interface{}{"key1": "value1"}),
 					},
 				},
@@ -236,7 +235,7 @@ func TestExpandVirtualMachineStatus(t *testing.T) {
 		{
 			name:     "empty input",
 			input:    []interface{}{},
-			expected: kubevirtapiv1.VirtualMachineStatus{},
+			expected: models.V1ClusterVirtualMachineStatus{},
 		},
 		{
 			name: "partial input",
@@ -245,7 +244,7 @@ func TestExpandVirtualMachineStatus(t *testing.T) {
 					"created": true,
 				},
 			},
-			expected: kubevirtapiv1.VirtualMachineStatus{
+			expected: models.V1ClusterVirtualMachineStatus{
 				Created: true,
 			},
 		},
@@ -262,23 +261,23 @@ func TestExpandVirtualMachineStatus(t *testing.T) {
 func TestFlattenVirtualMachineStatus(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    kubevirtapiv1.VirtualMachineStatus
+		input    *models.V1ClusterVirtualMachineStatus
 		expected []interface{}
 	}{
 		{
 			name: "full input",
-			input: kubevirtapiv1.VirtualMachineStatus{
+			input: &models.V1ClusterVirtualMachineStatus{
 				Created: true,
 				Ready:   false,
-				Conditions: []kubevirtapiv1.VirtualMachineCondition{
+				Conditions: []*models.V1VMVirtualMachineCondition{
 					{
-						Type:   kubevirtapiv1.VirtualMachineConditionType("Ready"),
-						Status: k8sv1.ConditionStatus("True"),
+						Type:   utils.PtrToString("Ready"),
+						Status: utils.PtrToString("True"),
 					},
 				},
-				StateChangeRequests: []kubevirtapiv1.VirtualMachineStateChangeRequest{
+				StateChangeRequests: []*models.V1VMVirtualMachineStateChangeRequest{
 					{
-						Action: kubevirtapiv1.StateChangeRequestAction("Start"),
+						Action: utils.PtrToString("Start"),
 						Data:   utils.ExpandStringMap(map[string]interface{}{"key1": "value1"}),
 					},
 				},
@@ -307,13 +306,13 @@ func TestFlattenVirtualMachineStatus(t *testing.T) {
 		},
 		{
 			name:  "empty input",
-			input: kubevirtapiv1.VirtualMachineStatus{},
+			input: &models.V1ClusterVirtualMachineStatus{},
 			expected: []interface{}{
 				map[string]interface{}{
 					"created":               false,
 					"ready":                 false,
-					"conditions":            []interface{}{},
-					"state_change_requests": []interface{}{},
+					"conditions":            nil,
+					"state_change_requests": nil,
 				},
 			},
 		},
@@ -321,7 +320,7 @@ func TestFlattenVirtualMachineStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flattenVirtualMachineStatus(tt.input)
+			flattenVirtualMachineStatusFromVM(tt.input)
 		})
 	}
 }
