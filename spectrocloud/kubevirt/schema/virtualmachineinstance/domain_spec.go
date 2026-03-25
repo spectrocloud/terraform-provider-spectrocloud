@@ -737,7 +737,16 @@ func flattenVMDiskDevice(in *models.V1VMDisk) []interface{} {
 		att["cdrom"] = []interface{}{map[string]interface{}{"bus": in.Cdrom.Bus}}
 	}
 	if in.Disk != nil {
-		att["disk"] = []interface{}{map[string]interface{}{"bus": in.Disk.Bus}}
+		d := map[string]interface{}{
+			"bus":       in.Disk.Bus,
+			"read_only": in.Disk.Readonly,
+		}
+		if in.Disk.PciAddress != "" {
+			d["pci_address"] = in.Disk.PciAddress
+		}
+		att["disk"] = []interface{}{d}
+
+		//att["disk"] = []interface{}{map[string]interface{}{"bus": in.Disk.Bus}}
 	}
 	if in.Lun != nil {
 		att["lun"] = []interface{}{map[string]interface{}{"bus": in.Lun.Bus}}
