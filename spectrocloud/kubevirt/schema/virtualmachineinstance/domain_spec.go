@@ -2,6 +2,7 @@ package virtualmachineinstance
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -112,7 +113,11 @@ func expandDisksToVM(disks []interface{}) []*models.V1VMDisk {
 			disk.Serial = v
 		}
 		if v, ok := in["boot_order"].(int); ok && v > 0 {
-			disk.BootOrder = int32(v)
+			if uint64(v) > uint64(math.MaxInt32) {
+				disk.BootOrder = math.MaxInt32
+			} else {
+				disk.BootOrder = int32(v) // #nosec G115 -- v > 0 and bounded by math.MaxInt32 above
+			}
 		}
 		if v, ok := in["disk_device"].([]interface{}); ok && len(v) > 0 {
 			expandDiskDeviceToVM(v, disk)
