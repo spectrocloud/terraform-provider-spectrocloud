@@ -107,13 +107,27 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	uid, err := c.CreateClusterProfile(clusterProfile)
+	adopted := false
 	if err != nil {
-		return diag.FromErr(err)
+		// If the profile already exists, adopt it instead of failing.
+		// This supports multi-environment patterns where each composition
+		// layer declares the same profile module.
+		name := d.Get("name").(string)
+		version := d.Get("version").(string)
+		existingUID, lookupErr := c.GetClusterProfileUID(name, version)
+		if lookupErr != nil || existingUID == "" {
+			return diag.FromErr(err) // return the original create error
+		}
+		log.Printf("Profile %s version %s already exists (UID %s), adopting", name, version, existingUID)
+		uid = existingUID
+		adopted = true
 	}
 
-	// And then publish
-	if err = c.PublishClusterProfile(uid); err != nil {
-		return diag.FromErr(err)
+	// Publish only for newly created profiles — adopted profiles are already published.
+	if !adopted {
+		if err = c.PublishClusterProfile(uid); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	d.SetId(uid)
 	resourceClusterProfileRead(ctx, d, m)

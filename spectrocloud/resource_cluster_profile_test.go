@@ -876,3 +876,18 @@ func TestResourceClusterProfileUpdateVersionAdoptWithFieldChanges(t *testing.T) 
 	assert.Empty(t, diags)
 	assert.Equal(t, "existing-profile-uid-1", d.Id())
 }
+
+// TestResourceClusterProfileCreateAdoptExisting tests that when Create fails
+// because the profile already exists, the function adopts the existing UID
+// instead of returning an error.
+func TestResourceClusterProfileCreateAdoptExisting(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	// Use name+version matching mock metadata → adopt path
+	_ = d.Set("name", "test-cluster-profile-1")
+	_ = d.Set("version", "1.0.0")
+	_ = d.Set("type", "add-on")
+	var ctx context.Context
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPINegativeClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "existing-profile-uid-1", d.Id())
+}
