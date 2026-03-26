@@ -311,6 +311,15 @@ func expandVolumeSourceForHapi(m map[string]interface{}, vol *models.V1VMVolume)
 	if vol.ContainerDisk != nil {
 		return
 	}
+	// data_volume (TypeList, MaxItems 1) — references a DataVolume / dataVolumeTemplate by name
+	if v, ok := m["data_volume"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+		dv := v[0].(map[string]interface{})
+		if name, ok := dv["name"].(string); ok && name != "" {
+			n := name
+			vol.DataVolume = &models.V1VMCoreDataVolumeSource{Name: &n}
+			return
+		}
+	}
 	// cloud_init_config_drive (TypeList)
 	if v, ok := m["cloud_init_config_drive"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
 		cc := v[0].(map[string]interface{})
