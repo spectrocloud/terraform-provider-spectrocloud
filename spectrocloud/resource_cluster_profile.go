@@ -46,7 +46,7 @@ func resourceClusterProfile() *schema.Resource {
 				Optional: true,
 				Default:  "1.0.0", // default as in UI
 				Description: "Version of the cluster profile. Defaults to '1.0.0'. " +
-					"Changing this value on an existing profile creates a new immutable version " +
+					"Changing this value on an existing profile creates a new version " +
 					"in Palette via clone. The previous version is preserved.",
 			},
 			"context": {
@@ -228,7 +228,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	// If version changed, clone the existing profile to create a new immutable version.
+	// If version changed, clone the existing profile to create a new version.
 	// This matches Palette's recommended workflow: create a new version rather than
 	// modifying a deployed version in place. The old version persists in Palette untouched.
 	if d.HasChange("version") {
@@ -236,23 +236,30 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		version := d.Get("version").(string)
 		log.Printf("Version changed, cloning profile %s to create version %s", d.Id(), version)
 
-		cloneEntity := &models.V1ClusterProfileCloneEntity{
-			Metadata: &models.V1ClusterProfileCloneMetaInputEntity{
-				Name:    &name,
-				Version: version,
-			},
-		}
-		newUID, err := c.CloneClusterProfile(d.Id(), cloneEntity)
-		if err != nil {
-			return diag.FromErr(err)
+		// Check if this version already exists. If so, adopt it and update in place
+		// rather than cloning (which would fail with a duplicate-name error).
+		existingUID, err := c.GetClusterProfileUID(name, version)
+		if err == nil && existingUID != "" {
+			log.Printf("Version %s already exists (UID %s), updating in place", version, existingUID)
+			d.SetId(existingUID)
+		} else {
+			// Version doesn't exist yet; clone to create it
+			cloneEntity := &models.V1ClusterProfileCloneEntity{
+				Metadata: &models.V1ClusterProfileCloneMetaInputEntity{
+					Name:    &name,
+					Version: version,
+				},
+			}
+			newUID, err := c.CloneClusterProfile(d.Id(), cloneEntity)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			d.SetId(newUID)
 		}
 
-		// Update state with new version's UID
-		d.SetId(newUID)
-
-		// If other fields also changed (packs, values, etc.), apply them to the new version
+		// If other fields also changed (packs, values, etc.), apply them to the version
 		if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") {
-			cp, err := c.GetClusterProfile(newUID)
+			cp, err := c.GetClusterProfile(d.Id())
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -270,9 +277,10 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 			if err := c.PatchClusterProfile(cluster, metadata); err != nil {
 				return diag.FromErr(err)
 			}
+			if err := c.PublishClusterProfile(d.Id()); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-
-		// Note: clone endpoint publishes automatically, no separate publish needed.
 
 		resourceClusterProfileRead(ctx, d, m)
 		return diags
