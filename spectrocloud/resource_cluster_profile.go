@@ -46,8 +46,10 @@ func resourceClusterProfile() *schema.Resource {
 				Optional: true,
 				Default:  "1.0.0", // default as in UI
 				Description: "Version of the cluster profile. Defaults to '1.0.0'. " +
-					"Changing this value on an existing profile creates a new version " +
-					"in Palette via clone. The previous version is preserved.",
+					"When the `clone-on-version-change` feature preview flag is enabled, " +
+					"changing this value on an existing profile creates a new version " +
+					"in Palette via clone. The previous version is preserved. " +
+					"Without the flag, changing this value updates the version in place.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -109,6 +111,9 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	uid, err := c.CreateClusterProfile(clusterProfile)
 	adopted := false
 	if err != nil {
+		if !isFeaturePreviewEnabled("clone-on-version-change") {
+			return diag.FromErr(err)
+		}
 		// If the profile already exists, adopt it instead of failing.
 		// This supports multi-environment patterns where each composition
 		// layer declares the same profile module.
@@ -245,7 +250,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 	// If version changed, clone the existing profile to create a new version.
 	// This matches Palette's recommended workflow: create a new version rather than
 	// modifying a deployed version in place. The old version persists in Palette untouched.
-	if d.HasChange("version") {
+	if d.HasChange("version") && isFeaturePreviewEnabled("clone-on-version-change") {
 		name := d.Get("name").(string)
 		version := d.Get("version").(string)
 		log.Printf("Version changed, cloning profile %s to create version %s", d.Id(), version)
@@ -300,7 +305,7 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diags
 	}
 
-	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") {
+	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") || d.HasChanges("version") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
 		if err != nil {

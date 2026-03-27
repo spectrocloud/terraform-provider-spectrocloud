@@ -19,6 +19,13 @@ const (
 )
 
 var ProviderInitProjectUid = ""
+var ProviderFeaturePreview = map[string]bool{}
+
+// isFeaturePreviewEnabled returns true if the given feature flag name is
+// explicitly set to true in the provider's feature_preview map.
+func isFeaturePreviewEnabled(name string) bool {
+	return ProviderFeaturePreview[name]
+}
 
 func New(_ string) func() *schema.Provider {
 	return func() *schema.Provider {
@@ -61,6 +68,15 @@ func New(_ string) func() *schema.Provider {
 					Type:        schema.TypeBool,
 					Optional:    true,
 					Description: "Ignore insecure TLS errors for Spectro Cloud API endpoints. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this in development/testing environments or when connecting to self-signed certificates in trusted networks. Defaults to false.",
+				},
+				"feature_preview": {
+					Type:     schema.TypeMap,
+					Optional: true,
+					Elem: &schema.Schema{
+						Type: schema.TypeBool,
+					},
+					Description: "A map of feature preview flags. " +
+						"Supported flags: `clone-on-version-change`.",
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
@@ -260,6 +276,18 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	if uid != "" {
 		ProviderInitProjectUid = uid
 		client.WithScopeProject(uid)(c)
+	}
+
+	if v, ok := d.GetOk("feature_preview"); ok {
+		fp := v.(map[string]interface{})
+		for key, val := range fp {
+			switch b := val.(type) {
+			case bool:
+				ProviderFeaturePreview[key] = b
+			case string:
+				ProviderFeaturePreview[key] = b == "true"
+			}
+		}
 	}
 
 	return c, diags
