@@ -95,9 +95,7 @@ func expandNetworksToVM(networks []interface{}) []*models.V1VMNetwork {
 		}
 		if v, ok := in["network_source"].([]interface{}); ok && len(v) > 0 {
 			if src, ok := v[0].(map[string]interface{}); ok {
-				// if p, ok := src["pod"].([]interface{}); ok && len(p) == 1 {
-
-				if p, ok := src["pod"].([]interface{}); ok {
+				if p, ok := src["pod"].([]interface{}); ok && len(p) > 0 && p[0] != nil {
 					item.Pod = expandPodNetworkToVM(p)
 				}
 				// if m, ok := src["multus"].([]interface{}); ok && len(m) == 1 {

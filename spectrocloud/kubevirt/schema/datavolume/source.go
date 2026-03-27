@@ -2,7 +2,6 @@ package datavolume
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -157,16 +156,14 @@ func expandDataVolumeSource(dataVolumeSource []interface{}) *models.V1VMDataVolu
 	return result
 }
 
-func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) *cdiv1.DataVolumeBlankImage {
+func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) models.V1VMDataVolumeBlankImage {
 	if len(dataVolumeSourceBlank) == 0 {
 		return nil
 	}
 
-	// When blank {} is present in Terraform config, we should return a DataVolumeBlankImage
-	// even if the first element is nil or an empty map
-	result := &cdiv1.DataVolumeBlankImage{}
-
-	return result
+	// V1VMDataVolumeBlankImage is generated as interface{} (empty JSON object). Use a map so JSON
+	// encodes as "{}". When blank {} is present in config, treat nil or empty map as the same.
+	return map[string]interface{}{}
 }
 
 func expandDataVolumeSourceHTTP(dataVolumeSourceHTTP []interface{}) *models.V1VMDataVolumeSourceHTTP {
@@ -226,124 +223,124 @@ func expandDataVolumeSourceRegistry(dataVolumeSourceRegistry []interface{}) *mod
 	return result
 }
 
-// expandDataVolumeSourceToK8s expands the source schema into CDI cdiv1.DataVolumeSource for native DataVolume resources.
-func expandDataVolumeSourceToK8s(dataVolumeSource []interface{}) *cdiv1.DataVolumeSource {
-	result := &cdiv1.DataVolumeSource{}
-	if len(dataVolumeSource) == 0 || dataVolumeSource[0] == nil {
-		return result
-	}
-	in := dataVolumeSource[0].(map[string]interface{})
-	if v, ok := in["blank"].([]interface{}); ok && len(v) > 0 {
-		result.Blank = expandDataVolumeSourceBlank(v)
-	}
-	if v, ok := in["http"].([]interface{}); ok && len(v) > 0 {
-		result.HTTP = expandDataVolumeSourceHTTPToK8s(v)
-	}
-	if v, ok := in["pvc"].([]interface{}); ok && len(v) > 0 {
-		result.PVC = expandDataVolumeSourcePVCToK8s(v)
-	}
-	if v, ok := in["registry"].([]interface{}); ok && len(v) > 0 {
-		result.Registry = expandDataVolumeSourceRegistryToK8s(v)
-	}
-	return result
-}
+// // expandDataVolumeSourceToK8s expands the source schema into CDI cdiv1.DataVolumeSource for native DataVolume resources.
+// func expandDataVolumeSourceToK8s(dataVolumeSource []interface{}) *cdiv1.DataVolumeSource {
+// 	result := &cdiv1.DataVolumeSource{}
+// 	if len(dataVolumeSource) == 0 || dataVolumeSource[0] == nil {
+// 		return result
+// 	}
+// 	in := dataVolumeSource[0].(map[string]interface{})
+// 	if v, ok := in["blank"].([]interface{}); ok && len(v) > 0 {
+// 		result.Blank = expandDataVolumeSourceBlank(v)
+// 	}
+// 	if v, ok := in["http"].([]interface{}); ok && len(v) > 0 {
+// 		result.HTTP = expandDataVolumeSourceHTTPToK8s(v)
+// 	}
+// 	if v, ok := in["pvc"].([]interface{}); ok && len(v) > 0 {
+// 		result.PVC = expandDataVolumeSourcePVCToK8s(v)
+// 	}
+// 	if v, ok := in["registry"].([]interface{}); ok && len(v) > 0 {
+// 		result.Registry = expandDataVolumeSourceRegistryToK8s(v)
+// 	}
+// 	return result
+// }
 
-func expandDataVolumeSourceHTTPToK8s(dataVolumeSourceHTTP []interface{}) *cdiv1.DataVolumeSourceHTTP {
-	if len(dataVolumeSourceHTTP) == 0 || dataVolumeSourceHTTP[0] == nil {
-		return nil
-	}
-	result := &cdiv1.DataVolumeSourceHTTP{}
-	in := dataVolumeSourceHTTP[0].(map[string]interface{})
-	if v, ok := in["url"].(string); ok {
-		result.URL = v
-	}
-	if v, ok := in["secret_ref"].(string); ok {
-		result.SecretRef = v
-	}
-	if v, ok := in["cert_config_map"].(string); ok {
-		result.CertConfigMap = v
-	}
-	return result
-}
+// func expandDataVolumeSourceHTTPToK8s(dataVolumeSourceHTTP []interface{}) *cdiv1.DataVolumeSourceHTTP {
+// 	if len(dataVolumeSourceHTTP) == 0 || dataVolumeSourceHTTP[0] == nil {
+// 		return nil
+// 	}
+// 	result := &cdiv1.DataVolumeSourceHTTP{}
+// 	in := dataVolumeSourceHTTP[0].(map[string]interface{})
+// 	if v, ok := in["url"].(string); ok {
+// 		result.URL = v
+// 	}
+// 	if v, ok := in["secret_ref"].(string); ok {
+// 		result.SecretRef = v
+// 	}
+// 	if v, ok := in["cert_config_map"].(string); ok {
+// 		result.CertConfigMap = v
+// 	}
+// 	return result
+// }
 
-func expandDataVolumeSourcePVCToK8s(dataVolumeSourcePVC []interface{}) *cdiv1.DataVolumeSourcePVC {
-	if len(dataVolumeSourcePVC) == 0 || dataVolumeSourcePVC[0] == nil {
-		return nil
-	}
-	result := &cdiv1.DataVolumeSourcePVC{}
-	in := dataVolumeSourcePVC[0].(map[string]interface{})
-	if v, ok := in["namespace"].(string); ok {
-		result.Namespace = v
-	}
-	if v, ok := in["name"].(string); ok {
-		result.Name = v
-	}
-	return result
-}
+// func expandDataVolumeSourcePVCToK8s(dataVolumeSourcePVC []interface{}) *cdiv1.DataVolumeSourcePVC {
+// 	if len(dataVolumeSourcePVC) == 0 || dataVolumeSourcePVC[0] == nil {
+// 		return nil
+// 	}
+// 	result := &cdiv1.DataVolumeSourcePVC{}
+// 	in := dataVolumeSourcePVC[0].(map[string]interface{})
+// 	if v, ok := in["namespace"].(string); ok {
+// 		result.Namespace = v
+// 	}
+// 	if v, ok := in["name"].(string); ok {
+// 		result.Name = v
+// 	}
+// 	return result
+// }
 
-func expandDataVolumeSourceRegistryToK8s(dataVolumeSourceRegistry []interface{}) *cdiv1.DataVolumeSourceRegistry {
-	if len(dataVolumeSourceRegistry) == 0 || dataVolumeSourceRegistry[0] == nil {
-		return nil
-	}
-	result := &cdiv1.DataVolumeSourceRegistry{}
-	in := dataVolumeSourceRegistry[0].(map[string]interface{})
-	if v, ok := in["image_url"].(string); ok {
-		result.URL = types.Ptr(v)
-	}
-	return result
-}
+// func expandDataVolumeSourceRegistryToK8s(dataVolumeSourceRegistry []interface{}) *cdiv1.DataVolumeSourceRegistry {
+// 	if len(dataVolumeSourceRegistry) == 0 || dataVolumeSourceRegistry[0] == nil {
+// 		return nil
+// 	}
+// 	result := &cdiv1.DataVolumeSourceRegistry{}
+// 	in := dataVolumeSourceRegistry[0].(map[string]interface{})
+// 	if v, ok := in["image_url"].(string); ok {
+// 		result.URL = types.Ptr(v)
+// 	}
+// 	return result
+// }
 
-// Flatteners
+// // Flatteners
 
-func flattenDataVolumeSource(in *cdiv1.DataVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-	if in != nil {
-		if in.Blank != nil {
-			att["blank"] = flattenDataVolumeSourceBlank()
-		}
-		if in.HTTP != nil {
-			att["http"] = flattenDataVolumeSourceHTTP(*in.HTTP)
-		}
-		if in.PVC != nil {
-			att["pvc"] = flattenDataVolumeSourcePVC(*in.PVC)
-		}
-		if in.Registry != nil {
-			att["registry"] = flattenDataVolumeSourceRegistry(*in.Registry)
-		}
+// func flattenDataVolumeSource(in *cdiv1.DataVolumeSource) []interface{} {
+// 	att := make(map[string]interface{})
+// 	if in != nil {
+// 		if in.Blank != nil {
+// 			att["blank"] = flattenDataVolumeSourceBlank()
+// 		}
+// 		if in.HTTP != nil {
+// 			att["http"] = flattenDataVolumeSourceHTTP(*in.HTTP)
+// 		}
+// 		if in.PVC != nil {
+// 			att["pvc"] = flattenDataVolumeSourcePVC(*in.PVC)
+// 		}
+// 		if in.Registry != nil {
+// 			att["registry"] = flattenDataVolumeSourceRegistry(*in.Registry)
+// 		}
 
-		return []interface{}{att}
-	}
-	return []interface{}{}
-}
+// 		return []interface{}{att}
+// 	}
+// 	return []interface{}{}
+// }
 
-func flattenDataVolumeSourceBlank() []interface{} {
-	att := map[string]interface{}{}
-	return []interface{}{att}
-}
+// func flattenDataVolumeSourceBlank() []interface{} {
+// 	att := map[string]interface{}{}
+// 	return []interface{}{att}
+// }
 
-func flattenDataVolumeSourceHTTP(in cdiv1.DataVolumeSourceHTTP) []interface{} {
-	att := map[string]interface{}{
-		"url":             in.URL,
-		"secret_ref":      in.SecretRef,
-		"cert_config_map": in.CertConfigMap,
-	}
-	return []interface{}{att}
-}
+// func flattenDataVolumeSourceHTTP(in cdiv1.DataVolumeSourceHTTP) []interface{} {
+// 	att := map[string]interface{}{
+// 		"url":             in.URL,
+// 		"secret_ref":      in.SecretRef,
+// 		"cert_config_map": in.CertConfigMap,
+// 	}
+// 	return []interface{}{att}
+// }
 
-func flattenDataVolumeSourcePVC(in cdiv1.DataVolumeSourcePVC) []interface{} {
-	att := map[string]interface{}{
-		"namespace": in.Namespace,
-		"name":      in.Name,
-	}
-	return []interface{}{att}
-}
+// func flattenDataVolumeSourcePVC(in cdiv1.DataVolumeSourcePVC) []interface{} {
+// 	att := map[string]interface{}{
+// 		"namespace": in.Namespace,
+// 		"name":      in.Name,
+// 	}
+// 	return []interface{}{att}
+// }
 
-func flattenDataVolumeSourceRegistry(in cdiv1.DataVolumeSourceRegistry) []interface{} {
-	att := map[string]interface{}{
-		"image_url": in.URL,
-	}
-	return []interface{}{att}
-}
+// func flattenDataVolumeSourceRegistry(in cdiv1.DataVolumeSourceRegistry) []interface{} {
+// 	att := map[string]interface{}{
+// 		"image_url": in.URL,
+// 	}
+// 	return []interface{}{att}
+// }
 
 // flattenDataVolumeSourceFromVM flattens Palette V1VMDataVolumeSource to the same shape as flattenDataVolumeSource.
 func flattenDataVolumeSourceFromVM(in *models.V1VMDataVolumeSource) []interface{} {
