@@ -95,12 +95,22 @@ func expandNetworksToVM(networks []interface{}) []*models.V1VMNetwork {
 		}
 		if v, ok := in["network_source"].([]interface{}); ok && len(v) > 0 {
 			if src, ok := v[0].(map[string]interface{}); ok {
-				if p, ok := src["pod"].([]interface{}); ok && len(p) > 0 && p[0] != nil {
-					item.Pod = expandPodNetworkToVM(p)
+				podList, podOK := src["pod"].([]interface{})
+				multusList, multusOK := src["multus"].([]interface{})
+				var multusNet *models.V1VMMultusNetwork
+				if multusOK {
+					multusNet = expandMultusNetworkToVM(multusList)
 				}
-				// if m, ok := src["multus"].([]interface{}); ok && len(m) == 1 {
-				if m, ok := src["multus"].([]interface{}); ok {
-					item.Multus = expandMultusNetworkToVM(m)
+				if multusNet != nil {
+					item.Multus = multusNet
+				} else if podOK {
+					// Default pod network: Terraform may send `pod {}` as an empty list (len==0). Only
+					// attach pod when multus is not configured so we never set two network types.
+					if len(podList) > 0 && podList[0] != nil {
+						item.Pod = expandPodNetworkToVM(podList)
+					} else {
+						item.Pod = &models.V1VMPodNetwork{}
+					}
 				}
 			}
 		}
