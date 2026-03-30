@@ -84,6 +84,7 @@ resource "spectrocloud_cluster_aks" "cluster" {
     disk_size_gb         = 60
     is_system_node_pool  = true
     storage_account_type = "Standard_LRS"
+    os_sku               = "Ubuntu2204"
   }
 }
 ```
@@ -190,6 +191,7 @@ Required:
 
 Optional:
 
+- `os_sku` (String) The OS SKU for the node pool. Valid values: `Ubuntu`, `Ubuntu2204`, `Ubuntu2404`, `AzureLinux`, `AzureLinux3`, `CBLMariner`, `Windows2019`, `Windows2022`. Immutable after creation (ForceNew).
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.

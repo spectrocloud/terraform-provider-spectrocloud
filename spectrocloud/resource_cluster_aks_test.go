@@ -20,6 +20,7 @@ func TestToMachinePoolAks(t *testing.T) {
 		"is_system_node_pool":  true,
 		"name":                 "pool-1",
 		"update_strategy":      "RollingUpdateScaleOut",
+		"os_sku":               "Ubuntu2204",
 	}
 
 	// Call the toMachinePoolAks function with the machine pool configuration
@@ -146,4 +147,125 @@ func TestFlattenMachinePoolConfigsAks(t *testing.T) {
 	assert.False(t, m1["is_system_node_pool"].(bool))
 	assert.Equal(t, "Standard_LRS", m1["storage_account_type"])
 	assert.Equal(t, "RollingUpdate", m1["update_strategy"])
+}
+
+func TestToMachinePoolAks_WithOsSku(t *testing.T) {
+	machinePoolConfig := map[string]interface{}{
+		"control_plane":        false,
+		"count":                2,
+		"min":                  1,
+		"max":                  4,
+		"instance_type":        "Standard_D4s_v3",
+		"disk_size_gb":         100,
+		"storage_account_type": "Standard_LRS",
+		"is_system_node_pool":  false,
+		"name":                 "worker-pool",
+		"update_strategy":      "RollingUpdateScaleOut",
+		"os_sku":               "Ubuntu2204",
+	}
+
+	mp := toMachinePoolAks(machinePoolConfig)
+
+	assert.NotNil(t, mp)
+	assert.NotNil(t, mp.ManagedPoolConfig)
+	// TODO: Uncomment assertion once palette-sdk-go is regenerated with OsSku field
+	// assert.Equal(t, "Ubuntu2204", mp.ManagedPoolConfig.OsSku)
+}
+
+func TestToMachinePoolAks_WithoutOsSku(t *testing.T) {
+	machinePoolConfig := map[string]interface{}{
+		"control_plane":        false,
+		"count":                2,
+		"min":                  1,
+		"max":                  4,
+		"instance_type":        "Standard_D4s_v3",
+		"disk_size_gb":         100,
+		"storage_account_type": "Standard_LRS",
+		"is_system_node_pool":  false,
+		"name":                 "worker-pool",
+		"update_strategy":      "RollingUpdateScaleOut",
+		"os_sku":               "",
+	}
+
+	mp := toMachinePoolAks(machinePoolConfig)
+
+	assert.NotNil(t, mp)
+	assert.NotNil(t, mp.ManagedPoolConfig)
+	// TODO: Uncomment assertion once palette-sdk-go is regenerated with OsSku field
+	// assert.Equal(t, "", mp.ManagedPoolConfig.OsSku)
+}
+
+func TestFlattenMachinePoolConfigsAks_WithOsSku(t *testing.T) {
+	machinePool := &models.V1AzureMachinePoolConfig{
+		Name:             "pool-with-sku",
+		Size:             2,
+		MinSize:          1,
+		MaxSize:          4,
+		IsSystemNodePool: false,
+		InstanceType:     "Standard_D4s_v3",
+		OsDisk: &models.V1AzureOSDisk{
+			DiskSizeGB: 100,
+			ManagedDisk: &models.V1ManagedDisk{
+				StorageAccountType: "Standard_LRS",
+			},
+		},
+		UpdateStrategy: &models.V1UpdateStrategy{
+			Type: "RollingUpdate",
+		},
+		// TODO: Uncomment OsSku once palette-sdk-go is regenerated with the OsSku field
+		// OsSku: "Ubuntu2204",
+	}
+
+	flattened := flattenMachinePoolConfigsAks([]*models.V1AzureMachinePoolConfig{machinePool})
+
+	assert.NotNil(t, flattened)
+	assert.Len(t, flattened, 1)
+	m := flattened[0].(map[string]interface{})
+	assert.Equal(t, "pool-with-sku", m["name"])
+	// TODO: Uncomment os_sku assertion once palette-sdk-go is regenerated
+	// assert.Equal(t, "Ubuntu2204", m["os_sku"])
+}
+
+func TestResourceMachinePoolAksHash_OsSku(t *testing.T) {
+	poolWithSku := map[string]interface{}{
+		"name":                 "pool1",
+		"count":                2,
+		"instance_type":        "Standard_D2s_v3",
+		"disk_size_gb":         50,
+		"is_system_node_pool":  false,
+		"storage_account_type": "Premium_LRS",
+		"update_strategy":      "RollingUpdateScaleOut",
+		"os_sku":               "Ubuntu2204",
+	}
+
+	poolWithDifferentSku := map[string]interface{}{
+		"name":                 "pool1",
+		"count":                2,
+		"instance_type":        "Standard_D2s_v3",
+		"disk_size_gb":         50,
+		"is_system_node_pool":  false,
+		"storage_account_type": "Premium_LRS",
+		"update_strategy":      "RollingUpdateScaleOut",
+		"os_sku":               "AzureLinux",
+	}
+
+	poolWithoutSku := map[string]interface{}{
+		"name":                 "pool1",
+		"count":                2,
+		"instance_type":        "Standard_D2s_v3",
+		"disk_size_gb":         50,
+		"is_system_node_pool":  false,
+		"storage_account_type": "Premium_LRS",
+		"update_strategy":      "RollingUpdateScaleOut",
+		"os_sku":               "",
+	}
+
+	hash1 := resourceMachinePoolAksHash(poolWithSku)
+	hash2 := resourceMachinePoolAksHash(poolWithDifferentSku)
+	hash3 := resourceMachinePoolAksHash(poolWithoutSku)
+
+	// Different os_sku values should produce different hashes
+	assert.NotEqual(t, hash1, hash2, "Different os_sku values should produce different hashes")
+	// Pool with os_sku should differ from pool without os_sku
+	assert.NotEqual(t, hash1, hash3, "Pool with os_sku should differ from pool without os_sku")
 }
