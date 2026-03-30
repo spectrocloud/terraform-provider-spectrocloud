@@ -320,6 +320,17 @@ func resourceClusterAks() *schema.Resource {
 							Required: true,
 							//ExactlyOneOf: []string{"Standard_LRS", "Standard_GRS", "Standard_RAGRS", "Standard_ZRS", "Premium_LRS", "Premium_ZRS", "Standard_GZRS", "Standard_RAGZRS"},
 						},
+						"os_sku": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "The OS SKU for the node pool. Valid values: Ubuntu, Ubuntu2204, Ubuntu2404, AzureLinux, AzureLinux3, CBLMariner, Windows2019, Windows2022. Immutable after creation.",
+							ValidateFunc: validation.StringInSlice([]string{
+								"Ubuntu", "Ubuntu2204", "Ubuntu2404",
+								"AzureLinux", "AzureLinux3", "CBLMariner",
+								"Windows2019", "Windows2022",
+							}, false),
+						},
 					},
 				},
 			},
@@ -566,6 +577,9 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 		oi["storage_account_type"] = machinePool.OsDisk.ManagedDisk.StorageAccountType
+		if machinePool.OsSku != nil {
+			oi["os_sku"] = string(*machinePool.OsSku)
+		}
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		ois = append(ois, oi)
@@ -798,6 +812,7 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		},
 		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
+			OsSku: toV1OsSkuPtr(m["os_sku"].(string)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:      toAdditionalNodePoolLabels(m),
@@ -870,4 +885,12 @@ func resourceClusterAksStateUpgradeV3(ctx context.Context, rawState map[string]i
 	}
 
 	return rawState, nil
+}
+
+func toV1OsSkuPtr(s string) *models.V1OsSku {
+	if s == "" {
+		return nil
+	}
+	v := models.V1OsSku(s)
+	return &v
 }
