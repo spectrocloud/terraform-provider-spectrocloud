@@ -40,6 +40,7 @@ resource "spectrocloud_cluster_aks" "aks" {
     disk_size_gb         = 50
     is_system_node_pool  = true
     storage_account_type = "Premium_LRS"
+    os_sku               = "Ubuntu2204"
   }
 
   machine_pool {
@@ -49,6 +50,7 @@ resource "spectrocloud_cluster_aks" "aks" {
     disk_size_gb         = 50
     is_system_node_pool  = false
     storage_account_type = "Premium_LRS"
+    os_sku               = "Ubuntu2204"
   }
 
 }
