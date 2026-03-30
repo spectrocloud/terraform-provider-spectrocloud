@@ -168,8 +168,8 @@ func TestToMachinePoolAks_WithOsSku(t *testing.T) {
 
 	assert.NotNil(t, mp)
 	assert.NotNil(t, mp.ManagedPoolConfig)
-	// TODO: Uncomment assertion once palette-sdk-go is regenerated with OsSku field
-	// assert.Equal(t, "Ubuntu2204", mp.ManagedPoolConfig.OsSku)
+	assert.NotNil(t, mp.ManagedPoolConfig.OsSku)
+	assert.Equal(t, models.V1OsSku("Ubuntu2204"), *mp.ManagedPoolConfig.OsSku)
 }
 
 func TestToMachinePoolAks_WithoutOsSku(t *testing.T) {
@@ -191,8 +191,7 @@ func TestToMachinePoolAks_WithoutOsSku(t *testing.T) {
 
 	assert.NotNil(t, mp)
 	assert.NotNil(t, mp.ManagedPoolConfig)
-	// TODO: Uncomment assertion once palette-sdk-go is regenerated with OsSku field
-	// assert.Equal(t, "", mp.ManagedPoolConfig.OsSku)
+	assert.Nil(t, mp.ManagedPoolConfig.OsSku)
 }
 
 func TestFlattenMachinePoolConfigsAks_WithOsSku(t *testing.T) {
@@ -212,8 +211,7 @@ func TestFlattenMachinePoolConfigsAks_WithOsSku(t *testing.T) {
 		UpdateStrategy: &models.V1UpdateStrategy{
 			Type: "RollingUpdate",
 		},
-		// TODO: Uncomment OsSku once palette-sdk-go is regenerated with the OsSku field
-		// OsSku: "Ubuntu2204",
+		OsSku: func() *models.V1OsSku { v := models.V1OsSku("Ubuntu2204"); return &v }(),
 	}
 
 	flattened := flattenMachinePoolConfigsAks([]*models.V1AzureMachinePoolConfig{machinePool})
@@ -222,8 +220,7 @@ func TestFlattenMachinePoolConfigsAks_WithOsSku(t *testing.T) {
 	assert.Len(t, flattened, 1)
 	m := flattened[0].(map[string]interface{})
 	assert.Equal(t, "pool-with-sku", m["name"])
-	// TODO: Uncomment os_sku assertion once palette-sdk-go is regenerated
-	// assert.Equal(t, "Ubuntu2204", m["os_sku"])
+	assert.Equal(t, "Ubuntu2204", m["os_sku"])
 }
 
 func TestResourceMachinePoolAksHash_OsSku(t *testing.T) {

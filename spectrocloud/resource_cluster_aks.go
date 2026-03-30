@@ -577,10 +577,9 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 		oi["storage_account_type"] = machinePool.OsDisk.ManagedDisk.StorageAccountType
-		// TODO: Uncomment os_sku flatten once palette-sdk-go is regenerated with the OsSku field on V1AzureMachinePoolConfig
-		// if machinePool.OsSku != "" {
-		// 	oi["os_sku"] = machinePool.OsSku
-		// }
+		if machinePool.OsSku != nil {
+			oi["os_sku"] = string(*machinePool.OsSku)
+		}
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		ois = append(ois, oi)
@@ -813,8 +812,7 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		},
 		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
-			// TODO: Uncomment OsSku once palette-sdk-go is regenerated with the OsSku field on V1AzureManagedMachinePoolConfig
-			// OsSku: m["os_sku"].(string),
+			OsSku: toV1OsSkuPtr(m["os_sku"].(string)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:      toAdditionalNodePoolLabels(m),
@@ -887,4 +885,12 @@ func resourceClusterAksStateUpgradeV3(ctx context.Context, rawState map[string]i
 	}
 
 	return rawState, nil
+}
+
+func toV1OsSkuPtr(s string) *models.V1OsSku {
+	if s == "" {
+		return nil
+	}
+	v := models.V1OsSku(s)
+	return &v
 }
