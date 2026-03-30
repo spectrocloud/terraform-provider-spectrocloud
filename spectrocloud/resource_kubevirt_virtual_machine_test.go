@@ -28,29 +28,47 @@ func prepareBasicResourceData() *schema.ResourceData {
 func TestFlattenDomainSpec(t *testing.T) {
 	guestQuantity := models.V1VMQuantity("2Gi")
 
+	emptyDomainResources := &models.V1VMResourceRequirements{
+		OvercommitGuestOverhead: false,
+		Requests:                map[string]interface{}{},
+		Limits:                  map[string]interface{}{},
+	}
+	emptyDomainDevices := &models.V1VMDevices{}
+	// flattenDisksFromVM / flattenInterfacesFromVM return []interface{}(nil) for empty lists.
+	emptyDevicesFlat := map[string]interface{}{
+		"disk":      []interface{}(nil),
+		"interface": []interface{}(nil),
+	}
+	emptyResourcesFlat := map[string]interface{}{
+		"limits":                     map[string]interface{}{},
+		"over_commit_guest_overhead": false,
+		"requests":                   map[string]interface{}{},
+	}
+
 	testCases := []struct {
 		input          models.V1VMDomainSpec
 		expectedOutput []interface{}
 	}{
 		{
 			input: models.V1VMDomainSpec{
-				CPU:    &models.V1VMCPU{}, // empty CPU and Memory should be ignored
-				Memory: &models.V1VMMemory{},
+				CPU:       &models.V1VMCPU{},
+				Memory:    &models.V1VMMemory{},
+				Resources: emptyDomainResources,
+				Devices:   emptyDomainDevices,
 			},
 			expectedOutput: []interface{}{
 				map[string]interface{}{
+					"cpu": []interface{}{
+						map[string]interface{}{},
+					},
+					"memory": []interface{}{
+						map[string]interface{}{},
+					},
 					"devices": []interface{}{
-						map[string]interface{}{
-							"disk":      []interface{}{},
-							"interface": []interface{}{},
-						},
+						emptyDevicesFlat,
 					},
 					"resources": []interface{}{
-						map[string]interface{}{
-							"limits":                     map[string]interface{}{},
-							"over_commit_guest_overhead": false,
-							"requests":                   map[string]interface{}{},
-						},
+						emptyResourcesFlat,
 					},
 				},
 			},
@@ -62,18 +80,24 @@ func TestFlattenDomainSpec(t *testing.T) {
 					Sockets: 1,
 					Threads: 1,
 				},
+				Resources: emptyDomainResources,
+				Devices:   emptyDomainDevices,
 			},
 			expectedOutput: []interface{}{
 				map[string]interface{}{
 					"cpu": []interface{}{
 						map[string]interface{}{
-							"cores":   uint32(2),
-							"sockets": uint32(1),
-							"threads": uint32(1),
+							"cores":   int64(2),
+							"sockets": int64(1),
+							"threads": int64(1),
 						},
 					},
-					"devices":   []interface{}{map[string]interface{}{"disk": []interface{}{}, "interface": []interface{}{}}},
-					"resources": []interface{}{map[string]interface{}{"limits": map[string]interface{}{}, "over_commit_guest_overhead": false, "requests": map[string]interface{}{}}},
+					"devices": []interface{}{
+						emptyDevicesFlat,
+					},
+					"resources": []interface{}{
+						emptyResourcesFlat,
+					},
 				},
 			},
 		},
@@ -82,6 +106,8 @@ func TestFlattenDomainSpec(t *testing.T) {
 				Memory: &models.V1VMMemory{
 					Guest: guestQuantity,
 				},
+				Resources: emptyDomainResources,
+				Devices:   emptyDomainDevices,
 			},
 			expectedOutput: []interface{}{
 				map[string]interface{}{
@@ -90,8 +116,12 @@ func TestFlattenDomainSpec(t *testing.T) {
 							"guest": "2Gi",
 						},
 					},
-					"devices":   []interface{}{map[string]interface{}{"disk": []interface{}{}, "interface": []interface{}{}}},
-					"resources": []interface{}{map[string]interface{}{"limits": map[string]interface{}{}, "over_commit_guest_overhead": false, "requests": map[string]interface{}{}}},
+					"devices": []interface{}{
+						emptyDevicesFlat,
+					},
+					"resources": []interface{}{
+						emptyResourcesFlat,
+					},
 				},
 			},
 		},
@@ -102,6 +132,8 @@ func TestFlattenDomainSpec(t *testing.T) {
 						PageSize: "1Gi",
 					},
 				},
+				Resources: emptyDomainResources,
+				Devices:   emptyDomainDevices,
 			},
 			expectedOutput: []interface{}{
 				map[string]interface{}{
@@ -110,8 +142,12 @@ func TestFlattenDomainSpec(t *testing.T) {
 							"hugepages": "1Gi",
 						},
 					},
-					"devices":   []interface{}{map[string]interface{}{"disk": []interface{}{}, "interface": []interface{}{}}},
-					"resources": []interface{}{map[string]interface{}{"limits": map[string]interface{}{}, "over_commit_guest_overhead": false, "requests": map[string]interface{}{}}},
+					"devices": []interface{}{
+						emptyDevicesFlat,
+					},
+					"resources": []interface{}{
+						emptyResourcesFlat,
+					},
 				},
 			},
 		},
