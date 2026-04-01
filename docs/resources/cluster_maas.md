@@ -153,6 +153,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `force_delete` (Boolean) If set to `true`, the cluster will be force deleted and user has to manually clean up the provisioned cloud resources.
 - `force_delete_delay` (Number) Delay duration in minutes to before invoking cluster force delete. Default and minimum is 20.
 - `host_config` (Block List) The host configuration for the cluster. (see [below for nested schema](#nestedblock--host_config))
+- `hyper_shift_config` (Block List, Max: 1) HyperShift / OpenShift control-plane hosting configuration for MAAS clusters. `cluster_deployment_type` `hypershift` denotes a management cluster; `openshift` denotes a hosted control plane and requires `host_cluster_uid`. (see [below for nested schema](#nestedblock--hyper_shift_config))
 - `location_config` (Block List) (see [below for nested schema](#nestedblock--location_config))
 - `namespaces` (Block List) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
 - `os_patch_after` (String) The date and time after which to patch the cluster. Prefix the time value with the respective RFC. Ex: `RFC3339: 2006-01-02T15:04:05Z07:00`
@@ -406,6 +407,18 @@ Optional:
 - `host_endpoint_type` (String) The type of endpoint for the cluster. Can be either 'Ingress' or 'LoadBalancer'. The default is 'Ingress'.
 - `ingress_host` (String) The host for the Ingress endpoint. Required if 'host_endpoint_type' is set to 'Ingress'.
 - `load_balancer_source_ranges` (String) The source ranges for the load balancer. Required if 'host_endpoint_type' is set to 'LoadBalancer'.
+
+
+<a id="nestedblock--hyper_shift_config"></a>
+### Nested Schema for `hyper_shift_config`
+
+Required:
+
+- `cluster_deployment_type` (String) Either `hypershift` (HyperShift management cluster) or `openshift` (OpenShift with control plane on HyperShift).
+
+Optional:
+
+- `host_cluster_uid` (String) UID of the host HyperShift cluster; required when `cluster_deployment_type` is `openshift`.
 
 
 <a id="nestedblock--location_config"></a>
