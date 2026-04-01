@@ -121,22 +121,6 @@ func resourceWorkspaceNamespaceHash(v interface{}) int {
 			}
 		}
 	}
-	// Resource allocation - include in hash for drift detection
-	// if val, ok := m["resource_allocation"]; ok && val != nil {
-	// 	if resourceAlloc, ok := val.(map[string]interface{}); ok && len(resourceAlloc) > 0 {
-	// 		// Sort keys for deterministic hashing
-	// 		keys := make([]string, 0, len(resourceAlloc))
-	// 		for k := range resourceAlloc {
-	// 			keys = append(keys, k)
-	// 		}
-	// 		sort.Strings(keys)
-	// 		for _, k := range keys {
-	// 			if v, ok := resourceAlloc[k].(string); ok && v != "" {
-	// 				buf.WriteString(fmt.Sprintf("resource_allocation-%s-%s-", k, v))
-	// 			}
-	// 		}
-	// 	}
-	// }
 
 	// Cluster resource allocations - include in hash
 	if val, ok := m["cluster_resource_allocations"]; ok && val != nil {

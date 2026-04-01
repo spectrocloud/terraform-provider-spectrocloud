@@ -54,18 +54,6 @@ func expandDataVolumeTemplates(dataVolumes []interface{}) ([]*models.V1VMDataVol
 	return result, nil
 }
 
-// flattenDataVolumeTemplatesK8s flattens KubeVirt []DataVolumeTemplateSpec to the same schema shape as flattenDataVolumeTemplates.
-// func flattenDataVolumeTemplatesK8s(in []kubevirtapiv1.DataVolumeTemplateSpec, resourceData *schema.ResourceData) []interface{} {
-// 	att := make([]interface{}, len(in))
-// 	for i, v := range in {
-// 		c := make(map[string]interface{})
-// 		c["metadata"] = k8s.FlattenMetadataDataVolume(v.ObjectMeta)
-// 		c["spec"] = datavolume.FlattenDataVolumeSpec(v.Spec)
-// 		att[i] = c
-// 	}
-// 	return att
-// }
-
 // flattenDataVolumeTemplatesFromVM flattens []*V1VMDataVolumeTemplateSpec (API response) to the same shape as flattenDataVolumeTemplates.
 func flattenDataVolumeTemplatesFromVM(in []*models.V1VMDataVolumeTemplateSpec, resourceData *schema.ResourceData) []interface{} {
 	if len(in) == 0 {

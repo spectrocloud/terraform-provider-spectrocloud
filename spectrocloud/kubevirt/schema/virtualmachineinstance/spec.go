@@ -76,40 +76,6 @@ func expandVirtualMachineInstanceSpec(d *schema.ResourceData) (*models.V1VMVirtu
 	return result, nil
 }
 
-// func flattenVirtualMachineInstanceSpec(in kubevirtapiv1.VirtualMachineInstanceSpec, resourceData *schema.ResourceData) []interface{} {
-// 	att := make(map[string]interface{})
-
-// 	att["priority_class_name"] = in.PriorityClassName
-// 	att["domain"] = FlattenDomainSpec(in.Domain)
-
-// 	att["node_selector"] = utils.FlattenStringMap(in.NodeSelector)
-// 	att["affinity"] = k8s.FlattenAffinity(in.Affinity)
-// 	att["scheduler_name"] = in.SchedulerName
-// 	att["tolerations"] = k8s.FlattenTolerations(in.Tolerations)
-// 	if in.EvictionStrategy != nil {
-// 		att["eviction_strategy"] = string(*in.EvictionStrategy)
-// 	}
-// 	if in.TerminationGracePeriodSeconds != nil {
-// 		att["termination_grace_period_seconds"] = *in.TerminationGracePeriodSeconds
-// 	}
-// 	att["volume"] = flattenVolumes(in.Volumes)
-// 	if in.LivenessProbe != nil {
-// 		att["liveness_probe"] = flattenProbe(*in.LivenessProbe)
-// 	}
-// 	if in.ReadinessProbe != nil {
-// 		att["readiness_probe"] = flattenProbe(*in.ReadinessProbe)
-// 	}
-// 	att["hostname"] = in.Hostname
-// 	att["subdomain"] = in.Subdomain
-// 	att["network"] = flattenNetworks(in.Networks)
-// 	att["dns_policy"] = string(in.DNSPolicy)
-// 	if in.DNSConfig != nil {
-// 		att["pod_dns_config"] = k8s.FlattenPodDNSConfig(in.DNSConfig)
-// 	}
-
-// 	return []interface{}{att}
-// }
-
 // flattenVirtualMachineInstanceSpecFromVM builds the same []interface{} shape as flattenVirtualMachineInstanceSpec from Palette V1VMVirtualMachineInstanceSpec.
 func flattenVirtualMachineInstanceSpecFromVM(in *models.V1VMVirtualMachineInstanceSpec, resourceData *schema.ResourceData) []interface{} {
 	if in == nil {

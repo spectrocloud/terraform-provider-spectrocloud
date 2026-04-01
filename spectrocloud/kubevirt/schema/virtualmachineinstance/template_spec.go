@@ -20,15 +20,6 @@ func ExpandVirtualMachineInstanceTemplateSpec(d *schema.ResourceData) (*models.V
 	return result, nil
 }
 
-// func FlattenVirtualMachineInstanceTemplateSpec(in kubevirtapiv1.VirtualMachineInstanceTemplateSpec, resourceData *schema.ResourceData) []interface{} {
-// 	att := make(map[string]interface{})
-
-// 	// Since we removed metadata support in VM instance Spec metadata is not set.
-// 	att["spec"] = flattenVirtualMachineInstanceSpec(in.Spec, resourceData)
-
-// 	return []interface{}{att}
-// }
-
 // FlattenVirtualMachineInstanceTemplateSpecFromVM builds the same shape as FlattenVirtualMachineInstanceTemplateSpec from Palette V1VMVirtualMachineInstanceTemplateSpec.
 func FlattenVirtualMachineInstanceTemplateSpecFromVM(in *models.V1VMVirtualMachineInstanceTemplateSpec, resourceData *schema.ResourceData) []interface{} {
 	att := make(map[string]interface{})

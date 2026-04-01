@@ -34,34 +34,6 @@ func DataVolumeFields() map[string]*schema.Schema {
 	}
 }
 
-// func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, error) {
-// 	result := &cdiv1.DataVolume{}
-
-// 	result.ObjectMeta = k8s.ExpandMetadataToObjectMeta(resourceData.Get("metadata").([]interface{}))
-// 	spec, err := ExpandDataVolumeSpecToK8s(resourceData.Get("spec").([]interface{}))
-// 	if err != nil {
-// 		return result, err
-// 	}
-// 	result.Spec = spec
-// 	result.Status = expandDataVolumeStatus(resourceData.Get("status").([]interface{}))
-
-// 	return result, nil
-// }
-
-// func ToResourceData(dv cdiv1.DataVolume, resourceData *schema.ResourceData) error {
-// 	if err := resourceData.Set("metadata", k8s.FlattenMetadataDataVolume(dv.ObjectMeta)); err != nil {
-// 		return err
-// 	}
-// 	if err := resourceData.Set("spec", FlattenDataVolumeSpec(dv.Spec)); err != nil {
-// 		return err
-// 	}
-// 	if err := resourceData.Set("status", flattenDataVolumeStatus(dv.Status)); err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
 // ToResourceDataFromVM writes metadata, spec, and status for refresh after create/update:
 // status is normalized from the current resource config (expand + flatten), matching legacy ToResourceData.
 func ToResourceDataFromVMTemplate(t *models.V1VMDataVolumeTemplateSpec, resourceData *schema.ResourceData) error {

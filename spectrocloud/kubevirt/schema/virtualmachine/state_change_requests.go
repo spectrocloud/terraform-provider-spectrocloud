@@ -73,24 +73,6 @@ func expandVirtualMachineStateChangeRequests(virtualMachineStateChangeRequests [
 	return result
 }
 
-// func flattenVirtualMachineStateChangeRequests(in []kubevirtapiv1.VirtualMachineStateChangeRequest) []interface{} {
-// 	att := make([]interface{}, len(in))
-
-// 	for i, v := range in {
-// 		c := make(map[string]interface{})
-
-// 		c["action"] = string(v.Action)
-// 		c["data"] = v.Data
-// 		if v.UID != nil {
-// 			c["uid"] = string(*v.UID)
-// 		}
-
-// 		att[i] = c
-// 	}
-
-// 	return att
-// }
-
 func flattenVirtualMachineStateChangeRequestsFromVM(in []*models.V1VMVirtualMachineStateChangeRequest) []interface{} {
 	if len(in) == 0 {
 		return nil

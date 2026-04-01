@@ -27,20 +27,6 @@ func ProbeSchema() *schema.Schema {
 	}
 }
 
-// func expandProbe(probe []interface{}) *kubevirtapiv1.Probe {
-// 	if len(probe) == 0 || probe[0] == nil {
-// 		return nil
-// 	}
-
-// 	result := &kubevirtapiv1.Probe{}
-
-// 	_ = probe[0].(map[string]interface{})
-
-// 	// TODO nargaman
-
-// 	return result
-// }
-
 // expandProbeToVM expands the probe schema into Palette models.V1VMProbe for VM spec.
 func expandProbeToVM(probe []interface{}) *models.V1VMProbe {
 	if len(probe) == 0 || probe[0] == nil {
@@ -50,16 +36,6 @@ func expandProbeToVM(probe []interface{}) *models.V1VMProbe {
 	// TODO: populate V1VMProbe fields when schema is defined
 	return &models.V1VMProbe{}
 }
-
-// func flattenProbe(in kubevirtapiv1.Probe) []interface{} {
-// 	att := make(map[string]interface{})
-
-// 	// att["spec"] = flattenVirtualMachineInstanceSpecSpec(in.Spec)
-// 	// att["status"] = flattenVirtualMachineInstanceSpecStatus(in.Status)
-// 	// TODO nargaman
-
-// 	return []interface{}{att}
-// }
 
 // flattenProbeFromVM flattens *models.V1VMProbe to the same shape as flattenProbe.
 func flattenProbeFromVM(in *models.V1VMProbe) []interface{} {

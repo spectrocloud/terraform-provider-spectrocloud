@@ -97,22 +97,6 @@ func expandVirtualMachineConditions(conditions []interface{}) ([]*models.V1VMVir
 	return result, nil
 }
 
-// func flattenVirtualMachineConditions(in []kubevirtapiv1.VirtualMachineCondition) []interface{} {
-// 	att := make([]interface{}, len(in))
-
-// 	for i, v := range in {
-// 		c := make(map[string]interface{})
-// 		c["type"] = string(v.Type)
-// 		c["status"] = string(v.Status)
-// 		c["reason"] = v.Reason
-// 		c["message"] = v.Message
-
-// 		att[i] = c
-// 	}
-
-// 	return att
-// }
-
 func flattenVirtualMachineConditionsFromVM(in []*models.V1VMVirtualMachineCondition) []interface{} {
 	if len(in) == 0 {
 		return nil
