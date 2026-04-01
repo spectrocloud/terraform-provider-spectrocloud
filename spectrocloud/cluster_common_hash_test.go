@@ -935,52 +935,6 @@ func TestResourceMachinePoolVirtualHash(t *testing.T) {
 	}
 }
 
-func TestResourceMachinePoolOpenStackHash(t *testing.T) {
-	testCases := []struct {
-		name         string
-		input        interface{}
-		expectedHash int
-	}{
-		{
-			name: "Valid MachinePoolOpenStackHash",
-			input: map[string]interface{}{
-				"name":                    "worker-pool-1",
-				"count":                   3,
-				"control_plane":           false,
-				"control_plane_as_worker": false,
-				"node_repave_interval":    0,
-				"update_strategy":         "RollingUpdate",
-				"instance_type":           "flavor1",
-				"subnet_id":               "subnet123",
-				"azs":                     schema.NewSet(schema.HashString, []interface{}{"az1", "az2"}),
-			},
-			expectedHash: 715623002,
-		},
-		{
-			name: "Valid MachinePoolOpenStackHash 2",
-			input: map[string]interface{}{
-				"name":                    "worker-pool-2",
-				"count":                   2,
-				"control_plane":           false,
-				"control_plane_as_worker": false,
-				"node_repave_interval":    0,
-				"update_strategy":         "Recreate",
-				"instance_type":           "flavor2",
-				"subnet_id":               "subnet456",
-				"azs":                     schema.NewSet(schema.HashString, []interface{}{"az3"}),
-			},
-			expectedHash: 3371730139,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			hash := resourceMachinePoolOpenStackHash(tc.input)
-			assert.Equal(t, tc.expectedHash, hash)
-		})
-	}
-}
-
 func TestResourceMachinePoolGkeHash(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -2119,41 +2073,4 @@ func TestAKSAndEKSHashWithAnnotationsAndOverride(t *testing.T) {
 				"Hash should change when additional_annotations or override_kubeadm_configuration is added")
 		})
 	}
-}
-
-// TestOpenStackHashWithNewFields tests OpenStack hash function with annotations and override
-func TestOpenStackHashWithNewFields(t *testing.T) {
-	base := map[string]interface{}{
-		"name":          "worker-pool",
-		"count":         3,
-		"instance_type": "flavor1",
-	}
-
-	withAnnotations := map[string]interface{}{
-		"name":          "worker-pool",
-		"count":         3,
-		"instance_type": "flavor1",
-		"additional_annotations": map[string]interface{}{
-			"custom.io/annotation": "value",
-		},
-	}
-
-	withOverride := map[string]interface{}{
-		"name":          "worker-pool",
-		"count":         3,
-		"instance_type": "flavor1",
-		"override_kubeadm_configuration": `kubeletExtraArgs:
-  max-pods: "110"`,
-	}
-
-	baseHash := resourceMachinePoolOpenStackHash(base)
-	annotationsHash := resourceMachinePoolOpenStackHash(withAnnotations)
-	overrideHash := resourceMachinePoolOpenStackHash(withOverride)
-
-	assert.NotEqual(t, baseHash, annotationsHash,
-		"OpenStack hash should change when annotations are added")
-	assert.NotEqual(t, baseHash, overrideHash,
-		"OpenStack hash should change when override_kubeadm_configuration is added")
-	assert.NotEqual(t, annotationsHash, overrideHash,
-		"Annotations and override should produce different hashes")
 }

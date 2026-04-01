@@ -94,14 +94,6 @@ func resolveAccountByName(c *client.V1Client, accountType, name, scope string) (
 		if acc != nil && acc.Metadata != nil {
 			return acc.Metadata.UID, nil
 		}
-	case "openstack":
-		acc, err := c.GetCloudAccountOpenStackByName(name, scope)
-		if err != nil {
-			return "", err
-		}
-		if acc != nil && acc.Metadata != nil {
-			return acc.Metadata.UID, nil
-		}
 	case "vsphere":
 		acc, err := c.GetCloudAccountVsphereByName(name, scope)
 		if err != nil {

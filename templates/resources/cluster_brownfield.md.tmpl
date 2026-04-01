@@ -9,7 +9,7 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
-~> **Preview Release**: The `spectrocloud_cluster_brownfield` resource provides the ability to import and register existing Kubernetes clusters across different cloud platforms (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack) with Palette. This feature is currently **in preview**, and we are actively working on enhancements that will be released in future versions.
+~> **Preview Release**: The `spectrocloud_cluster_brownfield` resource provides the ability to import and register existing Kubernetes clusters across different cloud platforms (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native and MAAS) with Palette. This feature is currently **in preview**, and we are actively working on enhancements that will be released in future versions.
 
 ## Example Usage
 
@@ -25,7 +25,7 @@ data "spectrocloud_backup_storage_location" "bsl" {
 
 resource "spectrocloud_cluster_brownfield" "cluster" {
   name       = var.cluster_name
-  cloud_type = "generic" # Options: aws, Eks-Anywhere, azure, gcp, vsphere, openshift, generic, apache-cloudstack, edge-native, maas, openstack
+  cloud_type = "generic" # Options: aws, Eks-Anywhere, azure, gcp, vsphere, openshift, generic, apache-cloudstack, edge-native, maas
   context    = "project" # Optional, defaults to "project"
   import_mode = "full"   # Options: "read_only" or "full" (default: "full")
   

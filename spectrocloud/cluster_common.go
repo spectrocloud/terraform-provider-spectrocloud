@@ -25,7 +25,6 @@ var (
 		"spectrocloud_cluster_edge_vsphere":      "edge-vsphere",
 		"spectrocloud_cluster_gcp":               "gcp",
 		"spectrocloud_cluster_maas":              "maas",
-		"spectrocloud_cluster_openstack":         "openstack",
 		"spectrocloud_cluster_vsphere":           "vsphere",
 		"spectrocloud_cluster_gke":               "gke",
 		"spectrocloud_cluster_apache_cloudstack": "apache-cloudstack",
