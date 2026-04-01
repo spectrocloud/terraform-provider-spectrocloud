@@ -34,7 +34,7 @@ data "spectrocloud_pack" "filtered" {
     pack_type   = ["spectro"]       # Allowed: "helm", "spectro", "oci", "manifest"
     addon_type  = ["system app"]    # Allowed: "load balancer", "ingress", "logging", "monitoring", "security", "authentication", "servicemesh", "system app", "app services", "registry", "csi", "cni", "integration"
     pack_layer  = ["addon"]         # Allowed: "kernel", "os", "k8s", "cni", "csi", "addon"
-    environment = ["all"]           # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "openstack", "edge-native"
+    environment = ["all"]           # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "edge-native"
     is_fips     = false             # Boolean: true (FIPS-compliant) / false (default)
     pack_source = ["community"]      # Allowed: "spectrocloud", "community"
   }

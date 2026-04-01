@@ -29,7 +29,7 @@ var AllowedAddonType = []string{"load balancer", "ingress", "logging", "monitori
 
 var AllowedEnvs = []string{
 	"all", "aws", "eks", "gcp", "gke", "vsphere",
-	"maas", "openstack", "edge-native", "aks", "azure",
+	"maas", "edge-native", "aks", "azure",
 }
 
 var AllowedPackType = []string{string(models.V1PackTypeSpectro), string(models.V1PackTypeHelm), string(models.V1PackTypeManifest), string(models.V1PackTypeOci)}
@@ -84,7 +84,7 @@ func dataSourcePack() *schema.Resource {
 						"environment": {
 							Type:        schema.TypeSet,
 							Optional:    true,
-							Description: "Defines the environment where the pack will be deployed. Options include `all`, `aws`, `eks`, `azure`, `aks`, `gcp`, `gke`, `vsphere`, `maas`, `openstack` and `edge-native`. If not specified, all options will be set by default.",
+							Description: "Defines the environment where the pack will be deployed. Options include `all`, `aws`, `eks`, `azure`, `aks`, `gcp`, `gke`, `vsphere`, `maas` and `edge-native`. If not specified, all options will be set by default.",
 							Elem: &schema.Schema{
 								Type:         schema.TypeString,
 								ValidateFunc: validation.StringInSlice(AllowedEnvs, false),

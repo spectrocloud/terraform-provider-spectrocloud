@@ -3,7 +3,7 @@
 
 resource "spectrocloud_cluster_brownfield" "basic" {
   name        = "my-existing-cluster"
-  cloud_type  = "generic" # Options: aws, eks-anywhere, azure, gcp, vsphere, openshift, generic, maas, openstack
+  cloud_type  = "generic" # Options: aws, eks-anywhere, azure, gcp, vsphere, openshift, generic, maas
   context     = "project" # Optional, defaults to "project"
   import_mode = "full"
 
