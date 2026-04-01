@@ -94,6 +94,19 @@ func FlattenVMMToSpectroSchemaFromVM(in *models.V1ClusterVirtualMachineSpec, res
 			}
 		}
 	}
+	// TypeList blocks must receive []interface{}{}, not nil, or Terraform state/normalization breaks.
+	if cpu == nil {
+		cpu = []interface{}{}
+	}
+	if memory == nil {
+		memory = []interface{}{}
+	}
+	if firmware == nil {
+		firmware = []interface{}{}
+	}
+	if features == nil {
+		features = []interface{}{}
+	}
 	vmTolerations = VMTemplateSpecAttributes["tolerations"]
 
 	if err := resourceData.Set("run_strategy", VM["run_strategy"]); err != nil {

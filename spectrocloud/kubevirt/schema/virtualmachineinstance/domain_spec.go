@@ -541,8 +541,9 @@ func flattenEFIFromVM(in *models.V1VMEFI) []interface{} {
 	if in.Persistent != nil {
 		att["persistent"] = *in.Persistent
 	}
+	// Non-nil EFI from the API (e.g. efi: {}) must still serialize as one block so bootloader nests correctly.
 	if len(att) == 0 {
-		return []interface{}{}
+		return []interface{}{map[string]interface{}{}}
 	}
 	return []interface{}{att}
 }

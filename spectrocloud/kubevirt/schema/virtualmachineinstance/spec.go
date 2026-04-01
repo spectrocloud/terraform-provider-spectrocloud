@@ -83,9 +83,8 @@ func flattenVirtualMachineInstanceSpecFromVM(in *models.V1VMVirtualMachineInstan
 	}
 	att := make(map[string]interface{})
 	att["priority_class_name"] = in.PriorityClassName
-	if in.Domain != nil {
-		att["domain"] = FlattenDomainSpecFromVM(in.Domain)
-	}
+	// Always emit domain so FlattenVMMToSpectroSchemaFromVM can read flattened cpu/memory/firmware/features.
+	att["domain"] = FlattenDomainSpecFromVM(in.Domain)
 	att["node_selector"] = utils.FlattenStringMap(in.NodeSelector)
 	att["affinity"] = k8s.FlattenAffinityFromVM(in.Affinity)
 	att["scheduler_name"] = in.SchedulerName
