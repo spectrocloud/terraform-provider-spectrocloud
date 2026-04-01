@@ -38,7 +38,7 @@ func resourceClusterBrownfield() *schema.Resource {
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
-		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack). This feature is currently in preview.",
+		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native and MAAS). This feature is currently in preview.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -74,9 +74,8 @@ func resourceClusterBrownfield() *schema.Resource {
 					"apache-cloudstack",
 					"edge-native",
 					"maas",
-					"openstack",
 				}, false),
-				Description: "The cloud type of the cluster. Supported values: `aws`, `eks-anywhere`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`,`apache-cloudstack`,`edge-native`,`maas`,`openstack`. This field cannot be updated after creation.",
+				Description: "The cloud type of the cluster. Supported values: `aws`, `eks-anywhere`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`,`apache-cloudstack`,`edge-native`,`maas`. This field cannot be updated after creation.",
 			},
 			"import_mode": {
 				Type:         schema.TypeString,
@@ -928,8 +927,6 @@ func getNodeMaintenanceStatusForCloudType(c *client.V1Client, cloudType string) 
 		return c.GetNodeMaintenanceStatusMaas
 	case "edge-native":
 		return c.GetNodeMaintenanceStatusEdgeNative
-	case "openstack":
-		return c.GetNodeMaintenanceStatusOpenStack
 	default:
 		return nil
 	}
@@ -954,8 +951,6 @@ func getMachinesListForCloudType(c *client.V1Client, cloudType string) func(stri
 		return c.GetMachinesListMaas
 	case "edge-native":
 		return c.GetMachinesListEdgeNative
-	case "openstack":
-		return c.GetMachinesListOpenStack
 	default:
 		return nil
 	}

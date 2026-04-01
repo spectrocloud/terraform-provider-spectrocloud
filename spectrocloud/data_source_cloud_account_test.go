@@ -2,10 +2,11 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func prepareBaseDataSourceAWSAccountSchema() *schema.ResourceData {
@@ -135,38 +136,6 @@ func TestReadVsphereAccountFuncNegative(t *testing.T) {
 	_ = d.Set("name", "test-vsphere-account-1")
 	diags = dataSourceCloudAccountVsphereRead(ctx, d, unitTestMockAPINegativeClient)
 	assertFirstDiagMessage(t, diags, "Unable to find vsphere cloud account")
-}
-
-func prepareBaseDataSourceOpenstackAccountSchema() *schema.ResourceData {
-	d := dataSourceCloudAccountOpenStack().TestResourceData()
-	return d
-}
-func TestReadOpenstackAccountFuncName(t *testing.T) {
-	d := prepareBaseDataSourceOpenstackAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-openstack-account-1")
-	diags = dataSourceCloudAccountOpenStackRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadOpenstackAccountFuncID(t *testing.T) {
-	d := prepareBaseDataSourceOpenstackAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("id", "test-openstack-account-id-1")
-	diags = dataSourceCloudAccountOpenStackRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-func TestReadOpenstackAccountFuncNegative(t *testing.T) {
-	d := prepareBaseDataSourceOpenstackAccountSchema()
-	var diags diag.Diagnostics
-
-	var ctx context.Context
-	_ = d.Set("name", "test-openstack-account-1")
-	diags = dataSourceCloudAccountOpenStackRead(ctx, d, unitTestMockAPINegativeClient)
-	assertFirstDiagMessage(t, diags, "Unable to find openstack cloud account")
 }
 
 func prepareBaseDataSourceMaasAccountSchema() *schema.ResourceData {
