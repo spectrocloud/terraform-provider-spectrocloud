@@ -1165,15 +1165,12 @@ Optional:
 <a id="nestedblock--status"></a>
 ### Nested Schema for `status`
 
-Required:
-
-- `conditions` (Block List, Min: 1) Hold the state information of the VirtualMachine and its VirtualMachineInstance. (see [below for nested schema](#nestedblock--status--conditions))
-- `state_change_requests` (Block List, Min: 1) StateChangeRequests indicates a list of actions that should be taken on a VMI. (see [below for nested schema](#nestedblock--status--state_change_requests))
-
 Optional:
 
+- `conditions` (Block List) Hold the state information of the VirtualMachine and its VirtualMachineInstance. (see [below for nested schema](#nestedblock--status--conditions))
 - `created` (Boolean) Created indicates if the virtual machine is created in the cluster.
 - `ready` (Boolean) Ready indicates if the virtual machine is running and ready.
+- `state_change_requests` (Block List) StateChangeRequests indicates a list of actions that should be taken on a VMI. (see [below for nested schema](#nestedblock--status--state_change_requests))
 
 <a id="nestedblock--status--conditions"></a>
 ### Nested Schema for `status.conditions`

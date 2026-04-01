@@ -7,12 +7,12 @@ import (
 
 func virtualMachineStatusFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-		"created": &schema.Schema{
+		"created": {
 			Type:        schema.TypeBool,
 			Description: "Created indicates if the virtual machine is created in the cluster.",
 			Optional:    true,
 		},
-		"ready": &schema.Schema{
+		"ready": {
 			Type:        schema.TypeBool,
 			Description: "Ready indicates if the virtual machine is running and ready.",
 			Optional:    true,
