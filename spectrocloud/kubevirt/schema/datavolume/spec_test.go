@@ -536,3 +536,27 @@ func TestFlattenDataVolumeSpec_WithBothPVCAndStorage(t *testing.T) {
 	assert.Contains(t, flattened, "pvc")
 	assert.Contains(t, flattened, "storage")
 }
+
+func TestFlattenDataVolumeSpec_WithBlankSource(t *testing.T) {
+	input := &models.V1VMDataVolumeSpec{
+		Source: &models.V1VMDataVolumeSource{
+			Blank: map[string]interface{}{},
+		},
+		Pvc: &models.V1VMPersistentVolumeClaimSpec{
+			AccessModes: []string{string(v1.ReadWriteOnce)},
+			Resources: &models.V1VMCoreResourceRequirements{
+				Requests: map[string]models.V1VMQuantity{"storage": "5Gi"},
+			},
+		},
+	}
+
+	result := FlattenDataVolumeSpecFromVM(input)
+	require.Len(t, result, 1)
+	flattened := result[0].(map[string]interface{})
+	source := flattened["source"].([]interface{})
+	require.Len(t, source, 1)
+	srcMap := source[0].(map[string]interface{})
+	blank := srcMap["blank"].([]interface{})
+	require.Len(t, blank, 1)
+	assert.Equal(t, map[string]interface{}{}, blank[0].(map[string]interface{}))
+}
