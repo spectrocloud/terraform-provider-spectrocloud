@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -112,7 +113,7 @@ func namespacedMetadataSchemaIsTemplate(objectName string, generatableName, isTe
 	}
 }
 
-func ConvertToBasicMetadata(d *schema.ResourceData) metav1.ObjectMeta {
+func ConvertToBasicMetadata(d *schema.ResourceData) *models.V1VMObjectMeta {
 	var meta []interface{}
 	metaValues := make(map[string]interface{})
 	if v, ok := d.GetOk("annotations"); ok && len(v.(map[string]interface{})) > 0 {
@@ -139,8 +140,8 @@ func ConvertToBasicMetadata(d *schema.ResourceData) metav1.ObjectMeta {
 	return ExpandMetadata(meta)
 }
 
-func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
-	meta := metav1.ObjectMeta{}
+func ExpandMetadata(in []interface{}) *models.V1VMObjectMeta {
+	meta := &models.V1VMObjectMeta{}
 	if len(in) < 1 {
 		return meta
 	}
@@ -172,6 +173,40 @@ func ExpandMetadata(in []interface{}) metav1.ObjectMeta {
 	return meta
 }
 
+// ExpandMetadataToObjectMeta expands the metadata schema into Kubernetes metav1.ObjectMeta.
+// Use this when building native K8s/CDI resources (e.g. cdiv1.DataVolume) that expect metav1.ObjectMeta.
+func ExpandMetadataToObjectMeta(in []interface{}) metav1.ObjectMeta {
+	var meta metav1.ObjectMeta
+	if len(in) < 1 {
+		return meta
+	}
+	m := in[0].(map[string]interface{})
+
+	if v, ok := m["annotations"].(map[string]string); ok && len(v) > 0 {
+		meta.Annotations = v
+	} else if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 {
+		meta.Annotations = utils.ExpandStringMap(v)
+	}
+	if v, ok := m["labels"].(map[string]string); ok && len(v) > 0 {
+		meta.Labels = v
+	} else if v, ok := m["labels"].(map[string]interface{}); ok && len(v) > 0 {
+		meta.Labels = utils.ExpandStringMap(v)
+	}
+	if v, ok := m["generate_name"]; ok && v.(string) != "" {
+		meta.GenerateName = v.(string)
+	}
+	if v, ok := m["name"]; ok && v != nil {
+		meta.Name = v.(string)
+	}
+	if v, ok := m["namespace"]; ok && v != nil {
+		meta.Namespace = v.(string)
+	}
+	if v, ok := m["resource_version"]; ok && v != nil {
+		meta.ResourceVersion = v.(string)
+	}
+	return meta
+}
+
 func FlattenMetadataDataVolume(meta metav1.ObjectMeta) []interface{} {
 	m := make(map[string]interface{})
 	// Filter out system-managed annotations for data volumes as well
@@ -190,6 +225,28 @@ func FlattenMetadataDataVolume(meta metav1.ObjectMeta) []interface{} {
 		m["namespace"] = meta.Namespace
 	}
 
+	return []interface{}{m}
+}
+
+// FlattenMetadataDataVolumeFromVM flattens Palette V1VMObjectMeta to the same shape as FlattenMetadataDataVolume.
+func FlattenMetadataDataVolumeFromVM(meta *models.V1VMObjectMeta) []interface{} {
+	m := make(map[string]interface{})
+	if meta == nil {
+		return []interface{}{m}
+	}
+	filteredAnnotations := filterSystemAnnotations(meta.Annotations)
+	m["annotations"] = utils.FlattenStringMap(filteredAnnotations)
+	if meta.GenerateName != "" {
+		m["generate_name"] = meta.GenerateName
+	}
+	m["labels"] = utils.FlattenStringMap(meta.Labels)
+	m["name"] = meta.Name
+	m["resource_version"] = meta.ResourceVersion
+	m["uid"] = meta.UID
+	m["generation"] = meta.Generation
+	if meta.Namespace != "" {
+		m["namespace"] = meta.Namespace
+	}
 	return []interface{}{m}
 }
 
@@ -222,5 +279,39 @@ func FlattenMetadata(meta metav1.ObjectMeta, resourceData *schema.ResourceData) 
 		return err
 	}
 
+	return err
+}
+
+// FlattenMetadataFromVM flattens Palette V1VMObjectMeta into resourceData, same keys as FlattenMetadata.
+func FlattenMetadataFromVM(meta *models.V1VMObjectMeta, resourceData *schema.ResourceData) error {
+	if resourceData == nil {
+		return nil
+	}
+	if meta == nil {
+		return nil
+	}
+	var err error
+	filteredAnnotations := filterSystemAnnotations(meta.Annotations)
+	if err = resourceData.Set("annotations", utils.FlattenStringMap(filteredAnnotations)); err != nil {
+		return err
+	}
+	if err = resourceData.Set("labels", utils.FlattenStringMap(meta.Labels)); err != nil {
+		return err
+	}
+	if err = resourceData.Set("name", meta.Name); err != nil {
+		return err
+	}
+	if err = resourceData.Set("resource_version", meta.ResourceVersion); err != nil {
+		return err
+	}
+	if err = resourceData.Set("uid", meta.UID); err != nil {
+		return err
+	}
+	if err = resourceData.Set("generation", int(meta.Generation)); err != nil {
+		return err
+	}
+	if err = resourceData.Set("namespace", meta.Namespace); err != nil {
+		return err
+	}
 	return err
 }

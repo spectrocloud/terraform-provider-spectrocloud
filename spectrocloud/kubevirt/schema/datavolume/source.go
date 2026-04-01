@@ -2,8 +2,8 @@ package datavolume
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -131,8 +131,8 @@ func dataVolumeSourceRegistrySchema() *schema.Schema {
 
 // Expanders
 
-func expandDataVolumeSource(dataVolumeSource []interface{}) *cdiv1.DataVolumeSource {
-	result := &cdiv1.DataVolumeSource{}
+func expandDataVolumeSource(dataVolumeSource []interface{}) *models.V1VMDataVolumeSource {
+	result := &models.V1VMDataVolumeSource{}
 
 	if len(dataVolumeSource) == 0 || dataVolumeSource[0] == nil {
 		return result
@@ -147,7 +147,7 @@ func expandDataVolumeSource(dataVolumeSource []interface{}) *cdiv1.DataVolumeSou
 		result.HTTP = expandDataVolumeSourceHTTP(v)
 	}
 	if v, ok := in["pvc"].([]interface{}); ok {
-		result.PVC = expandDataVolumeSourcePVC(v)
+		result.Pvc = expandDataVolumeSourcePVC(v)
 	}
 	if v, ok := in["registry"].([]interface{}); ok {
 		result.Registry = expandDataVolumeSourceRegistry(v)
@@ -156,29 +156,27 @@ func expandDataVolumeSource(dataVolumeSource []interface{}) *cdiv1.DataVolumeSou
 	return result
 }
 
-func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) *cdiv1.DataVolumeBlankImage {
+func expandDataVolumeSourceBlank(dataVolumeSourceBlank []interface{}) models.V1VMDataVolumeBlankImage {
 	if len(dataVolumeSourceBlank) == 0 {
 		return nil
 	}
 
-	// When blank {} is present in Terraform config, we should return a DataVolumeBlankImage
-	// even if the first element is nil or an empty map
-	result := &cdiv1.DataVolumeBlankImage{}
-
-	return result
+	// V1VMDataVolumeBlankImage is generated as interface{} (empty JSON object). Use a map so JSON
+	// encodes as "{}". When blank {} is present in config, treat nil or empty map as the same.
+	return map[string]interface{}{}
 }
 
-func expandDataVolumeSourceHTTP(dataVolumeSourceHTTP []interface{}) *cdiv1.DataVolumeSourceHTTP {
+func expandDataVolumeSourceHTTP(dataVolumeSourceHTTP []interface{}) *models.V1VMDataVolumeSourceHTTP {
 	if len(dataVolumeSourceHTTP) == 0 || dataVolumeSourceHTTP[0] == nil {
 		return nil
 	}
 
-	result := &cdiv1.DataVolumeSourceHTTP{}
+	result := &models.V1VMDataVolumeSourceHTTP{}
 
 	in := dataVolumeSourceHTTP[0].(map[string]interface{})
 
 	if v, ok := in["url"].(string); ok {
-		result.URL = v
+		result.URL = types.Ptr(v)
 	}
 	if v, ok := in["secret_ref"].(string); ok {
 		result.SecretRef = v
@@ -190,89 +188,75 @@ func expandDataVolumeSourceHTTP(dataVolumeSourceHTTP []interface{}) *cdiv1.DataV
 	return result
 }
 
-func expandDataVolumeSourcePVC(dataVolumeSourcePVC []interface{}) *cdiv1.DataVolumeSourcePVC {
+func expandDataVolumeSourcePVC(dataVolumeSourcePVC []interface{}) *models.V1VMDataVolumeSourcePVC {
 	if len(dataVolumeSourcePVC) == 0 || dataVolumeSourcePVC[0] == nil {
 		return nil
 	}
 
-	result := &cdiv1.DataVolumeSourcePVC{}
+	result := &models.V1VMDataVolumeSourcePVC{}
 
 	in := dataVolumeSourcePVC[0].(map[string]interface{})
 
 	if v, ok := in["namespace"].(string); ok {
-		result.Namespace = v
+		result.Namespace = types.Ptr(v)
 	}
 	if v, ok := in["name"].(string); ok {
-		result.Name = v
+		result.Name = types.Ptr(v)
 	}
 
 	return result
 }
 
-func expandDataVolumeSourceRegistry(dataVolumeSourceRegistry []interface{}) *cdiv1.DataVolumeSourceRegistry {
+func expandDataVolumeSourceRegistry(dataVolumeSourceRegistry []interface{}) *models.V1VMDataVolumeSourceRegistry {
 	if len(dataVolumeSourceRegistry) == 0 || dataVolumeSourceRegistry[0] == nil {
 		return nil
 	}
 
-	result := &cdiv1.DataVolumeSourceRegistry{}
+	result := &models.V1VMDataVolumeSourceRegistry{}
 
 	in := dataVolumeSourceRegistry[0].(map[string]interface{})
 
 	if v, ok := in["image_url"].(string); ok {
-		result.URL = types.Ptr(v)
+		result.URL = v
 	}
 
 	return result
 }
 
-// Flatteners
-
-func flattenDataVolumeSource(in *cdiv1.DataVolumeSource) []interface{} {
+// flattenDataVolumeSourceFromVM flattens Palette V1VMDataVolumeSource to the same shape as flattenDataVolumeSource.
+func flattenDataVolumeSourceFromVM(in *models.V1VMDataVolumeSource) []interface{} {
+	if in == nil {
+		return []interface{}{}
+	}
 	att := make(map[string]interface{})
-	if in != nil {
-		if in.Blank != nil {
-			att["blank"] = flattenDataVolumeSourceBlank()
+	if in.HTTP != nil {
+		url := ""
+		if in.HTTP.URL != nil {
+			url = *in.HTTP.URL
 		}
-		if in.HTTP != nil {
-			att["http"] = flattenDataVolumeSourceHTTP(*in.HTTP)
-		}
-		if in.PVC != nil {
-			att["pvc"] = flattenDataVolumeSourcePVC(*in.PVC)
-		}
-		if in.Registry != nil {
-			att["registry"] = flattenDataVolumeSourceRegistry(*in.Registry)
-		}
-
-		return []interface{}{att}
+		att["http"] = []interface{}{map[string]interface{}{
+			"url":             url,
+			"secret_ref":      in.HTTP.SecretRef,
+			"cert_config_map": in.HTTP.CertConfigMap,
+		}}
 	}
-	return []interface{}{}
-}
-
-func flattenDataVolumeSourceBlank() []interface{} {
-	att := map[string]interface{}{}
-	return []interface{}{att}
-}
-
-func flattenDataVolumeSourceHTTP(in cdiv1.DataVolumeSourceHTTP) []interface{} {
-	att := map[string]interface{}{
-		"url":             in.URL,
-		"secret_ref":      in.SecretRef,
-		"cert_config_map": in.CertConfigMap,
+	if in.Pvc != nil {
+		ns, name := "", ""
+		if in.Pvc.Namespace != nil {
+			ns = *in.Pvc.Namespace
+		}
+		if in.Pvc.Name != nil {
+			name = *in.Pvc.Name
+		}
+		att["pvc"] = []interface{}{map[string]interface{}{
+			"namespace": ns,
+			"name":      name,
+		}}
 	}
-	return []interface{}{att}
-}
-
-func flattenDataVolumeSourcePVC(in cdiv1.DataVolumeSourcePVC) []interface{} {
-	att := map[string]interface{}{
-		"namespace": in.Namespace,
-		"name":      in.Name,
-	}
-	return []interface{}{att}
-}
-
-func flattenDataVolumeSourceRegistry(in cdiv1.DataVolumeSourceRegistry) []interface{} {
-	att := map[string]interface{}{
-		"image_url": in.URL,
+	if in.Registry != nil {
+		att["registry"] = []interface{}{map[string]interface{}{
+			"image_url": in.Registry.URL,
+		}}
 	}
 	return []interface{}{att}
 }

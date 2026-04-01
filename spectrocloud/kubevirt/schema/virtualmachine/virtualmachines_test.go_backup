@@ -1,12 +1,13 @@
 package virtualmachine
 
 import (
+	"testing"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 	"github.com/stretchr/testify/assert"
 	k8sv1 "k8s.io/api/core/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	kubevirtapiv1 "kubevirt.io/api/core/v1"
-	"testing"
 )
 
 func TestExpandVirtualMachineConditions(t *testing.T) {
@@ -113,11 +114,10 @@ func TestFlattenVirtualMachineConditions(t *testing.T) {
 }
 
 func TestExpandVirtualMachineStateChangeRequests(t *testing.T) {
-	testUID := k8stypes.UID("1234")
 	tests := []struct {
 		name     string
 		input    []interface{}
-		expected []kubevirtapiv1.VirtualMachineStateChangeRequest
+		expected []*models.V1VMVirtualMachineStateChangeRequest
 	}{
 		{
 			name: "valid input",
@@ -130,18 +130,18 @@ func TestExpandVirtualMachineStateChangeRequests(t *testing.T) {
 					"uid": "1234",
 				},
 			},
-			expected: []kubevirtapiv1.VirtualMachineStateChangeRequest{
+			expected: []*models.V1VMVirtualMachineStateChangeRequest{
 				{
-					Action: kubevirtapiv1.StateChangeRequestAction("Start"),
+					Action: utils.PtrToString("Start"),
 					Data:   utils.ExpandStringMap(map[string]interface{}{"key1": "value1"}),
-					UID:    &testUID,
+					UID:    "1234",
 				},
 			},
 		},
 		{
 			name:     "empty input",
 			input:    []interface{}{},
-			expected: []kubevirtapiv1.VirtualMachineStateChangeRequest{},
+			expected: []*models.V1VMVirtualMachineStateChangeRequest{},
 		},
 		{
 			name: "partial input",
@@ -150,9 +150,9 @@ func TestExpandVirtualMachineStateChangeRequests(t *testing.T) {
 					"action": "Stop",
 				},
 			},
-			expected: []kubevirtapiv1.VirtualMachineStateChangeRequest{
+			expected: []*models.V1VMVirtualMachineStateChangeRequest{
 				{
-					Action: kubevirtapiv1.StateChangeRequestAction("Stop"),
+					Action: utils.PtrToString("Stop"),
 				},
 			},
 		},

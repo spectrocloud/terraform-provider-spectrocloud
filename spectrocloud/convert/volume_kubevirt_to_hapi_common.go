@@ -1,62 +1,90 @@
 package convert
 
 import (
-	"encoding/json"
-	"fmt"
+	"math"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/datavolume"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
-func ToHapiVolume(volume *cdiv1.DataVolume, addVolumeOptions *models.V1VMAddVolumeOptions) (*models.V1VMAddVolumeEntity, error) {
-	var GracePeriodSeconds int64
-	if volume.DeletionGracePeriodSeconds != nil {
-		GracePeriodSeconds = *volume.DeletionGracePeriodSeconds
-	}
-
-	Spec, err := ToHapiVolumeSpecM(volume.Spec)
+// ToHapiVolume builds a Palette VM add-volume request from Terraform resource data
+// without converting through CDI (cdiv1.DataVolume) types.
+func ToHapiVolume(d *schema.ResourceData, addVolumeOptions *models.V1VMAddVolumeOptions) (*models.V1VMAddVolumeEntity, error) {
+	meta := expandDataVolumeMetadataToVM(d)
+	spec, err := datavolume.ExpandDataVolumeSpec(d.Get("spec").([]interface{}))
 	if err != nil {
 		return nil, err
 	}
 
-	hapiVolume := &models.V1VMAddVolumeEntity{
+	return &models.V1VMAddVolumeEntity{
 		AddVolumeOptions: addVolumeOptions,
 		DataVolumeTemplate: &models.V1VMDataVolumeTemplateSpec{
-			Metadata: &models.V1VMObjectMeta{
-				Annotations:                volume.Annotations,
-				DeletionGracePeriodSeconds: GracePeriodSeconds,
-				Finalizers:                 volume.Finalizers,
-				GenerateName:               volume.GenerateName,
-				Generation:                 volume.Generation,
-				Labels:                     volume.Labels,
-				ManagedFields:              ToHapiVmManagedFields(volume.ManagedFields),
-				Name:                       volume.Name,
-				Namespace:                  volume.Namespace,
-				OwnerReferences:            ToHapiVmOwnerReferences(volume.OwnerReferences),
-				ResourceVersion:            volume.ResourceVersion,
-				UID:                        string(volume.UID),
-			},
-			Spec: Spec,
+			Metadata: meta,
+			Spec:     spec,
 		},
 		Persist: true,
-	}
-	return hapiVolume, nil
+	}, nil
 }
 
-func ToHapiVolumeSpecM(spec cdiv1.DataVolumeSpec) (*models.V1VMDataVolumeSpec, error) {
-	var hapiVolumeSpec models.V1VMDataVolumeSpec
-
-	// Marshal the input spec to JSON
-	specJson, err := json.Marshal(spec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal kubevirtapiv1.VirtualMachineSpec to JSON: %v", err)
+// expandDataVolumeMetadataToVM maps the `metadata` block to models.V1VMObjectMeta,
+// matching the field coverage of k8s.ExpandMetadataToObjectMeta for user-settable fields
+// plus uid/generation when present in state.
+func expandDataVolumeMetadataToVM(d *schema.ResourceData) *models.V1VMObjectMeta {
+	in := d.Get("metadata").([]interface{})
+	if len(in) < 1 || in[0] == nil {
+		return &models.V1VMObjectMeta{}
 	}
+	m := in[0].(map[string]interface{})
+	meta := &models.V1VMObjectMeta{}
 
-	// Unmarshal the JSON to the desired HAPI VM spec
-	err = json.Unmarshal(specJson, &hapiVolumeSpec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON to models.V1ClusterVirtualMachineSpec: %v", err)
+	if v, ok := m["annotations"].(map[string]string); ok && len(v) > 0 {
+		meta.Annotations = v
+	} else if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 {
+		meta.Annotations = utils.ExpandStringMap(v)
 	}
+	if v, ok := m["labels"].(map[string]string); ok && len(v) > 0 {
+		meta.Labels = v
+	} else if v, ok := m["labels"].(map[string]interface{}); ok && len(v) > 0 {
+		meta.Labels = utils.ExpandStringMap(v)
+	}
+	if v, ok := m["generate_name"]; ok && v != nil && v.(string) != "" {
+		meta.GenerateName = v.(string)
+	}
+	if v, ok := m["name"]; ok && v != nil {
+		meta.Name = v.(string)
+	}
+	if v, ok := m["namespace"]; ok && v != nil {
+		meta.Namespace = v.(string)
+	}
+	if v, ok := m["resource_version"]; ok && v != nil {
+		meta.ResourceVersion = v.(string)
+	}
+	if v, ok := m["uid"].(string); ok && v != "" {
+		meta.UID = v
+	}
+	if v, ok := m["generation"]; ok && v != nil {
+		meta.Generation = expandInt64FromInterface(v)
+	}
+	return meta
+}
 
-	return &hapiVolumeSpec, nil
+func expandInt64FromInterface(v interface{}) int64 {
+	switch g := v.(type) {
+	case int:
+		return int64(g)
+	case int64:
+		return g
+	case int32:
+		return int64(g)
+	case uint64:
+		// Compare as uint64 before narrowing (same pattern as common.SafeUint32 / SafeUintToInt).
+		if g > uint64(math.MaxInt64) {
+			return math.MaxInt64
+		}
+		return int64(g) // #nosec G115 -- g <= math.MaxInt64 after check above
+	default:
+		return 0
+	}
 }

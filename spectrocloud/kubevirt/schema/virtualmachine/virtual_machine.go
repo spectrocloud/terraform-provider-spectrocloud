@@ -3,11 +3,10 @@ package virtualmachine
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachineinstance"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
-
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
 
 func VirtualMachineFields() map[string]*schema.Schema {
@@ -467,10 +466,10 @@ func VirtualMachineFields() map[string]*schema.Schema {
 	}
 }
 
-func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.VirtualMachine, error) {
-	result := &kubevirtapiv1.VirtualMachine{}
+func FromResourceData(resourceData *schema.ResourceData) (*models.V1ClusterVirtualMachine, error) {
+	result := &models.V1ClusterVirtualMachine{}
 
-	result.ObjectMeta = k8s.ConvertToBasicMetadata(resourceData)
+	result.Metadata = k8s.ConvertToBasicMetadata(resourceData)
 	spec, err := ExpandVirtualMachineSpec(resourceData)
 	if err != nil {
 		return result, err
@@ -480,19 +479,19 @@ func FromResourceData(resourceData *schema.ResourceData) (*kubevirtapiv1.Virtual
 	if err != nil {
 		return result, err
 	}
-	result.Status = status
+	result.Status = &status
 
 	return result, nil
 }
 
-func ToResourceData(vm kubevirtapiv1.VirtualMachine, resourceData *schema.ResourceData) error {
-	if err := k8s.FlattenMetadata(vm.ObjectMeta, resourceData); err != nil {
+func ToResourceData(vm models.V1ClusterVirtualMachine, resourceData *schema.ResourceData) error {
+	if err := k8s.FlattenMetadataFromVM(vm.Metadata, resourceData); err != nil {
 		return err
 	}
-	if err := FlattenVMMToSpectroSchema(vm.Spec, resourceData); err != nil {
+	if err := FlattenVMMToSpectroSchemaFromVM(vm.Spec, resourceData); err != nil {
 		return err
 	}
-	if err := resourceData.Set("status", flattenVirtualMachineStatus(vm.Status)); err != nil {
+	if err := resourceData.Set("status", flattenVirtualMachineStatusFromVM(vm.Status)); err != nil {
 		return err
 	}
 

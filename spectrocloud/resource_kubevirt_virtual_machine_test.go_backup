@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	vm "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachine"
 	vmi "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachineinstance"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/test_utils"
@@ -15,7 +16,6 @@ import (
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
 
 // Domain Spec Tests start
@@ -29,16 +29,16 @@ func prepareBasicResourceData() *schema.ResourceData {
 }
 
 func TestFlattenDomainSpec(t *testing.T) {
-	guestQuantity := resource.NewQuantity(2*1024*1024*1024, resource.BinarySI)
+	guestQuantity := models.V1VMQuantity("2Gi")
 
 	testCases := []struct {
-		input          kubevirtapiv1.DomainSpec
+		input          models.V1VMDomainSpec
 		expectedOutput []interface{}
 	}{
 		{
-			input: kubevirtapiv1.DomainSpec{
-				CPU:    &kubevirtapiv1.CPU{}, // empty CPU and Memory should be ignored
-				Memory: &kubevirtapiv1.Memory{},
+			input: models.V1VMDomainSpec{
+				CPU:    &models.V1VMCPU{}, // empty CPU and Memory should be ignored
+				Memory: &models.V1VMMemory{},
 			},
 			expectedOutput: []interface{}{
 				map[string]interface{}{
@@ -59,8 +59,8 @@ func TestFlattenDomainSpec(t *testing.T) {
 			},
 		},
 		{
-			input: kubevirtapiv1.DomainSpec{
-				CPU: &kubevirtapiv1.CPU{
+			input: models.V1VMDomainSpec{
+				CPU: &models.V1VMCPU{
 					Cores:   2,
 					Sockets: 1,
 					Threads: 1,
@@ -81,8 +81,8 @@ func TestFlattenDomainSpec(t *testing.T) {
 			},
 		},
 		{
-			input: kubevirtapiv1.DomainSpec{
-				Memory: &kubevirtapiv1.Memory{
+			input: models.V1VMDomainSpec{
+				Memory: &models.V1VMMemory{
 					Guest: guestQuantity,
 				},
 			},
@@ -99,9 +99,9 @@ func TestFlattenDomainSpec(t *testing.T) {
 			},
 		},
 		{
-			input: kubevirtapiv1.DomainSpec{
-				Memory: &kubevirtapiv1.Memory{
-					Hugepages: &kubevirtapiv1.Hugepages{
+			input: models.V1VMDomainSpec{
+				Memory: &models.V1VMMemory{
+					Hugepages: &models.V1VMHugepages{
 						PageSize: "1Gi",
 					},
 				},
