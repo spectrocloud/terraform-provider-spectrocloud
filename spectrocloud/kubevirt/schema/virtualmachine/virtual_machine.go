@@ -429,7 +429,7 @@ func VirtualMachineFields() map[string]*schema.Schema {
 			Description: "EvictionStrategy can be set to \"LiveMigrate\" if the VirtualMachineInstance should be migrated instead of shut-off in case of a node drain.",
 			Optional:    true,
 			ValidateFunc: validation.StringInSlice([]string{
-				"LiveMigrate",
+				"LiveMigrate", "None", "LiveMigrateIfPossible",
 			}, false),
 		},
 		"termination_grace_period_seconds": {
