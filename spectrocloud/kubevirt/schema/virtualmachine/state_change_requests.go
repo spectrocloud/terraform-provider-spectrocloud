@@ -40,7 +40,7 @@ func virtualMachineStateChangeRequestsSchema() *schema.Schema {
 		Type: schema.TypeList,
 
 		Description: "StateChangeRequests indicates a list of actions that should be taken on a VMI.",
-		Required:    true,
+		Optional:    true,
 		Elem: &schema.Resource{
 			Schema: fields,
 		},
