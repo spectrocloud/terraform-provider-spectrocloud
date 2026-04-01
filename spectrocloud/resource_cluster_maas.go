@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -138,6 +139,32 @@ func resourceClusterMaas() *schema.Resource {
 				Default:      "",
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
+			"hyper_shift_config": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				MaxItems:    1,
+				Description: "HyperShift / OpenShift control-plane hosting configuration for MAAS clusters. `cluster_deployment_type` `hypershift` denotes a management cluster; `openshift` denotes a hosted control plane and requires `host_cluster_uid`.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"cluster_deployment_type": {
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+							ValidateFunc: validation.StringInSlice([]string{
+								string(models.V1ClusterDeploymentTypeHypershift),
+								string(models.V1ClusterDeploymentTypeOpenshift),
+							}, false),
+							Description: "Either `hypershift` (HyperShift management cluster) or `openshift` (OpenShift with control plane on HyperShift).",
+						},
+						"host_cluster_uid": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "UID of the host HyperShift cluster; required when `cluster_deployment_type` is `openshift`.",
+						},
+					},
+				},
 			},
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
@@ -419,6 +446,10 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diag.FromErr(err)
 	}
 
+	if err := validateHyperShiftMaasConfig(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	cluster, err := toMaasCluster(c, d)
 	if err != nil {
 		return diag.FromErr(err)
@@ -465,6 +496,10 @@ func resourceClusterMaasRead(_ context.Context, d *schema.ResourceData, m interf
 	diagnostics, done := readCommonFields(c, d, cluster)
 	if done {
 		return diagnostics
+	}
+
+	if err := flattenHyperShiftConfigMaas(cluster, d); err != nil {
+		return diag.FromErr(err)
 	}
 
 	// Flatten cluster_template variables using variables API
@@ -607,6 +642,10 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := validateHyperShiftMaasConfig(d); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -756,8 +795,64 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
+	if hs := toHyperShiftConfigMaas(d); hs != nil {
+		cluster.Spec.ClusterConfig.HyperShiftConfig = hs
+	}
 
 	return cluster, nil
+}
+
+func validateHyperShiftMaasConfig(d *schema.ResourceData) error {
+	v, ok := d.GetOk("hyper_shift_config")
+	if !ok {
+		return nil
+	}
+	list := v.([]interface{})
+	if len(list) == 0 {
+		return nil
+	}
+	m := list[0].(map[string]interface{})
+	dt := m["cluster_deployment_type"].(string)
+	host := ""
+	if h, ok := m["host_cluster_uid"].(string); ok {
+		host = h
+	}
+	if dt == string(models.V1ClusterDeploymentTypeOpenshift) && host == "" {
+		return fmt.Errorf("hyper_shift_config.host_cluster_uid is required when cluster_deployment_type is %q", models.V1ClusterDeploymentTypeOpenshift)
+	}
+	return nil
+}
+
+func toHyperShiftConfigMaas(d *schema.ResourceData) *models.V1HyperShiftConfig {
+	v, ok := d.GetOk("hyper_shift_config")
+	if !ok {
+		return nil
+	}
+	list := v.([]interface{})
+	if len(list) == 0 {
+		return nil
+	}
+	m := list[0].(map[string]interface{})
+	dt := m["cluster_deployment_type"].(string)
+	cfg := &models.V1HyperShiftConfig{
+		ClusterDeploymentType: models.V1ClusterDeploymentType(dt),
+	}
+	if host, ok := m["host_cluster_uid"].(string); ok && host != "" {
+		cfg.HostClusterUID = host
+	}
+	return cfg
+}
+
+func flattenHyperShiftConfigMaas(cluster *models.V1SpectroCluster, d *schema.ResourceData) error {
+	if cluster.Spec == nil || cluster.Spec.ClusterConfig == nil || cluster.Spec.ClusterConfig.HyperShiftConfig == nil {
+		return d.Set("hyper_shift_config", nil)
+	}
+	hs := cluster.Spec.ClusterConfig.HyperShiftConfig
+	m := map[string]interface{}{
+		"cluster_deployment_type": string(hs.ClusterDeploymentType),
+		"host_cluster_uid":        hs.HostClusterUID,
+	}
+	return d.Set("hyper_shift_config", []interface{}{m})
 }
 
 func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfigEntity, error) {
