@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
@@ -774,4 +775,176 @@ func TestResolvePackUID(t *testing.T) {
 			}
 		})
 	}
+}
+
+// prepareClusterProfileWithVersionChange creates ResourceData with a state+diff
+// so that HasChange("version") returns true. Additional field changes can be
+// injected via the extraDiffAttrs map.
+func prepareClusterProfileWithVersionChange(oldVersion, newVersion, profileName string, extraDiffAttrs map[string]*terraform.ResourceAttrDiff) *schema.ResourceData {
+	state := &terraform.InstanceState{
+		ID: "cluster-profile-1",
+		Attributes: map[string]string{
+			"name":               profileName,
+			"version":            oldVersion,
+			"context":            "project",
+			"description":        "old description",
+			"cloud":              "all",
+			"type":               "add-on",
+			"tags.#":             "0",
+			"pack.#":             "0",
+			"profile_variables.#": "0",
+		},
+	}
+
+	diffAttrs := map[string]*terraform.ResourceAttrDiff{
+		"version": {
+			Old: oldVersion,
+			New: newVersion,
+		},
+	}
+	for k, v := range extraDiffAttrs {
+		diffAttrs[k] = v
+	}
+
+	diff := &terraform.InstanceDiff{
+		Attributes: diffAttrs,
+	}
+
+	d, _ := schema.InternalMap(resourceClusterProfile().Schema).Data(state, diff)
+	return d
+}
+
+// TestResourceClusterProfileUpdateVersionClone tests that when the version
+// changes and the new version does NOT already exist, the clone path is taken.
+func TestResourceClusterProfileUpdateVersionClone(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
+
+	// Use a profile name that doesn't match any entry in the mock metadata
+	// so GetClusterProfileUID returns an error → triggers clone path.
+	d := prepareClusterProfileWithVersionChange("1.0.0", "2.0.0", "nonexistent-profile", nil)
+	var ctx context.Context
+
+	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	// After clone, the ID should be the cloned UID returned by the mock server.
+	assert.Equal(t, "cloned-profile-uid", d.Id())
+}
+
+// TestResourceClusterProfileUpdateVersionAdopt tests that when the version
+// changes and the new version already exists, the existing version is adopted
+// instead of cloning.
+func TestResourceClusterProfileUpdateVersionAdopt(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
+
+	// Use name "test-cluster-profile-1" and new version "1.0.0" which matches
+	// the mock metadata response (stable UID "existing-profile-uid-1").
+	d := prepareClusterProfileWithVersionChange("0.9.0", "1.0.0", "test-cluster-profile-1", nil)
+	var ctx context.Context
+
+	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	// Should have adopted the existing UID, not cloned.
+	assert.Equal(t, "existing-profile-uid-1", d.Id())
+}
+
+// TestResourceClusterProfileUpdateVersionCloneWithFieldChanges tests the clone
+// path when other fields (description) also changed alongside the version.
+func TestResourceClusterProfileUpdateVersionCloneWithFieldChanges(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
+
+	extra := map[string]*terraform.ResourceAttrDiff{
+		"description": {
+			Old: "old description",
+			New: "new description",
+		},
+	}
+	d := prepareClusterProfileWithVersionChange("1.0.0", "2.0.0", "nonexistent-profile", extra)
+	var ctx context.Context
+
+	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "cloned-profile-uid", d.Id())
+}
+
+// TestResourceClusterProfileUpdateVersionAdoptWithFieldChanges tests the adopt
+// path when other fields also changed — should adopt and then update/patch/publish.
+func TestResourceClusterProfileUpdateVersionAdoptWithFieldChanges(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
+
+	extra := map[string]*terraform.ResourceAttrDiff{
+		"description": {
+			Old: "old description",
+			New: "new description",
+		},
+	}
+	d := prepareClusterProfileWithVersionChange("0.9.0", "1.0.0", "test-cluster-profile-1", extra)
+	var ctx context.Context
+
+	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "existing-profile-uid-1", d.Id())
+}
+
+// TestResourceClusterProfileCreateAdoptExisting tests that when Create fails
+// because the profile already exists, the function adopts the existing UID
+// instead of returning an error.
+func TestResourceClusterProfileCreateAdoptExisting(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
+
+	d := prepareBaseClusterProfileTestData()
+	// Use name+version matching mock metadata → adopt path
+	_ = d.Set("name", "test-cluster-profile-1")
+	_ = d.Set("version", "1.0.0")
+	_ = d.Set("type", "add-on")
+	var ctx context.Context
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPINegativeClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "existing-profile-uid-1", d.Id())
+}
+
+// TestResourceClusterProfileUpdateVersionNoFlag tests that when the feature
+// preview flag is OFF, version changes fall through to the update-in-place
+// path (old behavior) instead of cloning.
+func TestResourceClusterProfileUpdateVersionNoFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{}
+
+	d := prepareClusterProfileWithVersionChange("1.0.0", "2.0.0", "nonexistent-profile", nil)
+	var ctx context.Context
+
+	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	// Without the flag, version change should NOT clone — it should
+	// fall through to the update-in-place path and keep the original ID.
+	assert.Equal(t, "cluster-profile-1", d.Id())
+}
+
+// TestResourceClusterProfileCreateNoAdoptWithoutFlag tests that when the
+// feature preview flag is OFF, a create failure returns the error instead
+// of trying to adopt an existing profile.
+func TestResourceClusterProfileCreateNoAdoptWithoutFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{}
+
+	d := prepareBaseClusterProfileTestData()
+	_ = d.Set("name", "test-cluster-profile-1")
+	_ = d.Set("version", "1.0.0")
+	_ = d.Set("type", "add-on")
+	var ctx context.Context
+	// On the negative client, create fails. Without the flag, it should
+	// return the error instead of trying to adopt.
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPINegativeClient)
+	assert.NotEmpty(t, diags)
 }
