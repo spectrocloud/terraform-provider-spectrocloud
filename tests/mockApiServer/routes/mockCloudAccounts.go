@@ -117,18 +117,6 @@ func getAccountResponse(cloud string) interface{} {
 			},
 			Listmeta: nil,
 		}
-	case "openstack":
-		return &models.V1OpenStackAccounts{
-			Items: []*models.V1OpenStackAccount{
-				{
-					Metadata: &models.V1ObjectMeta{
-						Name: "test-openstack-account-1",
-						UID:  "test-openstack-account-id-1",
-					},
-				},
-			},
-			Listmeta: nil,
-		}
 	case "maas":
 		return &models.V1MaasAccounts{
 			Items: []*models.V1MaasAccount{
@@ -265,18 +253,6 @@ func getAccountNegativeResponse(cloud string) interface{} {
 					Metadata: &models.V1ObjectMeta{
 						Name: "test-vsphere-account-1-neg",
 						UID:  "test-vsphere-account-id-1-neg",
-					},
-				},
-			},
-			Listmeta: nil,
-		}
-	case "openstack":
-		return &models.V1OpenStackAccounts{
-			Items: []*models.V1OpenStackAccount{
-				{
-					Metadata: &models.V1ObjectMeta{
-						Name: "test-openstack-account-1-neg",
-						UID:  "test-openstack-account-uid-1-neg",
 					},
 				},
 			},
@@ -790,82 +766,6 @@ func CloudAccountsRoutes() []Route {
 			},
 		},
 
-		// openstack
-		{
-			Method: "GET",
-			Path:   "/v1/cloudaccounts/openstack",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload:    getAccountResponse("openstack"),
-			},
-		},
-		{
-			Method: "POST",
-			Path:   "/v1/cloudaccounts/openstack",
-			Response: ResponseData{
-				StatusCode: 201,
-				Payload:    map[string]string{"UID": "test-openstack-account-id-1"},
-			},
-		},
-		{
-			Method: "POST",
-			Path:   "/v1/clouds/openstack/account/validate",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
-			},
-		},
-		{
-			Method: "PUT",
-			Path:   "/v1/cloudaccounts/openstack/{uid}",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    nil,
-			},
-		},
-		{
-			Method: "DELETE",
-			Path:   "/v1/cloudaccounts/openstack/{uid}",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    nil,
-			},
-		},
-		{
-			Method: "GET",
-			Path:   "/v1/cloudaccounts/openstack/{uid}",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &models.V1OpenStackAccount{
-					Metadata: &models.V1ObjectMeta{
-						Name: "test-openstack-account-1",
-						UID:  "test-openstack-account-id-1",
-					},
-					Spec: &models.V1OpenStackCloudAccount{
-						CaCert:           "testcert",
-						DefaultDomain:    "test.com",
-						DefaultProject:   "Default",
-						IdentityEndpoint: spectrocloud.StringPtr("testtest"),
-						Insecure:         false,
-						ParentRegion:     "test-region",
-						Password:         spectrocloud.StringPtr("test-pwd"),
-						Username:         spectrocloud.StringPtr("test-uname"),
-					},
-					Status: &models.V1CloudAccountStatus{
-						State: "Running",
-					},
-				},
-			},
-		},
-		{
-			Method: "POST",
-			Path:   "/v1/overlords/openstack/{uid}/account/validate",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    map[string]string{"AuditUID": generateRandomStringUID()},
-			},
-		},
-
 		{
 			Method: "GET",
 			Path:   "/v1/cloudaccounts/cloudTypes/{cloudType}",
@@ -1083,14 +983,6 @@ func CloudAccountsNegativeRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: 200,
 				Payload:    getAccountNegativeResponse("vsphere"),
-			},
-		},
-		{
-			Method: "GET",
-			Path:   "/v1/cloudaccounts/openstack",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload:    getAccountNegativeResponse("openstack"),
 			},
 		},
 		{

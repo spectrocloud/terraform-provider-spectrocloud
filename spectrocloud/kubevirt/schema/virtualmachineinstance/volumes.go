@@ -2,10 +2,8 @@ package virtualmachineinstance
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
 )
 
@@ -264,8 +262,8 @@ func VolumesSchema() *schema.Schema {
 	}
 }
 
-func expandVolumes(volumes []interface{}) []kubevirtapiv1.Volume {
-	result := make([]kubevirtapiv1.Volume, len(volumes))
+func expandVolumes(volumes []interface{}) []*models.V1VMVolume {
+	result := make([]*models.V1VMVolume, len(volumes))
 
 	if len(volumes) == 0 || volumes[0] == nil {
 		return result
@@ -273,437 +271,209 @@ func expandVolumes(volumes []interface{}) []kubevirtapiv1.Volume {
 
 	for i, condition := range volumes {
 		in := condition.(map[string]interface{})
-
+		result[i] = &models.V1VMVolume{}
 		if v, ok := in["name"].(string); ok {
-			result[i].Name = v
+			result[i].Name = &v
 		}
-		if v, ok := in["volume_source"].([]interface{}); ok {
-			result[i].VolumeSource = expandVolumeSource(v)
+		if vs, ok := in["volume_source"].([]interface{}); ok && len(vs) > 0 {
+			expandVolumeSourceForHapi(vs[0].(map[string]interface{}), result[i])
+		}
+		// Hapi missing volume source
+		// if v, ok := in["volume_source"].([]interface{}); ok {
+		// 	// result[i].VolumeSource = expandVolumeSource(v)
+		// }
+	}
+
+	return result
+}
+
+// expandVolumeSourceForHapi sets exactly one volume source on vol from Terraform volume_source map (container_disk, cloud_init_config_drive, etc.).
+func expandVolumeSourceForHapi(m map[string]interface{}, vol *models.V1VMVolume) {
+	if vol == nil {
+		return
+	}
+	// container_disk (TypeSet) -> list of one map with image_url
+	if v, ok := m["container_disk"]; ok && v != nil {
+		var list []interface{}
+		switch t := v.(type) {
+		case *schema.Set:
+			list = t.List()
+		case []interface{}:
+			list = t
+		}
+		if len(list) > 0 {
+			cd := list[0].(map[string]interface{})
+			if img, ok := cd["image_url"].(string); ok && img != "" {
+				vol.ContainerDisk = &models.V1VMContainerDiskSource{Image: &img}
+			}
 		}
 	}
-
-	return result
-}
-
-func expandVolumeSource(volumeSource []interface{}) kubevirtapiv1.VolumeSource {
-	result := kubevirtapiv1.VolumeSource{}
-
-	if len(volumeSource) == 0 || volumeSource[0] == nil {
-		return result
+	if vol.ContainerDisk != nil {
+		return
 	}
-
-	in := volumeSource[0].(map[string]interface{})
-
-	if v, ok := in["data_volume"].([]interface{}); ok {
-		result.DataVolume = expandDataVolume(v)
-	}
-	if v, ok := in["cloud_init_config_drive"].([]interface{}); ok {
-		result.CloudInitConfigDrive = expandCloudInitConfigDrive(v)
-	}
-	if v, ok := in["service_account"].([]interface{}); ok {
-		result.ServiceAccount = expandServiceAccount(v)
-	}
-	if v, ok := in["container_disk"].(*schema.Set); ok {
-		result.ContainerDisk = expandContainerDisk(v.List())
-	}
-	if v, ok := in["cloud_init_no_cloud"].(*schema.Set); ok {
-		result.CloudInitNoCloud = expandCloudInitNoCloud(v.List())
-	}
-	if v, ok := in["ephemeral"].([]interface{}); ok {
-		result.Ephemeral = expandEphemeral(v)
-	}
-	if v, ok := in["empty_disk"].([]interface{}); ok {
-		result.EmptyDisk = expandEmptyDisk(v)
-	}
-	if v, ok := in["host_disk"].([]interface{}); ok {
-		result.HostDisk = expandHostDisk(v)
-	}
-	if v, ok := in["config_map"].([]interface{}); ok {
-		result.ConfigMap = expandConfigMap(v)
-	}
-
-	return result
-}
-
-func expandDataVolume(dataVolumeSource []interface{}) *kubevirtapiv1.DataVolumeSource {
-	if len(dataVolumeSource) == 0 || dataVolumeSource[0] == nil {
-		return nil
-	}
-
-	result := &kubevirtapiv1.DataVolumeSource{}
-	in := dataVolumeSource[0].(map[string]interface{})
-
-	if v, ok := in["name"].(string); ok {
-		result.Name = v
-	}
-
-	return result
-}
-
-func expandCloudInitConfigDrive(cloudInitConfigDriveSource []interface{}) *kubevirtapiv1.CloudInitConfigDriveSource {
-	if len(cloudInitConfigDriveSource) == 0 || cloudInitConfigDriveSource[0] == nil {
-		return nil
-	}
-
-	result := &kubevirtapiv1.CloudInitConfigDriveSource{}
-	in := cloudInitConfigDriveSource[0].(map[string]interface{})
-
-	if v, ok := in["user_data_secret_ref"].([]interface{}); ok {
-		result.UserDataSecretRef = k8s.ExpandLocalObjectReferences(v)
-	}
-	if v, ok := in["user_data_base64"].(string); ok {
-		result.UserDataBase64 = v
-	}
-	if v, ok := in["user_data"].(string); ok {
-		result.UserData = v
-	}
-	if v, ok := in["network_data_secret_ref"].([]interface{}); ok {
-		result.NetworkDataSecretRef = k8s.ExpandLocalObjectReferences(v)
-	}
-	if v, ok := in["network_data_base64"].(string); ok {
-		result.NetworkDataBase64 = v
-	}
-	if v, ok := in["network_data"].(string); ok {
-		result.NetworkData = v
-	}
-
-	return result
-}
-
-func expandServiceAccount(serviceAccountSource []interface{}) *kubevirtapiv1.ServiceAccountVolumeSource {
-	if len(serviceAccountSource) == 0 || serviceAccountSource[0] == nil {
-		return nil
-	}
-
-	result := &kubevirtapiv1.ServiceAccountVolumeSource{}
-	in := serviceAccountSource[0].(map[string]interface{})
-
-	if v, ok := in["service_account_name"].(string); ok {
-		result.ServiceAccountName = v
-	}
-
-	return result
-}
-
-func expandContainerDisk(containerDiskSource []interface{}) *kubevirtapiv1.ContainerDiskSource {
-	if len(containerDiskSource) == 0 || containerDiskSource[0] == nil {
-		return nil
-	}
-
-	result := &kubevirtapiv1.ContainerDiskSource{}
-	in := containerDiskSource[0].(map[string]interface{})
-
-	if v, ok := in["image_url"].(string); ok {
-		result.Image = v
-	}
-
-	return result
-}
-
-func expandCloudInitNoCloud(cloudInitNoCloudSource []interface{}) *kubevirtapiv1.CloudInitNoCloudSource {
-	if len(cloudInitNoCloudSource) == 0 || cloudInitNoCloudSource[0] == nil {
-		return nil
-	}
-
-	result := &kubevirtapiv1.CloudInitNoCloudSource{}
-	in := cloudInitNoCloudSource[0].(map[string]interface{})
-
-	if v, ok := in["user_data_secret_ref"].([]interface{}); ok {
-		result.UserDataSecretRef = k8s.ExpandLocalObjectReferences(v)
-	}
-	if v, ok := in["user_data_base64"].(string); ok {
-		result.UserDataBase64 = v
-	}
-	if v, ok := in["user_data"].(string); ok {
-		result.UserData = v
-	}
-	if v, ok := in["network_data_secret_ref"].([]interface{}); ok {
-		result.NetworkDataSecretRef = k8s.ExpandLocalObjectReferences(v)
-	}
-	if v, ok := in["network_data_base64"].(string); ok {
-		result.NetworkDataBase64 = v
-	}
-	if v, ok := in["network_data"].(string); ok {
-		result.NetworkData = v
-	}
-
-	return result
-}
-
-func expandEphemeral(ephemeralSource []interface{}) *kubevirtapiv1.EphemeralVolumeSource {
-	if len(ephemeralSource) == 0 || ephemeralSource[0] == nil {
-		return nil
-	}
-
-	result := &kubevirtapiv1.EphemeralVolumeSource{}
-	in := ephemeralSource[0].(map[string]interface{})
-
-	if v, ok := in["persistent_volume_claim"].([]interface{}); ok {
-		result.PersistentVolumeClaim = expandPersistentVolumeClaim(v)
-	}
-
-	return result
-}
-
-func expandPersistentVolumeClaim(persistentVolumeClaimSource []interface{}) *v1.PersistentVolumeClaimVolumeSource {
-	if len(persistentVolumeClaimSource) == 0 || persistentVolumeClaimSource[0] == nil {
-		return nil
-	}
-
-	/*
-		type PersistentVolumeClaimVolumeSource struct {
-			v1.PersistentVolumeClaimVolumeSource `json:",inline"`
-			// Hotpluggable indicates whether the volume can be hotplugged and hotunplugged.
-			// +optional
-			Hotpluggable bool `json:"hotpluggable,omitempty"`
+	// data_volume (TypeList, MaxItems 1) — references a DataVolume / dataVolumeTemplate by name
+	if v, ok := m["data_volume"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+		dv := v[0].(map[string]interface{})
+		if name, ok := dv["name"].(string); ok && name != "" {
+			n := name
+			vol.DataVolume = &models.V1VMCoreDataVolumeSource{Name: &n}
+			return
 		}
-
-		type PersistentVolumeClaimVolumeSource struct {
-			// claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.
-			// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
-			ClaimName string `json:"claimName" protobuf:"bytes,1,opt,name=claimName"`
-			// readOnly Will force the ReadOnly setting in VolumeMounts.
-			// Default false.
-			// +optional
-			ReadOnly bool `json:"readOnly,omitempty" protobuf:"varint,2,opt,name=readOnly"`
+	}
+	// cloud_init_config_drive (TypeList)
+	if v, ok := m["cloud_init_config_drive"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+		cc := v[0].(map[string]interface{})
+		src := &models.V1VMCloudInitConfigDriveSource{}
+		if u, ok := cc["user_data"].(string); ok {
+			src.UserData = u
 		}
-
-	*/
-
-	result := &v1.PersistentVolumeClaimVolumeSource{}
-	in := persistentVolumeClaimSource[0].(map[string]interface{})
-
-	if v, ok := in["claim_name"].(string); ok {
-		result.ClaimName = v
+		if u, ok := cc["user_data_base64"].(string); ok {
+			src.UserDataBase64 = u
+		}
+		if n, ok := cc["network_data"].(string); ok {
+			src.NetworkData = n
+		}
+		if n, ok := cc["network_data_base64"].(string); ok {
+			src.NetworkDataBase64 = n
+		}
+		vol.CloudInitConfigDrive = src
 	}
-	if v, ok := in["read_only"].(bool); ok {
-		result.ReadOnly = v
-	}
+	// cloud_init_no_cloud (TypeSet)
+	// if v, ok := m["cloud_init_no_cloud"]; ok && v != nil {
+	// 	var list []interface{}
+	// 	switch t := v.(type) {
+	// 	case *schema.Set:
+	// 		list = t.List()
+	// 	case []interface{}:
+	// 		list = t
+	// 	}
+	// 	if len(list) > 0 && list[0] != nil {
+	// 		nc := list[0].(map[string]interface{})
+	// 		src := &models.V1VMCloudInitNoCloudSource{}
+	// 		if u, ok := nc["user_data"].(string); ok {
+	// 			src.UserData = u
+	// 		}
+	// 		if u, ok := nc["user_data_base64"].(string); ok {
+	// 			src.UserDataBase64 = u
+	// 		}
+	// 		if n, ok := nc["network_data"].(string); ok {
+	// 			src.NetworkData = n
+	// 		}
+	// 		if n, ok := nc["network_data_base64"].(string); ok {
+	// 			src.NetworkDataBase64 = n
+	// 		}
+	// 		vol.CloudInitNoCloud = src
+	// 	}
+	// }
 
-	return result
+	// cloud_init_config_drive (TypeList)
+	if v, ok := m["cloud_init_config_drive"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+		cc := v[0].(map[string]interface{})
+		src := &models.V1VMCloudInitConfigDriveSource{}
+		if u, ok := cc["user_data"].(string); ok {
+			src.UserData = u
+		}
+		if u, ok := cc["user_data_base64"].(string); ok {
+			src.UserDataBase64 = u
+		}
+		if n, ok := cc["network_data"].(string); ok {
+			src.NetworkData = n
+		}
+		if n, ok := cc["network_data_base64"].(string); ok {
+			src.NetworkDataBase64 = n
+		}
+		vol.CloudInitConfigDrive = src
+		return
+	}
+	// cloud_init_no_cloud (TypeSet)
+	if v, ok := m["cloud_init_no_cloud"]; ok && v != nil {
+		var list []interface{}
+		switch t := v.(type) {
+		case *schema.Set:
+			list = t.List()
+		case []interface{}:
+			list = t
+		}
+		if len(list) > 0 && list[0] != nil {
+			nc := list[0].(map[string]interface{})
+			src := &models.V1VMCloudInitNoCloudSource{}
+			if u, ok := nc["user_data"].(string); ok {
+				src.UserData = u
+			}
+			if u, ok := nc["user_data_base64"].(string); ok {
+				src.UserDataBase64 = u
+			}
+			if n, ok := nc["network_data"].(string); ok {
+				src.NetworkData = n
+			}
+			if n, ok := nc["network_data_base64"].(string); ok {
+				src.NetworkDataBase64 = n
+			}
+			vol.CloudInitNoCloud = src
+		}
+	}
 }
 
-func expandEmptyDisk(emptyDiskSource []interface{}) *kubevirtapiv1.EmptyDiskSource {
-	if len(emptyDiskSource) == 0 || emptyDiskSource[0] == nil {
+// flattenVolumesFromVM flattens []*models.V1VMVolume to the same shape as flattenVolumes.
+func flattenVolumesFromVM(in []*models.V1VMVolume) []interface{} {
+	if len(in) == 0 {
 		return nil
 	}
-
-	result := &kubevirtapiv1.EmptyDiskSource{}
-	in := emptyDiskSource[0].(map[string]interface{})
-
-	/* type EmptyDiskSource struct {
-		// Capacity of the sparse disk.
-		Capacity resource.Quantity `json:"capacity"`
-	}
-	type Quantity struct {
-		// i is the quantity in int64 scaled form, if d.Dec == nil
-		i int64Amount
-		// d is the quantity in inf.Dec form if d.Dec != nil
-		d infDecAmount
-		// s is the generated value of this quantity to avoid recalculation
-		s string
-
-		// Change Format at will. See the comment for Canonicalize for
-		// more details.
-		Format
-	}
-
-	*/
-	if v, ok := in["capacity"].(string); ok {
-		result.Capacity = resource.MustParse(v)
-	}
-
-	return result
-}
-
-func expandHostDisk(hostDiskSource []interface{}) *kubevirtapiv1.HostDisk {
-	if len(hostDiskSource) == 0 || hostDiskSource[0] == nil {
-		return nil
-	}
-
-	result := &kubevirtapiv1.HostDisk{}
-	in := hostDiskSource[0].(map[string]interface{})
-
-	if v, ok := in["path"].(string); ok {
-		result.Path = v
-	}
-	if v, ok := in["type"].(string); ok {
-		result.Type = kubevirtapiv1.HostDiskType(v)
-	}
-
-	return result
-}
-
-func expandConfigMap(configMapSource []interface{}) *kubevirtapiv1.ConfigMapVolumeSource {
-	if len(configMapSource) == 0 || configMapSource[0] == nil {
-		return nil
-	}
-
-	result := &kubevirtapiv1.ConfigMapVolumeSource{}
-
-	in := configMapSource[0].(map[string]interface{})
-	if v, ok := in["name"].(string); ok {
-		result.Name = v
-	}
-	if v, ok := in["optional"].(bool); ok {
-		result.Optional = &v
-	}
-	if v, ok := in["volume_label"].(string); ok {
-		result.VolumeLabel = v
-	}
-
-	return result
-}
-
-func flattenVolumes(in []kubevirtapiv1.Volume) []interface{} {
 	att := make([]interface{}, len(in))
-
 	for i, v := range in {
+		if v == nil {
+			continue
+		}
 		c := make(map[string]interface{})
-
-		c["name"] = v.Name
-		c["volume_source"] = flattenVolumeSource(v.VolumeSource)
-
+		if v.Name != nil {
+			c["name"] = *v.Name
+		}
+		c["volume_source"] = flattenVolumeSourceFromVM(v)
 		att[i] = c
 	}
-
 	return att
 }
 
-func flattenVolumeSource(in kubevirtapiv1.VolumeSource) []interface{} {
+func flattenVolumeSourceFromVM(in *models.V1VMVolume) []interface{} {
+	if in == nil {
+		return []interface{}{map[string]interface{}{}}
+	}
 	att := make(map[string]interface{})
-
 	if in.DataVolume != nil {
-		att["data_volume"] = flattenDataVolume(*in.DataVolume)
-	}
-	if in.CloudInitConfigDrive != nil {
-		att["cloud_init_config_drive"] = flattenCloudInitConfigDrive(*in.CloudInitConfigDrive)
-	}
-	if in.ServiceAccount != nil {
-		att["service_account"] = flattenServiceAccount(*in.ServiceAccount)
+		name := ""
+		if in.DataVolume.Name != nil {
+			name = *in.DataVolume.Name
+		}
+		att["data_volume"] = []interface{}{map[string]interface{}{"name": name}}
 	}
 	if in.ContainerDisk != nil {
-		att["container_disk"] = flattenContainerDisk(*in.ContainerDisk)
+		// att["container_disk"] = []interface{}{map[string]interface{}{"image": in.ContainerDisk.Image}}
+		att["container_disk"] = []interface{}{map[string]interface{}{"image_url": in.ContainerDisk.Image}}
 	}
 	if in.CloudInitNoCloud != nil {
-		att["cloud_init_no_cloud"] = flattenCloudInitNoCloud(*in.CloudInitNoCloud)
+		att["cloud_init_no_cloud"] = []interface{}{map[string]interface{}{"user_data": in.CloudInitNoCloud.UserData, "user_data_base64": in.CloudInitNoCloud.UserDataBase64}}
+	}
+	if in.CloudInitConfigDrive != nil {
+		c := in.CloudInitConfigDrive
+		cc := map[string]interface{}{
+			"user_data":           c.UserData,
+			"user_data_base64":    c.UserDataBase64,
+			"network_data":        c.NetworkData,
+			"network_data_base64": c.NetworkDataBase64,
+		}
+		// Optional: flatten secret refs if your schema uses them and you have a helper:
+		// if c.SecretRef != nil { cc["user_data_secret_ref"] = ... }
+		// if c.NetworkDataSecretRef != nil { cc["network_data_secret_ref"] = ... }
+		att["cloud_init_config_drive"] = []interface{}{cc}
 	}
 	if in.Ephemeral != nil {
-		att["ephemeral"] = flattenEphemeral(*in.Ephemeral)
+		att["ephemeral"] = []interface{}{map[string]interface{}{}}
 	}
 	if in.EmptyDisk != nil {
-		att["empty_disk"] = flattenEmptyDisk(*in.EmptyDisk)
+		att["empty_disk"] = []interface{}{map[string]interface{}{"capacity": in.EmptyDisk.Capacity}}
 	}
 	if in.HostDisk != nil {
-		att["host_disk"] = flattenHostDisk(*in.HostDisk)
+		att["host_disk"] = []interface{}{map[string]interface{}{"path": in.HostDisk.Path, "type": in.HostDisk.Type}}
 	}
-	/*if in.PersistentVolumeClaim != nil {
-		att["persistent_volume_claim"] = flattenPersistentVolumeClaim(in.PersistentVolumeClaim)
-	}*/
-	if in.ConfigMap != nil {
-		att["config_map"] = flattenConfigMap(*in.ConfigMap)
-	}
-
-	return []interface{}{att}
-}
-
-func flattenDataVolume(in kubevirtapiv1.DataVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-
-	att["name"] = in.Name
-
-	return []interface{}{att}
-}
-
-func flattenCloudInitConfigDrive(in kubevirtapiv1.CloudInitConfigDriveSource) []interface{} {
-	att := make(map[string]interface{})
-
-	if in.UserDataSecretRef != nil {
-		att["user_data_secret_ref"] = k8s.FlattenLocalObjectReferences(*in.UserDataSecretRef)
-	}
-	att["user_data_base64"] = in.UserDataBase64
-	att["user_data"] = in.UserData
-	if in.NetworkDataSecretRef != nil {
-		att["network_data_secret_ref"] = k8s.FlattenLocalObjectReferences(*in.NetworkDataSecretRef)
-	}
-	att["network_data_base64"] = in.NetworkDataBase64
-	att["network_data"] = in.NetworkData
-
-	return []interface{}{att}
-}
-
-func flattenServiceAccount(in kubevirtapiv1.ServiceAccountVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-
-	att["service_account_name"] = in.ServiceAccountName
-
-	return []interface{}{att}
-}
-
-func flattenContainerDisk(in kubevirtapiv1.ContainerDiskSource) []interface{} {
-	att := make(map[string]interface{})
-
-	att["image_url"] = in.Image
-
-	return []interface{}{att}
-}
-
-func flattenCloudInitNoCloud(in kubevirtapiv1.CloudInitNoCloudSource) []interface{} {
-	att := make(map[string]interface{})
-
-	if in.UserDataSecretRef != nil {
-		att["user_data_secret_ref"] = k8s.FlattenLocalObjectReferences(*in.UserDataSecretRef)
-	}
-	att["user_data_base64"] = in.UserDataBase64
-	att["user_data"] = in.UserData
-	if in.NetworkDataSecretRef != nil {
-		att["network_data_secret_ref"] = k8s.FlattenLocalObjectReferences(*in.NetworkDataSecretRef)
-	}
-	att["network_data_base64"] = in.NetworkDataBase64
-	att["network_data"] = in.NetworkData
-
-	return []interface{}{att}
-}
-
-func flattenEphemeral(in kubevirtapiv1.EphemeralVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-
-	if in.PersistentVolumeClaim != nil {
-		att["persistent_volume_claim"] = flattenPersistentVolumeClaim(*in.PersistentVolumeClaim)
-	}
-
-	return []interface{}{att}
-}
-
-func flattenPersistentVolumeClaim(in v1.PersistentVolumeClaimVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-
-	att["claim_name"] = in.ClaimName
-
-	return []interface{}{att}
-}
-
-func flattenEmptyDisk(in kubevirtapiv1.EmptyDiskSource) []interface{} {
-	att := make(map[string]interface{})
-
-	att["capacity"] = in.Capacity
-
-	return []interface{}{att}
-}
-
-func flattenHostDisk(in kubevirtapiv1.HostDisk) []interface{} {
-	att := make(map[string]interface{})
-
-	att["path"] = in.Path
-	att["type"] = in.Type
-
-	return []interface{}{att}
-}
-
-func flattenConfigMap(in kubevirtapiv1.ConfigMapVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-
-	att["name"] = in.Name
-
 	return []interface{}{att}
 }

@@ -38,21 +38,17 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, d *schema.ResourceDat
 	c := getV1ClientWithResourceContext(m, ClusterContext)
 
 	var diags diag.Diagnostics
-	dv, err := datavolume.FromResourceData(d)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 
 	// Extract "add_volume_options" from the Terraform schema
 	addVolumeOptionsData := d.Get("add_volume_options").([]interface{})
 	AddVolumeOptions := ExpandAddVolumeOptions(addVolumeOptionsData)
 
-	hapiVolume, err := convert.ToHapiVolume(dv, AddVolumeOptions)
+	hapiVolume, err := convert.ToHapiVolume(d, AddVolumeOptions)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating new data volume: %#v", dv)
+	log.Printf("[INFO] Creating new data volume")
 	// Warning or errors can be collected in a slice type
 	clusterUid := d.Get("cluster_uid").(string)
 
@@ -74,10 +70,10 @@ func resourceKubevirtDataVolumeCreate(ctx context.Context, d *schema.ResourceDat
 	if _, err := c.CreateDataVolume(clusterUid, vmName, hapiVolume); err != nil {
 		return diag.FromErr(err)
 	}
-	log.Printf("[INFO] Submitted new data volume: %#v", dv)
-	if err := datavolume.ToResourceData(*dv, d); err != nil {
+	if err := datavolume.ToResourceDataFromVMTemplate(hapiVolume.DataVolumeTemplate, d); err != nil {
 		return diag.FromErr(err)
 	}
+	log.Printf("[INFO] Submitted new data volume")
 	d.SetId(utils.BuildIdDV(ClusterContext, clusterUid, vmNamespace, vmName, hapiVolume.DataVolumeTemplate.Metadata))
 
 	return diags
@@ -114,14 +110,9 @@ func resourceKubevirtDataVolumeRead(ctx context.Context, d *schema.ResourceData,
 		namespace := dv.Metadata.Namespace
 
 		if name == rd_metadataName && namespace == rd_metadataNamespace {
-			kvVolume, err := convert.FromHapiVolume(&models.V1VMAddVolumeEntity{
+			if err := convert.FromHapiVolume(&models.V1VMAddVolumeEntity{
 				DataVolumeTemplate: dv,
-			})
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			err = datavolume.ToResourceData(*kvVolume, d)
-			if err != nil {
+			}, d); err != nil {
 				return diag.FromErr(err)
 			}
 			break

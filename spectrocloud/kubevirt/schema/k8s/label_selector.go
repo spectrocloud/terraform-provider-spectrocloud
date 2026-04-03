@@ -4,6 +4,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
@@ -100,6 +101,40 @@ func expandLabelSelectorRequirement(l []interface{}) []metav1.LabelSelectorRequi
 		obj[i] = metav1.LabelSelectorRequirement{
 			Key:      in["key"].(string),
 			Operator: metav1.LabelSelectorOperator(in["operator"].(string)),
+			Values:   utils.SliceOfString(in["values"].(*schema.Set).List()),
+		}
+	}
+	return obj
+}
+
+// expandLabelSelectorToVM expands Terraform config to *models.V1VMLabelSelector (same shape as expandLabelSelector input).
+func expandLabelSelectorToVM(l []interface{}) *models.V1VMLabelSelector {
+	if len(l) == 0 || l[0] == nil {
+		return &models.V1VMLabelSelector{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &models.V1VMLabelSelector{}
+	if v, ok := in["match_labels"].(map[string]interface{}); ok && len(v) > 0 {
+		obj.MatchLabels = utils.ExpandStringMap(v)
+	}
+	if v, ok := in["match_expressions"].([]interface{}); ok && len(v) > 0 {
+		obj.MatchExpressions = expandLabelSelectorRequirementToVM(v)
+	}
+	return obj
+}
+
+func expandLabelSelectorRequirementToVM(l []interface{}) []*models.V1VMLabelSelectorRequirement {
+	if len(l) == 0 {
+		return nil
+	}
+	obj := make([]*models.V1VMLabelSelectorRequirement, len(l))
+	for i, n := range l {
+		in := n.(map[string]interface{})
+		key := in["key"].(string)
+		operator := in["operator"].(string)
+		obj[i] = &models.V1VMLabelSelectorRequirement{
+			Key:      &key,
+			Operator: &operator,
 			Values:   utils.SliceOfString(in["values"].(*schema.Set).List()),
 		}
 	}

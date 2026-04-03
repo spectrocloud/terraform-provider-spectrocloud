@@ -4,12 +4,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
@@ -85,33 +84,34 @@ func TestExpandDataVolumeStorage_Full(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
-	// Check access modes
+	// Check access modes ([]string in HAPI model, not []PersistentVolumeAccessMode)
 	assert.Len(t, result.AccessModes, 2)
-	assert.Contains(t, result.AccessModes, v1.ReadWriteOnce)
-	assert.Contains(t, result.AccessModes, v1.ReadOnlyMany)
+	assert.Contains(t, result.AccessModes, string(v1.ReadWriteOnce))
+	assert.Contains(t, result.AccessModes, string(v1.ReadOnlyMany))
 
-	// Check resources
-	requestStorage := result.Resources.Requests[v1.ResourceStorage]
-	limitStorage := result.Resources.Limits[v1.ResourceStorage]
-	expectedRequest, _ := resource.ParseQuantity("10Gi")
-	expectedLimit, _ := resource.ParseQuantity("20Gi")
-	assert.True(t, requestStorage.Equal(expectedRequest))
-	assert.True(t, limitStorage.Equal(expectedLimit))
+	// Check resources (map[string]models.V1VMQuantity, not core/v1.ResourceList)
+	require.NotNil(t, result.Resources)
+	requestStorage := result.Resources.Requests["storage"]
+	limitStorage := result.Resources.Limits["storage"]
+	assert.Equal(t, "10Gi", string(requestStorage))
+	assert.Equal(t, "20Gi", string(limitStorage))
 
 	// Check selector
 	assert.NotNil(t, result.Selector)
 	assert.Equal(t, "ssd", result.Selector.MatchLabels["type"])
 	assert.Equal(t, "premium", result.Selector.MatchLabels["tier"])
 	assert.Len(t, result.Selector.MatchExpressions, 1)
-	assert.Equal(t, "zone", result.Selector.MatchExpressions[0].Key)
-	assert.Equal(t, metav1.LabelSelectorOpIn, result.Selector.MatchExpressions[0].Operator)
+	require.NotNil(t, result.Selector.MatchExpressions[0].Key)
+	require.NotNil(t, result.Selector.MatchExpressions[0].Operator)
+	assert.Equal(t, "zone", *result.Selector.MatchExpressions[0].Key)
+	assert.Equal(t, string(metav1.LabelSelectorOpIn), *result.Selector.MatchExpressions[0].Operator)
 	assert.Contains(t, result.Selector.MatchExpressions[0].Values, "us-west-1a")
 	assert.Contains(t, result.Selector.MatchExpressions[0].Values, "us-west-1b")
 
 	// Check other fields
 	assert.Equal(t, "test-volume", result.VolumeName)
-	assert.Equal(t, "premium-ssd", *result.StorageClassName)
-	assert.Equal(t, v1.PersistentVolumeFilesystem, *result.VolumeMode)
+	assert.Equal(t, "premium-ssd", result.StorageClassName)
+	assert.Equal(t, string(v1.PersistentVolumeFilesystem), result.VolumeMode)
 }
 
 func TestExpandDataVolumeStorage_Minimal(t *testing.T) {
@@ -136,17 +136,17 @@ func TestExpandDataVolumeStorage_Minimal(t *testing.T) {
 
 	// Check minimal configuration
 	assert.Len(t, result.AccessModes, 1)
-	assert.Equal(t, v1.ReadWriteOnce, result.AccessModes[0])
+	assert.Equal(t, string(v1.ReadWriteOnce), result.AccessModes[0])
 
-	requestStorage := result.Resources.Requests[v1.ResourceStorage]
-	expectedRequest, _ := resource.ParseQuantity("5Gi")
-	assert.True(t, requestStorage.Equal(expectedRequest))
+	require.NotNil(t, result.Resources)
+	requestStorage := result.Resources.Requests["storage"]
+	assert.Equal(t, "5Gi", string(requestStorage))
 
 	// Optional fields should be nil/empty
 	assert.Nil(t, result.Selector)
 	assert.Empty(t, result.VolumeName)
-	assert.Nil(t, result.StorageClassName)
-	assert.Nil(t, result.VolumeMode)
+	assert.Empty(t, result.StorageClassName)
+	assert.Empty(t, result.VolumeMode)
 }
 
 func TestExpandDataVolumeStorage_Empty(t *testing.T) {
@@ -191,50 +191,40 @@ func TestExpandDataVolumeStorage_VolumeMode(t *testing.T) {
 			require.NotNil(t, result)
 
 			if tt.expected == nil {
-				assert.Nil(t, result.VolumeMode)
+				assert.Empty(t, result.VolumeMode)
 			} else {
-				assert.Equal(t, *tt.expected, *result.VolumeMode)
+				assert.Equal(t, string(*tt.expected), result.VolumeMode)
 			}
 		})
 	}
 }
 
 func TestFlattenDataVolumeStorage_Full(t *testing.T) {
-	requestStorage, _ := resource.ParseQuantity("10Gi")
-	limitStorage, _ := resource.ParseQuantity("20Gi")
-
-	input := cdiv1.StorageSpec{
-		AccessModes: []v1.PersistentVolumeAccessMode{
-			v1.ReadWriteOnce,
-			v1.ReadOnlyMany,
+	input := &models.V1VMStorageSpec{
+		AccessModes: []string{string(v1.ReadWriteOnce), string(v1.ReadOnlyMany)},
+		Resources: &models.V1VMCoreResourceRequirements{
+			Requests: map[string]models.V1VMQuantity{"storage": "10Gi"},
+			Limits:   map[string]models.V1VMQuantity{"storage": "20Gi"},
 		},
-		Resources: v1.VolumeResourceRequirements{
-			Requests: v1.ResourceList{
-				v1.ResourceStorage: requestStorage,
-			},
-			Limits: v1.ResourceList{
-				v1.ResourceStorage: limitStorage,
-			},
-		},
-		Selector: &metav1.LabelSelector{
+		Selector: &models.V1VMLabelSelector{
 			MatchLabels: map[string]string{
 				"type": "ssd",
 				"tier": "premium",
 			},
-			MatchExpressions: []metav1.LabelSelectorRequirement{
+			MatchExpressions: []*models.V1VMLabelSelectorRequirement{
 				{
-					Key:      "zone",
-					Operator: metav1.LabelSelectorOpIn,
+					Key:      types.Ptr("zone"),
+					Operator: types.Ptr(string(metav1.LabelSelectorOpIn)),
 					Values:   []string{"us-west-1a", "us-west-1b"},
 				},
 			},
 		},
 		VolumeName:       "test-volume",
-		StorageClassName: types.Ptr("premium-ssd"),
-		VolumeMode:       types.Ptr(v1.PersistentVolumeFilesystem),
+		StorageClassName: "premium-ssd",
+		VolumeMode:       string(v1.PersistentVolumeFilesystem),
 	}
 
-	result := flattenDataVolumeStorage(input)
+	result := flattenDataVolumeStorageFromVM(input)
 	require.Len(t, result, 1)
 
 	flattened := result[0].(map[string]interface{})
@@ -266,7 +256,7 @@ func TestFlattenDataVolumeStorage_Full(t *testing.T) {
 	require.Len(t, matchExpressions, 1)
 	expr := matchExpressions[0].(map[string]interface{})
 	assert.Equal(t, "zone", expr["key"])
-	assert.Equal(t, metav1.LabelSelectorOpIn, expr["operator"])
+	assert.Equal(t, string(metav1.LabelSelectorOpIn), expr["operator"])
 
 	// Check other fields
 	assert.Equal(t, "test-volume", flattened["volume_name"])
@@ -275,20 +265,14 @@ func TestFlattenDataVolumeStorage_Full(t *testing.T) {
 }
 
 func TestFlattenDataVolumeStorage_Minimal(t *testing.T) {
-	requestStorage, _ := resource.ParseQuantity("5Gi")
-
-	input := cdiv1.StorageSpec{
-		AccessModes: []v1.PersistentVolumeAccessMode{
-			v1.ReadWriteOnce,
-		},
-		Resources: v1.VolumeResourceRequirements{
-			Requests: v1.ResourceList{
-				v1.ResourceStorage: requestStorage,
-			},
+	input := &models.V1VMStorageSpec{
+		AccessModes: []string{string(v1.ReadWriteOnce)},
+		Resources: &models.V1VMCoreResourceRequirements{
+			Requests: map[string]models.V1VMQuantity{"storage": "5Gi"},
 		},
 	}
 
-	result := flattenDataVolumeStorage(input)
+	result := flattenDataVolumeStorageFromVM(input)
 	require.Len(t, result, 1)
 
 	flattened := result[0].(map[string]interface{})
@@ -347,15 +331,15 @@ func TestExpandDataVolumeSpec_WithStorage(t *testing.T) {
 	// Check that storage field is populated
 	assert.NotNil(t, result.Storage)
 	assert.Len(t, result.Storage.AccessModes, 1)
-	assert.Equal(t, v1.ReadWriteOnce, result.Storage.AccessModes[0])
-	assert.Equal(t, "fast-ssd", *result.Storage.StorageClassName)
+	assert.Equal(t, string(v1.ReadWriteOnce), result.Storage.AccessModes[0])
+	assert.Equal(t, "fast-ssd", result.Storage.StorageClassName)
 
 	// Check that PVC is nil when using storage
-	assert.Nil(t, result.PVC)
+	assert.Nil(t, result.Pvc)
 
 	// Check other fields
 	assert.NotNil(t, result.Source)
-	assert.Equal(t, cdiv1.DataVolumeContentType("kubevirt"), result.ContentType)
+	assert.Equal(t, "kubevirt", result.ContentType)
 }
 
 func TestExpandDataVolumeSpec_WithPVC(t *testing.T) {
@@ -391,17 +375,17 @@ func TestExpandDataVolumeSpec_WithPVC(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check that PVC field is populated
-	assert.NotNil(t, result.PVC)
-	assert.Len(t, result.PVC.AccessModes, 1)
-	assert.Equal(t, v1.ReadWriteOnce, result.PVC.AccessModes[0])
-	assert.Equal(t, "standard", *result.PVC.StorageClassName)
+	assert.NotNil(t, result.Pvc)
+	assert.Len(t, result.Pvc.AccessModes, 1)
+	assert.Equal(t, string(v1.ReadWriteOnce), result.Pvc.AccessModes[0])
+	assert.Equal(t, "standard", result.Pvc.StorageClassName)
 
 	// Check that Storage is nil when using PVC
 	assert.Nil(t, result.Storage)
 
 	// Check other fields
 	assert.NotNil(t, result.Source)
-	assert.Equal(t, cdiv1.DataVolumeContentType("archive"), result.ContentType)
+	assert.Equal(t, "archive", result.ContentType)
 }
 
 func TestExpandDataVolumeSpec_WithBothPVCAndStorage(t *testing.T) {
@@ -449,40 +433,32 @@ func TestExpandDataVolumeSpec_WithBothPVCAndStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	// Both should be populated if both are provided
-	assert.NotNil(t, result.PVC)
+	assert.NotNil(t, result.Pvc)
 	assert.NotNil(t, result.Storage)
 
 	// Check PVC
-	assert.Len(t, result.PVC.AccessModes, 1)
-	assert.Equal(t, v1.ReadWriteOnce, result.PVC.AccessModes[0])
+	assert.Len(t, result.Pvc.AccessModes, 1)
+	assert.Equal(t, string(v1.ReadWriteOnce), result.Pvc.AccessModes[0])
 
 	// Check Storage
 	assert.Len(t, result.Storage.AccessModes, 1)
-	assert.Equal(t, v1.ReadWriteMany, result.Storage.AccessModes[0])
+	assert.Equal(t, string(v1.ReadWriteMany), result.Storage.AccessModes[0])
 }
 
 func TestFlattenDataVolumeSpec_WithStorage(t *testing.T) {
-	requestStorage, _ := resource.ParseQuantity("10Gi")
-
-	input := cdiv1.DataVolumeSpec{
-		Source: &cdiv1.DataVolumeSource{
-			Blank: &cdiv1.DataVolumeBlankImage{},
-		},
-		Storage: &cdiv1.StorageSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{
-				v1.ReadWriteOnce,
+	input := &models.V1VMDataVolumeSpec{
+		Source: &models.V1VMDataVolumeSource{},
+		Storage: &models.V1VMStorageSpec{
+			AccessModes: []string{string(v1.ReadWriteOnce)},
+			Resources: &models.V1VMCoreResourceRequirements{
+				Requests: map[string]models.V1VMQuantity{"storage": "10Gi"},
 			},
-			Resources: v1.VolumeResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceStorage: requestStorage,
-				},
-			},
-			StorageClassName: types.Ptr("fast-ssd"),
+			StorageClassName: "fast-ssd",
 		},
-		ContentType: cdiv1.DataVolumeContentType("kubevirt"),
+		ContentType: "kubevirt",
 	}
 
-	result := FlattenDataVolumeSpec(input)
+	result := FlattenDataVolumeSpecFromVM(input)
 	require.Len(t, result, 1)
 
 	flattened := result[0].(map[string]interface{})
@@ -504,27 +480,19 @@ func TestFlattenDataVolumeSpec_WithStorage(t *testing.T) {
 }
 
 func TestFlattenDataVolumeSpec_WithPVC(t *testing.T) {
-	requestStorage, _ := resource.ParseQuantity("10Gi")
-
-	input := cdiv1.DataVolumeSpec{
-		Source: &cdiv1.DataVolumeSource{
-			Blank: &cdiv1.DataVolumeBlankImage{},
-		},
-		PVC: &v1.PersistentVolumeClaimSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{
-				v1.ReadWriteOnce,
+	input := &models.V1VMDataVolumeSpec{
+		Source: &models.V1VMDataVolumeSource{},
+		Pvc: &models.V1VMPersistentVolumeClaimSpec{
+			AccessModes: []string{string(v1.ReadWriteOnce)},
+			Resources: &models.V1VMCoreResourceRequirements{
+				Requests: map[string]models.V1VMQuantity{"storage": "10Gi"},
 			},
-			Resources: v1.VolumeResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceStorage: requestStorage,
-				},
-			},
-			StorageClassName: types.Ptr("standard"),
+			StorageClassName: "standard",
 		},
-		ContentType: cdiv1.DataVolumeContentType("archive"),
+		ContentType: "archive",
 	}
 
-	result := FlattenDataVolumeSpec(input)
+	result := FlattenDataVolumeSpecFromVM(input)
 	require.Len(t, result, 1)
 
 	flattened := result[0].(map[string]interface{})
@@ -543,35 +511,23 @@ func TestFlattenDataVolumeSpec_WithPVC(t *testing.T) {
 }
 
 func TestFlattenDataVolumeSpec_WithBothPVCAndStorage(t *testing.T) {
-	requestStorage, _ := resource.ParseQuantity("10Gi")
-
-	input := cdiv1.DataVolumeSpec{
-		Source: &cdiv1.DataVolumeSource{
-			Blank: &cdiv1.DataVolumeBlankImage{},
-		},
-		PVC: &v1.PersistentVolumeClaimSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{
-				v1.ReadWriteOnce,
-			},
-			Resources: v1.VolumeResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceStorage: requestStorage,
-				},
+	input := &models.V1VMDataVolumeSpec{
+		Source: &models.V1VMDataVolumeSource{},
+		Pvc: &models.V1VMPersistentVolumeClaimSpec{
+			AccessModes: []string{string(v1.ReadWriteOnce)},
+			Resources: &models.V1VMCoreResourceRequirements{
+				Requests: map[string]models.V1VMQuantity{"storage": "10Gi"},
 			},
 		},
-		Storage: &cdiv1.StorageSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{
-				v1.ReadWriteMany,
-			},
-			Resources: v1.VolumeResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceStorage: requestStorage,
-				},
+		Storage: &models.V1VMStorageSpec{
+			AccessModes: []string{string(v1.ReadWriteMany)},
+			Resources: &models.V1VMCoreResourceRequirements{
+				Requests: map[string]models.V1VMQuantity{"storage": "10Gi"},
 			},
 		},
 	}
 
-	result := FlattenDataVolumeSpec(input)
+	result := FlattenDataVolumeSpecFromVM(input)
 	require.Len(t, result, 1)
 
 	flattened := result[0].(map[string]interface{})
@@ -579,4 +535,28 @@ func TestFlattenDataVolumeSpec_WithBothPVCAndStorage(t *testing.T) {
 	// Both should be present if both are in the spec
 	assert.Contains(t, flattened, "pvc")
 	assert.Contains(t, flattened, "storage")
+}
+
+func TestFlattenDataVolumeSpec_WithBlankSource(t *testing.T) {
+	input := &models.V1VMDataVolumeSpec{
+		Source: &models.V1VMDataVolumeSource{
+			Blank: map[string]interface{}{},
+		},
+		Pvc: &models.V1VMPersistentVolumeClaimSpec{
+			AccessModes: []string{string(v1.ReadWriteOnce)},
+			Resources: &models.V1VMCoreResourceRequirements{
+				Requests: map[string]models.V1VMQuantity{"storage": "5Gi"},
+			},
+		},
+	}
+
+	result := FlattenDataVolumeSpecFromVM(input)
+	require.Len(t, result, 1)
+	flattened := result[0].(map[string]interface{})
+	source := flattened["source"].([]interface{})
+	require.Len(t, source, 1)
+	srcMap := source[0].(map[string]interface{})
+	blank := srcMap["blank"].([]interface{})
+	require.Len(t, blank, 1)
+	assert.Equal(t, map[string]interface{}{}, blank[0].(map[string]interface{}))
 }

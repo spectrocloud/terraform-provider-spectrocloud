@@ -2,7 +2,8 @@ package virtualmachineinstance
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 func probeFields() map[string]*schema.Schema {
@@ -26,26 +27,21 @@ func ProbeSchema() *schema.Schema {
 	}
 }
 
-func expandProbe(probe []interface{}) *kubevirtapiv1.Probe {
+// expandProbeToVM expands the probe schema into Palette models.V1VMProbe for VM spec.
+func expandProbeToVM(probe []interface{}) *models.V1VMProbe {
 	if len(probe) == 0 || probe[0] == nil {
 		return nil
 	}
-
-	result := &kubevirtapiv1.Probe{}
-
 	_ = probe[0].(map[string]interface{})
-
-	// TODO nargaman
-
-	return result
+	// TODO: populate V1VMProbe fields when schema is defined
+	return &models.V1VMProbe{}
 }
 
-func flattenProbe(in kubevirtapiv1.Probe) []interface{} {
+// flattenProbeFromVM flattens *models.V1VMProbe to the same shape as flattenProbe.
+func flattenProbeFromVM(in *models.V1VMProbe) []interface{} {
+	if in == nil {
+		return []interface{}{map[string]interface{}{}}
+	}
 	att := make(map[string]interface{})
-
-	// att["spec"] = flattenVirtualMachineInstanceSpecSpec(in.Spec)
-	// att["status"] = flattenVirtualMachineInstanceSpecStatus(in.Status)
-	// TODO nargaman
-
 	return []interface{}{att}
 }

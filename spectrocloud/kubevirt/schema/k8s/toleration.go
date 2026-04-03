@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	v1 "k8s.io/api/core/v1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
@@ -61,30 +62,30 @@ func TolerationSchema() *schema.Schema {
 	}
 }
 
-func ExpandTolerations(tolerations []interface{}) ([]v1.Toleration, error) {
+func ExpandTolerations(tolerations []interface{}) ([]*models.V1VMToleration, error) {
 	if len(tolerations) == 0 {
-		return []v1.Toleration{}, nil
+		return []*models.V1VMToleration{}, nil
 	}
-	ts := make([]v1.Toleration, len(tolerations))
+	ts := make([]*models.V1VMToleration, len(tolerations))
 	for i, t := range tolerations {
 		m := t.(map[string]interface{})
-		ts[i] = v1.Toleration{}
+		ts[i] = &models.V1VMToleration{}
 
 		if value, ok := m["effect"].(string); ok {
-			ts[i].Effect = v1.TaintEffect(value)
+			ts[i].Effect = value
 		}
 		if value, ok := m["key"].(string); ok {
 			ts[i].Key = value
 		}
 		if value, ok := m["operator"].(string); ok {
-			ts[i].Operator = v1.TolerationOperator(value)
+			ts[i].Operator = value
 		}
 		if value, ok := m["toleration_seconds"].(string); ok && value != "" {
 			seconds, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("invalid toleration_seconds must be int or \"\", got \"%s\"", value)
 			}
-			ts[i].TolerationSeconds = utils.PtrToInt64(seconds)
+			ts[i].TolerationSeconds = seconds
 		}
 		if value, ok := m["value"]; ok {
 			ts[i].Value = value.(string)
@@ -114,6 +115,38 @@ func FlattenTolerations(tolerations []v1.Toleration) []interface{} {
 		}
 		if v.TolerationSeconds != nil {
 			obj["toleration_seconds"] = strconv.FormatInt(*v.TolerationSeconds, 10)
+		}
+		if v.Value != "" {
+			obj["value"] = v.Value
+		}
+		att = append(att, obj)
+	}
+	return att
+}
+
+// FlattenTolerationsFromVM flattens []*models.V1VMToleration to the same shape as FlattenTolerations.
+func FlattenTolerationsFromVM(tolerations []*models.V1VMToleration) []interface{} {
+	att := []interface{}{}
+	for _, v := range tolerations {
+		if v == nil {
+			continue
+		}
+		if strings.Contains(v.Key, "node.kubernetes.io/") {
+			log.Printf("[INFO] ignoring toleration with key: %s", v.Key)
+			continue
+		}
+		obj := map[string]interface{}{}
+		if v.Effect != "" {
+			obj["effect"] = v.Effect
+		}
+		if v.Key != "" {
+			obj["key"] = v.Key
+		}
+		if v.Operator != "" {
+			obj["operator"] = v.Operator
+		}
+		if v.TolerationSeconds != 0 {
+			obj["toleration_seconds"] = strconv.FormatInt(v.TolerationSeconds, 10)
 		}
 		if v.Value != "" {
 			obj["value"] = v.Value

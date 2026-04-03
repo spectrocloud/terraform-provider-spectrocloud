@@ -2,8 +2,8 @@ package virtualmachine
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/datavolume"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
 )
@@ -28,8 +28,8 @@ func dataVolumeTemplatesSchema() *schema.Schema {
 	}
 }
 
-func expandDataVolumeTemplates(dataVolumes []interface{}) ([]kubevirtapiv1.DataVolumeTemplateSpec, error) {
-	result := make([]kubevirtapiv1.DataVolumeTemplateSpec, len(dataVolumes))
+func expandDataVolumeTemplates(dataVolumes []interface{}) ([]*models.V1VMDataVolumeTemplateSpec, error) {
+	result := make([]*models.V1VMDataVolumeTemplateSpec, len(dataVolumes))
 
 	if len(dataVolumes) == 0 || dataVolumes[0] == nil {
 		return result, nil
@@ -37,31 +37,37 @@ func expandDataVolumeTemplates(dataVolumes []interface{}) ([]kubevirtapiv1.DataV
 
 	for i, dataVolume := range dataVolumes {
 		in := dataVolume.(map[string]interface{})
-
+		item := &models.V1VMDataVolumeTemplateSpec{}
 		if v, ok := in["metadata"].([]interface{}); ok {
-			result[i].ObjectMeta = k8s.ExpandMetadata(v)
+			item.Metadata = k8s.ExpandMetadata(v)
 		}
 		if v, ok := in["spec"].([]interface{}); ok {
 			spec, err := datavolume.ExpandDataVolumeSpec(v)
 			if err != nil {
 				return result, err
 			}
-			result[i].Spec = spec
+			item.Spec = spec
 		}
+		result[i] = item
 	}
 
 	return result, nil
 }
 
-func flattenDataVolumeTemplates(in []kubevirtapiv1.DataVolumeTemplateSpec, resourceData *schema.ResourceData) []interface{} {
-	att := make([]interface{}, len(in))
-
-	for i, v := range in {
-		c := make(map[string]interface{})
-		c["metadata"] = k8s.FlattenMetadataDataVolume(v.ObjectMeta)
-		c["spec"] = datavolume.FlattenDataVolumeSpec(v.Spec)
-		att[i] = c
+// flattenDataVolumeTemplatesFromVM flattens []*V1VMDataVolumeTemplateSpec (API response) to the same shape as flattenDataVolumeTemplates.
+func flattenDataVolumeTemplatesFromVM(in []*models.V1VMDataVolumeTemplateSpec, resourceData *schema.ResourceData) []interface{} {
+	if len(in) == 0 {
+		return []interface{}{}
 	}
-
+	att := make([]interface{}, 0, len(in))
+	for _, v := range in {
+		if v == nil {
+			continue
+		}
+		c := make(map[string]interface{})
+		c["metadata"] = k8s.FlattenMetadataDataVolumeFromVM(v.Metadata)
+		c["spec"] = datavolume.FlattenDataVolumeSpecFromVM(v.Spec)
+		att = append(att, c)
+	}
 	return att
 }
