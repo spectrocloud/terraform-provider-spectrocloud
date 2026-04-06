@@ -784,14 +784,14 @@ func prepareClusterProfileWithVersionChange(oldVersion, newVersion, profileName 
 	state := &terraform.InstanceState{
 		ID: "cluster-profile-1",
 		Attributes: map[string]string{
-			"name":               profileName,
-			"version":            oldVersion,
-			"context":            "project",
-			"description":        "old description",
-			"cloud":              "all",
-			"type":               "add-on",
-			"tags.#":             "0",
-			"pack.#":             "0",
+			"name":                profileName,
+			"version":             oldVersion,
+			"context":             "project",
+			"description":         "old description",
+			"cloud":               "all",
+			"type":                "add-on",
+			"tags.#":              "0",
+			"pack.#":              "0",
 			"profile_variables.#": "0",
 		},
 	}
