@@ -218,7 +218,11 @@ func ClusterProfileNegativeRoutes() []Route {
 			Path:   "/v1/dashboard/clusterprofiles/metadata",
 			Response: ResponseData{
 				StatusCode: 200,
-				Payload:    getClusterProfilesMetadataResponse(),
+				// Empty list so lookup by name fails with "cluster profile not found" from getProfile,
+				// instead of matching metadata then failing on GET by uid (423 on negative server).
+				Payload: &models.V1ClusterProfilesMetadata{
+					Items: []*models.V1ClusterProfileMetadata{},
+				},
 			},
 		},
 		{
