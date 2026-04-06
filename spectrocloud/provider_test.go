@@ -59,6 +59,13 @@ func prepareBaseProviderConfig() *schema.ResourceData {
 				Optional:    true,
 				Description: "Ignore insecure TLS errors for Spectro Cloud API endpoints. Defaults to false.",
 			},
+			"feature_preview": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeBool,
+				},
+			},
 		},
 	}
 
@@ -76,6 +83,18 @@ func TestProviderConfig(t *testing.T) {
 	d := prepareBaseProviderConfig()
 	_, diags := providerConfigure(context.Background(), d)
 	assert.Empty(t, diags)
+}
+
+func TestIsFeaturePreviewEnabled(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+
+	ProviderFeaturePreview = map[string]bool{}
+	assert.False(t, isFeaturePreviewEnabled("clone-on-version-change"))
+
+	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
+	assert.True(t, isFeaturePreviewEnabled("clone-on-version-change"))
+	assert.False(t, isFeaturePreviewEnabled("nonexistent"))
 }
 
 func TestProviderConfigValidError(t *testing.T) {

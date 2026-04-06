@@ -46,10 +46,10 @@ func resourceClusterProfile() *schema.Resource {
 				Optional: true,
 				Default:  "1.0.0", // default as in UI
 				Description: "Version of the cluster profile. Defaults to '1.0.0'. " +
-					"**Important**: Modifying this value will only update the version number of the existing cluster profile. " +
-					"It will NOT create a new version in Palette. " +
-					"To create a new version of a cluster profile, refer to the example at: " +
-					"https://github.com/spectrocloud/spectro-samples/tree/main/terraform/cluster-profiles",
+					"When the `clone-on-version-change` feature preview flag is enabled, " +
+					"changing this value on an existing profile creates a new version " +
+					"in Palette via clone. The previous version is preserved. " +
+					"Without the flag, changing this value updates the version in place.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -109,13 +109,30 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	uid, err := c.CreateClusterProfile(clusterProfile)
+	adopted := false
 	if err != nil {
-		return diag.FromErr(err)
+		if !isFeaturePreviewEnabled("clone-on-version-change") {
+			return diag.FromErr(err)
+		}
+		// If the profile already exists, adopt it instead of failing.
+		// This supports multi-environment patterns where each composition
+		// layer declares the same profile module.
+		name := d.Get("name").(string)
+		version := d.Get("version").(string)
+		existingUID, lookupErr := c.GetClusterProfileUID(name, version)
+		if lookupErr != nil || existingUID == "" {
+			return diag.FromErr(err) // return the original create error
+		}
+		log.Printf("Profile %s version %s already exists (UID %s), adopting", name, version, existingUID)
+		uid = existingUID
+		adopted = true
 	}
 
-	// And then publish
-	if err = c.PublishClusterProfile(uid); err != nil {
-		return diag.FromErr(err)
+	// Publish only for newly created profiles — adopted profiles are already published.
+	if !adopted {
+		if err = c.PublishClusterProfile(uid); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	d.SetId(uid)
 	resourceClusterProfileRead(ctx, d, m)
@@ -230,6 +247,64 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 	}
 
+	// If version changed, clone the existing profile to create a new version.
+	// This matches Palette's recommended workflow: create a new version rather than
+	// modifying a deployed version in place. The old version persists in Palette untouched.
+	if d.HasChange("version") && isFeaturePreviewEnabled("clone-on-version-change") {
+		name := d.Get("name").(string)
+		version := d.Get("version").(string)
+		log.Printf("Version changed, cloning profile %s to create version %s", d.Id(), version)
+
+		// Check if this version already exists. If so, adopt it and update in place
+		// rather than cloning (which would fail with a duplicate-name error).
+		existingUID, err := c.GetClusterProfileUID(name, version)
+		if err == nil && existingUID != "" {
+			log.Printf("Version %s already exists (UID %s), updating in place", version, existingUID)
+			d.SetId(existingUID)
+		} else {
+			// Version doesn't exist yet; clone to create it
+			cloneEntity := &models.V1ClusterProfileCloneEntity{
+				Metadata: &models.V1ClusterProfileCloneMetaInputEntity{
+					Name:    &name,
+					Version: version,
+				},
+			}
+			newUID, err := c.CloneClusterProfile(d.Id(), cloneEntity)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			d.SetId(newUID)
+		}
+
+		// If other fields also changed (packs, values, etc.), apply them to the version
+		if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") {
+			cp, err := c.GetClusterProfile(d.Id())
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			cluster, err := toClusterProfileUpdateWithResolution(d, cp, c)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			metadata, err := toClusterProfilePatch(d)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			if err := c.UpdateClusterProfile(cluster); err != nil {
+				return diag.FromErr(err)
+			}
+			if err := c.PatchClusterProfile(cluster, metadata); err != nil {
+				return diag.FromErr(err)
+			}
+			if err := c.PublishClusterProfile(d.Id()); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+		resourceClusterProfileRead(ctx, d, m)
+		return diags
+	}
+
 	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") || d.HasChanges("version") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
@@ -245,7 +320,6 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 			return diag.FromErr(err)
 		}
 
-		//ProfileContext := d.Get("context").(string)
 		if err := c.UpdateClusterProfile(cluster); err != nil {
 			return diag.FromErr(err)
 		}

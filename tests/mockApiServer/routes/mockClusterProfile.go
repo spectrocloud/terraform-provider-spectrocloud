@@ -12,7 +12,7 @@ func getClusterProfilesMetadataResponse() *models.V1ClusterProfilesMetadata {
 			{
 				Metadata: &models.V1ObjectEntity{
 					Name: "test-cluster-profile-1",
-					UID:  generateRandomStringUID(),
+					UID:  "existing-profile-uid-1",
 				},
 				Spec: &models.V1ClusterProfileMetadataSpec{
 					CloudType: "aws",
@@ -145,6 +145,30 @@ func ClusterProfileRoutes() []Route {
 			},
 		},
 		{
+			Method: "POST",
+			Path:   "/v1/clusterprofiles/{uid}/clone",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "cloned-profile-uid"},
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/clusterprofiles/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "PATCH",
+			Path:   "/v1/clusterprofiles/{uid}/metadata",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
 			Method: "PATCH",
 			Path:   "/v1/clusterprofiles/{uid}/publish",
 			Response: ResponseData{
@@ -182,11 +206,27 @@ func ClusterProfileRoutes() []Route {
 func ClusterProfileNegativeRoutes() []Route {
 	return []Route{
 		{
+			Method: "POST",
+			Path:   "/v1/clusterprofiles",
+			Response: ResponseData{
+				StatusCode: http.StatusConflict,
+				Payload:    getError("ClusterProfileAlreadyExists", "Cluster Profile already exists"),
+			},
+		},
+		{
 			Method: "GET",
 			Path:   "/v1/dashboard/clusterprofiles/metadata",
 			Response: ResponseData{
 				StatusCode: 200,
-				Payload:    &models.V1ClusterProfilesMetadata{},
+				Payload:    getClusterProfilesMetadataResponse(),
+			},
+		},
+		{
+			Method: "PATCH",
+			Path:   "/v1/clusterprofiles/{uid}/publish",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
 			},
 		},
 		{
