@@ -229,6 +229,11 @@ func flattenDataVolumeSourceFromVM(in *models.V1VMDataVolumeSource) []interface{
 		return []interface{}{}
 	}
 	att := make(map[string]interface{})
+	// Blank source is an empty JSON object; expand uses map[string]interface{}{}. Refresh must
+	// emit blank {} or Terraform forever plans to add it (SDK types Blank as interface{}).
+	if in.Blank != nil {
+		att["blank"] = []interface{}{map[string]interface{}{}}
+	}
 	if in.HTTP != nil {
 		url := ""
 		if in.HTTP.URL != nil {

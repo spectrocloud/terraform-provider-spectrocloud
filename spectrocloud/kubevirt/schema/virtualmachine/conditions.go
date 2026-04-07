@@ -61,7 +61,7 @@ func virtualMachineConditionsSchema() *schema.Schema {
 		Type: schema.TypeList,
 
 		Description: "Hold the state information of the VirtualMachine and its VirtualMachineInstance.",
-		Required:    true,
+		Optional:    true,
 		Elem: &schema.Resource{
 			Schema: fields,
 		},

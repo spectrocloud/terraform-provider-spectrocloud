@@ -120,8 +120,6 @@ func New(_ string) func() *schema.Provider {
 
 				"spectrocloud_virtual_machine": resourceKubevirtVirtualMachine(),
 
-				// "spectrocloud_virtual_machine_v2": resourceVirtualMachineV2(),
-
 				"spectrocloud_datavolume": resourceKubevirtDataVolume(),
 
 				"spectrocloud_application": resourceApplication(),
