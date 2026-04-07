@@ -27,8 +27,6 @@ func prepareBasicResourceData() *schema.ResourceData {
 
 func TestFlattenDomainSpec(t *testing.T) {
 	guestQuantity := models.V1VMQuantity("2Gi")
-<<<<<<< HEAD:spectrocloud/resource_kubevirt_virtual_machine_test.go_backup
-=======
 
 	emptyDomainResources := &models.V1VMResourceRequirements{
 		OvercommitGuestOverhead: false,
@@ -46,7 +44,6 @@ func TestFlattenDomainSpec(t *testing.T) {
 		"over_commit_guest_overhead": false,
 		"requests":                   map[string]interface{}{},
 	}
->>>>>>> main:spectrocloud/resource_kubevirt_virtual_machine_test.go
 
 	testCases := []struct {
 		input          models.V1VMDomainSpec
@@ -54,15 +51,10 @@ func TestFlattenDomainSpec(t *testing.T) {
 	}{
 		{
 			input: models.V1VMDomainSpec{
-<<<<<<< HEAD:spectrocloud/resource_kubevirt_virtual_machine_test.go_backup
-				CPU:    &models.V1VMCPU{}, // empty CPU and Memory should be ignored
-				Memory: &models.V1VMMemory{},
-=======
 				CPU:       &models.V1VMCPU{},
 				Memory:    &models.V1VMMemory{},
 				Resources: emptyDomainResources,
 				Devices:   emptyDomainDevices,
->>>>>>> main:spectrocloud/resource_kubevirt_virtual_machine_test.go
 			},
 			expectedOutput: []interface{}{
 				map[string]interface{}{
