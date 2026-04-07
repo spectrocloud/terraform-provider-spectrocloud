@@ -428,6 +428,12 @@ Refer to the [Import section](/docs#import) to learn more.
 - `type` (String) Specify the cluster profile type to use. Allowed values are `cluster`, `infra`, `add-on`, and `system`. These values map to the following User Interface (UI) labels. Use the value ' cluster ' for a **Full** cluster profile.For an Infrastructure cluster profile, use the value `infra`; for an Add-on cluster profile, use the value `add-on`.System cluster profiles can be specified using the value `system`. To learn more about cluster profiles, refer to the [Cluster Profile](https://docs.spectrocloud.com/cluster-profiles) documentation. Default value is `add-on`.
 - `version` (String) Version of the cluster profile. Defaults to '1.0.0'. When the `clone-on-version-change` feature preview flag is enabled, changing this value on an existing profile creates a new version in Palette via clone. The previous version is preserved. Without the flag, changing this value updates the version in place.
 
+**Notes**:
+
+- Cloning creates a new UID for the profile version. Clusters reference versions by UID; cloning does not change which UID a cluster is running. Upgrades must be explicit.
+- Because cloning creates a separate object, Terraform's resource lifecycle and state handling require care: if your configuration expects in-place renaming, enable the flag only after validating the upgrade path.
+- If you prefer existing behavior, do not set the feature flag and the provider will continue to update version in place.
+
 ### Read-Only
 
 - `id` (String) The ID of this resource.

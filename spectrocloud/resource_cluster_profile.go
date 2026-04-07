@@ -49,7 +49,15 @@ func resourceClusterProfile() *schema.Resource {
 					"When the `clone-on-version-change` feature preview flag is enabled, " +
 					"changing this value on an existing profile creates a new version " +
 					"in Palette via clone. The previous version is preserved. " +
-					"Without the flag, changing this value updates the version in place.",
+					"Without the flag, changing this value updates the version in place.\n\n" +
+					"**Notes**:\n\n" +
+					"- Cloning creates a new UID for the profile version. Clusters reference versions by UID; " +
+					"cloning does not change which UID a cluster is running. Upgrades must be explicit.\n" +
+					"- Because cloning creates a separate object, Terraform's resource lifecycle and state handling " +
+					"require care: if your configuration expects in-place renaming, enable the flag only after " +
+					"validating the upgrade path.\n" +
+					"- If you prefer existing behavior, do not set the feature flag and the provider will continue " +
+					"to update version in place.",
 			},
 			"context": {
 				Type:         schema.TypeString,
