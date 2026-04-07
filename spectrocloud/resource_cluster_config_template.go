@@ -69,7 +69,8 @@ func resourceClusterConfigTemplate() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Set of cluster profile references.",
-				Set:         resourceClusterConfigTemplateProfileHash,
+				// Use default HashResource (do not hash only profile ID). Hashing only `id` breaks "Terraform plan" for nested
+				// `variables` changes because the SDK can fail to diff nested attribute updates inside the same set element.
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
@@ -399,17 +400,6 @@ func resourceClusterConfigTemplateImport(ctx context.Context, d *schema.Resource
 
 // Hash functions for sets
 
-func resourceClusterConfigTemplateProfileHash(v interface{}) int {
-	var buf strings.Builder
-	m := v.(map[string]interface{})
-
-	if id, ok := m["id"].(string); ok {
-		buf.WriteString(fmt.Sprintf("%s-", id))
-	}
-
-	return schema.HashString(buf.String())
-}
-
 func resourceClusterConfigTemplateVariableHash(v interface{}) int {
 	var buf strings.Builder
 	m := v.(map[string]interface{})
@@ -577,9 +567,17 @@ func expandClusterTemplatePolicies(policies []interface{}) []*models.V1PolicyRef
 	return result
 }
 
+func clusterConfigTemplateProfileBlockResource() *schema.Resource {
+	return resourceClusterConfigTemplate().Schema["cluster_profile"].Elem.(*schema.Resource)
+}
+
+func newClusterConfigTemplateProfileSet(elems []interface{}) *schema.Set {
+	return schema.NewSet(schema.HashResource(clusterConfigTemplateProfileBlockResource()), elems)
+}
+
 func flattenClusterTemplateProfiles(profiles []*models.V1ClusterTemplateProfile) *schema.Set {
 	if profiles == nil {
-		return schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{})
+		return newClusterConfigTemplateProfileSet([]interface{}{})
 	}
 
 	result := make([]interface{}, len(profiles))
@@ -598,7 +596,7 @@ func flattenClusterTemplateProfiles(profiles []*models.V1ClusterTemplateProfile)
 		result[i] = profileMap
 	}
 
-	return schema.NewSet(resourceClusterConfigTemplateProfileHash, result)
+	return newClusterConfigTemplateProfileSet(result)
 }
 
 func flattenClusterTemplateProfileVariables(variables []*models.V1ClusterTemplateVariable) *schema.Set {
@@ -616,8 +614,11 @@ func flattenClusterTemplateProfileVariables(variables []*models.V1ClusterTemplat
 			varMap["value"] = variable.Value
 		}
 
+		// Align with schema default so refresh matches config when API omits assignStrategy.
 		if variable.AssignStrategy != "" {
 			varMap["assign_strategy"] = variable.AssignStrategy
+		} else {
+			varMap["assign_strategy"] = "all"
 		}
 
 		result[i] = varMap

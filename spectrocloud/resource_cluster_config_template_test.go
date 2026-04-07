@@ -34,8 +34,9 @@ func prepareBaseClusterConfigTemplateTestData() *schema.ResourceData {
 		},
 	})
 
-	// Create profiles set
-	profilesSet := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
+	// Create profiles set (must use same hashing as schema: HashResource over cluster_profile blocks)
+	profileResource := resourceClusterConfigTemplate().Schema["cluster_profile"].Elem.(*schema.Resource)
+	profilesSet := schema.NewSet(schema.HashResource(profileResource), []interface{}{
 		map[string]interface{}{
 			"id":        "test-profile-uid-1",
 			"variables": variablesSet,
@@ -117,14 +118,17 @@ func TestExpandClusterTemplatePolicies(t *testing.T) {
 }
 
 func TestProfileStructureChanged(t *testing.T) {
+	profileResource := resourceClusterConfigTemplate().Schema["cluster_profile"].Elem.(*schema.Resource)
+	profileHash := schema.HashResource(profileResource)
+
 	// Test case 1: Different number of profiles
-	oldProfiles := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
+	oldProfiles := schema.NewSet(profileHash, []interface{}{
 		map[string]interface{}{
 			"id":        "profile-1",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
 		},
 	})
-	newProfiles := schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
+	newProfiles := schema.NewSet(profileHash, []interface{}{
 		map[string]interface{}{
 			"id":        "profile-1",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
@@ -137,7 +141,7 @@ func TestProfileStructureChanged(t *testing.T) {
 	assert.True(t, profileStructureChanged(oldProfiles, newProfiles), "Should detect added profile")
 
 	// Test case 2: Same number but different IDs
-	oldProfiles = schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
+	oldProfiles = schema.NewSet(profileHash, []interface{}{
 		map[string]interface{}{
 			"id":        "profile-1",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
@@ -147,7 +151,7 @@ func TestProfileStructureChanged(t *testing.T) {
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
 		},
 	})
-	newProfiles = schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
+	newProfiles = schema.NewSet(profileHash, []interface{}{
 		map[string]interface{}{
 			"id":        "profile-1",
 			"variables": schema.NewSet(resourceClusterConfigTemplateVariableHash, []interface{}{}),
@@ -167,13 +171,13 @@ func TestProfileStructureChanged(t *testing.T) {
 		map[string]interface{}{"name": "var1", "value": "new", "assign_strategy": "all"},
 	})
 
-	oldProfiles = schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
+	oldProfiles = schema.NewSet(profileHash, []interface{}{
 		map[string]interface{}{
 			"id":        "profile-1",
 			"variables": oldVars,
 		},
 	})
-	newProfiles = schema.NewSet(resourceClusterConfigTemplateProfileHash, []interface{}{
+	newProfiles = schema.NewSet(profileHash, []interface{}{
 		map[string]interface{}{
 			"id":        "profile-1",
 			"variables": newVars,
