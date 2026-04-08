@@ -148,6 +148,17 @@ func resourceClusterProfile() *schema.Resource {
 // updates (which is why this approach has none of the stale-output or
 // "[WARN] tolerating it because it is using the legacy plugin SDK" issues that
 // come from trying to mutate `d.Id()` mid-Update).
+//
+// Validation: when a version change is detected under the flag, we also require
+// `skip_destroy = true` on the resource. Without it, the replacement's Delete
+// phase would call the Palette DELETE API and destroy the previous version --
+// defeating the whole point of immutable versioning. Since `skip_destroy` is a
+// provider-schema attribute we can read at plan time, surfacing this as a plan
+// error rather than a runtime surprise is strictly better UX. The companion
+// `lifecycle { create_before_destroy = true }` block cannot be validated from
+// the provider (Terraform core parses lifecycle blocks before the provider sees
+// the diff), but the error message includes it so users get both knobs from a
+// single diagnostic.
 func resourceClusterProfileCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
 	if d.Id() == "" {
 		// New resource -- no in-place update to convert
@@ -159,6 +170,27 @@ func resourceClusterProfileCustomizeDiff(_ context.Context, d *schema.ResourceDi
 	if d.HasChange("version") {
 		if err := d.ForceNew("version"); err != nil {
 			return err
+		}
+		if !d.Get("skip_destroy").(bool) {
+			return fmt.Errorf(
+				"immutable-clusterprofiles: version changes on %q require skip_destroy = true and "+
+					"lifecycle { create_before_destroy = true } on the resource, so that the previous "+
+					"version is preserved in Palette while Terraform replaces the resource. Add both to "+
+					"your resource block:\n\n"+
+					"  resource \"spectrocloud_cluster_profile\" %q {\n"+
+					"    # ...\n"+
+					"    skip_destroy = true\n\n"+
+					"    lifecycle {\n"+
+					"      create_before_destroy = true\n"+
+					"    }\n"+
+					"  }\n\n"+
+					"This follows the standard Terraform Plugin SDK v2 immutable-versioned-resource "+
+					"pattern used by aws_lambda_layer_version and similar resources. See the "+
+					"\"Immutable versioning\" section of the spectrocloud_cluster_profile docs for a "+
+					"full example.",
+				d.Get("name").(string),
+				d.Get("name").(string),
+			)
 		}
 	}
 	return nil

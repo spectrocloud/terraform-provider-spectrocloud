@@ -916,6 +916,91 @@ func TestResourceClusterProfileSchema_CustomizeDiffRegistered(t *testing.T) {
 	assert.NotNil(t, r.CustomizeDiff, "CustomizeDiff must be registered to gate ForceNew on version under immutable-clusterprofiles")
 }
 
+// customizeDiffFixture drives Resource.Diff (which runs the registered
+// CustomizeDiff function internally) with a version bump on an existing
+// resource. skipDestroyInConfig controls whether the user's HCL sets
+// skip_destroy = true, which is what the CustomizeDiff plan-time validation
+// checks for.
+func customizeDiffFixture(oldVersion, newVersion string, skipDestroyInConfig bool) (*terraform.InstanceDiff, error) {
+	r := resourceClusterProfile()
+	state := &terraform.InstanceState{
+		ID: "cluster-profile-1",
+		Attributes: map[string]string{
+			"name":                "example-addon",
+			"version":             oldVersion,
+			"context":             "project",
+			"description":         "",
+			"cloud":               "all",
+			"type":                "add-on",
+			"skip_destroy":        "false",
+			"tags.#":              "0",
+			"pack.#":              "0",
+			"profile_variables.#": "0",
+		},
+	}
+	cfg := map[string]interface{}{
+		"name":         "example-addon",
+		"version":      newVersion,
+		"context":      "project",
+		"cloud":        "all",
+		"type":         "add-on",
+		"skip_destroy": skipDestroyInConfig,
+	}
+	return r.Diff(context.Background(), state, terraform.NewResourceConfigRaw(cfg), unitTestMockAPIClient)
+}
+
+// TestResourceClusterProfileCustomizeDiff_VersionBump_MissingSkipDestroy
+// verifies that when the immutable-clusterprofiles flag is enabled and the
+// user bumps the version without setting skip_destroy = true, plan fails with
+// a clear error that tells the user which knobs to add. This is the guardrail
+// against the common mistake of enabling the flag but forgetting the companion
+// SDK v2 pattern attributes.
+func TestResourceClusterProfileCustomizeDiff_VersionBump_MissingSkipDestroy(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	_, err := customizeDiffFixture("1.0.0", "1.1.0", false)
+	assert.Error(t, err, "plan must error when version changes under the flag without skip_destroy = true")
+	assert.Contains(t, err.Error(), "skip_destroy = true")
+	assert.Contains(t, err.Error(), "create_before_destroy = true")
+	assert.Contains(t, err.Error(), "aws_lambda_layer_version")
+}
+
+// TestResourceClusterProfileCustomizeDiff_VersionBump_WithSkipDestroy
+// verifies that when skip_destroy is set, plan succeeds and the version change
+// is marked as a replacement (ForceNew). This is the intended happy path under
+// the immutable-clusterprofiles flag.
+func TestResourceClusterProfileCustomizeDiff_VersionBump_WithSkipDestroy(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	diff, err := customizeDiffFixture("1.0.0", "1.1.0", true)
+	assert.NoError(t, err)
+	assert.NotNil(t, diff)
+	versionAttr, ok := diff.Attributes["version"]
+	assert.True(t, ok, "version attribute should be in diff")
+	assert.True(t, versionAttr.RequiresNew, "version change must be marked ForceNew under the flag")
+}
+
+// TestResourceClusterProfileCustomizeDiff_VersionBump_FlagOff verifies that
+// without the immutable-clusterprofiles flag, the CustomizeDiff validation is
+// bypassed entirely and version changes behave like any other in-place update
+// -- no ForceNew, no skip_destroy requirement. This is the backward-compat path.
+func TestResourceClusterProfileCustomizeDiff_VersionBump_FlagOff(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{}
+
+	diff, err := customizeDiffFixture("1.0.0", "1.1.0", false)
+	assert.NoError(t, err, "without the flag, version changes must not require skip_destroy")
+	assert.NotNil(t, diff)
+	if versionAttr, ok := diff.Attributes["version"]; ok {
+		assert.False(t, versionAttr.RequiresNew, "without the flag, version must not be ForceNew")
+	}
+}
+
 // TestResourceClusterProfileDelete_SkipDestroy verifies that when
 // skip_destroy=true, the Delete function returns successfully without calling
 // the Palette delete API. This is the SDK v2 preservation pattern for
