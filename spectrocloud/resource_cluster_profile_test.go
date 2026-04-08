@@ -1001,6 +1001,95 @@ func TestResourceClusterProfileCustomizeDiff_VersionBump_FlagOff(t *testing.T) {
 	}
 }
 
+// customizeDiffContentChangeFixture drives Resource.Diff with a content change
+// (description field) on an existing resource while keeping the version field
+// the same. Used by the content-change-without-version-bump CustomizeDiff tests.
+func customizeDiffContentChangeFixture(oldDescription, newDescription string) (*terraform.InstanceDiff, error) {
+	r := resourceClusterProfile()
+	state := &terraform.InstanceState{
+		ID: "cluster-profile-1",
+		Attributes: map[string]string{
+			"name":                "example-addon",
+			"version":             "1.0.0",
+			"context":             "project",
+			"description":         oldDescription,
+			"cloud":               "all",
+			"type":                "add-on",
+			"skip_destroy":        "true",
+			"tags.#":              "0",
+			"pack.#":              "0",
+			"profile_variables.#": "0",
+		},
+	}
+	cfg := map[string]interface{}{
+		"name":         "example-addon",
+		"version":      "1.0.0",
+		"context":      "project",
+		"description":  newDescription,
+		"cloud":        "all",
+		"type":         "add-on",
+		"skip_destroy": true,
+	}
+	return r.Diff(context.Background(), state, terraform.NewResourceConfigRaw(cfg), unitTestMockAPIClient)
+}
+
+// TestResourceClusterProfileCustomizeDiff_ContentChange_WithoutVersionBump_UnderFlag
+// verifies that when immutable-clusterprofiles is enabled and the user mutates
+// any content field (description, pack, tags, etc.) WITHOUT bumping the version,
+// plan fails at CustomizeDiff time with a clear error telling them to bump the
+// version field.
+//
+// This is the guardrail against the "silent mutation" class of bug: without
+// this check, the legacy Update path would happily send a PUT to Palette and
+// the supposedly-immutable v1.0.0 would have its content mutated in place,
+// defeating the whole point of the feature flag. Caught empirically during
+// end-to-end demo walkthrough on 2026-04-08.
+func TestResourceClusterProfileCustomizeDiff_ContentChange_WithoutVersionBump_UnderFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	_, err := customizeDiffContentChangeFixture("original description", "mutated description")
+	assert.Error(t, err, "plan must error when content fields change under the flag without a version bump")
+	assert.Contains(t, err.Error(), "immutable-clusterprofiles")
+	assert.Contains(t, err.Error(), "description")
+	assert.Contains(t, err.Error(), "version bump")
+	assert.Contains(t, err.Error(), "1.0.0")
+}
+
+// TestResourceClusterProfileCustomizeDiff_ContentChange_WithoutVersionBump_FlagOff
+// verifies that without the flag, content changes without a version bump are
+// allowed through the legacy in-place update path. This is the backward-compat
+// behavior -- users who haven't opted into immutability can still patch their
+// cluster profiles in place (the destructive PUT path the provider always had).
+func TestResourceClusterProfileCustomizeDiff_ContentChange_WithoutVersionBump_FlagOff(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{}
+
+	diff, err := customizeDiffContentChangeFixture("original description", "mutated description")
+	assert.NoError(t, err, "without the flag, content changes must not be blocked at plan time")
+	assert.NotNil(t, diff)
+	// Description should be in the diff as a normal update, not a replacement.
+	if descAttr, ok := diff.Attributes["description"]; ok {
+		assert.False(t, descAttr.RequiresNew, "without the flag, description changes must not force replacement")
+	}
+}
+
+// TestResourceClusterProfileCustomizeDiff_NoChanges_UnderFlag verifies the
+// baseline: when the flag is on and nothing has changed (re-apply of the same
+// config), CustomizeDiff returns nil without error. Guards against accidentally
+// erroring on no-op applies.
+func TestResourceClusterProfileCustomizeDiff_NoChanges_UnderFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	// Same description on both sides -- no change.
+	_, err := customizeDiffContentChangeFixture("same description", "same description")
+	assert.NoError(t, err, "no-op applies under the flag must not error")
+}
+
 // TestResourceClusterProfileDelete_SkipDestroy verifies that when
 // skip_destroy=true, the Delete function returns successfully without calling
 // the Palette delete API. This is the SDK v2 preservation pattern for

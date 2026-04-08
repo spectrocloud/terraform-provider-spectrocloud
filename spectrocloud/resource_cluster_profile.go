@@ -149,16 +149,33 @@ func resourceClusterProfile() *schema.Resource {
 // "[WARN] tolerating it because it is using the legacy plugin SDK" issues that
 // come from trying to mutate `d.Id()` mid-Update).
 //
-// Validation: when a version change is detected under the flag, we also require
-// `skip_destroy = true` on the resource. Without it, the replacement's Delete
-// phase would call the Palette DELETE API and destroy the previous version --
-// defeating the whole point of immutable versioning. Since `skip_destroy` is a
-// provider-schema attribute we can read at plan time, surfacing this as a plan
-// error rather than a runtime surprise is strictly better UX. The companion
-// `lifecycle { create_before_destroy = true }` block cannot be validated from
-// the provider (Terraform core parses lifecycle blocks before the provider sees
-// the diff), but the error message includes it so users get both knobs from a
-// single diagnostic.
+// Validation happens in two shapes when the `immutable-clusterprofiles` flag is
+// enabled:
+//
+// 1. Version bump (`version` field changing): mark `version` as `ForceNew` so
+//    Terraform plans a replacement, AND require `skip_destroy = true` on the
+//    resource. Without `skip_destroy`, the replacement's Delete phase would call
+//    the Palette DELETE API and destroy the previous version -- defeating the
+//    whole point of immutable versioning. Since `skip_destroy` is a
+//    provider-schema attribute we can read at plan time, surfacing this as a
+//    plan error rather than a runtime surprise is strictly better UX. The
+//    companion `lifecycle { create_before_destroy = true }` block cannot be
+//    validated from the provider (Terraform core parses lifecycle blocks before
+//    the provider sees the diff), but the error message includes it so users
+//    get both knobs from a single diagnostic.
+//
+// 2. Content change WITHOUT a version bump (any of `name`, `tags`, `pack`,
+//    `description`, `profile_variables` changing while `version` stays the
+//    same): reject with a plan-time error. The whole point of the flag is that
+//    published cluster profile versions are immutable -- a user who edits the
+//    pack content of v1.0.0 and re-applies without bumping the version is
+//    asking the provider to silently mutate what's supposed to be an immutable
+//    object. Without this check, the legacy `Update` path below would happily
+//    send a PUT to the Palette API and the mutation would succeed silently
+//    (the Palette API currently does not enforce version immutability
+//    server-side). That would be the same class of bug as the
+//    `clone-on-version-change` stale-output issue this whole PR was written to
+//    fix -- a documented invariant that the code doesn't enforce.
 func resourceClusterProfileCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
 	if d.Id() == "" {
 		// New resource -- no in-place update to convert
@@ -167,7 +184,11 @@ func resourceClusterProfileCustomizeDiff(_ context.Context, d *schema.ResourceDi
 	if !isFeaturePreviewEnabled("immutable-clusterprofiles") {
 		return nil
 	}
+
 	if d.HasChange("version") {
+		// Version bump: mark ForceNew so Terraform plans a replacement, and
+		// require the skip_destroy knob so the replacement's Delete phase
+		// preserves the old version in Palette.
 		if err := d.ForceNew("version"); err != nil {
 			return err
 		}
@@ -192,8 +213,60 @@ func resourceClusterProfileCustomizeDiff(_ context.Context, d *schema.ResourceDi
 				d.Get("name").(string),
 			)
 		}
+		return nil
 	}
+
+	// Version did NOT change, but the flag is on. Look for any content changes
+	// that would have silently mutated the supposedly-immutable published
+	// version. If any content field has changed, reject the plan.
+	contentFields := []string{"name", "tags", "pack", "description", "profile_variables"}
+	var changedContentFields []string
+	for _, f := range contentFields {
+		if d.HasChange(f) {
+			changedContentFields = append(changedContentFields, f)
+		}
+	}
+	if len(changedContentFields) > 0 {
+		return fmt.Errorf(
+			"immutable-clusterprofiles: cluster profile versions are immutable. "+
+				"Detected changes to field(s) %v on %q (version %q) without a corresponding "+
+				"version bump. To push these changes, increment the version field "+
+				"(e.g., %q -> %q) so the provider creates a new immutable version via the "+
+				"clone endpoint while the previous version is preserved in Palette. If you "+
+				"intentionally want to mutate the existing version in place, remove the "+
+				"\"immutable-clusterprofiles\" feature_preview flag from your provider block "+
+				"(note: this reverts to the legacy destructive PUT behavior and is not "+
+				"recommended).",
+			changedContentFields,
+			d.Get("name").(string),
+			d.Get("version").(string),
+			d.Get("version").(string),
+			bumpPatchHint(d.Get("version").(string)),
+		)
+	}
+
 	return nil
+}
+
+// bumpPatchHint returns a best-effort "next patch version" suggestion for the
+// error message, purely cosmetic. If the version string isn't in a recognizable
+// semver shape, it returns "<next-version>" as a placeholder. This is only used
+// to make the error message more concrete -- the provider does not enforce any
+// particular version format.
+func bumpPatchHint(current string) string {
+	// Cheap heuristic: if the last segment is an integer, bump it by 1.
+	// Otherwise fall back to a placeholder.
+	parts := strings.Split(current, ".")
+	if len(parts) == 0 {
+		return "<next-version>"
+	}
+	last := parts[len(parts)-1]
+	n := 0
+	if _, err := fmt.Sscanf(last, "%d", &n); err != nil || n < 0 {
+		return "<next-version>"
+	}
+	parts[len(parts)-1] = fmt.Sprintf("%d", n+1)
+	return strings.Join(parts, ".")
 }
 
 // findAnyExistingProfileVersionUID returns the UID of any existing version of
@@ -469,14 +542,22 @@ func resourceClusterProfileUpdate(ctx context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	// Note: when `immutable-clusterprofiles` is enabled, version-field changes
-	// never reach Update -- CustomizeDiff marks them as ForceNew so Terraform
-	// plans a replacement instead of an in-place update, and the new immutable
-	// version is created in resourceClusterProfileCreate (the standard SDK v2
-	// replacement lifecycle for immutable-versioned resources). The block below
-	// is the legacy in-place update path for users who have NOT opted into the
-	// flag -- it preserves the original destructive PUT-based behavior for
-	// backward compatibility.
+	// Note on interaction with `immutable-clusterprofiles`:
+	//
+	// When the flag is enabled, CustomizeDiff catches both version changes
+	// (by marking `version` as ForceNew, routing the work through
+	// Create + skip_destroy-preserved Delete) AND content changes without
+	// a version bump (by returning a plan-time error that tells the user
+	// to bump the version or disable the flag). Either way, this Update
+	// block is NOT reached when the flag is set -- replacement-based
+	// work goes through Create, and disallowed mutations are rejected
+	// at plan time before Update runs.
+	//
+	// This block is therefore the legacy in-place update path for users
+	// who have NOT opted into the flag. It preserves the original
+	// destructive PUT-based behavior (mutating the existing UID via
+	// UpdateClusterProfile) for backward compatibility with existing CI
+	// and HCL that was written against the pre-flag provider.
 	if d.HasChanges("name") || d.HasChanges("tags") || d.HasChanges("pack") || d.HasChanges("description") || d.HasChanges("version") {
 		log.Printf("Updating packs")
 		cp, err := c.GetClusterProfile(d.Id())
