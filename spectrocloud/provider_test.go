@@ -90,10 +90,10 @@ func TestIsFeaturePreviewEnabled(t *testing.T) {
 	defer func() { ProviderFeaturePreview = orig }()
 
 	ProviderFeaturePreview = map[string]bool{}
-	assert.False(t, isFeaturePreviewEnabled("clone-on-version-change"))
+	assert.False(t, isFeaturePreviewEnabled("immutable-clusterprofiles"))
 
-	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
-	assert.True(t, isFeaturePreviewEnabled("clone-on-version-change"))
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+	assert.True(t, isFeaturePreviewEnabled("immutable-clusterprofiles"))
 	assert.False(t, isFeaturePreviewEnabled("nonexistent"))
 }
 

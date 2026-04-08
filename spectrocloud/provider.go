@@ -76,7 +76,23 @@ func New(_ string) func() *schema.Provider {
 						Type: schema.TypeBool,
 					},
 					Description: "A map of feature preview flags. " +
-						"Supported flags: `clone-on-version-change`.",
+						"Supported flags: `immutable-clusterprofiles`. " +
+						"\n\n" +
+						"The `immutable-clusterprofiles` flag enables the standard Terraform " +
+						"Plugin SDK v2 immutable-versioned-resource pattern for " +
+						"`spectrocloud_cluster_profile`. When set, the resource's `version` " +
+						"field becomes `ForceNew` (changes trigger a Terraform replacement " +
+						"instead of an in-place update), the new `skip_destroy` schema field " +
+						"is honored, and the Create function clones from any existing version " +
+						"of the lineage to produce the new immutable version. The Terraform " +
+						"resource id is set once at Create time and never mutates mid-update, " +
+						"so it respects the SDK v2 contract that a resource's primary id is " +
+						"stable across in-place updates. " +
+						"\n\n" +
+						"Without the flag, `spectrocloud_cluster_profile` uses its legacy " +
+						"in-place mutation behavior (PUT-based updates that overwrite the " +
+						"previous version). The flag is purely opt-in; existing user " +
+						"configurations are unaffected.",
 				},
 			},
 			ResourcesMap: map[string]*schema.Resource{

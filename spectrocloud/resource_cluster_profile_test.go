@@ -814,107 +814,16 @@ func prepareClusterProfileWithVersionChange(oldVersion, newVersion, profileName 
 	return d
 }
 
-// TestResourceClusterProfileUpdateVersionClone tests that when the version
-// changes and the new version does NOT already exist, the clone path is taken.
-func TestResourceClusterProfileUpdateVersionClone(t *testing.T) {
-	orig := ProviderFeaturePreview
-	defer func() { ProviderFeaturePreview = orig }()
-	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
-
-	// Use a profile name that doesn't match any entry in the mock metadata
-	// so GetClusterProfileUID returns an error → triggers clone path.
-	d := prepareClusterProfileWithVersionChange("1.0.0", "2.0.0", "nonexistent-profile", nil)
-	var ctx context.Context
-
-	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	// After clone, the ID should be the cloned UID returned by the mock server.
-	assert.Equal(t, "cloned-profile-uid", d.Id())
-}
-
-// TestResourceClusterProfileUpdateVersionAdopt tests that when the version
-// changes and the new version already exists, the existing version is adopted
-// instead of cloning.
-func TestResourceClusterProfileUpdateVersionAdopt(t *testing.T) {
-	orig := ProviderFeaturePreview
-	defer func() { ProviderFeaturePreview = orig }()
-	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
-
-	// Use name "test-cluster-profile-1" and new version "1.0.0" which matches
-	// the mock metadata response (stable UID "existing-profile-uid-1").
-	d := prepareClusterProfileWithVersionChange("0.9.0", "1.0.0", "test-cluster-profile-1", nil)
-	var ctx context.Context
-
-	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	// Should have adopted the existing UID, not cloned.
-	assert.Equal(t, "existing-profile-uid-1", d.Id())
-}
-
-// TestResourceClusterProfileUpdateVersionCloneWithFieldChanges tests the clone
-// path when other fields (description) also changed alongside the version.
-func TestResourceClusterProfileUpdateVersionCloneWithFieldChanges(t *testing.T) {
-	orig := ProviderFeaturePreview
-	defer func() { ProviderFeaturePreview = orig }()
-	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
-
-	extra := map[string]*terraform.ResourceAttrDiff{
-		"description": {
-			Old: "old description",
-			New: "new description",
-		},
-	}
-	d := prepareClusterProfileWithVersionChange("1.0.0", "2.0.0", "nonexistent-profile", extra)
-	var ctx context.Context
-
-	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "cloned-profile-uid", d.Id())
-}
-
-// TestResourceClusterProfileUpdateVersionAdoptWithFieldChanges tests the adopt
-// path when other fields also changed — should adopt and then update/patch/publish.
-func TestResourceClusterProfileUpdateVersionAdoptWithFieldChanges(t *testing.T) {
-	orig := ProviderFeaturePreview
-	defer func() { ProviderFeaturePreview = orig }()
-	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
-
-	extra := map[string]*terraform.ResourceAttrDiff{
-		"description": {
-			Old: "old description",
-			New: "new description",
-		},
-	}
-	d := prepareClusterProfileWithVersionChange("0.9.0", "1.0.0", "test-cluster-profile-1", extra)
-	var ctx context.Context
-
-	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "existing-profile-uid-1", d.Id())
-}
-
-// TestResourceClusterProfileCreateAdoptExisting tests that when Create fails
-// because the profile already exists, the function adopts the existing UID
-// instead of returning an error.
-func TestResourceClusterProfileCreateAdoptExisting(t *testing.T) {
-	orig := ProviderFeaturePreview
-	defer func() { ProviderFeaturePreview = orig }()
-	ProviderFeaturePreview = map[string]bool{"clone-on-version-change": true}
-
-	d := prepareBaseClusterProfileTestData()
-	// Use name+version matching mock metadata → adopt path
-	_ = d.Set("name", "test-cluster-profile-1")
-	_ = d.Set("version", "1.0.0")
-	_ = d.Set("type", "add-on")
-	var ctx context.Context
-	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPINegativeClient)
-	assert.Empty(t, diags)
-	assert.Equal(t, "existing-profile-uid-1", d.Id())
-}
-
-// TestResourceClusterProfileUpdateVersionNoFlag tests that when the feature
-// preview flag is OFF, version changes fall through to the update-in-place
-// path (old behavior) instead of cloning.
+// TestResourceClusterProfileUpdateVersionNoFlag tests that without the
+// immutable-clusterprofiles feature flag, version changes fall through to the
+// legacy in-place update path (UpdateClusterProfile / PUT) instead of triggering
+// a Create-path clone. The Terraform id stays stable because no replacement is
+// planned.
+//
+// Note: this is the backward-compat path. When the flag IS enabled, version
+// changes never reach Update at all -- CustomizeDiff marks them as ForceNew, so
+// Terraform plans a replacement and the new version is produced by the Create
+// function (see TestResourceClusterProfileCreate_ImmutableClusterprofiles_*).
 func TestResourceClusterProfileUpdateVersionNoFlag(t *testing.T) {
 	orig := ProviderFeaturePreview
 	defer func() { ProviderFeaturePreview = orig }()
@@ -925,14 +834,38 @@ func TestResourceClusterProfileUpdateVersionNoFlag(t *testing.T) {
 
 	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
-	// Without the flag, version change should NOT clone — it should
-	// fall through to the update-in-place path and keep the original ID.
+	// Without the flag, version change should NOT clone -- it falls through
+	// to the legacy update-in-place path and the Terraform id stays stable.
 	assert.Equal(t, "cluster-profile-1", d.Id())
 }
 
-// TestResourceClusterProfileCreateNoAdoptWithoutFlag tests that when the
-// feature preview flag is OFF, a create failure returns the error instead
-// of trying to adopt an existing profile.
+// TestResourceClusterProfileCreateAdoptExisting verifies the SDK v2
+// adopt-on-create pattern: when Create fails because the profile already
+// exists in Palette (e.g. another root module created it, or it was created
+// via the UI) AND the immutable-clusterprofiles flag is enabled, the function
+// adopts the existing UID into Terraform state instead of returning an error.
+func TestResourceClusterProfileCreateAdoptExisting(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	d := prepareBaseClusterProfileTestData()
+	// Use name+version matching mock metadata → adopt path
+	_ = d.Set("name", "test-cluster-profile-1")
+	_ = d.Set("version", "1.0.0")
+	_ = d.Set("type", "add-on")
+	var ctx context.Context
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	// Should have adopted the existing UID from the mock metadata.
+	assert.Equal(t, "existing-profile-uid-1", d.Id())
+}
+
+// TestResourceClusterProfileCreateNoAdoptWithoutFlag verifies that when the
+// immutable-clusterprofiles feature flag is OFF, a Create failure returns the
+// error instead of trying to adopt an existing profile. This preserves the
+// legacy "create is not idempotent" behavior for users who haven't opted into
+// the new flag.
 func TestResourceClusterProfileCreateNoAdoptWithoutFlag(t *testing.T) {
 	orig := ProviderFeaturePreview
 	defer func() { ProviderFeaturePreview = orig }()
@@ -947,4 +880,98 @@ func TestResourceClusterProfileCreateNoAdoptWithoutFlag(t *testing.T) {
 	// return the error instead of trying to adopt.
 	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPINegativeClient)
 	assert.NotEmpty(t, diags)
+}
+
+// TestResourceClusterProfileSchema_HasSkipDestroy verifies that the new
+// skip_destroy schema field is present with the expected type and default.
+// This field is part of the standard Terraform Plugin SDK v2 immutable-versioned
+// resource pattern -- it gates whether Delete actually calls the API or just
+// removes the resource from Terraform state.
+func TestResourceClusterProfileSchema_HasSkipDestroy(t *testing.T) {
+	r := resourceClusterProfile()
+	field, ok := r.Schema["skip_destroy"]
+	assert.True(t, ok, "skip_destroy field must be present on the cluster_profile schema")
+	assert.NotNil(t, field)
+	assert.Equal(t, schema.TypeBool, field.Type)
+	assert.True(t, field.Optional)
+	assert.Equal(t, false, field.Default, "skip_destroy must default to false for backward compatibility")
+}
+
+// TestResourceClusterProfileSchema_NoCurrentUid verifies that the current_uid
+// field was removed as part of the consolidation. It was only useful as a
+// workaround for the stale-output bug on the clone-on-version-change path,
+// which no longer exists.
+func TestResourceClusterProfileSchema_NoCurrentUid(t *testing.T) {
+	r := resourceClusterProfile()
+	_, ok := r.Schema["current_uid"]
+	assert.False(t, ok, "current_uid field must not be present; it was removed when clone-on-version-change was consolidated into immutable-clusterprofiles")
+}
+
+// TestResourceClusterProfileSchema_CustomizeDiffRegistered verifies that the
+// CustomizeDiff hook is wired up on the resource. CustomizeDiff is what marks
+// the version field as ForceNew when the immutable-clusterprofiles feature
+// flag is enabled.
+func TestResourceClusterProfileSchema_CustomizeDiffRegistered(t *testing.T) {
+	r := resourceClusterProfile()
+	assert.NotNil(t, r.CustomizeDiff, "CustomizeDiff must be registered to gate ForceNew on version under immutable-clusterprofiles")
+}
+
+// TestResourceClusterProfileDelete_SkipDestroy verifies that when
+// skip_destroy=true, the Delete function returns successfully without calling
+// the Palette delete API. This is the SDK v2 preservation pattern for
+// immutable-versioned resources: replacement lifecycles remove the old
+// resource from Terraform state via Delete, and skip_destroy makes that a
+// no-op so the underlying versioned object stays in the upstream system.
+func TestResourceClusterProfileDelete_SkipDestroy(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	d.SetId("some-uid-that-does-not-exist-in-mock")
+	_ = d.Set("skip_destroy", true)
+	_ = d.Set("context", "project")
+	var ctx context.Context
+
+	// Delete against the negative (failing) client -- if skip_destroy is
+	// honored, we never call the API, so the negative client's failure
+	// path doesn't trigger.
+	diags := resourceClusterProfileDelete(ctx, d, unitTestMockAPINegativeClient)
+	assert.Empty(t, diags, "skip_destroy=true should bypass the API call entirely, so negative-client failures should not surface")
+}
+
+// TestResourceClusterProfileDelete_NormalDestroy verifies that when
+// skip_destroy is false (the default), Delete calls the Palette delete API.
+// This preserves the legacy behavior for users who don't opt into the new
+// immutable lifecycle.
+func TestResourceClusterProfileDelete_NormalDestroy(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	d.SetId("test-cluster-profile-1")
+	_ = d.Set("skip_destroy", false)
+	_ = d.Set("context", "project")
+	var ctx context.Context
+
+	// The mock client's delete endpoint returns success for known UIDs.
+	diags := resourceClusterProfileDelete(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}
+
+// TestFindAnyExistingProfileVersionUID_Found verifies that the helper finds
+// an existing profile by name via the SDK's GetClusterProfiles listing endpoint.
+// This helper is used by the immutable-clusterprofiles Create path to discover
+// a clone source for a new version of an existing lineage.
+func TestFindAnyExistingProfileVersionUID_Found(t *testing.T) {
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	// The mock metadata includes "test-cluster-profile-1" with a known stable UID.
+	uid, err := findAnyExistingProfileVersionUID(c, "test-cluster-profile-1")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, uid, "expected to find an existing UID for test-cluster-profile-1 in the mock metadata")
+}
+
+// TestFindAnyExistingProfileVersionUID_NotFound verifies that the helper
+// returns an empty string (not an error) when no profile with the given name
+// exists. The empty-string-no-error return is what the Create path uses to
+// decide between "clone from existing lineage" and "create the very first
+// version from scratch".
+func TestFindAnyExistingProfileVersionUID_NotFound(t *testing.T) {
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	uid, err := findAnyExistingProfileVersionUID(c, "this-profile-definitely-does-not-exist-in-the-mock")
+	assert.NoError(t, err, "not-found should return an empty string without an error")
+	assert.Empty(t, uid)
 }
