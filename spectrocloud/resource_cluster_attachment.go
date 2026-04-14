@@ -31,12 +31,17 @@ func resourceAddonDeployment() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 3,
+		SchemaVersion: 4,
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Type:    resourceAddonDeploymentResourceV2().CoreConfigSchema().ImpliedType(),
 				Upgrade: resourceAddonDeploymentStateUpgradeV2,
 				Version: 2,
+			},
+			{
+				Type:    resourceAddonDeploymentResourceV3().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceAddonDeploymentStateUpgradeV3,
+				Version: 3,
 			},
 		},
 		Schema: map[string]*schema.Schema{
@@ -87,6 +92,25 @@ func resourceAddonDeploymentStateUpgradeV2(ctx context.Context, rawState map[str
 		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
 	}
 
+	return rawState, nil
+}
+
+func resourceAddonDeploymentStateUpgradeV3(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading addon deployment state from version 3 to 4 (backfill %s)", clusterAnnotationTerraformAddonDeployments)
+	id, _ := rawState["id"].(string)
+	clusterUID, _ := rawState["cluster_uid"].(string)
+	ctxStr := "project"
+	if v, ok := rawState["context"].(string); ok && v != "" {
+		ctxStr = v
+	}
+	profileUID, err := getClusterProfileUID(id)
+	if err != nil || profileUID == "" || clusterUID == "" {
+		return rawState, nil
+	}
+	c := getV1ClientWithResourceContext(meta, ctxStr)
+	if err := mergeTerraformAddonDeploymentProfileUIDs(c, clusterUID, []string{profileUID}, nil); err != nil {
+		log.Printf("[WARN] addon deployment state upgrade: could not backfill %s: %v", clusterAnnotationTerraformAddonDeployments, err)
+	}
 	return rawState, nil
 }
 
@@ -148,6 +172,10 @@ func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 	d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
+
+	if err := mergeTerraformAddonDeploymentProfileUIDs(c, clusterUid, []string{addonDeployment.Profiles[0].UID}, nil); err != nil {
+		return diag.FromErr(err)
+	}
 
 	diagnostics, isError = waitForAddonDeploymentCreation(ctx, d, *cluster, addonDeployment.Profiles[0].UID, diags, c)
 	if isError {
@@ -243,6 +271,8 @@ func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interf
 		return diag.FromErr(errors.New("cannot convert addon deployment: zero profiles found"))
 	}
 
+	oldCompositeID := d.Id()
+
 	newProfile, err := c.GetClusterProfile(addonDeployment.Profiles[0].UID)
 	if err != nil {
 		return diag.FromErr(err)
@@ -257,6 +287,11 @@ func updateAddonDeployment(ctx context.Context, d *schema.ResourceData, m interf
 		return diag.FromErr(err)
 	}
 	d.SetId(getAddonDeploymentId(clusterUid, clusterProfile))
+
+	if err := reconcileAddonDeploymentAnnotationAfterUpdate(c, oldCompositeID, clusterUid, addonDeployment.Profiles[0].UID); err != nil {
+		return diag.FromErr(err)
+	}
+
 	diagnostics, isError := waitForAddonDeploymentUpdate(ctx, d, *cluster, addonDeployment.Profiles[0].UID, diags, c)
 	if isError {
 		return diagnostics

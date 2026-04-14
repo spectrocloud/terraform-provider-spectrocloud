@@ -44,7 +44,34 @@ func updateClusterMetadata(c *client.V1Client, d *schema.ResourceData) error {
 	if err != nil {
 		return err
 	}
-	return c.UpdateClusterMetadata(d.Id(), toUpdateClusterMetadata(d))
+	cluster, err := c.GetCluster(d.Id())
+	if err != nil {
+		return err
+	}
+	return c.UpdateClusterMetadata(d.Id(), &models.V1ObjectMetaInputEntitySchema{
+		Metadata: mergeResourceMetadataWithClusterAnnotations(cluster, d),
+	})
+}
+
+// mergeResourceMetadataWithClusterAnnotations applies name/tags/description from ResourceData while
+// preserving existing cluster annotations (e.g. tf_addon_deployments from spectrocloud_addon_deployment).
+func mergeResourceMetadataWithClusterAnnotations(cluster *models.V1SpectroCluster, d *schema.ResourceData) *models.V1ObjectMetaInputEntity {
+	var ann map[string]string
+	if cluster != nil && cluster.Metadata != nil && cluster.Metadata.Annotations != nil {
+		ann = copyStringMap(cluster.Metadata.Annotations)
+	} else {
+		ann = map[string]string{}
+	}
+	ann["description"] = d.Get("description").(string)
+	md := &models.V1ObjectMetaInputEntity{
+		Name:        d.Get("name").(string),
+		Labels:      toTags(d),
+		Annotations: ann,
+	}
+	if _, ok := safeGetOk(d, "tags_map"); ok {
+		md.Labels = toTagsMap(d)
+	}
+	return md
 }
 
 func toUpdateClusterMetadata(d *schema.ResourceData) *models.V1ObjectMetaInputEntitySchema {

@@ -313,8 +313,15 @@ func setPackManifests(pack *models.V1PackValuesEntity, p map[string]interface{},
 			data := manifestsData[i].(map[string]interface{})
 			uid := ""
 			if cluster != nil {
+				addonSkip := terraformAddonManagedProfileUIDSet(cluster)
 				packs := make([]*models.V1PackRef, 0)
 				for _, profile := range cluster.Spec.ClusterProfileTemplates {
+					if profile == nil {
+						continue
+					}
+					if _, skip := addonSkip[profile.UID]; skip {
+						continue
+					}
 					packs = append(packs, profile.Packs...)
 				}
 				uid = getManifestUID(data["name"].(string), packs)
@@ -388,10 +395,15 @@ func findAttachedProfileByType(cluster *models.V1SpectroCluster, profileType str
 	if cluster == nil || cluster.Spec == nil || profileType == "" {
 		return ""
 	}
+	addonSkip := terraformAddonManagedProfileUIDSet(cluster)
 	for _, template := range cluster.Spec.ClusterProfileTemplates {
-		if template != nil && template.Type == profileType {
-			return template.UID
+		if template == nil || template.Type != profileType {
+			continue
 		}
+		if _, skip := addonSkip[template.UID]; skip {
+			continue
+		}
+		return template.UID
 	}
 	return ""
 }
@@ -403,8 +415,12 @@ func findAttachedProfileByName(cluster *models.V1SpectroCluster, profileName str
 		return ""
 	}
 
+	addonSkip := terraformAddonManagedProfileUIDSet(cluster)
 	for _, template := range cluster.Spec.ClusterProfileTemplates {
 		if template != nil && template.Name == profileName {
+			if _, skip := addonSkip[template.UID]; skip {
+				continue
+			}
 			return template.UID
 		}
 	}
@@ -421,6 +437,14 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
 	oldProfilesRaw, newProfilesRaw := d.GetChange("cluster_profile")
 	oldProfiles := normalizeInterfaceSliceFromListOrSet(oldProfilesRaw)
 	newProfiles := normalizeInterfaceSliceFromListOrSet(newProfilesRaw)
+
+	cluster, err := c.GetCluster(d.Id())
+	addonSkip := map[string]struct{}{}
+	if err == nil && cluster != nil {
+		addonSkip = terraformAddonManagedProfileUIDSet(cluster)
+	} else if err != nil {
+		log.Printf("Warning: could not get cluster for addon profile filter in getProfilesToDelete: %v", err)
+	}
 
 	// Build a set of new profile NAMES (not just IDs)
 	// This is important: version upgrades change the ID but keep the same name
@@ -464,6 +488,10 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
 				if clusterProfile != nil && clusterProfile.Metadata != nil {
 					profileName := clusterProfile.Metadata.Name
 					if !newProfileNames[profileName] {
+						if _, managedByAddon := addonSkip[id]; managedByAddon {
+							log.Printf("Profile %s (name: %s) is addon-managed - skip delete from cluster resource", id, profileName)
+							continue
+						}
 						if clusterProfile.Spec.Published != nil && clusterProfile.Spec.Published.Type == "infra" {
 							log.Printf("Profile %s (name: %s) is infra - skip delete, will be replaced via PATCH", id, profileName)
 							continue
@@ -628,7 +656,14 @@ func flattenClusterProfileForImport(c *client.V1Client, d *schema.ResourceData) 
 		return clusterProfiles, err
 	}
 
+	addonSkip := terraformAddonManagedProfileUIDSet(cluster)
 	for _, profileTemplate := range cluster.Spec.ClusterProfileTemplates {
+		if profileTemplate == nil {
+			continue
+		}
+		if _, skip := addonSkip[profileTemplate.UID]; skip {
+			continue
+		}
 		profile := make(map[string]interface{})
 		profile["id"] = profileTemplate.UID
 		clusterProfiles = append(clusterProfiles, profile)

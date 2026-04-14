@@ -5639,3 +5639,35 @@ func resourceAddonDeploymentResourceV2() *schema.Resource {
 		},
 	}
 }
+
+// resourceAddonDeploymentResourceV3 returns the schema for stored state version 3 (TypeSet cluster_profile).
+// Used for 3->4 state upgrade; must match resourceAddonDeployment schema at version 3 without recursion.
+func resourceAddonDeploymentResourceV3() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"cluster_uid": {
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The UID of the cluster to attach the addon profile to.",
+			},
+			"context": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"project", "tenant"}, false),
+				Default:      "project",
+				Description: "Specifies cluster context where addon profile is attached. " +
+					"Allowed values are `project` or `tenant`. Defaults to `project`. " + PROJECT_NAME_NUANCE,
+			},
+			"cluster_profile": schemas.ClusterProfileSchemaV2(),
+			"apply_setting": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "DownloadAndInstall",
+				ValidateFunc: validation.StringInSlice([]string{"DownloadAndInstall", "DownloadAndInstallLater"}, false),
+				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
+					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
+					"Default value is `DownloadAndInstall`.",
+			},
+		},
+	}
+}

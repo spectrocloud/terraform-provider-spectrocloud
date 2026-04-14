@@ -334,12 +334,17 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 	}
 	// Virtual cluster: when Spec.ClusterProfileTemplates is empty, use Status.Packs (like resources use GetCloudConfigVirtual)
 	if len(clusterProfiles) == 0 && cluster.Status != nil && len(cluster.Status.Packs) > 0 {
+		addonSkip := terraformAddonManagedProfileUIDSet(cluster)
 		seen := make(map[string]bool)
 		for _, p := range cluster.Status.Packs {
-			if p != nil && p.ProfileUID != "" && !seen[p.ProfileUID] {
-				seen[p.ProfileUID] = true
-				clusterProfiles = append(clusterProfiles, map[string]interface{}{"id": p.ProfileUID})
+			if p == nil || p.ProfileUID == "" || seen[p.ProfileUID] {
+				continue
 			}
+			if _, skip := addonSkip[p.ProfileUID]; skip {
+				continue
+			}
+			seen[p.ProfileUID] = true
+			clusterProfiles = append(clusterProfiles, map[string]interface{}{"id": p.ProfileUID})
 		}
 	}
 	if len(clusterProfiles) > 0 {

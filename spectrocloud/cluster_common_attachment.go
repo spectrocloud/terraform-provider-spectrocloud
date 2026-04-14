@@ -122,6 +122,9 @@ func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	log.Printf("Deleting addon profile %s from cluster %s", profileId, clusterUid)
+	if err := mergeTerraformAddonDeploymentProfileUIDs(c, clusterUid, nil, []string{profileId}); err != nil {
+		return diag.FromErr(err)
+	}
 	err = c.DeleteAddonDeployment(clusterUid, &models.V1SpectroClusterProfilesDeleteEntity{
 		ProfileUids: []string{profileId},
 	})
