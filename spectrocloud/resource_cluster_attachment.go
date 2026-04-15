@@ -104,7 +104,11 @@ func resourceAddonDeploymentStateUpgradeV3(ctx context.Context, rawState map[str
 		ctxStr = v
 	}
 	profileUID, err := getClusterProfileUID(id)
-	if err != nil || profileUID == "" || clusterUID == "" {
+	if err != nil {
+		log.Printf("[DEBUG] addon deployment state upgrade: skip backfill, invalid id: %v", err)
+		return rawState, nil
+	}
+	if profileUID == "" || clusterUID == "" {
 		return rawState, nil
 	}
 	c := getV1ClientWithResourceContext(meta, ctxStr)
