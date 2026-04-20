@@ -1,11 +1,12 @@
 package spectrocloud
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
-	"reflect"
-	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
