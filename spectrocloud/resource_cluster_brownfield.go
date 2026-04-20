@@ -70,7 +70,7 @@ func resourceClusterBrownfield() *schema.Resource {
 				// 	"generic",
 				// 	"apache-cloudstack",
 				// }, false),
-				Description: "The cloud type of the cluster. Supported values: `aws` (IaaS Cluster), `azure` (IaaS Cluster), `gcp` (IaaS Cluster), `generic` (\"generic\" should be used for everything else that is not listed here), `apache-cloudstack`. This field cannot be updated after creation.",
+				Description: "The cloud type of the cluster. Supported values: `aws` (IaaS Cluster), `azure` (IaaS Cluster), `gcp` (IaaS Cluster), `generic` (\"generic\" should be used and considered for everything else that is not listed here), `apache-cloudstack`. This field cannot be updated after creation.",
 			},
 			"import_mode": {
 				Type:         schema.TypeString,

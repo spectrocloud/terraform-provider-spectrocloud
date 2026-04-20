@@ -128,7 +128,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Required
 
-- `cloud_type` (String) The cloud type of the cluster. Supported values: `aws` (IaaS Cluster), `azure` (IaaS Cluster), `gcp` (IaaS Cluster), `generic` ("generic" should be used for everything else that is not listed here), `apache-cloudstack`. This field cannot be updated after creation.
+- `cloud_type` (String) The cloud type of the cluster. Supported values: `aws` (IaaS Cluster), `azure` (IaaS Cluster), `gcp` (IaaS Cluster), `generic` ("generic" should be used and considered for everything else that is not listed here), `apache-cloudstack`. This field cannot be updated after creation.
 - `name` (String) The name of the cluster to be registered. This field cannot be updated after creation.
 
 ### Optional
