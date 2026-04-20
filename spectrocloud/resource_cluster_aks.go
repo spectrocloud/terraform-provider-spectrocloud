@@ -812,7 +812,7 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		},
 		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
-			OsSku: toV1OsSkuPtr(m["os_sku"].(string)),
+			OsSku:            toV1OsSkuPtr(m["os_sku"].(string)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:      toAdditionalNodePoolLabels(m),
