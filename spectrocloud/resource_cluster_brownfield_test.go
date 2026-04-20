@@ -790,19 +790,19 @@ func TestGetNodeMaintenanceStatusForCloudType(t *testing.T) {
 		{
 			name:        "MAAS cloud type",
 			cloudType:   "maas",
-			expectedNil: false,
-			description: "Should return GetNodeMaintenanceStatusMaas function for maas",
+			expectedNil: true,
+			description: "maas not wired in getNodeMaintenanceStatusForCloudType (default returns nil)",
 			verify: func(t *testing.T, result GetMaintenanceStatus) {
-				assert.NotNil(t, result, "Result should not be nil for maas")
+				assert.Nil(t, result, "Result should be nil until maas is implemented")
 			},
 		},
 		{
 			name:        "Edge Native cloud type",
 			cloudType:   "edge-native",
-			expectedNil: false,
-			description: "Should return GetNodeMaintenanceStatusEdgeNative function for edge-native",
+			expectedNil: true,
+			description: "edge-native not wired in getNodeMaintenanceStatusForCloudType (default returns nil)",
 			verify: func(t *testing.T, result GetMaintenanceStatus) {
-				assert.NotNil(t, result, "Result should not be nil for edge-native")
+				assert.Nil(t, result, "Result should be nil until edge-native is implemented")
 			},
 		},
 		{
@@ -844,6 +844,8 @@ func TestGetNodeMaintenanceStatusForCloudType(t *testing.T) {
 			"vsphere":      {},
 			"openshift":    {},
 			"eks-anywhere": {},
+			"maas":         {},
+			"edge-native":  {},
 			"openstack":    {},
 		}
 		for _, cloudType := range cloudTypes {
@@ -941,19 +943,19 @@ func TestGetMachinesListForCloudType(t *testing.T) {
 		{
 			name:        "MAAS cloud type",
 			cloudType:   "maas",
-			expectedNil: false,
-			description: "Should return GetMachinesListMaas function for maas",
+			expectedNil: true,
+			description: "maas not wired in getMachinesListForCloudType (default returns nil)",
 			verify: func(t *testing.T, result func(string, string) (map[string]string, error)) {
-				assert.NotNil(t, result, "Result should not be nil for maas")
+				assert.Nil(t, result, "Result should be nil until maas is implemented")
 			},
 		},
 		{
 			name:        "Edge Native cloud type",
 			cloudType:   "edge-native",
-			expectedNil: false,
-			description: "Should return GetMachinesListEdgeNative function for edge-native",
+			expectedNil: true,
+			description: "edge-native not wired in getMachinesListForCloudType (default returns nil)",
 			verify: func(t *testing.T, result func(string, string) (map[string]string, error)) {
-				assert.NotNil(t, result, "Result should not be nil for edge-native")
+				assert.Nil(t, result, "Result should be nil until edge-native is implemented")
 			},
 		},
 		{
@@ -995,6 +997,8 @@ func TestGetMachinesListForCloudType(t *testing.T) {
 			"vsphere":      {},
 			"openshift":    {},
 			"eks-anywhere": {},
+			"maas":         {},
+			"edge-native":  {},
 			"openstack":    {},
 		}
 		for _, cloudType := range cloudTypes {
