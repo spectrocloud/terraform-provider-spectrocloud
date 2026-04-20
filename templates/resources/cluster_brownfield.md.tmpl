@@ -25,7 +25,7 @@ data "spectrocloud_backup_storage_location" "bsl" {
 
 resource "spectrocloud_cluster_brownfield" "cluster" {
   name       = var.cluster_name
-  cloud_type = "generic" # Options: aws, Eks-Anywhere, azure, gcp, vsphere, openshift, generic, apache-cloudstack, edge-native, maas
+  cloud_type = "generic" # Options: aws, azure, gcp, generic, apache-cloudstack, edge-native, maas
   context    = "project" # Optional, defaults to "project"
   import_mode = "full"   # Options: "read_only" or "full" (default: "full")
   
