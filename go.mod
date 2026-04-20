@@ -14,7 +14,7 @@ require (
 	github.com/spectrocloud/palette-sdk-go v0.0.0-20260407122216-4d5db6b96870
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.35.2
+	k8s.io/api v0.35.4
 	k8s.io/apimachinery v0.35.4
 )
 
