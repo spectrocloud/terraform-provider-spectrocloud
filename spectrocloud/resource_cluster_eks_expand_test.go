@@ -663,6 +663,7 @@ func TestResourceClusterEksImport(t *testing.T) {
 					// Error could be from GetCommonCluster when cluster is nil, when GetCluster fails, or from resourceClusterEksRead
 					// Check for various error message patterns
 					hasExpectedError := strings.Contains(errMsg, "unable to retrieve cluster data") ||
+						strings.Contains(errMsg, "unable to retrieve cluster by UID or name") ||
 						strings.Contains(errMsg, "find cluster") ||
 						strings.Contains(errMsg, "could not read cluster for import")
 					assert.True(t, hasExpectedError,

@@ -496,16 +496,16 @@ func TestResourceAccountCustomImport(t *testing.T) {
 			},
 			client:      unitTestMockAPINegativeClient,
 			expectError: true,
-			errorMsg:    "unable to retrieve cluster data",
+			errorMsg:    "unable to retrieve cloud account by id or name",
 			description: "Should return error when GetCommonAccount fails to retrieve account",
 			verify: func(t *testing.T, importedData []*schema.ResourceData, err error) {
 				assert.Error(t, err, "Should have error when GetCommonAccount fails")
 				assert.Nil(t, importedData, "Imported data should be nil on error")
 				if err != nil {
-					// Error could be from GetCommonAccount or resourceCloudAccountCustomRead
 					assert.True(
 						t,
-						strings.Contains(err.Error(), "unable to retrieve cluster data") ||
+						strings.Contains(err.Error(), "unable to retrieve cloud account by id or name") ||
+							strings.Contains(err.Error(), "unable to retrieve cluster data") ||
 							strings.Contains(err.Error(), "could not read cluster for import"),
 						"Error should mention account retrieval or read failure",
 					)

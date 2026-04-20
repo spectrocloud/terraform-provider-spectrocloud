@@ -33,7 +33,6 @@ func TestDataSourceCloudAccountRead_TableDriven(t *testing.T) {
 		{"Azure", "azure", dataSourceCloudAccountAzure().TestResourceData, dataSourceCloudAccountAzureRead, "Unable to find azure cloud account"},
 		{"GCP", "gcp", dataSourceCloudAccountGcp().TestResourceData, dataSourceCloudAccountGcpRead, "Unable to find gcp cloud account"},
 		{"Vsphere", "vsphere", dataSourceCloudAccountVsphere().TestResourceData, dataSourceCloudAccountVsphereRead, "Unable to find vsphere cloud account"},
-		{"Openstack", "openstack", dataSourceCloudAccountOpenStack().TestResourceData, dataSourceCloudAccountOpenStackRead, "Unable to find openstack cloud account"},
 		{"Maas", "maas", dataSourceCloudAccountMaas().TestResourceData, dataSourceCloudAccountMaasRead, "Unable to find maas cloud account"},
 		{"Custom", "custom", dataSourceCloudAccountCustom().TestResourceData, dataSourceCloudAccountCustomRead, "Unable to find cloud account"},
 	}

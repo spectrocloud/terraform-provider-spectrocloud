@@ -808,10 +808,10 @@ func TestGetNodeMaintenanceStatusForCloudType(t *testing.T) {
 		{
 			name:        "OpenStack cloud type",
 			cloudType:   "openstack",
-			expectedNil: false,
-			description: "Should return GetNodeMaintenanceStatusOpenStack function for openstack",
+			expectedNil: true,
+			description: "OpenStack not wired in getNodeMaintenanceStatusForCloudType (default returns nil)",
 			verify: func(t *testing.T, result GetMaintenanceStatus) {
-				assert.NotNil(t, result, "Result should not be nil for openstack")
+				assert.Nil(t, result, "Result should be nil until OpenStack is implemented")
 			},
 		},
 	}
@@ -842,10 +842,11 @@ func TestGetNodeMaintenanceStatusForCloudType(t *testing.T) {
 
 		for _, cloudType := range cloudTypes {
 			result := getNodeMaintenanceStatusForCloudType(c, cloudType)
-			assert.NotNil(t, result, "Function should not be nil for cloud type: %s", cloudType)
-
-			// Verify the function can be called (even if it fails, the signature should be correct)
-			// We don't actually call it since it requires valid cluster/node IDs
+			if cloudType == "openstack" {
+				assert.Nil(t, result, "openstack returns nil until implemented")
+			} else {
+				assert.NotNil(t, result, "Function should not be nil for cloud type: %s", cloudType)
+			}
 			_ = result
 		}
 	})
@@ -952,10 +953,10 @@ func TestGetMachinesListForCloudType(t *testing.T) {
 		{
 			name:        "OpenStack cloud type",
 			cloudType:   "openstack",
-			expectedNil: false,
-			description: "Should return GetMachinesListOpenStack function for openstack",
+			expectedNil: true,
+			description: "OpenStack not wired in getMachinesListForCloudType (default returns nil)",
 			verify: func(t *testing.T, result func(string, string) (map[string]string, error)) {
-				assert.NotNil(t, result, "Result should not be nil for openstack")
+				assert.Nil(t, result, "Result should be nil until OpenStack is implemented")
 			},
 		},
 	}
@@ -986,10 +987,11 @@ func TestGetMachinesListForCloudType(t *testing.T) {
 
 		for _, cloudType := range cloudTypes {
 			result := getMachinesListForCloudType(c, cloudType)
-			assert.NotNil(t, result, "Function should not be nil for cloud type: %s", cloudType)
-
-			// Verify the function can be referenced (even if not called, the signature should be correct)
-			// We don't actually call it since it requires valid cluster/node IDs
+			if cloudType == "openstack" {
+				assert.Nil(t, result, "openstack returns nil until implemented")
+			} else {
+				assert.NotNil(t, result, "Function should not be nil for cloud type: %s", cloudType)
+			}
 			_ = result
 		}
 

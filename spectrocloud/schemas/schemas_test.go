@@ -529,7 +529,7 @@ func TestProfileVariables(t *testing.T) {
 	// Test variable Resource schema fields
 	variableResourceSchema := variableElemResource.Schema
 	assert.NotNil(t, variableResourceSchema, "Variable Resource schema should not be nil")
-	assert.Equal(t, 10, len(variableResourceSchema), "Variable Resource schema should have exactly 10 fields")
+	assert.Equal(t, 12, len(variableResourceSchema), "Variable Resource schema should have exactly 12 fields")
 
 	// Test "name" field
 	nameSchema, exists := variableResourceSchema["name"]
@@ -558,7 +558,7 @@ func TestProfileVariables(t *testing.T) {
 	assert.False(t, formatSchema.Required, "'format' field should not be required")
 	assert.Equal(t, "string", formatSchema.Default, "'format' field should have default value 'string'")
 	assert.NotNil(t, formatSchema.ValidateFunc, "'format' field should have ValidateFunc")
-	assert.Equal(t, "The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Allowed formats include `string`, `number`, `boolean`, `ipv4`, `ipv4cidr`, `ipv6`, `version`.", formatSchema.Description, "'format' field should have correct description")
+	assert.Equal(t, "The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Allowed formats include `string`, `number`, `boolean`, `ipv4`, `ipv4cidr`, `ipv6`, `version`, `base64`.", formatSchema.Description, "'format' field should have correct description")
 
 	// Test "description" field
 	descriptionSchema, exists := variableResourceSchema["description"]
@@ -576,7 +576,7 @@ func TestProfileVariables(t *testing.T) {
 	assert.Equal(t, schema.TypeString, defaultValueSchema.Type, "'default_value' field should be TypeString")
 	assert.True(t, defaultValueSchema.Optional, "'default_value' field should be optional")
 	assert.False(t, defaultValueSchema.Required, "'default_value' field should not be required")
-	assert.Equal(t, "The default value of the variable.", defaultValueSchema.Description, "'default_value' field should have correct description")
+	assert.Equal(t, "The default value of the variable. If the format is `multiline`, then the default value should be a multi-line string. If the input type is `dropdown`, then the default value should be a option label.", defaultValueSchema.Description, "'default_value' field should have correct description")
 
 	// Test "regex" field
 	regexSchema, exists := variableResourceSchema["regex"]
@@ -622,6 +622,26 @@ func TestProfileVariables(t *testing.T) {
 	assert.True(t, hiddenSchema.Optional, "'hidden' field should be optional")
 	assert.False(t, hiddenSchema.Required, "'hidden' field should not be required")
 	assert.Equal(t, "If `hidden` is set to `true`, then variable will be hidden for overriding the value. By default the `hidden` flag will be set to `false`.", hiddenSchema.Description, "'hidden' field should have correct description")
+
+	// Test "input_type" field
+	inputTypeSchema, exists := variableResourceSchema["input_type"]
+	assert.True(t, exists, "Variable schema should have 'input_type' field")
+	assert.NotNil(t, inputTypeSchema, "'input_type' field schema should not be nil")
+	assert.Equal(t, schema.TypeString, inputTypeSchema.Type, "'input_type' field should be TypeString")
+	assert.True(t, inputTypeSchema.Optional, "'input_type' field should be optional")
+	assert.False(t, inputTypeSchema.Required, "'input_type' field should not be required")
+	assert.Equal(t, "text", inputTypeSchema.Default, "'input_type' field should have default value 'text'")
+	assert.NotNil(t, inputTypeSchema.ValidateFunc, "'input_type' field should have ValidateFunc")
+	assert.Equal(t, "The input type of the variable. Defaults to `text` for backward compatibility. Allowed input types include `text`, `dropdown`, `multiline`.", inputTypeSchema.Description, "'input_type' field should have correct description")
+
+	// Test "options" field
+	optionsSchema, exists := variableResourceSchema["options"]
+	assert.True(t, exists, "Variable schema should have 'options' field")
+	assert.NotNil(t, optionsSchema, "'options' field schema should not be nil")
+	assert.Equal(t, schema.TypeList, optionsSchema.Type, "'options' field should be TypeList")
+	assert.True(t, optionsSchema.Optional, "'options' field should be optional")
+	assert.False(t, optionsSchema.Required, "'options' field should not be required")
+	assert.Equal(t, "The options of the variable. Only applicable for dropdown input type.", optionsSchema.Description, "'options' field should have correct description")
 }
 
 func TestOverrideScalingSchema(t *testing.T) {

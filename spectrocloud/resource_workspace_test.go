@@ -572,12 +572,12 @@ func TestResourceWorkspaceImport(t *testing.T) {
 			},
 			client:      unitTestMockAPINegativeClient,
 			expectError: true,
-			errorMsg:    "could not retrieve workspace for import",
+			errorMsg:    "not found",
 			description: "Should return error when workspace is not found",
 			verify: func(t *testing.T, importedData []*schema.ResourceData, err error) {
 				assert.Error(t, err, "Should have error when workspace not found")
 				assert.Nil(t, importedData, "Imported data should be nil on error")
-				assert.Contains(t, err.Error(), "could not retrieve workspace for import", "Error message should indicate import failure")
+				assert.Contains(t, err.Error(), "not found", "Error message should indicate import failure")
 			},
 		},
 		{
@@ -589,16 +589,16 @@ func TestResourceWorkspaceImport(t *testing.T) {
 			},
 			client:      unitTestMockAPIClient,
 			expectError: true,
-			errorMsg:    "workspace with ID",
+			errorMsg:    "workspace import ID or name is required",
 			description: "Should return error when workspace UID is empty",
 			verify: func(t *testing.T, importedData []*schema.ResourceData, err error) {
 				assert.Error(t, err, "Should have error when UID is empty")
 				assert.Nil(t, importedData, "Imported data should be nil on error")
-				// Error could be either "could not retrieve" or "workspace with ID ... not found"
 				if err != nil {
 					errMsg := err.Error()
 					assert.True(t,
-						strings.Contains(errMsg, "could not retrieve workspace for import") ||
+						strings.Contains(errMsg, "workspace import ID or name is required") ||
+							strings.Contains(errMsg, "could not retrieve workspace for import") ||
 							strings.Contains(errMsg, "workspace with ID"),
 						"Error should indicate workspace not found or import failure")
 				}

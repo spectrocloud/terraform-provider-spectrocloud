@@ -218,12 +218,12 @@ func TestResourceApplianceImport(t *testing.T) {
 			},
 			client:      unitTestMockAPIClient,
 			expectError: true,
-			errorMsg:    "appliance import ID is required",
+			errorMsg:    "appliance import ID or name is required",
 			description: "Should return error when import ID is empty",
 			verify: func(t *testing.T, importedData []*schema.ResourceData, err error) {
 				assert.Error(t, err)
 				assert.Nil(t, importedData)
-				assert.Contains(t, err.Error(), "appliance import ID is required")
+				assert.Contains(t, err.Error(), "appliance import ID or name is required")
 			},
 		},
 		{

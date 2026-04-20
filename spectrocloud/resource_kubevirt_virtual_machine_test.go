@@ -11,11 +11,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	vm "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachine"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	vmi "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachineinstance"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/test_utils"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/test_utils/expand_utils"
+	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -980,7 +980,7 @@ func TestResourceVirtualMachineActions_ActionCases(t *testing.T) {
 			// Note: Due to waitForVirtualMachineToTargetState polling behavior,
 			// these tests may timeout. The function structure is tested, but
 			// full behavior requires integration tests or better mock setup
-			assert.Assert(t, diags != nil, "Should return diagnostics")
+			assert.NotNil(t, diags, "Should return diagnostics")
 		})
 	}
 }
@@ -1014,7 +1014,7 @@ func TestResourceVirtualMachineActions_CaseInsensitive(t *testing.T) {
 
 			// Verify function executes (doesn't panic)
 			// Actual success depends on mock API and polling behavior
-			assert.Assert(t, diags != nil, "Should return diagnostics")
+			assert.NotNil(t, diags, "Should return diagnostics")
 		})
 	}
 }
