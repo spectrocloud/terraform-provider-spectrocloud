@@ -31,8 +31,8 @@ func ProfileVariables() *schema.Schema {
 								Type:         schema.TypeString,
 								Optional:     true,
 								Default:      "string",
-								ValidateFunc: validation.StringInSlice([]string{"string", "number", "boolean", "ipv4", "ipv4cidr", "ipv6", "version"}, false),
-								Description:  "The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Allowed formats include `string`, `number`, `boolean`, `ipv4`, `ipv4cidr`, `ipv6`, `version`.",
+								ValidateFunc: validation.StringInSlice([]string{"string", "number", "boolean", "ipv4", "ipv4cidr", "ipv6", "version", "base64"}, false),
+								Description:  "The format of the variable. Default is `string`, `format` field can only be set during cluster profile creation. Allowed formats include `string`, `number`, `boolean`, `ipv4`, `ipv4cidr`, `ipv6`, `version`, `base64`.",
 							},
 							"description": {
 								Type:        schema.TypeString,
@@ -42,7 +42,7 @@ func ProfileVariables() *schema.Schema {
 							"default_value": {
 								Type:        schema.TypeString,
 								Optional:    true,
-								Description: "The default value of the variable.",
+								Description: "The default value of the variable. If the format is `multiline`, then the default value should be a multi-line string. If the input type is `dropdown`, then the default value should be a option label.",
 							},
 							"regex": {
 								Type:        schema.TypeString,
@@ -68,6 +68,42 @@ func ProfileVariables() *schema.Schema {
 								Type:        schema.TypeBool,
 								Optional:    true,
 								Description: "If `hidden` is set to `true`, then variable will be hidden for overriding the value. By default the `hidden` flag will be set to `false`.",
+							},
+							"input_type": {
+								Type:         schema.TypeString,
+								Optional:     true,
+								Default:      "text",
+								ValidateFunc: validation.StringInSlice([]string{"text", "dropdown", "multiline"}, false),
+								Description:  "The input type of the variable. Defaults to `text` for backward compatibility. Allowed input types include `text`, `dropdown`, `multiline`.",
+							},
+							"options": {
+								Type:        schema.TypeList,
+								Optional:    true,
+								Description: "The options of the variable. Only applicable for dropdown input type.",
+								Elem: &schema.Resource{
+									Schema: map[string]*schema.Schema{
+										"default": {
+											Type:        schema.TypeBool,
+											Computed:    true,
+											Description: "The default value of the option.",
+										},
+										"description": {
+											Type:        schema.TypeString,
+											Optional:    true,
+											Description: "The description of the option.",
+										},
+										"label": {
+											Type:        schema.TypeString,
+											Required:    true,
+											Description: "The label of the option.",
+										},
+										"value": {
+											Type:        schema.TypeString,
+											Required:    true,
+											Description: "The value of the option.",
+										},
+									},
+								},
 							},
 						},
 					},

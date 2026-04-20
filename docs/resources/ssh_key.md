@@ -71,8 +71,7 @@ terraform import spectrocloud_ssh_key.example <ssh_key_id>
 ### Context-specific Import
 
 ```bash
-terraform import spectrocloud_ssh_key.example <ssh_key_id>:project
-terraform import spectrocloud_ssh_key.example <ssh_key_id>:tenant
+terraform import spectrocloud_ssh_key.example <ssh_key_id>/<ssh_key_name>:<project>/<tenant>
 ```
 
 Where:

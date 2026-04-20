@@ -84,8 +84,8 @@ resource "spectrocloud_user" "user-test"{
 # To generate TF configuration.
   terraform plan -generate-config-out=test_user.tf
 
-# To import State file
-  terraform import spectrocloud_user.test_user {userUID}
+```bash
+  terraform import spectrocloud_user.test_user {userUID}/{email_id}
 ```
 
 

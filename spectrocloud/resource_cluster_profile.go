@@ -77,9 +77,9 @@ func resourceClusterProfile() *schema.Resource {
 				Default:  "all",
 				Optional: true,
 				// Removing validation to support custom clouds
-				// ValidateFunc: validation.StringInSlice([]string{"all", "aws", "azure", "gcp", "vsphere", "openstack", "maas", "virtual", "baremetal", "eks", "aks", "edge", "edge-native", "generic", "gke"}, false),
+				// ValidateFunc: validation.StringInSlice([]string{"all", "aws", "azure", "gcp", "vsphere", "maas", "virtual", "baremetal", "eks", "aks", "edge", "edge-native", "generic", "gke"}, false),
 				ForceNew: true,
-				Description: "Specify the infrastructure provider the cluster profile is for. Only Palette supported infrastructure providers can be used. The supported cloud types are - `all, aws, azure, gcp, vsphere, openstack, maas, virtual, baremetal, eks, aks, edge-native, generic, and gke` or any custom cloud provider registered in Palette, e.g., `nutanix`." +
+				Description: "Specify the infrastructure provider the cluster profile is for. Only Palette supported infrastructure providers can be used. The supported cloud types are - `all, aws, azure, gcp, vsphere, maas, virtual, baremetal, eks, aks, edge-native, generic, and gke` or any custom cloud provider registered in Palette, e.g., `nutanix`." +
 					"If the value is set to `all`, then the type must be set to `add-on`. Otherwise, the cluster profile may be incompatible with other providers. Default value is `all`.",
 			},
 			"type": {
@@ -108,7 +108,6 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	// Create
 	uid, err := c.CreateClusterProfile(clusterProfile)
 	if err != nil {
 		return diag.FromErr(err)
@@ -416,25 +415,17 @@ func toClusterProfilePackCreateWithResolution(pSrc interface{}, c *client.V1Clie
 	}
 
 	switch pType {
-	case models.V1PackTypeSpectro:
+	case models.V1PackTypeOci, models.V1PackTypeSpectro, models.V1PackTypeHelm:
 		if pUID == "" {
-			// UID not provided, validation already passed, so we have all resolution fields
-			// Resolve the pack UID
-			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			isSyncSupported, found := getRegistryIsSyncSupported(c, pRegistryUID, pType)
+			if found && isSyncSupported {
+				resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+				}
+				pUID = resolvedUID
 			}
-			pUID = resolvedUID
-		}
-	case models.V1PackTypeHelm:
-		if pUID == "" {
-			// UID not provided, validation already passed, so we have all resolution fields
-			// Resolve the pack UID
-			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
-			}
-			pUID = resolvedUID
+			// Else skip pack UID resolution when sync is not supported or registry not found
 		}
 	case models.V1PackTypeManifest:
 		if pUID == "" {
@@ -533,25 +524,17 @@ func toClusterProfilePackUpdateWithResolution(pSrc interface{}, packs []*models.
 	}
 
 	switch pType {
-	case models.V1PackTypeSpectro:
+	case models.V1PackTypeOci, models.V1PackTypeSpectro, models.V1PackTypeHelm:
 		if pUID == "" {
-			// UID not provided, validation already passed, so we have all resolution fields
-			// Resolve the pack UID
-			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+			isSyncSupported, found := getRegistryIsSyncSupported(c, pRegistryUID, pType)
+			if found && isSyncSupported {
+				resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
+				}
+				pUID = resolvedUID
 			}
-			pUID = resolvedUID
-		}
-	case models.V1PackTypeHelm:
-		if pUID == "" {
-			// UID not provided, validation already passed, so we have all resolution fields
-			// Resolve the pack UID
-			resolvedUID, err := resolvePackUID(c, pName, pTag, pRegistryUID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve pack UID for pack %s: %w", pName, err)
-			}
-			pUID = resolvedUID
+			// Else skip pack UID resolution when sync is not supported or registry not found
 		}
 	case models.V1PackTypeManifest:
 		if pUID == "" {
@@ -604,22 +587,97 @@ func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, er
 			for _, v := range variables.([]interface{}) {
 				variable := v.(map[string]interface{})
 				pv := &models.V1Variable{
-					DefaultValue: variable["default_value"].(string),
-					Description:  variable["description"].(string),
-					DisplayName:  variable["display_name"].(string), // revisit
-					Format:       types.Ptr(models.V1VariableFormat(variable["format"].(string))),
-					Hidden:       variable["hidden"].(bool),
-					Immutable:    variable["immutable"].(bool),
+					DefaultValue: getVariableString(variable, "default_value"),
+					Description:  getVariableString(variable, "description"),
+					DisplayName:  variable["display_name"].(string),
+					Format:       types.Ptr(models.V1VariableFormat(getVariableString(variable, "format", "string"))),
+					Hidden:       getVariableBool(variable, "hidden"),
+					Immutable:    getVariableBool(variable, "immutable"),
 					Name:         StringPtr(variable["name"].(string)),
-					Regex:        variable["regex"].(string),
-					IsSensitive:  variable["is_sensitive"].(bool),
-					Required:     variable["required"].(bool),
+					Regex:        getVariableString(variable, "regex"),
+					IsSensitive:  getVariableBool(variable, "is_sensitive"),
+					Required:     getVariableBool(variable, "required"),
+					InputType:    types.Ptr(models.V1VariableInputType(getVariableString(variable, "input_type", "text"))),
+					Options:      toVariableOptions(variable["options"]),
 				}
 				profileVariables = append(profileVariables, pv)
 			}
 		}
 	}
 	return profileVariables, nil
+}
+
+// getVariableString returns the string value for key from the variable map, or the first default if missing.
+func getVariableString(variable map[string]interface{}, key string, defaultVal ...string) string {
+	if v, ok := variable[key].(string); ok {
+		return v
+	}
+	if len(defaultVal) > 0 {
+		return defaultVal[0]
+	}
+	return ""
+}
+
+// getVariableBool returns the bool value for key from the variable map, or false if missing.
+func getVariableBool(variable map[string]interface{}, key string) bool {
+	if v, ok := variable[key].(bool); ok {
+		return v
+	}
+	return false
+}
+
+// toVariableOptions converts the Terraform options list to API V1VariableOption slice.
+func toVariableOptions(options interface{}) []*models.V1VariableOption {
+	if options == nil {
+		return nil
+	}
+	list, ok := options.([]interface{})
+	if !ok || len(list) == 0 {
+		return nil
+	}
+	out := make([]*models.V1VariableOption, 0, len(list))
+	for _, o := range list {
+		opt, ok := o.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		val, _ := opt["value"].(string)
+		label, _ := opt["label"].(string)
+		desc, _ := opt["description"].(string)
+		// default is computed in schema; use when present (e.g. from state after read)
+		defaultOpt := false
+		if d, ok := opt["default"].(bool); ok {
+			defaultOpt = d
+		}
+		out = append(out, &models.V1VariableOption{
+			Value:       types.Ptr(val),
+			Label:       label,
+			Description: desc,
+			Default:     defaultOpt,
+		})
+	}
+	return out
+}
+
+// flattenVariableOptions converts API V1VariableOption slice to Terraform options list.
+func flattenVariableOptions(opts []*models.V1VariableOption) []interface{} {
+	if len(opts) == 0 {
+		return nil
+	}
+	out := make([]interface{}, 0, len(opts))
+	for _, o := range opts {
+		if o == nil {
+			continue
+		}
+		m := map[string]interface{}{
+			"default":     o.Default,
+			"description": o.Description,
+			"label":       o.Label,
+			"value":       String(o.Value),
+		}
+		out = append(out, m)
+	}
+	return out
 }
 
 func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([]interface{}, error) {
@@ -639,6 +697,12 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 		variable["immutable"] = v.Immutable
 		variable["hidden"] = v.Hidden
 		variable["is_sensitive"] = v.IsSensitive
+		if v.InputType != nil {
+			variable["input_type"] = string(*v.InputType)
+		} else {
+			variable["input_type"] = "text"
+		}
+		variable["options"] = flattenVariableOptions(v.Options)
 		variables = append(variables, variable)
 	}
 	// Sorting ordering the list per configuration this reference if we need to change profile_variables to TypeList
@@ -664,6 +728,29 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 		"variable": sortedVariables,
 	}
 	return flattenProVariables, nil
+}
+
+// getRegistryIsSyncSupported returns (isSyncSupported, found). Resolve pack UID only when found and isSyncSupported is true.
+func getRegistryIsSyncSupported(c *client.V1Client, registryUID string, packType models.V1PackType) (isSyncSupported bool, found bool) {
+	if registryUID == "" {
+		return false, false
+	}
+	var status *models.V1RegistrySyncStatus
+	var err error
+	switch packType {
+	case models.V1PackTypeHelm:
+		status, err = c.GetHelmRegistrySyncStatus(registryUID)
+	case models.V1PackTypeOci:
+		status, err = c.GetOciBasicRegistrySyncStatus(registryUID)
+	case models.V1PackTypeSpectro:
+		status, err = c.GetPackRegistrySyncStatus(registryUID)
+	default:
+		return false, false
+	}
+	if err != nil || status == nil {
+		return false, false
+	}
+	return status.IsSyncSupported, true
 }
 
 // resolvePackUID resolves the pack UID based on name, tag, and registry_uid

@@ -1,6 +1,10 @@
 package addon_deployment
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,7 +14,26 @@ import (
 )
 
 func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
-	h := client.V1Client{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPatch &&
+			strings.HasPrefix(r.URL.Path, "/v1/spectroclusters/") &&
+			strings.HasSuffix(r.URL.Path, "/profiles") {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	u, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatalf("failed to parse server URL: %v", err)
+	}
+
+	h := client.New(
+		client.WithPaletteURI(u.Host),
+		client.WithSchemes([]string{u.Scheme}),
+	)
 
 	// Create mock cluster
 	cluster := &models.V1SpectroCluster{
@@ -43,14 +66,33 @@ func TestUpdateAddonDeploymentIsNotAttached(t *testing.T) {
 	}
 
 	// Call UpdateAddonDeployment
-	err := h.UpdateAddonDeployment(cluster, body, newProfile)
+	err = h.UpdateAddonDeployment(cluster, body, newProfile)
 
 	// Assert there was no error
 	assert.NoError(t, err)
 }
 
 func TestUpdateAddonDeploymentIsAttached(t *testing.T) {
-	h := client.V1Client{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPatch &&
+			strings.HasPrefix(r.URL.Path, "/v1/spectroclusters/") &&
+			strings.HasSuffix(r.URL.Path, "/profiles") {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	u, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatalf("failed to parse server URL: %v", err)
+	}
+
+	h := client.New(
+		client.WithPaletteURI(u.Host),
+		client.WithSchemes([]string{u.Scheme}),
+	)
 
 	// Create mock cluster
 	cluster := &models.V1SpectroCluster{
@@ -83,7 +125,7 @@ func TestUpdateAddonDeploymentIsAttached(t *testing.T) {
 	}
 
 	// Call UpdateAddonDeployment
-	err := h.UpdateAddonDeployment(cluster, body, newProfile)
+	err = h.UpdateAddonDeployment(cluster, body, newProfile)
 
 	// Assert there was no error
 	assert.NoError(t, err)

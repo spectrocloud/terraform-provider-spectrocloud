@@ -37,6 +37,25 @@ resource "spectrocloud_macros" "tenant_macro" {
 #   id = "67a8e0e3dc76532bf3d8af3c:project"
 # }
 
+## import existing developer setting## Import
+
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+to import the resource spectrocloud_macros by using its `id` with the Palette `context` separated by a colon. For example:
+
+```terraform
+ import {
+   to = spectrocloud_macros.imported_macros_tenant
+   id = "project_uid/tenant_uid:context"
+ }
+```
+
+Using `terraform import`, import the macros using the `tenant_uid` or `tenant_name` colon separated with `context`. For example:
+
+```console
+terraform import spectrocloud_macros.example <tenant_uid>/<project_uid>:<project>/<tenant>
+terraform import spectrocloud_macros.example <tenant_name>/<project_name>:<project>/<tenant>
+```
+
 ```
 
 

@@ -13,7 +13,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
-func prepareClusterVsphereTestData() *schema.ResourceData {
+func prepareClusterVsphereTestResourceData() *schema.ResourceData {
 	d := resourceClusterVsphere().TestResourceData()
 
 	d.SetId("")
@@ -227,7 +227,7 @@ func TestFlattenClusterConfigsVsphere(t *testing.T) {
 			},
 		},
 	}
-	d := prepareClusterVsphereTestData()
+	d := prepareClusterVsphereTestResourceData()
 	flattenedConfig := flattenClusterConfigsVsphere(d, inputCloudConfig)
 
 	flattenedConfigMap := flattenedConfig.([]interface{})[0].(map[string]interface{})
@@ -256,7 +256,7 @@ func TestFlattenClusterConfigsVsphere(t *testing.T) {
 }
 
 func TestFlattenClusterConfigsVsphereNil(t *testing.T) {
-	d := prepareClusterVsphereTestData()
+	d := prepareClusterVsphereTestResourceData()
 	flatCloudConfig := flattenClusterConfigsVsphere(d, nil)
 	if flatCloudConfig == nil {
 		t.Errorf("flattenClusterConfigsVsphere returning value for nill: %#v", flatCloudConfig)

@@ -33,12 +33,17 @@ func resourceClusterAks() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 3,
+		SchemaVersion: 4,
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Type:    resourceClusterAksResourceV2().CoreConfigSchema().ImpliedType(),
 				Upgrade: resourceClusterAksStateUpgradeV2,
 				Version: 2,
+			},
+			{
+				Type:    resourceClusterAksResourceV3().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterAksStateUpgradeV3,
+				Version: 3,
 			},
 		},
 		Schema: map[string]*schema.Schema{
@@ -76,7 +81,7 @@ func resourceClusterAks() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchemaV2(),
 			"cluster_template": schemas.ClusterTemplateSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
@@ -136,6 +141,12 @@ func resourceClusterAks() *schema.Resource {
 				Default:      "",
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
+			"update_worker_pools_in_parallel": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
@@ -833,6 +844,29 @@ func resourceClusterAksStateUpgradeV2(ctx context.Context, rawState map[string]i
 		}
 	} else {
 		log.Printf("[DEBUG] No machine_pool found in state, skipping conversion")
+	}
+
+	return rawState, nil
+}
+
+func resourceClusterAksStateUpgradeV3(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading cluster AKS state from version 3 to 4")
+
+	// Convert cluster_profile from TypeList (v3) to TypeSet (v4).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
 	}
 
 	return rawState, nil

@@ -32,7 +32,14 @@ func resourceClusterVirtual() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterVirtualResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterVirtualStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -119,7 +126,7 @@ func resourceClusterVirtual() *schema.Resource {
 				ValidateFunc: validation.StringInSlice([]string{"lock", "unlock"}, false),
 				Description:  "The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile": schemas.ClusterProfileSchemaV2(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -128,6 +135,19 @@ func resourceClusterVirtual() *schema.Resource {
 				Description: "The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. " +
 					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
 					"Default value is `DownloadAndInstall`.",
+			},
+			"update_worker_pools_in_parallel": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+			},
+			"cluster_timezone": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "",
+				ValidateFunc: validateTimezone,
+				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -221,6 +241,29 @@ func resourceClusterVirtual() *schema.Resource {
 	}
 }
 
+func resourceClusterVirtualStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading virtual cluster state from version 2 to 3")
+
+	// Convert cluster_profile from TypeList (v2) to TypeSet (v3).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
+	}
+
+	return rawState, nil
+}
+
 func resourceClusterVirtualCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
@@ -272,13 +315,98 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 		return diagnostics
 	}
 
-	return flattenCloudConfigVirtual(cluster.Spec.CloudConfigRef.UID, d, c)
+	configUID := ""
+	if cluster.Spec != nil && cluster.Spec.CloudConfigRef != nil {
+		configUID = cluster.Spec.CloudConfigRef.UID
+	}
+	if configUID != "" {
+		if diagErr := flattenCloudConfigVirtual(configUID, d, c); diagErr != nil {
+			log.Printf("[WARN] failed to flatten virtual cloud config: %v", diagErr)
+			// return diagErr
+		}
+	}
+
+	// Populate cluster_profile (profile IDs + variables) for read/import — same pattern as resources
+	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	if err != nil {
+		log.Printf("[WARN] failed to flatten cluster profiles: %v", err)
+		clusterProfiles = make([]interface{}, 0)
+	}
+	// Virtual cluster: when Spec.ClusterProfileTemplates is empty, use Status.Packs (like resources use GetCloudConfigVirtual)
+	if len(clusterProfiles) == 0 && cluster.Status != nil && len(cluster.Status.Packs) > 0 {
+		seen := make(map[string]bool)
+		for _, p := range cluster.Status.Packs {
+			if p != nil && p.ProfileUID != "" && !seen[p.ProfileUID] {
+				seen[p.ProfileUID] = true
+				clusterProfiles = append(clusterProfiles, map[string]interface{}{"id": p.ProfileUID})
+			}
+		}
+	}
+	if len(clusterProfiles) > 0 {
+		clusterVars, err := c.GetClusterVariables(d.Id())
+		if err != nil {
+			log.Printf("[WARN] failed to get cluster variables: %v", err)
+		} else {
+			profileVariablesMap := make(map[string]map[string]interface{})
+			for _, cv := range clusterVars {
+				if cv.ProfileUID != nil && cv.Variables != nil {
+					vars := make(map[string]interface{})
+					for _, v := range cv.Variables {
+						if v.Name != nil && v.Value != "" {
+							vars[*v.Name] = v.Value
+						}
+					}
+					if len(vars) > 0 {
+						profileVariablesMap[*cv.ProfileUID] = vars
+					}
+				}
+			}
+			for i := range clusterProfiles {
+				p := clusterProfiles[i].(map[string]interface{})
+				if uid, ok := p["id"].(string); ok && uid != "" {
+					if vars, has := profileVariablesMap[uid]; has {
+						p["variables"] = vars
+					}
+				}
+			}
+		}
+	}
+	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
+		log.Printf("[WARN] failed to set cluster_profile: %v", err)
+	}
+
+	return diag.Diagnostics{}
 }
 
 func flattenCloudConfigVirtual(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
-	err := d.Set("cloud_config_id", configUID)
-	if err != nil {
+	if err := d.Set("cloud_config_id", configUID); err != nil {
 		return diag.FromErr(err)
+	}
+
+	// Populate resources (cluster size) from virtual cloud config for read/import
+	config, err := c.GetCloudConfigVirtual(configUID)
+	if err != nil {
+		log.Printf("[WARN] failed to get virtual cloud config for resources: %v", err)
+		return diag.Diagnostics{}
+	}
+	if config != nil && config.Spec != nil && len(config.Spec.MachinePoolConfig) > 0 {
+		pool := config.Spec.MachinePoolConfig[0]
+		if pool != nil && pool.InstanceType != nil {
+			inst := pool.InstanceType
+			resources := []interface{}{
+				map[string]interface{}{
+					"max_cpu":           int(inst.MaxCPU),
+					"max_mem_in_mb":     int(inst.MaxMemInMiB),
+					"max_storage_in_gb": int(inst.MaxStorageGiB),
+					"min_cpu":           int(inst.MinCPU),
+					"min_mem_in_mb":     int(inst.MinMemInMiB),
+					"min_storage_in_gb": int(inst.MinStorageGiB),
+				},
+			}
+			if err := d.Set("resources", resources); err != nil {
+				log.Printf("[WARN] failed to set resources: %v", err)
+			}
+		}
 	}
 
 	return diag.Diagnostics{}
@@ -443,6 +571,8 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 						UID: hostClusterUid,
 					},
 				},
+				UpdateWorkerPoolsInParallel: d.Get("update_worker_pools_in_parallel").(bool),
+				Timezone:                    d.Get("cluster_timezone").(string),
 			},
 			Machinepoolconfig: nil,
 			Profiles:          profiles,

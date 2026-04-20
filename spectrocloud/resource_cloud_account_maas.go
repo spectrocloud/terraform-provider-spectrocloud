@@ -96,6 +96,10 @@ func resourceCloudAccountMaasRead(_ context.Context, d *schema.ResourceData, m i
 		return diag.FromErr(err)
 	}
 
+	if err := d.Set("maas_api_endpoint", *account.Spec.APIEndpoint); err != nil {
+		return diag.FromErr(err)
+	}
+
 	return diags
 }
 
@@ -156,7 +160,7 @@ func resourceAccountMaasImport(ctx context.Context, d *schema.ResourceData, m in
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
-	err := GetCommonAccount(d, c)
+	err := GetCommonAccount(d, c, "maas")
 	if err != nil {
 		return nil, err
 	}

@@ -3,14 +3,12 @@ package convert
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	k8sv1 "k8s.io/api/core/v1"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
 
-func ToKubevirtVMStatusM(status *models.V1ClusterVirtualMachineStatus) (kubevirtapiv1.VirtualMachineStatus, error) {
-	var kubevirtVMStatus kubevirtapiv1.VirtualMachineStatus
+func ToKubevirtVMStatusM(status *models.V1ClusterVirtualMachineStatus) (models.V1ClusterVirtualMachineStatus, error) {
+	var kubevirtVMStatus models.V1ClusterVirtualMachineStatus
 
 	// Marshal the input spec to JSON
 	hapiClusterVMSpecJSON, err := json.Marshal(status)
@@ -21,62 +19,49 @@ func ToKubevirtVMStatusM(status *models.V1ClusterVirtualMachineStatus) (kubevirt
 	// Unmarshal the JSON to the desired Kubevirt VM spec
 	err = json.Unmarshal(hapiClusterVMSpecJSON, &kubevirtVMStatus)
 	if err != nil {
-		return kubevirtVMStatus, fmt.Errorf("failed to unmarshal JSON to kubevirtapiv1.VirtualMachineSpec: %v", err)
+		return kubevirtVMStatus, fmt.Errorf("failed to unmarshal JSON to VirtualMachineSpec: %v", err)
 	}
 
 	return kubevirtVMStatus, nil
 }
 
-func ToKubevirtVMStatus(status *models.V1ClusterVirtualMachineStatus) kubevirtapiv1.VirtualMachineStatus {
-	var PrintableStatus kubevirtapiv1.VirtualMachinePrintableStatus
-	if status.PrintableStatus != "" {
-		PrintableStatus = kubevirtapiv1.VirtualMachinePrintableStatus(status.PrintableStatus)
+func ToKubevirtVMStatus(status *models.V1ClusterVirtualMachineStatus) models.V1ClusterVirtualMachineStatus {
+	if status == nil {
+		return models.V1ClusterVirtualMachineStatus{}
 	}
-
-	return kubevirtapiv1.VirtualMachineStatus{
-		SnapshotInProgress:     types.Ptr(status.SnapshotInProgress),
-		RestoreInProgress:      types.Ptr(status.RestoreInProgress),
+	return models.V1ClusterVirtualMachineStatus{
+		SnapshotInProgress:     status.SnapshotInProgress,
+		RestoreInProgress:      status.RestoreInProgress,
 		Created:                status.Created,
 		Ready:                  status.Ready,
-		PrintableStatus:        PrintableStatus,
-		Conditions:             ToKvVmStatusConditions(status.Conditions),
-		StateChangeRequests:    nil,
-		VolumeRequests:         nil,
-		VolumeSnapshotStatuses: nil,
-		StartFailure:           nil,
-		MemoryDumpRequest:      nil,
+		PrintableStatus:        status.PrintableStatus,
+		Conditions:             status.Conditions,
+		StateChangeRequests:    status.StateChangeRequests,
+		VolumeRequests:         status.VolumeRequests,
+		VolumeSnapshotStatuses: status.VolumeSnapshotStatuses,
+		StartFailure:           status.StartFailure,
+		MemoryDumpRequest:      status.MemoryDumpRequest,
 	}
 }
 
-func ToKvVmStatusConditions(conditions []*models.V1VMVirtualMachineCondition) []kubevirtapiv1.VirtualMachineCondition {
-	var kvConditions []kubevirtapiv1.VirtualMachineCondition
+func ToKvVmStatusConditions(conditions []*models.V1VMVirtualMachineCondition) []models.V1VMVirtualMachineCondition {
+	var kvConditions []models.V1VMVirtualMachineCondition
 	for _, condition := range conditions {
 		kvConditions = append(kvConditions, ToKvVmStatusCondition(condition))
 	}
 	return kvConditions
 }
 
-func ToKvVmStatusCondition(condition *models.V1VMVirtualMachineCondition) kubevirtapiv1.VirtualMachineCondition {
+func ToKvVmStatusCondition(condition *models.V1VMVirtualMachineCondition) models.V1VMVirtualMachineCondition {
 	if condition == nil {
-		return kubevirtapiv1.VirtualMachineCondition{}
+		return models.V1VMVirtualMachineCondition{}
 	}
-
-	var VirtualMachineConditionType kubevirtapiv1.VirtualMachineConditionType
-	if condition.Type != nil {
-		VirtualMachineConditionType = kubevirtapiv1.VirtualMachineConditionType(*condition.Type)
-	}
-
-	var ConditionStatus k8sv1.ConditionStatus
-	if condition.Status != nil {
-		ConditionStatus = k8sv1.ConditionStatus(*condition.Status)
-	}
-
-	return kubevirtapiv1.VirtualMachineCondition{
-		Type:   VirtualMachineConditionType,
-		Status: ConditionStatus,
-		// TODO: LastProbeTime:      condition.LastProbeTime,
-		// TODO: LastTransitionTime: condition.LastTransitionTime,
-		Reason:  condition.Reason,
-		Message: condition.Message,
+	return models.V1VMVirtualMachineCondition{
+		Type:               condition.Type,
+		Status:             condition.Status,
+		LastProbeTime:      condition.LastProbeTime,
+		LastTransitionTime: condition.LastTransitionTime,
+		Reason:             condition.Reason,
+		Message:            condition.Message,
 	}
 }

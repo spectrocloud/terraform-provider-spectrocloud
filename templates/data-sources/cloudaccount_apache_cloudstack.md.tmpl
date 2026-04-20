@@ -28,15 +28,6 @@ output "cloudstack_account_id" {
   description = "Apache CloudStack cloud account ID"
 }
 
-output "cloudstack_api_url" {
-  value       = data.spectrocloud_cloudaccount_apache_cloudstack.example.api_url
-  description = "CloudStack API endpoint URL"
-}
-
-output "cloudstack_domain" {
-  value       = data.spectrocloud_cloudaccount_apache_cloudstack.example.domain
-  description = "CloudStack domain for the account"
-}
 ```
 
 ### Retrieve by ID

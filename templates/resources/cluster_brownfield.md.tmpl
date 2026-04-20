@@ -9,7 +9,7 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
-~> **Preview Release**: The `spectrocloud_cluster_brownfield` resource provides the ability to import and register existing Kubernetes clusters across different cloud platforms (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack) with Palette. This feature is currently **in preview**, and we are actively working on enhancements that will be released in future versions.
+~> **Preview Release**: The `spectrocloud_cluster_brownfield` resource provides the ability to import and register existing Kubernetes clusters across different cloud platforms (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native and MAAS) with Palette. This feature is currently **in preview**, and we are actively working on enhancements that will be released in future versions.
 
 ## Example Usage
 
@@ -25,7 +25,7 @@ data "spectrocloud_backup_storage_location" "bsl" {
 
 resource "spectrocloud_cluster_brownfield" "cluster" {
   name       = var.cluster_name
-  cloud_type = "generic" # Options: aws, Eks-Anywhere, azure, gcp, vsphere, openshift, generic, apache-cloudstack, edge-native, maas, openstack
+  cloud_type = "generic" # Options: aws, Eks-Anywhere, azure, gcp, vsphere, openshift, generic, apache-cloudstack, edge-native, maas
   context    = "project" # Optional, defaults to "project"
   import_mode = "full"   # Options: "read_only" or "full" (default: "full")
   
@@ -104,17 +104,21 @@ output "kubectl_command" {
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
-to import the resource {{ .Name }} by using its `id` with the Palette `context` and `cloud_type` separated by colons. For example:
+to import the resource {{ .Name }} by using its  `id` with the Palette `context` and `cloud_type` separated by colons. For example:
 
 import {
   to = {{ .Name }}.example
   id = "example_id:context:cloud_type"
 }
 ```
-Using `terraform import`, import the cluster using the `id` colon separated with `context` and `cloud_type`. For example:
+Using `terraform import`, import the cluster using the `cluster_name` or `id` colon separated with `context` and `cloud_type`. For example:
 
 ```console
 terraform import {{ .Name }}.example cluster_uid:project:cloud_type 
+```
+
+```console
+terraform import {{ .Name }}.example cluster_name:project:cloud_type 
 ```
 
 Refer to the [Import section](/docs#import) to learn more.

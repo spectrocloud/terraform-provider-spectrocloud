@@ -3,12 +3,13 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client/herr"
 )
 
 func resourceRole() *schema.Resource {
@@ -100,9 +101,32 @@ func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface
 
 func resourceRoleImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	c := getV1ClientWithResourceContext(m, "tenant")
-	_, err := c.GetRoleByID(d.Id())
+
+	// Import ID can be either the role UID or the role name
+	importID := d.Id()
+	if importID == "" {
+		return nil, fmt.Errorf("role import ID or name is required")
+	}
+
+	// Try to get by ID first
+	role, err := c.GetRoleByID(importID)
 	if err != nil {
-		return nil, err
+		if !herr.IsNotFound(err) {
+			return nil, fmt.Errorf("unable to retrieve role '%s': %w", importID, err)
+		}
+		// Not found by ID — try by name
+		role, err = c.GetRole(importID)
+		if err != nil {
+			return nil, fmt.Errorf("unable to retrieve role by name or id '%s': %w", importID, err)
+		}
+		if role == nil || role.Metadata == nil || role.Metadata.UID == "" {
+			return nil, fmt.Errorf("role '%s' not found", importID)
+		}
+		d.SetId(role.Metadata.UID)
+	} else if role != nil {
+		d.SetId(importID)
+	} else {
+		return nil, fmt.Errorf("role '%s' not found", importID)
 	}
 
 	diags := resourceRoleRead(ctx, d, m)

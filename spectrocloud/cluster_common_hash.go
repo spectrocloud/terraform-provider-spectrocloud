@@ -247,6 +247,9 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
+	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	if m["min"] != nil {
 		fmt.Fprintf(buf, "%d-", m["min"].(int))
@@ -257,6 +260,19 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 	fmt.Fprintf(buf, "%s-", m["instance_type"].(string))
 	fmt.Fprintf(buf, "%s-", m["capacity_type"].(string))
 	fmt.Fprintf(buf, "%s-", m["max_price"].(string))
+	if val, ok := m["host_resource_group_arn"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+	if m["license_configuration_arns"] != nil {
+		arnsSet := m["license_configuration_arns"].(*schema.Set)
+		arnsList := arnsSet.List()
+		arnsListStr := make([]string, len(arnsList))
+		for i, v := range arnsList {
+			arnsListStr[i] = v.(string)
+		}
+		sort.Strings(arnsListStr)
+		fmt.Fprintf(buf, "%s-", strings.Join(arnsListStr, "-"))
+	}
 	if m["azs"] != nil {
 		azsSet := m["azs"].(*schema.Set)
 		azsList := azsSet.List()
@@ -898,49 +914,6 @@ func NormalizeYamlContent(yamlContent string) string {
 	}
 
 	return strings.Join(normalizedDocs, "\n---\n")
-}
-
-func resourceMachinePoolOpenStackHash(v interface{}) int {
-	nodePool := v.(map[string]interface{})
-	var buf bytes.Buffer
-
-	// Use CommonHash for common fields: additional_labels, taints, control_plane,
-	// control_plane_as_worker, name, count, update_strategy, node_repave_interval, node
-	commonBuf := CommonHash(nodePool)
-	buf.WriteString(commonBuf.String())
-
-	// Hash additional annotations and override_kubeadm_configuration
-	if _, ok := nodePool["additional_annotations"]; ok {
-		buf.WriteString(HashStringMap(nodePool["additional_annotations"]))
-	}
-	if val, ok := nodePool["override_kubeadm_configuration"].(string); ok && val != "" {
-		fmt.Fprintf(&buf, "%s-", val)
-	}
-
-	// Add OpenStack-specific fields
-	if val, ok := nodePool["instance_type"]; ok {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
-	}
-
-	// Handle azs (TypeSet) - sort for deterministic hash
-	if nodePool["azs"] != nil {
-		azsSet := nodePool["azs"].(*schema.Set)
-		azsList := azsSet.List()
-		azsListStr := make([]string, len(azsList))
-		for i, v := range azsList {
-			azsListStr[i] = v.(string)
-		}
-		sort.Strings(azsListStr)
-		azsStr := strings.Join(azsListStr, "-")
-		buf.WriteString(fmt.Sprintf("%s-", azsStr))
-	}
-
-	// Handle subnet_id (optional string field)
-	if val, ok := nodePool["subnet_id"]; ok && val != nil && val.(string) != "" {
-		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
-	}
-
-	return int(hash(buf.String()))
 }
 
 // resourceEdgeHostHash creates a hash for edge_host TypeSet

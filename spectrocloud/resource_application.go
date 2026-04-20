@@ -254,6 +254,10 @@ func resourceApplicationRead(_ context.Context, d *schema.ResourceData, m interf
 		// 	// This would need to be mapped based on the actual API response structure
 		// }
 
+		if envRef := appDeployment.Spec.Config.Target.EnvRef; envRef != nil && envRef.UID != "" {
+			config["cluster_group_uid"] = envRef.UID
+		}
+
 		if err := d.Set("config", []interface{}{config}); err != nil {
 			return diag.FromErr(err)
 		}

@@ -129,6 +129,11 @@ func RegistriesRoutes() []Route {
 							Key:                "test-key",
 						},
 					},
+					Status: &models.V1OciRegistryStatus{
+						SyncStatus: &models.V1RegistrySyncStatus{
+							IsSyncSupported: false,
+						},
+					},
 				},
 			},
 		},

@@ -24,11 +24,23 @@ resource "spectrocloud_registration_token" "tf_token" {
   status = "active"
 }
 
-## import existing registration token
-#import {
-#  to = spectrocloud_registration_token.token
-#  id = "{tokenUID}" //tokenUID
-#}
+## import existing Registry token## Import
+
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+to import the resource {{ .Name }} by using its `id` with the Palette `context` separated by a colon. For example:
+
+```terraform
+import {
+  to = spectrocloud_registration_token.token
+  id = "{tenantUID}" // tenant-uid
+}
+```
+
+Using `terraform import`, import the registration token using the `tenant_uid` or `tenant_name` colon separated with `context`. For example:
+
+```console
+terraform import {{ .Name }}.example tenant_uid/tenant_name
+```
 
 ```
 

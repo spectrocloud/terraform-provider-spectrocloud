@@ -2,17 +2,17 @@ package virtualmachine
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 func virtualMachineStatusFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-		"created": &schema.Schema{
+		"created": {
 			Type:        schema.TypeBool,
 			Description: "Created indicates if the virtual machine is created in the cluster.",
 			Optional:    true,
 		},
-		"ready": &schema.Schema{
+		"ready": {
 			Type:        schema.TypeBool,
 			Description: "Ready indicates if the virtual machine is running and ready.",
 			Optional:    true,
@@ -37,8 +37,8 @@ func virtualMachineStatusSchema() *schema.Schema {
 	}
 }
 
-func expandVirtualMachineStatus(virtualMachineStatus []interface{}) (kubevirtapiv1.VirtualMachineStatus, error) {
-	result := kubevirtapiv1.VirtualMachineStatus{}
+func expandVirtualMachineStatus(virtualMachineStatus []interface{}) (models.V1ClusterVirtualMachineStatus, error) {
+	result := models.V1ClusterVirtualMachineStatus{}
 
 	if len(virtualMachineStatus) == 0 || virtualMachineStatus[0] == nil {
 		return result, nil
@@ -66,13 +66,26 @@ func expandVirtualMachineStatus(virtualMachineStatus []interface{}) (kubevirtapi
 	return result, nil
 }
 
-func flattenVirtualMachineStatus(in kubevirtapiv1.VirtualMachineStatus) []interface{} {
-	att := make(map[string]interface{})
+// func flattenVirtualMachineStatus(in kubevirtapiv1.VirtualMachineStatus) []interface{} {
+// 	att := make(map[string]interface{})
 
+// 	att["created"] = in.Created
+// 	att["ready"] = in.Ready
+// 	att["conditions"] = flattenVirtualMachineConditions(in.Conditions)
+// 	att["state_change_requests"] = flattenVirtualMachineStateChangeRequests(in.StateChangeRequests)
+
+// 	return []interface{}{att}
+// }
+
+// flattenVirtualMachineStatusFromVM flattens *models.V1ClusterVirtualMachineStatus to the same schema shape as flattenVirtualMachineStatus.
+func flattenVirtualMachineStatusFromVM(in *models.V1ClusterVirtualMachineStatus) []interface{} {
+	if in == nil {
+		return nil
+	}
+	att := make(map[string]interface{})
 	att["created"] = in.Created
 	att["ready"] = in.Ready
-	att["conditions"] = flattenVirtualMachineConditions(in.Conditions)
-	att["state_change_requests"] = flattenVirtualMachineStateChangeRequests(in.StateChangeRequests)
-
+	att["conditions"] = flattenVirtualMachineConditionsFromVM(in.Conditions)
+	att["state_change_requests"] = flattenVirtualMachineStateChangeRequestsFromVM(in.StateChangeRequests)
 	return []interface{}{att}
 }

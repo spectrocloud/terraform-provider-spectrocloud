@@ -46,5 +46,28 @@ resource "spectrocloud_virtual_cluster" "cluster" {
    
 ```
 
+## Import
+
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+to import the resource {{ .Name }} by using its  `id` with the Palette `context` separated by a colon. For example:
+
+```terraform
+import {
+  to = {{ .Name }}.example
+  id = "example_id:context"
+}
+```
+
+Using `terraform import`, import the cluster using the `cluster_name` or `id` colon separated with `context`. For example:
+
+```console
+terraform import {{ .Name }}.example example_id
+```
+
+```console
+terraform import {{ .Name }}.example cluster_name
+```
+
+Refer to the [Import section](/docs#import) to learn more.
 
 {{ .SchemaMarkdown | trimspace }}

@@ -86,5 +86,11 @@ resource "spectrocloud_cloudaccount_apache_cloudstack" "cloudstack_insecure" {
 }
 ```
 
+Using `terraform import`, import the cloud account using the `cloud_account_name` or  `id` colon separated with `context`. For example:
+
+```console
+terraform import {{ .Name }}.{cloud_account_uid}/{cloud_account_name}:project
+```
+
 {{ .SchemaMarkdown | trimspace }}
 

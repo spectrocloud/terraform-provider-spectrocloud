@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -23,14 +24,21 @@ func resourceClusterBrownfield() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterBrownfieldImport,
 		},
-		SchemaVersion: 1,
+		SchemaVersion: 2,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterBrownfieldResourceV1().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterBrownfieldStateUpgradeV1,
+				Version: 1,
+			},
+		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Read:   schema.DefaultTimeout(5 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
-		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native, MAAS, and OpenStack). This feature is currently in preview.",
+		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native and MAAS). This feature is currently in preview.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -66,9 +74,8 @@ func resourceClusterBrownfield() *schema.Resource {
 					"apache-cloudstack",
 					"edge-native",
 					"maas",
-					"openstack",
 				}, false),
-				Description: "The cloud type of the cluster. Supported values: `aws`, `eks-anywhere`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`,`apache-cloudstack`,`edge-native`,`maas`,`openstack`. This field cannot be updated after creation.",
+				Description: "The cloud type of the cluster. Supported values: `aws`, `eks-anywhere`, `azure`, `gcp`, `vsphere`, `openshift`, `generic`,`apache-cloudstack`,`edge-native`,`maas`. This field cannot be updated after creation.",
 			},
 			"import_mode": {
 				Type:         schema.TypeString,
@@ -149,7 +156,7 @@ func resourceClusterBrownfield() *schema.Resource {
 					"`DownloadAndInstallLater` will only download artifact and postpone install for later. " +
 					"Default value is `DownloadAndInstall`.",
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile": schemas.ClusterProfileSchemaV2(),
 			"machine_pool": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -230,6 +237,29 @@ func resourceClusterBrownfield() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceClusterBrownfieldStateUpgradeV1(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading brownfield cluster state from version 1 to 2")
+
+	// Convert cluster_profile from TypeList (v1) to TypeSet (v2).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }
 
 func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -897,8 +927,6 @@ func getNodeMaintenanceStatusForCloudType(c *client.V1Client, cloudType string) 
 		return c.GetNodeMaintenanceStatusMaas
 	case "edge-native":
 		return c.GetNodeMaintenanceStatusEdgeNative
-	case "openstack":
-		return c.GetNodeMaintenanceStatusOpenStack
 	default:
 		return nil
 	}
@@ -923,8 +951,6 @@ func getMachinesListForCloudType(c *client.V1Client, cloudType string) func(stri
 		return c.GetMachinesListMaas
 	case "edge-native":
 		return c.GetMachinesListEdgeNative
-	case "openstack":
-		return c.GetMachinesListOpenStack
 	default:
 		return nil
 	}
@@ -991,7 +1017,10 @@ func extractManifestURL(importLink string) string {
 	return strings.TrimSpace(importLink)
 }
 
-// resourceClusterBrownfieldImport imports an existing brownfield cluster into Terraform state
+// resourceClusterBrownfieldImport imports an existing brownfield cluster into Terraform state.
+// Import ID format: id_or_name:context:cloud_type (e.g. "my-cluster:project:aws"). Uses the same
+// parser as custom cloud (ParseResourceCustomCloudImportID). Import by UID or name is supported:
+// GetCommonCluster resolves the first segment (id_or_name) by UID then by name.
 func resourceClusterBrownfieldImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	clusterID, scope, customCloudName, err := ParseResourceCustomCloudImportID(d)
 	if err != nil {
@@ -1009,15 +1038,11 @@ func resourceClusterBrownfieldImport(ctx context.Context, d *schema.ResourceData
 		return nil, fmt.Errorf("could not read cluster for import: %v", diags)
 	}
 
-	// cluster profile and common default cluster attribute is get set here
 	err = flattenCommonAttributeForBrownfieldClusterImport(c, d)
 	if err != nil {
 		return nil, err
 	}
 
-	// Return the resource data. In most cases, this method is only used to
-	// import one resource at a time, so you should return the resource data
-	// in a slice with a single element.
 	return []*schema.ResourceData{d}, nil
 }
 

@@ -8,51 +8,19 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	kubevirtapiv1 "kubevirt.io/api/core/v1"
 )
 
-func ToKubevirtVM(hapiVM *models.V1ClusterVirtualMachine) (*kubevirtapiv1.VirtualMachine, error) {
+func ToKubevirtVM(hapiVM *models.V1ClusterVirtualMachine) (*models.V1ClusterVirtualMachine, error) {
 	if hapiVM == nil {
 		return nil, errors.New("hapiVM is nil")
 	}
 
-	Spec, err := ToKubevirtVMSpecM(hapiVM.Spec)
-	if err != nil {
-		return nil, err
-	}
-	Status, err := ToKubevirtVMStatusM(hapiVM.Status)
-	if err != nil {
-		return nil, err
-	}
-	OwnerReferences, err := ToKubevirtVMOwnerReferences(hapiVM.Metadata.OwnerReferences)
-	if err != nil {
-		return nil, err
-	}
-	ManagedFields, err := ToKubevirtVMManagedFields(hapiVM.Metadata.ManagedFields)
-	if err != nil {
-		return nil, err
-	}
-	kubevirtVM := &kubevirtapiv1.VirtualMachine{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       hapiVM.Kind,
-			APIVersion: hapiVM.APIVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:                       hapiVM.Metadata.Name,
-			GenerateName:               hapiVM.Metadata.GenerateName,
-			Namespace:                  hapiVM.Metadata.Namespace,
-			UID:                        types.UID(hapiVM.Metadata.UID),
-			ResourceVersion:            hapiVM.Metadata.ResourceVersion,
-			Generation:                 hapiVM.Metadata.Generation,
-			DeletionGracePeriodSeconds: &hapiVM.Metadata.DeletionGracePeriodSeconds,
-			Labels:                     hapiVM.Metadata.Labels,
-			Annotations:                hapiVM.Metadata.Annotations,
-			OwnerReferences:            OwnerReferences,
-			Finalizers:                 hapiVM.Metadata.Finalizers,
-			ManagedFields:              ManagedFields,
-		},
-		Spec:   Spec,
-		Status: Status,
+	kubevirtVM := &models.V1ClusterVirtualMachine{
+		APIVersion: hapiVM.APIVersion,
+		Kind:       hapiVM.Kind,
+		Metadata:   hapiVM.Metadata,
+		Spec:       hapiVM.Spec,
+		Status:     hapiVM.Status,
 	}
 	return kubevirtVM, nil
 }

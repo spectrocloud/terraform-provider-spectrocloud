@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	v1 "k8s.io/api/core/v1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
@@ -86,6 +87,44 @@ func ExpandPodDNSConfig(l []interface{}) (*v1.PodDNSConfig, error) {
 	return obj, nil
 }
 
+// ExpandPodDNSConfigToVM expands the same schema into *models.V1VMPodDNSConfig for VM spec.
+func ExpandPodDNSConfigToVM(l []interface{}) (*models.V1VMPodDNSConfig, error) {
+	if len(l) == 0 || l[0] == nil {
+		return &models.V1VMPodDNSConfig{}, nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &models.V1VMPodDNSConfig{}
+	if v, ok := in["nameservers"].([]interface{}); ok {
+		obj.Nameservers = utils.ExpandStringSlice(v)
+	}
+	if v, ok := in["searches"].([]interface{}); ok {
+		obj.Searches = utils.ExpandStringSlice(v)
+	}
+	if v, ok := in["option"].([]interface{}); ok {
+		obj.Options = expandDNSConfigOptionsToVM(v)
+	}
+	return obj, nil
+}
+
+func expandDNSConfigOptionsToVM(options []interface{}) []*models.V1VMPodDNSConfigOption {
+	if len(options) == 0 {
+		return nil
+	}
+	opts := make([]*models.V1VMPodDNSConfigOption, 0, len(options))
+	for _, c := range options {
+		in := c.(map[string]interface{})
+		opt := &models.V1VMPodDNSConfigOption{}
+		if v, ok := in["name"].(string); ok {
+			opt.Name = v
+		}
+		if v, ok := in["value"].(string); ok {
+			opt.Value = v
+		}
+		opts = append(opts, opt)
+	}
+	return opts
+}
+
 func expandDNSConfigOptions(options []interface{}) ([]v1.PodDNSConfigOption, error) {
 	if len(options) == 0 {
 		return []v1.PodDNSConfigOption{}, nil
@@ -137,6 +176,50 @@ func flattenPodDNSConfigOptions(options []v1.PodDNSConfigOption) []interface{} {
 			obj["value"] = *v.Value
 		}
 		att[i] = obj
+	}
+	return att
+}
+
+// FlattenPodDNSConfigFromVM flattens Palette API V1VMPodDNSConfig to the same schema shape as FlattenPodDNSConfig.
+func FlattenPodDNSConfigFromVM(in *models.V1VMPodDNSConfig) []interface{} {
+	if in == nil {
+		return []interface{}{}
+	}
+	att := make(map[string]interface{})
+
+	if len(in.Nameservers) > 0 {
+		att["nameservers"] = in.Nameservers
+	}
+	if len(in.Searches) > 0 {
+		att["searches"] = in.Searches
+	}
+	if len(in.Options) > 0 {
+		att["option"] = flattenPodDNSConfigOptionsFromVM(in.Options)
+	}
+
+	if len(att) > 0 {
+		return []interface{}{att}
+	}
+	return []interface{}{}
+}
+
+func flattenPodDNSConfigOptionsFromVM(options []*models.V1VMPodDNSConfigOption) []interface{} {
+	if len(options) == 0 {
+		return nil
+	}
+	att := make([]interface{}, 0, len(options))
+	for _, v := range options {
+		if v == nil {
+			continue
+		}
+		obj := map[string]interface{}{}
+		if v.Name != "" {
+			obj["name"] = v.Name
+		}
+		if v.Value != "" {
+			obj["value"] = v.Value
+		}
+		att = append(att, obj)
 	}
 	return att
 }

@@ -23,10 +23,10 @@ resource "spectrocloud_appliance" "appliance" {
 
 ## Import
 
-Appliances can be imported using the appliance UID. This is a project-level resource.
+Appliances can be imported using the appliance_UID or appliance_name. This is a project-level resource.
 
 ```bash
-terraform import spectrocloud_appliance.example <appliance_uid>
+terraform import spectrocloud_appliance.example <appliance_uid>/<appliance_name>
 ```
 
 Where `<appliance_uid>` is the appliance UID.

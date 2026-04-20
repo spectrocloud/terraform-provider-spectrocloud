@@ -34,7 +34,7 @@ data "spectrocloud_pack" "filtered" {
     pack_type   = ["spectro"]       # Allowed: "helm", "spectro", "oci", "manifest"
     addon_type  = ["system app"]    # Allowed: "load balancer", "ingress", "logging", "monitoring", "security", "authentication", "servicemesh", "system app", "app services", "registry", "csi", "cni", "integration"
     pack_layer  = ["addon"]         # Allowed: "kernel", "os", "k8s", "cni", "csi", "addon"
-    environment = ["all"]           # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "openstack", "edge-native"
+    environment = ["all"]           # Allowed: "all", "aws", "eks", "azure", "aks", "gcp", "gke", "vsphere", "maas", "edge-native"
     is_fips     = false             # Boolean: true (FIPS-compliant) / false (default)
     pack_source = ["community"]      # Allowed: "spectrocloud", "community"
   }
@@ -99,7 +99,7 @@ data "spectrocloud_pack" "cni" {
 Optional:
 
 - `addon_type` (Set of String) Defines the type of add-on pack. Allowed values are `load balancer`, `ingress`, `logging`, `monitoring`, `security`, `authentication`, `servicemesh`, `system app`, `app services`, `registry` and `integration`. If not specified, all options will be set by default. For `storage` and `network` addon_type set `csi` or `cni` respectively in pack_layer
-- `environment` (Set of String) Defines the environment where the pack will be deployed. Options include `all`, `aws`, `eks`, `azure`, `aks`, `gcp`, `gke`, `vsphere`, `maas`, `openstack` and `edge-native`. If not specified, all options will be set by default.
+- `environment` (Set of String) Defines the environment where the pack will be deployed. Options include `all`, `aws`, `eks`, `azure`, `aks`, `gcp`, `gke`, `vsphere`, `maas` and `edge-native`. If not specified, all options will be set by default.
 - `is_fips` (Boolean) Indicates whether the pack is FIPS-compliant. If `true`, only FIPS-compliant components will be used.
 - `pack_layer` (Set of String) Indicates the pack layer, such as `kernel`, `os`, `k8s`, `cni`, `csi`, or `addon`. If not specified, all options will be set by default.
 - `pack_source` (Set of String) Specify the source of the pack. Allowed values are `spectrocloud` and `community`. If not specified, all options will be set by default.

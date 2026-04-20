@@ -34,11 +34,25 @@ resource "spectrocloud_platform_setting" "platform_settings" {
   }
 }
 
-## import existing platform settings
-#import {
-#  to = spectrocloud_platform_setting.platform_setting
-#  id = "{tenantUID/ProjectUID}:{tenant/project)}" // tenant-uid:tenant or project-uid:project
-#}
+
+## import existing Platform setting## Import
+
+In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
+to import the resource spectrocloud_platform_setting by using its `id` with the Palette `context` separated by a colon. For example:
+
+```terraform
+ import {
+   to = spectrocloud_platform_setting.platform_setting
+   id = "tenant_uid/project_uid:context"
+ }
+```
+
+Using `terraform import`, import the platform setting using the `tenant_uid/project_uid` or `tenant_name/project_name` colon separated with `context`. For example:
+
+```console
+terraform import spectrocloud_platform_setting.example <tenant_uid>/<project_uid>:<project>/<tenant>
+terraform import spectrocloud_platform_setting.example <tenant_name>/<project_name>:<project>/<tenant>
+```
 
 ```
 

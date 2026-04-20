@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/convert"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/virtualmachine"
 
@@ -47,17 +46,17 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 	if cluster == nil {
 		return diag.FromErr(fmt.Errorf("cluster not found for uid %s", clusterUid))
 	}
-	virtualMachineToCreate, err := virtualmachine.FromResourceData(d)
+	virtualMachineHapi, err := virtualmachine.FromResourceData(d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	hapiVM, err := convert.ToHapiVm(virtualMachineToCreate)
+	// hapiVM, err := convert.ToHapiVm(virtualMachineToCreate)
 	if _, ok := d.GetOk("run_on_launch"); ok {
 		if !d.Get("run_on_launch").(bool) {
-			hapiVM.Spec.RunStrategy = "Manual"
+			virtualMachineHapi.Spec.RunStrategy = "Manual"
 		} else {
-			hapiVM.Spec.Running = d.Get("run_on_launch").(bool)
+			virtualMachineHapi.Spec.Running = d.Get("run_on_launch").(bool)
 		}
 	}
 
@@ -66,38 +65,38 @@ func resourceKubevirtVirtualMachineCreate(ctx context.Context, d *schema.Resourc
 	}
 	if cloneFromVM, ok := d.GetOk("base_vm_name"); ok && cloneFromVM != "" {
 		// Handling clone case
-		err = c.CloneVirtualMachine(clusterUid, cloneFromVM.(string), hapiVM.Metadata.Name, hapiVM.Metadata.Namespace)
+		err = c.CloneVirtualMachine(clusterUid, cloneFromVM.(string), virtualMachineHapi.Metadata.Name, virtualMachineHapi.Metadata.Namespace)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		vm, err := c.GetVirtualMachine(clusterUid, hapiVM.Metadata.Namespace, hapiVM.Metadata.Name)
+		vm, err := c.GetVirtualMachine(clusterUid, virtualMachineHapi.Metadata.Namespace, virtualMachineHapi.Metadata.Name)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 		if vm == nil {
-			return diag.FromErr(fmt.Errorf("virtual machine not found after clone operation %s, %s, %s", clusterUid, hapiVM.Metadata.Namespace, hapiVM.Metadata.Name))
+			return diag.FromErr(fmt.Errorf("virtual machine not found after clone operation %s, %s, %s", clusterUid, virtualMachineHapi.Metadata.Namespace, virtualMachineHapi.Metadata.Name))
 		}
 		d.SetId(utils.BuildId(ClusterContext, clusterUid, vm.Metadata))
 		// apply the rest of configuration after clone to override it.
-		hapiVM.Metadata.ResourceVersion = vm.Metadata.ResourceVersion // set resource version to avoid conflict
+		virtualMachineHapi.Metadata.ResourceVersion = vm.Metadata.ResourceVersion // set resource version to avoid conflict
 		/*		//	// TODO: There is issue in Ally side, team asked as to explicitly make deletion-time to nil before put operation, after fix will remove.
 				hapiVM.Spec.Template.Metadata.DeletionTimestamp = nil
 				hapiVM.Metadata.DeletionTimestamp = nil
 				hapiVM.Spec.Template.Metadata.CreationTimestamp = ""
 				hapiVM.Metadata.CreationTimestamp = ""*/
-		_, err = c.UpdateVirtualMachine(cluster, hapiVM.Metadata.Name, hapiVM)
+		_, err = c.UpdateVirtualMachine(cluster, virtualMachineHapi.Metadata.Name, virtualMachineHapi)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	} else {
-		vm, err := c.CreateVirtualMachine(cluster.Metadata.UID, hapiVM)
+		vm, err := c.CreateVirtualMachine(cluster.Metadata.UID, virtualMachineHapi)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 		d.SetId(utils.BuildId(ClusterContext, clusterUid, vm.Metadata))
 	}
 	if d.Get("run_on_launch").(bool) {
-		diags, _ = waitForVirtualMachineToTargetState(ctx, d, cluster.Metadata.UID, hapiVM.Metadata.Name, hapiVM.Metadata.Namespace, diags, c, "create", "Running")
+		diags, _ = waitForVirtualMachineToTargetState(ctx, d, cluster.Metadata.UID, virtualMachineHapi.Metadata.Name, virtualMachineHapi.Metadata.Namespace, diags, c, "create", "Running")
 		if diags.HasError() {
 			return diags
 		}
@@ -123,16 +122,16 @@ func resourceKubevirtVirtualMachineRead(ctx context.Context, d *schema.ResourceD
 	if err != nil {
 		return handleReadError(d, err, diags)
 	}
-	vm, err := convert.ToKubevirtVM(hapiVM)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if vm == nil {
+	// vm, err := convert.ToKubevirtVM(hapiVM)
+	// if err != nil {
+	// 	return diag.FromErr(err)
+	// }
+	if hapiVM == nil {
 		return nil
 	}
-	log.Printf("[INFO] Received virtual machine: %#v", vm)
+	log.Printf("[INFO] Received virtual machine: %#v", hapiVM)
 
-	err = virtualmachine.ToResourceData(*vm, d)
+	err = virtualmachine.ToResourceData(*hapiVM, d)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -158,10 +157,10 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	hapiVM, err = convert.ToHapiVm(vm)
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	// hapiVM, err = convert.ToHapiVm(vm)
+	// if err != nil {
+	// 	return diag.FromErr(err)
+	// }
 
 	// needed to get context for the cluster
 	cluster, err := c.GetCluster(clusterUid)
@@ -171,12 +170,18 @@ func resourceVirtualMachineUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	if _, ok := d.GetOk("run_on_launch"); ok {
 		if !d.Get("run_on_launch").(bool) {
-			hapiVM.Spec.RunStrategy = "Manual"
+			vm.Spec.RunStrategy = "Manual"
 		} else {
-			hapiVM.Spec.Running = d.Get("run_on_launch").(bool)
+			vm.Spec.Running = d.Get("run_on_launch").(bool)
 		}
 	}
-	_, err = c.UpdateVirtualMachine(cluster, vmName, hapiVM)
+	// _, err = c.UpdateVirtualMachine(cluster, vmName, hapiVM)
+	// Send the VM built from Terraform (vm), not the one read from API (hapiVM).
+	// Preserve resourceVersion so the API can perform optimistic concurrency.
+	if hapiVM.Metadata != nil && hapiVM.Metadata.ResourceVersion != "" {
+		vm.Metadata.ResourceVersion = hapiVM.Metadata.ResourceVersion
+	}
+	_, err = c.UpdateVirtualMachine(cluster, vmName, vm)
 	if err != nil {
 		return diag.FromErr(err)
 	}

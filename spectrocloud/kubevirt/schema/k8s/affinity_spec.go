@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	v1 "k8s.io/api/core/v1"
 
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/utils"
 )
 
@@ -362,154 +363,415 @@ func flattenNodeSelectorRequirementList(in []v1.NodeSelectorRequirement) []inter
 	return att
 }
 
+// FlattenAffinityFromVM flattens *models.V1VMAffinity to the same shape as FlattenAffinity.
+func FlattenAffinityFromVM(in *models.V1VMAffinity) []interface{} {
+	if in == nil {
+		return nil
+	}
+	att := make(map[string]interface{})
+	if in.NodeAffinity != nil {
+		if nodeAff := flattenNodeAffinityFromVM(in.NodeAffinity); len(nodeAff) > 0 {
+			att["node_affinity"] = nodeAff
+		}
+	}
+	if in.PodAffinity != nil {
+		if podAff := flattenPodAffinityFromVM(in.PodAffinity); len(podAff) > 0 {
+			att["pod_affinity"] = podAff
+		}
+	}
+	if in.PodAntiAffinity != nil {
+		if podAntiAff := flattenPodAntiAffinityFromVM(in.PodAntiAffinity); len(podAntiAff) > 0 {
+			att["pod_anti_affinity"] = podAntiAff
+		}
+	}
+	if len(att) > 0 {
+		return []interface{}{att}
+	}
+	return []interface{}{}
+}
+
+func flattenNodeAffinityFromVM(in *models.V1VMNodeAffinity) []interface{} {
+	if in == nil {
+		return nil
+	}
+	att := make(map[string]interface{})
+	if in.RequiredDuringSchedulingIgnoredDuringExecution != nil {
+		if v := flattenNodeSelectorFromVM(in.RequiredDuringSchedulingIgnoredDuringExecution); len(v) > 0 {
+			att["required_during_scheduling_ignored_during_execution"] = v
+		}
+	}
+	if len(in.PreferredDuringSchedulingIgnoredDuringExecution) > 0 {
+		if v := flattenPreferredSchedulingTermsFromVM(in.PreferredDuringSchedulingIgnoredDuringExecution); len(v) > 0 {
+			att["preferred_during_scheduling_ignored_during_execution"] = v
+		}
+	}
+	if len(att) > 0 {
+		return []interface{}{att}
+	}
+	return []interface{}{}
+}
+
+func flattenNodeSelectorFromVM(in *models.V1VMNodeSelector) []interface{} {
+	if in == nil || len(in.NodeSelectorTerms) == 0 {
+		return nil
+	}
+	att := make(map[string]interface{})
+	att["node_selector_term"] = flattenNodeSelectorTermsFromVM(in.NodeSelectorTerms)
+	return []interface{}{att}
+}
+
+func flattenNodeSelectorTermsFromVM(in []*models.V1VMNodeSelectorTerm) []interface{} {
+	if len(in) == 0 {
+		return nil
+	}
+	att := make([]interface{}, len(in))
+	for i, n := range in {
+		if n != nil {
+			att[i] = flattenNodeSelectorTermFromVM(n)[0]
+		}
+	}
+	return att
+}
+
+func flattenNodeSelectorTermFromVM(in *models.V1VMNodeSelectorTerm) []interface{} {
+	if in == nil {
+		return []interface{}{map[string]interface{}{}}
+	}
+	att := make(map[string]interface{})
+	if len(in.MatchExpressions) > 0 {
+		att["match_expressions"] = flattenNodeSelectorRequirementListFromVM(in.MatchExpressions)
+	}
+	if len(in.MatchFields) > 0 {
+		att["match_fields"] = flattenNodeSelectorRequirementListFromVM(in.MatchFields)
+	}
+	return []interface{}{att}
+}
+
+func flattenNodeSelectorRequirementListFromVM(in []*models.V1VMNodeSelectorRequirement) []interface{} {
+	if len(in) == 0 {
+		return nil
+	}
+	att := make([]interface{}, len(in))
+	for i, v := range in {
+		if v == nil {
+			continue
+		}
+		m := map[string]interface{}{}
+		if v.Key != nil {
+			m["key"] = *v.Key
+		}
+		if len(v.Values) > 0 {
+			m["values"] = utils.NewStringSet(schema.HashString, v.Values)
+		}
+		if v.Operator != nil {
+			m["operator"] = *v.Operator
+		}
+		att[i] = m
+	}
+	return att
+}
+
+func flattenPreferredSchedulingTermsFromVM(in []*models.V1VMPreferredSchedulingTerm) []interface{} {
+	if len(in) == 0 {
+		return nil
+	}
+	att := make([]interface{}, len(in))
+	for i, n := range in {
+		if n == nil {
+			continue
+		}
+		m := make(map[string]interface{})
+		if n.Weight != nil {
+			m["weight"] = int(*n.Weight)
+		}
+		if n.Preference != nil {
+			m["preference"] = flattenNodeSelectorTermFromVM(n.Preference)[0]
+		}
+		att[i] = m
+	}
+	return att
+}
+
+func flattenPodAffinityFromVM(in *models.V1VMPodAffinity) []interface{} {
+	if in == nil {
+		return nil
+	}
+	att := make(map[string]interface{})
+	if len(in.RequiredDuringSchedulingIgnoredDuringExecution) > 0 {
+		att["required_during_scheduling_ignored_during_execution"] = flattenPodAffinityTermsFromVM(in.RequiredDuringSchedulingIgnoredDuringExecution)
+	}
+	if len(in.PreferredDuringSchedulingIgnoredDuringExecution) > 0 {
+		att["preferred_during_scheduling_ignored_during_execution"] = flattenWeightedPodAffinityTermsFromVM(in.PreferredDuringSchedulingIgnoredDuringExecution)
+	}
+	if len(att) > 0 {
+		return []interface{}{att}
+	}
+	return []interface{}{}
+}
+
+func flattenPodAntiAffinityFromVM(in *models.V1PodAntiAffinity) []interface{} {
+	if in == nil {
+		return nil
+	}
+	att := make(map[string]interface{})
+	if len(in.RequiredDuringSchedulingIgnoredDuringExecution) > 0 {
+		att["required_during_scheduling_ignored_during_execution"] = flattenPodAffinityTermsFromVM(in.RequiredDuringSchedulingIgnoredDuringExecution)
+	}
+	if len(in.PreferredDuringSchedulingIgnoredDuringExecution) > 0 {
+		att["preferred_during_scheduling_ignored_during_execution"] = flattenWeightedPodAffinityTermsFromVM(in.PreferredDuringSchedulingIgnoredDuringExecution)
+	}
+	if len(att) > 0 {
+		return []interface{}{att}
+	}
+	return []interface{}{}
+}
+
+func flattenPodAffinityTermsFromVM(in []*models.V1VMPodAffinityTerm) []interface{} {
+	if len(in) == 0 {
+		return nil
+	}
+	att := make([]interface{}, len(in))
+	for i, n := range in {
+		if n == nil {
+			continue
+		}
+		m := make(map[string]interface{})
+		if len(n.Namespaces) > 0 {
+			m["namespaces"] = utils.NewStringSet(schema.HashString, n.Namespaces)
+		}
+		if n.TopologyKey != nil && *n.TopologyKey != "" {
+			m["topology_key"] = *n.TopologyKey
+		}
+		if n.LabelSelector != nil {
+			m["label_selector"] = flattenLabelSelectorFromVM(n.LabelSelector)
+		}
+		att[i] = m
+	}
+	return att
+}
+
+func flattenWeightedPodAffinityTermsFromVM(in []*models.V1VMWeightedPodAffinityTerm) []interface{} {
+	if len(in) == 0 {
+		return nil
+	}
+	att := make([]interface{}, len(in))
+	for i, n := range in {
+		if n == nil {
+			continue
+		}
+		m := make(map[string]interface{})
+		if n.Weight != nil {
+			m["weight"] = int(*n.Weight)
+		}
+		if n.PodAffinityTerm != nil {
+			m["pod_affinity_term"] = flattenPodAffinityTermsFromVM([]*models.V1VMPodAffinityTerm{n.PodAffinityTerm})
+		}
+		att[i] = m
+	}
+	return att
+}
+
+func flattenLabelSelectorFromVM(in *models.V1VMLabelSelector) []interface{} {
+	if in == nil {
+		return nil
+	}
+	att := make(map[string]interface{})
+	if len(in.MatchExpressions) > 0 {
+		att["match_expressions"] = flattenLabelSelectorRequirementFromVM(in.MatchExpressions)
+	}
+	if len(in.MatchLabels) > 0 {
+		att["match_labels"] = in.MatchLabels
+	}
+	return []interface{}{att}
+}
+
+func flattenLabelSelectorRequirementFromVM(in []*models.V1VMLabelSelectorRequirement) []interface{} {
+	if len(in) == 0 {
+		return nil
+	}
+	att := make([]interface{}, len(in))
+	for i, v := range in {
+		if v == nil {
+			continue
+		}
+		m := map[string]interface{}{}
+		if v.Key != nil {
+			m["key"] = *v.Key
+		}
+		if v.Operator != nil {
+			m["operator"] = *v.Operator
+		}
+		if len(v.Values) > 0 {
+			m["values"] = utils.NewStringSet(schema.HashString, v.Values)
+		}
+		att[i] = m
+	}
+	return att
+}
+
 // Expanders
 
-func ExpandAffinity(a []interface{}) *v1.Affinity {
+func ExpandAffinity(a []interface{}) *models.V1VMAffinity {
 	if len(a) == 0 || a[0] == nil {
-		return &v1.Affinity{}
+		return &models.V1VMAffinity{}
 	}
 	in := a[0].(map[string]interface{})
-	obj := v1.Affinity{}
+	obj := models.V1VMAffinity{}
 	if v, ok := in["node_affinity"].([]interface{}); ok && len(v) > 0 {
 		obj.NodeAffinity = expandNodeAffinity(v)
 	}
 	if v, ok := in["pod_affinity"].([]interface{}); ok && len(v) > 0 {
-		obj.PodAffinity = expandPodAffinity(v)
+		obj.PodAffinity = expandPodAffinityToVM(v)
 	}
 	if v, ok := in["pod_anti_affinity"].([]interface{}); ok && len(v) > 0 {
-		obj.PodAntiAffinity = expandPodAntiAffinity(v)
+		obj.PodAntiAffinity = expandPodAntiAffinityToVM(v)
 	}
 	return &obj
 }
 
-func expandNodeAffinity(a []interface{}) *v1.NodeAffinity {
+func expandNodeAffinity(a []interface{}) *models.V1VMNodeAffinity {
 	if len(a) == 0 || a[0] == nil {
-		return &v1.NodeAffinity{}
+		return &models.V1VMNodeAffinity{}
 	}
 	in := a[0].(map[string]interface{})
-	obj := v1.NodeAffinity{}
+	obj := models.V1VMNodeAffinity{}
 	if v, ok := in["required_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
 		obj.RequiredDuringSchedulingIgnoredDuringExecution = expandNodeSelector(v)
 	}
 	if v, ok := in["preferred_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
-		obj.PreferredDuringSchedulingIgnoredDuringExecution = expandPreferredSchedulingTerms(v)
+		obj.PreferredDuringSchedulingIgnoredDuringExecution = expandPreferredSchedulingTermsToVM(v)
 	}
 	return &obj
 }
 
-func expandPodAffinity(a []interface{}) *v1.PodAffinity {
-	if len(a) == 0 || a[0] == nil {
-		return &v1.PodAffinity{}
-	}
-	in := a[0].(map[string]interface{})
-	obj := v1.PodAffinity{}
-	if v, ok := in["required_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
-		obj.RequiredDuringSchedulingIgnoredDuringExecution = expandPodAffinityTerms(v)
-	}
-	if v, ok := in["preferred_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
-		obj.PreferredDuringSchedulingIgnoredDuringExecution = expandWeightedPodAffinityTerms(v)
-	}
-	return &obj
-}
-
-func expandPodAntiAffinity(a []interface{}) *v1.PodAntiAffinity {
-	if len(a) == 0 || a[0] == nil {
-		return &v1.PodAntiAffinity{}
-	}
-	in := a[0].(map[string]interface{})
-	obj := v1.PodAntiAffinity{}
-	if v, ok := in["required_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
-		obj.RequiredDuringSchedulingIgnoredDuringExecution = expandPodAffinityTerms(v)
-	}
-	if v, ok := in["preferred_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
-		obj.PreferredDuringSchedulingIgnoredDuringExecution = expandWeightedPodAffinityTerms(v)
-	}
-	return &obj
-}
-
-func expandNodeSelector(s []interface{}) *v1.NodeSelector {
-	if len(s) == 0 || s[0] == nil {
-		return &v1.NodeSelector{}
-	}
-	in := s[0].(map[string]interface{})
-	obj := v1.NodeSelector{}
-	if v, ok := in["node_selector_term"].([]interface{}); ok && len(v) > 0 {
-		obj.NodeSelectorTerms = expandNodeSelectorTerms(v)
-	}
-	return &obj
-}
-
-func expandPreferredSchedulingTerms(t []interface{}) []v1.PreferredSchedulingTerm {
+func expandPreferredSchedulingTermsToVM(t []interface{}) []*models.V1VMPreferredSchedulingTerm {
 	if len(t) == 0 || t[0] == nil {
-		return []v1.PreferredSchedulingTerm{}
+		return nil
 	}
-	obj := make([]v1.PreferredSchedulingTerm, len(t))
+	obj := make([]*models.V1VMPreferredSchedulingTerm, len(t))
 	for i, n := range t {
 		in := n.(map[string]interface{})
+		term := &models.V1VMPreferredSchedulingTerm{}
 		if v, ok := in["weight"].(int); ok {
-			obj[i].Weight = safeInt32(v)
+			w := safeInt32(v)
+			term.Weight = &w
 		}
 		if v, ok := in["preference"].([]interface{}); ok && len(v) > 0 {
-			obj[i].Preference = *expandNodeSelectorTerm(v)
+			term.Preference = expandNodeSelectorTerm(v)
 		}
+		obj[i] = term
 	}
 	return obj
 }
 
-func expandPodAffinityTerms(t []interface{}) []v1.PodAffinityTerm {
-	if len(t) == 0 || t[0] == nil {
-		return []v1.PodAffinityTerm{}
+func expandPodAffinityToVM(a []interface{}) *models.V1VMPodAffinity {
+	if len(a) == 0 || a[0] == nil {
+		return &models.V1VMPodAffinity{}
 	}
-	obj := make([]v1.PodAffinityTerm, len(t))
+	in := a[0].(map[string]interface{})
+	obj := &models.V1VMPodAffinity{}
+	if v, ok := in["required_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
+		obj.RequiredDuringSchedulingIgnoredDuringExecution = expandPodAffinityTermsToVM(v)
+	}
+	if v, ok := in["preferred_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
+		obj.PreferredDuringSchedulingIgnoredDuringExecution = expandWeightedPodAffinityTermsToVM(v)
+	}
+	return obj
+}
+
+func expandPodAntiAffinityToVM(a []interface{}) *models.V1PodAntiAffinity {
+	if len(a) == 0 || a[0] == nil {
+		return &models.V1PodAntiAffinity{}
+	}
+	in := a[0].(map[string]interface{})
+	obj := &models.V1PodAntiAffinity{}
+	if v, ok := in["required_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
+		obj.RequiredDuringSchedulingIgnoredDuringExecution = expandPodAffinityTermsToVM(v)
+	}
+	if v, ok := in["preferred_during_scheduling_ignored_during_execution"].([]interface{}); ok && len(v) > 0 {
+		obj.PreferredDuringSchedulingIgnoredDuringExecution = expandWeightedPodAffinityTermsToVM(v)
+	}
+	return obj
+}
+
+func expandPodAffinityTermsToVM(t []interface{}) []*models.V1VMPodAffinityTerm {
+	if len(t) == 0 || t[0] == nil {
+		return nil
+	}
+	obj := make([]*models.V1VMPodAffinityTerm, len(t))
 	for i, n := range t {
 		in := n.(map[string]interface{})
+		term := &models.V1VMPodAffinityTerm{}
 		if v, ok := in["label_selector"].([]interface{}); ok && len(v) > 0 {
-			obj[i].LabelSelector = expandLabelSelector(v)
+			term.LabelSelector = expandLabelSelectorToVM(v)
 		}
 		if v, ok := in["namespaces"].(*schema.Set); ok {
-			obj[i].Namespaces = utils.SliceOfString(v.List())
+			term.Namespaces = utils.SliceOfString(v.List())
 		}
 		if v, ok := in["topology_key"].(string); ok {
-			obj[i].TopologyKey = v
+			term.TopologyKey = &v
 		}
+		obj[i] = term
 	}
 	return obj
 }
 
-func expandWeightedPodAffinityTerms(t []interface{}) []v1.WeightedPodAffinityTerm {
+func expandWeightedPodAffinityTermsToVM(t []interface{}) []*models.V1VMWeightedPodAffinityTerm {
 	if len(t) == 0 || t[0] == nil {
-		return []v1.WeightedPodAffinityTerm{}
+		return nil
 	}
-	obj := make([]v1.WeightedPodAffinityTerm, len(t))
+	obj := make([]*models.V1VMWeightedPodAffinityTerm, len(t))
 	for i, n := range t {
 		in := n.(map[string]interface{})
+		w := &models.V1VMWeightedPodAffinityTerm{}
 		if v, ok := in["weight"].(int); ok {
-			obj[i].Weight = safeInt32(v)
+			weight := safeInt32(v)
+			w.Weight = &weight
 		}
 		if v, ok := in["pod_affinity_term"].([]interface{}); ok && len(v) > 0 {
-			obj[i].PodAffinityTerm = expandPodAffinityTerms(v)[0]
+			terms := expandPodAffinityTermsToVM(v)
+			if len(terms) > 0 {
+				w.PodAffinityTerm = terms[0]
+			}
 		}
+		obj[i] = w
 	}
 	return obj
 }
 
-func expandNodeSelectorTerms(l []interface{}) []v1.NodeSelectorTerm {
-	if len(l) == 0 || l[0] == nil {
-		return []v1.NodeSelectorTerm{}
+func expandNodeSelector(s []interface{}) *models.V1VMNodeSelector {
+	if len(s) == 0 || s[0] == nil {
+		return &models.V1VMNodeSelector{}
 	}
-	obj := make([]v1.NodeSelectorTerm, len(l))
+	in := s[0].(map[string]interface{})
+	obj := models.V1VMNodeSelector{}
+	if v, ok := in["node_selector_term"].([]interface{}); ok && len(v) > 0 {
+		terms := expandNodeSelectorTerms(v)
+		obj.NodeSelectorTerms = make([]*models.V1VMNodeSelectorTerm, len(terms))
+		for i := range terms {
+			obj.NodeSelectorTerms[i] = &terms[i]
+		}
+	}
+	return &obj
+}
+
+func expandNodeSelectorTerms(l []interface{}) []models.V1VMNodeSelectorTerm {
+	if len(l) == 0 || l[0] == nil {
+		return []models.V1VMNodeSelectorTerm{}
+	}
+	obj := make([]models.V1VMNodeSelectorTerm, len(l))
 	for i, n := range l {
 		obj[i] = *expandNodeSelectorTerm([]interface{}{n})
 	}
 	return obj
 }
 
-func expandNodeSelectorTerm(l []interface{}) *v1.NodeSelectorTerm {
+func expandNodeSelectorTerm(l []interface{}) *models.V1VMNodeSelectorTerm {
 	if len(l) == 0 || l[0] == nil {
-		return &v1.NodeSelectorTerm{}
+		return &models.V1VMNodeSelectorTerm{}
 	}
 	in := l[0].(map[string]interface{})
-	obj := v1.NodeSelectorTerm{}
+	obj := models.V1VMNodeSelectorTerm{}
 	if v, ok := in["match_expressions"].([]interface{}); ok && len(v) > 0 {
 		obj.MatchExpressions = expandNodeSelectorRequirementList(v)
 	}
@@ -519,17 +781,19 @@ func expandNodeSelectorTerm(l []interface{}) *v1.NodeSelectorTerm {
 	return &obj
 }
 
-func expandNodeSelectorRequirementList(in []interface{}) []v1.NodeSelectorRequirement {
-	att := []v1.NodeSelectorRequirement{}
+func expandNodeSelectorRequirementList(in []interface{}) []*models.V1VMNodeSelectorRequirement {
+	att := []*models.V1VMNodeSelectorRequirement{}
 	if len(in) < 1 {
 		return att
 	}
-	att = make([]v1.NodeSelectorRequirement, len(in))
+	att = make([]*models.V1VMNodeSelectorRequirement, len(in))
 	for i, c := range in {
 		p := c.(map[string]interface{})
-		att[i].Key = p["key"].(string)
-		att[i].Operator = v1.NodeSelectorOperator(p["operator"].(string))
-		att[i].Values = utils.ExpandStringSlice(p["values"].(*schema.Set).List())
+		att[i] = &models.V1VMNodeSelectorRequirement{
+			Key:      utils.PtrToString(p["key"].(string)),
+			Operator: utils.PtrToString(p["operator"].(string)),
+			Values:   utils.ExpandStringSlice(p["values"].(*schema.Set).List()),
+		}
 	}
 	return att
 }

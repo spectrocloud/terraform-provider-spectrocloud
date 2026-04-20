@@ -97,18 +97,6 @@ func prepareClusterGcpTestData(id string) *schema.ResourceData {
 	return d
 }
 
-func prepareCloudAccountOpenstackTestData(id string) *schema.ResourceData {
-	d := resourceCloudAccountOpenstack().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
-func prepareClusterOpenStackTestData(id string) *schema.ResourceData {
-	d := resourceClusterOpenStack().TestResourceData()
-	d.SetId(id)
-	return d
-}
-
 func prepareCloudAccountVsphereTestData(id string) *schema.ResourceData {
 	d := resourceCloudAccountVsphere().TestResourceData()
 	d.SetId(id)
@@ -318,16 +306,6 @@ func TestResourceCloudAccountGcp(t *testing.T) {
 
 func TestResourceClusterGcp(t *testing.T) {
 	testData := prepareClusterGcpTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceCloudAccountOpenstack(t *testing.T) {
-	testData := prepareCloudAccountOpenstackTestData("test-id")
-	assert.Equal(t, "test-id", testData.Id())
-}
-
-func TestResourceClusterOpenStack(t *testing.T) {
-	testData := prepareClusterOpenStackTestData("test-id")
 	assert.Equal(t, "test-id", testData.Id())
 }
 

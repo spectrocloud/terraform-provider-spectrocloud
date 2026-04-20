@@ -34,7 +34,14 @@ func resourceClusterAws() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceClusterAwsResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceClusterAwsStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:     schema.TypeString,
@@ -78,7 +85,7 @@ func resourceClusterAws() *schema.Resource {
 				Optional:    true,
 				Description: "`cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`",
 			},
-			"cluster_profile":  schemas.ClusterProfileSchema(),
+			"cluster_profile":  schemas.ClusterProfileSchemaV2(),
 			"cluster_template": schemas.ClusterTemplateSchema(),
 			"cluster_type":     schemas.ClusterTypeSchema(),
 			"apply_setting": {
@@ -139,6 +146,12 @@ func resourceClusterAws() *schema.Resource {
 				Default:      "",
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
+			},
+			"update_worker_pools_in_parallel": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
@@ -253,12 +266,33 @@ func resourceClusterAws() *schema.Resource {
 							Default:     0,
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
+						"skip_k8s_upgrade": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "disabled",
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
+						},
 						"capacity_type": {
 							Type:         schema.TypeString,
 							Default:      "on-demand",
 							Optional:     true,
-							ValidateFunc: validation.StringInSlice([]string{"on-demand", "spot"}, false),
-							Description:  "Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.",
+							ValidateFunc: validation.StringInSlice([]string{"on-demand", "spot", "host-resource-group"}, false),
+							Description:  "Capacity type: 'on-demand', 'spot', or 'host-resource-group' (dedicated hosts). Defaults to 'on-demand'.",
+						},
+						"host_resource_group_arn": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "ARN of AWS Host Resource Group for node placement on dedicated hosts.",
+						},
+						"license_configuration_arns": {
+							Type:        schema.TypeSet,
+							Optional:    true,
+							Description: "List of AWS License Configuration ARNs (required when hostResourceGroupArn is specified, max 10)",
+							Set:         schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
 						},
 						"max_price": {
 							Type:        schema.TypeString,
@@ -516,11 +550,25 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		oi["max"] = int(machinePool.MaxSize)
 		oi["instance_type"] = machinePool.InstanceType
 		if machinePool.CapacityType != nil {
-			oi["capacity_type"] = machinePool.CapacityType
+			oi["capacity_type"] = *machinePool.CapacityType
+			if *machinePool.CapacityType == "host-resource-group" {
+				if machinePool.HostResourceGroupArn != "" {
+					oi["host_resource_group_arn"] = machinePool.HostResourceGroupArn
+				}
+				if len(machinePool.LicenseConfigurationArns) > 0 {
+					oi["license_configuration_arns"] = machinePool.LicenseConfigurationArns
+				}
+			}
 		}
 		if machinePool.SpotMarketOptions != nil {
 			oi["max_price"] = machinePool.SpotMarketOptions.MaxPrice
 		}
+		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" for backward compat when API omits field
+		skipK8sUpgrade := "disabled"
+		if machinePool.SkipK8sUpgrade != nil && *machinePool.SkipK8sUpgrade != "" {
+			skipK8sUpgrade = *machinePool.SkipK8sUpgrade
+		}
+		oi["skip_k8s_upgrade"] = skipK8sUpgrade
 		oi["disk_size_gb"] = int(machinePool.RootDeviceSize)
 		if machinePool.SubnetIds != nil {
 			oi["az_subnets"] = machinePool.SubnetIds
@@ -820,9 +868,54 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 		}
 	}
 
+	if capacityType == "host-resource-group" {
+		if m["host_resource_group_arn"] != nil && m["host_resource_group_arn"].(string) != "" {
+			mp.CloudConfig.HostResourceGroupArn = m["host_resource_group_arn"].(string)
+		}
+		if m["license_configuration_arns"] != nil {
+			arnsSet := m["license_configuration_arns"].(*schema.Set)
+			arns := make([]string, 0, arnsSet.Len())
+			for _, v := range arnsSet.List() {
+				arns = append(arns, v.(string))
+			}
+			mp.CloudConfig.LicenseConfigurationArns = arns
+		}
+	}
+
+	if !controlPlane {
+		skipK8sUpgrade := "disabled"
+		if v, ok := m["skip_k8s_upgrade"].(string); ok && v != "" {
+			skipK8sUpgrade = v
+		}
+		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
+	}
+
 	if m["additional_security_groups"] != nil {
 		mp.CloudConfig.AdditionalSecurityGroups = setAdditionalSecurityGroups(m)
 	}
 
 	return mp, nil
+}
+
+func resourceClusterAwsStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading AWS cluster state from version 2 to 3")
+
+	// Convert cluster_profile from TypeList (v2) to TypeSet (v3).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
+	}
+
+	return rawState, nil
 }

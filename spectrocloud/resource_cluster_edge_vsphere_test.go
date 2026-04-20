@@ -1,9 +1,10 @@
 package spectrocloud
 
 import (
+	"testing"
+
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
-	"testing"
 )
 
 func TestFlattenMachinePoolConfigsEdgeVsphere(t *testing.T) {
@@ -41,9 +42,9 @@ func TestFlattenMachinePoolConfigsEdgeVsphere(t *testing.T) {
 					Name:                    "pool1",
 					Size:                    3,
 					InstanceType: &models.V1VsphereInstanceType{
-						DiskGiB:   int32Ptr(100),
-						MemoryMiB: int64Ptr(8192),
-						NumCPUs:   int32Ptr(4),
+						DiskGiB:   types.Ptr(int32(100)),
+						MemoryMiB: types.Ptr(int64(8192)),
+						NumCPUs:   types.Ptr(int32(4)),
 					},
 					Placements: []*models.V1VspherePlacementConfig{
 						{

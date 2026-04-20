@@ -145,5 +145,47 @@ resource "spectrocloud_cluster_profile" "profile" {
       immutable = false
     }
   }
+  profile_variables {
+    variable {
+      default_value = "test2"
+      description   = null
+      display_name  = "Type List"
+      format        = "string"
+      hidden        = false
+      immutable     = false
+      input_type    = "dropdown"
+      is_sensitive  = false
+      name          = "type_list"
+      regex         = null
+      required      = false
+      options {
+        description = "test 1 description"
+        label       = "test1"
+        value       = "value1"
+      }
+      options {
+        description = "test 2 description"
+        label       = "test2"
+        value       = "value2"
+      }
+    }
+    variable {
+      default_value = <<-EOT
+      sdfsdfdsf
+      sdfsdf
+      sdfdsf
+      EOT      
+      description   = null
+      display_name  = "Type Multiline"
+      format        = "string"
+      hidden        = false
+      immutable     = false
+      input_type    = "multiline"
+      is_sensitive  = false
+      name          = "test_multiline"
+      regex         = null
+      required      = false
+    }
+  }
   */
 }

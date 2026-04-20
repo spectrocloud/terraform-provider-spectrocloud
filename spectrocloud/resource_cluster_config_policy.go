@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client/herr"
 )
 
 func resourceClusterConfigPolicy() *schema.Resource {
@@ -127,7 +128,10 @@ func resourceClusterConfigPolicyRead(ctx context.Context, d *schema.ResourceData
 	if err := d.Set("tags", flattenTags(policy.Metadata.Labels)); err != nil {
 		return diag.FromErr(err)
 	}
-
+	// currently only maintenance policy is supported, hence setting it to maintenance directly
+	if err := d.Set("policy_type", "maintenance"); err != nil {
+		return diag.FromErr(err)
+	}
 	if policy.Spec != nil {
 		if err := d.Set("schedules", flattenClusterConfigPolicySchedules(policy.Spec.Schedules)); err != nil {
 			return diag.FromErr(err)
@@ -172,14 +176,51 @@ func resourceClusterConfigPolicyDelete(ctx context.Context, d *schema.ResourceDa
 }
 
 func resourceClusterConfigPolicyImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
-	// The ID passed in is the UID
-	d.SetId(d.Id())
+	// Import ID format: id_or_name:context (e.g. "my-policy:project" or "uid-123:project")
+	resourceContext, policyID, err := ParseResourceID(d)
+	if err != nil {
+		return nil, err
+	}
+	c := getV1ClientWithResourceContext(m, resourceContext)
 
+	// Try by UID first
+	policy, err := c.GetClusterConfigPolicy(policyID)
+	if err == nil && policy != nil {
+		d.SetId(policy.Metadata.UID)
+		if err := d.Set("context", resourceContext); err != nil {
+			return nil, err
+		}
+		diags := resourceClusterConfigPolicyRead(ctx, d, m)
+		if diags.HasError() {
+			return nil, diags[0].Validate()
+		}
+		return []*schema.ResourceData{d}, nil
+	}
+	if err != nil && !herr.IsNotFound(err) {
+		return nil, fmt.Errorf("unable to retrieve cluster config policy '%s': %w", policyID, err)
+	}
+
+	// Try by name
+	policySummary, nameErr := c.GetClusterConfigPolicyByName(policyID)
+	if nameErr != nil {
+		return nil, fmt.Errorf("unable to retrieve cluster config policy by name or id '%s': %w", policyID, nameErr)
+	}
+	if policySummary == nil || policySummary.Metadata == nil {
+		return nil, fmt.Errorf("cluster config policy '%s' not found in context %s", policyID, resourceContext)
+	}
+	policyUID := policySummary.Metadata.UID
+	if policyUID == "" {
+		return nil, fmt.Errorf("cluster config policy with name '%s' has no UID", policyID)
+	}
+
+	d.SetId(policyUID)
+	if err := d.Set("context", resourceContext); err != nil {
+		return nil, err
+	}
 	diags := resourceClusterConfigPolicyRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, diags[0].Validate()
 	}
-
 	return []*schema.ResourceData{d}, nil
 }
 

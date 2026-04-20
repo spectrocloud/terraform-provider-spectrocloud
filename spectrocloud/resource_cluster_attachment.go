@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -30,7 +31,14 @@ func resourceAddonDeployment() *schema.Resource {
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 
-		SchemaVersion: 2,
+		SchemaVersion: 3,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourceAddonDeploymentResourceV2().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourceAddonDeploymentStateUpgradeV2,
+				Version: 2,
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"cluster_uid": {
 				Type:        schema.TypeString,
@@ -45,7 +53,7 @@ func resourceAddonDeployment() *schema.Resource {
 				Description: "Specifies cluster context where addon profile is attached. " +
 					"Allowed values are `project` or `tenant`. Defaults to `project`. " + PROJECT_NAME_NUANCE,
 			},
-			"cluster_profile": schemas.ClusterProfileSchema(),
+			"cluster_profile": schemas.ClusterProfileSchemaV2(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -59,9 +67,32 @@ func resourceAddonDeployment() *schema.Resource {
 	}
 }
 
+func resourceAddonDeploymentStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] Upgrading addon deployment state from version 2 to 3")
+
+	// Convert cluster_profile from TypeList (v2) to TypeSet (v3).
+	//
+	// Note: We keep the data as a list in rawState and let Terraform's schema processing
+	// convert it to TypeSet during normal resource loading. This avoids JSON serialization
+	// issues with schema.Set objects that contain hash functions.
+	if clusterProfileRaw, exists := rawState["cluster_profile"]; exists {
+		if clusterProfileList, ok := clusterProfileRaw.([]interface{}); ok {
+			log.Printf("[DEBUG] Keeping cluster_profile as list during state upgrade with %d items", len(clusterProfileList))
+			rawState["cluster_profile"] = clusterProfileList
+			log.Printf("[DEBUG] Successfully prepared cluster_profile for TypeSet conversion")
+		} else {
+			log.Printf("[DEBUG] cluster_profile is not a list, skipping conversion")
+		}
+	} else {
+		log.Printf("[DEBUG] No cluster_profile found in state, skipping conversion")
+	}
+
+	return rawState, nil
+}
+
 // validateSingleClusterProfile validates that exactly one cluster_profile is specified
 func validateSingleClusterProfile(d *schema.ResourceData) error {
-	profiles := d.Get("cluster_profile").([]interface{})
+	profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
 	if len(profiles) == 0 {
 		return errors.New("exactly one cluster_profile is required, but none was specified")
 	}

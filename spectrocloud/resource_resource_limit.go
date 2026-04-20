@@ -339,16 +339,25 @@ func resourceResourceLimitsDelete(ctx context.Context, d *schema.ResourceData, m
 
 func resourceResourceLimitsImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
 	c := getV1ClientWithResourceContext(m, "tenant")
-	var diags diag.Diagnostics
-	givenTenantId := d.Id()
+
+	// Resolve org name → tenant UID if a name was provided instead of a UID
+	resolvedTenantUID, err := resolveUidorNameToContextID(m, c, d.Id())
+	if err != nil {
+		return nil, err
+	}
+
 	actualTenantId, err := c.GetTenantUID()
 	if err != nil {
 		return nil, err
 	}
-	if givenTenantId != actualTenantId {
-		return nil, fmt.Errorf("tenant id is not valid with current user: %v", diags)
+	if resolvedTenantUID != actualTenantId {
+		return nil, fmt.Errorf("invalid import: tenant %q does not match your authorized tenant UID %q", d.Id(), actualTenantId)
 	}
-	diags = resourceResourceLimitsRead(ctx, d, m)
+
+	// Set the canonical ID so resourceResourceLimitsRead passes its singleton check
+	d.SetId("default-resource-limit-id")
+
+	diags := resourceResourceLimitsRead(ctx, d, m)
 	if diags.HasError() {
 		return nil, fmt.Errorf("could not read resource limits for import: %v", diags)
 	}

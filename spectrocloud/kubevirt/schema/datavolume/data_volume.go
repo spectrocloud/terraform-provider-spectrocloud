@@ -2,8 +2,7 @@ package datavolume
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
-
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/k8s"
 )
 
@@ -35,30 +34,54 @@ func DataVolumeFields() map[string]*schema.Schema {
 	}
 }
 
-func FromResourceData(resourceData *schema.ResourceData) (*cdiv1.DataVolume, error) {
-	result := &cdiv1.DataVolume{}
-
-	result.ObjectMeta = k8s.ExpandMetadata(resourceData.Get("metadata").([]interface{}))
-	spec, err := ExpandDataVolumeSpec(resourceData.Get("spec").([]interface{}))
-	if err != nil {
-		return result, err
+// ToResourceDataFromVM writes metadata, spec, and status for refresh after create/update:
+// status is normalized from the current resource config (expand + flatten), matching legacy ToResourceData.
+func ToResourceDataFromVMTemplate(t *models.V1VMDataVolumeTemplateSpec, resourceData *schema.ResourceData) error {
+	if t == nil {
+		return nil
 	}
-	result.Spec = spec
-	result.Status = expandDataVolumeStatus(resourceData.Get("status").([]interface{}))
-
-	return result, nil
+	if err := resourceData.Set("metadata", k8s.FlattenMetadataDataVolumeFromVM(t.Metadata)); err != nil {
+		return err
+	}
+	if err := resourceData.Set("spec", FlattenDataVolumeSpecFromVM(t.Spec)); err != nil {
+		return err
+	}
+	// HAPI does not carry status
+	// st := expandDataVolumeStatus(resourceData.Get("status").([]interface{}))
+	// if err := resourceData.Set("status", flattenDataVolumeStatus(st)); err != nil {
+	// 	return err
+	// }
+	if err := resourceData.Set("status", nil); err != nil {
+		return err
+	}
+	return nil
 }
 
-func ToResourceData(dv cdiv1.DataVolume, resourceData *schema.ResourceData) error {
-	if err := resourceData.Set("metadata", k8s.FlattenMetadataDataVolume(dv.ObjectMeta)); err != nil {
+// ToResourceDataFromVMTemplateRead refreshes metadata and spec from an API template during Read.
+// Status is set to an empty flattened phase/progress, matching the previous FromHapiVolume+ToResourceData
+// path (DataVolumeTemplate from the VM spec does not carry CDI status).
+func ToResourceDataFromVMTemplateRead(t *models.V1VMDataVolumeTemplateSpec, resourceData *schema.ResourceData) error {
+	if t == nil {
+		return nil
+	}
+	if err := resourceData.Set("metadata", k8s.FlattenMetadataDataVolumeFromVM(t.Metadata)); err != nil {
 		return err
 	}
-	if err := resourceData.Set("spec", FlattenDataVolumeSpec(dv.Spec)); err != nil {
+	if err := resourceData.Set("spec", FlattenDataVolumeSpecFromVM(t.Spec)); err != nil {
 		return err
 	}
-	if err := resourceData.Set("status", flattenDataVolumeStatus(dv.Status)); err != nil {
-		return err
-	}
-
+	// HAPI does not carry status
+	// if err := resourceData.Set("status", flattenDataVolumeStatus(cdiv1.DataVolumeStatus{})); err != nil {
+	// 	return err
+	// }
 	return nil
+}
+
+// ToResourceDataFromVMAddVolumeEntity writes Terraform state from models.V1VMAddVolumeEntity
+// (same shape as create/read against the Palette VM API) without CDI types.
+func ToResourceDataFromVMAddVolumeEntity(v *models.V1VMAddVolumeEntity, resourceData *schema.ResourceData) error {
+	if v == nil {
+		return nil
+	}
+	return ToResourceDataFromVMTemplateRead(v.DataVolumeTemplate, resourceData)
 }
