@@ -38,7 +38,7 @@ func resourceClusterBrownfield() *schema.Resource {
 			Update: schema.DefaultTimeout(10 * time.Minute),
 			Delete: schema.DefaultTimeout(10 * time.Minute),
 		},
-		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack, Edge Native and MAAS). This feature is currently in preview.",
+		Description: "Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack). This feature is currently in preview.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -63,16 +63,14 @@ func resourceClusterBrownfield() *schema.Resource {
 			"cloud_type": {
 				Type:     schema.TypeString,
 				Required: true,
-				ValidateFunc: validation.StringInSlice([]string{
-					"aws",
-					"azure",
-					"gcp",
-					"generic",
-					"apache-cloudstack",
-					"edge-native",
-					"maas",
-				}, false),
-				Description: "The cloud type of the cluster. Supported values: `aws` (IaaS Cluster), `azure` (IaaS Cluster), `gcp` (IaaS Cluster), `generic` (\"generic\" should be used for everything else that is not listed here), `apache-cloudstack`, `edge-native`, `maas`. This field cannot be updated after creation.",
+				// ValidateFunc: validation.StringInSlice([]string{
+				// 	"aws",
+				// 	"azure",
+				// 	"gcp",
+				// 	"generic",
+				// 	"apache-cloudstack",
+				// }, false),
+				Description: "The cloud type of the cluster. Supported values: `aws` (IaaS Cluster), `azure` (IaaS Cluster), `gcp` (IaaS Cluster), `generic` (\"generic\" should be used for everything else that is not listed here), `apache-cloudstack`. This field cannot be updated after creation.",
 			},
 			"import_mode": {
 				Type:         schema.TypeString,
@@ -305,21 +303,12 @@ func resourceClusterBrownfieldImportCreate(ctx context.Context, d *schema.Resour
 			Spec:     toBrownfieldClusterSpecCloudStack(d),
 		}
 		clusterUID, err = c.ImportSpectroClusterApacheCloudStack(entity)
-	case "maas":
-		entity := &models.V1SpectroMaasClusterImportEntity{
-			Metadata: metadata,
-			Spec:     toBrownfieldClusterSpecMaas(d),
-		}
-		clusterUID, err = c.ImportSpectroClusterMaas(entity)
-	case "edge-native":
-		entity := &models.V1SpectroEdgeNativeClusterImportEntity{
-			Metadata: metadata,
-			Spec:     toBrownfieldClusterSpecEdgeNative(d),
-		}
-		clusterUID, err = c.ImportSpectroClusterEdgeNative(entity)
-
 	default:
-		return diag.FromErr(fmt.Errorf("unsupported cloud type: %s", cloudType))
+		entity := &models.V1SpectroGenericClusterImportEntity{
+			Metadata: metadata,
+			Spec:     toBrownfieldClusterSpecGeneric(d),
+		}
+		clusterUID, err = c.ImportSpectroClusterGeneric(entity)
 	}
 
 	if err != nil {
@@ -911,10 +900,6 @@ func getNodeMaintenanceStatusForCloudType(c *client.V1Client, cloudType string) 
 		return c.GetNodeMaintenanceStatusGeneric
 	case "apache-cloudstack":
 		return c.GetNodeMaintenanceStatusCloudStack
-	case "maas":
-		return c.GetNodeMaintenanceStatusMaas
-	case "edge-native":
-		return c.GetNodeMaintenanceStatusEdgeNative
 	default:
 		return nil
 	}
@@ -933,10 +918,6 @@ func getMachinesListForCloudType(c *client.V1Client, cloudType string) func(stri
 		return c.GetMachinesListGeneric
 	case "apache-cloudstack":
 		return c.GetMachinesListApacheCloudstack
-	case "maas":
-		return c.GetMachinesListMaas
-	case "edge-native":
-		return c.GetMachinesListEdgeNative
 	default:
 		return nil
 	}

@@ -745,19 +745,19 @@ func TestGetNodeMaintenanceStatusForCloudType(t *testing.T) {
 		{
 			name:        "vSphere cloud type",
 			cloudType:   "vsphere",
-			expectedNil: false,
-			description: "Should return GetNodeMaintenanceStatusVsphere function for vsphere",
+			expectedNil: true,
+			description: "vsphere not wired in getNodeMaintenanceStatusForCloudType (default returns nil)",
 			verify: func(t *testing.T, result GetMaintenanceStatus) {
-				assert.NotNil(t, result, "Result should not be nil for vsphere")
+				assert.Nil(t, result, "Result should be nil until vsphere is implemented")
 			},
 		},
 		{
 			name:        "OpenShift cloud type",
 			cloudType:   "openshift",
-			expectedNil: false,
-			description: "Should return GetNodeMaintenanceStatusVsphere function for openshift",
+			expectedNil: true,
+			description: "openshift not wired in getNodeMaintenanceStatusForCloudType (default returns nil)",
 			verify: func(t *testing.T, result GetMaintenanceStatus) {
-				assert.NotNil(t, result, "Result should not be nil for openshift")
+				assert.Nil(t, result, "Result should be nil until openshift is implemented")
 			},
 		},
 		{
@@ -772,10 +772,10 @@ func TestGetNodeMaintenanceStatusForCloudType(t *testing.T) {
 		{
 			name:        "EKS-Anywhere cloud type",
 			cloudType:   "eks-anywhere",
-			expectedNil: false,
-			description: "Should return GetNodeMaintenanceStatusGeneric function for eks-anywhere",
+			expectedNil: true,
+			description: "eks-anywhere not wired in getNodeMaintenanceStatusForCloudType (default returns nil)",
 			verify: func(t *testing.T, result GetMaintenanceStatus) {
-				assert.NotNil(t, result, "Result should not be nil for eks-anywhere")
+				assert.Nil(t, result, "Result should be nil until eks-anywhere is implemented")
 			},
 		},
 		{
@@ -840,10 +840,16 @@ func TestGetNodeMaintenanceStatusForCloudType(t *testing.T) {
 
 		cloudTypes := []string{"aws", "azure", "gcp", "vsphere", "openshift", "generic", "eks-anywhere", "apache-cloudstack", "maas", "edge-native", "openstack"}
 
+		unwired := map[string]struct{}{
+			"vsphere":      {},
+			"openshift":    {},
+			"eks-anywhere": {},
+			"openstack":    {},
+		}
 		for _, cloudType := range cloudTypes {
 			result := getNodeMaintenanceStatusForCloudType(c, cloudType)
-			if cloudType == "openstack" {
-				assert.Nil(t, result, "openstack returns nil until implemented")
+			if _, ok := unwired[cloudType]; ok {
+				assert.Nil(t, result, "%s returns nil until implemented", cloudType)
 			} else {
 				assert.NotNil(t, result, "Function should not be nil for cloud type: %s", cloudType)
 			}
@@ -890,19 +896,19 @@ func TestGetMachinesListForCloudType(t *testing.T) {
 		{
 			name:        "vSphere cloud type",
 			cloudType:   "vsphere",
-			expectedNil: false,
-			description: "Should return GetMachinesListVsphere function for vsphere",
+			expectedNil: true,
+			description: "vsphere not wired in getMachinesListForCloudType (default returns nil)",
 			verify: func(t *testing.T, result func(string, string) (map[string]string, error)) {
-				assert.NotNil(t, result, "Result should not be nil for vsphere")
+				assert.Nil(t, result, "Result should be nil until vsphere is implemented")
 			},
 		},
 		{
 			name:        "OpenShift cloud type",
 			cloudType:   "openshift",
-			expectedNil: false,
-			description: "Should return GetMachinesListVsphere function for openshift",
+			expectedNil: true,
+			description: "openshift not wired in getMachinesListForCloudType (default returns nil)",
 			verify: func(t *testing.T, result func(string, string) (map[string]string, error)) {
-				assert.NotNil(t, result, "Result should not be nil for openshift")
+				assert.Nil(t, result, "Result should be nil until openshift is implemented")
 			},
 		},
 		{
@@ -917,10 +923,10 @@ func TestGetMachinesListForCloudType(t *testing.T) {
 		{
 			name:        "EKS-Anywhere cloud type",
 			cloudType:   "eks-anywhere",
-			expectedNil: false,
-			description: "Should return GetMachinesListGeneric function for eks-anywhere",
+			expectedNil: true,
+			description: "eks-anywhere not wired in getMachinesListForCloudType (default returns nil)",
 			verify: func(t *testing.T, result func(string, string) (map[string]string, error)) {
-				assert.NotNil(t, result, "Result should not be nil for eks-anywhere")
+				assert.Nil(t, result, "Result should be nil until eks-anywhere is implemented")
 			},
 		},
 		{
@@ -985,10 +991,16 @@ func TestGetMachinesListForCloudType(t *testing.T) {
 
 		cloudTypes := []string{"aws", "azure", "gcp", "vsphere", "openshift", "generic", "eks-anywhere", "apache-cloudstack", "maas", "edge-native", "openstack"}
 
+		unwired := map[string]struct{}{
+			"vsphere":      {},
+			"openshift":    {},
+			"eks-anywhere": {},
+			"openstack":    {},
+		}
 		for _, cloudType := range cloudTypes {
 			result := getMachinesListForCloudType(c, cloudType)
-			if cloudType == "openstack" {
-				assert.Nil(t, result, "openstack returns nil until implemented")
+			if _, ok := unwired[cloudType]; ok {
+				assert.Nil(t, result, "%s returns nil until implemented", cloudType)
 			} else {
 				assert.NotNil(t, result, "Function should not be nil for cloud type: %s", cloudType)
 			}

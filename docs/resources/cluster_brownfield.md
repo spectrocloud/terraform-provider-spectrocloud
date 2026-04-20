@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cluster_brownfield Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack, Edge Native and MAAS). This feature is currently in preview.
+  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack). This feature is currently in preview.
 ---
 
 # spectrocloud_cluster_brownfield (Resource)
 
-  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack, Edge Native and MAAS). This feature is currently in preview.
+  Register an existing Kubernetes cluster (brownfield) with Palette. This resource allows you to import and manage existing Kubernetes clusters. Supported cloud platforms: (AWS (Iaas), Azure (Iaas), GCP (Iaas), Generic (Generic should be used for everything else that is not listed here), Apache CloudStack). This feature is currently in preview.
 
 ~> **Preview Release**: The `spectrocloud_cluster_brownfield` resource provides the ability to import and register existing Kubernetes clusters across different cloud platforms (AWS, Azure, GCP, vSphere, OpenShift, Generic, Apache CloudStack, Edge Native and MAAS) with Palette. This feature is currently **in preview**, and we are actively working on enhancements that will be released in future versions.
 
@@ -25,7 +25,7 @@ data "spectrocloud_backup_storage_location" "bsl" {
 
 resource "spectrocloud_cluster_brownfield" "cluster" {
   name       = var.cluster_name
-  cloud_type = "generic" # Options: aws, azure, gcp, generic, apache-cloudstack, edge-native, maas
+  cloud_type = "generic" # Options: aws, azure, gcp, generic, apache-cloudstack.
   context    = "project" # Optional, defaults to "project"
   import_mode = "full"   # Options: "read_only" or "full" (default: "full")
   
@@ -128,7 +128,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Required
 
-- `cloud_type` (String) The cloud type of the cluster. Supported values: `aws` (IaaS Cluster), `azure` (IaaS Cluster), `gcp` (IaaS Cluster), `generic` ("generic" should be used for everything else that is not listed here), `apache-cloudstack`, `edge-native`, `maas`. This field cannot be updated after creation.
+- `cloud_type` (String) The cloud type of the cluster. Supported values: `aws` (IaaS Cluster), `azure` (IaaS Cluster), `gcp` (IaaS Cluster), `generic` ("generic" should be used for everything else that is not listed here), `apache-cloudstack`. This field cannot be updated after creation.
 - `name` (String) The name of the cluster to be registered. This field cannot be updated after creation.
 
 ### Optional
