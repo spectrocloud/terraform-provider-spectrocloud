@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
@@ -347,7 +348,8 @@ func TestFlattenMachinePoolConfigsVsphere(t *testing.T) {
 							"static_ip_pool_id": "pool1",
 						},
 					},
-					"update_strategy":        "RollingUpdate",          // Include this field in expected
+					"update_strategy":        "RollingUpdate", // Include this field in expected
+					"skip_k8s_upgrade":       "disabled",
 					"additional_labels":      map[string]interface{}{}, // Include this field in expected
 					"additional_annotations": map[string]interface{}{}, // Include this field in expected
 				},
@@ -367,4 +369,115 @@ func TestFlattenMachinePoolConfigsVsphere(t *testing.T) {
 			assert.Equal(t, tc.expected, result, "Unexpected result in test case: %s", tc.name)
 		})
 	}
+}
+
+func TestFlattenMachinePoolConfigsVsphereSkipK8sUpgrade(t *testing.T) {
+	mp := &models.V1VsphereMachinePoolConfig{
+		Name:           "worker-pool",
+		Size:           1,
+		MinSize:        1,
+		MaxSize:        1,
+		IsControlPlane: types.Ptr(false),
+		Labels:         []string{"worker"},
+		SkipK8sUpgrade: types.Ptr("enabled"),
+		InstanceType: &models.V1VsphereInstanceType{
+			DiskGiB:   types.Ptr(int32(50)),
+			MemoryMiB: types.Ptr(int64(4096)),
+			NumCPUs:   types.Ptr(int32(2)),
+		},
+		Placements: []*models.V1VspherePlacementConfig{
+			{
+				UID:          "p1",
+				Cluster:      "cl",
+				ResourcePool: "rp",
+				Datastore:    "ds",
+				Network: &models.V1VsphereNetworkConfig{
+					NetworkName: types.Ptr("net"),
+				},
+			},
+		},
+		UpdateStrategy: &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+	}
+	out := flattenMachinePoolConfigsVsphere([]*models.V1VsphereMachinePoolConfig{mp})
+	require.Len(t, out, 1)
+	oi := out[0].(map[string]interface{})
+	assert.Equal(t, "enabled", oi["skip_k8s_upgrade"])
+}
+
+func TestToMachinePoolVsphereSkipK8sUpgrade(t *testing.T) {
+	basePlacement := []interface{}{
+		map[string]interface{}{
+			"id":                "",
+			"cluster":           "cl",
+			"resource_pool":     "rp",
+			"datastore":         "ds",
+			"network":           "net",
+			"static_ip_pool_id": "",
+		},
+	}
+	baseInstance := []interface{}{
+		map[string]interface{}{
+			"disk_size_gb": 50,
+			"memory_mb":    4096,
+			"cpu":          2,
+		},
+	}
+
+	t.Run("worker sets SkipK8sUpgrade enabled", func(t *testing.T) {
+		m := map[string]interface{}{
+			"control_plane":           false,
+			"control_plane_as_worker": false,
+			"name":                    "w",
+			"count":                   1,
+			"min":                     1,
+			"max":                     1,
+			"node_repave_interval":    0,
+			"update_strategy":         "RollingUpdateScaleOut",
+			"skip_k8s_upgrade":        "enabled",
+			"placement":               basePlacement,
+			"instance_type":           baseInstance,
+		}
+		mp, err := toMachinePoolVsphere(m)
+		require.NoError(t, err)
+		require.NotNil(t, mp.PoolConfig.SkipK8sUpgrade)
+		assert.Equal(t, "enabled", *mp.PoolConfig.SkipK8sUpgrade)
+	})
+
+	t.Run("worker defaults SkipK8sUpgrade to disabled", func(t *testing.T) {
+		m := map[string]interface{}{
+			"control_plane":           false,
+			"control_plane_as_worker": false,
+			"name":                    "w",
+			"count":                   1,
+			"min":                     1,
+			"max":                     1,
+			"node_repave_interval":    0,
+			"update_strategy":         "RollingUpdateScaleOut",
+			"placement":               basePlacement,
+			"instance_type":           baseInstance,
+		}
+		mp, err := toMachinePoolVsphere(m)
+		require.NoError(t, err)
+		require.NotNil(t, mp.PoolConfig.SkipK8sUpgrade)
+		assert.Equal(t, "disabled", *mp.PoolConfig.SkipK8sUpgrade)
+	})
+
+	t.Run("control plane does not set SkipK8sUpgrade", func(t *testing.T) {
+		m := map[string]interface{}{
+			"control_plane":           true,
+			"control_plane_as_worker": false,
+			"name":                    "cp",
+			"count":                   3,
+			"min":                     3,
+			"max":                     3,
+			"node_repave_interval":    0,
+			"update_strategy":         "RollingUpdateScaleOut",
+			"skip_k8s_upgrade":        "enabled",
+			"placement":               basePlacement,
+			"instance_type":           baseInstance,
+		}
+		mp, err := toMachinePoolVsphere(m)
+		require.NoError(t, err)
+		assert.Nil(t, mp.PoolConfig.SkipK8sUpgrade)
+	})
 }
