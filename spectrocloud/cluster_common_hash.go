@@ -160,6 +160,9 @@ func resourceMachinePoolAksHash(v interface{}) int {
 	if val, ok := nodePool["storage_account_type"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
+	if val, ok := nodePool["os_sku"].(string); ok && val != "" {
+		buf.WriteString(fmt.Sprintf("%s-", val))
+	}
 
 	// Additional labels (map)
 	if _, ok := nodePool["additional_labels"]; ok {
