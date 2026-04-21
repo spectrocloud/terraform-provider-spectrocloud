@@ -501,7 +501,7 @@ func TestProfileVariables(t *testing.T) {
 	assert.Equal(t, schema.TypeList, profileVarsSchema.Type, "ProfileVariables schema should be TypeList")
 	assert.True(t, profileVarsSchema.Optional, "ProfileVariables schema should be optional")
 	assert.Equal(t, 1, profileVarsSchema.MaxItems, "ProfileVariables schema should have MaxItems of 1")
-	assert.Equal(t, "List of variables for the cluster profile.", profileVarsSchema.Description, "ProfileVariables schema should have correct description")
+	assert.Equal(t, "List of variables for the cluster profile. During Day 2 operations, variable updates are prioritized over pack updates due to variable reference constraints. Any additions or removals will apply variable changes first, followed by pack updates.", profileVarsSchema.Description, "ProfileVariables schema should have correct description")
 
 	// Test that Elem is a Resource
 	elemResource, ok := profileVarsSchema.Elem.(*schema.Resource)
