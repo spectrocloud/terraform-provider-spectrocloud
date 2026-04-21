@@ -179,7 +179,7 @@ Optional:
 
 Required:
 
-- `count` (Number) Number of nodes in the machine pool.
+- `count` (Number) Desired pool size sent to the API as `size` (node count when not using autoscaling limits). When autoscaling is enabled (`min` and `max` both greater than 0), set `count` equal to `min`: Palette persists pool `size` at that minimum while the autoscaler adjusts the live node count between `min` and `max`. A `count` greater than `min` is rejected by the provider and would not match persisted state or the Palette UI.
 - `disk_size_gb` (Number)
 - `instance_type` (String)
 - `name` (String)
@@ -193,9 +193,9 @@ Optional:
 - `azs` (List of String) Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
 - `eks_launch_template` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--eks_launch_template))
-- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
+- `max` (Number) Maximum number of nodes in the machine pool. Used for autoscaling together with `min`. When both `min` and `max` are greater than 0, `count` must equal `min`.
 - `max_price` (String)
-- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
+- `min` (Number) Minimum number of nodes in the machine pool. Used for autoscaling together with `max`. When both `min` and `max` are greater than 0, `count` must equal `min`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))

@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -47,6 +48,7 @@ func resourceClusterEks() *schema.Resource {
 				Version: 3,
 			},
 		},
+		CustomizeDiff: resourceClusterEksCustomizeDiff,
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -284,9 +286,12 @@ func resourceClusterEks() *schema.Resource {
 							Required: true,
 						},
 						"count": {
-							Type:        schema.TypeInt,
-							Required:    true,
-							Description: "Number of nodes in the machine pool.",
+							Type:     schema.TypeInt,
+							Required: true,
+							Description: "Desired pool size sent to the API as `size` (node count when not using autoscaling limits). " +
+								"When autoscaling is enabled (`min` and `max` both greater than 0), set `count` equal to `min`: " +
+								"Palette persists pool `size` at that minimum while the autoscaler adjusts the live node count between `min` and `max`. " +
+								"A `count` greater than `min` is rejected by the provider and would not match persisted state or the Palette UI.",
 						},
 						"update_strategy": {
 							Type:         schema.TypeString,
@@ -302,14 +307,16 @@ func resourceClusterEks() *schema.Resource {
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"min": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Description: "Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+							Type:     schema.TypeInt,
+							Optional: true,
+							Description: "Minimum number of nodes in the machine pool. Used for autoscaling together with `max`. " +
+								"When both `min` and `max` are greater than 0, `count` must equal `min`.",
 						},
 						"max": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
+							Type:     schema.TypeInt,
+							Optional: true,
+							Description: "Maximum number of nodes in the machine pool. Used for autoscaling together with `min`. " +
+								"When both `min` and `max` are greater than 0, `count` must equal `min`.",
 						},
 						"instance_type": {
 							Type:     schema.TypeString,
@@ -426,6 +433,53 @@ func resourceClusterEks() *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceClusterEksCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	return validateEksMachinePoolsAutoscalingCount(diff.Get("machine_pool"))
+}
+
+// validateEksMachinePoolsAutoscalingCount enforces that when autoscaling is active (min and max both > 0),
+// count must equal min — matching how pool size is sent to the API and persisted for autoscaled EKS pools.
+func validateEksMachinePoolsAutoscalingCount(raw interface{}) error {
+	if raw == nil {
+		return nil
+	}
+	set, ok := raw.(*schema.Set)
+	if !ok || set == nil {
+		return nil
+	}
+	for _, item := range set.List() {
+		mp, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		count, ok := mp["count"].(int)
+		if !ok {
+			continue
+		}
+		name, _ := mp["name"].(string)
+		minVal := count
+		if v, ok := mp["min"]; ok && v != nil {
+			if vi, ok := v.(int); ok {
+				minVal = vi
+			}
+		}
+		maxVal := count
+		if v, ok := mp["max"]; ok && v != nil {
+			if vi, ok := v.(int); ok {
+				maxVal = vi
+			}
+		}
+		if minVal > 0 && maxVal > 0 && count != minVal {
+			return fmt.Errorf(
+				"machine_pool %q: when `min` and `max` are both greater than 0 (autoscaling enabled), `count` must equal `min` "+
+					"so configuration matches the pool size Palette uses (got count=%d, min=%d, max=%d)",
+				name, count, minVal, maxVal,
+			)
+		}
+	}
+	return nil
 }
 
 func resourceClusterEksCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -1027,6 +1081,12 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 	if m["max"] != nil {
 		max = SafeInt32(m["max"].(int))
 	}
+	// When autoscaling is enabled (min and max both > 0), Palette persists size as min so the UI
+	// does not pad node lists to a stale desired count above the autoscaler's current floor.
+	poolSize := SafeInt32(m["count"].(int))
+	if min > 0 && max > 0 {
+		poolSize = min
+	}
 	instanceType := ""
 	if val, ok := m["instance_type"]; ok {
 		instanceType = val.(string)
@@ -1055,7 +1115,7 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			IsControlPlane:        controlPlane,
 			Labels:                labels,
 			Name:                  types.Ptr(m["name"].(string)),
-			Size:                  types.Ptr(SafeInt32(m["count"].(int))),
+			Size:                  types.Ptr(poolSize),
 			UpdateStrategy:        toUpdateStrategy(m),
 			MinSize:               min,
 			MaxSize:               max,
