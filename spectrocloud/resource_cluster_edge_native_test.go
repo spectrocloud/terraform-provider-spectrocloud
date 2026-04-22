@@ -432,6 +432,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane_as_worker": false,
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
+					"skip_k8s_upgrade":        "disabled",
 					"name":                    "pool1",
 					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 						map[string]interface{}{
@@ -461,6 +462,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane_as_worker": true,
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
+					"skip_k8s_upgrade":        "disabled",
 					"name":                    "pool2",
 					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 						map[string]interface{}{
