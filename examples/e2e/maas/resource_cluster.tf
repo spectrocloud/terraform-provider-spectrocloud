@@ -8,7 +8,8 @@ resource "spectrocloud_cluster_maas" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
   cloud_config {
-    domain = var.maas_domain # "maas.sc"
+    domain   = var.maas_domain # "maas.sc"
+    ssh_keys = var.cluster_ssh_public_keys
   }
 
   machine_pool {

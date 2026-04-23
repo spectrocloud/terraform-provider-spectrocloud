@@ -180,7 +180,8 @@ func TestToMachinePoolMaas(t *testing.T) {
 
 func TestFlattenClusterConfigsMaas(t *testing.T) {
 	t.Run("Nil Input", func(t *testing.T) {
-		result := flattenClusterConfigsMaas(nil)
+		d := resourceClusterMaas().TestResourceData()
+		result := flattenClusterConfigsMaas(d, nil)
 		expected := make([]interface{}, 0)
 
 		if !reflect.DeepEqual(expected, result) {
@@ -189,8 +190,9 @@ func TestFlattenClusterConfigsMaas(t *testing.T) {
 	})
 
 	t.Run("Nil Spec", func(t *testing.T) {
+		d := resourceClusterMaas().TestResourceData()
 		config := &models.V1MaasCloudConfig{}
-		result := flattenClusterConfigsMaas(config)
+		result := flattenClusterConfigsMaas(d, config)
 		expected := make([]interface{}, 0)
 
 		if !reflect.DeepEqual(expected, result) {
@@ -199,10 +201,11 @@ func TestFlattenClusterConfigsMaas(t *testing.T) {
 	})
 
 	t.Run("Nil ClusterConfig", func(t *testing.T) {
+		d := resourceClusterMaas().TestResourceData()
 		config := &models.V1MaasCloudConfig{
 			Spec: &models.V1MaasCloudConfigSpec{},
 		}
-		result := flattenClusterConfigsMaas(config)
+		result := flattenClusterConfigsMaas(d, config)
 		expected := make([]interface{}, 0)
 
 		if !reflect.DeepEqual(expected, result) {
@@ -211,6 +214,7 @@ func TestFlattenClusterConfigsMaas(t *testing.T) {
 	})
 
 	t.Run("Valid Input Without NtpServers", func(t *testing.T) {
+		d := resourceClusterMaas().TestResourceData()
 		domain := "test.maas.local"
 		config := &models.V1MaasCloudConfig{
 			Spec: &models.V1MaasCloudConfigSpec{
@@ -221,7 +225,7 @@ func TestFlattenClusterConfigsMaas(t *testing.T) {
 			},
 		}
 
-		result := flattenClusterConfigsMaas(config)
+		result := flattenClusterConfigsMaas(d, config)
 		resultMap := result[0].(map[string]interface{})
 
 		assert.Equal(t, "test.maas.local", resultMap["domain"])
@@ -231,6 +235,7 @@ func TestFlattenClusterConfigsMaas(t *testing.T) {
 	})
 
 	t.Run("Valid Input With NtpServers", func(t *testing.T) {
+		d := resourceClusterMaas().TestResourceData()
 		domain := "test.maas.local"
 		ntpServers := []string{"0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"}
 		config := &models.V1MaasCloudConfig{
@@ -243,7 +248,7 @@ func TestFlattenClusterConfigsMaas(t *testing.T) {
 			},
 		}
 
-		result := flattenClusterConfigsMaas(config)
+		result := flattenClusterConfigsMaas(d, config)
 		resultMap := result[0].(map[string]interface{})
 
 		assert.Equal(t, "test.maas.local", resultMap["domain"])
@@ -252,6 +257,7 @@ func TestFlattenClusterConfigsMaas(t *testing.T) {
 	})
 
 	t.Run("Valid Input With Empty NtpServers", func(t *testing.T) {
+		d := resourceClusterMaas().TestResourceData()
 		domain := "test.maas.local"
 		ntpServers := []string{}
 		config := &models.V1MaasCloudConfig{
@@ -264,7 +270,7 @@ func TestFlattenClusterConfigsMaas(t *testing.T) {
 			},
 		}
 
-		result := flattenClusterConfigsMaas(config)
+		result := flattenClusterConfigsMaas(d, config)
 		resultMap := result[0].(map[string]interface{})
 
 		assert.Equal(t, "test.maas.local", resultMap["domain"])

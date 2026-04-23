@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -192,6 +193,23 @@ func resourceClusterMaas() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "Domain name in which the cluster to be provisioned.",
+						},
+						"ssh_key": {
+							Type:          schema.TypeString,
+							Optional:      true,
+							ConflictsWith: []string{"cloud_config.0.ssh_keys"},
+							Description:   "The SSH public key injected into MAAS nodes as an authorized key for the 'spectro' user. `ssh_key` and `ssh_keys` are mutually exclusive.",
+							Deprecated:    "This field is deprecated and will be removed in the future. Use `ssh_keys` instead.",
+						},
+						"ssh_keys": {
+							Type:          schema.TypeSet,
+							Optional:      true,
+							Set:           schema.HashString,
+							ConflictsWith: []string{"cloud_config.0.ssh_key"},
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of SSH public keys injected into MAAS nodes as authorized keys for the 'spectro' user. `ssh_key` and `ssh_keys` are mutually exclusive.",
 						},
 						"enable_lxd_vm": {
 							Type:        schema.TypeBool,
@@ -528,7 +546,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 				return diag.FromErr(err)
 			}
 		}
-		if err := d.Set("cloud_config", flattenClusterConfigsMaas(config)); err != nil {
+		if err := d.Set("cloud_config", flattenClusterConfigsMaas(d, config)); err != nil {
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig, config.Spec.ClusterConfig)
@@ -545,7 +563,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 	return diags
 }
 
-func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
+func flattenClusterConfigsMaas(d *schema.ResourceData, config *models.V1MaasCloudConfig) []interface{} {
 	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
 		return make([]interface{}, 0)
 	}
@@ -560,6 +578,22 @@ func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
 	}
 	if config.Spec.ClusterConfig.NtpServers != nil {
 		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
+	}
+
+	if _, ok := d.GetOk("cloud_config.0.ssh_key"); ok {
+		if len(config.Spec.ClusterConfig.SSHKeys) > 0 {
+			m["ssh_key"] = strings.TrimSpace(config.Spec.ClusterConfig.SSHKeys[0])
+		}
+	}
+	if _, ok := d.GetOk("cloud_config.0.ssh_keys"); ok {
+		m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
+	}
+	if len(config.Spec.ClusterConfig.SSHKeys) != 0 {
+		if _, hasKey := m["ssh_key"]; !hasKey {
+			if _, hasKeys := m["ssh_keys"]; !hasKeys {
+				m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
+			}
+		}
 	}
 
 	return []interface{}{m}
@@ -753,8 +787,25 @@ func toMaasCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1MaasC
 			Domain:      &DomainVal,
 			EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
 			NtpServers:  toNtpServers(cloudConfig),
+			SSHKeys:     getMaasSSHKeys(cloudConfig),
 		},
 	}
+}
+
+func getMaasSSHKeys(cloudConfig map[string]interface{}) []string {
+	if cloudConfig["ssh_keys"] != nil {
+		if set, ok := cloudConfig["ssh_keys"].(*schema.Set); ok && set.Len() > 0 {
+			keys := make([]string, 0, set.Len())
+			for _, k := range set.List() {
+				keys = append(keys, strings.TrimSpace(k.(string)))
+			}
+			return keys
+		}
+	}
+	if sshKey, ok := cloudConfig["ssh_key"].(string); ok && sshKey != "" {
+		return []string{strings.TrimSpace(sshKey)}
+	}
+	return nil
 }
 
 func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroMaasClusterEntity, error) {
@@ -779,6 +830,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 				Domain:      &DomainVal,
 				EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
 				NtpServers:  toNtpServers(cloudConfig),
+				SSHKeys:     getMaasSSHKeys(cloudConfig),
 			},
 		},
 	}
