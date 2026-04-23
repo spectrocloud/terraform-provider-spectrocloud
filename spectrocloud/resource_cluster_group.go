@@ -2,7 +2,9 @@ package spectrocloud
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
@@ -11,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
+	clientv1 "github.com/spectrocloud/palette-sdk-go/api/client/version1"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 )
@@ -102,16 +105,17 @@ func resourceClusterGroup() *schema.Resource {
 							Description: "The allowed oversubscription percentage.",
 						},
 						"values": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Computed:    true,
+							Description: "Virtual cluster pack values YAML. If omitted, defaults are loaded from the Palette API for the selected `k8s_distribution` (GET /v1/spectroclusters/virtual/packs/values).",
 						},
 						"k8s_distribution": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Default:     "vcluster-generic",
+							Default:     "cncf_k8s",
 							ForceNew:    true,
-							Description: "The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`.",
+							Description: "The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`. Default to use `cncf_k8s`.",
 						},
 					},
 				},
@@ -169,7 +173,11 @@ func resourceClusterGroupCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-	cluster := toClusterGroup(c, d)
+	packValuesYAML, err := resolveClusterGroupPackValuesYAML(ctx, c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	cluster := toClusterGroup(c, d, packValuesYAML)
 
 	uid, err := c.CreateClusterGroup(cluster)
 	if err != nil {
@@ -222,16 +230,22 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 		if clusterConfig != nil {
 			limitConfig := clusterConfig.LimitConfig
 			if limitConfig != nil {
-				err := d.Set("config", []map[string]interface{}{
-					{
-						"host_endpoint_type":       clusterConfig.EndpointType,
-						"cpu_millicore":            limitConfig.CPUMilliCore,
-						"memory_in_mb":             limitConfig.MemoryMiB,
-						"storage_in_gb":            limitConfig.StorageGiB,
-						"oversubscription_percent": limitConfig.OverSubscription,
-						"k8s_distribution":         clusterConfig.KubernetesDistroType,
-					},
-				})
+				k8sDist := ""
+				if clusterConfig.KubernetesDistroType != nil {
+					k8sDist = string(*clusterConfig.KubernetesDistroType)
+				}
+				cfg := map[string]interface{}{
+					"host_endpoint_type":       clusterConfig.EndpointType,
+					"cpu_millicore":            limitConfig.CPUMilliCore,
+					"memory_in_mb":             limitConfig.MemoryMiB,
+					"storage_in_gb":            limitConfig.StorageGiB,
+					"oversubscription_percent": limitConfig.OverSubscription,
+					"k8s_distribution":         k8sDist,
+				}
+				if clusterConfig.Values != "" {
+					cfg["values"] = clusterConfig.Values
+				}
+				err := d.Set("config", []map[string]interface{}{cfg})
 				if err != nil {
 					return diag.FromErr(err)
 				}
@@ -269,19 +283,73 @@ func flattenClusterGroup(clusterGroup *models.V1ClusterGroup, d *schema.Resource
 	return diag.Diagnostics{}
 }
 
+func clusterGroupK8sDistroQueryParam(d *schema.ResourceData) string {
+	v := d.Get("config.0.k8s_distribution")
+	s, _ := v.(string)
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "cncf_k8s"
+	}
+	return s
+}
+
+func resolveClusterGroupPackValuesYAML(ctx context.Context, c *client.V1Client, d *schema.ResourceData) (string, error) {
+	if v, ok := d.GetOk("config.0.values"); ok {
+		if s := strings.TrimSpace(v.(string)); s != "" {
+			return s, nil
+		}
+	}
+	k8 := clusterGroupK8sDistroQueryParam(d)
+	params := clientv1.NewV1VirtualClustersPacksValuesParamsWithContext(ctx).
+		WithKubernetesDistroType(&k8)
+	resp, err := c.Client.V1VirtualClustersPacksValues(params)
+	if err != nil {
+		return "", fmt.Errorf("loading default virtual cluster pack values for kubernetesDistroType %q: %w", k8, err)
+	}
+	return mergeVirtualClusterPackValuesYAML(resp.Payload)
+}
+
+func mergeVirtualClusterPackValuesYAML(p *models.V1ClusterVirtualPacksValues) (string, error) {
+	if p == nil || len(p.Packs) == 0 {
+		return "", fmt.Errorf("virtual cluster pack values response is empty")
+	}
+	var b strings.Builder
+	for _, pack := range p.Packs {
+		if pack == nil {
+			continue
+		}
+		vs := strings.TrimSpace(pack.Values)
+		if vs == "" {
+			continue
+		}
+		if b.Len() > 0 {
+			b.WriteString("\n---\n")
+		}
+		b.WriteString(vs)
+	}
+	if b.Len() == 0 {
+		return "", fmt.Errorf("virtual cluster pack values contained no YAML content")
+	}
+	return b.String(), nil
+}
+
 func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	packValuesYAML, err := resolveClusterGroupPackValuesYAML(ctx, c, d)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	// if there are changes in the name of  cluster group, update it using UpdateClusterGroupMeta()
-	clusterGroup := toClusterGroup(c, d)
-	err := c.UpdateClusterGroupMeta(clusterGroup)
+	clusterGroup := toClusterGroup(c, d, packValuesYAML)
+	err = c.UpdateClusterGroupMeta(clusterGroup)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 	if d.HasChanges("config", "clusters") {
-		clusterGroup := toClusterGroup(c, d)
+		clusterGroup := toClusterGroup(c, d, packValuesYAML)
 
 		err := c.UpdateClusterGroup(clusterGroup.Metadata.UID, toClusterGroupUpdate(clusterGroup))
 		if err != nil {
@@ -305,7 +373,7 @@ func resourceClusterGroupUpdate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
-func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1ClusterGroupEntity {
+func toClusterGroup(c *client.V1Client, d *schema.ResourceData, packValuesYAML string) *models.V1ClusterGroupEntity {
 	clusterRefs := make([]*models.V1ClusterGroupClusterRef, 0)
 	clusterRefObj, ok := d.GetOk("clusters")
 	clusterGroupContext := d.Get("context").(string)
@@ -318,16 +386,12 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 	}
 
 	var clusterGroupLimitConfig *models.V1ClusterGroupLimitConfig
-	var values string
 	resourcesObj, ok := d.GetOk("config")
 	endpointType := "Ingress" // default endpoint type is ingress
 	var k8Distro string
 	if ok {
 		resources := resourcesObj.([]interface{})[0].(map[string]interface{})
 		clusterGroupLimitConfig = toClusterGroupLimitConfig(resources)
-		if resources["values"] != nil {
-			values = resources["values"].(string)
-		}
 		if resources["host_endpoint_type"] != nil {
 			endpointType = resources["host_endpoint_type"].(string)
 		}
@@ -342,7 +406,7 @@ func toClusterGroup(c *client.V1Client, d *schema.ResourceData) *models.V1Cluste
 		Spec: &models.V1ClusterGroupSpecEntity{
 			Type:           "hostCluster",
 			ClusterRefs:    clusterRefs,
-			ClustersConfig: GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, values, k8Distro),
+			ClustersConfig: GetClusterGroupConfig(clusterGroupLimitConfig, hostClusterConfig, endpointType, packValuesYAML, k8Distro),
 		},
 	}
 	profiles, _ := toProfilesCommon(c, d, "", clusterGroupContext)

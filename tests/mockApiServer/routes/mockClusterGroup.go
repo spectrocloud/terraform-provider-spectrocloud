@@ -5,6 +5,22 @@ import "github.com/spectrocloud/palette-sdk-go/api/models"
 func ClusterGroupRoutes() []Route {
 	return []Route{
 		{
+			Method: "GET",
+			Path:   "/v1/spectroclusters/virtual/packs/values",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1ClusterVirtualPacksValues{
+					Packs: []*models.V1ClusterVirtualPacksValue{
+						{
+							DistroType: "cncf_k8s",
+							Layer:      "k8s",
+							Values:     "mock-default-virtual-cluster-pack-values-yaml",
+						},
+					},
+				},
+			},
+		},
+		{
 			Method: "POST",
 			Path:   "/v1/clustergroups",
 			Response: ResponseData{

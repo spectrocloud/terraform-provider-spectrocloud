@@ -56,6 +56,19 @@ func prepareClusterGroupTestData() (*schema.ResourceData, error) {
 	return d, nil
 }
 
+func TestMergeVirtualClusterPackValuesYAML(t *testing.T) {
+	out, err := mergeVirtualClusterPackValuesYAML(&models.V1ClusterVirtualPacksValues{
+		Packs: []*models.V1ClusterVirtualPacksValue{
+			{Values: "a: 1"},
+			{Values: "b: 2"},
+		},
+	})
+	assert.NoError(t, err)
+	assert.Contains(t, out, "a: 1")
+	assert.Contains(t, out, "---")
+	assert.Contains(t, out, "b: 2")
+}
+
 func TestDefaultValuesSet(t *testing.T) {
 	clusterGroupLimitConfig := &models.V1ClusterGroupLimitConfig{}
 	hostClusterConfig := []*models.V1ClusterGroupHostClusterConfig{{}}
@@ -192,6 +205,8 @@ func TestFlattenClusterGroup(t *testing.T) {
 					StorageGiB:       int32(storageLimit),
 					OverSubscription: int32(overSubscription),
 				},
+				KubernetesDistroType: models.V1ClusterKubernetesDistroTypeCncfK8s.Pointer(),
+				Values:               "from-api-yaml",
 				HostClustersConfig: []*models.V1ClusterGroupHostClusterConfig{
 					{
 						ClusterUID: clusterUID1,
@@ -236,6 +251,8 @@ func TestFlattenClusterGroup(t *testing.T) {
 	assert.Equal(t, memoryLimit, config["memory_in_mb"])
 	assert.Equal(t, storageLimit, config["storage_in_gb"])
 	assert.Equal(t, overSubscription, config["oversubscription_percent"])
+	assert.Equal(t, "from-api-yaml", config["values"])
+	assert.Equal(t, "cncf_k8s", config["k8s_distribution"])
 
 	// assert clusters fields are set correctly
 	clustersList := d.Get("clusters").([]interface{})
