@@ -3,8 +3,9 @@ package routes
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"net/http"
+
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 // ResponseData defines the structure of mock responses
