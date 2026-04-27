@@ -49,7 +49,12 @@ docs-score-check: ## Fail when docs score has unresolved defects
 ##@ Test Targets
 .PHONY: testacc
 testacc: ## Run acceptance tests
-	TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m
+	@if go tool covdata >/dev/null 2>&1; then \
+		TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m; \
+	else \
+		echo "go tool covdata not available; running acceptance tests without coverage flags"; \
+		TF_ACC=1 go test -v $(TESTARGS) ./spectrocloud/... -timeout 120m; \
+	fi
 
 ##@ Development Targets
 DEV_PROVIDER_VERSION=100.100.100
