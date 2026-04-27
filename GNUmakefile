@@ -6,6 +6,7 @@
 # Go variables
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
+MODULE_GO_VERSION ?= $(shell go list -m -f '{{.GoVersion}}')
 
 # Output
 TIME   = `date +%H:%M:%S`
@@ -37,7 +38,7 @@ vet: ## Run go vet against code
 	go vet ./...
 
 lint: golangci-lint ## Run golangci-lint against code
-	$(GOLANGCI_LINT) run
+	$(GOLANGCI_LINT) run --allow-parallel-runners
 
 generate:
 	go generate ./...
@@ -70,19 +71,6 @@ bin-dir:
 	test -d $(BIN_DIR) || mkdir $(BIN_DIR)
 
 GOLANGCI_VERSION ?= 2.7.2
+GOLANGCI_LINT=$(BIN_DIR)/golangci-lint
 golangci-lint: bin-dir
-	if ! test -f $(BIN_DIR)/golangci-lint-linux-amd64; then \
-		curl -LOs https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_VERSION)/golangci-lint-$(GOLANGCI_VERSION)-linux-amd64.tar.gz; \
-		tar -zxf golangci-lint-$(GOLANGCI_VERSION)-linux-amd64.tar.gz; \
-		mv golangci-lint-$(GOLANGCI_VERSION)-*/golangci-lint $(BIN_DIR)/golangci-lint-linux-amd64; \
-		chmod +x $(BIN_DIR)/golangci-lint-linux-amd64; \
-		rm -rf ./golangci-lint-$(GOLANGCI_VERSION)-linux-amd64*; \
-	fi
-	if ! test -f $(BIN_DIR)/golangci-lint-$(GOOS)-$(GOARCH); then \
-		curl -LOs https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_VERSION)/golangci-lint-$(GOLANGCI_VERSION)-$(GOOS)-$(GOARCH).tar.gz; \
-		tar -zxf golangci-lint-$(GOLANGCI_VERSION)-$(GOOS)-$(GOARCH).tar.gz; \
-		mv golangci-lint-$(GOLANGCI_VERSION)-*/golangci-lint $(BIN_DIR)/golangci-lint-$(GOOS)-$(GOARCH); \
-		chmod +x $(BIN_DIR)/golangci-lint-$(GOOS)-$(GOARCH); \
-		rm -rf ./golangci-lint-$(GOLANGCI_VERSION)-$(GOOS)-$(GOARCH)*; \
-	fi
-GOLANGCI_LINT=$(BIN_DIR)/golangci-lint-$(GOOS)-$(GOARCH)
+	GOTOOLCHAIN=go$(MODULE_GO_VERSION) GOBIN=$(abspath $(BIN_DIR)) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(GOLANGCI_VERSION)
