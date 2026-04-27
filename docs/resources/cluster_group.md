@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cluster_group Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing host cluster groups in Spectro Cloud.
 ---
 
 # spectrocloud_cluster_group (Resource)
 
-  
+  Resource for managing host cluster groups in Spectro Cloud.
 
 ## Example Usage
 
@@ -66,7 +66,7 @@ Refer to the [Import section](/docs#import) to learn more.
 ### Required
 
 - `config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--config))
-- `name` (String) Name of the cluster group
+- `name` (String) Name of the cluster group.
 
 ### Optional
 
@@ -92,7 +92,7 @@ Optional:
 - `memory_in_mb` (Number) The memory limit in megabytes (MB).
 - `oversubscription_percent` (Number) The allowed oversubscription percentage.
 - `storage_in_gb` (Number) The storage limit in gigabytes (GB).
-- `values` (String)
+- `values` (String) YAML values override string applied to the cluster group configuration.
 
 
 <a id="nestedblock--cluster_profile"></a>

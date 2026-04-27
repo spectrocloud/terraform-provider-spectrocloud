@@ -65,7 +65,7 @@ output "tenant_template_cluster_profile" {
 - `execution_state` (String) Current execution state of the cluster template. Possible values: `Pending`, `Applied`, `Failed`, `PartiallyApplied`.
 - `id` (String) The ID of this resource.
 - `policy` (List of Object) List of policy references. (see [below for nested schema](#nestedatt--policy))
-- `tags` (Set of String) Tags assigned to the cluster config template.
+- `tags` (Set of String) Set of tag strings assigned to the cluster config template.
 
 <a id="nestedatt--attached_cluster"></a>
 ### Nested Schema for `attached_cluster`

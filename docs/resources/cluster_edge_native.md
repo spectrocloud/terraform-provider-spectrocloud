@@ -87,13 +87,13 @@ Refer to the [Import section](/docs#import) to learn more.
 
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - `machine_pool` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String)
+- `name` (String) Name of the Edge Native cluster. Changing this forces a new resource.
 
 ### Optional
 
 - `apply_setting` (String) The setting to apply the cluster profile. `DownloadAndInstall` will download and install packs in one action. `DownloadAndInstallLater` will only download artifact and postpone install for later. Default value is `DownloadAndInstall`.
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
-- `cloud_account_id` (String)
+- `cloud_account_id` (String) UID of the cloud account associated with this Edge Native cluster. Changing this forces a new resource.
 - `cluster_meta_attribute` (String) `cluster_meta_attribute` can be used to set additional cluster metadata information, eg `{'nic_name': 'test', 'env': 'stage'}`
 - `cluster_profile` (Block Set) (see [below for nested schema](#nestedblock--cluster_profile))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
@@ -142,7 +142,7 @@ Optional:
 Required:
 
 - `edge_host` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--edge_host))
-- `name` (String)
+- `name` (String) Name of the machine pool.
 
 Optional:
 
@@ -162,16 +162,16 @@ Optional:
 
 Required:
 
-- `host_uid` (String) Edge host id
+- `host_uid` (String) UID of the edge host.
 
 Optional:
 
-- `default_gateway` (String) Edge host default gateway
-- `dns_servers` (Set of String) Edge host DNS servers
-- `host_name` (String) Edge host name
+- `default_gateway` (String) Default gateway IP address for the edge host network interface.
+- `dns_servers` (Set of String) Set of DNS server IP address strings for the edge host network interface.
+- `host_name` (String) Name of the edge host.
 - `nic_name` (String) NIC Name for edge host.
-- `static_ip` (String) Edge host static IP address
-- `subnet_mask` (String) Edge host subnet mask
+- `static_ip` (String) Static IP address assigned to the edge host.
+- `subnet_mask` (String) Subnet mask for the edge host network interface.
 - `two_node_role` (String) Two node role for edge host. Valid values are `primary` and `secondary`.
 
 

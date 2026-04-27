@@ -26,7 +26,7 @@ check-diff: reviewable ## Execute branch is clean
 	git diff --quiet || ($(ERR) please run 'make reviewable' to include all changes && false)
 	@$(OK) branch is clean
 
-reviewable: fmt vet lint generate ## Ensure code is ready for review
+reviewable: fmt vet lint generate docs-score-check ## Ensure code is ready for review
 	git submodule update --remote
 	go mod tidy
 
@@ -41,6 +41,10 @@ lint: golangci-lint ## Run golangci-lint against code
 
 generate:
 	go generate ./...
+
+docs-score-check: ## Fail when docs score has unresolved defects
+	python3 tools/docs_score/score.py --json-only
+	@python3 -c 'import json,sys; d=json.load(open("tools/docs_score/score.json")); ts=d.get("total_score",0); pf=d.get("pages_failing",0); print(f"docs score check: total_score={ts}, pages_failing={pf}"); sys.exit(1 if (ts > 0 and pf > 0) else 0)'
 
 ##@ Test Targets
 .PHONY: testacc

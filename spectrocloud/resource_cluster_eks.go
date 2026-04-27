@@ -80,7 +80,7 @@ func resourceClusterEks() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive — only one should be used at a time",
+				Description: "A map of tags to be applied to the cluster. `tags` and `tags_map` are mutually exclusive; only one should be used at a time.",
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -185,18 +185,20 @@ func resourceClusterEks() *schema.Resource {
 							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"region": {
-							Type:     schema.TypeString,
-							ForceNew: true,
-							Required: true,
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Required:    true,
+							Description: "AWS region where the EKS cluster is deployed. Changing this forces a new resource.",
 						},
 						"vpc_id": {
-							Type:     schema.TypeString,
-							ForceNew: true,
-							Optional: true,
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Optional:    true,
+							Description: "VPC ID used to provision the EKS cluster.",
 						},
 						"azs": {
 							Type:        schema.TypeList,
-							Description: "Mutually exclusive with `az_subnets`. Use for Dynamic provisioning.",
+							Description: "List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning.",
 							Optional:    true,
 							ForceNew:    true,
 							Elem: &schema.Schema{
@@ -205,7 +207,7 @@ func resourceClusterEks() *schema.Resource {
 						},
 						"az_subnets": {
 							Type:        schema.TypeMap,
-							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
+							Description: "Map of availability zone name to subnet ID string. Mutually exclusive with `azs`; use for static provisioning.",
 							Optional:    true,
 							ForceNew:    true,
 							DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
@@ -262,6 +264,7 @@ func resourceClusterEks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "Name of the EKS machine pool.",
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -282,8 +285,9 @@ func resourceClusterEks() *schema.Resource {
 						"node":   schemas.NodeSchema(),
 						"taints": schemas.ClusterTaintsSchema(),
 						"disk_size_gb": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "Root disk size in GB for each node in this machine pool.",
 						},
 						"count": {
 							Type:     schema.TypeInt,
@@ -319,8 +323,9 @@ func resourceClusterEks() *schema.Resource {
 								"When both `min` and `max` are greater than 0, `count` must equal `min`.",
 						},
 						"instance_type": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "AWS EC2 instance type used for nodes in this machine pool.",
 						},
 						"ami_type": {
 							Type:        schema.TypeString,
@@ -336,14 +341,15 @@ func resourceClusterEks() *schema.Resource {
 							Description:  "Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.",
 						},
 						"max_price": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "",
+							Description: "Maximum hourly spot instance price for this machine pool. Used only when `capacity_type` is `spot`.",
 						},
 						"azs": {
 							Type:        schema.TypeList,
 							Optional:    true,
-							Description: "Mutually exclusive with `az_subnets`.",
+							Description: "List of availability zone names for machine pool placement. Mutually exclusive with `az_subnets`.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -351,7 +357,7 @@ func resourceClusterEks() *schema.Resource {
 						"az_subnets": {
 							Type:        schema.TypeMap,
 							Optional:    true,
-							Description: "Mutually exclusive with `azs`. Use for Static provisioning.",
+							Description: "Map of availability zone name to subnet ID string for machine pool placement. Mutually exclusive with `azs`; use for static provisioning.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -366,19 +372,22 @@ func resourceClusterEks() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Name of the Fargate profile.",
 						},
 						"subnets": {
-							Type:     schema.TypeList,
-							Optional: true,
+							Type:        schema.TypeList,
+							Optional:    true,
+							Description: "List of subnet ID strings used by this Fargate profile.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
 						},
 						"additional_tags": {
-							Type:     schema.TypeMap,
-							Optional: true,
+							Type:        schema.TypeMap,
+							Optional:    true,
+							Description: "Map of additional tag key-value pairs applied to Fargate resources.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -390,12 +399,14 @@ func resourceClusterEks() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"namespace": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Kubernetes namespace matched by this Fargate selector.",
 									},
 									"labels": {
-										Type:     schema.TypeMap,
-										Optional: true,
+										Type:        schema.TypeMap,
+										Optional:    true,
+										Description: "Map of Kubernetes label key-value pairs used to match workloads for this selector.",
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},

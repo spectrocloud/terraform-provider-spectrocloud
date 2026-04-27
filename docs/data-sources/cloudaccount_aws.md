@@ -54,6 +54,6 @@ data "spectrocloud_cloudaccount_aws" "aws_account" {
 ### Optional
 
 - `context` (String) The context of the cluster. Allowed values are `project` or `tenant` or ``.
-- `depends` (String)
+- `depends` (String) Dependency marker used internally by Terraform graph evaluation.
 - `id` (String) ID of the AWS cloud account registered in Palette.
 - `name` (String) Name of the AWS cloud account registered in Palette.

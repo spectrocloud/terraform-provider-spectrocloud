@@ -2,12 +2,12 @@
 page_title: "spectrocloud_resource_limit Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing tenant-wide Palette object quota limits in Spectro Cloud.
 ---
 
 # spectrocloud_resource_limit (Resource)
 
-  
+  Resource for managing tenant-wide Palette object quota limits in Spectro Cloud.
 
 You can learn more about managing resource limit in Palette by reviewing the [Default Resource Limit](https://docs.spectrocloud.com/tenant-settings/palette-resource-limits/?utm_source=palette&utm_medium=product2docs) guide.
 

@@ -40,7 +40,7 @@ func resourceProject() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "Assign tags to the project.",
+				Description: "Set of tag strings to assign to the project.",
 			},
 			"description": {
 				Type:        schema.TypeString,

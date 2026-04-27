@@ -105,9 +105,10 @@ func resourceClusterCustomCloud() *schema.Resource {
 				Description: "The cloud account id to use for this cluster.",
 			},
 			"cloud_config_id": {
-				Type:       schema.TypeString,
-				Computed:   true,
-				Deprecated: "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Identifier of the generated cloud configuration associated with this custom cloud cluster.",
+				Deprecated:  "This field is deprecated and will be removed in the future. Use `cloud_config` instead.",
 			},
 			"cluster_timezone": {
 				Type:         schema.TypeString,

@@ -2,12 +2,12 @@
 page_title: "spectrocloud_application Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing applications deployed through Spectro Cloud.
 ---
 
 # spectrocloud_application (Resource)
 
-  
+  Resource for managing applications deployed through Spectro Cloud.
 
 ## Example Usage
 

@@ -23,6 +23,7 @@ func resourceRegistrationToken() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceRegistrationTokenImport,
 		},
+		Description: "Resource for managing registration tokens in Spectro Cloud.",
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
@@ -64,8 +65,9 @@ func resourceRegistrationToken() *schema.Resource {
 				Description:  "The status of the registration token. Allowed values are `active` or `inactive`. Default is `active`.",
 			},
 			"token": {
-				Type:     schema.TypeString,
-				Computed: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Generated registration token value returned by Palette.",
 			},
 		},
 	}

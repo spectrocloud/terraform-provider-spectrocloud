@@ -44,9 +44,10 @@ func resourceClusterAws() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the AWS cluster. Changing this forces a new resource.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -72,7 +73,7 @@ func resourceClusterAws() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive — only one should be used at a time",
+				Description: "A map of tags to be applied to the cluster. `tags` and `tags_map` are mutually exclusive; only one should be used at a time.",
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -98,9 +99,10 @@ func resourceClusterAws() *schema.Resource {
 					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "UID of the AWS cloud account used for this cluster. Changing this forces a new resource.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -321,7 +323,7 @@ func resourceClusterAws() *schema.Resource {
 						"azs": {
 							Type:        schema.TypeSet,
 							Optional:    true,
-							Description: "Mutually exclusive with `az_subnets`. Use `azs` for Dynamic provisioning.",
+							Description: "Set of availability zone name strings. Mutually exclusive with `az_subnets`; use `azs` for dynamic provisioning.",
 							MinItems:    1,
 							Set:         schema.HashString,
 							Elem: &schema.Schema{
@@ -331,7 +333,7 @@ func resourceClusterAws() *schema.Resource {
 						"az_subnets": {
 							Type:        schema.TypeMap,
 							Optional:    true,
-							Description: "Mutually exclusive with `azs`. Use `az_subnets` for Static provisioning.",
+							Description: "Map of availability zone name to subnet ID string. Mutually exclusive with `azs`; use `az_subnets` for static provisioning.",
 							Elem: &schema.Schema{
 								Type:     schema.TypeString,
 								Required: true,
@@ -344,7 +346,7 @@ func resourceClusterAws() *schema.Resource {
 								Type: schema.TypeString,
 							},
 							Optional:    true,
-							Description: "Additional security groups to attach to the instance.",
+							Description: "Set of additional security group ID strings to attach to the instance.",
 						},
 						"node": schemas.NodeSchema(),
 					},

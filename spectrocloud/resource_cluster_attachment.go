@@ -24,6 +24,7 @@ func resourceAddonDeployment() *schema.Resource {
 		ReadContext:   resourceAddonDeploymentRead,
 		UpdateContext: resourceAddonDeploymentUpdate,
 		DeleteContext: resourceAddonDeploymentDelete,
+		Description:   "Resource for attaching cluster profiles as addon deployments to an existing cluster.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),

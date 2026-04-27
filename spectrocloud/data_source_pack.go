@@ -66,7 +66,7 @@ func dataSourcePack() *schema.Resource {
 						"addon_type": {
 							Type:        schema.TypeSet,
 							Optional:    true,
-							Description: "Defines the type of add-on pack. Allowed values are `load balancer`, `ingress`, `logging`, `monitoring`, `security`, `authentication`, `servicemesh`, `system app`, `app services`, `registry` and `integration`. If not specified, all options will be set by default. For `storage` and `network` addon_type set `csi` or `cni` respectively in pack_layer",
+							Description: "Set of add-on type strings to filter by. Allowed values are `load balancer`, `ingress`, `logging`, `monitoring`, `security`, `authentication`, `servicemesh`, `system app`, `app services`, `registry`, and `integration`. If not specified, all options are included. For `storage` and `network`, set `pack_layer` to `csi` or `cni` respectively.",
 							Elem: &schema.Schema{
 								Type:         schema.TypeString,
 								ValidateFunc: validation.StringInSlice(AllowedAddonType, false),
@@ -125,7 +125,7 @@ func dataSourcePack() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Computed:    true,
-				Description: "Filter results by cloud type. If not provided, all cloud types are returned.",
+				Description: "Set of cloud type strings used to filter results. If not provided, all cloud types are returned.",
 				Set:         schema.HashString,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,

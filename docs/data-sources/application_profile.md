@@ -28,7 +28,7 @@ output "application_profile_version" {
 
 ### Required
 
-- `name` (String) Name of the application profile
+- `name` (String) Name of the application profile to look up.
 
 ### Optional
 

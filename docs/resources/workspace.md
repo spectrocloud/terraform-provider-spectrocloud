@@ -2,12 +2,12 @@
 page_title: "spectrocloud_workspace Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing workspaces in Spectro Cloud.
 ---
 
 # spectrocloud_workspace (Resource)
 
-  
+  Resource for managing workspaces in Spectro Cloud.
 
 ## Example Usage
 
@@ -99,16 +99,17 @@ data "spectrocloud_backup_storage_location" "bsl" {
 
 ```hcl
 # import existing user example
-  import {
-    to = spectrocloud_workspace.test_user
-    id = "{userUID}"
-  }
+import {
+  to = spectrocloud_workspace.test_user
+  id = "{userUID}"
+}
 
 # To generate TF configuration.
-  terraform plan -generate-config-out=test_workspace.tf
+terraform plan -generate-config-out=test_workspace.tf
+```
 
 ```bash
-  terraform import spectrocloud_user.test_workspace {workspaceUID}/{workspace_name}
+terraform import spectrocloud_workspace.test_workspace {workspaceUID/workspace_name}
 ```
 
 
@@ -118,15 +119,15 @@ data "spectrocloud_backup_storage_location" "bsl" {
 ### Required
 
 - `clusters` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--clusters))
-- `name` (String)
+- `name` (String) Name of the workspace.
 
 ### Optional
 
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
-- `description` (String)
+- `description` (String) Description of the workspace.
 - `namespaces` (Block Set) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
-- `tags` (Set of String)
+- `tags` (Set of String) Set of tag strings in the form `key:value` applied to the workspace.
 - `workspace_quota` (Block List, Max: 1) Workspace quota default limits assigned to the namespace. (see [below for nested schema](#nestedblock--workspace_quota))
 
 ### Read-Only
@@ -138,7 +139,7 @@ data "spectrocloud_backup_storage_location" "bsl" {
 
 Required:
 
-- `uid` (String)
+- `uid` (String) UID of the cluster attached to this workspace.
 
 Read-Only:
 
@@ -211,7 +212,7 @@ Optional:
 Required:
 
 - `resource_allocation` (Map of String) Resource allocation for the cluster. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration: `cpu_cores`, `memory_MiB`, `gpu`. Any other field names will not be honored by the system. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.
-- `uid` (String)
+- `uid` (String) UID of the cluster for this namespace-specific resource allocation.
 
 
 

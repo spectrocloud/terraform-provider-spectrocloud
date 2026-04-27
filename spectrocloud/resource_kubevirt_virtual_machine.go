@@ -22,6 +22,7 @@ func resourceKubevirtVirtualMachine() *schema.Resource {
 		ReadContext:   resourceKubevirtVirtualMachineRead,
 		UpdateContext: resourceVirtualMachineUpdate,
 		DeleteContext: resourceKubevirtVirtualMachineDelete,
+		Description:   "Resource for managing KubeVirt virtual machines on Spectro Cloud clusters.",
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

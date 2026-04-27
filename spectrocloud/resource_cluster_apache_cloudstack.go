@@ -57,7 +57,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The name of the cluster.",
+				Description: "Unique cluster name shown in Palette for this Apache CloudStack cluster.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -186,7 +186,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 									"name": {
 										Type:        schema.TypeString,
 										Optional:    true,
-										Description: "CloudStack project name.",
+										Description: "CloudStack project name used to scope cluster resources in this zone.",
 									},
 								},
 							},
@@ -237,7 +237,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 												"name": {
 													Type:        schema.TypeString,
 													Required:    true,
-													Description: "Network name in this zone.",
+													Description: "CloudStack network name within the selected zone.",
 												},
 												"type": {
 													Type:        schema.TypeString,
@@ -278,7 +278,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 															"name": {
 																Type:        schema.TypeString,
 																Required:    true,
-																Description: "VPC name.",
+																Description: "CloudStack VPC name associated with the selected network.",
 															},
 															"cidr": {
 																Type:        schema.TypeString,
@@ -345,7 +345,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 						"name": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "Name of the machine pool.",
+							Description: "Unique machine pool name within this cluster configuration.",
 						},
 						"count": {
 							Type:        schema.TypeInt,
@@ -415,7 +415,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 									"name": {
 										Type:        schema.TypeString,
 										Computed:    true,
-										Description: "Name for the instance configuration.",
+										Description: "Resolved CloudStack offering name for this computed instance configuration.",
 									},
 									"category": {
 										Type:        schema.TypeString,
@@ -440,7 +440,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 									"name": {
 										Type:        schema.TypeString,
 										Optional:    true,
-										Description: "Template name. Either ID or name must be provided.",
+										Description: "CloudStack template name to use for this machine pool. Either `id` or `name` must be provided.",
 									},
 								},
 							},
