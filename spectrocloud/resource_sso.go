@@ -649,17 +649,30 @@ func toOIDC(d *schema.ResourceData) *models.V1TenantOidcClientSpec {
 	oidcSpec.ScopesDelimiter = ""
 	oidcSpec.SyncSsoTeams = true
 
+	useUserInfo := false
 	if uie, ok := oidc["user_info_endpoint"]; ok {
-		if len(uie.([]interface{})) > 0 {
+		if uieList, ok2 := uie.([]interface{}); ok2 && len(uieList) > 0 {
+			useUserInfo = true
+			u := uieList[0].(map[string]interface{})
+			email := ""
+			if v, ok := u["email"]; ok && v != nil {
+				email = v.(string)
+			}
 			oidcSpec.UserInfo = &models.V1OidcUserInfo{
 				Claims: &models.V1TenantOidcClaims{
-					Email:       uie.([]interface{})[0].(map[string]interface{})["email"].(string),
-					FirstName:   uie.([]interface{})[0].(map[string]interface{})["first_name"].(string),
-					LastName:    uie.([]interface{})[0].(map[string]interface{})["last_name"].(string),
-					SpectroTeam: uie.([]interface{})[0].(map[string]interface{})["spectro_team"].(string),
+					Email:       email,
+					FirstName:   u["first_name"].(string),
+					LastName:    u["last_name"].(string),
+					SpectroTeam: u["spectro_team"].(string),
 				},
 				UseUserInfo: BoolPtr(true),
 			}
+		}
+	}
+	if !useUserInfo {
+		// Explicitly disable userinfo when the block is absent or empty so read/apply stay aligned with the API.
+		oidcSpec.UserInfo = &models.V1OidcUserInfo{
+			UseUserInfo: BoolPtr(false),
 		}
 	}
 	return oidcSpec
@@ -687,13 +700,24 @@ func flattenOidc(oidcSpec *models.V1TenantOidcClientSpec, d *schema.ResourceData
 	spec["spectro_team"] = oidcSpec.RequiredClaims.SpectroTeam
 	spec["scopes"] = oidcSpec.Scopes
 
+	// Only populate user_info_endpoint when the tenant has OIDC userinfo lookup enabled.
+	// Otherwise Terraform would constantly propose removing a block that read() always re-filled.
 	var userEndpoint []interface{}
-	userEndpoint = append(userEndpoint, map[string]interface{}{
-		"email":        oidcSpec.UserInfo.Claims.Email,
-		"first_name":   oidcSpec.UserInfo.Claims.FirstName,
-		"last_name":    oidcSpec.UserInfo.Claims.LastName,
-		"spectro_team": oidcSpec.UserInfo.Claims.SpectroTeam,
-	})
+	if oidcSpec.UserInfo != nil && oidcSpec.UserInfo.UseUserInfo != nil && *oidcSpec.UserInfo.UseUserInfo {
+		email, firstName, lastName, spectroTeam := "", "", "", ""
+		if oidcSpec.UserInfo.Claims != nil {
+			email = oidcSpec.UserInfo.Claims.Email
+			firstName = oidcSpec.UserInfo.Claims.FirstName
+			lastName = oidcSpec.UserInfo.Claims.LastName
+			spectroTeam = oidcSpec.UserInfo.Claims.SpectroTeam
+		}
+		userEndpoint = append(userEndpoint, map[string]interface{}{
+			"email":        email,
+			"first_name":   firstName,
+			"last_name":    lastName,
+			"spectro_team": spectroTeam,
+		})
+	}
 	spec["user_info_endpoint"] = userEndpoint
 
 	oidc = append(oidc, spec)
