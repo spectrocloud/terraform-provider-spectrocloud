@@ -2,8 +2,9 @@ package spectrocloud
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
@@ -94,50 +95,10 @@ func TestToProject(t *testing.T) {
 	}
 }
 
-func TestCreateProjectFunc(t *testing.T) {
-	d := prepareBaseProjectSchema()
-	var diags diag.Diagnostics
-	err := d.Set("name", "dev")
-	if err != nil {
-		return
-	}
-	var ctx context.Context
-	diags = resourceProjectCreate(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
+func TestResourceProjectCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareBaseProjectSchema, unitTestMockAPIClient,
+		resourceProjectCreate, resourceProjectRead, resourceProjectUpdate, resourceProjectDelete)
 }
-
-func TestReadProjectFunc(t *testing.T) {
-	d := resourceProject().TestResourceData()
-	var diags diag.Diagnostics
-	d.SetId("test123")
-
-	var ctx context.Context
-	diags = resourceProjectRead(ctx, d, unitTestMockAPIClient)
-	assert.Equal(t, 0, len(diags))
-}
-
-func TestResourceProjectUpdate(t *testing.T) {
-	// Prepare the schema data for the test.
-	d := prepareBaseProjectSchema()
-	// Call the function you want to test.
-	ctx := context.Background()
-	diags := resourceProjectUpdate(ctx, d, unitTestMockAPIClient)
-	// Assert that no diagnostics were returned (i.e., no errors).
-	assert.Empty(t, diags)
-}
-
-func TestResourceProjectDelete(t *testing.T) {
-	// Prepare the schema data for the test.
-	d := prepareBaseProjectSchema()
-	// Call the function you want to test.
-	ctx := context.Background()
-	diags := resourceProjectDelete(ctx, d, unitTestMockAPIClient)
-	// Assert that no diagnostics were returned (i.e., no errors).
-	assert.Empty(t, diags)
-}
-
-// Negative case's
-
 func TestCreateProjectNegativeFunc(t *testing.T) {
 	d := prepareBaseProjectSchema()
 	var diags diag.Diagnostics

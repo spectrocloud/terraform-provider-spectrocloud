@@ -86,6 +86,17 @@ func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
 	return &buf
 }
 
+func interfaceStringOrEmpty(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return s
+}
+
 func resourceMachinePoolAzureHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
@@ -226,7 +237,7 @@ func resourceMachinePoolGcpHash(v interface{}) int {
 			azsList := azsSet.List()
 			azsListStr := make([]string, len(azsList))
 			for i, v := range azsList {
-				azsListStr[i] = v.(string)
+				azsListStr[i] = interfaceStringOrEmpty(v)
 			}
 			sort.Strings(azsListStr)
 			azsStr := strings.Join(azsListStr, "-")
@@ -268,7 +279,7 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 		arnsList := arnsSet.List()
 		arnsListStr := make([]string, len(arnsList))
 		for i, v := range arnsList {
-			arnsListStr[i] = v.(string)
+			arnsListStr[i] = interfaceStringOrEmpty(v)
 		}
 		sort.Strings(arnsListStr)
 		fmt.Fprintf(buf, "%s-", strings.Join(arnsListStr, "-"))
@@ -278,7 +289,7 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 		azsList := azsSet.List()
 		azsListStr := make([]string, len(azsList))
 		for i, v := range azsList {
-			azsListStr[i] = v.(string)
+			azsListStr[i] = interfaceStringOrEmpty(v)
 		}
 		sort.Strings(azsListStr)
 		azsStr := strings.Join(azsListStr, "-")
@@ -322,20 +333,21 @@ func resourceMachinePoolEksHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
 	}
 
-	keys := make([]string, 0, len(nodePool["az_subnets"].(map[string]interface{})))
-	for k := range nodePool["az_subnets"].(map[string]interface{}) {
+	azSubnetMap := nodePool["az_subnets"].(map[string]interface{})
+	keys := make([]string, 0, len(azSubnetMap))
+	for k := range azSubnetMap {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		buf.WriteString(fmt.Sprintf("%s-%s", k, nodePool["az_subnets"].(map[string]interface{})[k].(string)))
+		buf.WriteString(fmt.Sprintf("%s-%s", k, interfaceStringOrEmpty(azSubnetMap[k])))
 	}
 
 	if nodePool["azs"] != nil {
 		azsList := nodePool["azs"].([]interface{})
 		azsListStr := make([]string, len(azsList))
 		for i, v := range azsList {
-			azsListStr[i] = v.(string)
+			azsListStr[i] = interfaceStringOrEmpty(v)
 		}
 		sort.Strings(azsListStr)
 		azsStr := strings.Join(azsListStr, "-")
@@ -469,6 +481,9 @@ func resourceMachinePoolVsphereHash(v interface{}) int {
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
+	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	if v, found := m["instance_type"]; found {
 		if len(v.([]interface{})) > 0 {
@@ -557,6 +572,9 @@ func resourceMachinePoolMaasHash(v interface{}) int {
 		buf.WriteString(HashStringMap(m["additional_annotations"]))
 	}
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
 

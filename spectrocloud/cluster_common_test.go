@@ -17,6 +17,108 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Shared schema definitions for cluster common tests (match cluster resource schemas)
+var (
+	testClusterHostConfigSchema = map[string]*schema.Schema{
+		"host_config": {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"host_endpoint_type": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"ingress_host": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"external_traffic_policy": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"load_balancer_source_ranges": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+				},
+			},
+		},
+	}
+	testClusterLocationConfigSchema = map[string]*schema.Schema{
+		"location_config": {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"country_code": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"country_name": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"region_code": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"region_name": {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					"latitude": {
+						Type:     schema.TypeFloat,
+						Optional: true,
+					},
+					"longitude": {
+						Type:     schema.TypeFloat,
+						Optional: true,
+					},
+				},
+			},
+		},
+	}
+	testClusterOsPatchConfigSchema = map[string]*schema.Schema{
+		"os_patch_on_boot": {
+			Type:     schema.TypeBool,
+			Optional: true,
+		},
+		"os_patch_schedule": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+		"os_patch_after": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}
+	testClusterApplySettingSchema = map[string]*schema.Schema{
+		"apply_setting": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}
+	testClusterPauseAgentUpgradesSchema = map[string]*schema.Schema{
+		"pause_agent_upgrades": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}
+	testClusterCloudConfigIdSchema = map[string]*schema.Schema{
+		"cloud_config_id": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}
+	testClusterTypeSchema = map[string]*schema.Schema{
+		"cluster_type": {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}
+)
+
 func TestToAdditionalNodePoolLabels(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -786,32 +888,7 @@ func TestToNtpServers(t *testing.T) {
 }
 
 func TestToClusterHostConfigs(t *testing.T) {
-	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"host_config": {
-			Type:     schema.TypeList,
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"host_endpoint_type": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"ingress_host": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"external_traffic_policy": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"load_balancer_source_ranges": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-				},
-			},
-		},
-	}, map[string]interface{}{
+	d := schema.TestResourceDataRaw(t, testClusterHostConfigSchema, map[string]interface{}{
 		"host_config": []interface{}{
 			map[string]interface{}{
 				"host_endpoint_type":          "LoadBalancer",
@@ -844,32 +921,7 @@ func TestToClusterHostConfigs(t *testing.T) {
 }
 
 func TestToClusterHostConfigsNoHostConfig(t *testing.T) {
-	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"host_config": {
-			Type:     schema.TypeList,
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"host_endpoint_type": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"ingress_host": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"external_traffic_policy": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"load_balancer_source_ranges": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-				},
-			},
-		},
-	}, map[string]interface{}{})
+	d := schema.TestResourceDataRaw(t, testClusterHostConfigSchema, map[string]interface{}{})
 
 	result := toClusterHostConfigs(d)
 
@@ -958,40 +1010,7 @@ func TestFlattenSourceRangesNil(t *testing.T) {
 }
 
 func TestToClusterLocationConfigs(t *testing.T) {
-	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"location_config": {
-			Type:     schema.TypeList,
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					"country_code": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"country_name": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"region_code": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"region_name": {
-						Type:     schema.TypeString,
-						Optional: true,
-					},
-					"latitude": {
-						Type:     schema.TypeFloat,
-						Optional: true,
-					},
-					"longitude": {
-						Type:     schema.TypeFloat,
-						Optional: true,
-					},
-				},
-			},
-		},
-	}, map[string]interface{}{
+	resourceData := schema.TestResourceDataRaw(t, testClusterLocationConfigSchema, map[string]interface{}{
 		"location_config": []interface{}{
 			map[string]interface{}{
 				"country_code": "US",
@@ -1358,20 +1377,7 @@ func TestToUpdateOsPatchEntityClusterRbac(t *testing.T) {
 }
 
 func TestToOsPatchConfig(t *testing.T) {
-	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"os_patch_on_boot": {
-			Type:     schema.TypeBool,
-			Optional: true,
-		},
-		"os_patch_schedule": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-		"os_patch_after": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-	}, map[string]interface{}{
+	resourceData := schema.TestResourceDataRaw(t, testClusterOsPatchConfigSchema, map[string]interface{}{
 		"os_patch_on_boot":  true,
 		"os_patch_schedule": "0 0 * * *",
 		"os_patch_after":    "2024-01-01T00:00:00.000Z",
@@ -1421,12 +1427,7 @@ func TestValidateOsPatchOnDemandAfter(t *testing.T) {
 
 func TestToSpcApplySettings(t *testing.T) {
 	// Test case when "apply_setting" is set
-	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"apply_setting": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-	}, map[string]interface{}{
+	resourceData := schema.TestResourceDataRaw(t, testClusterApplySettingSchema, map[string]interface{}{
 		"apply_setting": "reboot",
 	})
 
@@ -1440,12 +1441,7 @@ func TestToSpcApplySettings(t *testing.T) {
 	assert.Equal(t, expected, result)
 
 	// Test case when "apply_setting" is not set (empty string)
-	resourceDataEmpty := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"apply_setting": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-	}, map[string]interface{}{
+	resourceDataEmpty := schema.TestResourceDataRaw(t, testClusterApplySettingSchema, map[string]interface{}{
 		"apply_setting": "",
 	})
 
@@ -1455,12 +1451,7 @@ func TestToSpcApplySettings(t *testing.T) {
 	assert.Nil(t, resultEmpty)
 
 	// Test case when "apply_setting" is not present at all
-	resourceDataNil := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"apply_setting": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-	}, map[string]interface{}{})
+	resourceDataNil := schema.TestResourceDataRaw(t, testClusterApplySettingSchema, map[string]interface{}{})
 
 	resultNil, errNil := toSpcApplySettings(resourceDataNil)
 
@@ -1660,12 +1651,7 @@ func TestValidateCloudType(t *testing.T) {
 }
 
 func TestUpdateAgentUpgradeSetting(t *testing.T) {
-	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"pause_agent_upgrades": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-	}, map[string]interface{}{})
+	resourceData := schema.TestResourceDataRaw(t, testClusterPauseAgentUpgradesSchema, map[string]interface{}{})
 
 	tests := []struct {
 		name               string
@@ -1751,12 +1737,7 @@ func TestValidateCloudTypeOne(t *testing.T) {
 }
 
 func TestFlattenCloudConfigGeneric(t *testing.T) {
-	resourceData := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-		"cloud_config_id": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
-	}, map[string]interface{}{})
+	resourceData := schema.TestResourceDataRaw(t, testClusterCloudConfigIdSchema, map[string]interface{}{})
 
 	client := &client.V1Client{}
 	configUID := "test-config-uid"
@@ -1797,14 +1778,7 @@ func TestToClusterType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resourceSchema := map[string]*schema.Schema{
-				"cluster_type": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
-			}
-
-			resourceData := schema.TestResourceDataRaw(t, resourceSchema, map[string]interface{}{})
+			resourceData := schema.TestResourceDataRaw(t, testClusterTypeSchema, map[string]interface{}{})
 			if tt.clusterType != nil && tt.clusterType != "" {
 				err := resourceData.Set("cluster_type", tt.clusterType)
 				require.NoError(t, err)
@@ -1875,16 +1849,8 @@ func TestValidateClusterTypeUpdate(t *testing.T) {
 
 	t.Run("Empty state has no change", func(t *testing.T) {
 		// When cluster_type is not in the schema data at all, there should be no change detected
-		resourceSchema := map[string]*schema.Schema{
-			"cluster_type": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
-			},
-		}
-
 		// Create resource data with empty state - no cluster_type set
-		d := schema.TestResourceDataRaw(t, resourceSchema, map[string]interface{}{})
+		d := schema.TestResourceDataRaw(t, testClusterTypeSchema, map[string]interface{}{})
 		d.SetId("test-cluster-id")
 
 		err := ValidateClusterTypeUpdate(d)
