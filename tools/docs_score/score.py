@@ -5,7 +5,7 @@ Deterministic documentation quality scorer for terraform-provider-spectrocloud.
 Walks docs/resources/ and docs/data-sources/, parses each tfplugindocs-generated
 page, and awards defect points. Lower total is better.
 
-See autoresearch_docs/program.md for the metric definition. This script IS the
+See docs_score/README.md for the metric definition. This script IS the
 ground truth — if the program.md and this file disagree, this file wins and
 the program.md should be updated.
 
