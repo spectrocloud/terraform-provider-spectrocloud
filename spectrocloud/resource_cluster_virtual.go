@@ -42,9 +42,10 @@ func resourceClusterVirtual() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the virtual cluster. Changing this forces a new resource.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -74,11 +75,13 @@ func resourceClusterVirtual() *schema.Resource {
 				Optional: true,
 				// ExactlyOneOf: []string{"host_cluster_uid", "cluster_group_uid"},
 				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
+				Description:  "UID of the host cluster where this virtual cluster is created.",
 			},
 			"cluster_group_uid": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validation.StringNotInSlice([]string{""}, false),
+				Description:  "UID of the cluster group used to select the host cluster.",
 			},
 			"pause_cluster": {
 				Type:        schema.TypeBool,
@@ -93,28 +96,34 @@ func resourceClusterVirtual() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"max_cpu": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum vCPU allocation for the virtual cluster.",
 						},
 						"max_mem_in_mb": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum memory allocation in MB for the virtual cluster.",
 						},
 						"max_storage_in_gb": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Maximum storage allocation in GB for the virtual cluster.",
 						},
 						"min_cpu": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum vCPU allocation for the virtual cluster.",
 						},
 						"min_mem_in_mb": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum memory allocation in MB for the virtual cluster.",
 						},
 						"min_storage_in_gb": {
-							Type:     schema.TypeInt,
-							Optional: true,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Description: "Minimum storage allocation in GB for the virtual cluster.",
 						},
 					},
 				},
@@ -191,24 +200,29 @@ func resourceClusterVirtual() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"chart_name": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Helm chart name used to install the virtual cluster control plane.",
 						},
 						"chart_repo": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Helm repository URL for the virtual cluster chart.",
 						},
 						"chart_version": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Helm chart version for the virtual cluster deployment.",
 						},
 						"chart_values": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "YAML values override passed to the virtual cluster Helm chart.",
 						},
 						"k8s_version": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Kubernetes version for the virtual cluster control plane.",
 						},
 					},
 				},

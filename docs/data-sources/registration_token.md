@@ -2,12 +2,12 @@
 page_title: "spectrocloud_registration_token Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up a registration token by name or UID.
 ---
 
 # spectrocloud_registration_token (Data Source)
 
-  
+  Data source for looking up a registration token by name or UID.
 
 ~> A data source for retrieving information about an registration token registered in Palette.
 
@@ -40,4 +40,4 @@ output "token" {
 - `expiry_date` (String) The expiration date of the registration token in `YYYY-MM-DD` format.
 - `project_uid` (String) The unique identifier of the project associated with the registration token.
 - `status` (String) The status of the registration token. Allowed values are `active` or `inactive`. Default is `active`.
-- `token` (String) The registration token
+- `token` (String) The registration token value.

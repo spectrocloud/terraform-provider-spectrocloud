@@ -24,6 +24,7 @@ func resourceSSO() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceSSOImport,
 		},
+		Description: "Resource for managing tenant-level single sign-on configuration in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -147,7 +148,7 @@ func resourceSSO() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "Scopes requested during OIDC authentication.",
+							Description: "Set of OIDC scope strings requested during authentication.",
 						},
 						"first_name": {
 							Type:        schema.TypeString,

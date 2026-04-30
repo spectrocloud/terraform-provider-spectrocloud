@@ -46,6 +46,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceRegistryOciImport,
 		},
+		Description: "Resource for managing OCI registries in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

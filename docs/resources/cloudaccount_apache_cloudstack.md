@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cloudaccount_apache_cloudstack Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing Apache CloudStack cloud accounts in Spectro Cloud.
 ---
 
 # spectrocloud_cloudaccount_apache_cloudstack (Resource)
 
-  
+  Resource for managing Apache CloudStack cloud accounts in Spectro Cloud.
 
 ## Example Usage
 
@@ -98,7 +98,7 @@ terraform import spectrocloud_cloudaccount_apache_cloudstack.{cloud_account_uid}
 ### Required
 
 - `api_key` (String, Sensitive) The API key for Apache CloudStack authentication.
-- `api_url` (String) The API URL of the Apache CloudStack management server. For example: https://cloudstack.example.com:8080/client/api
+- `api_url` (String) The API URL of the Apache CloudStack management server. For example: https://cloudstack.example.com:8080/client/api.
 - `name` (String) Name of the Apache CloudStack cloud account.
 - `private_cloud_gateway_id` (String) ID of the private cloud gateway that is used to connect to the Apache CloudStack cloud.
 - `secret_key` (String, Sensitive) The secret key for Apache CloudStack authentication.

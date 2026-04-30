@@ -24,6 +24,7 @@ func resourceTeam() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceTeamImport,
 		},
+		Description: "Resource for managing teams and role mappings in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

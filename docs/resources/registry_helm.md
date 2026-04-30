@@ -2,12 +2,12 @@
 page_title: "spectrocloud_registry_helm Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing Helm registries in Spectro Cloud.
 ---
 
 # spectrocloud_registry_helm (Resource)
 
-  
+  Resource for managing Helm registries in Spectro Cloud.
 
 ## Example Usage
 
@@ -49,7 +49,7 @@ The import will automatically populate all configuration fields from the Spectro
 - `credentials` (Block List, Min: 1, Max: 1) Authentication credentials for accessing the Helm registry. (see [below for nested schema](#nestedblock--credentials))
 - `endpoint` (String) The URL endpoint of the Helm registry where the charts are hosted.
 - `is_private` (Boolean) Specifies whether the Helm registry is private or public.
-- `name` (String) The name of the Helm registry. This must be unique
+- `name` (String) The name of the Helm registry. This must be unique.
 
 ### Optional
 

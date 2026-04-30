@@ -34,10 +34,12 @@ func resourceWorkspace() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceWorkspaceImport,
 		},
+		Description: "Resource for managing workspaces in Spectro Cloud.",
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the workspace.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -46,10 +48,12 @@ func resourceWorkspace() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "Set of tag strings in the form `key:value` applied to the workspace.",
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Description of the workspace.",
 			},
 			"workspace_quota": {
 				Type:        schema.TypeList,
@@ -83,8 +87,9 @@ func resourceWorkspace() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"uid": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "UID of the cluster attached to this workspace.",
 						},
 						"cluster_name": {
 							Type:     schema.TypeString,

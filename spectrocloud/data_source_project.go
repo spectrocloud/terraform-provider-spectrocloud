@@ -10,6 +10,7 @@ import (
 func dataSourceProject() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceProjectRead,
+		Description: "Data source for looking up a Spectro Cloud project by name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -19,9 +20,10 @@ func dataSourceProject() *schema.Resource {
 				ConflictsWith: []string{"name"},
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Computed: true,
-				Optional: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Description: "Name of the project to look up.",
 			},
 		},
 	}

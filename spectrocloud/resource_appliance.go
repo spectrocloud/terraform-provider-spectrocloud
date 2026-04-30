@@ -64,7 +64,7 @@ func resourceAppliance() *schema.Resource {
 				Optional:     true,
 				Default:      "disabled",
 				ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
-				Description:  "Activate remote shell access to troubleshoot edge hosts by initiating an SSH connection from Palette using the configured username and password credentials. https://docs.spectrocloud.com/clusters/edge/cluster-management/remote-shell/",
+				Description:  "Activate remote shell access to troubleshoot edge hosts by initiating an SSH connection from Palette using the configured credentials. See https://docs.spectrocloud.com/clusters/edge/cluster-management/remote-shell/.",
 			},
 			"temporary_shell_credentials": {
 				Type:         schema.TypeString,

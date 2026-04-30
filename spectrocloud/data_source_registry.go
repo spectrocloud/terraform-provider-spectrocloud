@@ -11,6 +11,7 @@ import (
 func dataSourceRegistry() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceRegistryRead,
+		Description: "Data source for looking up an OCI, Helm, or Spectro registry by name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -19,9 +20,10 @@ func dataSourceRegistry() *schema.Resource {
 				Optional: true,
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the registry to look up.",
 			},
 			"type": {
 				Type:         schema.TypeString,

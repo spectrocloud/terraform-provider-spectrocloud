@@ -38,8 +38,9 @@ func resourceClusterProfile() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the cluster profile.",
 			},
 			"version": {
 				Type:     schema.TypeString,
@@ -49,7 +50,7 @@ func resourceClusterProfile() *schema.Resource {
 					"**Important**: Modifying this value will only update the version number of the existing cluster profile. " +
 					"It will NOT create a new version in Palette. " +
 					"To create a new version of a cluster profile, refer to the example at: " +
-					"https://github.com/spectrocloud/spectro-samples/tree/main/terraform/cluster-profiles",
+					"https://github.com/spectrocloud/spectro-samples/tree/main/terraform/cluster-profiles.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -69,8 +70,9 @@ func resourceClusterProfile() *schema.Resource {
 				Description: "A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.",
 			},
 			"description": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Description of the cluster profile.",
 			},
 			"cloud": {
 				Type:     schema.TypeString,
