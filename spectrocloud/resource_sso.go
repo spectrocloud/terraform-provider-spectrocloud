@@ -678,6 +678,46 @@ func toOIDC(d *schema.ResourceData) *models.V1TenantOidcClientSpec {
 	return oidcSpec
 }
 
+// priorOidcString returns a string field from the first element of the configured oidc block (state/config).
+func priorOidcString(d *schema.ResourceData, field string) string {
+	raw, ok := d.GetOk("oidc")
+	if !ok || raw == nil {
+		return ""
+	}
+	list, ok := raw.([]interface{})
+	if !ok || len(list) == 0 {
+		return ""
+	}
+	m, ok := list[0].(map[string]interface{})
+	if !ok || m == nil {
+		return ""
+	}
+	v, ok := m[field]
+	if !ok || v == nil {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return s
+}
+
+// resolveOIDCClientSecret picks the value to store in state after a read. The API often returns a masked
+// client secret; in that case we keep the last known value from state so Terraform does not plan a change every refresh.
+func resolveOIDCClientSecret(priorFromState, apiSecret string) string {
+	if priorFromState != "" {
+		if apiSecret == "" || strings.Contains(apiSecret, "*") {
+			return priorFromState
+		}
+		return apiSecret
+	}
+	if apiSecret != "" && !strings.Contains(apiSecret, "*") {
+		return apiSecret
+	}
+	return ""
+}
+
 func flattenOidc(oidcSpec *models.V1TenantOidcClientSpec, d *schema.ResourceData) error {
 	var err error
 	var oidc []interface{}
@@ -685,7 +725,7 @@ func flattenOidc(oidcSpec *models.V1TenantOidcClientSpec, d *schema.ResourceData
 
 	spec["callback_url"] = oidcSpec.CallbackURL
 	spec["client_id"] = oidcSpec.ClientID
-	spec["client_secret"] = oidcSpec.ClientSecret
+	spec["client_secret"] = resolveOIDCClientSecret(priorOidcString(d, "client_secret"), oidcSpec.ClientSecret)
 
 	spec["default_team_ids"] = oidcSpec.DefaultTeams
 	decodeCA, _ := base64.StdEncoding.DecodeString(oidcSpec.IssuerTLS.CaCertificateBase64)
