@@ -2,12 +2,12 @@
 page_title: "spectrocloud_backup_storage_location Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing backup storage locations in Spectro Cloud.
 ---
 
 # spectrocloud_backup_storage_location (Resource)
 
-  
+  Resource for managing backup storage locations in Spectro Cloud.
 
 ## Example Usage
 

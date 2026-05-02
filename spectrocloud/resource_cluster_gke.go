@@ -91,9 +91,10 @@ func resourceClusterGke() *schema.Resource {
 					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "UID of the GCP cloud account used for this GKE cluster. Changing this forces a new resource.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -117,9 +118,10 @@ func resourceClusterGke() *schema.Resource {
 							Description: "GCP project name.",
 						},
 						"region": {
-							Type:     schema.TypeString,
-							ForceNew: true,
-							Required: true,
+							Type:        schema.TypeString,
+							ForceNew:    true,
+							Required:    true,
+							Description: "Google Cloud region where the GKE cluster is deployed. Changing this forces a new resource.",
 						},
 					},
 				},
@@ -155,8 +157,9 @@ func resourceClusterGke() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Name of the GKE machine pool.",
 						},
 						"count": {
 							Type:        schema.TypeInt,
@@ -164,9 +167,10 @@ func resourceClusterGke() *schema.Resource {
 							Description: "Number of nodes in the machine pool.",
 						},
 						"disk_size_gb": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							Default:  60,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     60,
+							Description: "Root disk size in GB for each node in this machine pool.",
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -185,8 +189,9 @@ func resourceClusterGke() *schema.Resource {
 							Description: "Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.",
 						},
 						"instance_type": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "GCE machine type used for nodes in this machine pool.",
 						},
 						"update_strategy": {
 							Type:         schema.TypeString,

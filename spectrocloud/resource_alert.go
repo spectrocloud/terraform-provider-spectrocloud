@@ -33,6 +33,7 @@ func resourceAlert() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceAlertImport,
 		},
+		Description: "Resource for managing project-level alert channels in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -84,16 +85,19 @@ func resourceAlert() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"is_succeeded": {
-							Type:     schema.TypeBool,
-							Optional: true,
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Description: "Whether the latest alert delivery operation succeeded.",
 						},
 						"message": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Status message from the latest alert delivery operation.",
 						},
 						"time": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Timestamp of the latest alert delivery status update.",
 						},
 					},
 				},

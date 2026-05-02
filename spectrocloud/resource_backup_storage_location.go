@@ -26,6 +26,7 @@ func resourceBackupStorageLocation() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceBackupStorageLocationImport,
 		},
+		Description: "Resource for managing backup storage locations in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),

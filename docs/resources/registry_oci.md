@@ -2,12 +2,12 @@
 page_title: "spectrocloud_registry_oci Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing OCI registries in Spectro Cloud.
 ---
 
 # spectrocloud_registry_oci (Resource)
 
-  
+  Resource for managing OCI registries in Spectro Cloud.
 
 ## Example Usage
 

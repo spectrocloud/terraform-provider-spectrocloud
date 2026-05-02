@@ -20,10 +20,12 @@ func resourceCloudAccountAws() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceAccountAwsImport,
 		},
+		Description: "Resource for managing AWS cloud account credentials in Spectro Cloud.",
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Name of the AWS cloud account.",
 			},
 			"context": {
 				Type:         schema.TypeString,

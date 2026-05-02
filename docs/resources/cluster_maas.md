@@ -192,7 +192,7 @@ Optional:
 
 Required:
 
-- `azs` (Set of String) Availability zones in which the machine pool nodes to be provisioned.
+- `azs` (Set of String) Set of availability zone name strings where machine pool nodes are provisioned.
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
 - `name` (String) Name of the machine pool.

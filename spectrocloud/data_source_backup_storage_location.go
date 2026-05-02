@@ -10,6 +10,7 @@ import (
 func dataSourceBackupStorageLocation() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceBackupStorageLocationRead,
+		Description: "Data source for looking up a backup storage location by ID or name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {

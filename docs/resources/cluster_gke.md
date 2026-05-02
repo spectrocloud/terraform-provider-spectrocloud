@@ -73,7 +73,7 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Required
 
-- `cloud_account_id` (String)
+- `cloud_account_id` (String) UID of the GCP cloud account used for this GKE cluster. Changing this forces a new resource.
 - `cloud_config` (Block List, Min: 1, Max: 1) The GKE environment configuration settings such as project parameters and region parameters that apply to this cluster. (see [below for nested schema](#nestedblock--cloud_config))
 - `machine_pool` (Block Set, Min: 1) The machine pool configuration for the cluster. (see [below for nested schema](#nestedblock--machine_pool))
 - `name` (String) The name of the cluster.
@@ -119,7 +119,7 @@ Refer to the [Import section](/docs#import) to learn more.
 Required:
 
 - `project` (String) GCP project name.
-- `region` (String)
+- `region` (String) Google Cloud region where the GKE cluster is deployed. Changing this forces a new resource.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -128,14 +128,14 @@ Required:
 Required:
 
 - `count` (Number) Number of nodes in the machine pool.
-- `instance_type` (String)
-- `name` (String)
+- `instance_type` (String) GCE machine type used for nodes in this machine pool.
+- `name` (String) Name of the GKE machine pool.
 
 Optional:
 
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
-- `disk_size_gb` (Number)
+- `disk_size_gb` (Number) Root disk size in GB for each node in this machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))

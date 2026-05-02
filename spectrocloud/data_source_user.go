@@ -10,6 +10,7 @@ import (
 func dataSourceUser() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceUserRead,
+		Description: "Data source for looking up a user by ID or email address.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {

@@ -27,6 +27,7 @@ func resourceRegistryHelm() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceRegistryHelmImport,
 		},
+		Description: "Resource for managing Helm registries in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -40,7 +41,7 @@ func resourceRegistryHelm() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The name of the Helm registry. This must be unique",
+				Description: "The name of the Helm registry. This must be unique.",
 			},
 			"is_private": {
 				Type:        schema.TypeBool,

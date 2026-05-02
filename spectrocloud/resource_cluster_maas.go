@@ -324,7 +324,7 @@ func resourceClusterMaas() *schema.Resource {
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "Availability zones in which the machine pool nodes to be provisioned.",
+							Description: "Set of availability zone name strings where machine pool nodes are provisioned.",
 						},
 						"node_tags": {
 							Type:     schema.TypeSet,

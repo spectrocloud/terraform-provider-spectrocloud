@@ -58,14 +58,15 @@ resource "spectrocloud_sso" "sso_setting" {
   #    }
   #  }
 }
+```
 
-## import existing sso settings
-## when importing either we can import saml or oidc
-#import {
-#  to = spectrocloud_sso.sso_setting
-#  id = "5eea74e9teste0dtestd3f316:saml" // tenant-uid:saml or tenant-uid:oidc
-#}
+## Import
 
+```terraform
+import {
+  to = spectrocloud_sso.sso_setting
+  id = "5eea74e9teste0dtestd3f316:saml" // tenant-uid:saml or tenant-uid:oidc
+}
 ```
 
 {{ .SchemaMarkdown | trimspace }}
