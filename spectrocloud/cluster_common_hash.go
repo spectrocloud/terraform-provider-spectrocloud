@@ -445,25 +445,34 @@ func resourceMachinePoolGkeHash(v interface{}) int {
 
 func eksLaunchTemplate(v interface{}) string {
 	var buf bytes.Buffer
-	if len(v.([]interface{})) > 0 {
-		m := v.([]interface{})[0].(map[string]interface{})
+	list, ok := v.([]interface{})
+	if !ok || len(list) == 0 {
+		return buf.String()
+	}
+	first := list[0]
+	if first == nil {
+		return buf.String()
+	}
+	m, ok := first.(map[string]interface{})
+	if !ok {
+		return buf.String()
+	}
 
-		if m["ami_id"] != nil {
-			buf.WriteString(fmt.Sprintf("%s-", m["ami_id"].(string)))
-		}
-		if m["root_volume_type"] != nil {
-			buf.WriteString(fmt.Sprintf("%s-", m["root_volume_type"].(string)))
-		}
-		if m["root_volume_iops"] != nil {
-			buf.WriteString(fmt.Sprintf("%d-", m["root_volume_iops"].(int)))
-		}
-		if m["root_volume_throughput"] != nil {
-			buf.WriteString(fmt.Sprintf("%d-", m["root_volume_throughput"].(int)))
-		}
-		if m["additional_security_groups"] != nil {
-			for _, sg := range m["additional_security_groups"].(*schema.Set).List() {
-				buf.WriteString(fmt.Sprintf("%s-", sg.(string)))
-			}
+	if m["ami_id"] != nil {
+		buf.WriteString(fmt.Sprintf("%s-", m["ami_id"].(string)))
+	}
+	if m["root_volume_type"] != nil {
+		buf.WriteString(fmt.Sprintf("%s-", m["root_volume_type"].(string)))
+	}
+	if m["root_volume_iops"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["root_volume_iops"].(int)))
+	}
+	if m["root_volume_throughput"] != nil {
+		buf.WriteString(fmt.Sprintf("%d-", m["root_volume_throughput"].(int)))
+	}
+	if m["additional_security_groups"] != nil {
+		for _, sg := range m["additional_security_groups"].(*schema.Set).List() {
+			buf.WriteString(fmt.Sprintf("%s-", sg.(string)))
 		}
 	}
 

@@ -1165,7 +1165,14 @@ func setEksLaunchTemplate(machinePool map[string]interface{}) *models.V1AwsLaunc
 			return nil
 		}
 
-		eksLaunchTemplate := eksLaunchTemplateList[0].(map[string]interface{})
+		first := eksLaunchTemplateList[0]
+		if first == nil {
+			return nil
+		}
+		eksLaunchTemplate, ok := first.(map[string]interface{})
+		if !ok {
+			return nil
+		}
 
 		keys := []string{"ami_id", "root_volume_type", "root_volume_iops", "root_volume_throughput", "additional_security_groups"}
 
