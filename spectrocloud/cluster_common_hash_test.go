@@ -604,6 +604,34 @@ func TestResourceMachinePoolEksHash(t *testing.T) {
 	}
 }
 
+// EKS machine pool hashing must tolerate Terraform's []interface{}{nil} placeholder during diff
+// for optional nested blocks (same effective hash as omitting eks_launch_template).
+func TestResourceMachinePoolEksHash_eksLaunchTemplateNilListElement(t *testing.T) {
+	poolBase := map[string]interface{}{
+		"disk_size_gb":  100,
+		"min":           2,
+		"max":           5,
+		"instance_type": "t2.micro",
+		"capacity_type": "on-demand",
+		"max_price":     "0.05",
+		"az_subnets": map[string]interface{}{
+			"subnet1": "subnet-123",
+			"subnet2": "subnet-456",
+		},
+	}
+	withoutLT := map[string]interface{}{}
+	for k, v := range poolBase {
+		withoutLT[k] = v
+	}
+	withNilLT := map[string]interface{}{}
+	for k, v := range poolBase {
+		withNilLT[k] = v
+	}
+	withNilLT["eks_launch_template"] = []interface{}{nil}
+
+	assert.Equal(t, resourceMachinePoolEksHash(withoutLT), resourceMachinePoolEksHash(withNilLT))
+}
+
 func TestEksLaunchTemplate(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -624,6 +652,11 @@ func TestEksLaunchTemplate(t *testing.T) {
 			expected: "ami-123-gp2-100-200-sg-456-sg-123-",
 		},
 		{name: "empty slice", input: []interface{}{}, expected: ""},
+		{
+			name:     "Terraform diff placeholder: list with nil element",
+			input:    []interface{}{nil},
+			expected: "",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
