@@ -23,12 +23,14 @@ func dataSourceCluster() *schema.Resource {
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The admin kubeconfig file for accessing the cluster. This is computed automatically.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Computed from the cluster; treat as a highly sensitive secret.",
 			},
 			"kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The kubeconfig file for accessing the cluster as a non-admin user. This is computed automatically.",
+				Sensitive:   true,
+				Description: "Non-admin kubeconfig (credential material). Computed from the cluster; protect like any kubeconfig secret.",
 			},
 			"context": {
 				Type:         schema.TypeString,

@@ -152,12 +152,14 @@ func resourceClusterAks() *schema.Resource {
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -188,7 +190,8 @@ func resourceClusterAks() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							ForceNew:    true,
-							Description: "Public SSH key to be used for the cluster nodes.",
+							Sensitive:   true,
+							Description: "Public SSH key for the cluster nodes (key material; treat as sensitive infrastructure).",
 						},
 						"private_cluster": {
 							Type:        schema.TypeBool,

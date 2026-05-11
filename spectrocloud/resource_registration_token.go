@@ -67,7 +67,8 @@ func resourceRegistrationToken() *schema.Resource {
 			"token": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Generated registration token value returned by Palette.",
+				Sensitive:   true,
+				Description: "Generated registration token (credential). Anyone with this value can enroll hosts against the token scope; treat as a secret.",
 			},
 		},
 	}

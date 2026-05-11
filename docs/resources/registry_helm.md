@@ -69,8 +69,8 @@ Required:
 
 Optional:
 
-- `password` (String) The password for basic authentication. Required if 'credential_type' is set to 'basic'.
-- `token` (String) The authentication token. Required if 'credential_type' is set to 'token'.
+- `password` (String, Sensitive) Password for basic auth (credential). Required when credential_type is `basic`.
+- `token` (String, Sensitive) Auth token (credential). Required when credential_type is `token`.
 - `username` (String) The username for basic authentication. Required if 'credential_type' is set to 'basic'.
 
 

@@ -83,7 +83,7 @@ Required:
 
 Optional:
 
-- `access_key` (String) The access key for accessing the registry. Required if 'credential_type' is set to 'secret'.
+- `access_key` (String, Sensitive) The access key for accessing the registry (credential). Required if 'credential_type' is set to 'secret'.
 - `arn` (String) The Amazon Resource Name (ARN) used for AWS-based authentication. Required if 'credential_type' is 'sts'.
 - `external_id` (String) The external ID used for AWS STS (Security Token Service) authentication. Required if 'credential_type' is 'sts'.
 - `password` (String, Sensitive) The password for basic authentication. Required if 'credential_type' is 'basic'.

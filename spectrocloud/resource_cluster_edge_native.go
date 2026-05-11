@@ -147,12 +147,14 @@ func resourceClusterEdgeNative() *schema.Resource {
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -163,13 +165,14 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_keys": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Set:      schema.HashString,
+							Type:      schema.TypeSet,
+							Optional:  true,
+							Set:       schema.HashString,
+							Sensitive: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.",
+							Description: "List of public SSH keys for the cluster (key material; treat as sensitive infrastructure).",
 						},
 						"vip": {
 							Type:        schema.TypeString,

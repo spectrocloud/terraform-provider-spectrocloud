@@ -110,7 +110,8 @@ func resourceBackupStorageLocation() *schema.Resource {
 						"access_key": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The access key for S3 authentication, required if 'credential_type' is set to 'secret'.",
+							Sensitive:   true,
+							Description: "The access key for S3 authentication (credential), required if 'credential_type' is set to 'secret'.",
 						},
 						"secret_key": {
 							Type:        schema.TypeString,

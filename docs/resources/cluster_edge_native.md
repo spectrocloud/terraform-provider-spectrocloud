@@ -119,10 +119,10 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 
 <a id="nestedblock--cloud_config"></a>
 ### Nested Schema for `cloud_config`
@@ -132,7 +132,7 @@ Optional:
 - `is_two_node_cluster` (Boolean) Set to `true` to enable a two-node cluster.
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
 - `overlay_cidr_range` (String) The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`
-- `ssh_keys` (Set of String) List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.
+- `ssh_keys` (Set of String, Sensitive) List of public SSH keys for the cluster (key material; treat as sensitive infrastructure).
 - `vip` (String) The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`.
 
 
