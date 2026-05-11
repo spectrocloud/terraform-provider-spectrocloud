@@ -12,3 +12,6 @@ maas_domain              = "{enter Maas Domain}" # "maas.sc"
 # Enter the Maas Region and AZ for cluster resources
 maas_resource_pool = "{enter Maas Resource Pool}"
 maas_azs           = ["{enter Maas Availability Zone}"]
+
+# Optional SSH public keys injected into MAAS nodes for the 'spectro' user.
+# cluster_ssh_public_keys = ["ssh-rsa AAAAB3NzaC1y... user@host"]
