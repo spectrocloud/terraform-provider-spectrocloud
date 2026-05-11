@@ -18,10 +18,10 @@ resource "spectrocloud_cluster_maas" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
   cloud_config {
-    subscription_id = "subscription-id"
-    resource_group  = "dev"
-    ssh_key         = "ssh key value"
-    region          = "centralus"
+    domain        = "maas.mycompany.com"
+    enable_lxd_vm = false
+    ntp_servers   = ["0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"]
+    ssh_keys      = var.cluster_ssh_public_keys
   }
 
   cluster_profile {
@@ -64,11 +64,36 @@ resource "spectrocloud_cluster_maas" "cluster" {
   }
 
   machine_pool {
-    name                 = "worker-basic"
-    count                = 1
-    instance_type        = "Standard_DS4"
-    disk_size_gb         = 60
-    is_system_node_pool  = true
-    storage_account_type = "Standard_LRS"
+    control_plane           = true
+    control_plane_as_worker = true
+    name                    = "cp-pool"
+    count                   = 1
+
+    placement {
+      resource_pool = "Medium-Generic"
+    }
+
+    instance_type {
+      min_memory_mb = 4096
+      min_cpu       = 2
+    }
+
+    azs = ["az1"]
+  }
+
+  machine_pool {
+    name  = "worker-basic"
+    count = 1
+
+    placement {
+      resource_pool = "Medium-Generic"
+    }
+
+    instance_type {
+      min_memory_mb = 4096
+      min_cpu       = 2
+    }
+
+    azs = ["az2"]
   }
 }

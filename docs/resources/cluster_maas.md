@@ -32,9 +32,10 @@ resource "spectrocloud_cluster_maas" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
   cloud_config {
-    domain = "maas.mycompany.com"
+    domain        = "maas.mycompany.com"
     enable_lxd_vm = false
-    ntp_servers = ["0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"]
+    ntp_servers   = ["0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"]
+    ssh_keys      = var.cluster_ssh_public_keys
   }
 
   cluster_profile {
@@ -185,6 +186,7 @@ Optional:
 
 - `enable_lxd_vm` (Boolean) Whether to enable LXD VM. Default is `false`.
 - `ntp_servers` (Set of String) A list of NTP servers to use instead of the machine image's default NTP server list.
+- `ssh_keys` (Set of String) List of SSH public keys injected into MAAS nodes as authorized keys for the 'spectro' user.
 
 
 <a id="nestedblock--machine_pool"></a>

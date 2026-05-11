@@ -197,6 +197,12 @@ func resourceClusterAks() *schema.Resource {
 							ForceNew:    true,
 							Description: "Whether to create a private cluster(API endpoint). Default is `false`.",
 						},
+						"override_cluster_api_config": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.",
+						},
 
 						// fields for static placement are having flat structure as backend currently doesn't support multiple subnets.
 						"vnet_name": {
@@ -523,6 +529,9 @@ func flattenClusterConfigsAks(config *models.V1AzureCloudConfig) []interface{} {
 		m["ssh_key"] = *config.Spec.ClusterConfig.SSHKey
 	}
 	m["private_cluster"] = config.Spec.ClusterConfig.APIServerAccessProfile.EnablePrivateCluster
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
 	if config.Spec.ClusterConfig.VnetName != "" {
 		m["vnet_name"] = config.Spec.ClusterConfig.VnetName
 	}
@@ -722,6 +731,11 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		vnetcidr = cloudConfigMap["vnet_cidr_block"].(string)
 	}
 
+	var overrideClusterAPIConfig string
+	if cloudConfigMap["override_cluster_api_config"] != nil {
+		overrideClusterAPIConfig = cloudConfigMap["override_cluster_api_config"].(string)
+	}
+
 	var workerSubnet *models.V1Subnet
 	if cloudConfigMap["worker_subnet_name"] != nil && cloudConfigMap["worker_cidr"] != nil {
 		workerSubnet = &models.V1Subnet{
@@ -759,12 +773,13 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 				APIServerAccessProfile: &models.V1APIServerAccessProfile{
 					EnablePrivateCluster: cloudConfigMap["private_cluster"].(bool),
 				},
-				SubscriptionID:     types.Ptr(cloudConfigMap["subscription_id"].(string)),
-				VnetName:           vnetname,
-				VnetResourceGroup:  vnetResourceGroup,
-				VnetCidrBlock:      vnetcidr,
-				ControlPlaneSubnet: controlPlaneSubnet,
-				WorkerSubnet:       workerSubnet,
+				SubscriptionID:           types.Ptr(cloudConfigMap["subscription_id"].(string)),
+				OverrideClusterAPIConfig: overrideClusterAPIConfig,
+				VnetName:                 vnetname,
+				VnetResourceGroup:        vnetResourceGroup,
+				VnetCidrBlock:            vnetcidr,
+				ControlPlaneSubnet:       controlPlaneSubnet,
+				WorkerSubnet:             workerSubnet,
 			},
 		},
 	}
