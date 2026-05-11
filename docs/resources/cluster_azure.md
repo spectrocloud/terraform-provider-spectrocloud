@@ -159,10 +159,10 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
 
 <a id="nestedblock--cloud_config"></a>
@@ -172,7 +172,7 @@ Required:
 
 - `region` (String) Azure region. This can be found in the Azure portal under `Resource groups`.
 - `resource_group` (String) Azure resource group. This can be found in the Azure portal under `Resource groups`.
-- `ssh_key` (String) Public SSH key to be used for the cluster nodes.
+- `ssh_key` (String, Sensitive) Public SSH key for the cluster nodes (key material; treat as sensitive infrastructure).
 - `subscription_id` (String) Azure subscription ID. This can be found in the Azure portal under `Subscriptions`.
 
 Optional:

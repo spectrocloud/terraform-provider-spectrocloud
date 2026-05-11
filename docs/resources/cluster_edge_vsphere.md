@@ -61,10 +61,10 @@ resource "spectrocloud_cluster_edge_vsphere" "example" {
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 
 <a id="nestedblock--cloud_config"></a>
 ### Nested Schema for `cloud_config`
@@ -80,8 +80,8 @@ Optional:
 - `image_template_folder` (String) vSphere folder containing VM image templates used for node provisioning.
 - `network_search_domain` (String) DNS search domain associated with the control plane endpoint.
 - `network_type` (String) Type of network endpoint used for the control plane address.
-- `ssh_key` (String) Public SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
-- `ssh_keys` (Set of String) List of public SSH (Secure Shell) keys to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
+- `ssh_key` (String, Sensitive) Public SSH key for the cluster (key material; treat as sensitive). `ssh_key` and `ssh_keys` are mutually exclusive.
+- `ssh_keys` (Set of String, Sensitive) List of public SSH keys (key material; treat as sensitive). `ssh_key` and `ssh_keys` are mutually exclusive.
 - `static_ip` (Boolean) Whether to use static IP addressing for the control plane endpoint. Default is `false`.
 
 

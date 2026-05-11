@@ -132,7 +132,8 @@ func resourceRegistryOciEcr() *schema.Resource {
 						"access_key": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The access key for accessing the registry. Required if 'credential_type' is set to 'secret'.",
+							Sensitive:   true,
+							Description: "The access key for accessing the registry (credential). Required if 'credential_type' is set to 'secret'.",
 						},
 						"secret_key": {
 							Type:        schema.TypeString,

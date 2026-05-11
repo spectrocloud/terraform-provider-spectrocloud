@@ -129,7 +129,7 @@ Required:
 
 Optional:
 
-- `access_key` (String) The access key for S3 authentication, required if 'credential_type' is set to 'secret'.
+- `access_key` (String, Sensitive) The access key for S3 authentication (credential), required if 'credential_type' is set to 'secret'.
 - `arn` (String) The Amazon Resource Name (ARN) of the IAM role to assume for accessing S3 when using 'sts' credentials.
 - `external_id` (String) An external ID used for cross-account access to the S3 storage when using 'sts' credentials.
 - `s3_force_path_style` (Boolean) A boolean flag indicating whether to enforce the path-style URL for accessing S3.
