@@ -186,8 +186,7 @@ Optional:
 
 - `enable_lxd_vm` (Boolean) Whether to enable LXD VM. Default is `false`.
 - `ntp_servers` (Set of String) A list of NTP servers to use instead of the machine image's default NTP server list.
-- `ssh_key` (String, Deprecated) The SSH public key injected into MAAS nodes as an authorized key for the 'spectro' user. `ssh_key` and `ssh_keys` are mutually exclusive.
-- `ssh_keys` (Set of String) List of SSH public keys injected into MAAS nodes as authorized keys for the 'spectro' user. `ssh_key` and `ssh_keys` are mutually exclusive.
+- `ssh_keys` (Set of String) List of SSH public keys injected into MAAS nodes as authorized keys for the 'spectro' user.
 
 
 <a id="nestedblock--machine_pool"></a>

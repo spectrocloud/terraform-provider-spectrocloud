@@ -46,20 +46,11 @@ func TestGetMaasSSHKeys_FromSet(t *testing.T) {
 	assert.Equal([]string{"ssh-rsa AAAA1", "ssh-rsa AAAA2"}, sorted)
 }
 
-func TestGetMaasSSHKeys_FromSingleKey(t *testing.T) {
-	assert := assert.New(t)
-	cloudConfig := map[string]interface{}{
-		"ssh_key": "  ssh-rsa AAAAsingle  ",
-	}
-	keys := getMaasSSHKeys(cloudConfig)
-	assert.Equal([]string{"ssh-rsa AAAAsingle"}, keys)
-}
-
 func TestGetMaasSSHKeys_Neither(t *testing.T) {
 	assert := assert.New(t)
 	cloudConfig := map[string]interface{}{}
 	keys := getMaasSSHKeys(cloudConfig)
-	assert.Nil(keys, "neither ssh_key nor ssh_keys set should return nil (backward compat)")
+	assert.Nil(keys, "no ssh_keys set should return nil")
 }
 
 func TestToMaasCloudConfigUpdate_WithSSHKeys(t *testing.T) {
@@ -78,19 +69,6 @@ func TestToMaasCloudConfigUpdate_WithSSHKeys(t *testing.T) {
 	assert.Equal([]string{"ssh-rsa AAAA1", "ssh-rsa AAAA2"}, sorted)
 }
 
-func TestToMaasCloudConfigUpdate_WithSingleSSHKey(t *testing.T) {
-	assert := assert.New(t)
-	cloudConfig := map[string]interface{}{
-		"domain":        "maas.test.local",
-		"enable_lxd_vm": false,
-		"ssh_key":       "ssh-rsa AAAAsingle",
-	}
-	entity := toMaasCloudConfigUpdate(cloudConfig)
-	assert.NotNil(entity)
-	assert.NotNil(entity.ClusterConfig)
-	assert.Equal([]string{"ssh-rsa AAAAsingle"}, entity.ClusterConfig.SSHKeys)
-}
-
 func TestToMaasCloudConfigUpdate_NoSSHKeys(t *testing.T) {
 	assert := assert.New(t)
 	cloudConfig := map[string]interface{}{
@@ -100,10 +78,10 @@ func TestToMaasCloudConfigUpdate_NoSSHKeys(t *testing.T) {
 	entity := toMaasCloudConfigUpdate(cloudConfig)
 	assert.NotNil(entity)
 	assert.NotNil(entity.ClusterConfig)
-	assert.Nil(entity.ClusterConfig.SSHKeys, "no SSH keys should serialise as nil (backward compat)")
+	assert.Nil(entity.ClusterConfig.SSHKeys, "no SSH keys should serialise as nil")
 }
 
-func TestFlattenClusterConfigsMaas_SSHKeys_Preferred(t *testing.T) {
+func TestFlattenClusterConfigsMaas_SSHKeys(t *testing.T) {
 	assert := assert.New(t)
 	keys := []string{"ssh-rsa AAAA1", "ssh-rsa AAAA2"}
 	inputCloudConfig := &models.V1MaasCloudConfig{
@@ -123,29 +101,8 @@ func TestFlattenClusterConfigsMaas_SSHKeys_Preferred(t *testing.T) {
 	m := flat[0].(map[string]interface{})
 	assert.Equal("maas.test.local", m["domain"])
 	got, ok := m["ssh_keys"].([]string)
-	assert.True(ok, "ssh_keys should be set via the preferred branch")
+	assert.True(ok, "ssh_keys should be set when present in state and API")
 	assert.Equal(keys, got)
-	_, hasKey := m["ssh_key"]
-	assert.False(hasKey, "ssh_key should not be populated when user used ssh_keys")
-}
-
-func TestFlattenClusterConfigsMaas_SSHKey_Deprecated(t *testing.T) {
-	assert := assert.New(t)
-	inputCloudConfig := &models.V1MaasCloudConfig{
-		Spec: &models.V1MaasCloudConfigSpec{
-			ClusterConfig: &models.V1MaasClusterConfig{
-				Domain:  strPtr("maas.test.local"),
-				SSHKeys: []string{"  ssh-rsa AAAAsingle  "},
-			},
-		},
-	}
-	d := prepareClusterMaasTestResourceData(map[string]interface{}{
-		"ssh_key": "ssh-rsa AAAAsingle",
-	})
-	flat := flattenClusterConfigsMaas(d, inputCloudConfig)
-	assert.Equal(1, len(flat))
-	m := flat[0].(map[string]interface{})
-	assert.Equal("ssh-rsa AAAAsingle", m["ssh_key"], "ssh_key should be trimmed and populated")
 }
 
 func TestFlattenClusterConfigsMaas_Import(t *testing.T) {
@@ -165,7 +122,7 @@ func TestFlattenClusterConfigsMaas_Import(t *testing.T) {
 	assert.Equal(1, len(flat))
 	m := flat[0].(map[string]interface{})
 	got, ok := m["ssh_keys"].([]string)
-	assert.True(ok, "ssh_keys should default on import when neither GetOk branch trips")
+	assert.True(ok, "ssh_keys should be set on import when API returns keys")
 	if !reflect.DeepEqual(got, keys) {
 		t.Errorf("expected %#v, got %#v", keys, got)
 	}
@@ -195,9 +152,7 @@ func TestFlattenClusterConfigsMaas_NoSSHKeys(t *testing.T) {
 	flat := flattenClusterConfigsMaas(d, inputCloudConfig)
 	assert.Equal(1, len(flat))
 	m := flat[0].(map[string]interface{})
-	_, hasKey := m["ssh_key"]
 	_, hasKeys := m["ssh_keys"]
-	assert.False(hasKey, "ssh_key should be absent when server has no SSH keys")
 	assert.False(hasKeys, "ssh_keys should be absent when server has no SSH keys")
 }
 

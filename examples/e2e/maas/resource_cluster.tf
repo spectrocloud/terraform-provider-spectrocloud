@@ -1,4 +1,3 @@
-
 resource "spectrocloud_cluster_maas" "cluster" {
   name = "maas-picard-cluster-1"
 
@@ -8,7 +7,10 @@ resource "spectrocloud_cluster_maas" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_maas.account.id
 
   cloud_config {
-    domain   = var.maas_domain # "maas.sc"
+    domain        = var.maas_domain # e.g. "maas.sc"
+    enable_lxd_vm = false
+    ntp_servers   = ["0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"]
+    # SSH public keys for the spectro user on MAAS nodes; set cluster_ssh_public_keys in tfvars (list of strings).
     ssh_keys = var.cluster_ssh_public_keys
   }
 

@@ -194,22 +194,14 @@ func resourceClusterMaas() *schema.Resource {
 							Required:    true,
 							Description: "Domain name in which the cluster to be provisioned.",
 						},
-						"ssh_key": {
-							Type:          schema.TypeString,
-							Optional:      true,
-							ConflictsWith: []string{"cloud_config.0.ssh_keys"},
-							Description:   "The SSH public key injected into MAAS nodes as an authorized key for the 'spectro' user. `ssh_key` and `ssh_keys` are mutually exclusive.",
-							Deprecated:    "This field is deprecated and will be removed in the future. Use `ssh_keys` instead.",
-						},
 						"ssh_keys": {
-							Type:          schema.TypeSet,
-							Optional:      true,
-							Set:           schema.HashString,
-							ConflictsWith: []string{"cloud_config.0.ssh_key"},
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "List of SSH public keys injected into MAAS nodes as authorized keys for the 'spectro' user. `ssh_key` and `ssh_keys` are mutually exclusive.",
+							Description: "List of SSH public keys injected into MAAS nodes as authorized keys for the 'spectro' user.",
 						},
 						"enable_lxd_vm": {
 							Type:        schema.TypeBool,
@@ -587,20 +579,8 @@ func flattenClusterConfigsMaas(d *schema.ResourceData, config *models.V1MaasClou
 		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
 	}
 
-	if _, ok := d.GetOk("cloud_config.0.ssh_key"); ok {
-		if len(config.Spec.ClusterConfig.SSHKeys) > 0 {
-			m["ssh_key"] = strings.TrimSpace(config.Spec.ClusterConfig.SSHKeys[0])
-		}
-	}
-	if _, ok := d.GetOk("cloud_config.0.ssh_keys"); ok {
+	if len(config.Spec.ClusterConfig.SSHKeys) > 0 {
 		m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
-	}
-	if len(config.Spec.ClusterConfig.SSHKeys) != 0 {
-		if _, hasKey := m["ssh_key"]; !hasKey {
-			if _, hasKeys := m["ssh_keys"]; !hasKeys {
-				m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
-			}
-		}
 	}
 
 	return []interface{}{m}
@@ -807,19 +787,18 @@ func toMaasCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1MaasC
 }
 
 func getMaasSSHKeys(cloudConfig map[string]interface{}) []string {
-	if cloudConfig["ssh_keys"] != nil {
-		if set, ok := cloudConfig["ssh_keys"].(*schema.Set); ok && set.Len() > 0 {
-			keys := make([]string, 0, set.Len())
-			for _, k := range set.List() {
-				keys = append(keys, strings.TrimSpace(k.(string)))
-			}
-			return keys
-		}
+	if cloudConfig["ssh_keys"] == nil {
+		return nil
 	}
-	if sshKey, ok := cloudConfig["ssh_key"].(string); ok && sshKey != "" {
-		return []string{strings.TrimSpace(sshKey)}
+	set, ok := cloudConfig["ssh_keys"].(*schema.Set)
+	if !ok || set.Len() == 0 {
+		return nil
 	}
-	return nil
+	keys := make([]string, 0, set.Len())
+	for _, k := range set.List() {
+		keys = append(keys, strings.TrimSpace(k.(string)))
+	}
+	return keys
 }
 
 func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroMaasClusterEntity, error) {
