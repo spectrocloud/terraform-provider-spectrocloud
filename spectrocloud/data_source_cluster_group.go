@@ -11,6 +11,7 @@ import (
 func dataSourceClusterGroup() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceClusterGroupRead,
+		Description: "Data source for looking up a cluster group by name within a given context.",
 
 		Schema: map[string]*schema.Schema{
 			"name": {

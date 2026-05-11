@@ -10,6 +10,7 @@ import (
 func dataSourceRegistryOci() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceRegistryOciRead,
+		Description: "Data source for looking up an OCI registry by name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {

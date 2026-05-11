@@ -24,6 +24,7 @@ func resourceTeam() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceTeamImport,
 		},
+		Description: "Resource for managing teams and role mappings in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -173,7 +174,15 @@ func resourceTeamRead(ctx context.Context, d *schema.ResourceData, m interface{}
 	if err := d.Set("name", team.Metadata.Name); err != nil {
 		return diag.FromErr(err)
 	}
-	if err := d.Set("users", team.Spec.Users); err != nil {
+	userIDs := team.Spec.Users
+	if userIDs == nil {
+		userIDs = []string{}
+	}
+	userElems := make([]interface{}, len(userIDs))
+	for i, u := range userIDs {
+		userElems[i] = u
+	}
+	if err := d.Set("users", schema.NewSet(schema.HashString, userElems)); err != nil {
 		return diag.FromErr(err)
 	}
 

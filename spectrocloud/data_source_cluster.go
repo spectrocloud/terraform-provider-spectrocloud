@@ -11,6 +11,7 @@ import (
 func dataSourceCluster() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceClusterRead,
+		Description: "Data source for looking up a cluster by name and retrieving connection details.",
 
 		Schema: map[string]*schema.Schema{
 			"name": {

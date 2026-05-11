@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cloudaccount_custom Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing custom cloud accounts in Spectro Cloud.
 ---
 
 # spectrocloud_cloudaccount_custom (Resource)
 
-  
+  Resource for managing custom cloud accounts in Spectro Cloud.
 
 ## Example Usage
 
@@ -57,7 +57,7 @@ terraform import spectrocloud_cloudaccount_custom.{cloud_account_uid}/{cloud_acc
 ### Optional
 
 - `context` (String) The context of the custom cloud configuration. Allowed values are `project` or `tenant`. Default value is `project`. If  the `project` context is specified, the project name will sourced from the provider configuration parameter [`project_name`](https://registry.terraform.io/providers/spectrocloud/spectrocloud/latest/docs#schema).
-- `credentials` (Map of String, Sensitive) The credentials required for accessing the cloud.
+- `credentials` (Map of String, Sensitive) Map of credential key to credential value strings required for accessing the cloud.
 
 ### Read-Only
 

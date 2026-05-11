@@ -9,6 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Shared schema for cluster datasource tests (match data_source_cluster schema)
+var testDataSourceClusterSchema = map[string]*schema.Schema{
+	"name":              {Type: schema.TypeString, Required: true},
+	"context":           {Type: schema.TypeString, Required: true},
+	"virtual":           {Type: schema.TypeBool, Optional: true},
+	"kube_config":       {Type: schema.TypeString, Computed: true},
+	"admin_kube_config": {Type: schema.TypeString, Computed: true},
+	"state":             {Type: schema.TypeString, Computed: true},
+	"health":            {Type: schema.TypeString, Computed: true},
+}
+
 func TestDataSourceClusterRead(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -18,15 +29,7 @@ func TestDataSourceClusterRead(t *testing.T) {
 	}{
 		{
 			name: "Successful read",
-			resourceData: schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-				"name":              {Type: schema.TypeString, Required: true},
-				"context":           {Type: schema.TypeString, Required: true},
-				"virtual":           {Type: schema.TypeBool, Optional: true},
-				"kube_config":       {Type: schema.TypeString, Computed: true},
-				"admin_kube_config": {Type: schema.TypeString, Computed: true},
-				"state":             {Type: schema.TypeString, Computed: true},
-				"health":            {Type: schema.TypeString, Computed: true},
-			}, map[string]interface{}{
+			resourceData: schema.TestResourceDataRaw(t, testDataSourceClusterSchema, map[string]interface{}{
 				"name":    "test-cluster",
 				"context": "some-context",
 				"virtual": false,
@@ -36,15 +39,7 @@ func TestDataSourceClusterRead(t *testing.T) {
 		},
 		{
 			name: "Cluster not found",
-			resourceData: schema.TestResourceDataRaw(t, map[string]*schema.Schema{
-				"name":              {Type: schema.TypeString, Required: true},
-				"context":           {Type: schema.TypeString, Required: true},
-				"virtual":           {Type: schema.TypeBool, Optional: true},
-				"kube_config":       {Type: schema.TypeString, Computed: true},
-				"admin_kube_config": {Type: schema.TypeString, Computed: true},
-				"state":             {Type: schema.TypeString, Computed: true},
-				"health":            {Type: schema.TypeString, Computed: true},
-			}, map[string]interface{}{
+			resourceData: schema.TestResourceDataRaw(t, testDataSourceClusterSchema, map[string]interface{}{
 				"name":              "test-cluster",
 				"context":           "some-context",
 				"virtual":           false,

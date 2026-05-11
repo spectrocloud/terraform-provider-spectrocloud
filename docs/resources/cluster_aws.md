@@ -148,10 +148,10 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Required
 
-- `cloud_account_id` (String)
+- `cloud_account_id` (String) UID of the AWS cloud account used for this cluster. Changing this forces a new resource.
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - `machine_pool` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String)
+- `name` (String) Name of the AWS cluster. Changing this forces a new resource.
 
 ### Optional
 
@@ -177,7 +177,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`. The `tags` attribute will soon be deprecated. It is recommended to use `tags_map` instead.
-- `tags_map` (Map of String) A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive — only one should be used at a time
+- `tags_map` (Map of String) A map of tags to be applied to the cluster. `tags` and `tags_map` are mutually exclusive; only one should be used at a time.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
@@ -216,9 +216,9 @@ Optional:
 
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
-- `additional_security_groups` (Set of String) Additional security groups to attach to the instance.
-- `az_subnets` (Map of String) Mutually exclusive with `azs`. Use `az_subnets` for Static provisioning.
-- `azs` (Set of String) Mutually exclusive with `az_subnets`. Use `azs` for Dynamic provisioning.
+- `additional_security_groups` (Set of String) Set of additional security group ID strings to attach to the instance.
+- `az_subnets` (Map of String) Map of availability zone name to subnet ID string. Mutually exclusive with `azs`; use `az_subnets` for static provisioning.
+- `azs` (Set of String) Set of availability zone name strings. Mutually exclusive with `az_subnets`; use `azs` for dynamic provisioning.
 - `capacity_type` (String) Capacity type: 'on-demand', 'spot', or 'host-resource-group' (dedicated hosts). Defaults to 'on-demand'.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.

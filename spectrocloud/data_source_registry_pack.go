@@ -10,6 +10,7 @@ import (
 func dataSourceRegistryPack() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceRegistryPackRead,
+		Description: "Data source for looking up a Spectro pack registry by name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -18,9 +19,10 @@ func dataSourceRegistryPack() *schema.Resource {
 				Optional: true,
 			},
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the pack registry to look up.",
 			},
 		},
 	}

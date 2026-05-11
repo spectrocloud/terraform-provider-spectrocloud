@@ -283,6 +283,13 @@ func resourceClusterVsphere() *schema.Resource {
 							Default:     0,
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
+						"skip_k8s_upgrade": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "disabled",
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
+						},
 						"count": {
 							Type:        schema.TypeInt,
 							Required:    true,
@@ -606,6 +613,13 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+
+		// Flatten skip_k8s_upgrade; default "disabled" when API omits field
+		skipK8sUpgrade := "disabled"
+		if machinePool.SkipK8sUpgrade != nil && *machinePool.SkipK8sUpgrade != "" {
+			skipK8sUpgrade = *machinePool.SkipK8sUpgrade
+		}
+		oi["skip_k8s_upgrade"] = skipK8sUpgrade
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
@@ -1010,6 +1024,11 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+		skipK8sUpgrade := "disabled"
+		if v, ok := m["skip_k8s_upgrade"].(string); ok && v != "" {
+			skipK8sUpgrade = v
+		}
+		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
 
 	if !controlPlane {

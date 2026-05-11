@@ -1,11 +1,8 @@
 package spectrocloud
 
 import (
-	"context"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -241,30 +238,7 @@ func prepareAlertTestData() *schema.ResourceData {
 	return rd
 }
 
-func TestResourceAlertCreate(t *testing.T) {
-	rd := prepareAlertTestData()
-	ctx := context.Background()
-	diags := resourceAlertCreate(ctx, rd, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-}
-
-func TestResourceAlertRead(t *testing.T) {
-	rd := prepareAlertTestData()
-	ctx := context.Background()
-	diags := resourceAlertRead(ctx, rd, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-}
-
-func TestResourceAlertUpdate(t *testing.T) {
-	rd := prepareAlertTestData()
-	ctx := context.Background()
-	diags := resourceAlertUpdate(ctx, rd, unitTestMockAPIClient)
-	assert.Empty(t, diags)
-}
-
-func TestResourceAlertDelete(t *testing.T) {
-	rd := prepareAlertTestData()
-	ctx := context.Background()
-	diags := resourceAlertDelete(ctx, rd, unitTestMockAPIClient)
-	assert.Empty(t, diags)
+func TestResourceAlertCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareAlertTestData, unitTestMockAPIClient,
+		resourceAlertCreate, resourceAlertRead, resourceAlertUpdate, resourceAlertDelete)
 }
