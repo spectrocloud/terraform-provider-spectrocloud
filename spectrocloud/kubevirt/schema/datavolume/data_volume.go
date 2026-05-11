@@ -14,8 +14,9 @@ func DataVolumeFields() map[string]*schema.Schema {
 			Description: "The cluster UID to which the virtual machine belongs to.",
 		},
 		"cluster_context": {
-			Type:     schema.TypeString,
-			Required: true,
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Resource context for the target cluster. Allowed values are `project` or `tenant`.",
 		},
 		"vm_name": {
 			Type:        schema.TypeString,

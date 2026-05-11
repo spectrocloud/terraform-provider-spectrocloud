@@ -38,7 +38,7 @@ func dataSourceClusterConfigTemplate() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "Tags assigned to the cluster config template.",
+				Description: "Set of tag strings assigned to the cluster config template.",
 			},
 			"cloud_type": {
 				Type:        schema.TypeString,

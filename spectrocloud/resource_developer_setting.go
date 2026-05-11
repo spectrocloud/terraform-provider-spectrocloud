@@ -18,6 +18,7 @@ func resourceDeveloperSetting() *schema.Resource {
 		ReadContext:   resourceDeveloperSettingRead,
 		UpdateContext: resourceDeveloperSettingUpdate,
 		DeleteContext: resourceDeveloperSettingDelete,
+		Description:   "Resource for managing tenant-level developer quota settings in Spectro Cloud.",
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceDeveloperSettingImport,
 		},

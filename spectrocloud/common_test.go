@@ -5,15 +5,18 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/spectrocloud/palette-sdk-go/client"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/stretchr/testify/assert"
 )
 
 //type Cred struct {
@@ -201,6 +204,61 @@ func deleteBuild() error {
 func assertFirstDiagMessage(t *testing.T, diags diag.Diagnostics, msg string) {
 	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
 		assert.Contains(t, diags[0].Summary, msg, "The first diagnostic message does not contain the expected error message")
+	}
+}
+
+// resourceCRUDFunc is the signature of resource Create/Read/Update/Delete functions.
+type resourceCRUDFunc func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics
+
+// testResourceCRUD runs a full CRUD cycle (Create -> Read -> Update -> Read -> Delete) and asserts no diagnostics.
+func testResourceCRUD(t *testing.T, prepareData func() *schema.ResourceData, meta interface{}, create, read, update, delete resourceCRUDFunc) {
+	ctx := context.Background()
+	d := prepareData()
+
+	diags := create(ctx, d, meta)
+	assert.Empty(t, diags, "Create should not return diagnostics")
+	assert.NotEmpty(t, d.Id(), "Create should set resource ID")
+
+	diags = read(ctx, d, meta)
+	assert.Empty(t, diags, "Read should not return diagnostics")
+
+	diags = update(ctx, d, meta)
+	assert.Empty(t, diags, "Update should not return diagnostics")
+
+	diags = read(ctx, d, meta)
+	assert.Empty(t, diags, "Read after Update should not return diagnostics")
+
+	diags = delete(ctx, d, meta)
+	assert.Empty(t, diags, "Delete should not return diagnostics")
+}
+
+// testResourceCRUDNegative runs one CRUD op with negative client and asserts diags contain msgSubstr.
+func testResourceCRUDNegative(t *testing.T, op string, prepare func() *schema.ResourceData, meta interface{},
+	create, read, update, delete resourceCRUDFunc, setID bool, msgSubstr string) {
+	ctx := context.Background()
+	d := prepare()
+	if setID {
+		d.SetId("12763471256725")
+	}
+	var diags diag.Diagnostics
+	switch op {
+	case "Create":
+		diags = create(ctx, d, meta)
+	case "Read":
+		diags = read(ctx, d, meta)
+	case "Update":
+		diags = update(ctx, d, meta)
+	case "Delete":
+		diags = delete(ctx, d, meta)
+	default:
+		t.Fatalf("unknown op %s", op)
+	}
+	if len(diags) == 0 {
+		t.Errorf("expected diagnostics containing %q", msgSubstr)
+		return
+	}
+	if !strings.Contains(diags[0].Summary, msgSubstr) {
+		t.Errorf("diag summary %q does not contain %q", diags[0].Summary, msgSubstr)
 	}
 }
 

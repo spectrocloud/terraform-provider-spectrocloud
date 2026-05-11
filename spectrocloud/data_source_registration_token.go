@@ -13,6 +13,7 @@ import (
 func dataSourceRegistrationToken() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceRegistrationTokenRead,
+		Description: "Data source for looking up a registration token by name or UID.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -46,7 +47,7 @@ func dataSourceRegistrationToken() *schema.Resource {
 			"token": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The registration token",
+				Description: "The registration token value.",
 			},
 		},
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spectrocloud/palette-sdk-go/client"
@@ -17,6 +18,25 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
+// ociEcrSecretKeyForRead prefers secret_key from state and ignores masked values returned by the API.
+func ociEcrSecretKeyForRead(d *schema.ResourceData, apiSecret string) string {
+	if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+		if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+			if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+				if secretKey, exists := currentCredMap["secret_key"]; exists && secretKey != nil {
+					if s, ok := secretKey.(string); ok && s != "" {
+						return s
+					}
+				}
+			}
+		}
+	}
+	if apiSecret != "" && !strings.Contains(apiSecret, "*") {
+		return apiSecret
+	}
+	return ""
+}
+
 func resourceRegistryOciEcr() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceRegistryEcrCreate,
@@ -26,6 +46,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceRegistryOciImport,
 		},
+		Description: "Resource for managing OCI registries in Spectro Cloud.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
@@ -336,15 +357,8 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 		case models.V1AwsCloudAccountCredentialTypeSecret:
 			acc["access_key"] = registry.Spec.Credentials.AccessKey
 			acc["credential_type"] = models.V1AwsCloudAccountCredentialTypeSecret
-			// Preserve secret_key from state to avoid drift when API does not return it
-			if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
-				if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
-					if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
-						if secretKey, exists := currentCredMap["secret_key"]; exists && secretKey != nil {
-							acc["secret_key"] = secretKey
-						}
-					}
-				}
+			if sk := ociEcrSecretKeyForRead(d, registry.Spec.Credentials.SecretKey); sk != "" {
+				acc["secret_key"] = sk
 			}
 		default:
 			errMsg := fmt.Sprintf("Registry type %s not implemented.", *registry.Spec.Credentials.CredentialType)

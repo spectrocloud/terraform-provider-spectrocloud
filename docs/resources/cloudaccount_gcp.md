@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cloudaccount_gcp Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing GCP cloud account credentials in Spectro Cloud.
 ---
 
 # spectrocloud_cloudaccount_gcp (Resource)
 
-  
+  Resource for managing GCP cloud account credentials in Spectro Cloud.
 
 ## Example Usage
 

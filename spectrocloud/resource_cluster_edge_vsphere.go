@@ -25,6 +25,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceClusterEdgeVsphereImport,
 		},
+		Description: "Resource for managing Edge vSphere clusters in Spectro Cloud through Palette.",
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(180 * time.Minute),
@@ -42,9 +43,10 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the Edge vSphere cluster. Changing this forces a new resource.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -55,9 +57,10 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 					"Default is `project`. " + PROJECT_NAME_NUANCE,
 			},
 			"edge_host_uid": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "UID of the registered Edge host where this cluster is deployed. Changing this forces a new resource.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -150,16 +153,19 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"datacenter": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Name of the vSphere datacenter used by this cluster.",
 						},
 						"folder": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "vSphere inventory folder where cluster virtual machines are created.",
 						},
 						"image_template_folder": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "vSphere folder containing VM image templates used for node provisioning.",
 						},
 
 						"ssh_key": {
@@ -179,23 +185,27 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 							Description: "List of public SSH (Secure Shell) keys to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
 						},
 						"vip": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Virtual IP address for the Kubernetes control plane endpoint.",
 						},
 
 						"static_ip": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+							Description: "Whether to use static IP addressing for the control plane endpoint. Default is `false`.",
 						},
 
 						"network_type": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Type of network endpoint used for the control plane address.",
 						},
 						"network_search_domain": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "DNS search domain associated with the control plane endpoint.",
 						},
 					},
 				},
@@ -208,8 +218,9 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Name of the machine pool.",
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -273,16 +284,19 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"disk_size_gb": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "Disk size in GB for each node in this machine pool.",
 									},
 									"memory_mb": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "Memory size in MB for each node in this machine pool.",
 									},
 									"cpu": {
-										Type:     schema.TypeInt,
-										Required: true,
+										Type:        schema.TypeInt,
+										Required:    true,
+										Description: "Number of vCPUs for each node in this machine pool.",
 									},
 								},
 							},
@@ -297,24 +311,29 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 										Computed: true,
 									},
 									"cluster": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Name of the vSphere compute cluster used for node placement.",
 									},
 									"resource_pool": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Name of the vSphere resource pool used for node placement.",
 									},
 									"datastore": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Name of the vSphere datastore used for node disks.",
 									},
 									"network": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Name of the vSphere network attached to machine pool nodes.",
 									},
 									"static_ip_pool_id": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "UID of the static IP pool used for machine pool networking.",
 									},
 								},
 							},

@@ -110,6 +110,6 @@ func ProfileVariables() *schema.Schema {
 				},
 			},
 		},
-		Description: "List of variables for the cluster profile.",
+		Description: "List of variables for the cluster profile. During Day 2 operations, variable updates are prioritized over pack updates due to variable reference constraints. Any additions or removals will apply variable changes first, followed by pack updates.",
 	}
 }

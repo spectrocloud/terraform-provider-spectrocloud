@@ -2,10 +2,11 @@ package spectrocloud
 
 import (
 	"context"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // Test for the `toGcpAccount` function
@@ -60,35 +61,9 @@ func prepareResourceCloudAccountGcp() *schema.ResourceData {
 	return d
 }
 
-func TestResourceCloudAccountGcpCreate(t *testing.T) {
-	d := prepareResourceCloudAccountGcp()
-	ctx := context.Background()
-	diags := resourceCloudAccountGcpCreate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-gcp-account-id-1", d.Id())
-}
-
-func TestResourceCloudAccountGcpRead(t *testing.T) {
-	d := prepareResourceCloudAccountGcp()
-	ctx := context.Background()
-	diags := resourceCloudAccountGcpRead(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-gcp-account-id-1", d.Id())
-}
-
-func TestResourceCloudAccountGcpUpdate(t *testing.T) {
-	d := prepareResourceCloudAccountGcp()
-	ctx := context.Background()
-	diags := resourceCloudAccountGcpUpdate(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
-	assert.Equal(t, "test-gcp-account-id-1", d.Id())
-}
-
-func TestResourceCloudAccountGcpDelete(t *testing.T) {
-	d := prepareResourceCloudAccountGcp()
-	ctx := context.Background()
-	diags := resourceCloudAccountGcpDelete(ctx, d, unitTestMockAPIClient)
-	assert.Len(t, diags, 0)
+func TestResourceCloudAccountGcpCRUD(t *testing.T) {
+	testResourceCRUD(t, prepareResourceCloudAccountGcp, unitTestMockAPIClient,
+		resourceCloudAccountGcpCreate, resourceCloudAccountGcpRead, resourceCloudAccountGcpUpdate, resourceCloudAccountGcpDelete)
 }
 
 func TestResourceCloudAccountGcpImport(t *testing.T) {

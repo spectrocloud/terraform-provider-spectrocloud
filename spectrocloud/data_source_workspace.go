@@ -10,12 +10,14 @@ import (
 func dataSourceWorkspace() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceWorkspaceRead,
+		Description: "Data source for looking up a Spectro Cloud workspace by name.",
 
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the workspace to look up.",
 			},
 		},
 	}

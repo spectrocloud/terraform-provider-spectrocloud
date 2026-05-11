@@ -43,9 +43,10 @@ func resourceClusterGcp() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the GCP cluster. Changing this forces a new resource.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -87,9 +88,10 @@ func resourceClusterGcp() *schema.Resource {
 					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "UID of the GCP cloud account used for this cluster. Changing this forces a new resource.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -160,16 +162,19 @@ func resourceClusterGcp() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"network": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "VPC network name used to provision cluster resources.",
 						},
 						"project": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Google Cloud project ID where cluster resources are created.",
 						},
 						"region": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Google Cloud region where the cluster is deployed.",
 						},
 					},
 				},
@@ -216,6 +221,7 @@ func resourceClusterGcp() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "Name of the machine pool.",
 						},
 						"count": {
 							Type:        schema.TypeInt,
@@ -229,8 +235,9 @@ func resourceClusterGcp() *schema.Resource {
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
 						"instance_type": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "GCE machine type used for nodes in this machine pool.",
 						},
 						"update_strategy": {
 							Type:         schema.TypeString,
@@ -246,15 +253,17 @@ func resourceClusterGcp() *schema.Resource {
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"disk_size_gb": {
-							Type:     schema.TypeInt,
-							Optional: true,
-							Default:  65,
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     65,
+							Description: "Root disk size in GB for each node in this machine pool.",
 						},
 						"azs": {
-							Type:     schema.TypeSet,
-							Required: true,
-							MinItems: 1,
-							Set:      schema.HashString,
+							Type:        schema.TypeSet,
+							Required:    true,
+							MinItems:    1,
+							Set:         schema.HashString,
+							Description: "Set of availability zone name strings for machine pool placement.",
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},

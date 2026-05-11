@@ -11,6 +11,7 @@ import (
 func dataSourcePrivateCloudGatewayDNSMap() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceDNSMapRead,
+		Description: "Data source for looking up private cloud gateway DNS mappings.",
 
 		Schema: map[string]*schema.Schema{
 			"search_domain_name": {

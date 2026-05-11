@@ -178,7 +178,7 @@ Refer to the [Import section](/docs#import) to learn more.
 ### Read-Only
 
 - `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
-- `cloud_config_id` (String, Deprecated)
+- `cloud_config_id` (String, Deprecated) Identifier of the generated cloud configuration associated with this custom cloud cluster.
 - `id` (String) The ID of this resource.
 - `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
 

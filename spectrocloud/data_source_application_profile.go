@@ -17,7 +17,7 @@ func dataSourceApplicationProfile() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Name of the application profile",
+				Description: "Name of the application profile to look up.",
 			},
 			"version": {
 				Type:        schema.TypeString,

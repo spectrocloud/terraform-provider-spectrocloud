@@ -13,8 +13,9 @@ func DataVolumeOptionsSchema() *schema.Schema {
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
 				"name": {
-					Type:     schema.TypeString,
-					Required: true,
+					Type:        schema.TypeString,
+					Required:    true,
+					Description: "Name of the volume attachment in the virtual machine spec.",
 				},
 				"disk": {
 					Type:     schema.TypeList,
@@ -23,12 +24,14 @@ func DataVolumeOptionsSchema() *schema.Schema {
 					Elem: &schema.Resource{
 						Schema: map[string]*schema.Schema{
 							"name": {
-								Type:     schema.TypeString,
-								Required: true,
+								Type:        schema.TypeString,
+								Required:    true,
+								Description: "Name of the disk definition in the virtual machine spec.",
 							},
 							"bus": {
-								Type:     schema.TypeString,
-								Required: true,
+								Type:        schema.TypeString,
+								Required:    true,
+								Description: "Disk bus type used by the attached data volume (for example, `virtio` or `sata`).",
 							},
 						},
 					},
@@ -46,13 +49,15 @@ func DataVolumeOptionsSchema() *schema.Schema {
 								Elem: &schema.Resource{
 									Schema: map[string]*schema.Schema{
 										"name": {
-											Type:     schema.TypeString,
-											Required: true,
+											Type:        schema.TypeString,
+											Required:    true,
+											Description: "Name of the data volume source referenced by this attachment.",
 										},
 										"hotpluggable": {
-											Type:     schema.TypeBool,
-											Optional: true,
-											Default:  true,
+											Type:        schema.TypeBool,
+											Optional:    true,
+											Default:     true,
+											Description: "Whether this data volume can be hot-plugged while the virtual machine is running.",
 										},
 									},
 								},

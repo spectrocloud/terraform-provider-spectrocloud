@@ -18,6 +18,7 @@ terraform.tfstate
 .terraform.lock.hcl
 .terraform.tfstate.lock.info
 terraform.tfvars
+score.json
 
 kubeconfig_*
 

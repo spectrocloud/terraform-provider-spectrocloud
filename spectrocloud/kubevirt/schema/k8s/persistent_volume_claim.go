@@ -15,7 +15,7 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"access_modes": {
 			Type:        schema.TypeSet,
-			Description: "A set of the desired access modes the volume should have. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes-1",
+			Description: "Set of desired access mode strings for the volume. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#access-modes-1.",
 			Required:    true,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
@@ -36,14 +36,14 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"limits": {
 						Type:        schema.TypeMap,
-						Description: "Map describing the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
+						Description: "Map describing the maximum compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/.",
 						Optional:    true,
 						ForceNew:    true,
 					},
 					// This is the only field the API will allow modifying in-place, so ForceNew is not used.
 					"requests": {
 						Type:        schema.TypeMap,
-						Description: "Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
+						Description: "Map describing the minimum compute resources required. If omitted, it defaults to `limits` when explicitly specified, otherwise to an implementation-defined value. More info: http://kubernetes.io/docs/user-guide/compute-resources/.",
 						Optional:    true,
 					},
 				},
@@ -68,7 +68,7 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 		},
 		"storage_class_name": {
 			Type:        schema.TypeString,
-			Description: "Name of the storage class requested by the claim",
+			Description: "Name of the storage class requested by the claim.",
 			Optional:    true,
 			Computed:    true,
 		},

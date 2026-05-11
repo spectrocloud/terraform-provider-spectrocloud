@@ -21,6 +21,7 @@ func resourceCloudAccountAzure() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceAccountAzureImport,
 		},
+		Description: "Resource for managing Azure cloud account credentials in Spectro Cloud.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

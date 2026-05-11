@@ -11,6 +11,16 @@ description: |-
 
 ## Example Usage
 
+```hcl
+resource "spectrocloud_addon_deployment" "example" {
+  cluster_uid = "cluster-uid"
+  context     = "project"
+
+  cluster_profile {
+    id = "cluster-profile-uid"
+  }
+}
+```
 
 
 {{ .SchemaMarkdown | trimspace }}

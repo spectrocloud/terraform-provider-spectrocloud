@@ -2,12 +2,12 @@
 page_title: "spectrocloud_cloudaccount_azure Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing Azure cloud account credentials in Spectro Cloud.
 ---
 
 # spectrocloud_cloudaccount_azure (Resource)
 
-  
+  Resource for managing Azure cloud account credentials in Spectro Cloud.
 
 ## Example Usage
 

@@ -14,6 +14,7 @@ import (
 func dataSourceCloudAccountVsphere() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceCloudAccountVsphereRead,
+		Description: "Data source for looking up a vSphere cloud account by ID or name.",
 
 		Schema: map[string]*schema.Schema{
 			"id": {

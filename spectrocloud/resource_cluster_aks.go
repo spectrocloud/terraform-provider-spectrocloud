@@ -51,7 +51,7 @@ func resourceClusterAks() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "",
+				Description: "Name of the AKS cluster. Changing this forces a new resource.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -93,9 +93,10 @@ func resourceClusterAks() *schema.Resource {
 					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "UID of the Azure cloud account used for this AKS cluster. Changing this forces a new resource.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -166,19 +167,22 @@ func resourceClusterAks() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"subscription_id": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							ForceNew:    true,
+							Description: "Azure subscription ID used to provision the AKS cluster. Changing this forces a new resource.",
 						},
 						"resource_group": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							ForceNew:    true,
+							Description: "Azure resource group where AKS resources are created. Changing this forces a new resource.",
 						},
 						"region": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							ForceNew:    true,
+							Description: "Azure region where the AKS cluster is deployed. Changing this forces a new resource.",
 						},
 						"ssh_key": {
 							Type:        schema.TypeString,
@@ -193,55 +197,70 @@ func resourceClusterAks() *schema.Resource {
 							ForceNew:    true,
 							Description: "Whether to create a private cluster(API endpoint). Default is `false`.",
 						},
+						"override_cluster_api_config": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.",
+						},
 
 						// fields for static placement are having flat structure as backend currently doesn't support multiple subnets.
 						"vnet_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Name of the virtual network used for AKS static placement. Changing this forces a new resource.",
 						},
 
 						"vnet_resource_group": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Azure resource group that contains the virtual network. Changing this forces a new resource.",
 						},
 
 						"vnet_cidr_block": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "CIDR block assigned to the virtual network. Changing this forces a new resource.",
 						},
 
 						"worker_subnet_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Name of the worker subnet in the virtual network. Changing this forces a new resource.",
 						},
 						"worker_cidr": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "CIDR block for the worker subnet. Changing this forces a new resource.",
 						},
 						"worker_subnet_security_group_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Security group name attached to the worker subnet. Changing this forces a new resource.",
 						},
 						"control_plane_subnet_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Name of the control plane subnet in the virtual network. Changing this forces a new resource.",
 						},
 						"control_plane_cidr": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "CIDR block for the control plane subnet. Changing this forces a new resource.",
 						},
 						"control_plane_subnet_security_group_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Security group name attached to the control plane subnet. Changing this forces a new resource.",
 						},
 					},
 				},
@@ -256,6 +275,7 @@ func resourceClusterAks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "Name of the AKS machine pool.",
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -294,8 +314,9 @@ func resourceClusterAks() *schema.Resource {
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"instance_type": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Azure VM size used for nodes in this machine pool.",
 						},
 						"min": {
 							Type:        schema.TypeInt,
@@ -308,17 +329,20 @@ func resourceClusterAks() *schema.Resource {
 							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"disk_size_gb": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "OS disk size in GB for each node in this machine pool.",
 						},
 						"is_system_node_pool": {
-							Type:     schema.TypeBool,
-							Required: true,
+							Type:        schema.TypeBool,
+							Required:    true,
+							Description: "Whether this machine pool is marked as the AKS system node pool.",
 						},
 						"storage_account_type": {
 							Type:     schema.TypeString,
 							Required: true,
 							//ExactlyOneOf: []string{"Standard_LRS", "Standard_GRS", "Standard_RAGRS", "Standard_ZRS", "Premium_LRS", "Premium_ZRS", "Standard_GZRS", "Standard_RAGZRS"},
+							Description: "Storage account type for managed disks in this machine pool.",
 						},
 					},
 				},
@@ -505,6 +529,9 @@ func flattenClusterConfigsAks(config *models.V1AzureCloudConfig) []interface{} {
 		m["ssh_key"] = *config.Spec.ClusterConfig.SSHKey
 	}
 	m["private_cluster"] = config.Spec.ClusterConfig.APIServerAccessProfile.EnablePrivateCluster
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
 	if config.Spec.ClusterConfig.VnetName != "" {
 		m["vnet_name"] = config.Spec.ClusterConfig.VnetName
 	}
@@ -704,6 +731,11 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		vnetcidr = cloudConfigMap["vnet_cidr_block"].(string)
 	}
 
+	var overrideClusterAPIConfig string
+	if cloudConfigMap["override_cluster_api_config"] != nil {
+		overrideClusterAPIConfig = cloudConfigMap["override_cluster_api_config"].(string)
+	}
+
 	var workerSubnet *models.V1Subnet
 	if cloudConfigMap["worker_subnet_name"] != nil && cloudConfigMap["worker_cidr"] != nil {
 		workerSubnet = &models.V1Subnet{
@@ -741,12 +773,13 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 				APIServerAccessProfile: &models.V1APIServerAccessProfile{
 					EnablePrivateCluster: cloudConfigMap["private_cluster"].(bool),
 				},
-				SubscriptionID:     types.Ptr(cloudConfigMap["subscription_id"].(string)),
-				VnetName:           vnetname,
-				VnetResourceGroup:  vnetResourceGroup,
-				VnetCidrBlock:      vnetcidr,
-				ControlPlaneSubnet: controlPlaneSubnet,
-				WorkerSubnet:       workerSubnet,
+				SubscriptionID:           types.Ptr(cloudConfigMap["subscription_id"].(string)),
+				OverrideClusterAPIConfig: overrideClusterAPIConfig,
+				VnetName:                 vnetname,
+				VnetResourceGroup:        vnetResourceGroup,
+				VnetCidrBlock:            vnetcidr,
+				ControlPlaneSubnet:       controlPlaneSubnet,
+				WorkerSubnet:             workerSubnet,
 			},
 		},
 	}
