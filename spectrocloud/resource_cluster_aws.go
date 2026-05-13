@@ -167,7 +167,6 @@ func resourceClusterAws() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -201,7 +200,6 @@ func resourceClusterAws() *schema.Resource {
 						"override_cluster_api_config": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							ForceNew:    true,
 							Description: "YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.",
 						},
 					},
@@ -635,6 +633,12 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if err := c.UpdateCloudConfigAws(cloudConfigId, toCloudConfigAws(cloudConfig)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigAws(cloudConfigId)
 	if err != nil {
@@ -739,13 +743,7 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 			ClusterTemplate: toClusterTemplateReference(d),
 			ClusterType:     toClusterType(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1AwsClusterConfig{
-				SSHKeyName:               cloudConfig["ssh_key_name"].(string),
-				Region:                   types.Ptr(cloudConfig["region"].(string)),
-				VpcID:                    cloudConfig["vpc_id"].(string),
-				ControlPlaneLoadBalancer: cloudConfig["control_plane_lb"].(string),
-				OverrideClusterAPIConfig: cloudConfig["override_cluster_api_config"].(string),
-			},
+			CloudConfig:     toAwsClusterConfig(cloudConfig),
 		},
 	}
 
@@ -781,6 +779,22 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster, nil
+}
+
+func toCloudConfigAws(cloudConfig map[string]interface{}) *models.V1AwsCloudClusterConfigEntity {
+	return &models.V1AwsCloudClusterConfigEntity{
+		ClusterConfig: toAwsClusterConfig(cloudConfig),
+	}
+}
+
+func toAwsClusterConfig(cloudConfig map[string]interface{}) *models.V1AwsClusterConfig {
+	return &models.V1AwsClusterConfig{
+		SSHKeyName:               cloudConfig["ssh_key_name"].(string),
+		Region:                   types.Ptr(cloudConfig["region"].(string)),
+		VpcID:                    cloudConfig["vpc_id"].(string),
+		ControlPlaneLoadBalancer: cloudConfig["control_plane_lb"].(string),
+		OverrideClusterAPIConfig: cloudConfig["override_cluster_api_config"].(string),
+	}
 }
 
 func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachinePoolConfigEntity, error) {
