@@ -156,3 +156,83 @@ func TestSyncClusterProfilesFromAPIWhenAddonDeploymentDisabled(t *testing.T) {
 	require.Len(t, profiles, 1)
 	assert.Equal(t, "profile-from-api", profiles[0].(map[string]interface{})["id"])
 }
+
+func TestSetClusterProfilesFromAPI(t *testing.T) {
+	r := resourceClusterEks()
+	d := r.TestResourceData()
+	d.SetId("cluster-1")
+
+	cluster := &models.V1SpectroCluster{
+		Spec: &models.V1SpectroClusterSpec{
+			ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
+				{UID: "api-profile-a"},
+				{UID: "api-profile-b"},
+			},
+		},
+	}
+
+	err := setClusterProfilesFromAPI(nil, d, cluster)
+	require.NoError(t, err)
+
+	profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+	require.Len(t, profiles, 2)
+}
+
+func TestRollbackClusterProfileOnUpdateError(t *testing.T) {
+	t.Cleanup(func() {
+		disableAddonDeploymentResource = false
+	})
+
+	r := resourceClusterEks()
+	oldProfile := []interface{}{
+		map[string]interface{}{"id": "pre-apply-profile"},
+	}
+
+	t.Run("flag off restores pre-apply snapshot", func(t *testing.T) {
+		disableAddonDeploymentResource = false
+		d := r.TestResourceData()
+		d.SetId("cluster-1")
+		_ = d.Set("cluster_profile", []interface{}{
+			map[string]interface{}{"id": "failed-desired-profile"},
+		})
+
+		rollbackClusterProfileOnUpdateError(nil, d, oldProfile)
+
+		profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+		require.Len(t, profiles, 1)
+		assert.Equal(t, "pre-apply-profile", profiles[0].(map[string]interface{})["id"])
+	})
+
+	t.Run("flag on without client falls back to pre-apply snapshot", func(t *testing.T) {
+		disableAddonDeploymentResource = true
+		d := r.TestResourceData()
+		d.SetId("cluster-1")
+		_ = d.Set("cluster_profile", []interface{}{
+			map[string]interface{}{"id": "failed-desired-profile"},
+		})
+
+		rollbackClusterProfileOnUpdateError(nil, d, oldProfile)
+
+		profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+		require.Len(t, profiles, 1)
+		assert.Equal(t, "pre-apply-profile", profiles[0].(map[string]interface{})["id"])
+	})
+
+	t.Run("flag on with cluster_template restores pre-apply snapshot", func(t *testing.T) {
+		disableAddonDeploymentResource = true
+		d := r.TestResourceData()
+		d.SetId("cluster-1")
+		_ = d.Set("cluster_template", []interface{}{
+			map[string]interface{}{"id": "template-1"},
+		})
+		_ = d.Set("cluster_profile", []interface{}{
+			map[string]interface{}{"id": "failed-desired-profile"},
+		})
+
+		rollbackClusterProfileOnUpdateError(nil, d, oldProfile)
+
+		profiles := normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile"))
+		require.Len(t, profiles, 1)
+		assert.Equal(t, "pre-apply-profile", profiles[0].(map[string]interface{})["id"])
+	})
+}

@@ -413,71 +413,73 @@ func findAttachedProfileByName(cluster *models.V1SpectroCluster, profileName str
 	return ""
 }
 
-// getProfilesToDelete compares old and new cluster_profile state and returns
-// the UIDs of profiles that need to be deleted (profiles in old state but not in new state).
-// This is necessary when using PATCH since it doesn't automatically remove profiles.
-// Important: This compares by profile NAME, not just ID. If a profile ID changes but the
-// name stays the same (version upgrade), it's NOT a deletion - it's handled by ReplaceWithProfile.
-func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
+// isProfileAttachedToCluster reports whether profileUID is attached on the cluster document.
+func isProfileAttachedToCluster(cluster *models.V1SpectroCluster, profileUID string) bool {
+	if cluster == nil || cluster.Spec == nil || profileUID == "" {
+		return false
+	}
+	for _, template := range cluster.Spec.ClusterProfileTemplates {
+		if template != nil && template.UID == profileUID {
+			return true
+		}
+	}
+	return false
+}
+
+// getProfilesToDelete returns profile UIDs to remove from the cluster when they are no longer
+// in Terraform config. Comparison is by UID: an old profile UID that is still attached on the
+// cluster but absent from the new config is deleted via DeleteAddonDeployment.
+//
+// Previously deletion was skipped when another config profile shared the same profile name
+// (treating it as a version upgrade via ReplaceWithProfile). That left duplicate attachments
+// on the cluster when Palette attached a new profile version (new UID, same name) while the
+// old UID was removed from config.
+func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) []string {
 	oldProfilesRaw, newProfilesRaw := d.GetChange("cluster_profile")
 	oldProfiles := normalizeInterfaceSliceFromListOrSet(oldProfilesRaw)
 	newProfiles := normalizeInterfaceSliceFromListOrSet(newProfilesRaw)
 
-	// Build a set of new profile NAMES (not just IDs)
-	// This is important: version upgrades change the ID but keep the same name
-	newProfileNames := make(map[string]bool)
-	if len(newProfiles) > 0 {
-		for _, p := range newProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				// Get the profile name from the API
-				clusterProfile, err := c.GetClusterProfile(id)
-				if err != nil {
-					log.Printf("Warning: could not get profile %s to check name: %v", id, err)
-					continue
-				}
-				if clusterProfile != nil && clusterProfile.Metadata != nil {
-					newProfileNames[clusterProfile.Metadata.Name] = true
-				}
-			}
+	newProfileUIDs := make(map[string]bool, len(newProfiles))
+	for _, p := range newProfiles {
+		if p == nil {
+			continue
+		}
+		profile := p.(map[string]interface{})
+		if id, ok := profile["id"].(string); ok && id != "" {
+			newProfileUIDs[id] = true
 		}
 	}
 
-	// Find profiles in old state whose NAME is not in new state
-	// Only these are actual deletions; ID changes with same name are version upgrades
 	var profilesToDelete []string
-	if len(oldProfiles) > 0 {
-		for _, p := range oldProfiles {
-			if p == nil {
-				continue
-			}
-			profile := p.(map[string]interface{})
-			if id, ok := profile["id"].(string); ok && id != "" {
-				// Get the old profile name from the API
-				clusterProfile, err := c.GetClusterProfile(id)
-				if err != nil {
-					log.Printf("Warning: could not get old profile %s to check name: %v", id, err)
-					continue
-				}
-				if clusterProfile != nil && clusterProfile.Metadata != nil {
-					profileName := clusterProfile.Metadata.Name
-					if !newProfileNames[profileName] {
-						if clusterProfile.Spec.Published != nil && clusterProfile.Spec.Published.Type == "infra" {
-							log.Printf("Profile %s (name: %s) is infra - skip delete, will be replaced via PATCH", id, profileName)
-							continue
-						}
-						// This profile name is not in the new state - it's a real deletion
-						log.Printf("Profile %s (name: %s) will be deleted (name removed from cluster_profile)", id, profileName)
-						profilesToDelete = append(profilesToDelete, id)
-					} else {
-						log.Printf("Profile %s (name: %s) ID changed but name still exists - version upgrade, not deletion", id, profileName)
-					}
-				}
-			}
+	for _, p := range oldProfiles {
+		if p == nil {
+			continue
 		}
+		profile := p.(map[string]interface{})
+		oldUID, ok := profile["id"].(string)
+		if !ok || oldUID == "" || newProfileUIDs[oldUID] {
+			continue
+		}
+
+		if !isProfileAttachedToCluster(cluster, oldUID) {
+			log.Printf("Profile %s removed from config but not attached on cluster - skipping API delete", oldUID)
+			continue
+		}
+
+		clusterProfile, err := c.GetClusterProfile(oldUID)
+		if err != nil {
+			log.Printf("Warning: could not get profile %s for delete check: %v", oldUID, err)
+			profilesToDelete = append(profilesToDelete, oldUID)
+			continue
+		}
+		if clusterProfile != nil && clusterProfile.Spec != nil && clusterProfile.Spec.Published != nil &&
+			clusterProfile.Spec.Published.Type == "infra" {
+			log.Printf("Profile %s is infra - skip delete, will be replaced via PATCH", oldUID)
+			continue
+		}
+
+		log.Printf("Profile %s will be deleted (UID removed from cluster_profile but still attached on cluster)", oldUID)
+		profilesToDelete = append(profilesToDelete, oldUID)
 	}
 
 	return profilesToDelete
@@ -486,24 +488,22 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData) []string {
 func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	log.Printf("Updating cluster_profile (not cluster_template)")
 
-	// Capture old cluster_profile value at the start to restore on any error
-	// This prevents Terraform state from getting out of sync with API when updates fail
+	// Capture old cluster_profile to restore on error (pre-apply snapshot, or API sync when flag is on).
 	oldProfileRaw, _ := d.GetChange("cluster_profile")
 	oldProfile := normalizeInterfaceSliceFromListOrSet(oldProfileRaw)
-	restoreOldProfile := func() {
-		_ = d.Set("cluster_profile", oldProfile)
+	rollbackProfiles := func() {
+		rollbackClusterProfileOnUpdateError(c, d, oldProfile)
 	}
 
 	profiles, err := toAddonDeplProfiles(c, d)
 	var variableEntity []*models.V1SpectroClusterVariableUpdateEntity
 	if err != nil {
-		// Restore old value on error
-		restoreOldProfile()
+		rollbackProfiles()
 		return err
 	}
 	settings, err := toSpcApplySettings(d)
 	if err != nil {
-		restoreOldProfile()
+		rollbackProfiles()
 		return err
 	}
 
@@ -516,14 +516,14 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	// Handle profile deletions: find profiles that were in old state but not in new state
 	// These need to be explicitly deleted since PATCH doesn't remove profiles
 	if d.HasChange("cluster_profile") {
-		profilesToDelete := getProfilesToDelete(c, d)
+		profilesToDelete := getProfilesToDelete(c, d, cluster)
 		if len(profilesToDelete) > 0 {
 			log.Printf("Deleting %d profiles that were removed from cluster_profile", len(profilesToDelete))
 			deleteBody := &models.V1SpectroClusterProfilesDeleteEntity{
 				ProfileUids: profilesToDelete,
 			}
 			if err := c.DeleteAddonDeployment(d.Id(), deleteBody); err != nil {
-				restoreOldProfile()
+				rollbackProfiles()
 				return fmt.Errorf("failed to delete removed profiles: %w", err)
 			}
 		}
@@ -537,6 +537,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	// Set ReplaceWithProfile for profiles that already exist on the cluster
 	// This ensures PATCH updates existing profiles instead of adding duplicates
 	if err := setReplaceWithProfileForExisting(c, cluster, profiles); err != nil {
+		rollbackProfiles()
 		return fmt.Errorf("failed to resolve profile replacements: %w", err)
 	}
 
@@ -547,9 +548,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	clusterContext := d.Get("context").(string)
 	// Use PATCH instead of PUT to preserve add-on profiles attached via spectrocloud_addon_deployment
 	if err := c.PatchClusterProfileValues(d.Id(), body); err != nil {
-		// Restore old value on API error (e.g., DuplicateClusterPacksForbidden)
-		// This ensures Terraform state stays in sync with actual API state
-		restoreOldProfile()
+		rollbackProfiles()
 		return err
 	}
 
@@ -559,7 +558,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 
 	ctx := context.Background()
 	if err := waitForProfileDownload(ctx, c, clusterContext, d.Id(), d.Timeout(schema.TimeoutUpdate)); err != nil {
-		restoreOldProfile()
+		rollbackProfiles()
 		return err
 	}
 
@@ -610,7 +609,7 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	if len(variableEntity) != 0 {
 		err = c.UpdateClusterProfileVariableInCluster(d.Id(), variableEntity)
 		if err != nil {
-			restoreOldProfile()
+			rollbackProfiles()
 			return err
 		}
 	}
@@ -769,27 +768,57 @@ func shouldSyncClusterProfilesFromAPI(d *schema.ResourceData) bool {
 	return true
 }
 
+// setClusterProfilesFromAPI builds cluster_profile state from the cluster API document and writes it
+// to ResourceData (flatten, variable/pack enrichment, align with config). Used on read and on
+// update rollback when disable_addon_deployment_resource is true.
+func setClusterProfilesFromAPI(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) error {
+	if cluster == nil {
+		return fmt.Errorf("cluster is required to sync cluster_profile from API")
+	}
+
+	clusterProfiles, err := flattenClusterProfilesFromCluster(cluster)
+	if err != nil {
+		return err
+	}
+	clusterProfiles, err = enrichClusterProfilesWithVariables(c, d, d.Id(), clusterProfiles)
+	if err != nil {
+		return err
+	}
+	clusterProfiles, err = enrichClusterProfilesWithPacks(c, d, cluster, clusterProfiles)
+	if err != nil {
+		return err
+	}
+	alignClusterProfilesStateWithConfig(d, clusterProfiles)
+	return d.Set("cluster_profile", clusterProfiles)
+}
+
+// rollbackClusterProfileOnUpdateError restores cluster_profile after a failed updateProfiles.
+// When shouldSyncClusterProfilesFromAPI is true, re-fetches the cluster and syncs from API so
+// ResourceData reflects Palette (including partial applies). Otherwise restores the pre-apply snapshot.
+func rollbackClusterProfileOnUpdateError(c *client.V1Client, d *schema.ResourceData, oldProfile []interface{}) {
+	if shouldSyncClusterProfilesFromAPI(d) && c != nil && d.Id() != "" {
+		refreshed, err := c.GetCluster(d.Id())
+		if err != nil {
+			log.Printf("Warning: could not refresh cluster for profile rollback from API: %v; restoring pre-apply cluster_profile", err)
+			_ = d.Set("cluster_profile", oldProfile)
+			return
+		}
+		if err := setClusterProfilesFromAPI(c, d, refreshed); err != nil {
+			log.Printf("Warning: could not sync cluster_profile from API on rollback: %v; restoring pre-apply cluster_profile", err)
+			_ = d.Set("cluster_profile", oldProfile)
+		}
+		return
+	}
+	_ = d.Set("cluster_profile", oldProfile)
+}
+
 // syncClusterProfilesFromAPIWhenAddonDeploymentDisabled refreshes cluster_profile from the API during
 // read when disable_addon_deployment_resource is true (addon profiles are owned by the cluster resource).
 func syncClusterProfilesFromAPIWhenAddonDeploymentDisabled(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) diag.Diagnostics {
 	if !shouldSyncClusterProfilesFromAPI(d) {
 		return nil
 	}
-
-	clusterProfiles, err := flattenClusterProfilesFromCluster(cluster)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	clusterProfiles, err = enrichClusterProfilesWithVariables(c, d, d.Id(), clusterProfiles)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	clusterProfiles, err = enrichClusterProfilesWithPacks(c, d, cluster, clusterProfiles)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	alignClusterProfilesStateWithConfig(d, clusterProfiles)
-	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
+	if err := setClusterProfilesFromAPI(c, d, cluster); err != nil {
 		return diag.FromErr(err)
 	}
 	return nil
