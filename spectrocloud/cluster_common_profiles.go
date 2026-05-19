@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
@@ -618,22 +619,180 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 }
 
 func flattenClusterProfileForImport(c *client.V1Client, d *schema.ResourceData) ([]interface{}, error) {
-	//clusterContext := "project"
-	//if v, ok := d.GetOk("context"); ok {
-	//	clusterContext = v.(string)
-	//}
-	clusterProfiles := make([]interface{}, 0)
 	cluster, err := c.GetCluster(d.Id())
+	if err != nil {
+		return nil, err
+	}
+	clusterProfiles, err := flattenClusterProfilesFromCluster(cluster)
+	if err != nil {
+		return nil, err
+	}
+	clusterProfiles, err = enrichClusterProfilesWithVariables(c, d, d.Id(), clusterProfiles)
+	if err != nil {
+		return nil, err
+	}
+	return enrichClusterProfilesWithPacks(c, d, cluster, clusterProfiles)
+}
+
+// flattenClusterProfilesFromCluster maps every ClusterProfileTemplates entry from the API into
+// cluster_profile state. Used for import and for read refresh when addon deployment is disabled.
+func flattenClusterProfilesFromCluster(cluster *models.V1SpectroCluster) ([]interface{}, error) {
+	clusterProfiles := make([]interface{}, 0)
+	if cluster == nil || cluster.Spec == nil {
+		return clusterProfiles, nil
+	}
+
+	for _, profileTemplate := range cluster.Spec.ClusterProfileTemplates {
+		if profileTemplate == nil || profileTemplate.UID == "" {
+			continue
+		}
+		clusterProfiles = append(clusterProfiles, map[string]interface{}{
+			"id":   profileTemplate.UID,
+			"pack": []interface{}{},
+		})
+	}
+	return clusterProfiles, nil
+}
+
+// enrichClusterProfilesWithPacks attaches pack values from ClusterProfileTemplates when the profile
+// has pack blocks in Terraform config (same pattern as spectrocloud_addon_deployment read).
+func enrichClusterProfilesWithPacks(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster, clusterProfiles []interface{}) ([]interface{}, error) {
+	if c == nil || cluster == nil || cluster.Spec == nil || len(clusterProfiles) == 0 {
+		return clusterProfiles, nil
+	}
+
+	templateByUID := make(map[string]*models.V1ClusterProfileTemplate, len(cluster.Spec.ClusterProfileTemplates))
+	for _, template := range cluster.Spec.ClusterProfileTemplates {
+		if template != nil && template.UID != "" {
+			templateByUID[template.UID] = template
+		}
+	}
+
+	registryNameMap := buildPackRegistryNameMapFromClusterProfiles(d)
+	registryUIDMap := buildPackRegistryUIDMapFromClusterProfiles(d)
+
+	for i := range clusterProfiles {
+		p := clusterProfiles[i].(map[string]interface{})
+		uid, ok := p["id"].(string)
+		if !ok || uid == "" || !clusterProfileHasPacksInConfig(d, uid) {
+			continue
+		}
+
+		template, ok := templateByUID[uid]
+		if !ok || len(template.Packs) == 0 {
+			continue
+		}
+
+		packManifests, packDiags, done := getPacksContent(template.Packs, c, d)
+		if done {
+			if len(packDiags) > 0 {
+				return clusterProfiles, fmt.Errorf("%s: %s", packDiags[0].Summary, packDiags[0].Detail)
+			}
+			return clusterProfiles, errors.New("failed to read pack manifest content")
+		}
+
+		packs, err := flattenPacksWithRegistryMaps(c, nil, template.Packs, packManifests, registryNameMap, registryUIDMap)
+		if err != nil {
+			return clusterProfiles, err
+		}
+		configPacks := getClusterProfilePacksFromConfig(d, uid)
+		for j := range packs {
+			pack, ok := packs[j].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			name, _ := pack["name"].(string)
+			alignPackStateWithConfig(pack, findConfigPackByName(configPacks, name))
+			packs[j] = pack
+		}
+		p["pack"] = packs
+	}
+
+	return clusterProfiles, nil
+}
+
+// enrichClusterProfilesWithVariables attaches cluster profile variables from the Palette API so
+// refreshed state matches what Terraform config expects (avoids spurious cluster_profile changes).
+func enrichClusterProfilesWithVariables(c *client.V1Client, d *schema.ResourceData, clusterUID string, clusterProfiles []interface{}) ([]interface{}, error) {
+	if c == nil || len(clusterProfiles) == 0 {
+		return clusterProfiles, nil
+	}
+
+	clusterVars, err := c.GetClusterVariables(clusterUID)
 	if err != nil {
 		return clusterProfiles, err
 	}
 
-	for _, profileTemplate := range cluster.Spec.ClusterProfileTemplates {
-		profile := make(map[string]interface{})
-		profile["id"] = profileTemplate.UID
-		clusterProfiles = append(clusterProfiles, profile)
+	profileVariablesMap := make(map[string]map[string]interface{})
+	for _, cv := range clusterVars {
+		if cv.ProfileUID == nil || cv.Variables == nil {
+			continue
+		}
+		vars := make(map[string]interface{})
+		for _, v := range cv.Variables {
+			if v.Name != nil && v.Value != "" {
+				vars[*v.Name] = v.Value
+			}
+		}
+		if len(vars) > 0 {
+			profileVariablesMap[*cv.ProfileUID] = vars
+		}
 	}
+
+	for i := range clusterProfiles {
+		p := clusterProfiles[i].(map[string]interface{})
+		uid, ok := p["id"].(string)
+		if !ok || uid == "" {
+			continue
+		}
+		if vars, has := profileVariablesMap[uid]; has && len(vars) > 0 {
+			p["variables"] = vars
+		} else if clusterProfileHasVariablesInConfig(d, uid) {
+			p["variables"] = map[string]interface{}{}
+		} else {
+			delete(p, "variables")
+		}
+	}
+
 	return clusterProfiles, nil
+}
+
+func shouldSyncClusterProfilesFromAPI(d *schema.ResourceData) bool {
+	if !addonDeploymentResourceDisabled() {
+		return false
+	}
+	if raw := d.Get("cluster_template"); raw != nil {
+		if list, ok := raw.([]interface{}); ok && len(list) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// syncClusterProfilesFromAPIWhenAddonDeploymentDisabled refreshes cluster_profile from the API during
+// read when disable_addon_deployment_resource is true (addon profiles are owned by the cluster resource).
+func syncClusterProfilesFromAPIWhenAddonDeploymentDisabled(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) diag.Diagnostics {
+	if !shouldSyncClusterProfilesFromAPI(d) {
+		return nil
+	}
+
+	clusterProfiles, err := flattenClusterProfilesFromCluster(cluster)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	clusterProfiles, err = enrichClusterProfilesWithVariables(c, d, d.Id(), clusterProfiles)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	clusterProfiles, err = enrichClusterProfilesWithPacks(c, d, cluster, clusterProfiles)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	alignClusterProfilesStateWithConfig(d, clusterProfiles)
+	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
 }
 
 // toClusterTemplateReference extracts cluster template reference from ResourceData

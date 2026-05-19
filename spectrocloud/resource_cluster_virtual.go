@@ -340,8 +340,9 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 		}
 	}
 
-	// Populate cluster_profile (profile IDs + variables) for read/import — same pattern as resources
-	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	// Populate cluster_profile (profile IDs + variables) for read/import.
+	// When disable_addon_deployment_resource is true, readCommonFields already synced profile IDs.
+	clusterProfiles, err := flattenClusterProfilesFromCluster(cluster)
 	if err != nil {
 		log.Printf("[WARN] failed to flatten cluster profiles: %v", err)
 		clusterProfiles = make([]interface{}, 0)
@@ -357,33 +358,15 @@ func resourceClusterVirtualRead(_ context.Context, d *schema.ResourceData, m int
 		}
 	}
 	if len(clusterProfiles) > 0 {
-		clusterVars, err := c.GetClusterVariables(d.Id())
+		clusterProfiles, err = enrichClusterProfilesWithVariables(c, d, d.Id(), clusterProfiles)
 		if err != nil {
-			log.Printf("[WARN] failed to get cluster variables: %v", err)
-		} else {
-			profileVariablesMap := make(map[string]map[string]interface{})
-			for _, cv := range clusterVars {
-				if cv.ProfileUID != nil && cv.Variables != nil {
-					vars := make(map[string]interface{})
-					for _, v := range cv.Variables {
-						if v.Name != nil && v.Value != "" {
-							vars[*v.Name] = v.Value
-						}
-					}
-					if len(vars) > 0 {
-						profileVariablesMap[*cv.ProfileUID] = vars
-					}
-				}
-			}
-			for i := range clusterProfiles {
-				p := clusterProfiles[i].(map[string]interface{})
-				if uid, ok := p["id"].(string); ok && uid != "" {
-					if vars, has := profileVariablesMap[uid]; has {
-						p["variables"] = vars
-					}
-				}
-			}
+			log.Printf("[WARN] failed to enrich cluster profile variables: %v", err)
 		}
+		clusterProfiles, err = enrichClusterProfilesWithPacks(c, d, cluster, clusterProfiles)
+		if err != nil {
+			log.Printf("[WARN] failed to enrich cluster profile packs: %v", err)
+		}
+		alignClusterProfilesStateWithConfig(d, clusterProfiles)
 	}
 	if err := d.Set("cluster_profile", clusterProfiles); err != nil {
 		log.Printf("[WARN] failed to set cluster_profile: %v", err)
