@@ -9,6 +9,8 @@ description: |-
 
   Resource for attaching cluster profiles as addon deployments to an existing cluster.
 
+~> **Provider feature flag:** Set `feature_flag.disable_addon_deployment_resource = true` in the [provider configuration](../index.md#feature-flags) to disallow this resource during plan and apply.
+
 ## Example Usage
 
 ```hcl
