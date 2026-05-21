@@ -84,7 +84,6 @@ resource "spectrocloud_cluster_aks" "cluster" {
     disk_size_gb         = 60
     is_system_node_pool  = true
     storage_account_type = "Standard_LRS"
-    os_sku               = "Ubuntu2204"
   }
 }
 ```
@@ -191,12 +190,12 @@ Required:
 
 Optional:
 
-- `os_sku` (String) The OS SKU for the node pool. Valid values: `Ubuntu`, `Ubuntu2204`, `Ubuntu2404`, `AzureLinux`, `AzureLinux3`, `CBLMariner`, `Windows2019`, `Windows2022`. Immutable after creation (ForceNew).
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
+- `os_sku` (String) The OS SKU for the AKS node pool. Valid values: Ubuntu, AzureLinux, Windows2022. Immutable after creation.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))

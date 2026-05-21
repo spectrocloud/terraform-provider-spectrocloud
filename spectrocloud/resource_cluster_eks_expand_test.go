@@ -938,4 +938,3 @@ func TestSetAdditionalSecurityGroups(t *testing.T) {
 		})
 	}
 }
-

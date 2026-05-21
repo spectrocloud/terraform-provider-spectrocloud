@@ -342,11 +342,9 @@ func resourceClusterAks() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							ForceNew:    true,
-							Description: "The OS SKU for the node pool. Valid values: Ubuntu, Ubuntu2204, Ubuntu2404, AzureLinux, AzureLinux3, CBLMariner, Windows2019, Windows2022. Immutable after creation.",
+							Description: "The OS SKU for the AKS node pool. Valid values: Ubuntu, AzureLinux, Windows2022. Immutable after creation.",
 							ValidateFunc: validation.StringInSlice([]string{
-								"Ubuntu", "Ubuntu2204", "Ubuntu2404",
-								"AzureLinux", "AzureLinux3", "CBLMariner",
-								"Windows2019", "Windows2022",
+								"Ubuntu", "AzureLinux", "Windows2022",
 							}, false),
 						},
 					},

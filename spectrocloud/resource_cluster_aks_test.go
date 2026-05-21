@@ -20,7 +20,7 @@ func TestToMachinePoolAks(t *testing.T) {
 		"is_system_node_pool":  true,
 		"name":                 "pool-1",
 		"update_strategy":      "RollingUpdateScaleOut",
-		"os_sku":               "Ubuntu2204",
+		"os_sku":               "Ubuntu",
 	}
 
 	// Call the toMachinePoolAks function with the machine pool configuration
@@ -161,7 +161,7 @@ func TestToMachinePoolAks_WithOsSku(t *testing.T) {
 		"is_system_node_pool":  false,
 		"name":                 "worker-pool",
 		"update_strategy":      "RollingUpdateScaleOut",
-		"os_sku":               "Ubuntu2204",
+		"os_sku":               "Ubuntu",
 	}
 
 	mp := toMachinePoolAks(machinePoolConfig)
@@ -169,7 +169,7 @@ func TestToMachinePoolAks_WithOsSku(t *testing.T) {
 	assert.NotNil(t, mp)
 	assert.NotNil(t, mp.ManagedPoolConfig)
 	assert.NotEmpty(t, mp.ManagedPoolConfig.OsSku)
-	assert.Equal(t, models.V1OsSku("Ubuntu2204"), mp.ManagedPoolConfig.OsSku)
+	assert.Equal(t, models.V1OsSku("Ubuntu"), mp.ManagedPoolConfig.OsSku)
 }
 
 func TestToMachinePoolAks_WithoutOsSku(t *testing.T) {
@@ -211,7 +211,7 @@ func TestFlattenMachinePoolConfigsAks_WithOsSku(t *testing.T) {
 		UpdateStrategy: &models.V1UpdateStrategy{
 			Type: "RollingUpdate",
 		},
-		OsSku: models.V1OsSku("Ubuntu2204"),
+		OsSku: models.V1OsSku("Ubuntu"),
 	}
 
 	flattened := flattenMachinePoolConfigsAks([]*models.V1AzureMachinePoolConfig{machinePool})
@@ -220,7 +220,7 @@ func TestFlattenMachinePoolConfigsAks_WithOsSku(t *testing.T) {
 	assert.Len(t, flattened, 1)
 	m := flattened[0].(map[string]interface{})
 	assert.Equal(t, "pool-with-sku", m["name"])
-	assert.Equal(t, "Ubuntu2204", m["os_sku"])
+	assert.Equal(t, "Ubuntu", m["os_sku"])
 }
 
 func TestResourceMachinePoolAksHash_OsSku(t *testing.T) {
@@ -232,7 +232,7 @@ func TestResourceMachinePoolAksHash_OsSku(t *testing.T) {
 		"is_system_node_pool":  false,
 		"storage_account_type": "Premium_LRS",
 		"update_strategy":      "RollingUpdateScaleOut",
-		"os_sku":               "Ubuntu2204",
+		"os_sku":               "Ubuntu",
 	}
 
 	poolWithDifferentSku := map[string]interface{}{
