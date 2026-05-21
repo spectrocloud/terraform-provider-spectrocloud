@@ -355,18 +355,13 @@ func setReplaceWithProfileForExisting(c *client.V1Client, cluster *models.V1Spec
 		}
 		// Check if a profile with the same name is already attached to the cluster
 		existingUID := findAttachedProfileByName(cluster, clusterProfile.Metadata.Name)
-		// Infra swap: if no same-name match but this profile is infra, replace the existing attached infra (different name)
-		if existingUID == "" && clusterProfile.Spec != nil {
-			var profileType string
-			if clusterProfile.Spec.Published != nil {
-				profileType = clusterProfile.Spec.Published.Type
-			}
-			if profileType == "infra" {
-				existingUID = findAttachedProfileByType(cluster, "infra")
-				if existingUID != "" {
-					log.Printf("Profile %s (name: %s) is infra - will replace existing infra %s via PATCH",
-						profile.UID, clusterProfile.Metadata.Name, existingUID)
-				}
+		// Infra swap: if no same-name match but this profile is infra/cluster type, replace the attached infra layer.
+		if existingUID == "" && clusterProfile.Spec != nil && clusterProfile.Spec.Published != nil &&
+			isInfraClusterProfileType(clusterProfile.Spec.Published.Type) {
+			existingUID = findAttachedInfraProfile(cluster)
+			if existingUID != "" {
+				log.Printf("Profile %s (name: %s) is infra - will replace existing infra %s via PATCH",
+					profile.UID, clusterProfile.Metadata.Name, existingUID)
 			}
 		}
 		if existingUID != "" && existingUID != profile.UID {
@@ -383,19 +378,51 @@ func setReplaceWithProfileForExisting(c *client.V1Client, cluster *models.V1Spec
 	return nil
 }
 
-// findAttachedProfileByType returns the UID of the first attached profile with the given type (e.g. "infra").
-// Used when replacing an infra profile with another of a different name.
-func findAttachedProfileByType(cluster *models.V1SpectroCluster, profileType string) string {
-	if cluster == nil || cluster.Spec == nil || profileType == "" {
+// isInfraClusterProfileType reports whether a profile template type is an infra layer (Palette treats
+// both "infra" and "cluster" as infra; EKS profiles commonly use "cluster").
+func isInfraClusterProfileType(profileType string) bool {
+	return profileType == "infra" || profileType == "cluster"
+}
+
+// getAttachedProfileType returns the template type for a profile UID on the cluster, if attached.
+func getAttachedProfileType(cluster *models.V1SpectroCluster, profileUID string) string {
+	if cluster == nil || cluster.Spec == nil || profileUID == "" {
 		return ""
 	}
 	for _, template := range cluster.Spec.ClusterProfileTemplates {
-		if template != nil && template.Type == profileType {
+		if template != nil && template.UID == profileUID {
+			return template.Type
+		}
+	}
+	return ""
+}
+
+// findAttachedInfraProfile returns the UID of the first attached infra/cluster profile on the cluster.
+func findAttachedInfraProfile(cluster *models.V1SpectroCluster) string {
+	if cluster == nil || cluster.Spec == nil {
+		return ""
+	}
+	for _, template := range cluster.Spec.ClusterProfileTemplates {
+		if template != nil && isInfraClusterProfileType(template.Type) {
 			return template.UID
 		}
 	}
 	return ""
 }
+
+// // findAttachedProfileByType returns the UID of the first attached profile with the given type (e.g. "infra").
+// // Used when replacing an infra profile with another of a different name.
+// func findAttachedProfileByType(cluster *models.V1SpectroCluster, profileType string) string {
+// 	if cluster == nil || cluster.Spec == nil || profileType == "" {
+// 		return ""
+// 	}
+// 	for _, template := range cluster.Spec.ClusterProfileTemplates {
+// 		if template != nil && template.Type == profileType {
+// 			return template.UID
+// 		}
+// 	}
+// 	return ""
+// }
 
 // findAttachedProfileByName finds a profile attached to the cluster by its name.
 // Returns the UID of the attached profile if found, empty string otherwise.
@@ -466,16 +493,23 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData, cluster *mo
 			continue
 		}
 
-		clusterProfile, err := c.GetClusterProfile(oldUID)
-		if err != nil {
-			log.Printf("Warning: could not get profile %s for delete check: %v", oldUID, err)
-			profilesToDelete = append(profilesToDelete, oldUID)
+		if isInfraClusterProfileType(getAttachedProfileType(cluster, oldUID)) {
+			log.Printf("Profile %s is infra/cluster on cluster - skip delete, will be replaced via PATCH", oldUID)
 			continue
 		}
-		if clusterProfile != nil && clusterProfile.Spec != nil && clusterProfile.Spec.Published != nil &&
-			clusterProfile.Spec.Published.Type == "infra" {
-			log.Printf("Profile %s is infra - skip delete, will be replaced via PATCH", oldUID)
-			continue
+
+		if c != nil {
+			clusterProfile, err := c.GetClusterProfile(oldUID)
+			if err != nil {
+				log.Printf("Warning: could not get profile %s for delete check: %v", oldUID, err)
+				profilesToDelete = append(profilesToDelete, oldUID)
+				continue
+			}
+			if clusterProfile != nil && clusterProfile.Spec != nil && clusterProfile.Spec.Published != nil &&
+				isInfraClusterProfileType(clusterProfile.Spec.Published.Type) {
+				log.Printf("Profile %s is infra/cluster profile - skip delete, will be replaced via PATCH", oldUID)
+				continue
+			}
 		}
 
 		log.Printf("Profile %s will be deleted (UID removed from cluster_profile but still attached on cluster)", oldUID)
