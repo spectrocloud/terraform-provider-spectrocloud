@@ -6,6 +6,7 @@
 # Go variables
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
+MODULE_GO_VERSION ?= $(shell go list -m -f '{{.GoVersion}}')
 
 # Output
 TIME   = `date +%H:%M:%S`
@@ -26,7 +27,7 @@ check-diff: reviewable ## Execute branch is clean
 	git diff --quiet || ($(ERR) please run 'make reviewable' to include all changes && false)
 	@$(OK) branch is clean
 
-reviewable: fmt vet lint generate ## Ensure code is ready for review
+reviewable: fmt vet lint generate docs-score-check ## Ensure code is ready for review
 	git submodule update --remote
 	go mod tidy
 
@@ -37,15 +38,24 @@ vet: ## Run go vet against code
 	go vet ./...
 
 lint: golangci-lint ## Run golangci-lint against code
-	$(GOLANGCI_LINT) run
+	$(GOLANGCI_LINT) run --allow-parallel-runners
 
 generate:
 	go generate ./...
 
+docs-score-check: ## Fail when docs score has unresolved defects
+	python3 tools/docs_score/score.py --json-only
+	@python3 -c 'import json,sys; d=json.load(open("tools/docs_score/score.json")); ts=d.get("total_score",0); pf=d.get("pages_failing",0); print(f"docs score check: total_score={ts}, pages_failing={pf}"); sys.exit(1 if (ts > 0 and pf > 0) else 0)'
+
 ##@ Test Targets
 .PHONY: testacc
 testacc: ## Run acceptance tests
-	TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m
+	@if go tool covdata >/dev/null 2>&1; then \
+		TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m; \
+	else \
+		echo "go tool covdata not available; running acceptance tests without coverage flags"; \
+		TF_ACC=1 go test -v $(TESTARGS) ./spectrocloud/... -timeout 120m; \
+	fi
 
 ##@ Development Targets
 DEV_PROVIDER_VERSION=100.100.100
@@ -70,19 +80,6 @@ bin-dir:
 	test -d $(BIN_DIR) || mkdir $(BIN_DIR)
 
 GOLANGCI_VERSION ?= 2.7.2
+GOLANGCI_LINT=$(BIN_DIR)/golangci-lint
 golangci-lint: bin-dir
-	if ! test -f $(BIN_DIR)/golangci-lint-linux-amd64; then \
-		curl -LOs https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_VERSION)/golangci-lint-$(GOLANGCI_VERSION)-linux-amd64.tar.gz; \
-		tar -zxf golangci-lint-$(GOLANGCI_VERSION)-linux-amd64.tar.gz; \
-		mv golangci-lint-$(GOLANGCI_VERSION)-*/golangci-lint $(BIN_DIR)/golangci-lint-linux-amd64; \
-		chmod +x $(BIN_DIR)/golangci-lint-linux-amd64; \
-		rm -rf ./golangci-lint-$(GOLANGCI_VERSION)-linux-amd64*; \
-	fi
-	if ! test -f $(BIN_DIR)/golangci-lint-$(GOOS)-$(GOARCH); then \
-		curl -LOs https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_VERSION)/golangci-lint-$(GOLANGCI_VERSION)-$(GOOS)-$(GOARCH).tar.gz; \
-		tar -zxf golangci-lint-$(GOLANGCI_VERSION)-$(GOOS)-$(GOARCH).tar.gz; \
-		mv golangci-lint-$(GOLANGCI_VERSION)-*/golangci-lint $(BIN_DIR)/golangci-lint-$(GOOS)-$(GOARCH); \
-		chmod +x $(BIN_DIR)/golangci-lint-$(GOOS)-$(GOARCH); \
-		rm -rf ./golangci-lint-$(GOLANGCI_VERSION)-$(GOOS)-$(GOARCH)*; \
-	fi
-GOLANGCI_LINT=$(BIN_DIR)/golangci-lint-$(GOOS)-$(GOARCH)
+	GOTOOLCHAIN=go$(MODULE_GO_VERSION) GOBIN=$(abspath $(BIN_DIR)) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(GOLANGCI_VERSION)

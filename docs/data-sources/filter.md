@@ -3,12 +3,12 @@
 page_title: "spectrocloud_filter Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up filter definitions by name.
 ---
 
 # spectrocloud_filter (Data Source)
 
-
+Data source for looking up filter definitions by name.
 
 ## Example Usage
 

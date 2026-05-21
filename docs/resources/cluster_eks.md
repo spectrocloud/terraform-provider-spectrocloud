@@ -143,7 +143,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`. The `tags` attribute will soon be deprecated. It is recommended to use `tags_map` instead.
-- `tags_map` (Map of String) A map of tags to be applied to the cluster. tags and tags_map are mutually exclusive — only one should be used at a time
+- `tags_map` (Map of String) A map of tags to be applied to the cluster. `tags` and `tags_map` are mutually exclusive; only one should be used at a time.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
@@ -160,18 +160,18 @@ Refer to the [Import section](/docs#import) to learn more.
 
 Required:
 
-- `region` (String)
+- `region` (String) AWS region where the EKS cluster is deployed. Changing this forces a new resource.
 
 Optional:
 
-- `az_subnets` (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
-- `azs` (List of String) Mutually exclusive with `az_subnets`. Use for Dynamic provisioning.
+- `az_subnets` (Map of String) Map of availability zone name to subnet ID string. Mutually exclusive with `azs`; use for static provisioning.
+- `azs` (List of String) List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning.
 - `encryption_config_arn` (String) The ARN of the KMS encryption key to use for the cluster. Refer to the [Enable Secrets Encryption for EKS Cluster](https://docs.spectrocloud.com/clusters/public-cloud/aws/enable-secrets-encryption-kms-key/) for additional guidance.
 - `endpoint_access` (String) Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.
 - `private_access_cidrs` (Set of String) List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.
 - `public_access_cidrs` (Set of String) List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.
 - `ssh_key_name` (String) Public SSH key to be used for the cluster nodes.
-- `vpc_id` (String)
+- `vpc_id` (String) VPC ID used to provision the EKS cluster.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -179,23 +179,23 @@ Optional:
 
 Required:
 
-- `count` (Number) Number of nodes in the machine pool.
-- `disk_size_gb` (Number)
-- `instance_type` (String)
-- `name` (String)
+- `count` (Number) Desired pool size sent to the API as `size` (node count when not using autoscaling limits). When autoscaling is enabled (`min` and `max` both greater than 0), set `count` equal to `min`: Palette persists pool `size` at that minimum while the autoscaler adjusts the live node count between `min` and `max`. A `count` greater than `min` is rejected by the provider and would not match persisted state or the Palette UI.
+- `disk_size_gb` (Number) Root disk size in GB for each node in this machine pool.
+- `instance_type` (String) AWS EC2 instance type used for nodes in this machine pool.
+- `name` (String) Name of the EKS machine pool.
 
 Optional:
 
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `ami_type` (String) Specifies the type of Amazon Machine Image (AMI) to use for the machine pool. Valid values are [`AL2_x86_64`, `AL2_x86_64_GPU`, `AL2023_x86_64_STANDARD`, `AL2023_x86_64_NEURON` and `AL2023_x86_64_NVIDIA`]. Defaults to `AL2023_x86_64_STANDARD`. `AL2_x86_64`and `AL2_x86_64_GPU` are deprecated and will be removed in the future.
-- `az_subnets` (Map of String) Mutually exclusive with `azs`. Use for Static provisioning.
-- `azs` (List of String) Mutually exclusive with `az_subnets`.
+- `az_subnets` (Map of String) Map of availability zone name to subnet ID string for machine pool placement. Mutually exclusive with `azs`; use for static provisioning.
+- `azs` (List of String) List of availability zone names for machine pool placement. Mutually exclusive with `az_subnets`.
 - `capacity_type` (String) Capacity type is an instance type,  can be 'on-demand' or 'spot'. Defaults to 'on-demand'.
 - `eks_launch_template` (Block List, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--eks_launch_template))
-- `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
-- `max_price` (String)
-- `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
+- `max` (Number) Maximum number of nodes in the machine pool. Used for autoscaling together with `min`. When both `min` and `max` are greater than 0, `count` must equal `min`.
+- `max_price` (String) Maximum hourly spot instance price for this machine pool. Used only when `capacity_type` is `spot`.
+- `min` (Number) Minimum number of nodes in the machine pool. Used for autoscaling together with `max`. When both `min` and `max` are greater than 0, `count` must equal `min`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
@@ -207,7 +207,7 @@ Optional:
 
 Optional:
 
-- `additional_security_groups` (Set of String) Additional security groups to attach to the instance.
+- `additional_security_groups` (Set of String) Set of additional AWS security group IDs to attach to the instance.
 - `ami_id` (String) The ID of the custom Amazon Machine Image (AMI). If you do not set an `ami_id`, Palette will repave the cluster when it automatically updates the EKS AMI.
 - `root_volume_iops` (Number) The number of input/output operations per second (IOPS) for the root volume.
 - `root_volume_throughput` (Number) The throughput of the root volume in MiB/s.
@@ -367,24 +367,24 @@ Optional:
 
 Required:
 
-- `name` (String)
+- `name` (String) Name of the Fargate profile.
 - `selector` (Block List, Min: 1) (see [below for nested schema](#nestedblock--fargate_profile--selector))
 
 Optional:
 
-- `additional_tags` (Map of String)
-- `subnets` (List of String)
+- `additional_tags` (Map of String) Map of additional tag key-value pairs applied to Fargate resources.
+- `subnets` (List of String) List of subnet ID strings used by this Fargate profile.
 
 <a id="nestedblock--fargate_profile--selector"></a>
 ### Nested Schema for `fargate_profile.selector`
 
 Required:
 
-- `namespace` (String)
+- `namespace` (String) Kubernetes namespace matched by this Fargate selector.
 
 Optional:
 
-- `labels` (Map of String)
+- `labels` (Map of String) Map of Kubernetes label key-value pairs used to match workloads for this selector.
 
 
 

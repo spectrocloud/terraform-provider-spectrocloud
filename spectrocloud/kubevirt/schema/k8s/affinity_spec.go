@@ -108,7 +108,7 @@ func preferredSchedulingTermFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"weight": {
 			Type:        schema.TypeInt,
-			Description: "weight is in the range 1-100",
+			Description: "Weight in the range `1-100`.",
 			Required:    true,
 		},
 		"preference": {
@@ -188,14 +188,14 @@ func podAffinityTermFields() map[string]*schema.Schema {
 		},
 		"namespaces": {
 			Type:        schema.TypeSet,
-			Description: "namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'",
+			Description: "Set of namespace name strings that the label selector applies to; null or empty means this pod's namespace.",
 			Optional:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 			Set:         schema.HashString,
 		},
 		"topology_key": {
 			Type:         schema.TypeString,
-			Description:  "empty topology key is interpreted by the scheduler as 'all topologies'",
+			Description:  "Topology key used by the scheduler; an empty value is interpreted as all topologies.",
 			Optional:     true,
 			ValidateFunc: validation.StringMatch(regexp.MustCompile(`^.+$`), "value cannot be empty"),
 		},
@@ -206,12 +206,12 @@ func weightedPodAffinityTermFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"weight": {
 			Type:        schema.TypeInt,
-			Description: "weight associated with matching the corresponding podAffinityTerm, in the range 1-100",
+			Description: "Weight associated with the matching `pod_affinity_term`, in the range `1-100`.",
 			Required:    true,
 		},
 		"pod_affinity_term": {
 			Type:        schema.TypeList,
-			Description: "A pod affinity term, associated with the corresponding weight",
+			Description: "Pod affinity term associated with the corresponding weight.",
 			Required:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{

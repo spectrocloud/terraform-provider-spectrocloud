@@ -11,7 +11,7 @@ func volumesFields() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeString,
-			Description: "Volume's name.",
+			Description: "Unique volume name used to reference this volume from VM disk definitions.",
 			Required:    true,
 		},
 		"volume_source": {
@@ -30,7 +30,7 @@ func volumesFields() map[string]*schema.Schema {
 							Schema: map[string]*schema.Schema{
 								"name": {
 									Type:        schema.TypeString,
-									Description: "Name represents the name of the DataVolume in the same namespace.",
+									Description: "Name of the DataVolume in the same namespace to attach as the volume source.",
 									Required:    true,
 								},
 							},
@@ -144,7 +144,7 @@ func volumesFields() map[string]*schema.Schema {
 										Schema: map[string]*schema.Schema{
 											"claim_name": {
 												Type:        schema.TypeString,
-												Description: "ClaimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims",
+												Description: "Name of the PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims.",
 												Required:    true,
 											},
 											"read_only": {
@@ -182,7 +182,7 @@ func volumesFields() map[string]*schema.Schema {
 							Schema: map[string]*schema.Schema{
 								"claim_name": {
 									Type:        schema.TypeString,
-									Description: "ClaimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims",
+									Description: "Name of the PersistentVolumeClaim in the same namespace as the pod using this volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims.",
 									Required:    true,
 								},
 								"read_only": {
@@ -232,8 +232,9 @@ func volumesFields() map[string]*schema.Schema {
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"key": {
-												Type:     schema.TypeString,
-												Optional: true,
+												Type:        schema.TypeString,
+												Optional:    true,
+												Description: "Key name from the referenced ConfigMap to project into the volume.",
 											},
 										},
 									},

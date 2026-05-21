@@ -98,6 +98,115 @@ func TestToOIDC(t *testing.T) {
 	assert.Equal(t, true, *result.UserInfo.UseUserInfo)
 }
 
+func TestResolveOIDCClientSecret(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		prior  string
+		api    string
+		expect string
+	}{
+		{"empty api keeps prior", "my-secret", "", "my-secret"},
+		{"masked api keeps prior", "my-secret", "********", "my-secret"},
+		{"masked with prefix keeps prior", "my-secret", "abcd****", "my-secret"},
+		{"cleartext api replaces prior when not masked", "old", "new-secret-value", "new-secret-value"},
+		{"no prior uses cleartext api", "", "only-from-api", "only-from-api"},
+		{"no prior masked api yields empty", "", "********", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expect, resolveOIDCClientSecret(tc.prior, tc.api))
+		})
+	}
+}
+
+func TestFlattenOidc_PreservesMaskedClientSecret(t *testing.T) {
+	encodedCA := base64.StdEncoding.EncodeToString([]byte("test-ca-cert"))
+	resourceSchema := map[string]*schema.Schema{
+		"oidc": {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"callback_url":                     {Type: schema.TypeString, Required: true},
+					"client_id":                        {Type: schema.TypeString, Required: true},
+					"client_secret":                    {Type: schema.TypeString, Required: true},
+					"default_team_ids":                 {Type: schema.TypeList, Elem: &schema.Schema{Type: schema.TypeString}, Required: true},
+					"identity_provider_ca_certificate": {Type: schema.TypeString, Required: true},
+					"insecure_skip_tls_verify":         {Type: schema.TypeBool, Required: true},
+					"issuer_url":                       {Type: schema.TypeString, Required: true},
+					"logout_url":                       {Type: schema.TypeString, Required: true},
+					"email":                            {Type: schema.TypeString, Required: true},
+					"first_name":                       {Type: schema.TypeString, Required: true},
+					"last_name":                        {Type: schema.TypeString, Required: true},
+					"spectro_team":                     {Type: schema.TypeString, Required: true},
+					"scopes":                           {Type: schema.TypeList, Elem: &schema.Schema{Type: schema.TypeString}, Required: true},
+					"user_info_endpoint": {
+						Type:     schema.TypeList,
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"email":        {Type: schema.TypeString, Required: true},
+								"first_name":   {Type: schema.TypeString, Required: true},
+								"last_name":    {Type: schema.TypeString, Required: true},
+								"spectro_team": {Type: schema.TypeString, Required: true},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	initialOidc := map[string]interface{}{
+		"callback_url":                     "https://example.com/callback",
+		"client_id":                        "client-id",
+		"client_secret":                    "plaintext-from-state",
+		"default_team_ids":                 []interface{}{"team1", "team2"},
+		"identity_provider_ca_certificate": "cert",
+		"insecure_skip_tls_verify":         true,
+		"issuer_url":                       "https://issuer.com",
+		"logout_url":                       "https://example.com/logout",
+		"email":                            "email",
+		"first_name":                       "given_name",
+		"last_name":                        "family_name",
+		"spectro_team":                     "groups",
+		"scopes":                           []interface{}{"openid", "profile"},
+		"user_info_endpoint":               []interface{}{},
+	}
+	resourceData := schema.TestResourceDataRaw(t, resourceSchema, map[string]interface{}{
+		"oidc": []interface{}{initialOidc},
+	})
+
+	oidcSpec := &models.V1TenantOidcClientSpec{
+		CallbackURL:  "https://example.com/callback",
+		ClientID:     "client-id",
+		ClientSecret: "********",
+		DefaultTeams: []string{"team1", "team2"},
+		IssuerTLS: &models.V1OidcIssuerTLS{
+			CaCertificateBase64: encodedCA,
+			InsecureSkipVerify:  BoolPtr(true),
+		},
+		IssuerURL: "https://issuer.com",
+		LogoutURL: "https://example.com/logout",
+		RequiredClaims: &models.V1TenantOidcClaims{
+			Email:       "email",
+			FirstName:   "given_name",
+			LastName:    "family_name",
+			SpectroTeam: "groups",
+		},
+		Scopes: []string{"openid", "profile"},
+		UserInfo: &models.V1OidcUserInfo{
+			UseUserInfo: BoolPtr(false),
+		},
+	}
+
+	err := flattenOidc(oidcSpec, resourceData)
+	assert.NoError(t, err)
+	flattened := resourceData.Get("oidc").([]interface{})[0].(map[string]interface{})
+	assert.Equal(t, "plaintext-from-state", flattened["client_secret"])
+}
+
 func TestFlattenOidc(t *testing.T) {
 	encodedCA := base64.StdEncoding.EncodeToString([]byte("test-ca-cert"))
 	resourceSchema := map[string]*schema.Schema{
@@ -157,6 +266,7 @@ func TestFlattenOidc(t *testing.T) {
 		},
 		Scopes: []string{"openid", "profile"},
 		UserInfo: &models.V1OidcUserInfo{
+			UseUserInfo: BoolPtr(true),
 			Claims: &models.V1TenantOidcClaims{
 				Email:       "email",
 				FirstName:   "given_name",
@@ -189,6 +299,114 @@ func TestFlattenOidc(t *testing.T) {
 	assert.Equal(t, "given_name", userInfo["first_name"])
 	assert.Equal(t, "family_name", userInfo["last_name"])
 	assert.Equal(t, "groups", userInfo["spectro_team"])
+}
+
+func TestFlattenOidc_UserInfoDisabled(t *testing.T) {
+	encodedCA := base64.StdEncoding.EncodeToString([]byte("test-ca-cert"))
+	resourceSchema := map[string]*schema.Schema{
+		"oidc": {
+			Type:     schema.TypeList,
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"callback_url":                     {Type: schema.TypeString, Required: true},
+					"client_id":                        {Type: schema.TypeString, Required: true},
+					"client_secret":                    {Type: schema.TypeString, Required: true},
+					"default_team_ids":                 {Type: schema.TypeList, Elem: &schema.Schema{Type: schema.TypeString}, Required: true},
+					"identity_provider_ca_certificate": {Type: schema.TypeString, Required: true},
+					"insecure_skip_tls_verify":         {Type: schema.TypeBool, Required: true},
+					"issuer_url":                       {Type: schema.TypeString, Required: true},
+					"logout_url":                       {Type: schema.TypeString, Required: true},
+					"email":                            {Type: schema.TypeString, Required: true},
+					"first_name":                       {Type: schema.TypeString, Required: true},
+					"last_name":                        {Type: schema.TypeString, Required: true},
+					"spectro_team":                     {Type: schema.TypeString, Required: true},
+					"scopes":                           {Type: schema.TypeList, Elem: &schema.Schema{Type: schema.TypeString}, Required: true},
+					"user_info_endpoint": {
+						Type:     schema.TypeList,
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"email":        {Type: schema.TypeString, Required: true},
+								"first_name":   {Type: schema.TypeString, Required: true},
+								"last_name":    {Type: schema.TypeString, Required: true},
+								"spectro_team": {Type: schema.TypeString, Required: true},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	resourceData := schema.TestResourceDataRaw(t, resourceSchema, map[string]interface{}{})
+
+	oidcSpec := &models.V1TenantOidcClientSpec{
+		CallbackURL:  "https://example.com/callback",
+		ClientID:     "client-id",
+		ClientSecret: "client-secret",
+		DefaultTeams: []string{"team1", "team2"},
+		IssuerTLS: &models.V1OidcIssuerTLS{
+			CaCertificateBase64: encodedCA,
+			InsecureSkipVerify:  BoolPtr(true),
+		},
+		IssuerURL: "https://issuer.com",
+		LogoutURL: "https://example.com/logout",
+		RequiredClaims: &models.V1TenantOidcClaims{
+			Email:       "email",
+			FirstName:   "given_name",
+			LastName:    "family_name",
+			SpectroTeam: "groups",
+		},
+		Scopes: []string{"openid", "profile"},
+		UserInfo: &models.V1OidcUserInfo{
+			UseUserInfo: BoolPtr(false),
+			Claims: &models.V1TenantOidcClaims{
+				Email:       "email",
+				FirstName:   "given_name",
+				LastName:    "family_name",
+				SpectroTeam: "groups",
+			},
+		},
+	}
+
+	err := flattenOidc(oidcSpec, resourceData)
+	assert.NoError(t, err)
+
+	flattened := resourceData.Get("oidc").([]interface{})[0].(map[string]interface{})
+	uie := flattened["user_info_endpoint"].([]interface{})
+	assert.Len(t, uie, 0)
+}
+
+func TestToOIDC_NoUserInfoEndpoint(t *testing.T) {
+	input := map[string]interface{}{
+		"oidc": []interface{}{
+			map[string]interface{}{
+				"callback_url":                     "https://example.com/callback",
+				"client_id":                        "client-id",
+				"client_secret":                    "client-secret",
+				"default_team_ids":                 schema.NewSet(schema.HashString, []interface{}{"team1", "team2"}),
+				"identity_provider_ca_certificate": "cert",
+				"insecure_skip_tls_verify":         true,
+				"issuer_url":                       "https://issuer.com",
+				"logout_url":                       "https://example.com/logout",
+				"email":                            "email",
+				"first_name":                       "given_name",
+				"last_name":                        "family_name",
+				"spectro_team":                     "groups",
+				"scopes":                           schema.NewSet(schema.HashString, []interface{}{"openid", "profile"}),
+				"user_info_endpoint":               []interface{}{},
+			},
+		},
+	}
+
+	resourceData := resourceSSO().TestResourceData()
+	err := resourceData.Set("oidc", input["oidc"])
+	assert.NoError(t, err)
+
+	result := toOIDC(resourceData)
+	assert.NotNil(t, result.UserInfo)
+	assert.Equal(t, false, *result.UserInfo.UseUserInfo)
 }
 
 func TestToSAML(t *testing.T) {

@@ -11,6 +11,15 @@ description: |-
 
 ## Example Usage
 
+```hcl
+resource "spectrocloud_cluster_edge_vsphere" "example" {
+  name          = "edge-vsphere-cluster"
+  edge_host_uid = "edge-host-uid"
+
+  # Additional required fields such as cluster_profile,
+  # cloud_config, and machine_pool are omitted for brevity.
+}
+```
 
 
 

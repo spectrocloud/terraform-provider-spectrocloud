@@ -50,9 +50,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "Name of the Edge Native cluster. Changing this forces a new resource.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -94,9 +95,10 @@ func resourceClusterEdgeNative() *schema.Resource {
 					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "UID of the cloud account associated with this Edge Native cluster. Changing this forces a new resource.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -208,6 +210,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "Name of the machine pool.",
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -270,16 +273,16 @@ func resourceClusterEdgeNative() *schema.Resource {
 										Type:        schema.TypeString,
 										Optional:    true,
 										Default:     "",
-										Description: "Edge host name",
+										Description: "Name of the edge host.",
 									},
 									"host_uid": {
 										Type:        schema.TypeString,
-										Description: "Edge host id",
+										Description: "UID of the edge host.",
 										Required:    true,
 									},
 									"static_ip": {
 										Type:        schema.TypeString,
-										Description: "Edge host static IP address",
+										Description: "Static IP address assigned to the edge host.",
 										Optional:    true,
 									},
 									"nic_name": {
@@ -289,19 +292,19 @@ func resourceClusterEdgeNative() *schema.Resource {
 									},
 									"default_gateway": {
 										Type:        schema.TypeString,
-										Description: "Edge host default gateway",
+										Description: "Default gateway IP address for the edge host network interface.",
 										Optional:    true,
 									},
 									"subnet_mask": {
 										Type:        schema.TypeString,
-										Description: "Edge host subnet mask",
+										Description: "Subnet mask for the edge host network interface.",
 										Optional:    true,
 									},
 									"dns_servers": {
 										Type:        schema.TypeSet,
 										Optional:    true,
 										Set:         schema.HashString,
-										Description: "Edge host DNS servers",
+										Description: "Set of DNS server IP address strings for the edge host network interface.",
 										Elem: &schema.Schema{
 											Type: schema.TypeString,
 										},

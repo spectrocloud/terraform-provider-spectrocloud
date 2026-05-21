@@ -604,6 +604,34 @@ func TestResourceMachinePoolEksHash(t *testing.T) {
 	}
 }
 
+// EKS machine pool hashing must tolerate Terraform's []interface{}{nil} placeholder during diff
+// for optional nested blocks (same effective hash as omitting eks_launch_template).
+func TestResourceMachinePoolEksHash_eksLaunchTemplateNilListElement(t *testing.T) {
+	poolBase := map[string]interface{}{
+		"disk_size_gb":  100,
+		"min":           2,
+		"max":           5,
+		"instance_type": "t2.micro",
+		"capacity_type": "on-demand",
+		"max_price":     "0.05",
+		"az_subnets": map[string]interface{}{
+			"subnet1": "subnet-123",
+			"subnet2": "subnet-456",
+		},
+	}
+	withoutLT := map[string]interface{}{}
+	for k, v := range poolBase {
+		withoutLT[k] = v
+	}
+	withNilLT := map[string]interface{}{}
+	for k, v := range poolBase {
+		withNilLT[k] = v
+	}
+	withNilLT["eks_launch_template"] = []interface{}{nil}
+
+	assert.Equal(t, resourceMachinePoolEksHash(withoutLT), resourceMachinePoolEksHash(withNilLT))
+}
+
 func TestEksLaunchTemplate(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -624,6 +652,11 @@ func TestEksLaunchTemplate(t *testing.T) {
 			expected: "ami-123-gp2-100-200-sg-456-sg-123-",
 		},
 		{name: "empty slice", input: []interface{}{}, expected: ""},
+		{
+			name:     "Terraform diff placeholder: list with nil element",
+			input:    []interface{}{nil},
+			expected: "",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -683,6 +716,44 @@ func TestResourceMachinePoolVsphereHash(t *testing.T) {
 			assert.Equal(t, tc.expected, result)
 		})
 	}
+}
+
+func TestResourceMachinePoolVsphereHashIncludesSkipK8sUpgrade(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                    "pool-a",
+		"count":                   2,
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "RollingUpdateScaleOut",
+		"min":                     0,
+		"max":                     0,
+		"node_repave_interval":    0,
+		"instance_type": []interface{}{
+			map[string]interface{}{
+				"cpu":          2,
+				"disk_size_gb": 50,
+				"memory_mb":    4096,
+			},
+		},
+		"placement": []interface{}{
+			map[string]interface{}{
+				"cluster":           "c1",
+				"resource_pool":     "rp",
+				"datastore":         "ds",
+				"network":           "n",
+				"static_ip_pool_id": "",
+			},
+		},
+		"skip_k8s_upgrade": "disabled",
+	}
+	enabled := make(map[string]interface{}, len(base)+1)
+	for k, v := range base {
+		enabled[k] = v
+	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+
+	assert.NotEqual(t, resourceMachinePoolVsphereHash(base), resourceMachinePoolVsphereHash(enabled),
+		"vSphere machine pool hash should change when skip_k8s_upgrade changes")
 }
 
 func TestResourceMachinePoolEdgeNativeHash(t *testing.T) {
@@ -820,6 +891,43 @@ func TestResourceMachinePoolMaasHash(t *testing.T) {
 			assert.Equal(t, tc.expectedHash, hash)
 		})
 	}
+}
+
+func TestResourceMachinePoolMaasHashIncludesSkipK8sUpgrade(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                    "pool-a",
+		"count":                   2,
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "RollingUpdateScaleOut",
+		"min":                     0,
+		"max":                     0,
+		"node_repave_interval":    0,
+		"instance_type": []interface{}{
+			map[string]interface{}{
+				"min_cpu":       2,
+				"min_memory_mb": 4096,
+			},
+		},
+		"azs":        schema.NewSet(schema.HashString, []interface{}{"az1"}),
+		"node_tags":  schema.NewSet(schema.HashString, []interface{}{}),
+		"use_lxd_vm": false,
+		"placement": []interface{}{
+			map[string]interface{}{
+				"resource_pool": "rp",
+			},
+		},
+		"network":          []interface{}{},
+		"skip_k8s_upgrade": "disabled",
+	}
+	enabled := make(map[string]interface{}, len(base)+1)
+	for k, v := range base {
+		enabled[k] = v
+	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+
+	assert.NotEqual(t, resourceMachinePoolMaasHash(base), resourceMachinePoolMaasHash(enabled),
+		"MAAS machine pool hash should change when skip_k8s_upgrade changes")
 }
 
 func TestResourceMachinePoolVirtualHash(t *testing.T) {

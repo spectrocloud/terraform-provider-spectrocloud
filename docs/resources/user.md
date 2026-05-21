@@ -74,18 +74,16 @@ resource "spectrocloud_user" "user-test"{
 
 ### Importing existing user states
 
-```hcl
-# import existing user example
-  import {
-    to = spectrocloud_user.test_user
-    id = "{userUID}"
-  }
+```terraform
+import {
+  to = spectrocloud_user.test_user
+  id = "{userUID}"
+}
+```
 
-# To generate TF configuration.
-  terraform plan -generate-config-out=test_user.tf
-
-```bash
-  terraform import spectrocloud_user.test_user {userUID}/{email_id}
+```console
+terraform plan -generate-config-out=test_user.tf
+terraform import spectrocloud_user.test_user {userUID}/{email_id}
 ```
 
 

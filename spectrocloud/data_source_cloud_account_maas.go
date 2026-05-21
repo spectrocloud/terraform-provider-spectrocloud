@@ -14,6 +14,7 @@ import (
 func dataSourceCloudAccountMaas() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceCloudAccountMaasRead,
+		Description: "Data source for looking up a MaaS cloud account by ID or name.",
 
 		Schema: map[string]*schema.Schema{
 			"maas_api_endpoint": {

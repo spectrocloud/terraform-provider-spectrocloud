@@ -639,7 +639,7 @@ terraform import spectrocloud_cluster_apache_cloudstack.{cluster_uid}/{cluster_n
 - `cloud_account_id` (String) ID of the CloudStack cloud account used for the cluster. This cloud account must be of type `cloudstack`.
 - `cloud_config` (Block List, Min: 1, Max: 1) CloudStack cluster configuration. (see [below for nested schema](#nestedblock--cloud_config))
 - `machine_pool` (Block Set, Min: 1) Machine pool configuration for the cluster. (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String) The name of the cluster.
+- `name` (String) Unique cluster name shown in Palette for this Apache CloudStack cluster.
 
 ### Optional
 
@@ -706,7 +706,7 @@ Optional:
 
 Required:
 
-- `name` (String) Network name in this zone.
+- `name` (String) CloudStack network name within the selected zone.
 
 Optional:
 
@@ -723,7 +723,7 @@ Optional:
 
 Required:
 
-- `name` (String) VPC name.
+- `name` (String) CloudStack VPC name associated with the selected network.
 
 Optional:
 
@@ -740,7 +740,7 @@ Optional:
 Optional:
 
 - `id` (String) CloudStack project ID.
-- `name` (String) CloudStack project name.
+- `name` (String) CloudStack project name used to scope cluster resources in this zone.
 
 
 
@@ -750,7 +750,7 @@ Optional:
 Required:
 
 - `count` (Number) Number of nodes in the machine pool.
-- `name` (String) Name of the machine pool.
+- `name` (String) Unique machine pool name within this cluster configuration.
 - `offering` (String) Apache CloudStack compute offering (instance type/size) name.
 
 Optional:
@@ -820,7 +820,7 @@ Required:
 Optional:
 
 - `id` (String) Template ID. Either ID or name must be provided.
-- `name` (String) Template name. Either ID or name must be provided.
+- `name` (String) CloudStack template name to use for this machine pool. Either `id` or `name` must be provided.
 
 
 <a id="nestedatt--machine_pool--instance_config"></a>

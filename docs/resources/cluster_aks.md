@@ -114,10 +114,10 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Required
 
-- `cloud_account_id` (String)
+- `cloud_account_id` (String) UID of the Azure cloud account used for this AKS cluster. Changing this forces a new resource.
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - `machine_pool` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String)
+- `name` (String) Name of the AKS cluster. Changing this forces a new resource.
 
 ### Optional
 
@@ -158,23 +158,23 @@ Refer to the [Import section](/docs#import) to learn more.
 
 Required:
 
-- `region` (String)
-- `resource_group` (String)
+- `region` (String) Azure region where the AKS cluster is deployed. Changing this forces a new resource.
+- `resource_group` (String) Azure resource group where AKS resources are created. Changing this forces a new resource.
 - `ssh_key` (String) Public SSH key to be used for the cluster nodes.
-- `subscription_id` (String)
+- `subscription_id` (String) Azure subscription ID used to provision the AKS cluster. Changing this forces a new resource.
 
 Optional:
 
-- `control_plane_cidr` (String)
-- `control_plane_subnet_name` (String)
-- `control_plane_subnet_security_group_name` (String)
+- `control_plane_cidr` (String) CIDR block for the control plane subnet. Changing this forces a new resource.
+- `control_plane_subnet_name` (String) Name of the control plane subnet in the virtual network. Changing this forces a new resource.
+- `control_plane_subnet_security_group_name` (String) Security group name attached to the control plane subnet. Changing this forces a new resource.
 - `private_cluster` (Boolean) Whether to create a private cluster(API endpoint). Default is `false`.
-- `vnet_cidr_block` (String)
-- `vnet_name` (String)
-- `vnet_resource_group` (String)
-- `worker_cidr` (String)
-- `worker_subnet_name` (String)
-- `worker_subnet_security_group_name` (String)
+- `vnet_cidr_block` (String) CIDR block assigned to the virtual network. Changing this forces a new resource.
+- `vnet_name` (String) Name of the virtual network used for AKS static placement. Changing this forces a new resource.
+- `vnet_resource_group` (String) Azure resource group that contains the virtual network. Changing this forces a new resource.
+- `worker_cidr` (String) CIDR block for the worker subnet. Changing this forces a new resource.
+- `worker_subnet_name` (String) Name of the worker subnet in the virtual network. Changing this forces a new resource.
+- `worker_subnet_security_group_name` (String) Security group name attached to the worker subnet. Changing this forces a new resource.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -183,11 +183,11 @@ Optional:
 Required:
 
 - `count` (Number) Number of nodes in the machine pool.
-- `disk_size_gb` (Number)
-- `instance_type` (String)
-- `is_system_node_pool` (Boolean)
-- `name` (String)
-- `storage_account_type` (String)
+- `disk_size_gb` (Number) OS disk size in GB for each node in this machine pool.
+- `instance_type` (String) Azure VM size used for nodes in this machine pool.
+- `is_system_node_pool` (Boolean) Whether this machine pool is marked as the AKS system node pool.
+- `name` (String) Name of the AKS machine pool.
+- `storage_account_type` (String) Storage account type for managed disks in this machine pool.
 
 Optional:
 

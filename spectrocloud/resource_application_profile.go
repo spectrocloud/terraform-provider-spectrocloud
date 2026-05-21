@@ -40,7 +40,7 @@ func resourceApplicationProfile() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
-				Description: "Name of the application profile",
+				Description: "Readable name for the application profile.",
 				Required:    true,
 			},
 			"version": {

@@ -46,7 +46,7 @@ func resourceRole() *schema.Resource {
 				Type:        schema.TypeSet,
 				Required:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "The permission's assigned to the role.",
+				Description: "Set of permission ID strings assigned to the role.",
 			},
 		},
 	}

@@ -168,8 +168,8 @@ func TestToMachinePoolAks_WithOsSku(t *testing.T) {
 
 	assert.NotNil(t, mp)
 	assert.NotNil(t, mp.ManagedPoolConfig)
-	assert.NotNil(t, mp.ManagedPoolConfig.OsSku)
-	assert.Equal(t, models.V1OsSku("Ubuntu2204"), *mp.ManagedPoolConfig.OsSku)
+	assert.NotEmpty(t, mp.ManagedPoolConfig.OsSku)
+	assert.Equal(t, models.V1OsSku("Ubuntu2204"), mp.ManagedPoolConfig.OsSku)
 }
 
 func TestToMachinePoolAks_WithoutOsSku(t *testing.T) {
@@ -191,7 +191,7 @@ func TestToMachinePoolAks_WithoutOsSku(t *testing.T) {
 
 	assert.NotNil(t, mp)
 	assert.NotNil(t, mp.ManagedPoolConfig)
-	assert.Nil(t, mp.ManagedPoolConfig.OsSku)
+	assert.Empty(t, mp.ManagedPoolConfig.OsSku)
 }
 
 func TestFlattenMachinePoolConfigsAks_WithOsSku(t *testing.T) {
@@ -211,7 +211,7 @@ func TestFlattenMachinePoolConfigsAks_WithOsSku(t *testing.T) {
 		UpdateStrategy: &models.V1UpdateStrategy{
 			Type: "RollingUpdate",
 		},
-		OsSku: func() *models.V1OsSku { v := models.V1OsSku("Ubuntu2204"); return &v }(),
+		OsSku: models.V1OsSku("Ubuntu2204"),
 	}
 
 	flattened := flattenMachinePoolConfigsAks([]*models.V1AzureMachinePoolConfig{machinePool})

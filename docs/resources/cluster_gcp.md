@@ -103,10 +103,10 @@ Refer to the [Import section](/docs#import) to learn more.
 
 ### Required
 
-- `cloud_account_id` (String)
+- `cloud_account_id` (String) UID of the GCP cloud account used for this cluster. Changing this forces a new resource.
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
 - `machine_pool` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String)
+- `name` (String) Name of the GCP cluster. Changing this forces a new resource.
 
 ### Optional
 
@@ -147,12 +147,12 @@ Refer to the [Import section](/docs#import) to learn more.
 
 Required:
 
-- `project` (String)
-- `region` (String)
+- `project` (String) Google Cloud project ID where cluster resources are created.
+- `region` (String) Google Cloud region where the cluster is deployed.
 
 Optional:
 
-- `network` (String)
+- `network` (String) VPC network name used to provision cluster resources.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -160,10 +160,10 @@ Optional:
 
 Required:
 
-- `azs` (Set of String)
+- `azs` (Set of String) Set of availability zone name strings for machine pool placement.
 - `count` (Number) Number of nodes in the machine pool.
-- `instance_type` (String)
-- `name` (String)
+- `instance_type` (String) GCE machine type used for nodes in this machine pool.
+- `name` (String) Name of the machine pool.
 
 Optional:
 
@@ -171,7 +171,7 @@ Optional:
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
-- `disk_size_gb` (Number)
+- `disk_size_gb` (Number) Root disk size in GB for each node in this machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.

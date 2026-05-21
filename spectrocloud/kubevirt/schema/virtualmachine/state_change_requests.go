@@ -21,7 +21,7 @@ func virtualMachineStateChangeRequestFields() map[string]*schema.Schema {
 		},
 		"data": {
 			Type:        schema.TypeMap,
-			Description: "Provides additional data in order to perform the Action.",
+			Description: "Map of string key/value pairs with additional parameters required to perform the action.",
 			Optional:    true,
 			Elem:        &schema.Schema{Type: schema.TypeString},
 		},

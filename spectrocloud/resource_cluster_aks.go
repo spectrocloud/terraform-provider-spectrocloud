@@ -51,7 +51,7 @@ func resourceClusterAks() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "",
+				Description: "Name of the AKS cluster. Changing this forces a new resource.",
 			},
 			"context": {
 				Type:         schema.TypeString,
@@ -93,9 +93,10 @@ func resourceClusterAks() *schema.Resource {
 					"Default value is `DownloadAndInstall`.",
 			},
 			"cloud_account_id": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
+				Description: "UID of the Azure cloud account used for this AKS cluster. Changing this forces a new resource.",
 			},
 			"cloud_config_id": {
 				Type:        schema.TypeString,
@@ -166,19 +167,22 @@ func resourceClusterAks() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"subscription_id": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							ForceNew:    true,
+							Description: "Azure subscription ID used to provision the AKS cluster. Changing this forces a new resource.",
 						},
 						"resource_group": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							ForceNew:    true,
+							Description: "Azure resource group where AKS resources are created. Changing this forces a new resource.",
 						},
 						"region": {
-							Type:     schema.TypeString,
-							Required: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							ForceNew:    true,
+							Description: "Azure region where the AKS cluster is deployed. Changing this forces a new resource.",
 						},
 						"ssh_key": {
 							Type:        schema.TypeString,
@@ -196,52 +200,61 @@ func resourceClusterAks() *schema.Resource {
 
 						// fields for static placement are having flat structure as backend currently doesn't support multiple subnets.
 						"vnet_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Name of the virtual network used for AKS static placement. Changing this forces a new resource.",
 						},
 
 						"vnet_resource_group": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Azure resource group that contains the virtual network. Changing this forces a new resource.",
 						},
 
 						"vnet_cidr_block": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "CIDR block assigned to the virtual network. Changing this forces a new resource.",
 						},
 
 						"worker_subnet_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Name of the worker subnet in the virtual network. Changing this forces a new resource.",
 						},
 						"worker_cidr": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "CIDR block for the worker subnet. Changing this forces a new resource.",
 						},
 						"worker_subnet_security_group_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Security group name attached to the worker subnet. Changing this forces a new resource.",
 						},
 						"control_plane_subnet_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Name of the control plane subnet in the virtual network. Changing this forces a new resource.",
 						},
 						"control_plane_cidr": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "CIDR block for the control plane subnet. Changing this forces a new resource.",
 						},
 						"control_plane_subnet_security_group_name": {
-							Type:     schema.TypeString,
-							Optional: true,
-							ForceNew: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							ForceNew:    true,
+							Description: "Security group name attached to the control plane subnet. Changing this forces a new resource.",
 						},
 					},
 				},
@@ -256,6 +269,7 @@ func resourceClusterAks() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 							//ForceNew: true,
+							Description: "Name of the AKS machine pool.",
 						},
 						"additional_labels": {
 							Type:     schema.TypeMap,
@@ -294,8 +308,9 @@ func resourceClusterAks() *schema.Resource {
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
 						"instance_type": {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Azure VM size used for nodes in this machine pool.",
 						},
 						"min": {
 							Type:        schema.TypeInt,
@@ -308,17 +323,20 @@ func resourceClusterAks() *schema.Resource {
 							Description: "Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.",
 						},
 						"disk_size_gb": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
+							Description: "OS disk size in GB for each node in this machine pool.",
 						},
 						"is_system_node_pool": {
-							Type:     schema.TypeBool,
-							Required: true,
+							Type:        schema.TypeBool,
+							Required:    true,
+							Description: "Whether this machine pool is marked as the AKS system node pool.",
 						},
 						"storage_account_type": {
 							Type:     schema.TypeString,
 							Required: true,
 							//ExactlyOneOf: []string{"Standard_LRS", "Standard_GRS", "Standard_RAGRS", "Standard_ZRS", "Premium_LRS", "Premium_ZRS", "Standard_GZRS", "Standard_RAGZRS"},
+							Description: "Storage account type for managed disks in this machine pool.",
 						},
 						"os_sku": {
 							Type:        schema.TypeString,
@@ -577,8 +595,8 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 		oi["storage_account_type"] = machinePool.OsDisk.ManagedDisk.StorageAccountType
-		if machinePool.OsSku != nil {
-			oi["os_sku"] = string(*machinePool.OsSku)
+		if machinePool.OsSku != "" {
+			oi["os_sku"] = string(machinePool.OsSku)
 		}
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
@@ -812,7 +830,7 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		},
 		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
-			OsSku:            toV1OsSkuPtr(m["os_sku"].(string)),
+			OsSku:            models.V1OsSku(m["os_sku"].(string)),
 		},
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:      toAdditionalNodePoolLabels(m),
@@ -885,12 +903,4 @@ func resourceClusterAksStateUpgradeV3(ctx context.Context, rawState map[string]i
 	}
 
 	return rawState, nil
-}
-
-func toV1OsSkuPtr(s string) *models.V1OsSku {
-	if s == "" {
-		return nil
-	}
-	v := models.V1OsSku(s)
-	return &v
 }

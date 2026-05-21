@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -31,6 +32,38 @@ func schemaValidationForLocationProvider(ctx context.Context, d *schema.Resource
 		return fmt.Errorf("`azure_storage_config, s3, region, ca_cert` are not allowed when location provider set to 'gcp'")
 	}
 	return nil
+}
+
+// priorS3BlockString returns a string field from the first element of the s3 block in state/config.
+func priorS3BlockString(d *schema.ResourceData, field string) string {
+	raw := d.Get("s3")
+	if raw == nil {
+		return ""
+	}
+	lst, ok := raw.([]interface{})
+	if !ok || len(lst) == 0 {
+		return ""
+	}
+	m, ok := lst[0].(map[string]interface{})
+	if !ok || m == nil {
+		return ""
+	}
+	v, ok := m[field].(string)
+	if !ok {
+		return ""
+	}
+	return v
+}
+
+// s3SecretKeyForRead prefers the configured secret from state and falls back to the API value only when it is not a masked placeholder.
+func s3SecretKeyForRead(d *schema.ResourceData, apiSecret string) string {
+	if v := priorS3BlockString(d, "secret_key"); v != "" {
+		return v
+	}
+	if apiSecret != "" && !strings.Contains(apiSecret, "*") {
+		return apiSecret
+	}
+	return ""
 }
 
 func S3BackupStorageLocationCreate(d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
@@ -149,13 +182,12 @@ func S3BackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) dia
 		s3["credential_type"] = string(*s3Bsl.Spec.Config.Credentials.CredentialType)
 		if *s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
-			// Preserve the existing secret_key from state to avoid drift detection when API returns masked values
-			if currentS3Config := d.Get("s3").([]interface{}); len(currentS3Config) > 0 {
-				if currentS3 := currentS3Config[0].(map[string]interface{}); currentS3 != nil {
-					if secretKey, exists := currentS3["secret_key"]; exists {
-						s3["secret_key"] = secretKey
-					}
-				}
+			apiSecret := ""
+			if s3Bsl.Spec.Config.Credentials != nil {
+				apiSecret = s3Bsl.Spec.Config.Credentials.SecretKey
+			}
+			if sk := s3SecretKeyForRead(d, apiSecret); sk != "" {
+				s3["secret_key"] = sk
 			}
 		} else {
 			s3["arn"] = s3Bsl.Spec.Config.Credentials.Sts.Arn
@@ -225,13 +257,12 @@ func MinioBackupStorageLocationRead(d *schema.ResourceData, c *client.V1Client) 
 		s3["credential_type"] = string(*s3Bsl.Spec.Config.Credentials.CredentialType)
 		if *s3Bsl.Spec.Config.Credentials.CredentialType == models.V1AwsCloudAccountCredentialTypeSecret {
 			s3["access_key"] = s3Bsl.Spec.Config.Credentials.AccessKey
-			// Preserve the existing secret_key from state to avoid drift detection when API returns masked values
-			if currentS3Config := d.Get("s3").([]interface{}); len(currentS3Config) > 0 {
-				if currentS3 := currentS3Config[0].(map[string]interface{}); currentS3 != nil {
-					if secretKey, exists := currentS3["secret_key"]; exists {
-						s3["secret_key"] = secretKey
-					}
-				}
+			apiSecret := ""
+			if s3Bsl.Spec.Config.Credentials != nil {
+				apiSecret = s3Bsl.Spec.Config.Credentials.SecretKey
+			}
+			if sk := s3SecretKeyForRead(d, apiSecret); sk != "" {
+				s3["secret_key"] = sk
 			}
 		}
 		s3Config := make([]interface{}, 0, 1)

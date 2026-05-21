@@ -3,12 +3,12 @@
 page_title: "spectrocloud_cluster Data Source - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Data source for looking up a cluster by name and retrieving connection details.
 ---
 
 # spectrocloud_cluster (Data Source)
 
-
+Data source for looking up a cluster by name and retrieving connection details.
 
 ## Example Usage
 

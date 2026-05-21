@@ -10,6 +10,7 @@ import (
 func dataSourcePrivateCloudGatewayIpPool() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceIpPoolRead,
+		Description: "Data source for looking up a private cloud gateway IP pool by name.",
 
 		Schema: map[string]*schema.Schema{
 			"name": {

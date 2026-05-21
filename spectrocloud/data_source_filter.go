@@ -10,6 +10,7 @@ import (
 func dataSourceFilter() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceFilterRead,
+		Description: "Data source for looking up filter definitions by name.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

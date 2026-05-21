@@ -255,6 +255,44 @@ func TestToMachinePoolEks(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Autoscaling pool normalizes size to min when count exceeds min",
+			input: map[string]interface{}{
+				"name":            "autoscaled-pool",
+				"disk_size_gb":    20,
+				"instance_type":   "m5.large",
+				"update_strategy": "RollingUpdateScaleOut",
+				"count":           10,
+				"min":             2,
+				"max":             6,
+				"az_subnets": map[string]interface{}{
+					"us-west-2a": "subnet-abc",
+				},
+			},
+			expected: &models.V1EksMachinePoolConfigEntity{
+				CloudConfig: &models.V1EksMachineCloudConfigEntity{
+					RootDeviceSize: 20,
+					InstanceType:   "m5.large",
+					CapacityType:   types.Ptr("on-demand"),
+					Azs:            []string{"us-west-2a"},
+					Subnets: []*models.V1EksSubnetEntity{
+						{Az: "us-west-2a", ID: "subnet-abc"},
+					},
+				},
+				PoolConfig: &models.V1MachinePoolConfigEntity{
+					IsControlPlane:   false,
+					Labels:           []string{},
+					Name:             types.Ptr("autoscaled-pool"),
+					Size:             types.Ptr(int32(2)),
+					MinSize:          2,
+					MaxSize:          6,
+					AdditionalLabels: map[string]string{},
+					UpdateStrategy: &models.V1UpdateStrategy{
+						Type: "RollingUpdateScaleOut",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -263,8 +301,60 @@ func TestToMachinePoolEks(t *testing.T) {
 			assert.Equal(t, tt.expected.CloudConfig.RootDeviceSize, got.CloudConfig.RootDeviceSize)
 			assert.Equal(t, tt.expected.PoolConfig.AdditionalLabels, got.PoolConfig.AdditionalLabels)
 			assert.Equal(t, tt.expected.PoolConfig.UpdateStrategy.Type, got.PoolConfig.UpdateStrategy.Type)
+			if tt.expected.PoolConfig != nil && tt.expected.PoolConfig.Size != nil {
+				assert.Equal(t, *tt.expected.PoolConfig.Size, *got.PoolConfig.Size)
+				assert.Equal(t, tt.expected.PoolConfig.MinSize, got.PoolConfig.MinSize)
+				assert.Equal(t, tt.expected.PoolConfig.MaxSize, got.PoolConfig.MaxSize)
+			}
 		})
 	}
+}
+
+func TestValidateEksMachinePoolsAutoscalingCount(t *testing.T) {
+	t.Parallel()
+	constHash := func(interface{}) int { return 1 }
+
+	t.Run("nil is valid", func(t *testing.T) {
+		assert.NoError(t, validateEksMachinePoolsAutoscalingCount(nil))
+	})
+
+	t.Run("autoscaling with count equal to min is valid", func(t *testing.T) {
+		s := schema.NewSet(constHash, []interface{}{
+			map[string]interface{}{
+				"name": "worker", "count": 2, "min": 2, "max": 10,
+			},
+		})
+		assert.NoError(t, validateEksMachinePoolsAutoscalingCount(s))
+	})
+
+	t.Run("autoscaling with count greater than min is invalid", func(t *testing.T) {
+		s := schema.NewSet(constHash, []interface{}{
+			map[string]interface{}{
+				"name": "worker", "count": 10, "min": 2, "max": 10,
+			},
+		})
+		err := validateEksMachinePoolsAutoscalingCount(s)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "worker")
+		assert.Contains(t, err.Error(), "count")
+		assert.Contains(t, err.Error(), "min")
+	})
+
+	t.Run("only count set uses implicit min=max=count", func(t *testing.T) {
+		s := schema.NewSet(constHash, []interface{}{
+			map[string]interface{}{"name": "worker", "count": 4},
+		})
+		assert.NoError(t, validateEksMachinePoolsAutoscalingCount(s))
+	})
+
+	t.Run("min zero does not trigger autoscaling rule", func(t *testing.T) {
+		s := schema.NewSet(constHash, []interface{}{
+			map[string]interface{}{
+				"name": "worker", "count": 10, "min": 0, "max": 20,
+			},
+		})
+		assert.NoError(t, validateEksMachinePoolsAutoscalingCount(s))
+	})
 }
 
 func TestToFargateProfileEks(t *testing.T) {
@@ -848,3 +938,4 @@ func TestSetAdditionalSecurityGroups(t *testing.T) {
 		})
 	}
 }
+

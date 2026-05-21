@@ -46,7 +46,7 @@ func TestAppPackSchema(t *testing.T) {
 
 	assert.Equal(t, schema.TypeMap, elemSchema.Schema["properties"].Type)
 	assert.Equal(t, true, elemSchema.Schema["properties"].Optional)
-	assert.Equal(t, "The various properties required by different database tiers eg: `databaseName` and `databaseVolumeSize` size for Redis etc.", elemSchema.Schema["properties"].Description)
+	assert.Equal(t, "Map of property name to string value required by the pack tier (for example, `databaseName` or `databaseVolumeSize`).", elemSchema.Schema["properties"].Description)
 
 	assert.Equal(t, schema.TypeInt, elemSchema.Schema["install_order"].Type)
 	assert.Equal(t, true, elemSchema.Schema["install_order"].Optional)
@@ -501,7 +501,7 @@ func TestProfileVariables(t *testing.T) {
 	assert.Equal(t, schema.TypeList, profileVarsSchema.Type, "ProfileVariables schema should be TypeList")
 	assert.True(t, profileVarsSchema.Optional, "ProfileVariables schema should be optional")
 	assert.Equal(t, 1, profileVarsSchema.MaxItems, "ProfileVariables schema should have MaxItems of 1")
-	assert.Equal(t, "List of variables for the cluster profile.", profileVarsSchema.Description, "ProfileVariables schema should have correct description")
+	assert.Equal(t, "List of variables for the cluster profile. During Day 2 operations, variable updates are prioritized over pack updates due to variable reference constraints. Any additions or removals will apply variable changes first, followed by pack updates.", profileVarsSchema.Description, "ProfileVariables schema should have correct description")
 
 	// Test that Elem is a Resource
 	elemResource, ok := profileVarsSchema.Elem.(*schema.Resource)
@@ -750,5 +750,5 @@ func TestAwsLaunchTemplate(t *testing.T) {
 	elemSchema, ok := additionalSecurityGroupsSchema.Elem.(*schema.Schema)
 	assert.True(t, ok, "'additional_security_groups' Elem should be a Schema")
 	assert.Equal(t, schema.TypeString, elemSchema.Type, "'additional_security_groups' Elem should be TypeString")
-	assert.Equal(t, "Additional security groups to attach to the instance.", additionalSecurityGroupsSchema.Description, "'additional_security_groups' field should have correct description")
+	assert.Equal(t, "Set of additional AWS security group IDs to attach to the instance.", additionalSecurityGroupsSchema.Description, "'additional_security_groups' field should have correct description")
 }

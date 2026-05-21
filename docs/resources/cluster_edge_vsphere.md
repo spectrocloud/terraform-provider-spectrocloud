@@ -2,15 +2,24 @@
 page_title: "spectrocloud_cluster_edge_vsphere Resource - terraform-provider-spectrocloud"
 subcategory: ""
 description: |-
-  
+  Resource for managing Edge vSphere clusters in Spectro Cloud through Palette.
 ---
 
 # spectrocloud_cluster_edge_vsphere (Resource)
 
-  
+  Resource for managing Edge vSphere clusters in Spectro Cloud through Palette.
 
 ## Example Usage
 
+```hcl
+resource "spectrocloud_cluster_edge_vsphere" "example" {
+  name          = "edge-vsphere-cluster"
+  edge_host_uid = "edge-host-uid"
+
+  # Additional required fields such as cluster_profile,
+  # cloud_config, and machine_pool are omitted for brevity.
+}
+```
 
 
 
@@ -20,9 +29,9 @@ description: |-
 ### Required
 
 - `cloud_config` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--cloud_config))
-- `edge_host_uid` (String)
+- `edge_host_uid` (String) UID of the registered Edge host where this cluster is deployed. Changing this forces a new resource.
 - `machine_pool` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool))
-- `name` (String)
+- `name` (String) Name of the Edge vSphere cluster. Changing this forces a new resource.
 
 ### Optional
 
@@ -62,18 +71,18 @@ description: |-
 
 Required:
 
-- `datacenter` (String)
-- `folder` (String)
-- `vip` (String)
+- `datacenter` (String) Name of the vSphere datacenter used by this cluster.
+- `folder` (String) vSphere inventory folder where cluster virtual machines are created.
+- `vip` (String) Virtual IP address for the Kubernetes control plane endpoint.
 
 Optional:
 
-- `image_template_folder` (String)
-- `network_search_domain` (String)
-- `network_type` (String)
+- `image_template_folder` (String) vSphere folder containing VM image templates used for node provisioning.
+- `network_search_domain` (String) DNS search domain associated with the control plane endpoint.
+- `network_type` (String) Type of network endpoint used for the control plane address.
 - `ssh_key` (String) Public SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 - `ssh_keys` (Set of String) List of public SSH (Secure Shell) keys to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
-- `static_ip` (Boolean)
+- `static_ip` (Boolean) Whether to use static IP addressing for the control plane endpoint. Default is `false`.
 
 
 <a id="nestedblock--machine_pool"></a>
@@ -83,7 +92,7 @@ Required:
 
 - `count` (Number) Number of nodes in the machine pool.
 - `instance_type` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--machine_pool--instance_type))
-- `name` (String)
+- `name` (String) Name of the machine pool.
 - `placement` (Block List, Min: 1) (see [below for nested schema](#nestedblock--machine_pool--placement))
 
 Optional:
@@ -104,9 +113,9 @@ Optional:
 
 Required:
 
-- `cpu` (Number)
-- `disk_size_gb` (Number)
-- `memory_mb` (Number)
+- `cpu` (Number) Number of vCPUs for each node in this machine pool.
+- `disk_size_gb` (Number) Disk size in GB for each node in this machine pool.
+- `memory_mb` (Number) Memory size in MB for each node in this machine pool.
 
 
 <a id="nestedblock--machine_pool--placement"></a>
@@ -114,14 +123,14 @@ Required:
 
 Required:
 
-- `cluster` (String)
-- `datastore` (String)
-- `network` (String)
-- `resource_pool` (String)
+- `cluster` (String) Name of the vSphere compute cluster used for node placement.
+- `datastore` (String) Name of the vSphere datastore used for node disks.
+- `network` (String) Name of the vSphere network attached to machine pool nodes.
+- `resource_pool` (String) Name of the vSphere resource pool used for node placement.
 
 Optional:
 
-- `static_ip_pool_id` (String)
+- `static_ip_pool_id` (String) UID of the static IP pool used for machine pool networking.
 
 Read-Only:
 
