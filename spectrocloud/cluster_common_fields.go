@@ -138,6 +138,10 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	if diags := syncClusterProfilesFromAPIWhenAddonDeploymentDisabled(c, d, cluster); diags.HasError() {
+		return diags, true
+	}
+
 	return diag.Diagnostics{}, false
 }
 

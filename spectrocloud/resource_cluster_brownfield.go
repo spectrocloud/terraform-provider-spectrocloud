@@ -827,6 +827,10 @@ func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, clus
 		}
 	}
 
+	if diags := syncClusterProfilesFromAPIWhenAddonDeploymentDisabled(c, d, cluster); diags.HasError() {
+		return diags, true
+	}
+
 	return diag.Diagnostics{}, false
 }
 
