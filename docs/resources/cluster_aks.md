@@ -167,6 +167,7 @@ Optional:
 - `control_plane_cidr` (String) CIDR block for the control plane subnet. Changing this forces a new resource.
 - `control_plane_subnet_name` (String) Name of the control plane subnet in the virtual network. Changing this forces a new resource.
 - `control_plane_subnet_security_group_name` (String) Security group name attached to the control plane subnet. Changing this forces a new resource.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `private_cluster` (Boolean) Whether to create a private cluster(API endpoint). Default is `false`.
 - `vnet_cidr_block` (String) CIDR block assigned to the virtual network. Changing this forces a new resource.
 - `vnet_name` (String) Name of the virtual network used for AKS static placement. Changing this forces a new resource.

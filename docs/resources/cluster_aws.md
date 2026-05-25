@@ -200,6 +200,7 @@ Required:
 Optional:
 
 - `control_plane_lb` (String) Control plane load balancer type. Valid values are `Internet-facing` and `internal`. Defaults to `` (empty string).
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `vpc_id` (String) The VPC ID to deploy the cluster in. If not provided, VPC will be provisioned dynamically.
 
 
