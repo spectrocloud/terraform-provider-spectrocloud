@@ -133,7 +133,7 @@ Optional:
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
 - `overlay_cidr_range` (String) The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`
 - `ssh_keys` (Set of String) List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.
-- `vip` (String) The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`.
+- `vip` (String) The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`. When not specified, Palette assigns the VIP and the assigned value is populated on read.
 
 
 <a id="nestedblock--machine_pool"></a>
