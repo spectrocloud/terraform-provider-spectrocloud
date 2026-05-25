@@ -102,6 +102,10 @@ func resourceAddonDeploymentStateRefreshFunc(c *client.V1Client, cluster models.
 }
 
 func resourceAddonDeploymentDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	if addonDeploymentResourceDisabled() {
+		return diag.FromErr(addonDeploymentResourceDisabledError())
+	}
+
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
