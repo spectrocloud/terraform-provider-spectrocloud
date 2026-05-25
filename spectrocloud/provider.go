@@ -62,6 +62,15 @@ func New(_ string) func() *schema.Provider {
 					Optional:    true,
 					Description: "Ignore insecure TLS errors for Spectro Cloud API endpoints. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this in development/testing environments or when connecting to self-signed certificates in trusted networks. Defaults to false.",
 				},
+				"feature_flag": {
+					Type:     schema.TypeMap,
+					Optional: true,
+					Elem: &schema.Schema{
+						Type: schema.TypeBool,
+					},
+					Description: "Optional provider feature flags (map of booleans). Unknown keys are ignored. " +
+						"Set `disable_addon_deployment_resource` to `true` to block the `spectrocloud_addon_deployment` resource during plan and apply.",
+				},
 			},
 			ResourcesMap: map[string]*schema.Resource{
 				"spectrocloud_team": resourceTeam(),
@@ -205,6 +214,8 @@ func New(_ string) func() *schema.Provider {
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	var diags diag.Diagnostics
+
+	configureFeatureFlags(d)
 
 	host := d.Get("host").(string)
 	projectName := d.Get("project_name").(string)
