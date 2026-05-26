@@ -7,8 +7,15 @@ resource "spectrocloud_cluster_aws" "cluster" {
   cloud_account_id = spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
-    ssh_key_name = var.aws_ssh_key_name
-    region       = var.aws_region
+    ssh_key_name                = var.aws_ssh_key_name
+    region                      = var.aws_region
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
   }
 
   # To override or specify values for a cluster:

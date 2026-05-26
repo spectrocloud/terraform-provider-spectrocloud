@@ -161,7 +161,6 @@ func resourceClusterAks() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -200,7 +199,6 @@ func resourceClusterAks() *schema.Resource {
 						"override_cluster_api_config": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							ForceNew:    true,
 							Description: "YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.",
 						},
 
@@ -612,6 +610,12 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if err := c.UpdateCloudConfigAks(cloudConfigId, toCloudConfigAks(cloudConfig)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	CloudConfig, err := c.GetCloudConfigAks(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -715,7 +719,40 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cloudConfig := config[0]
 	cloudConfigMap := cloudConfig.(map[string]interface{})
 
-	// static placement support
+	clusterContext := d.Get("context").(string)
+	profiles, err := toProfiles(c, d, clusterContext)
+	if err != nil {
+		return nil, err
+	}
+	cluster := &models.V1SpectroAzureClusterEntity{
+		Metadata: getClusterMetadata(d),
+		Spec: &models.V1SpectroAzureClusterEntitySpec{
+			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
+			Profiles:        profiles,
+			ClusterTemplate: toClusterTemplateReference(d),
+			Policies:        toPolicies(d),
+			CloudConfig:     toAksClusterConfig(cloudConfigMap),
+		},
+	}
+
+	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
+	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+		mp := toMachinePoolAks(machinePool)
+		machinePoolConfigs = append(machinePoolConfigs, mp)
+	}
+	cluster.Spec.Machinepoolconfig = machinePoolConfigs
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
+
+	return cluster, nil
+}
+
+func toCloudConfigAks(cloudConfig map[string]interface{}) *models.V1AzureCloudClusterConfigEntity {
+	return &models.V1AzureCloudClusterConfigEntity{
+		ClusterConfig: toAksClusterConfig(cloudConfig),
+	}
+}
+
+func toAksClusterConfig(cloudConfigMap map[string]interface{}) *models.V1AzureClusterConfig {
 	var vnetname string
 	if cloudConfigMap["vnet_name"] != nil {
 		vnetname = cloudConfigMap["vnet_name"].(string)
@@ -754,45 +791,21 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		}
 	}
 
-	clusterContext := d.Get("context").(string)
-	profiles, err := toProfiles(c, d, clusterContext)
-	if err != nil {
-		return nil, err
-	}
-	cluster := &models.V1SpectroAzureClusterEntity{
-		Metadata: getClusterMetadata(d),
-		Spec: &models.V1SpectroAzureClusterEntitySpec{
-			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        profiles,
-			ClusterTemplate: toClusterTemplateReference(d),
-			Policies:        toPolicies(d),
-			CloudConfig: &models.V1AzureClusterConfig{
-				Location:      types.Ptr(cloudConfigMap["region"].(string)),
-				ResourceGroup: cloudConfigMap["resource_group"].(string),
-				SSHKey:        types.Ptr(cloudConfigMap["ssh_key"].(string)),
-				APIServerAccessProfile: &models.V1APIServerAccessProfile{
-					EnablePrivateCluster: cloudConfigMap["private_cluster"].(bool),
-				},
-				SubscriptionID:           types.Ptr(cloudConfigMap["subscription_id"].(string)),
-				OverrideClusterAPIConfig: overrideClusterAPIConfig,
-				VnetName:                 vnetname,
-				VnetResourceGroup:        vnetResourceGroup,
-				VnetCidrBlock:            vnetcidr,
-				ControlPlaneSubnet:       controlPlaneSubnet,
-				WorkerSubnet:             workerSubnet,
-			},
+	return &models.V1AzureClusterConfig{
+		Location:      types.Ptr(cloudConfigMap["region"].(string)),
+		ResourceGroup: cloudConfigMap["resource_group"].(string),
+		SSHKey:        types.Ptr(cloudConfigMap["ssh_key"].(string)),
+		APIServerAccessProfile: &models.V1APIServerAccessProfile{
+			EnablePrivateCluster: cloudConfigMap["private_cluster"].(bool),
 		},
+		SubscriptionID:           types.Ptr(cloudConfigMap["subscription_id"].(string)),
+		OverrideClusterAPIConfig: overrideClusterAPIConfig,
+		VnetName:                 vnetname,
+		VnetResourceGroup:        vnetResourceGroup,
+		VnetCidrBlock:            vnetcidr,
+		ControlPlaneSubnet:       controlPlaneSubnet,
+		WorkerSubnet:             workerSubnet,
 	}
-
-	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolAks(machinePool)
-		machinePoolConfigs = append(machinePoolConfigs, mp)
-	}
-	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-	cluster.Spec.ClusterConfig = toClusterConfig(d)
-
-	return cluster, nil
 }
 
 func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigEntity {
