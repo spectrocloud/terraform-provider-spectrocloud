@@ -141,7 +141,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
+				Default:     false,
 				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
@@ -174,7 +174,8 @@ func resourceClusterEdgeNative() *schema.Resource {
 						"vip": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`.",
+							Computed:    true,
+							Description: "The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`. When not specified, Palette assigns the VIP and the assigned value is populated on read.",
 						},
 						"overlay_cidr_range": {
 							Type:        schema.TypeString,
@@ -464,12 +465,7 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	if config, err := c.GetCloudConfigEdgeNative(configUID); err != nil {
 		return diag.FromErr(err)
 	} else {
-		cloudConfig := map[string]interface{}{}
-		if _, ok := d.GetOk("cloud_config"); ok {
-			cloudConfig = d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
-		}
-
-		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(cloudConfig, config)); err != nil {
+		if err := d.Set("cloud_config", flattenClusterConfigsEdgeNative(config)); err != nil {
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsEdgeNative(config.Spec.MachinePoolConfig)
@@ -485,7 +481,7 @@ func flattenCloudConfigEdgeNative(configUID string, d *schema.ResourceData, c *c
 	return diag.Diagnostics{}
 }
 
-func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config *models.V1EdgeNativeCloudConfig) []interface{} {
+func flattenClusterConfigsEdgeNative(config *models.V1EdgeNativeCloudConfig) []interface{} {
 	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
 		return make([]interface{}, 0)
 	}
@@ -494,15 +490,13 @@ func flattenClusterConfigsEdgeNative(cloudConfig map[string]interface{}, config 
 	if config.Spec.ClusterConfig.SSHKeys != nil {
 		m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
 	}
-	if config.Spec.ClusterConfig.ControlPlaneEndpoint.Host != "" {
-		if v, ok := cloudConfig["vip"]; ok && v.(string) != "" {
-			m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
-		}
+	if config.Spec.ClusterConfig.ControlPlaneEndpoint != nil && config.Spec.ClusterConfig.ControlPlaneEndpoint.Host != "" {
+		m["vip"] = config.Spec.ClusterConfig.ControlPlaneEndpoint.Host
 	}
 	if config.Spec.ClusterConfig.NtpServers != nil {
 		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
 	}
-	if config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr != "" {
+	if config.Spec.ClusterConfig.OverlayNetworkConfiguration != nil && config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr != "" {
 		m["overlay_cidr_range"] = config.Spec.ClusterConfig.OverlayNetworkConfiguration.Cidr
 	}
 	if config.Spec.ClusterConfig != nil {
