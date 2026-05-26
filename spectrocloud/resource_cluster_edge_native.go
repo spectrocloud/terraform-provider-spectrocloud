@@ -138,6 +138,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
