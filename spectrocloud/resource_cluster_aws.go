@@ -198,11 +198,7 @@ func resourceClusterAws() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{"", "Internet-facing", "internal"}, false),
 							Description:  "Control plane load balancer type. Valid values are `Internet-facing` and `internal`. Defaults to `` (empty string).",
 						},
-						"override_cluster_api_config": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.",
-						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -319,6 +315,7 @@ func resourceClusterAws() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"disk_size_gb": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -554,6 +551,9 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		// Flatten override_kubeadm_configuration (worker pools only)
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
 
 		oi["min"] = int(machinePool.MinSize)
@@ -869,6 +869,9 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
 
 	if !controlPlane {

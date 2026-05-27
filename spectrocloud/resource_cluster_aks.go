@@ -197,11 +197,7 @@ func resourceClusterAks() *schema.Resource {
 							ForceNew:    true,
 							Description: "Whether to create a private cluster(API endpoint). Default is `false`.",
 						},
-						"override_cluster_api_config": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.",
-						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 
 						// fields for static placement are having flat structure as backend currently doesn't support multiple subnets.
 						"vnet_name": {
@@ -312,6 +308,7 @@ func resourceClusterAks() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"instance_type": {
 							Type:        schema.TypeString,
 							Required:    true,
@@ -586,6 +583,9 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		// Flatten override_kubeadm_configuration (worker pools only)
 		if machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
 
 		oi["instance_type"] = machinePool.InstanceType
@@ -865,6 +865,9 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
 
 	return mp
