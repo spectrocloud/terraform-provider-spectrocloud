@@ -136,8 +136,10 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 		}
 	}
 	diags = commonApplianceUpdate(ctx, d, c)
-
-	return diags
+	if diags.HasError() {
+		return diags
+	}
+	return resourceApplianceRead(ctx, d, m)
 }
 
 func resourceApplianceStateRefreshFunc(c *client.V1Client, id string) retry.StateRefreshFunc {
@@ -159,32 +161,53 @@ func resourceApplianceStateRefreshFunc(c *client.V1Client, id string) retry.Stat
 func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
-	if id, okId := d.GetOk("uid"); okId {
-		appliance, err := c.GetAppliance(id.(string))
-		if err != nil {
-			return handleReadError(d, err, diags)
-		} else if appliance == nil {
-			d.SetId("")
-			return diags
-		}
-		d.SetId(appliance.Metadata.UID)
-		if appliance.Spec.TunnelConfig != nil {
-			err = d.Set("remote_shell", appliance.Spec.TunnelConfig.RemoteSSH)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-			err = d.Set("temporary_shell_credentials", appliance.Spec.TunnelConfig.RemoteSSHTempUser)
-			if err != nil {
-				return diag.FromErr(err)
-			}
-		}
 
-		/*err = d.Set("name", appliance.Metadata.Name)
-		if err != nil {
-			return diag.FromErr(err)
-		}*/
+	applianceID := d.Id()
+	if uid, ok := d.GetOk("uid"); ok && uid.(string) != "" {
+		applianceID = uid.(string)
+	}
+	if applianceID == "" {
+		return diags
+	}
+
+	appliance, err := c.GetAppliance(applianceID)
+	if err != nil {
+		return handleReadError(d, err, diags)
+	} else if appliance == nil {
+		d.SetId("")
+		return diags
+	}
+
+	d.SetId(appliance.Metadata.UID)
+	if err := d.Set("uid", appliance.Metadata.UID); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("tags", flattenTagsMap(appliance.Metadata.Labels)); err != nil {
+		return diag.FromErr(err)
+	}
+	remoteShell, temporaryShellCredentials := flattenApplianceTunnelConfig(appliance.Spec)
+	if err := d.Set("remote_shell", remoteShell); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set("temporary_shell_credentials", temporaryShellCredentials); err != nil {
+		return diag.FromErr(err)
 	}
 	return diags
+}
+
+func flattenApplianceTunnelConfig(spec *models.V1EdgeHostDeviceSpec) (remoteShell, temporaryShellCredentials string) {
+	remoteShell = models.V1SpectroTunnelConfigRemoteSSHDisabled
+	temporaryShellCredentials = models.V1SpectroTunnelConfigRemoteSSHTempUserDisabled
+	if spec == nil || spec.TunnelConfig == nil {
+		return remoteShell, temporaryShellCredentials
+	}
+	if spec.TunnelConfig.RemoteSSH != nil && *spec.TunnelConfig.RemoteSSH != "" {
+		remoteShell = *spec.TunnelConfig.RemoteSSH
+	}
+	if spec.TunnelConfig.RemoteSSHTempUser != nil && *spec.TunnelConfig.RemoteSSHTempUser != "" {
+		temporaryShellCredentials = *spec.TunnelConfig.RemoteSSHTempUser
+	}
+	return remoteShell, temporaryShellCredentials
 }
 
 func commonApplianceUpdate(ctx context.Context, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
@@ -210,9 +233,11 @@ func commonApplianceUpdate(ctx context.Context, d *schema.ResourceData, c *clien
 
 func resourceApplianceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
-	var diags diag.Diagnostics
-	commonApplianceUpdate(ctx, d, c)
-	return diags
+	diags := commonApplianceUpdate(ctx, d, c)
+	if diags.HasError() {
+		return diags
+	}
+	return resourceApplianceRead(ctx, d, m)
 }
 
 func resourceApplianceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -228,10 +253,7 @@ func resourceApplianceDelete(ctx context.Context, d *schema.ResourceData, m inte
 
 func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 	id := d.Get("uid").(string)
-	tags := map[string]string{}
-	if d.Get("tags") != nil {
-		tags = expandStringMap(d.Get("tags").(map[string]interface{}))
-	}
+	tags := expandApplianceTags(d)
 
 	metadata := &models.V1ObjectTagsEntity{
 		UID:    id,
@@ -252,10 +274,10 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 }
 
 func toApplianceMeta(d *schema.ResourceData) *models.V1EdgeHostDeviceMetaUpdateEntity {
-	if d.Get("tags") != nil {
+	if tags, ok := d.GetOk("tags"); ok {
 		return &models.V1EdgeHostDeviceMetaUpdateEntity{
 			Metadata: &models.V1ObjectTagsEntity{
-				Labels: expandStringMap(d.Get("tags").(map[string]interface{})),
+				Labels: expandApplianceTagsMap(tags.(map[string]interface{})),
 				Name:   d.Id(),
 				UID:    d.Id(),
 			},
@@ -283,6 +305,29 @@ func setFields(d *schema.ResourceData, tags map[string]interface{}) models.V1Edg
 	if tags["name"] != nil {
 		appliance.Metadata.Name = tags["name"].(string)
 	}
-	appliance.Metadata.Labels = expandStringMap(tags)
+	appliance.Metadata.Labels = expandApplianceTagsMap(tags)
 	return appliance
+}
+
+func expandApplianceTags(d *schema.ResourceData) map[string]string {
+	if tags, ok := d.GetOk("tags"); ok {
+		return expandApplianceTagsMap(tags.(map[string]interface{}))
+	}
+	return map[string]string{}
+}
+
+func expandApplianceTagsMap(configured map[string]interface{}) map[string]string {
+	if len(configured) == 0 {
+		return map[string]string{}
+	}
+	tags := make(map[string]string, len(configured))
+	for k, v := range configured {
+		vStr := v.(string)
+		if vStr != "" && vStr != "spectro__tag" {
+			tags[k] = vStr
+		} else {
+			tags[k] = "spectro__tag"
+		}
+	}
+	return tags
 }
