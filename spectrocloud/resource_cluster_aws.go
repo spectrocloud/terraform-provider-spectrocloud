@@ -149,6 +149,7 @@ func resourceClusterAws() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -167,7 +168,6 @@ func resourceClusterAws() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -198,6 +198,7 @@ func resourceClusterAws() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{"", "Internet-facing", "internal"}, false),
 							Description:  "Control plane load balancer type. Valid values are `Internet-facing` and `internal`. Defaults to `` (empty string).",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -314,6 +315,7 @@ func resourceClusterAws() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"disk_size_gb": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -515,6 +517,9 @@ func flattenClusterConfigsAws(config *models.V1AwsCloudConfig) []interface{} {
 	if config.Spec.ClusterConfig.ControlPlaneLoadBalancer != "" {
 		m["control_plane_lb"] = config.Spec.ClusterConfig.ControlPlaneLoadBalancer
 	}
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
 
 	return []interface{}{m}
 }
@@ -546,6 +551,9 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		// Flatten override_kubeadm_configuration (worker pools only)
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
 
 		oi["min"] = int(machinePool.MinSize)
@@ -626,6 +634,12 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if err := c.UpdateCloudConfigAws(cloudConfigId, toCloudConfigAws(cloudConfig)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigAws(cloudConfigId)
 	if err != nil {
@@ -730,12 +744,7 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 			ClusterTemplate: toClusterTemplateReference(d),
 			ClusterType:     toClusterType(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1AwsClusterConfig{
-				SSHKeyName:               cloudConfig["ssh_key_name"].(string),
-				Region:                   types.Ptr(cloudConfig["region"].(string)),
-				VpcID:                    cloudConfig["vpc_id"].(string),
-				ControlPlaneLoadBalancer: cloudConfig["control_plane_lb"].(string),
-			},
+			CloudConfig:     toAwsClusterConfig(cloudConfig),
 		},
 	}
 
@@ -771,6 +780,22 @@ func toAwsCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster, nil
+}
+
+func toCloudConfigAws(cloudConfig map[string]interface{}) *models.V1AwsCloudClusterConfigEntity {
+	return &models.V1AwsCloudClusterConfigEntity{
+		ClusterConfig: toAwsClusterConfig(cloudConfig),
+	}
+}
+
+func toAwsClusterConfig(cloudConfig map[string]interface{}) *models.V1AwsClusterConfig {
+	return &models.V1AwsClusterConfig{
+		SSHKeyName:               cloudConfig["ssh_key_name"].(string),
+		Region:                   types.Ptr(cloudConfig["region"].(string)),
+		VpcID:                    cloudConfig["vpc_id"].(string),
+		ControlPlaneLoadBalancer: cloudConfig["control_plane_lb"].(string),
+		OverrideClusterAPIConfig: cloudConfig["override_cluster_api_config"].(string),
+	}
 }
 
 func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachinePoolConfigEntity, error) {
@@ -844,6 +869,9 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
 
 	if !controlPlane {

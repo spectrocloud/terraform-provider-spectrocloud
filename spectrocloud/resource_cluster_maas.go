@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -140,6 +141,7 @@ func resourceClusterMaas() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"hyper_shift_config": {
 				Type:        schema.TypeList,
 				Optional:    true,
@@ -192,6 +194,15 @@ func resourceClusterMaas() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "Domain name in which the cluster to be provisioned.",
+						},
+						"ssh_keys": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Description: "List of SSH public keys injected into MAAS nodes as authorized keys for the 'spectro' user.",
 						},
 						"enable_lxd_vm": {
 							Type:        schema.TypeBool,
@@ -535,7 +546,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 				return diag.FromErr(err)
 			}
 		}
-		if err := d.Set("cloud_config", flattenClusterConfigsMaas(config)); err != nil {
+		if err := d.Set("cloud_config", flattenClusterConfigsMaas(d, config)); err != nil {
 			return diag.FromErr(err)
 		}
 		mp := flattenMachinePoolConfigsMaas(config.Spec.MachinePoolConfig, config.Spec.ClusterConfig)
@@ -552,7 +563,7 @@ func flattenCloudConfigMaas(configUID string, d *schema.ResourceData, c *client.
 	return diags
 }
 
-func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
+func flattenClusterConfigsMaas(d *schema.ResourceData, config *models.V1MaasCloudConfig) []interface{} {
 	if config == nil || config.Spec == nil || config.Spec.ClusterConfig == nil {
 		return make([]interface{}, 0)
 	}
@@ -567,6 +578,10 @@ func flattenClusterConfigsMaas(config *models.V1MaasCloudConfig) []interface{} {
 	}
 	if config.Spec.ClusterConfig.NtpServers != nil {
 		m["ntp_servers"] = config.Spec.ClusterConfig.NtpServers
+	}
+
+	if len(config.Spec.ClusterConfig.SSHKeys) > 0 {
+		m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
 	}
 
 	return []interface{}{m}
@@ -767,8 +782,24 @@ func toMaasCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1MaasC
 			Domain:      &DomainVal,
 			EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
 			NtpServers:  toNtpServers(cloudConfig),
+			SSHKeys:     getMaasSSHKeys(cloudConfig),
 		},
 	}
+}
+
+func getMaasSSHKeys(cloudConfig map[string]interface{}) []string {
+	if cloudConfig["ssh_keys"] == nil {
+		return nil
+	}
+	set, ok := cloudConfig["ssh_keys"].(*schema.Set)
+	if !ok || set.Len() == 0 {
+		return nil
+	}
+	keys := make([]string, 0, set.Len())
+	for _, k := range set.List() {
+		keys = append(keys, strings.TrimSpace(k.(string)))
+	}
+	return keys
 }
 
 func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroMaasClusterEntity, error) {
@@ -793,6 +824,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 				Domain:      &DomainVal,
 				EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
 				NtpServers:  toNtpServers(cloudConfig),
+				SSHKeys:     getMaasSSHKeys(cloudConfig),
 			},
 		},
 	}
