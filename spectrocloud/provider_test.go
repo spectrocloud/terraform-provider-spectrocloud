@@ -59,6 +59,13 @@ func prepareBaseProviderConfig() *schema.ResourceData {
 				Optional:    true,
 				Description: "Ignore insecure TLS errors for Spectro Cloud API endpoints. Defaults to false.",
 			},
+			"feature_flag": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeBool,
+				},
+			},
 		},
 	}
 

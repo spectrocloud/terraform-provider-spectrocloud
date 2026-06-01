@@ -97,6 +97,7 @@ Refer to the [Import section](/docs#import) to learn more.
 - `os_patch_schedule` (String) Cron schedule for OS patching. This must be in the form of `0 0 * * *`.
 - `pause_agent_upgrades` (String) The pause agent upgrades setting allows to control the automatic upgrade of the Palette component and agent for an individual cluster. The default value is `unlock`, meaning upgrades occur automatically. Setting it to `lock` pauses automatic agent upgrades for the cluster.
 - `pause_cluster` (Boolean) To pause and resume cluster state. Set to true to pause running cluster & false to resume it.
+- `renew_k8s_certificates_now` (String) Timestamp to trigger an immediate renewal of control plane Kubernetes PKI certificates for this cluster. NOTE: The renewal is initiated immediately when this value changes - the timestamp does NOT schedule a future renewal. Set this to the current timestamp each time you want to trigger certificate renewal. This field can also be used for tracking when renewals were triggered. Renewal may take several minutes depending on cluster size. Only control plane certificates are renewed; worker node certificates are not supported. Format: RFC3339 (e.g., '2024-01-15T10:30:00Z').
 - `resources` (Block List, Max: 1) (see [below for nested schema](#nestedblock--resources))
 - `scan_policy` (Block List, Max: 1) The scan policy for the cluster. (see [below for nested schema](#nestedblock--scan_policy))
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.

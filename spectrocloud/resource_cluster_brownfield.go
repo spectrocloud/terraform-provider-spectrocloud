@@ -142,6 +142,7 @@ func resourceClusterBrownfield() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"apply_setting": {
 				Type:         schema.TypeString,
 				Optional:     true,
@@ -825,6 +826,10 @@ func readCommonFieldsBrownfield(c *client.V1Client, d *schema.ResourceData, clus
 		if err := d.Set("location_config", flattenLocationConfig(clusterStatus.Status.Location)); err != nil {
 			return diag.FromErr(err), true
 		}
+	}
+
+	if diags := syncClusterProfilesFromAPIWhenAddonDeploymentDisabled(c, d, cluster); diags.HasError() {
+		return diags, true
 	}
 
 	return diag.Diagnostics{}, false

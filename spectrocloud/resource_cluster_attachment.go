@@ -24,6 +24,7 @@ func resourceAddonDeployment() *schema.Resource {
 		ReadContext:   resourceAddonDeploymentRead,
 		UpdateContext: resourceAddonDeploymentUpdate,
 		DeleteContext: resourceAddonDeploymentDelete,
+		CustomizeDiff: resourceAddonDeploymentCustomizeDiff,
 		Description:   "Resource for attaching cluster profiles as addon deployments to an existing cluster.",
 
 		Timeouts: &schema.ResourceTimeout{
@@ -68,7 +69,18 @@ func resourceAddonDeployment() *schema.Resource {
 	}
 }
 
+func resourceAddonDeploymentCustomizeDiff(_ context.Context, _ *schema.ResourceDiff, _ interface{}) error {
+	if addonDeploymentResourceDisabled() {
+		return addonDeploymentResourceDisabledError()
+	}
+	return nil
+}
+
 func resourceAddonDeploymentStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+	if addonDeploymentResourceDisabled() {
+		return nil, addonDeploymentResourceDisabledError()
+	}
+
 	log.Printf("[DEBUG] Upgrading addon deployment state from version 2 to 3")
 
 	// Convert cluster_profile from TypeList (v2) to TypeSet (v3).
@@ -104,6 +116,10 @@ func validateSingleClusterProfile(d *schema.ResourceData) error {
 }
 
 func resourceAddonDeploymentCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	if addonDeploymentResourceDisabled() {
+		return diag.FromErr(addonDeploymentResourceDisabledError())
+	}
+
 	// Validate exactly one cluster_profile is specified
 	if err := validateSingleClusterProfile(d); err != nil {
 		return diag.FromErr(err)
@@ -186,6 +202,10 @@ func isProfileAttached(cluster *models.V1SpectroCluster, uid string) bool {
 
 //goland:noinspection GoUnhandledErrorResult
 func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	if addonDeploymentResourceDisabled() {
+		return diag.FromErr(addonDeploymentResourceDisabledError())
+	}
+
 	resourceContext := d.Get("context").(string)
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
@@ -211,6 +231,10 @@ func resourceAddonDeploymentRead(_ context.Context, d *schema.ResourceData, m in
 }
 
 func resourceAddonDeploymentUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	if addonDeploymentResourceDisabled() {
+		return diag.FromErr(addonDeploymentResourceDisabledError())
+	}
+
 	// Validate exactly one cluster_profile is specified
 	if err := validateSingleClusterProfile(d); err != nil {
 		return diag.FromErr(err)

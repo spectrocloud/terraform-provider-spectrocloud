@@ -142,6 +142,9 @@ func resourceMachinePoolAksHash(v interface{}) int {
 	if val, ok := nodePool["override_kubeadm_configuration"].(string); ok && val != "" {
 		fmt.Fprintf(&buf, "%s-", val)
 	}
+	if val, ok := nodePool["override_cluster_api_config"].(string); ok && val != "" {
+		fmt.Fprintf(&buf, "%s-", val)
+	}
 
 	// Include all fields that should trigger a machine pool update
 	if val, ok := nodePool["name"]; ok {
@@ -170,6 +173,9 @@ func resourceMachinePoolAksHash(v interface{}) int {
 	}
 	if val, ok := nodePool["storage_account_type"]; ok {
 		buf.WriteString(fmt.Sprintf("%s-", val.(string)))
+	}
+	if val, ok := nodePool["os_sku"].(string); ok && val != "" {
+		buf.WriteString(fmt.Sprintf("%s-", val))
 	}
 
 	// Additional labels (map)
@@ -256,6 +262,9 @@ func resourceMachinePoolAwsHash(v interface{}) int {
 		buf.WriteString(HashStringMap(m["additional_annotations"]))
 	}
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+	if val, ok := m["override_cluster_api_config"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
 	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {

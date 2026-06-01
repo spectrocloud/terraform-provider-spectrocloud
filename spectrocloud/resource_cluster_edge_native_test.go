@@ -572,8 +572,7 @@ func TestGetFirstIPRange(t *testing.T) {
 }
 
 func TestFlattenClusterConfigsEdgeNative(t *testing.T) {
-	// Test case 1: Valid Cloud Config and Config
-	cloudConfig := map[string]interface{}{"vip": "192.168.1.1"}
+	// Test case 1: Valid Cloud Config from API (vip populated regardless of prior config)
 	validConfig := &models.V1EdgeNativeCloudConfig{
 		Spec: &models.V1EdgeNativeCloudConfigSpec{
 			ClusterConfig: &models.V1EdgeNativeClusterConfig{
@@ -590,7 +589,7 @@ func TestFlattenClusterConfigsEdgeNative(t *testing.T) {
 		},
 	}
 
-	resultValid := flattenClusterConfigsEdgeNative(cloudConfig, validConfig)
+	resultValid := flattenClusterConfigsEdgeNative(validConfig)
 
 	// Assertions for valid Cloud Config and Config
 	expectedValidResult := []interface{}{
@@ -616,15 +615,33 @@ func TestFlattenClusterConfigsEdgeNative(t *testing.T) {
 		},
 	}
 
-	resultMissingHost := flattenClusterConfigsEdgeNative(cloudConfig, missingHostConfig)
+	resultMissingHost := flattenClusterConfigsEdgeNative(missingHostConfig)
 
 	// Assertions for missing Control Plane Endpoint Host
 	assert.Equal(t, []interface{}{map[string]interface{}{"is_two_node_cluster": false}}, resultMissingHost)
 
-	// Test case 3: Missing Cluster Config
+	// Test case 3: Import-style read — API has VIP, no prior Terraform config
+	importConfig := &models.V1EdgeNativeCloudConfig{
+		Spec: &models.V1EdgeNativeCloudConfigSpec{
+			ClusterConfig: &models.V1EdgeNativeClusterConfig{
+				ControlPlaneEndpoint: &models.V1EdgeNativeControlPlaneEndPoint{
+					Host: "10.10.166.155",
+				},
+			},
+		},
+	}
+	resultImport := flattenClusterConfigsEdgeNative(importConfig)
+	assert.Equal(t, []interface{}{
+		map[string]interface{}{
+			"vip":                 "10.10.166.155",
+			"is_two_node_cluster": false,
+		},
+	}, resultImport)
+
+	// Test case 4: Missing Cluster Config
 	missingConfig := &models.V1EdgeNativeCloudConfig{}
 
-	resultMissingConfig := flattenClusterConfigsEdgeNative(cloudConfig, missingConfig)
+	resultMissingConfig := flattenClusterConfigsEdgeNative(missingConfig)
 
 	// Assertions for missing Cluster Config
 	assert.Equal(t, []interface{}{}, resultMissingConfig)

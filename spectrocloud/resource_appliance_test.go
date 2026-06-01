@@ -56,13 +56,7 @@ func TestToApplianceMeta_WithoutTags(t *testing.T) {
 	d.Set("uid", "testID")
 	d.SetId("testID")
 
-	expectedEntityWithoutTags := &models.V1EdgeHostDeviceMetaUpdateEntity{
-		Metadata: &models.V1ObjectTagsEntity{
-			Name:   "testID",
-			UID:    "testID",
-			Labels: make(map[string]string),
-		},
-	}
+	expectedEntityWithoutTags := &models.V1EdgeHostDeviceMetaUpdateEntity{}
 
 	resultWithoutTags := toApplianceMeta(d)
 	assert.Equal(t, expectedEntityWithoutTags, resultWithoutTags)
@@ -92,7 +86,7 @@ func TestSetFields_WithNameTag(t *testing.T) {
 		Metadata: &models.V1ObjectMeta{
 			UID:    "testID",
 			Name:   "TestName",
-			Labels: expandStringMap(mockTags),
+			Labels: expandApplianceTagsMap(mockTags),
 		},
 	}
 
@@ -111,7 +105,7 @@ func TestSetFields_WithoutNameTag(t *testing.T) {
 	expectedApplianceWithoutNameTag := models.V1EdgeHostDevice{
 		Metadata: &models.V1ObjectMeta{
 			UID:    "testID",
-			Labels: expandStringMap(mockTagsWithoutName),
+			Labels: expandApplianceTagsMap(mockTagsWithoutName),
 		},
 	}
 
@@ -144,6 +138,29 @@ func TestResourceApplianceRead(t *testing.T) {
 	diags := resourceApplianceRead(context.Background(), d, unitTestMockAPIClient)
 
 	assert.Empty(t, diags)
+	tags, ok := d.GetOk("tags")
+	assert.True(t, ok)
+	assert.Equal(t, map[string]interface{}{"type": "test"}, tags)
+	assert.Equal(t, "disabled", d.Get("remote_shell"))
+	assert.Equal(t, "disabled", d.Get("temporary_shell_credentials"))
+	assert.Equal(t, d.Id(), d.Get("uid"))
+}
+
+func TestFlattenApplianceTunnelConfig(t *testing.T) {
+	remoteShell, tempCreds := flattenApplianceTunnelConfig(nil)
+	assert.Equal(t, "disabled", remoteShell)
+	assert.Equal(t, "disabled", tempCreds)
+
+	enabled := "enabled"
+	spec := &models.V1EdgeHostDeviceSpec{
+		TunnelConfig: &models.V1SpectroTunnelConfig{
+			RemoteSSH:         &enabled,
+			RemoteSSHTempUser: &enabled,
+		},
+	}
+	remoteShell, tempCreds = flattenApplianceTunnelConfig(spec)
+	assert.Equal(t, "enabled", remoteShell)
+	assert.Equal(t, "enabled", tempCreds)
 }
 
 func TestResourceApplianceUpdate(t *testing.T) {

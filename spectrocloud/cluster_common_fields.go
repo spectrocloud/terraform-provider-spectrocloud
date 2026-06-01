@@ -138,6 +138,10 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
+	if diags := syncClusterProfilesFromAPIWhenAddonDeploymentDisabled(c, d, cluster); diags.HasError() {
+		return diags, true
+	}
+
 	return diag.Diagnostics{}, false
 }
 
@@ -167,6 +171,9 @@ func updateCommonFieldsForBrownfieldCluster(d *schema.ResourceData, c *client.V1
 	}
 	_ = updateAgentUpgradeSetting(c, d)
 	_ = updateClusterTimezone(c, d)
+	if diags := renewK8sCertificatesNow(c, d); diags.HasError() {
+		return diags
+	}
 	return diag.Diagnostics{}
 }
 
@@ -252,7 +259,21 @@ func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagno
 		}
 	}
 
+	if diags := renewK8sCertificatesNow(c, d); diags.HasError() {
+		return diags, true
+	}
+
 	return diag.Diagnostics{}, false
+}
+
+func renewK8sCertificatesNow(c *client.V1Client, d *schema.ResourceData) diag.Diagnostics {
+	if !d.HasChange("renew_k8s_certificates_now") {
+		return nil
+	}
+	if err := c.RenewClusterK8Certificates(d.Id()); err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
 }
 
 func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) error {

@@ -143,6 +143,7 @@ func resourceClusterAks() *schema.Resource {
 				ValidateFunc: validateTimezone,
 				Description:  "Defines the time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades will follow this time zone to ensure they run at the appropriate local time for the cluster. Must be in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata', 'Europe/London').",
 			},
+			"renew_k8s_certificates_now": schemas.RenewK8sCertificatesNowSchema(),
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -163,7 +164,6 @@ func resourceClusterAks() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -200,6 +200,7 @@ func resourceClusterAks() *schema.Resource {
 							ForceNew:    true,
 							Description: "Whether to create a private cluster(API endpoint). Default is `false`.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 
 						// fields for static placement are having flat structure as backend currently doesn't support multiple subnets.
 						"vnet_name": {
@@ -310,6 +311,7 @@ func resourceClusterAks() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"instance_type": {
 							Type:        schema.TypeString,
 							Required:    true,
@@ -340,6 +342,12 @@ func resourceClusterAks() *schema.Resource {
 							Required: true,
 							//ExactlyOneOf: []string{"Standard_LRS", "Standard_GRS", "Standard_RAGRS", "Standard_ZRS", "Premium_LRS", "Premium_ZRS", "Standard_GZRS", "Standard_RAGZRS"},
 							Description: "Storage account type for managed disks in this machine pool.",
+						},
+						"os_sku": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"Ubuntu", "AzureLinux", "Windows2022"}, false),
+							Description:  "OS SKU for the AKS node pool. Valid values are `Ubuntu`, `AzureLinux`, and `Windows2022`. Immutable after creation.",
 						},
 					},
 				},
@@ -526,6 +534,9 @@ func flattenClusterConfigsAks(config *models.V1AzureCloudConfig) []interface{} {
 		m["ssh_key"] = *config.Spec.ClusterConfig.SSHKey
 	}
 	m["private_cluster"] = config.Spec.ClusterConfig.APIServerAccessProfile.EnablePrivateCluster
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
 	if config.Spec.ClusterConfig.VnetName != "" {
 		m["vnet_name"] = config.Spec.ClusterConfig.VnetName
 	}
@@ -582,11 +593,17 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		if machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
+		}
 
 		oi["instance_type"] = machinePool.InstanceType
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 		oi["storage_account_type"] = machinePool.OsDisk.ManagedDisk.StorageAccountType
+		if machinePool.OsSku != "" {
+			oi["os_sku"] = string(machinePool.OsSku)
+		}
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		ois = append(ois, oi)
@@ -606,6 +623,12 @@ func resourceClusterAksUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if err := c.UpdateCloudConfigAks(cloudConfigId, toCloudConfigAks(cloudConfig)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	CloudConfig, err := c.GetCloudConfigAks(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -709,7 +732,40 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cloudConfig := config[0]
 	cloudConfigMap := cloudConfig.(map[string]interface{})
 
-	// static placement support
+	clusterContext := d.Get("context").(string)
+	profiles, err := toProfiles(c, d, clusterContext)
+	if err != nil {
+		return nil, err
+	}
+	cluster := &models.V1SpectroAzureClusterEntity{
+		Metadata: getClusterMetadata(d),
+		Spec: &models.V1SpectroAzureClusterEntitySpec{
+			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
+			Profiles:        profiles,
+			ClusterTemplate: toClusterTemplateReference(d),
+			Policies:        toPolicies(d),
+			CloudConfig:     toAksClusterConfig(cloudConfigMap),
+		},
+	}
+
+	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
+	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
+		mp := toMachinePoolAks(machinePool)
+		machinePoolConfigs = append(machinePoolConfigs, mp)
+	}
+	cluster.Spec.Machinepoolconfig = machinePoolConfigs
+	cluster.Spec.ClusterConfig = toClusterConfig(d)
+
+	return cluster, nil
+}
+
+func toCloudConfigAks(cloudConfig map[string]interface{}) *models.V1AzureCloudClusterConfigEntity {
+	return &models.V1AzureCloudClusterConfigEntity{
+		ClusterConfig: toAksClusterConfig(cloudConfig),
+	}
+}
+
+func toAksClusterConfig(cloudConfigMap map[string]interface{}) *models.V1AzureClusterConfig {
 	var vnetname string
 	if cloudConfigMap["vnet_name"] != nil {
 		vnetname = cloudConfigMap["vnet_name"].(string)
@@ -723,6 +779,11 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	var vnetcidr string
 	if cloudConfigMap["vnet_cidr_block"] != nil {
 		vnetcidr = cloudConfigMap["vnet_cidr_block"].(string)
+	}
+
+	var overrideClusterAPIConfig string
+	if cloudConfigMap["override_cluster_api_config"] != nil {
+		overrideClusterAPIConfig = cloudConfigMap["override_cluster_api_config"].(string)
 	}
 
 	var workerSubnet *models.V1Subnet
@@ -743,44 +804,21 @@ func toAksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 		}
 	}
 
-	clusterContext := d.Get("context").(string)
-	profiles, err := toProfiles(c, d, clusterContext)
-	if err != nil {
-		return nil, err
-	}
-	cluster := &models.V1SpectroAzureClusterEntity{
-		Metadata: getClusterMetadata(d),
-		Spec: &models.V1SpectroAzureClusterEntitySpec{
-			CloudAccountUID: types.Ptr(d.Get("cloud_account_id").(string)),
-			Profiles:        profiles,
-			ClusterTemplate: toClusterTemplateReference(d),
-			Policies:        toPolicies(d),
-			CloudConfig: &models.V1AzureClusterConfig{
-				Location:      types.Ptr(cloudConfigMap["region"].(string)),
-				ResourceGroup: cloudConfigMap["resource_group"].(string),
-				SSHKey:        types.Ptr(cloudConfigMap["ssh_key"].(string)),
-				APIServerAccessProfile: &models.V1APIServerAccessProfile{
-					EnablePrivateCluster: cloudConfigMap["private_cluster"].(bool),
-				},
-				SubscriptionID:     types.Ptr(cloudConfigMap["subscription_id"].(string)),
-				VnetName:           vnetname,
-				VnetResourceGroup:  vnetResourceGroup,
-				VnetCidrBlock:      vnetcidr,
-				ControlPlaneSubnet: controlPlaneSubnet,
-				WorkerSubnet:       workerSubnet,
-			},
+	return &models.V1AzureClusterConfig{
+		Location:      types.Ptr(cloudConfigMap["region"].(string)),
+		ResourceGroup: cloudConfigMap["resource_group"].(string),
+		SSHKey:        types.Ptr(cloudConfigMap["ssh_key"].(string)),
+		APIServerAccessProfile: &models.V1APIServerAccessProfile{
+			EnablePrivateCluster: cloudConfigMap["private_cluster"].(bool),
 		},
+		SubscriptionID:           types.Ptr(cloudConfigMap["subscription_id"].(string)),
+		OverrideClusterAPIConfig: overrideClusterAPIConfig,
+		VnetName:                 vnetname,
+		VnetResourceGroup:        vnetResourceGroup,
+		VnetCidrBlock:            vnetcidr,
+		ControlPlaneSubnet:       controlPlaneSubnet,
+		WorkerSubnet:             workerSubnet,
 	}
-
-	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
-	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp := toMachinePoolAks(machinePool)
-		machinePoolConfigs = append(machinePoolConfigs, mp)
-	}
-	cluster.Spec.Machinepoolconfig = machinePoolConfigs
-	cluster.Spec.ClusterConfig = toClusterConfig(d)
-
-	return cluster, nil
 }
 
 func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigEntity {
@@ -805,6 +843,13 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		max = SafeInt32(m["max"].(int))
 	}
 
+	managedPoolConfig := &models.V1AzureManagedMachinePoolConfig{
+		IsSystemNodePool: m["is_system_node_pool"].(bool),
+	}
+	if osSku, ok := m["os_sku"].(string); ok && osSku != "" {
+		managedPoolConfig.OsSku = models.V1OsSku(osSku)
+	}
+
 	mp := &models.V1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			InstanceType: m["instance_type"].(string),
@@ -817,9 +862,7 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 			},
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
-		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
-			IsSystemNodePool: m["is_system_node_pool"].(bool),
-		},
+		ManagedPoolConfig: managedPoolConfig,
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:      toAdditionalNodePoolLabels(m),
 			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),
@@ -839,6 +882,9 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
 
 	return mp
