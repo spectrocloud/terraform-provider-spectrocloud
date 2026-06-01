@@ -340,6 +340,12 @@ func resourceClusterAks() *schema.Resource {
 							//ExactlyOneOf: []string{"Standard_LRS", "Standard_GRS", "Standard_RAGRS", "Standard_ZRS", "Premium_LRS", "Premium_ZRS", "Standard_GZRS", "Standard_RAGZRS"},
 							Description: "Storage account type for managed disks in this machine pool.",
 						},
+						"os_sku": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"Ubuntu", "AzureLinux", "Windows2022"}, false),
+							Description:  "OS SKU for the AKS node pool. Valid values are `Ubuntu`, `AzureLinux`, and `Windows2022`. Immutable after creation.",
+						},
 					},
 				},
 			},
@@ -592,6 +598,9 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 		oi["storage_account_type"] = machinePool.OsDisk.ManagedDisk.StorageAccountType
+		if machinePool.OsSku != "" {
+			oi["os_sku"] = string(machinePool.OsSku)
+		}
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		ois = append(ois, oi)
@@ -831,6 +840,13 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		max = SafeInt32(m["max"].(int))
 	}
 
+	managedPoolConfig := &models.V1AzureManagedMachinePoolConfig{
+		IsSystemNodePool: m["is_system_node_pool"].(bool),
+	}
+	if osSku, ok := m["os_sku"].(string); ok && osSku != "" {
+		managedPoolConfig.OsSku = models.V1OsSku(osSku)
+	}
+
 	mp := &models.V1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			InstanceType: m["instance_type"].(string),
@@ -843,9 +859,7 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 			},
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
-		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
-			IsSystemNodePool: m["is_system_node_pool"].(bool),
-		},
+		ManagedPoolConfig: managedPoolConfig,
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:      toAdditionalNodePoolLabels(m),
 			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),
