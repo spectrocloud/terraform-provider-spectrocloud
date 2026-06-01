@@ -115,6 +115,84 @@ func buildPackRegistryUIDMapFromClusterProfiles(d *schema.ResourceData) map[stri
 	return registryUIDMap
 }
 
+// resolveProfileVariableValue picks the value to store in state after a read. When the variable is
+// marked sensitive in the cluster variables API (IsSensitive), Palette returns a masked value and
+// the prior state/config value must be preserved to avoid drift.
+func resolveProfileVariableValue(prior, apiValue string, isSensitive bool) string {
+	if isSensitive {
+		if prior != "" {
+			return prior
+		}
+		return ""
+	}
+	if apiValue != "" {
+		return apiValue
+	}
+	return prior
+}
+
+// priorClusterProfileVariable returns the variable value from cluster_profile or nested cluster_template state.
+func priorClusterProfileVariable(d *schema.ResourceData, profileUID, varName string) string {
+	if v := priorClusterProfileVariableFromProfiles(d.Get("cluster_profile"), profileUID, varName); v != "" {
+		return v
+	}
+	if raw := d.Get("cluster_template"); raw != nil {
+		if templates, ok := raw.([]interface{}); ok && len(templates) > 0 {
+			if template, ok := templates[0].(map[string]interface{}); ok {
+				if nested, ok := template["cluster_profile"]; ok && nested != nil {
+					return priorClusterProfileVariableFromProfiles(nested, profileUID, varName)
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func priorClusterProfileVariableFromProfiles(profilesRaw interface{}, profileUID, varName string) string {
+	for _, profile := range normalizeInterfaceSliceFromListOrSet(profilesRaw) {
+		profileMap, ok := profile.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		id, ok := profileMap["id"].(string)
+		if !ok || id != profileUID {
+			continue
+		}
+		vars, ok := profileMap["variables"].(map[string]interface{})
+		if !ok || vars == nil {
+			return ""
+		}
+		if v, ok := vars[varName]; ok && v != nil {
+			return v.(string)
+		}
+		return ""
+	}
+	return ""
+}
+
+// profileVariablesMapFromAPI builds a variables map for state from the cluster variables API response.
+func profileVariablesMapFromAPI(d *schema.ResourceData, profileUID string, apiVars []*models.V1SpectroClusterVariableResponse) map[string]interface{} {
+	vars := make(map[string]interface{})
+	for _, v := range apiVars {
+		if v.Name == nil {
+			continue
+		}
+		name := *v.Name
+		prior := priorClusterProfileVariable(d, profileUID, name)
+		resolved := resolveProfileVariableValue(prior, v.Value, v.IsSensitive)
+		if resolved != "" {
+			vars[name] = resolved
+			continue
+		}
+		// Import / first read: sensitive values are masked in the API and cannot be returned in cleartext.
+		// Still record the variable name so import populates state; set the real value in Terraform config.
+		if v.IsSensitive && prior == "" && v.Value != "" {
+			vars[name] = ""
+		}
+	}
+	return vars
+}
+
 // clusterProfileHasVariablesInConfig reports whether variables are declared for a profile in config.
 func clusterProfileHasVariablesInConfig(d *schema.ResourceData, profileUID string) bool {
 	for _, profile := range normalizeInterfaceSliceFromListOrSet(d.Get("cluster_profile")) {

@@ -761,12 +761,7 @@ func enrichClusterProfilesWithVariables(c *client.V1Client, d *schema.ResourceDa
 		if cv.ProfileUID == nil || cv.Variables == nil {
 			continue
 		}
-		vars := make(map[string]interface{})
-		for _, v := range cv.Variables {
-			if v.Name != nil && v.Value != "" {
-				vars[*v.Name] = v.Value
-			}
-		}
+		vars := profileVariablesMapFromAPI(d, *cv.ProfileUID, cv.Variables)
 		if len(vars) > 0 {
 			profileVariablesMap[*cv.ProfileUID] = vars
 		}
@@ -778,7 +773,7 @@ func enrichClusterProfilesWithVariables(c *client.V1Client, d *schema.ResourceDa
 		if !ok || uid == "" {
 			continue
 		}
-		if vars, has := profileVariablesMap[uid]; has && len(vars) > 0 {
+		if vars, has := profileVariablesMap[uid]; has {
 			p["variables"] = vars
 		} else if clusterProfileHasVariablesInConfig(d, uid) {
 			p["variables"] = map[string]interface{}{}
@@ -980,14 +975,13 @@ func flattenClusterTemplateVariables(c *client.V1Client, d *schema.ResourceData,
 	profileVariablesMap := make(map[string]map[string]string)
 	for _, clusterVar := range clusterVars {
 		if clusterVar.ProfileUID != nil && clusterVar.Variables != nil {
-			vars := make(map[string]string)
-			for _, v := range clusterVar.Variables {
-				if v.Name != nil && v.Value != "" {
-					vars[*v.Name] = v.Value
-				}
+			vars := profileVariablesMapFromAPI(d, *clusterVar.ProfileUID, clusterVar.Variables)
+			stringVars := make(map[string]string, len(vars))
+			for k, v := range vars {
+				stringVars[k] = v.(string)
 			}
-			if len(vars) > 0 {
-				profileVariablesMap[*clusterVar.ProfileUID] = vars
+			if len(stringVars) > 0 {
+				profileVariablesMap[*clusterVar.ProfileUID] = stringVars
 			}
 		}
 	}
