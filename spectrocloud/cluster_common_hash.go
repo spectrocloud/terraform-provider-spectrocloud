@@ -177,6 +177,9 @@ func resourceMachinePoolAksHash(v interface{}) int {
 	if val, ok := nodePool["os_sku"].(string); ok && val != "" {
 		buf.WriteString(fmt.Sprintf("%s-", val))
 	}
+	if val, ok := nodePool["os_type"].(string); ok && val != "" {
+		buf.WriteString(fmt.Sprintf("%s-", val))
+	}
 
 	// Additional labels (map)
 	if _, ok := nodePool["additional_labels"]; ok {

@@ -346,6 +346,13 @@ func resourceClusterAks() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{"Ubuntu", "AzureLinux", "Windows2022"}, false),
 							Description:  "OS SKU for the AKS node pool. Valid values are `Ubuntu`, `AzureLinux`, and `Windows2022`. Immutable after creation.",
 						},
+						"os_type": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "Linux",
+							ValidateFunc: validation.StringInSlice([]string{"Linux", "Windows"}, false),
+							Description:  "Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.",
+						},
 					},
 				},
 			},
@@ -601,6 +608,11 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		if machinePool.OsSku != "" {
 			oi["os_sku"] = string(machinePool.OsSku)
 		}
+		if machinePool.OsType != nil {
+			oi["os_type"] = string(*machinePool.OsType)
+		} else if machinePool.OsDisk != nil && machinePool.OsDisk.OsType != nil {
+			oi["os_type"] = string(*machinePool.OsDisk.OsType)
+		}
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		ois = append(ois, oi)
@@ -847,6 +859,14 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		managedPoolConfig.OsSku = models.V1OsSku(osSku)
 	}
 
+	osType := models.V1OsTypeLinux
+	if m["os_type"] != nil && m["os_type"].(string) != "" {
+		if m["os_type"].(string) == "Windows" {
+			osType = models.V1OsTypeWindows
+		}
+	}
+	managedPoolConfig.OsType = &osType
+
 	mp := &models.V1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			InstanceType: m["instance_type"].(string),
@@ -855,7 +875,7 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 				ManagedDisk: &models.V1ManagedDisk{
 					StorageAccountType: m["storage_account_type"].(string),
 				},
-				OsType: models.NewV1OsType(""), // TODO: PA1-SIVA fix a right type
+				OsType: &osType,
 			},
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
