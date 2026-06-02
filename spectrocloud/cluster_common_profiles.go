@@ -651,6 +651,59 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 	return nil
 }
 
+// setClusterProfilesOrTemplateForImport populates cluster_profile or cluster_template in state
+// depending on whether the cluster was created from a cluster template.
+func setClusterProfilesOrTemplateForImport(c *client.V1Client, d *schema.ResourceData, cluster *models.V1SpectroCluster) error {
+	clusterProfiles, err := flattenClusterProfileForImport(c, d)
+	if err != nil {
+		return err
+	}
+
+	if cluster != nil && cluster.Spec != nil && cluster.Spec.ClusterTemplate != nil && cluster.Spec.ClusterTemplate.UID != "" {
+		templateEntry := map[string]interface{}{
+			"id":              cluster.Spec.ClusterTemplate.UID,
+			"cluster_profile": clusterTemplateProfileSetFromList(clusterProfiles),
+		}
+		if template, templateErr := c.GetClusterConfigTemplate(cluster.Spec.ClusterTemplate.UID); templateErr == nil && template != nil && template.Metadata != nil {
+			templateEntry["name"] = template.Metadata.Name
+		}
+		return d.Set("cluster_template", []interface{}{templateEntry})
+	}
+
+	return d.Set("cluster_profile", clusterProfiles)
+}
+
+func clusterTemplateProfileSetFromList(profiles []interface{}) *schema.Set {
+	profileSet := schema.NewSet(schema.HashResource(&schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"id": {
+				Type: schema.TypeString,
+			},
+			"variables": {
+				Type: schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+		},
+	}), []interface{}{})
+
+	for _, profile := range profiles {
+		p, ok := profile.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		entry := map[string]interface{}{
+			"id": p["id"],
+		}
+		if vars, hasVars := p["variables"]; hasVars && vars != nil {
+			entry["variables"] = vars
+		}
+		profileSet.Add(entry)
+	}
+	return profileSet
+}
+
 func flattenClusterProfileForImport(c *client.V1Client, d *schema.ResourceData) ([]interface{}, error) {
 	cluster, err := c.GetCluster(d.Id())
 	if err != nil {
