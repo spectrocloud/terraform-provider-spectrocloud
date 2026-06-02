@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,65 +11,56 @@ import (
 // Shared schema for cluster datasource tests (match data_source_cluster schema)
 var testDataSourceClusterSchema = map[string]*schema.Schema{
 	"name":              {Type: schema.TypeString, Required: true},
-	"context":           {Type: schema.TypeString, Required: true},
+	"context":           {Type: schema.TypeString, Optional: true, Default: "project"},
 	"virtual":           {Type: schema.TypeBool, Optional: true},
 	"kube_config":       {Type: schema.TypeString, Computed: true},
 	"admin_kube_config": {Type: schema.TypeString, Computed: true},
 	"state":             {Type: schema.TypeString, Computed: true},
 	"health":            {Type: schema.TypeString, Computed: true},
+	"cluster_timezone":  {Type: schema.TypeString, Computed: true},
 }
 
 func TestDataSourceClusterRead(t *testing.T) {
 	tests := []struct {
 		name          string
 		resourceData  *schema.ResourceData
+		mockClient    interface{}
 		expectedError bool
-		expectedDiags diag.Diagnostics
 	}{
 		{
 			name: "Successful read",
 			resourceData: schema.TestResourceDataRaw(t, testDataSourceClusterSchema, map[string]interface{}{
 				"name":    "test-cluster",
-				"context": "some-context",
+				"context": "project",
 				"virtual": false,
 			}),
+			mockClient:    unitTestMockAPIClient,
 			expectedError: false,
-			expectedDiags: diag.Diagnostics{},
 		},
 		{
 			name: "Cluster not found",
 			resourceData: schema.TestResourceDataRaw(t, testDataSourceClusterSchema, map[string]interface{}{
-				"name":              "test-cluster",
-				"context":           "some-context",
-				"virtual":           false,
-				"kube_config":       "",
-				"admin_kube_config": "",
+				"name":    "missing-cluster",
+				"context": "project",
+				"virtual": false,
 			}),
-			expectedError: false,
-			expectedDiags: diag.Diagnostics{
-				diag.Diagnostic{
-					Severity: diag.Error,
-					Summary:  "Cluster not found",
-					Detail:   "The cluster 'test-cluster' was not found.",
-				},
-			},
+			mockClient:    unitTestMockAPINegativeClient,
+			expectedError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := tt.resourceData
-			var ctx context.Context
-			diags := dataSourceClusterRead(ctx, d, unitTestMockAPIClient)
+			diags := dataSourceClusterRead(context.Background(), d, tt.mockClient)
 
 			if tt.expectedError {
 				assert.NotEmpty(t, diags)
-			} else {
-				assert.Empty(t, diags)
+				return
 			}
-			if d.Id() != "" {
-				assert.Equal(t, "test-cluster-id", d.Id())
-			}
+			assert.Empty(t, diags)
+			assert.Equal(t, "test-cluster-id", d.Id())
+			assert.Equal(t, "UTC", d.Get("cluster_timezone"))
 		})
 	}
 }
