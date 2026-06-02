@@ -1857,3 +1857,67 @@ func TestValidateClusterTypeUpdate(t *testing.T) {
 		assert.NoError(t, err, "Should not error when cluster_type is not present in state")
 	})
 }
+
+func TestSetCommonClusterImportAttributesNilClusterConfig(t *testing.T) {
+	schemaMap := map[string]*schema.Schema{
+		"cluster_timezone":     {Type: schema.TypeString, Optional: true},
+		"description":          {Type: schema.TypeString, Optional: true},
+		"apply_setting":        {Type: schema.TypeString, Optional: true},
+		"pause_agent_upgrades": {Type: schema.TypeString, Optional: true},
+		"os_patch_on_boot":     {Type: schema.TypeBool, Optional: true},
+		"os_patch_schedule":    {Type: schema.TypeString, Optional: true},
+		"review_repave_state":  {Type: schema.TypeString, Optional: true},
+		"force_delete":         {Type: schema.TypeBool, Optional: true},
+		"force_delete_delay":   {Type: schema.TypeInt, Optional: true},
+		"skip_completion":      {Type: schema.TypeBool, Optional: true},
+	}
+	d := schema.TestResourceDataRaw(t, schemaMap, map[string]interface{}{})
+
+	cluster := &models.V1SpectroCluster{
+		Metadata: &models.V1ObjectMeta{
+			Annotations: map[string]string{
+				"description": "template cluster",
+			},
+		},
+		Spec: &models.V1SpectroClusterSpec{
+			ClusterConfig: nil,
+			ClusterTemplate: &models.V1SpectroClusterTemplateRef{
+				UID: "template-uid",
+			},
+		},
+		Status: &models.V1SpectroClusterStatus{
+			SpcApply: &models.V1SpcApply{
+				ActionType: "DownloadAndInstall",
+			},
+		},
+	}
+
+	err := setCommonClusterImportAttributes(cluster, d, true)
+	require.NoError(t, err)
+	assert.Equal(t, "template cluster", d.Get("description"))
+	assert.Equal(t, "DownloadAndInstall", d.Get("apply_setting"))
+	assert.Equal(t, "unlock", d.Get("pause_agent_upgrades"))
+	assert.Equal(t, false, d.Get("force_delete"))
+	assert.Equal(t, 20, d.Get("force_delete_delay"))
+	assert.Equal(t, false, d.Get("skip_completion"))
+}
+
+func TestSetCommonClusterImportAttributesNilCluster(t *testing.T) {
+	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{}, map[string]interface{}{})
+	err := setCommonClusterImportAttributes(nil, d, true)
+	require.Error(t, err)
+}
+
+func TestClusterTemplateProfileSetFromList(t *testing.T) {
+	profiles := []interface{}{
+		map[string]interface{}{
+			"id": "profile-1",
+			"variables": map[string]interface{}{
+				"key": "value",
+			},
+			"pack": []interface{}{},
+		},
+	}
+	profileSet := clusterTemplateProfileSetFromList(profiles)
+	require.Equal(t, 1, profileSet.Len())
+}

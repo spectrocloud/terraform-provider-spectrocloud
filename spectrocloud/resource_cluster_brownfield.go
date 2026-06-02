@@ -1019,61 +1019,16 @@ func resourceClusterBrownfieldImport(ctx context.Context, d *schema.ResourceData
 }
 
 func flattenCommonAttributeForBrownfieldClusterImport(c *client.V1Client, d *schema.ResourceData) error {
-	clusterProfiles, err := flattenClusterProfileForImport(c, d)
-	if err != nil {
-		return err
-	}
-	err = d.Set("cluster_profile", clusterProfiles)
-	if err != nil {
-		return err
-	}
-
 	var diags diag.Diagnostics
 	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return err
 	}
+
+	if err := setClusterProfilesOrTemplateForImport(c, d, cluster); err != nil {
+		return err
+	}
+
 	_ = d.Set("import_mode", "")
-
-	if cluster.Spec.ClusterConfig.Timezone != "" {
-		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
-			return err
-		}
-	}
-
-	if cluster.Metadata.Annotations["description"] != "" {
-		if err := d.Set("description", cluster.Metadata.Annotations["description"]); err != nil {
-			return err
-		}
-	}
-
-	if cluster.Status.SpcApply != nil {
-		err = d.Set("apply_setting", cluster.Status.SpcApply.ActionType)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster))
-	if err != nil {
-		return err
-	}
-	if cluster.Status.Repave != nil {
-		if err = d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
-			return err
-		}
-	}
-	err = d.Set("force_delete", false)
-	if err != nil {
-		return err
-	}
-	err = d.Set("force_delete_delay", 20)
-	if err != nil {
-		return err
-	}
-	err = d.Set("skip_completion", false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return setCommonClusterImportAttributes(cluster, d, true)
 }
