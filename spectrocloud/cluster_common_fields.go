@@ -25,7 +25,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		return diag.FromErr(err), true
 	}
 	// When the current repave state is pending, we set the review_repave_state to Pending, For indicate the system change.
-	if _, ok := d.GetOk("review_repave_state"); ok {
+	if _, ok := d.GetOk("review_repave_state"); ok && cluster.Status != nil && cluster.Status.Repave != nil {
 		// We are adding this check to handle virtual cluster scenario. virtual cluster doesn't have support for `review_repave_state`
 		if err := d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
 			return diag.FromErr(err), true
@@ -75,27 +75,44 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		}
 	}
 
-	clusterAdditionalMeta := cluster.Spec.ClusterConfig.ClusterMetaAttribute
-	if clusterAdditionalMeta != "" {
-		// We are adding this check to handle virtual cluster scenario. virtual cluster doesn't have support for `cluster_meta_attribute`
-		if _, ok := d.GetOk("cluster_meta_attribute"); ok {
-			err := d.Set("cluster_meta_attribute", clusterAdditionalMeta)
-			if err != nil {
-				return diag.FromErr(err), true
+	var clusterConfig *models.V1ClusterConfig
+	if cluster.Spec != nil {
+		clusterConfig = cluster.Spec.ClusterConfig
+	}
+
+	if clusterConfig != nil {
+		clusterAdditionalMeta := clusterConfig.ClusterMetaAttribute
+		if clusterAdditionalMeta != "" {
+			// We are adding this check to handle virtual cluster scenario. virtual cluster doesn't have support for `cluster_meta_attribute`
+			if _, ok := d.GetOk("cluster_meta_attribute"); ok {
+				err := d.Set("cluster_meta_attribute", clusterAdditionalMeta)
+				if err != nil {
+					return diag.FromErr(err), true
+				}
 			}
 		}
-	}
 
-	// Flatten update_worker_pools_in_parallel - always set during read (including import)
-	if err := d.Set("update_worker_pools_in_parallel", cluster.Spec.ClusterConfig.UpdateWorkerPoolsInParallel); err != nil {
-		return diag.FromErr(err), true
-	}
+		// Flatten update_worker_pools_in_parallel - always set during read (including import)
+		if err := d.Set("update_worker_pools_in_parallel", clusterConfig.UpdateWorkerPoolsInParallel); err != nil {
+			return diag.FromErr(err), true
+		}
 
-	// Flatten cluster_timezone - always set during read (including import)
-	if cluster.Spec.ClusterConfig.Timezone != "" {
-		if _, ok := d.GetOk("cluster_timezone"); ok {
-			if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
-				return diag.FromErr(err), true
+		// Flatten cluster_timezone - always set during read (including import)
+		if clusterConfig.Timezone != "" {
+			if _, ok := d.GetOk("cluster_timezone"); ok {
+				if err := d.Set("cluster_timezone", clusterConfig.Timezone); err != nil {
+					return diag.FromErr(err), true
+				}
+			}
+		}
+
+		hostConfig := clusterConfig.HostClusterConfig
+		if hostConfig != nil && hostConfig.IsHostCluster != nil && *hostConfig.IsHostCluster {
+			flattenHostConfig := flattenHostConfig(hostConfig)
+			if len(flattenHostConfig) > 0 {
+				if err := d.Set("host_config", flattenHostConfig); err != nil {
+					return diag.FromErr(err), true
+				}
 			}
 		}
 	}
@@ -105,17 +122,7 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 		return diag.FromErr(err), true
 	}
 
-	hostConfig := cluster.Spec.ClusterConfig.HostClusterConfig
-	if hostConfig != nil && *hostConfig.IsHostCluster {
-		flattenHostConfig := flattenHostConfig(hostConfig)
-		if len(flattenHostConfig) > 0 {
-			if err := d.Set("host_config", flattenHostConfig); err != nil {
-				return diag.FromErr(err), true
-			}
-		}
-	}
-
-	if _, ok := d.GetOk("review_repave_state"); ok {
+	if _, ok := d.GetOk("review_repave_state"); ok && cluster.Status != nil && cluster.Status.Repave != nil {
 		if err := d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
 			return diag.FromErr(err), true
 		}

@@ -162,74 +162,80 @@ func updateAgentUpgradeSetting(c *client.V1Client, d *schema.ResourceData) error
 	return nil
 }
 
-// This function is called during import cluster from palette to set default terraform value
-func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.ResourceData) error {
-	clusterProfiles, err := flattenClusterProfileForImport(c, d)
-	if err != nil {
-		return err
+// setCommonClusterImportAttributes sets shared cluster attributes during import.
+// ClusterConfig, Metadata, and Status may be nil for template-based clusters.
+func setCommonClusterImportAttributes(cluster *models.V1SpectroCluster, d *schema.ResourceData, includeRepaveState bool) error {
+	if cluster == nil {
+		return fmt.Errorf("cluster data is unavailable for import")
 	}
-	err = d.Set("cluster_profile", clusterProfiles)
-	if err != nil {
+
+	var clusterConfig *models.V1ClusterConfig
+	if cluster.Spec != nil {
+		clusterConfig = cluster.Spec.ClusterConfig
+	}
+
+	if clusterConfig != nil && clusterConfig.Timezone != "" {
+		if err := d.Set("cluster_timezone", clusterConfig.Timezone); err != nil {
+			return err
+		}
+	}
+
+	if cluster.Metadata != nil && cluster.Metadata.Annotations != nil {
+		if desc := cluster.Metadata.Annotations["description"]; desc != "" {
+			if err := d.Set("description", desc); err != nil {
+				return err
+			}
+		}
+	}
+
+	if cluster.Status != nil && cluster.Status.SpcApply != nil {
+		if err := d.Set("apply_setting", cluster.Status.SpcApply.ActionType); err != nil {
+			return err
+		}
+	}
+
+	if err := d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster)); err != nil {
 		return err
 	}
 
+	if clusterConfig != nil && clusterConfig.MachineManagementConfig != nil && clusterConfig.MachineManagementConfig.OsPatchConfig != nil {
+		osPatch := clusterConfig.MachineManagementConfig.OsPatchConfig
+		if err := d.Set("os_patch_on_boot", osPatch.PatchOnBoot); err != nil {
+			return err
+		}
+		if err := d.Set("os_patch_schedule", osPatch.Schedule); err != nil {
+			return err
+		}
+	}
+
+	if includeRepaveState && cluster.Status != nil && cluster.Status.Repave != nil {
+		if err := d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
+			return err
+		}
+	}
+
+	if err := d.Set("force_delete", false); err != nil {
+		return err
+	}
+	if err := d.Set("force_delete_delay", 20); err != nil {
+		return err
+	}
+	return d.Set("skip_completion", false)
+}
+
+// This function is called during import cluster from palette to set default terraform value
+func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.ResourceData) error {
 	var diags diag.Diagnostics
 	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return err
 	}
 
-	if cluster.Spec.ClusterConfig.Timezone != "" {
-		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
-			return err
-		}
+	if err := setClusterProfilesOrTemplateForImport(c, d, cluster); err != nil {
+		return err
 	}
 
-	if cluster.Metadata.Annotations["description"] != "" {
-		if err := d.Set("description", cluster.Metadata.Annotations["description"]); err != nil {
-			return err
-		}
-	}
-
-	if cluster.Status.SpcApply != nil {
-		err = d.Set("apply_setting", cluster.Status.SpcApply.ActionType)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster))
-	if err != nil {
-		return err
-	}
-	if cluster.Spec.ClusterConfig.MachineManagementConfig != nil {
-		err = d.Set("os_patch_on_boot", cluster.Spec.ClusterConfig.MachineManagementConfig.OsPatchConfig.PatchOnBoot)
-		if err != nil {
-			return err
-		}
-		err = d.Set("os_patch_schedule", cluster.Spec.ClusterConfig.MachineManagementConfig.OsPatchConfig.Schedule)
-		if err != nil {
-			return err
-		}
-	}
-	if cluster.Status.Repave != nil {
-		if err = d.Set("review_repave_state", cluster.Status.Repave.State); err != nil {
-			return err
-		}
-	}
-	err = d.Set("force_delete", false)
-	if err != nil {
-		return err
-	}
-	err = d.Set("force_delete_delay", 20)
-	if err != nil {
-		return err
-	}
-	err = d.Set("skip_completion", false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return setCommonClusterImportAttributes(cluster, d, true)
 }
 
 func GetCommonCluster(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
@@ -278,67 +284,17 @@ func generalWarningForRepave(diags *diag.Diagnostics) {
 }
 
 func flattenCommonAttributeForCustomClusterImport(c *client.V1Client, d *schema.ResourceData) error {
-	clusterProfiles, err := flattenClusterProfileForImport(c, d)
-	if err != nil {
-		return err
-	}
-	err = d.Set("cluster_profile", clusterProfiles)
-	if err != nil {
-		return err
-	}
-
 	var diags diag.Diagnostics
 	cluster, err := resourceClusterRead(d, c, diags)
 	if err != nil {
 		return err
 	}
 
-	if cluster.Metadata.Annotations["description"] != "" {
-		if err := d.Set("description", cluster.Metadata.Annotations["description"]); err != nil {
-			return err
-		}
+	if err := setClusterProfilesOrTemplateForImport(c, d, cluster); err != nil {
+		return err
 	}
 
-	if cluster.Status.SpcApply != nil {
-		err = d.Set("apply_setting", cluster.Status.SpcApply.ActionType)
-		if err != nil {
-			return err
-		}
-	}
-
-	if cluster.Spec.ClusterConfig.Timezone != "" {
-		if err := d.Set("cluster_timezone", cluster.Spec.ClusterConfig.Timezone); err != nil {
-			return err
-		}
-	}
-
-	err = d.Set("pause_agent_upgrades", getSpectroComponentsUpgrade(cluster))
-	if err != nil {
-		return err
-	}
-	if cluster.Spec.ClusterConfig.MachineManagementConfig != nil {
-		err = d.Set("os_patch_on_boot", cluster.Spec.ClusterConfig.MachineManagementConfig.OsPatchConfig.PatchOnBoot)
-		if err != nil {
-			return err
-		}
-		err = d.Set("os_patch_schedule", cluster.Spec.ClusterConfig.MachineManagementConfig.OsPatchConfig.Schedule)
-		if err != nil {
-			return err
-		}
-	}
-	err = d.Set("force_delete", false)
-	if err != nil {
-		return err
-	}
-	err = d.Set("force_delete_delay", 20)
-	if err != nil {
-		return err
-	}
-	err = d.Set("skip_completion", false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return setCommonClusterImportAttributes(cluster, d, false)
 }
 
 func flattenCloudConfigGeneric(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
