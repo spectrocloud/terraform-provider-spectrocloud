@@ -21,7 +21,11 @@ func getMockSpectroCluster() *models.V1SpectroCluster {
 			},
 		},
 		Spec: &models.V1SpectroClusterSpec{
+			CloudType:   "aws",
 			ClusterType: "full",
+			CloudConfigRef: &models.V1ObjectReference{
+				UID: MockCloudConfigUID,
+			},
 			ClusterConfig: &models.V1ClusterConfig{
 				ClusterMetaAttribute:        "test-cluster-meta-attributes",
 				UpdateWorkerPoolsInParallel: true,
@@ -42,6 +46,9 @@ func getMockSpectroCluster() *models.V1SpectroCluster {
 		},
 		Status: &models.V1SpectroClusterStatus{
 			State: "Running",
+			Repave: &models.V1ClusterRepaveStatus{
+				State: models.V1ClusterRepaveStateApproved.Pointer(),
+			},
 			SpcApply: &models.V1SpcApply{
 				CanBeApplied: true,
 			},

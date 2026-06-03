@@ -293,8 +293,10 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 	if cluster == nil {
 		return nil
 	}
-	if cluster.Status.Repave.State != nil {
-		if *cluster.Status.Repave.State == models.V1ClusterRepaveStatePending {
+	if cluster.Status == nil || cluster.Status.Repave == nil || cluster.Status.Repave.State == nil {
+		return nil
+	}
+	if *cluster.Status.Repave.State == models.V1ClusterRepaveStatePending {
 			if approveClusterRepave == "Approved" {
 				err := c.ApproveClusterRepave(d.Id())
 				if err != nil {
@@ -318,7 +320,6 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 				err = errors.New("cluster repave state is pending. \nDue to the following reasons -  \n" + strings.Join(reasons, "\n") + "\nKindly verify the cluster and set `review_repave_state` to `Approved` to continue the repave operation and day 2 operation on the cluster.")
 				return err
 			}
-		}
 	}
 
 	return nil

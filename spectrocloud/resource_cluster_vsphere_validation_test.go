@@ -34,10 +34,10 @@ func TestValidateMachinePoolChange(t *testing.T) {
 
 	basePlacement := []interface{}{
 		map[string]interface{}{
-			"cluster":       "cluster-a",
-			"datastore":     "ds-a",
-			"resource_pool": "rp-a",
-			"network":       "net-a",
+			"cluster":           "cluster-a",
+			"datastore":         "ds-a",
+			"resource_pool":     "rp-a",
+			"network":           "net-a",
 			"static_ip_pool_id": "",
 		},
 	}
@@ -50,10 +50,10 @@ func TestValidateMachinePoolChange(t *testing.T) {
 
 	t.Run("placement length change is rejected", func(t *testing.T) {
 		newPlacement := append(basePlacement, map[string]interface{}{
-			"cluster":       "cluster-b",
-			"datastore":     "ds-b",
-			"resource_pool": "rp-b",
-			"network":       "net-b",
+			"cluster":           "cluster-b",
+			"datastore":         "ds-b",
+			"resource_pool":     "rp-b",
+			"network":           "net-b",
 			"static_ip_pool_id": "",
 		})
 
@@ -66,10 +66,10 @@ func TestValidateMachinePoolChange(t *testing.T) {
 	t.Run("cluster value change is rejected", func(t *testing.T) {
 		updatedPlacement := []interface{}{
 			map[string]interface{}{
-				"cluster":       "cluster-b",
-				"datastore":     "ds-a",
-				"resource_pool": "rp-a",
-				"network":       "net-a",
+				"cluster":           "cluster-b",
+				"datastore":         "ds-a",
+				"resource_pool":     "rp-a",
+				"network":           "net-a",
 				"static_ip_pool_id": "",
 			},
 		}

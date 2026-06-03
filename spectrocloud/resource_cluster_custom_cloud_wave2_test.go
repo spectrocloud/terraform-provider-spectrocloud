@@ -5,9 +5,53 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const (
+	customCloudType           = "nutanix"
+	customCloudConfigUID      = "test-cloud-config-id"
+	customCloudAccountUID     = "test-custom-account-id-1"
+	customCloudPoolYAML       = "kind: KubeadmControlPlane\nmetadata:\n  name: pool-1\nspec:\n  replicas: 3"
+	customCloudPool2YAML      = "kind: MachineDeployment\nmetadata:\n  name: pool-2\nspec:\n  replicas: 2\n  template:\n    spec: {}"
+	customCloudClusterProfile = "cluster-profile-import-1"
+)
+
+func customCloudMachinePoolSet(pools ...map[string]interface{}) *schema.Set {
+	items := make([]interface{}, len(pools))
+	for i, p := range pools {
+		items[i] = p
+	}
+	return schema.NewSet(resourceMachinePoolCustomCloudHash, items)
+}
+
+func prepareCustomCloudResourceData(t *testing.T) *schema.ResourceData {
+	t.Helper()
+	d := resourceClusterCustomCloud().TestResourceData()
+	require.NoError(t, d.Set("name", "test-custom-cluster"))
+	require.NoError(t, d.Set("context", "project"))
+	require.NoError(t, d.Set("cloud", customCloudType))
+	require.NoError(t, d.Set("cloud_account_id", customCloudAccountUID))
+	require.NoError(t, d.Set("cloud_config_id", customCloudConfigUID))
+	require.NoError(t, d.Set("cluster_profile", []interface{}{
+		map[string]interface{}{"id": customCloudClusterProfile},
+	}))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"values": "kind: Cluster\nmetadata:\n  name: test-custom-cluster",
+		},
+	}))
+	require.NoError(t, d.Set("machine_pool", []interface{}{
+		map[string]interface{}{
+			"control_plane":           true,
+			"control_plane_as_worker": true,
+			"node_pool_config":        customCloudPoolYAML,
+		},
+	}))
+	return d
+}
 
 func TestApplyYamlOverridesPath(t *testing.T) {
 	yamlContent := `kind: Cluster
@@ -163,4 +207,189 @@ func TestParseDocumentSpecificPath(t *testing.T) {
 	kind, path = parseDocumentSpecificPath("metadata.name")
 	assert.Equal(t, "", kind)
 	assert.Equal(t, "metadata.name", path)
+}
+
+func TestResourceClusterCustomCloudReadWithMock(t *testing.T) {
+	d := prepareCustomCloudResourceData(t)
+	d.SetId("test-cluster-id")
+
+	diags := resourceClusterCustomCloudRead(context.Background(), d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, customCloudConfigUID, d.Get("cloud_config_id"))
+	assert.Equal(t, customCloudAccountUID, d.Get("cloud_account_id"))
+}
+
+func TestResourceClusterCustomCloudUpdateCloudConfigWithMock(t *testing.T) {
+	d := prepareCustomCloudResourceData(t)
+	d.SetId("test-cluster-id")
+
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"values": "kind: Cluster\nmetadata:\n  name: old-name",
+		},
+	}))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"values": "kind: Cluster\nmetadata:\n  name: new-name",
+		},
+	}))
+
+	diags := resourceClusterCustomCloudUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}
+
+func TestResourceClusterCustomCloudCreateWithMock(t *testing.T) {
+	d := prepareCustomCloudResourceData(t)
+	require.NoError(t, d.Set("tags", []interface{}{"skip_completion"}))
+
+	diags := resourceClusterCustomCloudCreate(context.Background(), d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "test-custom-cluster-id", d.Id())
+}
+
+func TestApplyWildcardPatternOverrides(t *testing.T) {
+	yamlContent := `kind: Cluster
+metadata:
+  hostname: old-host
+  labels:
+    env: dev`
+
+	out, err := applyWildcardPatternOverrides(yamlContent, map[string]interface{}{
+		"*name": "patched",
+	})
+	require.NoError(t, err)
+	assert.Contains(t, out, "patched")
+}
+
+func TestApplyFieldPatternOverrides(t *testing.T) {
+	yamlContent := `kind: Cluster
+spec:
+  rootVolume:
+    size: 100
+  other: 1`
+
+	out, err := applyFieldPatternOverrides(yamlContent, map[string]interface{}{
+		"rootVolume.size": "256",
+	})
+	require.NoError(t, err)
+	assert.Contains(t, out, "256")
+	assert.NotContains(t, out, "100")
+}
+
+func TestApplyYamlOverridesWithTemplatesWildcardAndField(t *testing.T) {
+	yamlContent := `kind: Cluster
+metadata:
+  hostname: host-${env}
+spec:
+  rootVolume:
+    size: 10`
+
+	out, err := applyYamlOverridesWithTemplates(yamlContent, map[string]interface{}{
+		"env":             "prod",
+		"rootVolume.size": "512",
+	})
+	require.NoError(t, err)
+	assert.Contains(t, out, "host-prod")
+	assert.Contains(t, out, "512")
+}
+
+func TestExtractMachinePoolNameFromYAML(t *testing.T) {
+	name := extractMachinePoolNameFromYAML(map[string]interface{}{
+		"node_pool_config": customCloudPoolYAML,
+	})
+	assert.Equal(t, "pool-1", name)
+}
+
+func TestResourceClusterCustomCloudUpdateMachinePoolWithMock(t *testing.T) {
+	d := prepareCustomCloudResourceData(t)
+	d.SetId("test-cluster-id")
+
+	oldPool := map[string]interface{}{
+		"control_plane":           true,
+		"control_plane_as_worker": true,
+		"node_pool_config":        customCloudPoolYAML,
+	}
+	updatedYAML := "kind: KubeadmControlPlane\nmetadata:\n  name: pool-1\nspec:\n  replicas: 5"
+	newPool := map[string]interface{}{
+		"control_plane":           true,
+		"control_plane_as_worker": true,
+		"node_pool_config":        updatedYAML,
+	}
+
+	require.NoError(t, d.Set("machine_pool", customCloudMachinePoolSet(oldPool)))
+	require.NoError(t, d.Set("machine_pool", customCloudMachinePoolSet(newPool)))
+
+	diags := resourceClusterCustomCloudUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}
+
+func TestResourceClusterCustomCloudUpdateMachinePoolAddWithMock(t *testing.T) {
+	d := prepareCustomCloudResourceData(t)
+	d.SetId("test-cluster-id")
+
+	pool1 := map[string]interface{}{
+		"control_plane":           true,
+		"control_plane_as_worker": true,
+		"node_pool_config":        customCloudPoolYAML,
+	}
+	pool2 := map[string]interface{}{
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"node_pool_config":        customCloudPool2YAML,
+	}
+
+	require.NoError(t, d.Set("machine_pool", customCloudMachinePoolSet(pool1)))
+	require.NoError(t, d.Set("machine_pool", customCloudMachinePoolSet(pool1, pool2)))
+
+	diags := resourceClusterCustomCloudUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}
+
+func TestResourceClusterCustomCloudUpdateMachinePoolDeleteWithMock(t *testing.T) {
+	d := prepareCustomCloudResourceData(t)
+	d.SetId("test-cluster-id")
+
+	pool1 := map[string]interface{}{
+		"control_plane":           true,
+		"control_plane_as_worker": true,
+		"node_pool_config":        customCloudPoolYAML,
+	}
+	pool2 := map[string]interface{}{
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"node_pool_config":        customCloudPool2YAML,
+	}
+
+	require.NoError(t, d.Set("machine_pool", customCloudMachinePoolSet(pool1, pool2)))
+	require.NoError(t, d.Set("machine_pool", customCloudMachinePoolSet(pool1)))
+
+	diags := resourceClusterCustomCloudUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}
+
+func TestResourceClusterCustomCloudUpdateClusterProfileWithMock(t *testing.T) {
+	d := prepareCustomCloudResourceData(t)
+	d.SetId("test-cluster-id")
+	require.NoError(t, d.Set("tags", []interface{}{"skip_apply"}))
+
+	setChangedClusterProfiles(t, d,
+		[]interface{}{map[string]interface{}{"id": "cluster-profile-import-2"}},
+		[]interface{}{map[string]interface{}{"id": "cluster-profile-import-1"}},
+	)
+
+	diags := resourceClusterCustomCloudUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError())
+}
+
+func TestFlattenCloudConfigCustomWithMock(t *testing.T) {
+	d := prepareCustomCloudResourceData(t)
+	c := mustUnitClient(t, false)
+
+	diags, hasError := flattenCloudConfigCustom(customCloudConfigUID, d, c)
+	assert.False(t, hasError)
+	assert.Empty(t, diags)
+
+	pools, ok := d.Get("machine_pool").(*schema.Set)
+	require.True(t, ok)
+	assert.Greater(t, pools.Len(), 0)
 }

@@ -799,6 +799,12 @@ func CloudAccountsRoutes() []Route {
 							Logo:          "",
 							Name:          "test-cloud",
 						},
+						{
+							CloudCategory: models.V1CloudCategoryCloud.Pointer(),
+							DisplayName:   "nutanix",
+							IsCustom:      true,
+							Name:          "nutanix",
+						},
 					},
 				},
 			},

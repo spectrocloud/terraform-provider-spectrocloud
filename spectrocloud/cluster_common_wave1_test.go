@@ -225,4 +225,3 @@ func TestReadCommonFieldsPaths(t *testing.T) {
 		assert.Equal(t, true, d.Get("update_worker_pools_in_parallel"))
 	})
 }
-
