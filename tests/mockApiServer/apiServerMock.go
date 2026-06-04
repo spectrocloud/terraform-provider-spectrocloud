@@ -119,6 +119,7 @@ func init() {
 		routes.ClusterCommonRoutes,
 		routes.AksClusterRoutes,
 		routes.AzureClusterRoutes,
+		routes.EksClusterRoutes,
 		routes.ClusterRoutes,
 		routes.CustomCloudClusterRoutes,
 		routes.AwsClusterRoutes,
