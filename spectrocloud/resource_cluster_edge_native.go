@@ -214,6 +214,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							//ForceNew: true,
 							Description: "Name of the machine pool.",
 						},
+						"arch_type": schemas.MachinePoolArchTypeSchema(),
 						"additional_labels": {
 							Type:     schema.TypeMap,
 							Optional: true,
@@ -562,6 +563,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
+		oi["arch_type"] = flattenMachinePoolArchType(machinePool.MachinePoolProperties)
 		if machinePool.UpdateStrategy != nil {
 			oi["update_strategy"] = machinePool.UpdateStrategy.Type
 			// Flatten override_Scaling if using OverrideScaling strategy
@@ -863,6 +865,8 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 			return mp, err
 		}
 	}
+
+	mp.PoolConfig.MachinePoolProperties = toMachinePoolProperties(m)
 
 	return mp, nil
 }

@@ -34,6 +34,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     control_plane           = true
     control_plane_as_worker = true
     name                    = "cp-pool"
+    arch_type               = "amd64"
 
     edge_host {
       host_uid  = spectrocloud_appliance.appliance0.uid
@@ -43,7 +44,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
   }
 
   machine_pool {
-    name = "worker-pool"
+    name      = "worker-pool"
 
     edge_host {
       host_uid  = spectrocloud_appliance.appliance1.uid
@@ -149,6 +150,7 @@ Optional:
 
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
+- `arch_type` (String) Architecture type of the machine pool. Allowed values are `amd64` and `arm64`. Default is `amd64`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
