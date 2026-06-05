@@ -197,6 +197,8 @@ Optional:
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
+- `os_sku` (String) OS SKU for the AKS node pool. Valid values are `Ubuntu`, `AzureLinux`, and `Windows2022`. Immutable after creation.
+- `os_type` (String) Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.
 - `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))

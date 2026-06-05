@@ -348,6 +348,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 					Size:                    types.Ptr(int32(len(edgeHosts.EdgeHosts))),
 					UpdateStrategy:          &models.V1UpdateStrategy{Type: getUpdateStrategy(tt.input)},
 					UseControlPlaneAsWorker: false,
+					MachinePoolProperties:   toMachinePoolProperties(tt.input),
 				},
 			}
 
@@ -437,6 +438,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool1",
+					"arch_type":               "amd64",
 					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 						map[string]interface{}{
 							"host_name":       "host1",
@@ -466,6 +468,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool2",
+					"arch_type":               "amd64",
 					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 						map[string]interface{}{
 							"host_name":       "host3",
@@ -616,6 +619,51 @@ func TestFlattenEdgeNativePoolHost(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFlattenMachinePoolArchType(t *testing.T) {
+	assert.Equal(t, "amd64", flattenMachinePoolArchType(nil))
+	assert.Equal(t, "amd64", flattenMachinePoolArchType(&models.V1MachinePoolProperties{}))
+	assert.Equal(t, "arm64", flattenMachinePoolArchType(&models.V1MachinePoolProperties{
+		ArchType: models.V1ArchTypeArm64.Pointer(),
+	}))
+}
+
+func TestToMachinePoolEdgeNativeArchType(t *testing.T) {
+	hostUID := "host-1"
+	mp, err := toMachinePoolEdgeNative(map[string]interface{}{
+		"name":                    "pool1",
+		"arch_type":               "arm64",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
+		"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+			map[string]interface{}{
+				"host_uid": hostUID,
+			},
+		}),
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, mp.PoolConfig.MachinePoolProperties)
+	assert.NotNil(t, mp.PoolConfig.MachinePoolProperties.ArchType)
+	assert.Equal(t, models.V1ArchTypeArm64, *mp.PoolConfig.MachinePoolProperties.ArchType)
+}
+
+func TestFlattenMachinePoolConfigsEdgeNativeArchType(t *testing.T) {
+	hostUID := "host-1"
+	result := flattenMachinePoolConfigsEdgeNative([]*models.V1EdgeNativeMachinePoolConfig{
+		{
+			Name: "pool-arm",
+			Hosts: []*models.V1EdgeNativeHost{
+				{HostUID: &hostUID},
+			},
+			MachinePoolProperties: &models.V1MachinePoolProperties{
+				ArchType: models.V1ArchTypeArm64.Pointer(),
+			},
+		},
+	})
+	assert.Len(t, result, 1)
+	assert.Equal(t, "arm64", result[0].(map[string]interface{})["arch_type"])
 }
 
 func TestValidationNodeRepaveIntervalForControlPlane(t *testing.T) {

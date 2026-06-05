@@ -18,6 +18,8 @@ func TestToMachinePoolAks(t *testing.T) {
 		"disk_size_gb":         50,
 		"storage_account_type": "Premium_LRS",
 		"is_system_node_pool":  true,
+		"os_sku":               "AzureLinux",
+		"os_type":              "Linux",
 		"name":                 "pool-1",
 		"update_strategy":      "RollingUpdateScaleOut",
 	}
@@ -31,6 +33,9 @@ func TestToMachinePoolAks(t *testing.T) {
 	assert.Equal(t, int32(50), mp.CloudConfig.OsDisk.DiskSizeGB)
 	assert.Equal(t, "Premium_LRS", mp.CloudConfig.OsDisk.ManagedDisk.StorageAccountType)
 	assert.True(t, mp.ManagedPoolConfig.IsSystemNodePool)
+	assert.Equal(t, models.V1OsSkuAzureLinux, mp.ManagedPoolConfig.OsSku)
+	assert.Equal(t, models.V1OsTypeLinux, *mp.ManagedPoolConfig.OsType)
+	assert.Equal(t, models.V1OsTypeLinux, *mp.CloudConfig.OsDisk.OsType)
 	assert.Equal(t, "pool-1", *mp.PoolConfig.Name)
 	assert.Equal(t, int32(3), *mp.PoolConfig.Size)
 	assert.Equal(t, int32(1), mp.PoolConfig.MinSize)
@@ -99,6 +104,8 @@ func TestFlattenMachinePoolConfigsAks(t *testing.T) {
 		MaxSize:          5,
 		IsSystemNodePool: false,
 		InstanceType:     "Standard_DS2_v2",
+		OsSku:            models.V1OsSkuUbuntu,
+		OsType:           models.V1OsTypeLinux.Pointer(),
 		OsDisk: &models.V1AzureOSDisk{
 			DiskSizeGB: 100,
 			ManagedDisk: &models.V1ManagedDisk{
@@ -145,5 +152,7 @@ func TestFlattenMachinePoolConfigsAks(t *testing.T) {
 	assert.Equal(t, 100, m1["disk_size_gb"])
 	assert.False(t, m1["is_system_node_pool"].(bool))
 	assert.Equal(t, "Standard_LRS", m1["storage_account_type"])
+	assert.Equal(t, "Ubuntu", m1["os_sku"])
+	assert.Equal(t, "Linux", m1["os_type"])
 	assert.Equal(t, "RollingUpdate", m1["update_strategy"])
 }

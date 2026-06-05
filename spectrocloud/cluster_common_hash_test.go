@@ -360,6 +360,38 @@ func TestResourceMachinePoolAksHashAllFields(t *testing.T) {
 			description: "Changing storage_account_type should change hash",
 		},
 		{
+			name: "OS SKU change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"os_sku":               "Ubuntu",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["os_sku"] = "AzureLinux"
+			},
+			description: "Changing os_sku should change hash",
+		},
+		{
+			name: "OS type change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"os_type":              "Linux",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["os_type"] = "Windows"
+			},
+			description: "Changing os_type should change hash",
+		},
+		{
 			name: "Additional labels change affects hash",
 			baseInput: map[string]interface{}{
 				"name":                 "pool-1",
