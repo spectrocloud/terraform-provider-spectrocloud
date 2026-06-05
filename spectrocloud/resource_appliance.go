@@ -18,6 +18,8 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	schemas "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
 
 func resourceAppliance() *schema.Resource {
@@ -46,6 +48,11 @@ func resourceAppliance() *schema.Resource {
 				ForceNew:    true,
 				Description: "The unique identifier (UID) for the appliance.",
 			},
+			"arch_type": func() *schema.Schema {
+				s := schemas.MachinePoolArchTypeSchema()
+				s.ForceNew = true
+				return s
+			}(),
 			"tags": {
 				Type:        schema.TypeMap,
 				Optional:    true,
@@ -192,7 +199,27 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 	if err := d.Set("temporary_shell_credentials", temporaryShellCredentials); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := d.Set("arch_type", flattenApplianceArchType(appliance)); err != nil {
+		return diag.FromErr(err)
+	}
 	return diags
+}
+
+func flattenApplianceArchType(appliance *models.V1EdgeHostDevice) string {
+	if appliance != nil && appliance.Spec != nil && appliance.Spec.Device != nil &&
+		appliance.Spec.Device.ArchType != nil && *appliance.Spec.Device.ArchType != "" {
+		return *appliance.Spec.Device.ArchType
+	}
+	return "amd64"
+}
+
+func toApplianceArchType(d *schema.ResourceData) *models.V1ArchType {
+	archType := "amd64"
+	if v, ok := d.GetOk("arch_type"); ok && v.(string) != "" {
+		archType = v.(string)
+	}
+	arch := models.V1ArchType(archType)
+	return &arch
 }
 
 func flattenApplianceTunnelConfig(spec *models.V1EdgeHostDeviceSpec) (remoteShell, temporaryShellCredentials string) {
@@ -269,6 +296,7 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 		Metadata: metadata,
 		Spec: &models.V1EdgeHostDeviceSpecEntity{
 			HostPairingKey: strfmt.Password(key),
+			ArchType:       toApplianceArchType(d),
 		},
 	}
 }
