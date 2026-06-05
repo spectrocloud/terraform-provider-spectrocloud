@@ -1,5 +1,6 @@
 resource "spectrocloud_appliance" "appliance" {
-  uid = "test-dec9"
+  uid       = "test-dec9"
+  arch_type = "amd64"
   tags = {
     "name" = "appliance_name"
   }

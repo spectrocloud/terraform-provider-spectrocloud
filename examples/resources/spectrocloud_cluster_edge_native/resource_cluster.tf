@@ -15,6 +15,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     control_plane           = true
     control_plane_as_worker = true
     name                    = "cp-pool"
+    arch_type               = "amd64"
 
     edge_host {
       host_uid        = "edge-fsdsdedadfasdtest"

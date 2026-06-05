@@ -692,6 +692,10 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
 
+	if archType, ok := m["arch_type"].(string); ok && archType != "" {
+		fmt.Fprintf(buf, "arch_type:%s-", archType)
+	}
+
 	// Hash additional annotations and override_kubeadm_configuration
 	if _, ok := m["additional_annotations"]; ok {
 		buf.WriteString(HashStringMap(m["additional_annotations"]))
