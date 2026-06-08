@@ -348,6 +348,7 @@ func TestToMachinePoolEdgeNative(t *testing.T) {
 					Size:                    types.Ptr(int32(len(edgeHosts.EdgeHosts))),
 					UpdateStrategy:          &models.V1UpdateStrategy{Type: getUpdateStrategy(tt.input)},
 					UseControlPlaneAsWorker: false,
+					MachinePoolProperties:   toMachinePoolProperties(tt.input),
 				},
 			}
 
@@ -437,6 +438,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool1",
+					"arch_type":               "amd64",
 					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 						map[string]interface{}{
 							"host_name":       "host1",
@@ -466,6 +468,7 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 					"control_plane":           false,
 					"node_repave_interval":    int32(0),
 					"name":                    "pool2",
+					"arch_type":               "amd64",
 					"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
 						map[string]interface{}{
 							"host_name":       "host3",
@@ -517,6 +520,150 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFlattenEdgeNativePoolHost(t *testing.T) {
+	hostUID := "csi-3"
+
+	tests := []struct {
+		name     string
+		host     *models.V1EdgeNativeHost
+		expected map[string]interface{}
+	}{
+		{
+			name: "NIC IP is preferred over deprecated staticIP",
+			host: &models.V1EdgeNativeHost{
+				HostUID:  &hostUID,
+				HostName: "edge-host-1",
+				StaticIP: "10.0.0.1",
+				Nic: &models.V1Nic{
+					IP: "192.168.1.10",
+				},
+			},
+			expected: map[string]interface{}{
+				"host_name":       "edge-host-1",
+				"host_uid":        hostUID,
+				"static_ip":       "192.168.1.10",
+				"nic_name":        "",
+				"default_gateway": "",
+				"subnet_mask":     "",
+				"dns_servers":     []string(nil),
+			},
+		},
+		{
+			name: "Deprecated staticIP is used when NIC is nil",
+			host: &models.V1EdgeNativeHost{
+				HostUID:  &hostUID,
+				StaticIP: "192.168.1.20",
+				NicName:  "eth0",
+			},
+			expected: map[string]interface{}{
+				"host_name":       "",
+				"host_uid":        hostUID,
+				"static_ip":       "192.168.1.20",
+				"nic_name":        "eth0",
+				"default_gateway": "",
+				"subnet_mask":     "",
+				"dns_servers":     []string(nil),
+			},
+		},
+		{
+			name: "Deprecated staticIP is used when NIC IP is empty",
+			host: &models.V1EdgeNativeHost{
+				HostUID:  &hostUID,
+				StaticIP: "192.168.1.30",
+				Nic:      &models.V1Nic{},
+			},
+			expected: map[string]interface{}{
+				"host_name":       "",
+				"host_uid":        hostUID,
+				"static_ip":       "192.168.1.30",
+				"nic_name":        "",
+				"default_gateway": "",
+				"subnet_mask":     "",
+				"dns_servers":     []string(nil),
+			},
+		},
+		{
+			name: "Full NIC configuration is flattened",
+			host: &models.V1EdgeNativeHost{
+				HostUID:  &hostUID,
+				HostName: "edge-host-2",
+				Nic: &models.V1Nic{
+					IP:      "10.10.10.5",
+					NicName: "ens192",
+					Gateway: "10.10.10.1",
+					Subnet:  "255.255.255.0",
+					DNS:     []string{"8.8.8.8"},
+				},
+				TwoNodeCandidatePriority: "primary",
+			},
+			expected: map[string]interface{}{
+				"host_name":       "edge-host-2",
+				"host_uid":        hostUID,
+				"static_ip":       "10.10.10.5",
+				"nic_name":        "ens192",
+				"default_gateway": "10.10.10.1",
+				"subnet_mask":     "255.255.255.0",
+				"dns_servers":     []string{"8.8.8.8"},
+				"two_node_role":   "primary",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := flattenEdgeNativePoolHost(tt.host)
+			if diff := cmp.Diff(tt.expected, result); diff != "" {
+				t.Fatalf("flattenEdgeNativePoolHost mismatch (-expected +actual):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestFlattenMachinePoolArchType(t *testing.T) {
+	assert.Equal(t, "amd64", flattenMachinePoolArchType(nil))
+	assert.Equal(t, "amd64", flattenMachinePoolArchType(&models.V1MachinePoolProperties{}))
+	assert.Equal(t, "arm64", flattenMachinePoolArchType(&models.V1MachinePoolProperties{
+		ArchType: models.V1ArchTypeArm64.Pointer(),
+	}))
+}
+
+func TestToMachinePoolEdgeNativeArchType(t *testing.T) {
+	hostUID := "host-1"
+	mp, err := toMachinePoolEdgeNative(map[string]interface{}{
+		"name":                    "pool1",
+		"arch_type":               "arm64",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
+		"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+			map[string]interface{}{
+				"host_uid": hostUID,
+			},
+		}),
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, mp.PoolConfig.MachinePoolProperties)
+	assert.NotNil(t, mp.PoolConfig.MachinePoolProperties.ArchType)
+	assert.Equal(t, models.V1ArchTypeArm64, *mp.PoolConfig.MachinePoolProperties.ArchType)
+}
+
+func TestFlattenMachinePoolConfigsEdgeNativeArchType(t *testing.T) {
+	hostUID := "host-1"
+	result := flattenMachinePoolConfigsEdgeNative([]*models.V1EdgeNativeMachinePoolConfig{
+		{
+			Name: "pool-arm",
+			Hosts: []*models.V1EdgeNativeHost{
+				{HostUID: &hostUID},
+			},
+			MachinePoolProperties: &models.V1MachinePoolProperties{
+				ArchType: models.V1ArchTypeArm64.Pointer(),
+			},
+		},
+	})
+	assert.Len(t, result, 1)
+	assert.Equal(t, "arm64", result[0].(map[string]interface{})["arch_type"])
 }
 
 func TestValidationNodeRepaveIntervalForControlPlane(t *testing.T) {

@@ -217,6 +217,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							//ForceNew: true,
 							Description: "Name of the machine pool.",
 						},
+						"arch_type": schemas.MachinePoolArchTypeSchema(),
 						"additional_labels": {
 							Type:     schema.TypeMap,
 							Optional: true,
@@ -510,6 +511,46 @@ func flattenClusterConfigsEdgeNative(config *models.V1EdgeNativeCloudConfig) []i
 	return []interface{}{m}
 }
 
+// flattenEdgeNativePoolHost maps an API edge host to Terraform edge_host state.
+// Static IP and NIC details may be in host.nic or the deprecated top-level fields.
+func flattenEdgeNativePoolHost(host *models.V1EdgeNativeHost) map[string]interface{} {
+	if host == nil || host.HostUID == nil {
+		return nil
+	}
+
+	staticIP := host.StaticIP
+	nicName := host.NicName
+	defaultGateway := ""
+	subnetMask := ""
+	var dnsServers []string
+
+	if host.Nic != nil {
+		if host.Nic.IP != "" {
+			staticIP = host.Nic.IP
+		}
+		if host.Nic.NicName != "" {
+			nicName = host.Nic.NicName
+		}
+		defaultGateway = host.Nic.Gateway
+		subnetMask = host.Nic.Subnet
+		dnsServers = host.Nic.DNS
+	}
+
+	rawHost := map[string]interface{}{
+		"host_name":       host.HostName,
+		"host_uid":        *host.HostUID,
+		"static_ip":       staticIP,
+		"nic_name":        nicName,
+		"default_gateway": defaultGateway,
+		"subnet_mask":     subnetMask,
+		"dns_servers":     dnsServers,
+	}
+	if host.TwoNodeCandidatePriority != "" {
+		rawHost["two_node_role"] = host.TwoNodeCandidatePriority
+	}
+	return rawHost
+}
+
 func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMachinePoolConfig) []interface{} {
 	if machinePools == nil {
 		return make([]interface{}, 0)
@@ -525,6 +566,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
+		oi["arch_type"] = flattenMachinePoolArchType(machinePool.MachinePoolProperties)
 		if machinePool.UpdateStrategy != nil {
 			oi["update_strategy"] = machinePool.UpdateStrategy.Type
 			// Flatten override_Scaling if using OverrideScaling strategy
@@ -538,19 +580,9 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 
 		var hosts []interface{}
 		for _, host := range machinePool.Hosts {
-			rawHost := map[string]interface{}{
-				"host_name":       host.HostName,
-				"host_uid":        *host.HostUID,
-				"static_ip":       host.Nic.IP,
-				"nic_name":        host.Nic.NicName,
-				"default_gateway": host.Nic.Gateway,
-				"subnet_mask":     host.Nic.Subnet,
-				"dns_servers":     host.Nic.DNS,
+			if rawHost := flattenEdgeNativePoolHost(host); rawHost != nil {
+				hosts = append(hosts, rawHost)
 			}
-			if host.TwoNodeCandidatePriority != "" {
-				rawHost["two_node_role"] = host.TwoNodeCandidatePriority
-			}
-			hosts = append(hosts, rawHost)
 		}
 		oi["edge_host"] = schema.NewSet(resourceEdgeHostHash, hosts)
 		flattenUpdateStrategy(machinePool.UpdateStrategy, oi)
@@ -836,6 +868,8 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 			return mp, err
 		}
 	}
+
+	mp.PoolConfig.MachinePoolProperties = toMachinePoolProperties(m)
 
 	return mp, nil
 }

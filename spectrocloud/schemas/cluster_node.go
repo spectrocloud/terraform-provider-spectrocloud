@@ -5,6 +5,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
+func MachinePoolArchTypeSchema() *schema.Schema {
+	return &schema.Schema{
+		Type:         schema.TypeString,
+		Optional:     true,
+		Default:      "amd64",
+		Description:  "Architecture type of the machine pool. Allowed values are `amd64` and `arm64`. Default is `amd64`.",
+		ValidateFunc: validation.StringInSlice([]string{"amd64", "arm64"}, false),
+	}
+}
+
 func NodeSchema() *schema.Schema {
 	return &schema.Schema{
 		Type:     schema.TypeList,

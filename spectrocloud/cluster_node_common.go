@@ -146,3 +146,21 @@ func getNodeValue(nodeId, action string) map[string]interface{} {
 		"action":  action,
 	}
 }
+
+func toMachinePoolProperties(m map[string]interface{}) *models.V1MachinePoolProperties {
+	archType := "amd64"
+	if v, ok := m["arch_type"].(string); ok && v != "" {
+		archType = v
+	}
+	arch := models.V1ArchType(archType)
+	return &models.V1MachinePoolProperties{
+		ArchType: &arch,
+	}
+}
+
+func flattenMachinePoolArchType(properties *models.V1MachinePoolProperties) string {
+	if properties != nil && properties.ArchType != nil && string(*properties.ArchType) != "" {
+		return string(*properties.ArchType)
+	}
+	return "amd64"
+}

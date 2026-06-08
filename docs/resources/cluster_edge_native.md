@@ -34,6 +34,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
     control_plane           = true
     control_plane_as_worker = true
     name                    = "cp-pool"
+    arch_type               = "amd64"
 
     edge_host {
       host_uid  = spectrocloud_appliance.appliance0.uid
@@ -43,7 +44,7 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
   }
 
   machine_pool {
-    name = "worker-pool"
+    name      = "worker-pool"
 
     edge_host {
       host_uid  = spectrocloud_appliance.appliance1.uid
@@ -133,7 +134,7 @@ Optional:
 - `is_two_node_cluster` (Boolean) Set to `true` to enable a two-node cluster.
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
 - `overlay_cidr_range` (String) The Overlay (VPN) creates a virtual network, using techniques like VxLAN. It overlays the existing network infrastructure, enhancing connectivity either at Layer 2 or Layer 3, making it flexible and adaptable for various needs. For example, `100.64.192.0/24`
-- `ssh_keys` (Set of String) List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.
+- `ssh_keys` (Set of String, Sensitive) List of public SSH keys for the cluster (key material; treat as sensitive infrastructure).
 - `vip` (String) The `vip` can be specified as either an IP address or a fully qualified domain name (FQDN). If `overlay_cidr_range` is set, the `vip` should be within the specified `overlay_cidr_range`. By default, the `vip` is set to the first IP address within the given `overlay_cidr_range`. When not specified, Palette assigns the VIP and the assigned value is populated on read.
 
 
@@ -149,6 +150,7 @@ Optional:
 
 - `additional_annotations` (Map of String) Additional annotations to be applied to the machine pool. Annotations must be in the form of `key:value`.
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
+- `arch_type` (String) Architecture type of the machine pool. Allowed values are `amd64` and `arm64`. Default is `amd64`.
 - `control_plane` (Boolean) Whether this machine pool is a control plane. Defaults to `false`.
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))

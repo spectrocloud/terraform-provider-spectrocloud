@@ -177,6 +177,9 @@ func resourceMachinePoolAksHash(v interface{}) int {
 	if val, ok := nodePool["os_sku"].(string); ok && val != "" {
 		buf.WriteString(fmt.Sprintf("%s-", val))
 	}
+	if val, ok := nodePool["os_type"].(string); ok && val != "" {
+		buf.WriteString(fmt.Sprintf("%s-", val))
+	}
 
 	// Additional labels (map)
 	if _, ok := nodePool["additional_labels"]; ok {
@@ -688,6 +691,10 @@ func GpuConfigHash(config map[string]interface{}) string {
 func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
+
+	if archType, ok := m["arch_type"].(string); ok && archType != "" {
+		fmt.Fprintf(buf, "arch_type:%s-", archType)
+	}
 
 	// Hash additional annotations and override_kubeadm_configuration
 	if _, ok := m["additional_annotations"]; ok {
