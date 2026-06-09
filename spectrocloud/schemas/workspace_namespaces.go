@@ -11,7 +11,7 @@ import (
 func WorkspaceNamespacesSchema() *schema.Schema {
 	return &schema.Schema{
 		Type:        schema.TypeSet,
-		Optional:    true,
+		Required:    true,
 		Description: "The namespaces for the cluster.",
 		Set:         resourceWorkspaceNamespaceHash,
 		Elem: &schema.Resource{
