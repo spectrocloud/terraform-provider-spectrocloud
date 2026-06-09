@@ -81,8 +81,8 @@ Optional:
 - `image_template_folder` (String) vSphere folder containing VM image templates used for node provisioning.
 - `network_search_domain` (String) DNS search domain associated with the control plane endpoint.
 - `network_type` (String) Type of network endpoint used for the control plane address.
-- `ssh_key` (String, Sensitive) Public SSH key for the cluster (key material; treat as sensitive). `ssh_key` and `ssh_keys` are mutually exclusive.
-- `ssh_keys` (Set of String, Sensitive) List of public SSH keys (key material; treat as sensitive). `ssh_key` and `ssh_keys` are mutually exclusive.
+- `ssh_key` (String) Public SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
+- `ssh_keys` (Set of String) List of public SSH (Secure Shell) keys to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 - `static_ip` (Boolean) Whether to use static IP addressing for the control plane endpoint. Default is `false`.
 
 

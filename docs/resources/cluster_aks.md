@@ -160,7 +160,7 @@ Required:
 
 - `region` (String) Azure region where the AKS cluster is deployed. Changing this forces a new resource.
 - `resource_group` (String) Azure resource group where AKS resources are created. Changing this forces a new resource.
-- `ssh_key` (String, Sensitive) Public SSH key for the cluster nodes (key material; treat as sensitive infrastructure).
+- `ssh_key` (String) Public SSH key to be used for the cluster nodes.
 - `subscription_id` (String) Azure subscription ID used to provision the AKS cluster. Changing this forces a new resource.
 
 Optional:

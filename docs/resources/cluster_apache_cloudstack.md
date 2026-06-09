@@ -687,7 +687,7 @@ Optional:
 
 - `control_plane_endpoint` (String) Endpoint IP to be used for the API server. Should only be set for static CloudStack networks.
 - `project` (Block List, Max: 1) CloudStack project configuration (optional). If not specified, the cluster will be created in the domain's default project. (see [below for nested schema](#nestedblock--cloud_config--project))
-- `ssh_key_name` (String, Sensitive) SSH key pair name or key material for cluster nodes (treat as sensitive).
+- `ssh_key_name` (String) SSH key name for accessing cluster nodes.
 - `sync_with_cks` (Boolean) Determines if an external managed CKS (CloudStack Kubernetes Service) cluster should be created. Default is `false`.
 
 <a id="nestedblock--cloud_config--zone"></a>

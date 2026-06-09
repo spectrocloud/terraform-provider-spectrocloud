@@ -185,8 +185,7 @@ func resourceClusterEks() *schema.Resource {
 							Type:        schema.TypeString,
 							ForceNew:    true,
 							Optional:    true,
-							Sensitive:   true,
-							Description: "EC2 key pair name or SSH public key material for cluster nodes (treat as sensitive).",
+							Description: "Public SSH key to be used for the cluster nodes.",
 						},
 						"region": {
 							Type:        schema.TypeString,

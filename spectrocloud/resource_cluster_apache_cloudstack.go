@@ -197,8 +197,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 						"ssh_key_name": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Sensitive:   true,
-							Description: "SSH key pair name or key material for cluster nodes (treat as sensitive).",
+							Description: "SSH key name for accessing cluster nodes.",
 						},
 						"control_plane_endpoint": {
 							Type:        schema.TypeString,

@@ -186,21 +186,19 @@ func resourceClusterVsphere() *schema.Resource {
 						"ssh_key": {
 							Type:         schema.TypeString,
 							Optional:     true,
-							Sensitive:    true,
 							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
-							Description:  "Public SSH key for the cluster (key material; treat as sensitive). `ssh_key` and `ssh_keys` are mutually exclusive.",
+							Description:  "The SSH key to be used for the cluster. This is the public key that will be used to access the cluster nodes. `ssh_key & ssh_keys` are mutually exclusive.",
 							Deprecated:   "This field is deprecated and will be removed in the future. Use `ssh_keys` instead.",
 						},
 						"ssh_keys": {
 							Type:         schema.TypeSet,
 							Optional:     true,
 							Set:          schema.HashString,
-							Sensitive:    true,
 							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "List of public SSH keys (key material; treat as sensitive). `ssh_key` and `ssh_keys` are mutually exclusive.",
+							Description: "List of public SSH (Secure Shell) keys to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
 						},
 						"static_ip": {
 							Type:     schema.TypeBool,

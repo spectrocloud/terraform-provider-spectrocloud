@@ -174,20 +174,18 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 						"ssh_key": {
 							Type:         schema.TypeString,
 							Optional:     true,
-							Sensitive:    true,
 							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
-							Description:  "Public SSH key for the cluster (key material; treat as sensitive). `ssh_key` and `ssh_keys` are mutually exclusive.",
+							Description:  "Public SSH Key (Secure Shell) to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
 						},
 						"ssh_keys": {
 							Type:         schema.TypeSet,
 							Optional:     true,
 							Set:          schema.HashString,
-							Sensitive:    true,
 							ExactlyOneOf: []string{"cloud_config.0.ssh_key", "cloud_config.0.ssh_keys"},
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "List of public SSH keys (key material; treat as sensitive). `ssh_key` and `ssh_keys` are mutually exclusive.",
+							Description: "List of public SSH (Secure Shell) keys to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.",
 						},
 						"vip": {
 							Type:        schema.TypeString,

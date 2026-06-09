@@ -173,7 +173,7 @@ Required:
 
 - `region` (String) Azure region. This can be found in the Azure portal under `Resource groups`.
 - `resource_group` (String) Azure resource group. This can be found in the Azure portal under `Resource groups`.
-- `ssh_key` (String, Sensitive) Public SSH key for the cluster nodes (key material; treat as sensitive infrastructure).
+- `ssh_key` (String) Public SSH key to be used for the cluster nodes.
 - `subscription_id` (String) Azure subscription ID. This can be found in the Azure portal under `Subscriptions`.
 
 Optional:

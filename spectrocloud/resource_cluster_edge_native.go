@@ -166,14 +166,13 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"ssh_keys": {
-							Type:      schema.TypeSet,
-							Optional:  true,
-							Set:       schema.HashString,
-							Sensitive: true,
+							Type:     schema.TypeSet,
+							Optional: true,
+							Set:      schema.HashString,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
-							Description: "List of public SSH keys for the cluster (key material; treat as sensitive infrastructure).",
+							Description: "List of public SSH (Secure Shell) to establish, administer, and communicate with remote clusters.",
 						},
 						"vip": {
 							Type:        schema.TypeString,

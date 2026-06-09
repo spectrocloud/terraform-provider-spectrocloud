@@ -196,7 +196,7 @@ Refer to the [Import section](/docs#import) to learn more.
 Required:
 
 - `region` (String) The AWS region to deploy the cluster in.
-- `ssh_key_name` (String, Sensitive) EC2 key pair name or SSH public key material for cluster nodes (treat as sensitive).
+- `ssh_key_name` (String) Public SSH key to be used for the cluster nodes.
 
 Optional:
 
