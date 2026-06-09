@@ -256,6 +256,38 @@ func TestToMachinePoolEks(t *testing.T) {
 			},
 		},
 		{
+			name: "Worker pool with override_cluster_api_config",
+			input: map[string]interface{}{
+				"name":                        "worker-override",
+				"disk_size_gb":                50,
+				"instance_type":               "t3.medium",
+				"update_strategy":             "RollingUpdateScaleOut",
+				"count":                       2,
+				"az_subnets":                  map[string]interface{}{},
+				"override_cluster_api_config": "apiVersion: cluster.x-k8s.io/v1beta1\nkind: MachinePool",
+			},
+			expected: &models.V1EksMachinePoolConfigEntity{
+				CloudConfig: &models.V1EksMachineCloudConfigEntity{
+					RootDeviceSize: 50,
+					InstanceType:   "t3.medium",
+					CapacityType:   types.Ptr("on-demand"),
+				},
+				PoolConfig: &models.V1MachinePoolConfigEntity{
+					IsControlPlane:           false,
+					Labels:                   []string{"worker"},
+					Name:                     types.Ptr("worker-override"),
+					Size:                     types.Ptr(int32(2)),
+					MinSize:                  2,
+					MaxSize:                  2,
+					AdditionalLabels:         map[string]string{},
+					OverrideClusterAPIConfig: "apiVersion: cluster.x-k8s.io/v1beta1\nkind: MachinePool",
+					UpdateStrategy: &models.V1UpdateStrategy{
+						Type: "RollingUpdateScaleOut",
+					},
+				},
+			},
+		},
+		{
 			name: "Autoscaling pool normalizes size to min when count exceeds min",
 			input: map[string]interface{}{
 				"name":            "autoscaled-pool",
@@ -306,6 +338,7 @@ func TestToMachinePoolEks(t *testing.T) {
 				assert.Equal(t, tt.expected.PoolConfig.MinSize, got.PoolConfig.MinSize)
 				assert.Equal(t, tt.expected.PoolConfig.MaxSize, got.PoolConfig.MaxSize)
 			}
+			assert.Equal(t, tt.expected.PoolConfig.OverrideClusterAPIConfig, got.PoolConfig.OverrideClusterAPIConfig)
 		})
 	}
 }
@@ -541,6 +574,33 @@ func TestToCloudConfigEks(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "cloud config with override_cluster_api_config",
+			input: map[string]interface{}{
+				"region":                      "us-west-2",
+				"vpc_id":                      "vpc-override",
+				"ssh_key_name":                "my-key",
+				"endpoint_access":             "public",
+				"public_access_cidrs":         schema.NewSet(schema.HashString, []interface{}{}),
+				"private_access_cidrs":        schema.NewSet(schema.HashString, []interface{}{}),
+				"override_cluster_api_config": "kind: Cluster",
+			},
+			expected: &models.V1EksCloudClusterConfigEntity{
+				ClusterConfig: &models.V1EksClusterConfig{
+					BastionDisabled:          true,
+					VpcID:                    "vpc-override",
+					Region:                   types.Ptr("us-west-2"),
+					SSHKeyName:               "my-key",
+					OverrideClusterAPIConfig: "kind: Cluster",
+					EndpointAccess: &models.V1EksClusterConfigEndpointAccess{
+						Public:       true,
+						Private:      false,
+						PublicCIDRs:  []string{},
+						PrivateCIDRs: []string{},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -552,6 +612,7 @@ func TestToCloudConfigEks(t *testing.T) {
 			assert.Equal(t, tc.expected.ClusterConfig.VpcID, result.ClusterConfig.VpcID, "VpcID should match")
 			assert.Equal(t, *tc.expected.ClusterConfig.Region, *result.ClusterConfig.Region, "Region should match")
 			assert.Equal(t, tc.expected.ClusterConfig.SSHKeyName, result.ClusterConfig.SSHKeyName, "SSHKeyName should match")
+			assert.Equal(t, tc.expected.ClusterConfig.OverrideClusterAPIConfig, result.ClusterConfig.OverrideClusterAPIConfig, "OverrideClusterAPIConfig should match")
 
 			// Compare encryption config
 			if tc.expected.ClusterConfig.EncryptionConfig == nil {

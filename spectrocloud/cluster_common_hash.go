@@ -324,6 +324,9 @@ func resourceMachinePoolEksHash(v interface{}) int {
 	if val, ok := nodePool["override_kubeadm_configuration"].(string); ok && val != "" {
 		fmt.Fprintf(&buf, "%s-", val)
 	}
+	if val, ok := nodePool["override_cluster_api_config"].(string); ok && val != "" {
+		fmt.Fprintf(&buf, "%s-", val)
+	}
 
 	if val, ok := nodePool["count"]; ok {
 		buf.WriteString(fmt.Sprintf("%d-", val.(int)))

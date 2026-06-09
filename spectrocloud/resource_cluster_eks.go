@@ -253,6 +253,7 @@ func resourceClusterEks() *schema.Resource {
 							ForceNew:    true,
 							Optional:    true,
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -313,6 +314,7 @@ func resourceClusterEks() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"min": {
 							Type:     schema.TypeInt,
 							Optional: true,
@@ -651,6 +653,9 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	ret["region"] = *cloudConfig.Spec.ClusterConfig.Region
 	ret["vpc_id"] = cloudConfig.Spec.ClusterConfig.VpcID
 	ret["ssh_key_name"] = cloudConfig.Spec.ClusterConfig.SSHKeyName
+	if cloudConfig.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		ret["override_cluster_api_config"] = cloudConfig.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
 
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
@@ -707,6 +712,9 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		// Flatten override_kubeadm_configuration (worker pools only)
 		if machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
 
 		oi["min"] = int(machinePool.MinSize)
@@ -1142,6 +1150,9 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
 	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
+	}
 
 	if capacityType == "spot" {
 		maxPrice := "0.0" // default value
@@ -1297,14 +1308,20 @@ func toCloudConfigEks(cloudConfig map[string]interface{}) *models.V1EksCloudClus
 		access.PrivateCIDRs = cidrs
 	}
 
+	overrideClusterAPIConfig := ""
+	if cloudConfig["override_cluster_api_config"] != nil {
+		overrideClusterAPIConfig = cloudConfig["override_cluster_api_config"].(string)
+	}
+
 	clusterConfigEntity := &models.V1EksCloudClusterConfigEntity{
 		ClusterConfig: &models.V1EksClusterConfig{
-			BastionDisabled:  true,
-			VpcID:            cloudConfig["vpc_id"].(string),
-			Region:           types.Ptr(cloudConfig["region"].(string)),
-			SSHKeyName:       cloudConfig["ssh_key_name"].(string),
-			EncryptionConfig: encryptionConfig,
-			EndpointAccess:   access,
+			BastionDisabled:          true,
+			VpcID:                    cloudConfig["vpc_id"].(string),
+			Region:                   types.Ptr(cloudConfig["region"].(string)),
+			SSHKeyName:               cloudConfig["ssh_key_name"].(string),
+			EncryptionConfig:         encryptionConfig,
+			EndpointAccess:           access,
+			OverrideClusterAPIConfig: overrideClusterAPIConfig,
 		},
 	}
 
