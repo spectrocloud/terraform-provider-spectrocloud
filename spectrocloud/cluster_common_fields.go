@@ -293,32 +293,32 @@ func validateSystemRepaveApproval(d *schema.ResourceData, c *client.V1Client) er
 	if cluster == nil {
 		return nil
 	}
-	if cluster.Status.Repave.State != nil {
-		if *cluster.Status.Repave.State == models.V1ClusterRepaveStatePending {
-			if approveClusterRepave == "Approved" {
-				err := c.ApproveClusterRepave(d.Id())
-				if err != nil {
-					return err
-				}
-				cluster, err := c.GetCluster(d.Id())
-				if err != nil {
-					return err
-				}
-				if *cluster.Status.Repave.State == models.V1ClusterRepaveStateApproved {
-					return nil
-				} else {
-					err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `review_repave_state` to `Approved` to approve the repave operation on the cluster")
-					return err
-				}
-			} else {
-				reasons, err := c.GetRepaveReasons(d.Id())
-				if err != nil {
-					return err
-				}
-				err = errors.New("cluster repave state is pending. \nDue to the following reasons -  \n" + strings.Join(reasons, "\n") + "\nKindly verify the cluster and set `review_repave_state` to `Approved` to continue the repave operation and day 2 operation on the cluster.")
+	if cluster.Status == nil || cluster.Status.Repave == nil || cluster.Status.Repave.State == nil {
+		return nil
+	}
+	if *cluster.Status.Repave.State == models.V1ClusterRepaveStatePending {
+		if approveClusterRepave == "Approved" {
+			err := c.ApproveClusterRepave(d.Id())
+			if err != nil {
 				return err
 			}
+			cluster, err := c.GetCluster(d.Id())
+			if err != nil {
+				return err
+			}
+			if cluster.Status != nil && cluster.Status.Repave != nil && cluster.Status.Repave.State != nil &&
+				*cluster.Status.Repave.State == models.V1ClusterRepaveStateApproved {
+				return nil
+			}
+			err = errors.New("repave cluster is not approved - cluster repave state is still not approved. Please set `review_repave_state` to `Approved` to approve the repave operation on the cluster")
+			return err
 		}
+		reasons, err := c.GetRepaveReasons(d.Id())
+		if err != nil {
+			return err
+		}
+		err = errors.New("cluster repave state is pending. \nDue to the following reasons -  \n" + strings.Join(reasons, "\n") + "\nKindly verify the cluster and set `review_repave_state` to `Approved` to continue the repave operation and day 2 operation on the cluster.")
+		return err
 	}
 
 	return nil

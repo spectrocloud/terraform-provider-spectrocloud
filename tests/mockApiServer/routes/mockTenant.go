@@ -1,9 +1,19 @@
 package routes
 
 import (
-	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"net/http"
 )
+
+// Stable tenant UID for tenant-scoped macro and data source tests.
+const mockTenantUID = "test-tenant-uid"
+
+func getMockUserInfoPayload() map[string]interface{} {
+	return map[string]interface{}{
+		"orgName":   "Default",
+		"tenantUid": mockTenantUID,
+		"userUid":   "test-user-uid",
+	}
+}
 
 func TenantRoutes() []Route {
 	return []Route{
@@ -12,11 +22,7 @@ func TenantRoutes() []Route {
 			Path:   "/v1/users/info",
 			Response: ResponseData{
 				StatusCode: http.StatusOK,
-				Payload: models.V1UserInfo{
-					OrgName:   "Default",
-					TenantUID: generateRandomStringUID(),
-					UserUID:   generateRandomStringUID(),
-				},
+				Payload:    getMockUserInfoPayload(),
 			},
 		}}
 }
@@ -28,11 +34,7 @@ func TenantNegativeRoutes() []Route {
 			Path:   "/v1/users/info",
 			Response: ResponseData{
 				StatusCode: http.StatusOK,
-				Payload: models.V1UserInfo{
-					OrgName:   "Default",
-					TenantUID: generateRandomStringUID(),
-					UserUID:   generateRandomStringUID(),
-				},
+				Payload:    getMockUserInfoPayload(),
 			},
 		}}
 }

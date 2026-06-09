@@ -6,13 +6,18 @@ import (
 	"net/http"
 )
 
+const (
+	clusterProfileUID1 = "cluster-profile-import-1"
+	clusterProfileUID2 = "cluster-profile-import-2"
+)
+
 func getClusterProfilesMetadataResponse() *models.V1ClusterProfilesMetadata {
 	return &models.V1ClusterProfilesMetadata{
 		Items: []*models.V1ClusterProfileMetadata{
 			{
 				Metadata: &models.V1ObjectEntity{
 					Name: "test-cluster-profile-1",
-					UID:  generateRandomStringUID(),
+					UID:  clusterProfileUID1,
 				},
 				Spec: &models.V1ClusterProfileMetadataSpec{
 					CloudType: "aws",
@@ -22,7 +27,7 @@ func getClusterProfilesMetadataResponse() *models.V1ClusterProfilesMetadata {
 			{
 				Metadata: &models.V1ObjectEntity{
 					Name: "test-cluster-profile-2",
-					UID:  generateRandomStringUID(),
+					UID:  clusterProfileUID2,
 				},
 				Spec: &models.V1ClusterProfileMetadataSpec{
 					CloudType: "gcp",
@@ -46,7 +51,7 @@ func getClusterProfileResponse() *models.V1ClusterProfile {
 			Labels:                nil,
 			LastModifiedTimestamp: models.V1Time{},
 			Name:                  "test-cluster-profile-1",
-			UID:                   generateRandomStringUID(),
+			UID:                   clusterProfileUID1,
 		},
 		Spec: &models.V1ClusterProfileSpec{
 			Draft: nil,
