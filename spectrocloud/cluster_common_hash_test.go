@@ -818,6 +818,22 @@ func TestResourceMachinePoolEdgeNativeHash(t *testing.T) {
 		hash2 := resourceMachinePoolEdgeNativeHash(machinePool2)
 		assert.NotEqual(t, hash1, hash2, "different inputs must produce different hashes")
 	})
+
+	base := map[string]interface{}{
+		"name":          "worker",
+		"control_plane": false,
+		"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+			map[string]interface{}{"host_uid": "uid1"},
+		}),
+		"skip_k8s_upgrade": "disabled",
+	}
+	enabled := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		enabled[k] = v
+	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+	assert.NotEqual(t, resourceMachinePoolEdgeNativeHash(base), resourceMachinePoolEdgeNativeHash(enabled),
+		"edge native machine pool hash should change when skip_k8s_upgrade changes")
 }
 
 func TestGpuConfigHash(t *testing.T) {

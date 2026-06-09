@@ -459,7 +459,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"dns_servers":     []string(nil),
 						},
 					}),
-					"update_strategy": "strategy1",
+					"update_strategy":  "strategy1",
+					"skip_k8s_upgrade": "disabled",
 				},
 				map[string]interface{}{
 					"additional_labels":       map[string]string{"label2": "value2"},
@@ -480,7 +481,8 @@ func TestFlattenMachinePoolConfigsEdgeNative(t *testing.T) {
 							"dns_servers":     []string(nil),
 						},
 					}),
-					"update_strategy": "strategy2",
+					"update_strategy":  "strategy2",
+					"skip_k8s_upgrade": "disabled",
 				},
 			},
 		},
@@ -647,6 +649,41 @@ func TestToMachinePoolEdgeNativeArchType(t *testing.T) {
 	assert.NotNil(t, mp.PoolConfig.MachinePoolProperties)
 	assert.NotNil(t, mp.PoolConfig.MachinePoolProperties.ArchType)
 	assert.Equal(t, models.V1ArchTypeArm64, *mp.PoolConfig.MachinePoolProperties.ArchType)
+}
+
+func TestFlattenMachinePoolConfigsEdgeNativeSkipK8sUpgrade(t *testing.T) {
+	hostUID := "host-1"
+	enabled := "enabled"
+	result := flattenMachinePoolConfigsEdgeNative([]*models.V1EdgeNativeMachinePoolConfig{
+		{
+			Name: "worker-pool",
+			Hosts: []*models.V1EdgeNativeHost{
+				{HostUID: &hostUID},
+			},
+			SkipK8sUpgrade: &enabled,
+		},
+	})
+	assert.Len(t, result, 1)
+	assert.Equal(t, "enabled", result[0].(map[string]interface{})["skip_k8s_upgrade"])
+}
+
+func TestToMachinePoolEdgeNativeSkipK8sUpgrade(t *testing.T) {
+	hostUID := "host-1"
+	mp, err := toMachinePoolEdgeNative(map[string]interface{}{
+		"name":                    "worker-pool",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
+		"skip_k8s_upgrade":        "enabled",
+		"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+			map[string]interface{}{
+				"host_uid": hostUID,
+			},
+		}),
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, mp.PoolConfig.SkipK8sUpgrade)
+	assert.Equal(t, "enabled", *mp.PoolConfig.SkipK8sUpgrade)
 }
 
 func TestFlattenMachinePoolConfigsEdgeNativeArchType(t *testing.T) {
