@@ -120,13 +120,13 @@ terraform import spectrocloud_workspace.test_workspace {workspaceUID/workspace_n
 
 - `clusters` (Block Set, Min: 1) (see [below for nested schema](#nestedblock--clusters))
 - `name` (String) Name of the workspace.
+- `namespaces` (Block Set, Min: 1) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
 
 ### Optional
 
 - `backup_policy` (Block List, Max: 1) The backup policy for the cluster. If not specified, no backups will be taken. (see [below for nested schema](#nestedblock--backup_policy))
 - `cluster_rbac_binding` (Block List) The RBAC binding for the cluster. (see [below for nested schema](#nestedblock--cluster_rbac_binding))
 - `description` (String) Description of the workspace.
-- `namespaces` (Block Set) The namespaces for the cluster. (see [below for nested schema](#nestedblock--namespaces))
 - `tags` (Set of String) Set of tag strings in the form `key:value` applied to the workspace.
 - `workspace_quota` (Block List, Max: 1) Workspace quota default limits assigned to the namespace. (see [below for nested schema](#nestedblock--workspace_quota))
 
@@ -144,6 +144,29 @@ Required:
 Read-Only:
 
 - `cluster_name` (String)
+
+
+<a id="nestedblock--namespaces"></a>
+### Nested Schema for `namespaces`
+
+Required:
+
+- `name` (String) Name of the namespace. This is the name of the Kubernetes namespace in the cluster.
+- `resource_allocation` (Map of String) Resource allocation for the namespace. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration: `cpu_cores`, `memory_MiB`, `gpu`, and `gpu_provider`. Any other field names will not be honored by the system. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1', gpu_provider: 'nvidia'}`
+
+Optional:
+
+- `cluster_resource_allocations` (Block List, Max: 1) (see [below for nested schema](#nestedblock--namespaces--cluster_resource_allocations))
+- `images_blacklist` (List of String) List of images to disallow for the namespace. For example, `['nginx:latest', 'redis:latest']`
+
+<a id="nestedblock--namespaces--cluster_resource_allocations"></a>
+### Nested Schema for `namespaces.cluster_resource_allocations`
+
+Required:
+
+- `resource_allocation` (Map of String) Resource allocation for the cluster. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration: `cpu_cores`, `memory_MiB`, `gpu`. Any other field names will not be honored by the system. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.
+- `uid` (String) UID of the cluster for this namespace-specific resource allocation.
+
 
 
 <a id="nestedblock--backup_policy"></a>
@@ -190,29 +213,6 @@ Required:
 Optional:
 
 - `namespace` (String) The Kubernetes namespace of the subject. Required if 'type' is set to 'ServiceAccount'.
-
-
-
-<a id="nestedblock--namespaces"></a>
-### Nested Schema for `namespaces`
-
-Required:
-
-- `name` (String) Name of the namespace. This is the name of the Kubernetes namespace in the cluster.
-- `resource_allocation` (Map of String) Resource allocation for the namespace. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration: `cpu_cores`, `memory_MiB`, `gpu`, and `gpu_provider`. Any other field names will not be honored by the system. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1', gpu_provider: 'nvidia'}`
-
-Optional:
-
-- `cluster_resource_allocations` (Block List, Max: 1) (see [below for nested schema](#nestedblock--namespaces--cluster_resource_allocations))
-- `images_blacklist` (List of String) List of images to disallow for the namespace. For example, `['nginx:latest', 'redis:latest']`
-
-<a id="nestedblock--namespaces--cluster_resource_allocations"></a>
-### Nested Schema for `namespaces.cluster_resource_allocations`
-
-Required:
-
-- `resource_allocation` (Map of String) Resource allocation for the cluster. This is a map containing the resource type and the resource value. Only the following field names are supported for resource configuration: `cpu_cores`, `memory_MiB`, `gpu`. Any other field names will not be honored by the system. For example, `{cpu_cores: '2', memory_MiB: '2048', gpu: '1'}`. Note: gpu_provider is not supported here; use the default resource_allocation for GPU provider configuration.
-- `uid` (String) UID of the cluster for this namespace-specific resource allocation.
 
 
 

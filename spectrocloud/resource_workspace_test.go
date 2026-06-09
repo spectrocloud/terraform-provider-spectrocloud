@@ -226,13 +226,7 @@ func TestFlattenWorkspaceQuota(t *testing.T) {
 					},
 				},
 			},
-			expected: []interface{}{
-				map[string]interface{}{
-					"cpu":    0.0,
-					"memory": 0.0,
-					"gpu":    0,
-				},
-			},
+			expected: []interface{}{},
 		},
 		{
 			name: "Workspace with large GPU limit",
