@@ -2,14 +2,12 @@ package spectrocloud
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
@@ -46,7 +44,7 @@ func resourceAppliance() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The unique identifier (UID) for the appliance.",
+				Description: "The unique identifier (UID) for the appliance. Note: This field is required and must be unique across all appliances in the tenant.",
 			},
 			"arch_type": func() *schema.Schema {
 				s := schemas.MachinePoolArchTypeSchema()
@@ -113,15 +111,8 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 	appliance := toApplianceEntity(d)
 	uid, err := c.CreateAppliance(appliance)
-
 	if err != nil {
-		var e *transport.TransportError
-		if errors.As(err, &e) && e.Payload.Code == "AlreadyRegisteredEdgeHostDevice" {
-			uid = d.Get("uid").(string)
-			d.SetId(uid)
-		} else {
-			return diag.FromErr(err)
-		}
+		return diag.FromErr(err)
 	}
 
 	d.SetId(uid)

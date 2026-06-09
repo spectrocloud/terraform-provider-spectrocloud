@@ -42,7 +42,7 @@ The import will automatically populate all configuration fields from the Spectro
 
 ### Required
 
-- `uid` (String) The unique identifier (UID) for the appliance.
+- `uid` (String) The unique identifier (UID) for the appliance. Note: This field is required and must be unique across all appliances in the tenant.
 
 ### Optional
 
