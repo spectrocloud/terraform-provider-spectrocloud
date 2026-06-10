@@ -3,6 +3,7 @@ package spectrocloud
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-openapi/strfmt"
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
 
@@ -221,6 +223,9 @@ func resourceAuditTrailCreate(ctx context.Context, d *schema.ResourceData, m int
 	auditType := d.Get("type").(string)
 	switch auditType {
 	case auditTrailTypeCloudWatch:
+		if err := validateCloudWatchAuditTrail(d, c); err != nil {
+			return diag.FromErr(err)
+		}
 		config, err := toCloudWatchDataSinkConfig(d, "")
 		if err != nil {
 			return diag.FromErr(err)
@@ -231,6 +236,9 @@ func resourceAuditTrailCreate(ctx context.Context, d *schema.ResourceData, m int
 		}
 		d.SetId(uid)
 	case auditTrailTypeSplunk:
+		if err := validateSplunkAuditTrail(d, c, tenantUID); err != nil {
+			return diag.FromErr(err)
+		}
 		entity, err := toSplunkSinkEntity(d, false)
 		if err != nil {
 			return diag.FromErr(err)
@@ -297,6 +305,9 @@ func resourceAuditTrailUpdate(ctx context.Context, d *schema.ResourceData, m int
 	auditType := d.Get("type").(string)
 	switch auditType {
 	case auditTrailTypeCloudWatch:
+		if err := validateCloudWatchAuditTrail(d, c); err != nil {
+			return diag.FromErr(err)
+		}
 		config, err := toCloudWatchDataSinkConfig(d, d.Id())
 		if err != nil {
 			return diag.FromErr(err)
@@ -305,11 +316,7 @@ func resourceAuditTrailUpdate(ctx context.Context, d *schema.ResourceData, m int
 			return diag.FromErr(err)
 		}
 	case auditTrailTypeSplunk:
-		validateEntity, err := toSplunkSinkEntity(d, false)
-		if err != nil {
-			return diag.FromErr(err)
-		}
-		if err := c.ValidateSplunkAuditTrail(tenantUID, validateEntity.Spec); err != nil {
+		if err := validateSplunkAuditTrail(d, c, tenantUID); err != nil {
 			return diag.FromErr(err)
 		}
 		preserveToken := !d.HasChange("splunk.0.token")
@@ -398,6 +405,106 @@ func resourceAuditTrailImport(ctx context.Context, d *schema.ResourceData, m int
 	return []*schema.ResourceData{d}, nil
 }
 
+func priorCloudWatchBlockString(d *schema.ResourceData, field string) string {
+	raw := d.Get("cloudwatch")
+	if raw == nil {
+		return ""
+	}
+	lst, ok := raw.([]interface{})
+	if !ok || len(lst) == 0 {
+		return ""
+	}
+	m, ok := lst[0].(map[string]interface{})
+	if !ok || m == nil {
+		return ""
+	}
+	v, ok := m[field].(string)
+	if !ok {
+		return ""
+	}
+	return v
+}
+
+func priorSplunkBlockString(d *schema.ResourceData, field string) string {
+	raw := d.Get("splunk")
+	if raw == nil {
+		return ""
+	}
+	lst, ok := raw.([]interface{})
+	if !ok || len(lst) == 0 {
+		return ""
+	}
+	m, ok := lst[0].(map[string]interface{})
+	if !ok || m == nil {
+		return ""
+	}
+	v, ok := m[field].(string)
+	if !ok {
+		return ""
+	}
+	return v
+}
+
+func cloudWatchSecretKeyForRead(d *schema.ResourceData, apiSecret string) string {
+	if v := priorCloudWatchBlockString(d, "secret_key"); v != "" {
+		return v
+	}
+	if apiSecret != "" && !strings.Contains(apiSecret, "*") {
+		return apiSecret
+	}
+	return ""
+}
+
+func cloudWatchExternalIDForRead(d *schema.ResourceData, apiExternalID string) string {
+	if v := priorCloudWatchBlockString(d, "external_id"); v != "" {
+		return v
+	}
+	if apiExternalID != "" && !strings.Contains(apiExternalID, "*") {
+		return apiExternalID
+	}
+	return ""
+}
+
+func splunkTokenForRead(d *schema.ResourceData) string {
+	return priorSplunkBlockString(d, "token")
+}
+
+func toCloudWatchValidateConfig(d *schema.ResourceData) (*models.V1CloudWatchConfig, error) {
+	cwList := d.Get("cloudwatch").([]interface{})
+	if len(cwList) == 0 {
+		return nil, fmt.Errorf("cloudwatch block is required")
+	}
+	cw := cwList[0].(map[string]interface{})
+
+	stream := ""
+	if v, ok := cw["stream"].(string); ok {
+		stream = v
+	}
+
+	return &models.V1CloudWatchConfig{
+		Group:       cw["group"].(string),
+		Region:      cw["region"].(string),
+		Stream:      stream,
+		Credentials: toCloudWatchCredentials(d),
+	}, nil
+}
+
+func validateCloudWatchAuditTrail(d *schema.ResourceData, c *client.V1Client) error {
+	config, err := toCloudWatchValidateConfig(d)
+	if err != nil {
+		return err
+	}
+	return c.ValidateCloudWatchAuditTrail(config)
+}
+
+func validateSplunkAuditTrail(d *schema.ResourceData, c *client.V1Client, tenantUID string) error {
+	entity, err := toSplunkSinkEntity(d, false)
+	if err != nil {
+		return err
+	}
+	return c.ValidateSplunkAuditTrail(tenantUID, entity.Spec)
+}
+
 func toCloudWatchCredentials(d *schema.ResourceData) *models.V1AwsCloudAccount {
 	cwList := d.Get("cloudwatch").([]interface{})
 	cw := cwList[0].(map[string]interface{})
@@ -435,6 +542,11 @@ func toCloudWatchDataSinkConfig(d *schema.ResourceData, uid string) (*models.V1D
 	}
 	cw := cwList[0].(map[string]interface{})
 
+	stream := ""
+	if v, ok := cw["stream"].(string); ok {
+		stream = v
+	}
+
 	config := &models.V1DataSinkConfig{
 		Metadata: &models.V1ObjectMeta{
 			Name: d.Get("name").(string),
@@ -446,7 +558,7 @@ func toCloudWatchDataSinkConfig(d *schema.ResourceData, uid string) (*models.V1D
 					CloudWatch: &models.V1CloudWatch{
 						Group:       cw["group"].(string),
 						Region:      cw["region"].(string),
-						Stream:      cw["stream"].(string),
+						Stream:      stream,
 						Credentials: toCloudWatchCredentials(d),
 					},
 				},
@@ -534,11 +646,16 @@ func flattenCloudWatchAuditTrail(d *schema.ResourceData, config *models.V1DataSi
 			cwMap["credential_type"] = "sts"
 			if cw.Credentials.Sts != nil {
 				cwMap["arn"] = cw.Credentials.Sts.Arn
-				cwMap["external_id"] = cw.Credentials.Sts.ExternalID
+				if externalID := cloudWatchExternalIDForRead(d, cw.Credentials.Sts.ExternalID); externalID != "" {
+					cwMap["external_id"] = externalID
+				}
 			}
 		} else {
 			cwMap["credential_type"] = "secret"
 			cwMap["access_key"] = cw.Credentials.AccessKey
+			if secretKey := cloudWatchSecretKeyForRead(d, cw.Credentials.SecretKey); secretKey != "" {
+				cwMap["secret_key"] = secretKey
+			}
 		}
 	}
 
@@ -563,6 +680,9 @@ func flattenSplunkAuditTrail(d *schema.ResourceData, sink *models.V1SplunkSink) 
 		"hec_url": hecURL,
 		"index":   sink.Spec.Index,
 		"source":  sink.Spec.Source,
+	}
+	if token := splunkTokenForRead(d); token != "" {
+		spMap["token"] = token
 	}
 
 	if sink.Spec.TLSConfig != nil {

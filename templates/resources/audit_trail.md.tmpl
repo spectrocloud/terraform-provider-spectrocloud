@@ -9,27 +9,29 @@ description: |-
 
 {{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
 
-Audit trails forward Palette tenant audit logs to AWS CloudWatch or Splunk HEC. Each tenant supports at most one CloudWatch audit trail and one Splunk audit trail.
+Audit trails forward Palette tenant audit logs to AWS CloudWatch or Splunk HEC. Each tenant supports at most one CloudWatch audit trail and one Splunk audit trail. Both sink types can be configured on the same tenant at the same time.
 
-Credentials are validated against Palette before create and update, matching the tenant settings UI flow.
+CloudWatch audit trails are managed via `POST /v1/tenants/{tenantUID}/assets/dataSinks`. CloudWatch credentials and Splunk HEC settings are validated against Palette before create and update, matching the cloud account and tenant settings UI flow.
 
 ## Example Usage
 
 ### CloudWatch with access keys
 
+This example mirrors the tenant settings UI payload: log group `dev-hubble-audits` in `us-east-1` with secret credentials. Omit `stream` to write to the log group without a dedicated log stream.
+
 ```hcl
 resource "spectrocloud_audit_trail" "cloudwatch" {
-  name = "test-tf"
+  name = "rag"
   type = "cloudwatch"
 
   cloudwatch {
-    group  = "logs"
+    group  = "dev-hubble-audits"
     region = "us-east-1"
-    stream = "test"
 
     credential_type = "secret"
     access_key      = var.aws_access_key
     secret_key      = var.aws_secret_key
+    partition       = "aws"
   }
 }
 ```
@@ -38,16 +40,17 @@ resource "spectrocloud_audit_trail" "cloudwatch" {
 
 ```hcl
 resource "spectrocloud_audit_trail" "cloudwatch_sts" {
-  name = "test-tf-sts"
+  name = "rag-sts"
   type = "cloudwatch"
 
   cloudwatch {
-    group  = "logs"
+    group  = "dev-hubble-audits"
     region = "us-east-1"
 
     credential_type = "sts"
-    arn             = "arn:aws:iam::123456789012:role/SpectroCloudRole"
-    external_id     = var.external_id
+    arn             = var.aws_sts_role_arn
+    external_id     = var.aws_external_id
+    partition       = "aws"
   }
 }
 ```

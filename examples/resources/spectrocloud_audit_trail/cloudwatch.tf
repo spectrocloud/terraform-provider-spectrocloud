@@ -1,28 +1,32 @@
+# CloudWatch audit trail using secret credentials.
+# Maps to POST /v1/tenants/{tenantUID}/assets/dataSinks with type "cloudwatch".
+# A tenant may have one CloudWatch audit trail and one Splunk audit trail concurrently.
 resource "spectrocloud_audit_trail" "cloudwatch" {
-  name = "test-tf"
+  name = "rag"
   type = "cloudwatch"
 
   cloudwatch {
-    group  = "logs"
+    group  = "dev-hubble-audits"
     region = "us-east-1"
-    stream = "test"
 
     credential_type = "secret"
     access_key      = var.aws_access_key
     secret_key      = var.aws_secret_key
+    partition       = "aws"
   }
 }
 
 resource "spectrocloud_audit_trail" "cloudwatch_sts" {
-  name = "test-tf-sts"
+  name = "rag-sts"
   type = "cloudwatch"
 
   cloudwatch {
-    group  = "logs"
+    group  = "dev-hubble-audits"
     region = "us-east-1"
 
     credential_type = "sts"
-    arn             = "arn:aws:iam::123456789012:role/SpectroCloudRole"
-    external_id     = var.external_id
+    arn             = var.aws_sts_role_arn
+    external_id     = var.aws_external_id
+    partition       = "aws"
   }
 }
