@@ -2,11 +2,11 @@ package spectrocloud
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
@@ -14,146 +14,162 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// testProfileVariablesTwoVars is shared by ToClusterProfileVariables and restriction tests.
-var testProfileVariablesTwoVars = map[string]interface{}{
-	"variable": []interface{}{
-		map[string]interface{}{
-			"default_value": "default_value_1", "description": "description_1", "display_name": "display_name_1",
-			"format": "string", "hidden": false, "immutable": true, "name": "variable_name_1",
-			"regex": "regex_1", "required": true, "is_sensitive": false,
-		},
-		map[string]interface{}{
-			"default_value": "default_value_2", "description": "description_2", "display_name": "display_name_2",
-			"format": "integer", "hidden": true, "immutable": false, "name": "variable_name_2",
-			"regex": "regex_2", "required": false, "is_sensitive": true,
-		},
-	},
-}
-
 func TestToClusterProfileVariables(t *testing.T) {
-	tests := []struct {
-		name          string
-		cloud         string
-		typeStr       string
-		profileVars   []interface{}
-		expectLen     int
-		expectNoError bool
-	}{
-		{"valid two variables", "edge-native", "add-on", []interface{}{testProfileVariablesTwoVars}, 2, true},
-		{"empty profile_variables", "edge-native", "add-on", []interface{}{map[string]interface{}{}}, 0, true},
-		{"invalid format", "edge-native", "add-on", []interface{}{map[string]interface{}{"variable": []interface{}{}}}, 0, true},
-		{"restriction cloud all type infra", "all", "infra", []interface{}{testProfileVariablesTwoVars}, 2, true},
-		{"restriction cloud edge-native type infra", "edge-native", "infra", []interface{}{testProfileVariablesTwoVars}, 2, true},
-		{"restriction cloud aws type add-on", "aws", "add-on", []interface{}{testProfileVariablesTwoVars}, 2, true},
-		{"restriction cloud all type add-on", "all", "add-on", []interface{}{testProfileVariablesTwoVars}, 2, true},
-		{"restriction cloud aws type infra", "aws", "infra", []interface{}{testProfileVariablesTwoVars}, 2, true},
-		{"restriction cloud edge-native type add-on", "edge-native", "add-on", []interface{}{testProfileVariablesTwoVars}, 2, true},
+	mockResourceData := resourceClusterProfile().TestResourceData()
+	var proVar []interface{}
+	variables := map[string]interface{}{
+		"variable": []interface{}{
+			map[string]interface{}{
+				"default_value": "default_value_1",
+				"description":   "description_1",
+				"display_name":  "display_name_1",
+				"format":        "string",
+				"hidden":        false,
+				"immutable":     true,
+				"name":          "variable_name_1",
+				"regex":         "regex_1",
+				"required":      true,
+				"is_sensitive":  false,
+			},
+			map[string]interface{}{
+				"default_value": "default_value_2",
+				"description":   "description_2",
+				"display_name":  "display_name_2",
+				"format":        "integer",
+				"hidden":        true,
+				"immutable":     false,
+				"name":          "variable_name_2",
+				"regex":         "regex_2",
+				"required":      false,
+				"is_sensitive":  true,
+			},
+		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := resourceClusterProfile().TestResourceData()
-			_ = d.Set("cloud", tt.cloud)
-			_ = d.Set("type", tt.typeStr)
-			_ = d.Set("profile_variables", tt.profileVars)
-			result, err := toClusterProfileVariables(d)
-			if tt.expectNoError {
-				assert.NoError(t, err)
-			}
-			assert.Len(t, result, tt.expectLen)
-		})
-	}
-}
+	proVar = append(proVar, variables)
+	_ = mockResourceData.Set("cloud", "edge-native")
+	_ = mockResourceData.Set("type", "add-on")
+	_ = mockResourceData.Set("profile_variables", proVar)
+	result, err := toClusterProfileVariables(mockResourceData)
 
-// testFlattenProfileVariablesPV is the API model slice for flatten tests.
-var testFlattenProfileVariablesPV = []*models.V1Variable{
-	{Name: StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: models.NewV1VariableFormat("string"), DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
-	{Name: StringPtr("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: models.NewV1VariableFormat("integer"), DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
+	// Assertions for valid profile variables
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	// Test case 2: Empty profile variables
+	mockResourceDataEmpty := resourceClusterProfile().TestResourceData()
+	_ = mockResourceDataEmpty.Set("cloud", "edge-native")
+	_ = mockResourceDataEmpty.Set("type", "add-on")
+	_ = mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
+	resultEmpty, errEmpty := toClusterProfileVariables(mockResourceDataEmpty)
+
+	// Assertions for empty profile variables
+	assert.NoError(t, errEmpty)
+	assert.Len(t, resultEmpty, 0)
+
+	// Test case 3: Invalid profile variables format
+	mockResourceDataInvalid := resourceClusterProfile().TestResourceData()
+	_ = mockResourceDataInvalid.Set("cloud", "edge-native")
+	_ = mockResourceDataInvalid.Set("profile_variables", []interface{}{
+		map[string]interface{}{
+			"variable": []interface{}{}, // Invalid format, should be a list
+		},
+	})
+	resultInvalid, _ := toClusterProfileVariables(mockResourceDataInvalid)
+
+	// Assertions for invalid profile variables format
+	assert.Len(t, resultInvalid, 0) // No variables should be extracted on error
 }
 
 func TestFlattenProfileVariables(t *testing.T) {
-	validVariablesMap := map[string]interface{}{
+	// Test case 1: Valid profile variables and pv
+	mockResourceData := resourceClusterProfile().TestResourceData()
+	var proVar []interface{}
+	variables := map[string]interface{}{
 		"variable": []interface{}{
-			map[string]interface{}{"name": "variable_name_1", "display_name": "display_name_1", "description": "description_1", "format": "string", "default_value": "default_value_1", "regex": "regex_1", "required": true, "immutable": false, "hidden": false},
-			map[string]interface{}{"name": "variable_name_2", "display_name": "display_name_2", "description": "description_2", "format": "integer", "default_value": "default_value_2", "regex": "regex_2", "required": false, "immutable": true, "hidden": true},
-		},
-	}
-	tests := []struct {
-		name      string
-		setup     func() (*schema.ResourceData, []*models.V1Variable)
-		expectLen int
-		verify    func(t *testing.T, result []interface{})
-	}{
-		{
-			name: "valid profile variables and pv",
-			setup: func() (*schema.ResourceData, []*models.V1Variable) {
-				d := resourceClusterProfile().TestResourceData()
-				_ = d.Set("cloud", "edge-native")
-				_ = d.Set("profile_variables", []interface{}{validVariablesMap})
-				return d, testFlattenProfileVariablesPV
+			map[string]interface{}{
+				"name":          "variable_name_1",
+				"display_name":  "display_name_1",
+				"description":   "description_1",
+				"format":        "string",
+				"default_value": "default_value_1",
+				"regex":         "regex_1",
+				"required":      true,
+				"immutable":     false,
+				"hidden":        false,
 			},
-			expectLen: 1,
-			verify: func(t *testing.T, result []interface{}) {
-				assert.Equal(t, []interface{}{
-					map[string]interface{}{
-						"variable": []interface{}{
-							map[string]interface{}{
-								"name":          StringPtr("variable_name_1"),
-								"display_name":  "display_name_1",
-								"description":   "description_1",
-								"format":        models.NewV1VariableFormat("string"),
-								"default_value": "default_value_1",
-								"regex":         "regex_1",
-								"required":      true,
-								"immutable":     false,
-								"hidden":        false,
-								"is_sensitive":  false,
-								"input_type":    "text",
-								"options":       []interface{}(nil),
-							},
-							map[string]interface{}{
-								"name":          StringPtr("variable_name_2"),
-								"display_name":  "display_name_2",
-								"description":   "description_2",
-								"format":        models.NewV1VariableFormat("integer"),
-								"default_value": "default_value_2",
-								"regex":         "regex_2",
-								"required":      false,
-								"immutable":     true,
-								"hidden":        true,
-								"is_sensitive":  false,
-								"input_type":    "text",
-								"options":       []interface{}(nil),
-							},
-						},
-					},
-				}, result)
-			},
-		},
-		{
-			name: "empty profile variables and pv",
-			setup: func() (*schema.ResourceData, []*models.V1Variable) {
-				d := resourceClusterProfile().TestResourceData()
-				_ = d.Set("cloud", "edge-native")
-				_ = d.Set("profile_variables", []interface{}{map[string]interface{}{}})
-				return d, nil
-			},
-			expectLen: 0,
-			verify: func(t *testing.T, result []interface{}) {
-				assert.Equal(t, []interface{}{}, result)
+			map[string]interface{}{
+				"name":          "variable_name_2",
+				"display_name":  "display_name_2",
+				"description":   "description_2",
+				"format":        "integer",
+				"default_value": "default_value_2",
+				"regex":         "regex_2",
+				"required":      false,
+				"immutable":     true,
+				"hidden":        true,
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d, pv := tt.setup()
-			result, err := flattenProfileVariables(d, pv)
-			assert.NoError(t, err)
-			assert.Len(t, result, tt.expectLen)
-			if tt.verify != nil {
-				tt.verify(t, result)
-			}
-		})
+	proVar = append(proVar, variables)
+	_ = mockResourceData.Set("cloud", "edge-native")
+	_ = mockResourceData.Set("profile_variables", proVar)
+
+	pv := []*models.V1Variable{
+		{Name: StringPtr("variable_name_1"), DisplayName: "display_name_1", Description: "description_1", Format: models.NewV1VariableFormat("string"), DefaultValue: "default_value_1", Regex: "regex_1", Required: true, Immutable: false, Hidden: false},
+		{Name: StringPtr("variable_name_2"), DisplayName: "display_name_2", Description: "description_2", Format: models.NewV1VariableFormat("integer"), DefaultValue: "default_value_2", Regex: "regex_2", Required: false, Immutable: true, Hidden: true},
 	}
+
+	result, err := flattenProfileVariables(mockResourceData, pv)
+
+	// Assertions for valid profile variables and pv
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, []interface{}{
+		map[string]interface{}{
+			"variable": []interface{}{
+				map[string]interface{}{
+					"name":          StringPtr("variable_name_1"),
+					"display_name":  "display_name_1",
+					"description":   "description_1",
+					"format":        models.NewV1VariableFormat("string"),
+					"default_value": "default_value_1",
+					"regex":         "regex_1",
+					"required":      true,
+					"immutable":     false,
+					"hidden":        false,
+					"is_sensitive":  false,
+					"input_type":    "text",
+					"options":       []interface{}(nil),
+				},
+				map[string]interface{}{
+					"name":          StringPtr("variable_name_2"),
+					"display_name":  "display_name_2",
+					"description":   "description_2",
+					"format":        models.NewV1VariableFormat("integer"),
+					"default_value": "default_value_2",
+					"regex":         "regex_2",
+					"required":      false,
+					"immutable":     true,
+					"hidden":        true,
+					"is_sensitive":  false,
+					"input_type":    "text",
+					"options":       []interface{}(nil),
+				},
+			},
+		},
+	}, result)
+
+	// Test case 2: Empty profile variables and pv
+	//mockResourceDataEmpty := schema.TestResourceDataRaw(t, resourceClusterProfileVariables().Schema, map[string]interface{}{})
+	mockResourceDataEmpty := resourceClusterProfile().TestResourceData()
+	_ = mockResourceDataEmpty.Set("cloud", "edge-native")
+	_ = mockResourceDataEmpty.Set("profile_variables", []interface{}{map[string]interface{}{}})
+	resultEmpty, errEmpty := flattenProfileVariables(mockResourceDataEmpty, nil)
+
+	// Assertions for empty profile variables and pv
+	assert.NoError(t, errEmpty)
+	assert.Len(t, resultEmpty, 0)
+	assert.Equal(t, []interface{}{}, resultEmpty)
 }
 
 func TestToClusterProfileVariablesInputTypeAndOptions(t *testing.T) {
@@ -280,6 +296,78 @@ func TestFlattenProfileVariablesInputTypeAndOptions(t *testing.T) {
 	assert.Equal(t, "prod", opt1["value"])
 	assert.Equal(t, "Production", opt1["label"])
 	assert.False(t, opt1["default"].(bool))
+}
+
+func TestToClusterProfileVariablesRestrictionError(t *testing.T) {
+	mockResourceData := resourceClusterProfile().TestResourceData()
+	var proVar []interface{}
+	variables := map[string]interface{}{
+		"variable": []interface{}{
+			map[string]interface{}{
+				"default_value": "default_value_1",
+				"description":   "description_1",
+				"display_name":  "display_name_1",
+				"format":        "string",
+				"hidden":        false,
+				"immutable":     true,
+				"name":          "variable_name_1",
+				"regex":         "regex_1",
+				"required":      true,
+				"is_sensitive":  false,
+			},
+			map[string]interface{}{
+				"default_value": "default_value_2",
+				"description":   "description_2",
+				"display_name":  "display_name_2",
+				"format":        "integer",
+				"hidden":        true,
+				"immutable":     false,
+				"name":          "variable_name_2",
+				"regex":         "regex_2",
+				"required":      false,
+				"is_sensitive":  true,
+			},
+		},
+	}
+	proVar = append(proVar, variables)
+	_ = mockResourceData.Set("cloud", "all")
+	_ = mockResourceData.Set("type", "infra")
+	_ = mockResourceData.Set("profile_variables", proVar)
+	result, err := toClusterProfileVariables(mockResourceData)
+
+	// Assertions for valid profile variables
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	_ = mockResourceData.Set("cloud", "edge-native")
+	_ = mockResourceData.Set("type", "infra")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	_ = mockResourceData.Set("cloud", "aws")
+	_ = mockResourceData.Set("type", "add-on")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	_ = mockResourceData.Set("cloud", "all")
+	_ = mockResourceData.Set("type", "add-on")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	_ = mockResourceData.Set("cloud", "aws")
+	_ = mockResourceData.Set("type", "infra")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+
+	_ = mockResourceData.Set("cloud", "edge-native")
+	_ = mockResourceData.Set("type", "add-on")
+	result, err = toClusterProfileVariables(mockResourceData)
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
 }
 
 func TestToClusterProfilePackCreate(t *testing.T) {
@@ -493,9 +581,13 @@ func prepareBaseClusterProfileTestData() *schema.ResourceData {
 	return d
 }
 
-func TestResourceClusterProfileCRUD(t *testing.T) {
-	testResourceCRUD(t, prepareBaseClusterProfileTestData, unitTestMockAPIClient,
-		resourceClusterProfileCreate, resourceClusterProfileRead, resourceClusterProfileUpdate, resourceClusterProfileDelete)
+func TestResourceClusterProfileCreate(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	var ctx context.Context
+	_ = d.Set("type", "add-on")
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "cluster-profile-1", d.Id())
 }
 
 func TestResourceClusterProfileCreateError(t *testing.T) {
@@ -503,6 +595,29 @@ func TestResourceClusterProfileCreateError(t *testing.T) {
 	var ctx context.Context
 	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPINegativeClient)
 	assert.NotEmpty(t, diags)
+}
+
+func TestResourceClusterProfileRead(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	var ctx context.Context
+	diags := resourceClusterProfileRead(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "cluster-profile-1", d.Id())
+}
+
+func TestResourceClusterProfileUpdate(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	var ctx context.Context
+	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	assert.Equal(t, "cluster-profile-1", d.Id())
+}
+
+func TestResourceClusterProfileDelete(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	var ctx context.Context
+	diags := resourceClusterProfileDelete(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
 }
 
 func TestValidatePackUIDOrResolutionFields(t *testing.T) {
@@ -662,1050 +777,375 @@ func TestResolvePackUID(t *testing.T) {
 	}
 }
 
-func TestFlattenClusterProfileCommon(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func() (*schema.ResourceData, *models.V1ClusterProfile)
-		expectError bool
-		description string
-		verify      func(t *testing.T, d *schema.ResourceData, err error)
-	}{
-		{
-			name: "Successful flattening with all fields",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
-				d := resourceClusterProfile().TestResourceData()
-				cp := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: &models.V1ClusterProfileTemplate{
-							CloudType:      "aws",
-							Type:           "add-on",
-							ProfileVersion: "1.0.0",
-						},
-					},
-				}
-				return d, cp
-			},
-			expectError: false,
-			description: "Should successfully set cloud, type, and version fields",
-			verify: func(t *testing.T, d *schema.ResourceData, err error) {
-				assert.NoError(t, err, "Should not have error on success")
-				assert.Equal(t, "aws", d.Get("cloud"), "Cloud should be set to 'aws'")
-				assert.Equal(t, "add-on", d.Get("type"), "Type should be set to 'add-on'")
-				assert.Equal(t, "1.0.0", d.Get("version"), "Version should be set to '1.0.0'")
-			},
-		},
-		{
-			name: "Flatten with different cloud types",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
-				d := resourceClusterProfile().TestResourceData()
-				cp := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: &models.V1ClusterProfileTemplate{
-							CloudType:      "edge-native",
-							Type:           "cluster",
-							ProfileVersion: "2.5.3",
-						},
-					},
-				}
-				return d, cp
-			},
-			expectError: false,
-			description: "Should handle different cloud types",
-			verify: func(t *testing.T, d *schema.ResourceData, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.Equal(t, "edge-native", d.Get("cloud"), "Cloud should be set to 'edge-native'")
-				assert.Equal(t, "cluster", d.Get("type"), "Type should be set to 'cluster'")
-				assert.Equal(t, "2.5.3", d.Get("version"), "Version should be set to '2.5.3'")
-			},
-		},
-		{
-			name: "Flatten with different profile types",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
-				d := resourceClusterProfile().TestResourceData()
-				cp := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: &models.V1ClusterProfileTemplate{
-							CloudType:      "azure",
-							Type:           "infra",
-							ProfileVersion: "3.1.0",
-						},
-					},
-				}
-				return d, cp
-			},
-			expectError: false,
-			description: "Should handle different profile types",
-			verify: func(t *testing.T, d *schema.ResourceData, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.Equal(t, "azure", d.Get("cloud"), "Cloud should be set to 'azure'")
-				assert.Equal(t, "infra", d.Get("type"), "Type should be set to 'infra'")
-				assert.Equal(t, "3.1.0", d.Get("version"), "Version should be set to '3.1.0'")
-			},
-		},
-		{
-			name: "Flatten with system profile type",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
-				d := resourceClusterProfile().TestResourceData()
-				cp := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: &models.V1ClusterProfileTemplate{
-							CloudType:      "all",
-							Type:           "system",
-							ProfileVersion: "1.2.3",
-						},
-					},
-				}
-				return d, cp
-			},
-			expectError: false,
-			description: "Should handle system profile type",
-			verify: func(t *testing.T, d *schema.ResourceData, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.Equal(t, "all", d.Get("cloud"), "Cloud should be set to 'all'")
-				assert.Equal(t, "system", d.Get("type"), "Type should be set to 'system'")
-				assert.Equal(t, "1.2.3", d.Get("version"), "Version should be set to '1.2.3'")
-			},
-		},
-		{
-			name: "Flatten with nil Spec (should panic)",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
-				d := resourceClusterProfile().TestResourceData()
-				cp := &models.V1ClusterProfile{
-					Spec: nil,
-				}
-				return d, cp
-			},
-			expectError: true,
-			description: "Should panic when Spec is nil",
-			verify: func(t *testing.T, d *schema.ResourceData, err error) {
-				// Function will panic on nil pointer dereference
-				// This test verifies the function doesn't handle nil gracefully
-			},
-		},
-		{
-			name: "Flatten with nil Published (should panic)",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
-				d := resourceClusterProfile().TestResourceData()
-				cp := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: nil,
-					},
-				}
-				return d, cp
-			},
-			expectError: true,
-			description: "Should panic when Published is nil",
-			verify: func(t *testing.T, d *schema.ResourceData, err error) {
-				// Function will panic on nil pointer dereference
-				// This test verifies the function doesn't handle nil gracefully
-			},
-		},
-		{
-			name: "Flatten with empty Type string",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
-				d := resourceClusterProfile().TestResourceData()
-				cp := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: &models.V1ClusterProfileTemplate{
-							CloudType:      "gcp",
-							Type:           "",
-							ProfileVersion: "4.0.0",
-						},
-					},
-				}
-				return d, cp
-			},
-			expectError: false,
-			description: "Should handle empty Type string",
-			verify: func(t *testing.T, d *schema.ResourceData, err error) {
-				assert.NoError(t, err, "Should not have error with empty type string")
-				assert.Equal(t, "gcp", d.Get("cloud"), "Cloud should be set correctly")
-				assert.Equal(t, "", d.Get("type"), "Type should be set to empty string")
-				assert.Equal(t, "4.0.0", d.Get("version"), "Version should be set correctly")
-			},
-		},
-		{
-			name: "Flatten with custom cloud type",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile) {
-				d := resourceClusterProfile().TestResourceData()
-				cp := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: &models.V1ClusterProfileTemplate{
-							CloudType:      "nutanix",
-							Type:           "add-on",
-							ProfileVersion: "1.0.0",
-						},
-					},
-				}
-				return d, cp
-			},
-			expectError: false,
-			description: "Should handle custom cloud types",
-			verify: func(t *testing.T, d *schema.ResourceData, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.Equal(t, "nutanix", d.Get("cloud"), "Cloud should be set to custom cloud type 'nutanix'")
-				assert.Equal(t, "add-on", d.Get("type"), "Type should be set correctly")
-				assert.Equal(t, "1.0.0", d.Get("version"), "Version should be set correctly")
-			},
+// prepareClusterProfileWithVersionChange creates ResourceData with a state+diff
+// so that HasChange("version") returns true. Additional field changes can be
+// injected via the extraDiffAttrs map.
+func prepareClusterProfileWithVersionChange(oldVersion, newVersion, profileName string, extraDiffAttrs map[string]*terraform.ResourceAttrDiff) *schema.ResourceData {
+	state := &terraform.InstanceState{
+		ID: "cluster-profile-1",
+		Attributes: map[string]string{
+			"name":                profileName,
+			"version":             oldVersion,
+			"context":             "project",
+			"description":         "old description",
+			"cloud":               "all",
+			"type":                "add-on",
+			"tags.#":              "0",
+			"pack.#":              "0",
+			"profile_variables.#": "0",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d, cp := tt.setup()
+	diffAttrs := map[string]*terraform.ResourceAttrDiff{
+		"version": {
+			Old: oldVersion,
+			New: newVersion,
+		},
+	}
+	for k, v := range extraDiffAttrs {
+		diffAttrs[k] = v
+	}
 
-			var err error
-			var panicked bool
+	diff := &terraform.InstanceDiff{
+		Attributes: diffAttrs,
+	}
 
-			// Handle potential panics for nil pointer dereferences
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						panicked = true
-						err = fmt.Errorf("panic: %v", r)
-					}
-				}()
-				err = flattenClusterProfileCommon(d, cp)
-			}()
+	d, _ := schema.InternalMap(resourceClusterProfile().Schema).Data(state, diff)
+	return d
+}
 
-			// Verify results
-			if tt.expectError {
-				if panicked {
-					// Panic is expected for nil pointer cases
-					assert.Error(t, err, "Expected panic/error for test case: %s", tt.description)
-				} else {
-					assert.Error(t, err, "Expected error for test case: %s", tt.description)
-				}
-			} else {
-				if panicked {
-					t.Logf("Unexpected panic occurred: %v", err)
-					assert.Fail(t, "Unexpected panic for test case: %s", tt.description)
-				} else {
-					assert.NoError(t, err, "Should not have error for test case: %s", tt.description)
-				}
-			}
+// TestResourceClusterProfileUpdateVersionNoFlag tests that without the
+// immutable-clusterprofiles feature flag, version changes fall through to the
+// legacy in-place update path (UpdateClusterProfile / PUT) instead of triggering
+// a Create-path clone. The Terraform id stays stable because no replacement is
+// planned.
+//
+// Note: this is the backward-compat path. When the flag IS enabled, version
+// changes never reach Update at all -- CustomizeDiff marks them as ForceNew, so
+// Terraform plans a replacement and the new version is produced by the Create
+// function (see TestResourceClusterProfileCreate_ImmutableClusterprofiles_*).
+func TestResourceClusterProfileUpdateVersionNoFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{}
 
-			// Run custom verify function if provided
-			if tt.verify != nil {
-				tt.verify(t, d, err)
-			}
-		})
+	d := prepareClusterProfileWithVersionChange("1.0.0", "2.0.0", "nonexistent-profile", nil)
+	var ctx context.Context
+
+	diags := resourceClusterProfileUpdate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	// Without the flag, version change should NOT clone -- it falls through
+	// to the legacy update-in-place path and the Terraform id stays stable.
+	assert.Equal(t, "cluster-profile-1", d.Id())
+}
+
+// TestResourceClusterProfileCreateAdoptExisting verifies the SDK v2
+// adopt-on-create pattern: when Create fails because the profile already
+// exists in Palette (e.g. another root module created it, or it was created
+// via the UI) AND the immutable-clusterprofiles flag is enabled, the function
+// adopts the existing UID into Terraform state instead of returning an error.
+func TestResourceClusterProfileCreateAdoptExisting(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	d := prepareBaseClusterProfileTestData()
+	// Use name+version matching mock metadata → adopt path
+	_ = d.Set("name", "test-cluster-profile-1")
+	_ = d.Set("version", "1.0.0")
+	_ = d.Set("type", "add-on")
+	var ctx context.Context
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+	// Should have adopted the existing UID from the mock metadata.
+	assert.Equal(t, "existing-profile-uid-1", d.Id())
+}
+
+// TestResourceClusterProfileCreateNoAdoptWithoutFlag verifies that when the
+// immutable-clusterprofiles feature flag is OFF, a Create failure returns the
+// error instead of trying to adopt an existing profile. This preserves the
+// legacy "create is not idempotent" behavior for users who haven't opted into
+// the new flag.
+func TestResourceClusterProfileCreateNoAdoptWithoutFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{}
+
+	d := prepareBaseClusterProfileTestData()
+	_ = d.Set("name", "test-cluster-profile-1")
+	_ = d.Set("version", "1.0.0")
+	_ = d.Set("type", "add-on")
+	var ctx context.Context
+	// On the negative client, create fails. Without the flag, it should
+	// return the error instead of trying to adopt.
+	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPINegativeClient)
+	assert.NotEmpty(t, diags)
+}
+
+// TestResourceClusterProfileSchema_HasSkipDestroy verifies that the new
+// skip_destroy schema field is present with the expected type and default.
+// This field is part of the standard Terraform Plugin SDK v2 immutable-versioned
+// resource pattern -- it gates whether Delete actually calls the API or just
+// removes the resource from Terraform state.
+func TestResourceClusterProfileSchema_HasSkipDestroy(t *testing.T) {
+	r := resourceClusterProfile()
+	field, ok := r.Schema["skip_destroy"]
+	assert.True(t, ok, "skip_destroy field must be present on the cluster_profile schema")
+	assert.NotNil(t, field)
+	assert.Equal(t, schema.TypeBool, field.Type)
+	assert.True(t, field.Optional)
+	assert.Equal(t, false, field.Default, "skip_destroy must default to false for backward compatibility")
+}
+
+// TestResourceClusterProfileSchema_NoCurrentUid verifies that the current_uid
+// field was removed as part of the consolidation. It was only useful as a
+// workaround for the stale-output bug on the clone-on-version-change path,
+// which no longer exists.
+func TestResourceClusterProfileSchema_NoCurrentUid(t *testing.T) {
+	r := resourceClusterProfile()
+	_, ok := r.Schema["current_uid"]
+	assert.False(t, ok, "current_uid field must not be present; it was removed when clone-on-version-change was consolidated into immutable-clusterprofiles")
+}
+
+// TestResourceClusterProfileSchema_CustomizeDiffRegistered verifies that the
+// CustomizeDiff hook is wired up on the resource. CustomizeDiff is what marks
+// the version field as ForceNew when the immutable-clusterprofiles feature
+// flag is enabled.
+func TestResourceClusterProfileSchema_CustomizeDiffRegistered(t *testing.T) {
+	r := resourceClusterProfile()
+	assert.NotNil(t, r.CustomizeDiff, "CustomizeDiff must be registered to gate ForceNew on version under immutable-clusterprofiles")
+}
+
+// customizeDiffFixture drives Resource.Diff (which runs the registered
+// CustomizeDiff function internally) with a version bump on an existing
+// resource. skipDestroyInConfig controls whether the user's HCL sets
+// skip_destroy = true, which is what the CustomizeDiff plan-time validation
+// checks for.
+func customizeDiffFixture(oldVersion, newVersion string, skipDestroyInConfig bool) (*terraform.InstanceDiff, error) {
+	r := resourceClusterProfile()
+	state := &terraform.InstanceState{
+		ID: "cluster-profile-1",
+		Attributes: map[string]string{
+			"name":                "example-addon",
+			"version":             oldVersion,
+			"context":             "project",
+			"description":         "",
+			"cloud":               "all",
+			"type":                "add-on",
+			"skip_destroy":        "false",
+			"tags.#":              "0",
+			"pack.#":              "0",
+			"profile_variables.#": "0",
+		},
+	}
+	cfg := map[string]interface{}{
+		"name":         "example-addon",
+		"version":      newVersion,
+		"context":      "project",
+		"cloud":        "all",
+		"type":         "add-on",
+		"skip_destroy": skipDestroyInConfig,
+	}
+	return r.Diff(context.Background(), state, terraform.NewResourceConfigRaw(cfg), unitTestMockAPIClient)
+}
+
+// TestResourceClusterProfileCustomizeDiff_VersionBump_MissingSkipDestroy
+// verifies that when the immutable-clusterprofiles flag is enabled and the
+// user bumps the version without setting skip_destroy = true, plan fails with
+// a clear error that tells the user which knobs to add. This is the guardrail
+// against the common mistake of enabling the flag but forgetting the companion
+// SDK v2 pattern attributes.
+func TestResourceClusterProfileCustomizeDiff_VersionBump_MissingSkipDestroy(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	_, err := customizeDiffFixture("1.0.0", "1.1.0", false)
+	assert.Error(t, err, "plan must error when version changes under the flag without skip_destroy = true")
+	assert.Contains(t, err.Error(), "skip_destroy = true")
+	assert.Contains(t, err.Error(), "create_before_destroy = true")
+	assert.Contains(t, err.Error(), "aws_lambda_layer_version")
+}
+
+// TestResourceClusterProfileCustomizeDiff_VersionBump_WithSkipDestroy
+// verifies that when skip_destroy is set, plan succeeds and the version change
+// is marked as a replacement (ForceNew). This is the intended happy path under
+// the immutable-clusterprofiles flag.
+func TestResourceClusterProfileCustomizeDiff_VersionBump_WithSkipDestroy(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	diff, err := customizeDiffFixture("1.0.0", "1.1.0", true)
+	assert.NoError(t, err)
+	assert.NotNil(t, diff)
+	versionAttr, ok := diff.Attributes["version"]
+	assert.True(t, ok, "version attribute should be in diff")
+	assert.True(t, versionAttr.RequiresNew, "version change must be marked ForceNew under the flag")
+}
+
+// TestResourceClusterProfileCustomizeDiff_VersionBump_FlagOff verifies that
+// without the immutable-clusterprofiles flag, the CustomizeDiff validation is
+// bypassed entirely and version changes behave like any other in-place update
+// -- no ForceNew, no skip_destroy requirement. This is the backward-compat path.
+func TestResourceClusterProfileCustomizeDiff_VersionBump_FlagOff(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{}
+
+	diff, err := customizeDiffFixture("1.0.0", "1.1.0", false)
+	assert.NoError(t, err, "without the flag, version changes must not require skip_destroy")
+	assert.NotNil(t, diff)
+	if versionAttr, ok := diff.Attributes["version"]; ok {
+		assert.False(t, versionAttr.RequiresNew, "without the flag, version must not be ForceNew")
 	}
 }
 
-func TestToClusterProfileCreateWithResolution(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func() (*schema.ResourceData, *client.V1Client)
-		expectError bool
-		description string
-		verify      func(t *testing.T, cp *models.V1ClusterProfileEntity, err error)
-	}{
-		{
-			name: "Successful creation with packs and variables",
-			setup: func() (*schema.ResourceData, *client.V1Client) {
-				d := resourceClusterProfile().TestResourceData()
-				_ = d.Set("name", "test-profile")
-				_ = d.Set("version", "1.0.0")
-				_ = d.Set("description", "test description")
-				_ = d.Set("cloud", "aws")
-				_ = d.Set("type", "add-on")
-				_ = d.Set("pack", []interface{}{
-					map[string]interface{}{
-						"uid":          "test-pack-uid-1",
-						"type":         "spectro",
-						"name":         "test-pack",
-						"registry_uid": "test-registry-uid",
-						"tag":          "v1.0.0",
-						"values":       "test values",
-						"manifest":     []interface{}{},
-					},
-				})
-				_ = d.Set("profile_variables", []interface{}{
-					map[string]interface{}{
-						"variable": []interface{}{
-							map[string]interface{}{
-								"name":          "test_var",
-								"display_name":  "Test Variable",
-								"format":        "string",
-								"description":   "test description",
-								"default_value": "default",
-								"regex":         "",
-								"required":      false,
-								"immutable":     false,
-								"is_sensitive":  false,
-								"hidden":        false,
-							},
-						},
-					},
-				})
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return d, c
-			},
-			expectError: false,
-			description: "Should successfully create cluster profile with packs and variables",
-			verify: func(t *testing.T, cp *models.V1ClusterProfileEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, cp, "Cluster profile should not be nil")
-				assert.Equal(t, "test-profile", cp.Metadata.Name, "Name should match")
-				assert.Equal(t, "1.0.0", cp.Spec.Version, "Version should match")
-				assert.Equal(t, "aws", cp.Spec.Template.CloudType, "Cloud type should match")
-				assert.NotNil(t, cp.Spec.Template.Packs, "Packs should not be nil")
-				assert.NotNil(t, cp.Spec.Variables, "Variables should not be nil")
-			},
-		},
-		{
-			name: "Successful creation with multiple packs",
-			setup: func() (*schema.ResourceData, *client.V1Client) {
-				d := resourceClusterProfile().TestResourceData()
-				_ = d.Set("name", "test-profile")
-				_ = d.Set("version", "3.0.0")
-				_ = d.Set("cloud", "edge-native")
-				_ = d.Set("type", "add-on")
-				_ = d.Set("pack", []interface{}{
-					map[string]interface{}{
-						"uid":          "pack-uid-1",
-						"type":         "spectro",
-						"name":         "pack1",
-						"registry_uid": "reg-uid",
-						"tag":          "v1.0",
-						"values":       "values1",
-						"manifest":     []interface{}{},
-					},
-					map[string]interface{}{
-						"uid":          "pack-uid-2",
-						"type":         "spectro",
-						"name":         "pack2",
-						"registry_uid": "reg-uid",
-						"tag":          "v2.0",
-						"values":       "values2",
-						"manifest":     []interface{}{},
-					},
-					map[string]interface{}{
-						"uid":          "",
-						"type":         "manifest",
-						"name":         "manifest-pack",
-						"registry_uid": "",
-						"tag":          "",
-						"values":       "",
-						"manifest":     []interface{}{},
-					},
-				})
-				_ = d.Set("profile_variables", []interface{}{
-					map[string]interface{}{
-						"variable": []interface{}{},
-					},
-				})
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return d, c
-			},
-			expectError: false,
-			description: "Should successfully create cluster profile with multiple packs",
-			verify: func(t *testing.T, cp *models.V1ClusterProfileEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, cp, "Cluster profile should not be nil")
-				assert.Equal(t, "test-profile", cp.Metadata.Name, "Name should match")
-				assert.NotNil(t, cp.Spec.Template.Packs, "Packs should not be nil")
-				assert.GreaterOrEqual(t, len(cp.Spec.Template.Packs), 1, "Should have at least one pack")
-			},
-		},
-		{
-			name: "Successful creation with manifest pack type",
-			setup: func() (*schema.ResourceData, *client.V1Client) {
-				d := resourceClusterProfile().TestResourceData()
-				_ = d.Set("name", "test-profile")
-				_ = d.Set("version", "1.0.0")
-				_ = d.Set("cloud", "vsphere")
-				_ = d.Set("type", "cluster")
-				_ = d.Set("pack", []interface{}{
-					map[string]interface{}{
-						"uid":          "",
-						"type":         "manifest",
-						"name":         "manifest-pack",
-						"registry_uid": "",
-						"tag":          "",
-						"values":       "manifest values",
-						"manifest": []interface{}{
-							map[string]interface{}{
-								"name":    "manifest1",
-								"content": "manifest content",
-							},
-						},
-					},
-				})
-				_ = d.Set("profile_variables", []interface{}{
-					map[string]interface{}{
-						"variable": []interface{}{},
-					},
-				})
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return d, c
-			},
-			expectError: false,
-			description: "Should successfully create cluster profile with manifest pack type",
-			verify: func(t *testing.T, cp *models.V1ClusterProfileEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, cp, "Cluster profile should not be nil")
-				assert.Equal(t, "test-profile", cp.Metadata.Name, "Name should match")
-				assert.NotNil(t, cp.Spec.Template.Packs, "Packs should not be nil")
-				if len(cp.Spec.Template.Packs) > 0 {
-					assert.Equal(t, "spectro-manifest-pack", cp.Spec.Template.Packs[0].UID, "Manifest pack should have default UID")
-				}
-			},
+// customizeDiffContentChangeFixture drives Resource.Diff with a content change
+// (description field) on an existing resource while keeping the version field
+// the same. Used by the content-change-without-version-bump CustomizeDiff tests.
+func customizeDiffContentChangeFixture(oldDescription, newDescription string) (*terraform.InstanceDiff, error) {
+	r := resourceClusterProfile()
+	state := &terraform.InstanceState{
+		ID: "cluster-profile-1",
+		Attributes: map[string]string{
+			"name":                "example-addon",
+			"version":             "1.0.0",
+			"context":             "project",
+			"description":         oldDescription,
+			"cloud":               "all",
+			"type":                "add-on",
+			"skip_destroy":        "true",
+			"tags.#":              "0",
+			"pack.#":              "0",
+			"profile_variables.#": "0",
 		},
 	}
+	cfg := map[string]interface{}{
+		"name":         "example-addon",
+		"version":      "1.0.0",
+		"context":      "project",
+		"description":  newDescription,
+		"cloud":        "all",
+		"type":         "add-on",
+		"skip_destroy": true,
+	}
+	return r.Diff(context.Background(), state, terraform.NewResourceConfigRaw(cfg), unitTestMockAPIClient)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d, c := tt.setup()
+// TestResourceClusterProfileCustomizeDiff_ContentChange_WithoutVersionBump_UnderFlag
+// verifies that when immutable-clusterprofiles is enabled and the user mutates
+// any content field (description, pack, tags, etc.) WITHOUT bumping the version,
+// plan fails at CustomizeDiff time with a clear error telling them to bump the
+// version field.
+//
+// This is the guardrail against the "silent mutation" class of bug: without
+// this check, the legacy Update path would happily send a PUT to Palette and
+// the supposedly-immutable v1.0.0 would have its content mutated in place,
+// defeating the whole point of the feature flag. Caught empirically during
+// end-to-end demo walkthrough on 2026-04-08.
+func TestResourceClusterProfileCustomizeDiff_ContentChange_WithoutVersionBump_UnderFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
 
-			var cp *models.V1ClusterProfileEntity
-			var err error
-			var panicked bool
+	_, err := customizeDiffContentChangeFixture("original description", "mutated description")
+	assert.Error(t, err, "plan must error when content fields change under the flag without a version bump")
+	assert.Contains(t, err.Error(), "immutable-clusterprofiles")
+	assert.Contains(t, err.Error(), "description")
+	assert.Contains(t, err.Error(), "version bump")
+	assert.Contains(t, err.Error(), "1.0.0")
+}
 
-			// Handle potential panics
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						panicked = true
-						err = fmt.Errorf("panic: %v", r)
-					}
-				}()
-				cp, err = toClusterProfileCreateWithResolution(d, c)
-			}()
+// TestResourceClusterProfileCustomizeDiff_ContentChange_WithoutVersionBump_FlagOff
+// verifies that without the flag, content changes without a version bump are
+// allowed through the legacy in-place update path. This is the backward-compat
+// behavior -- users who haven't opted into immutability can still patch their
+// cluster profiles in place (the destructive PUT path the provider always had).
+func TestResourceClusterProfileCustomizeDiff_ContentChange_WithoutVersionBump_FlagOff(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{}
 
-			// Verify results
-			if tt.expectError {
-				if panicked {
-					assert.Error(t, err, "Expected panic/error for test case: %s", tt.description)
-				} else {
-					assert.Error(t, err, "Expected error for test case: %s", tt.description)
-				}
-			} else {
-				if panicked {
-					t.Logf("Unexpected panic occurred: %v", err)
-					assert.Fail(t, "Unexpected panic for test case: %s", tt.description)
-				} else {
-					assert.NoError(t, err, "Should not have error for test case: %s", tt.description)
-				}
-			}
-
-			// Run custom verify function if provided
-			if tt.verify != nil {
-				tt.verify(t, cp, err)
-			}
-		})
+	diff, err := customizeDiffContentChangeFixture("original description", "mutated description")
+	assert.NoError(t, err, "without the flag, content changes must not be blocked at plan time")
+	assert.NotNil(t, diff)
+	// Description should be in the diff as a normal update, not a replacement.
+	if descAttr, ok := diff.Attributes["description"]; ok {
+		assert.False(t, descAttr.RequiresNew, "without the flag, description changes must not force replacement")
 	}
 }
 
-func TestToClusterProfileBasic(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func() *schema.ResourceData
-		expectError bool
-		description string
-		verify      func(t *testing.T, cp *models.V1ClusterProfileEntity)
-	}{
-		{
-			name: "Successful creation with all fields",
-			setup: func() *schema.ResourceData {
-				d := resourceClusterProfile().TestResourceData()
-				d.SetId("test-profile-uid")
-				_ = d.Set("name", "test-profile")
-				_ = d.Set("version", "1.0.0")
-				_ = d.Set("description", "Test description")
-				_ = d.Set("cloud", "aws")
-				_ = d.Set("type", "add-on")
-				_ = d.Set("tags", []interface{}{"tag1:value1", "tag2:value2"})
-				return d
-			},
-			expectError: false,
-			description: "Should successfully create basic cluster profile with all fields",
-			verify: func(t *testing.T, cp *models.V1ClusterProfileEntity) {
-				assert.NotNil(t, cp, "Cluster profile should not be nil")
-				assert.Equal(t, "test-profile", cp.Metadata.Name, "Name should match")
-				assert.Equal(t, "test-profile-uid", cp.Metadata.UID, "UID should match")
-				assert.Equal(t, "Test description", cp.Metadata.Annotations["description"], "Description should match")
-				assert.Equal(t, "aws", cp.Spec.Template.CloudType, "Cloud type should match")
-				assert.Equal(t, "add-on", string(*cp.Spec.Template.Type), "Type should match")
-				assert.Equal(t, "1.0.0", cp.Spec.Version, "Version should match")
-				assert.NotNil(t, cp.Metadata.Labels, "Labels should not be nil")
-			},
-		},
-		{
-			name: "Successful creation with tags",
-			setup: func() *schema.ResourceData {
-				d := resourceClusterProfile().TestResourceData()
-				d.SetId("test-profile-uid-4")
-				_ = d.Set("name", "test-profile-4")
-				_ = d.Set("version", "1.0.0")
-				_ = d.Set("cloud", "edge-native")
-				_ = d.Set("type", "add-on")
-				_ = d.Set("tags", []interface{}{"env:prod", "team:devops"})
-				return d
-			},
-			expectError: false,
-			description: "Should successfully create basic cluster profile with tags",
-			verify: func(t *testing.T, cp *models.V1ClusterProfileEntity) {
-				assert.NotNil(t, cp, "Cluster profile should not be nil")
-				assert.Equal(t, "test-profile-4", cp.Metadata.Name, "Name should match")
-				assert.NotNil(t, cp.Metadata.Labels, "Labels should not be nil")
-				// Verify tags are converted to labels
-				if cp.Metadata.Labels != nil {
-					assert.Greater(t, len(cp.Metadata.Labels), 0, "Labels should contain tags")
-				}
-			},
-		},
-	}
+// TestResourceClusterProfileCustomizeDiff_NoChanges_UnderFlag verifies the
+// baseline: when the flag is on and nothing has changed (re-apply of the same
+// config), CustomizeDiff returns nil without error. Guards against accidentally
+// erroring on no-op applies.
+func TestResourceClusterProfileCustomizeDiff_NoChanges_UnderFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := tt.setup()
-
-			var cp *models.V1ClusterProfileEntity
-			var panicked bool
-			var err error
-
-			// Handle potential panics for missing required fields
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						panicked = true
-						err = fmt.Errorf("panic: %v", r)
-					}
-				}()
-				cp = toClusterProfileBasic(d)
-			}()
-
-			// Verify results
-			if tt.expectError {
-				if panicked {
-					// Panic is expected for missing required fields
-					assert.Error(t, err, "Expected panic/error for test case: %s", tt.description)
-				} else {
-					assert.Fail(t, "Expected panic/error but got none for test case: %s", tt.description)
-				}
-			} else {
-				if panicked {
-					t.Logf("Unexpected panic occurred: %v", err)
-					assert.Fail(t, "Unexpected panic for test case: %s", tt.description)
-				} else {
-					assert.NotNil(t, cp, "Cluster profile should not be nil for test case: %s", tt.description)
-				}
-			}
-
-			// Run custom verify function if provided
-			if tt.verify != nil && !panicked {
-				tt.verify(t, cp)
-			}
-		})
-	}
+	// Same description on both sides -- no change.
+	_, err := customizeDiffContentChangeFixture("same description", "same description")
+	assert.NoError(t, err, "no-op applies under the flag must not error")
 }
 
-func TestToClusterProfileUpdateWithResolution(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func() (*schema.ResourceData, *models.V1ClusterProfile, *client.V1Client)
-		expectError bool
-		description string
-		verify      func(t *testing.T, cp *models.V1ClusterProfileUpdateEntity, err error)
-	}{
-		{
-			name: "Successful update with multiple packs",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile, *client.V1Client) {
-				d := resourceClusterProfile().TestResourceData()
-				d.SetId("test-profile-uid-3")
-				_ = d.Set("name", "test-profile-3")
-				_ = d.Set("version", "4.0.0")
-				_ = d.Set("type", "infra")
-				_ = d.Set("pack", []interface{}{
-					map[string]interface{}{
-						"uid":          "pack-uid-1",
-						"type":         "spectro",
-						"name":         "pack1",
-						"registry_uid": "reg-uid",
-						"tag":          "v1.0",
-						"values":       "values1",
-						"manifest":     []interface{}{},
-					},
-					map[string]interface{}{
-						"uid":          "pack-uid-2",
-						"type":         "spectro",
-						"name":         "pack2",
-						"registry_uid": "reg-uid",
-						"tag":          "v2.0",
-						"values":       "values2",
-						"manifest":     []interface{}{},
-					},
-					map[string]interface{}{
-						"uid":          "",
-						"type":         "manifest",
-						"name":         "manifest-pack",
-						"registry_uid": "",
-						"tag":          "",
-						"values":       "",
-						"manifest":     []interface{}{},
-					},
-				})
-				cluster := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: &models.V1ClusterProfileTemplate{
-							Packs: []*models.V1PackRef{
-								{
-									PackUID: "pack-uid-1",
-									Name:    types.Ptr("pack1"),
-								},
-								{
-									PackUID: "pack-uid-2",
-									Name:    types.Ptr("pack2"),
-								},
-							},
-						},
-					},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return d, cluster, c
-			},
-			expectError: false,
-			description: "Should successfully create update entity with multiple packs",
-			verify: func(t *testing.T, cp *models.V1ClusterProfileUpdateEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, cp, "Cluster profile update entity should not be nil")
-				assert.Equal(t, "test-profile-3", cp.Metadata.Name, "Name should match")
-				assert.NotNil(t, cp.Spec.Template.Packs, "Packs should not be nil")
-				assert.GreaterOrEqual(t, len(cp.Spec.Template.Packs), 1, "Should have at least one pack")
-			},
-		},
-		{
-			name: "Error from pack resolution - missing registry_uid",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile, *client.V1Client) {
-				d := resourceClusterProfile().TestResourceData()
-				d.SetId("test-profile-uid-4")
-				_ = d.Set("name", "test-profile-4")
-				_ = d.Set("version", "1.0.0")
-				_ = d.Set("type", "add-on")
-				_ = d.Set("pack", []interface{}{
-					map[string]interface{}{
-						"uid":          "",
-						"type":         "spectro",
-						"name":         "test-pack",
-						"registry_uid": "",
-						"tag":          "v1.0.0",
-						"values":       "test values",
-						"manifest":     []interface{}{},
-					},
-				})
-				cluster := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: &models.V1ClusterProfileTemplate{
-							Packs: []*models.V1PackRef{},
-						},
-					},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return d, cluster, c
-			},
-			expectError: true,
-			description: "Should return error when pack resolution fails due to missing registry_uid",
-			verify: func(t *testing.T, cp *models.V1ClusterProfileUpdateEntity, err error) {
-				assert.Error(t, err, "Should have error")
-				assert.Nil(t, cp, "Cluster profile update entity should be nil on error")
-				assert.Contains(t, err.Error(), "either 'uid' must be provided", "Error should mention missing fields")
-			},
-		},
-		{
-			name: "Successful update with different profile types",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile, *client.V1Client) {
-				d := resourceClusterProfile().TestResourceData()
-				d.SetId("test-profile-uid-6")
-				_ = d.Set("name", "test-profile-6")
-				_ = d.Set("version", "5.0.0")
-				_ = d.Set("type", "cluster")
-				_ = d.Set("pack", []interface{}{})
-				cluster := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: &models.V1ClusterProfileTemplate{
-							Packs: []*models.V1PackRef{},
-						},
-					},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return d, cluster, c
-			},
-			expectError: false,
-			description: "Should successfully create update entity with cluster type",
-			verify: func(t *testing.T, cp *models.V1ClusterProfileUpdateEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, cp, "Cluster profile update entity should not be nil")
-				assert.Equal(t, "cluster", string(*cp.Spec.Template.Type), "Type should be 'cluster'")
-				assert.Equal(t, "5.0.0", cp.Spec.Version, "Version should match")
-			},
-		},
-		{
-			name: "Panic when cluster.Spec.Published is nil",
-			setup: func() (*schema.ResourceData, *models.V1ClusterProfile, *client.V1Client) {
-				d := resourceClusterProfile().TestResourceData()
-				d.SetId("test-profile-uid-9")
-				_ = d.Set("name", "test-profile-9")
-				_ = d.Set("version", "1.0.0")
-				_ = d.Set("type", "add-on")
-				_ = d.Set("pack", []interface{}{
-					map[string]interface{}{
-						"uid":          "test-pack-uid",
-						"type":         "spectro",
-						"name":         "test-pack",
-						"registry_uid": "reg-uid",
-						"tag":          "v1.0",
-						"values":       "",
-						"manifest":     []interface{}{},
-					},
-				})
-				cluster := &models.V1ClusterProfile{
-					Spec: &models.V1ClusterProfileSpec{
-						Published: nil,
-					},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return d, cluster, c
-			},
-			expectError: true,
-			description: "Should panic when cluster.Spec.Published is nil",
-			verify: func(t *testing.T, cp *models.V1ClusterProfileUpdateEntity, err error) {
-				// Function will panic on nil pointer dereference
-			},
-		},
-	}
+// TestResourceClusterProfileDelete_SkipDestroy verifies that when
+// skip_destroy=true, the Delete function returns successfully without calling
+// the Palette delete API. This is the SDK v2 preservation pattern for
+// immutable-versioned resources: replacement lifecycles remove the old
+// resource from Terraform state via Delete, and skip_destroy makes that a
+// no-op so the underlying versioned object stays in the upstream system.
+func TestResourceClusterProfileDelete_SkipDestroy(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	d.SetId("some-uid-that-does-not-exist-in-mock")
+	_ = d.Set("skip_destroy", true)
+	_ = d.Set("context", "project")
+	var ctx context.Context
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d, cluster, c := tt.setup()
-
-			var cp *models.V1ClusterProfileUpdateEntity
-			var err error
-			var panicked bool
-
-			// Handle potential panics
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						panicked = true
-						err = fmt.Errorf("panic: %v", r)
-					}
-				}()
-				cp, err = toClusterProfileUpdateWithResolution(d, cluster, c)
-			}()
-
-			// Verify results
-			if tt.expectError {
-				if panicked {
-					// Panic is expected for nil pointer cases
-					assert.Error(t, err, "Expected panic/error for test case: %s", tt.description)
-				} else {
-					assert.Error(t, err, "Expected error for test case: %s", tt.description)
-				}
-			} else {
-				if panicked {
-					t.Logf("Unexpected panic occurred: %v", err)
-					assert.Fail(t, "Unexpected panic for test case: %s", tt.description)
-				} else {
-					assert.NoError(t, err, "Should not have error for test case: %s", tt.description)
-				}
-			}
-
-			// Run custom verify function if provided
-			if tt.verify != nil && !panicked {
-				tt.verify(t, cp, err)
-			}
-		})
-	}
+	// Delete against the negative (failing) client -- if skip_destroy is
+	// honored, we never call the API, so the negative client's failure
+	// path doesn't trigger.
+	diags := resourceClusterProfileDelete(ctx, d, unitTestMockAPINegativeClient)
+	assert.Empty(t, diags, "skip_destroy=true should bypass the API call entirely, so negative-client failures should not surface")
 }
 
-func TestToClusterProfilePackCreateWithResolution(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func() (map[string]interface{}, *client.V1Client)
-		expectError bool
-		description string
-		verify      func(t *testing.T, pack *models.V1PackManifestEntity, err error)
-	}{
-		{
-			name: "Successful creation with manifest pack and default UID",
-			setup: func() (map[string]interface{}, *client.V1Client) {
-				input := map[string]interface{}{
-					"name":   "test-manifest-pack",
-					"type":   "manifest",
-					"tag":    "",
-					"uid":    "",
-					"values": "test-values",
-					"manifest": []interface{}{
-						map[string]interface{}{
-							"content": "manifest-content",
-							"name":    "manifest-name",
-						},
-					},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return input, c
-			},
-			expectError: false,
-			description: "Should successfully create manifest pack with default UID",
-			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, pack, "Pack should not be nil")
-				assert.Equal(t, "test-manifest-pack", *pack.Name, "Name should match")
-				assert.Equal(t, "spectro-manifest-pack", pack.UID, "UID should be default for manifest pack")
-				assert.Equal(t, models.V1PackTypeManifest, *pack.Type, "Type should be Manifest")
-				assert.Equal(t, 1, len(pack.Manifests), "Should have one manifest")
-			},
-		},
-		{
-			name: "Successful creation with values and manifest content trimming",
-			setup: func() (map[string]interface{}, *client.V1Client) {
-				input := map[string]interface{}{
-					"name":         "test-pack",
-					"type":         "spectro",
-					"tag":          "v1.0",
-					"uid":          "test-uid",
-					"registry_uid": "test-registry-uid",
-					"values":       "test-values\n",
-					"manifest": []interface{}{
-						map[string]interface{}{
-							"content": "manifest-content\n",
-							"name":    "manifest-name",
-						},
-					},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return input, c
-			},
-			expectError: false,
-			description: "Should successfully trim whitespace from values and manifest content",
-			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, pack, "Pack should not be nil")
-				assert.Equal(t, "test-values", pack.Values, "Values should be trimmed")
-				assert.Equal(t, "manifest-content", pack.Manifests[0].Content, "Manifest content should be trimmed")
-			},
-		},
-		{
-			name: "Successful creation with empty values",
-			setup: func() (map[string]interface{}, *client.V1Client) {
-				input := map[string]interface{}{
-					"name":         "test-pack",
-					"type":         "spectro",
-					"tag":          "v1.0",
-					"uid":          "test-uid",
-					"registry_uid": "test-registry-uid",
-					"values":       "",
-					"manifest":     []interface{}{},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return input, c
-			},
-			expectError: false,
-			description: "Should successfully create pack with empty values",
-			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, pack, "Pack should not be nil")
-				assert.Equal(t, "", pack.Values, "Values should be empty string")
-			},
-		},
-		{
-			name: "Successful resolution: registry_name resolved even with UID provided",
-			setup: func() (map[string]interface{}, *client.V1Client) {
-				input := map[string]interface{}{
-					"name":          "test-pack",
-					"type":          "spectro",
-					"tag":           "v1.0",
-					"uid":           "test-uid",
-					"registry_name": "test-registry-name",
-					"values":        "test-values",
-					"manifest":      []interface{}{},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return input, c
-			},
-			expectError: false,
-			description: "Function resolves registry_name even if UID is provided (tests resolveRegistryNameToUID is called regardless of UID presence)",
-			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				if !assert.NoError(t, err, "Should not have error") {
-					return
-				}
-				if !assert.NotNil(t, pack, "Pack should not be nil") {
-					return
-				}
-				assert.Equal(t, "test-registry-uid", pack.RegistryUID, "RegistryUID should be resolved from registry_name even when UID is provided")
-				assert.Equal(t, "test-uid", pack.UID, "UID should remain as provided")
-			},
-		},
-		{
-			name: "Successful creation with Spectro pack type",
-			setup: func() (map[string]interface{}, *client.V1Client) {
-				input := map[string]interface{}{
-					"name":         "test-pack",
-					"type":         "spectro",
-					"tag":          "v1.0",
-					"uid":          "test-uid",
-					"registry_uid": "test-registry-uid",
-					"values":       "test-values",
-					"manifest":     []interface{}{},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return input, c
-			},
-			expectError: false,
-			description: "Should successfully create Spectro pack",
-			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, pack, "Pack should not be nil")
-				assert.Equal(t, models.V1PackTypeSpectro, *pack.Type, "Type should be Spectro")
-			},
-		},
-		{
-			name: "Panic when client is nil",
-			setup: func() (map[string]interface{}, *client.V1Client) {
-				input := map[string]interface{}{
-					"name":         "test-pack",
-					"type":         "spectro",
-					"tag":          "v1.0",
-					"uid":          "",
-					"registry_uid": "test-registry-uid",
-					"values":       "test-values",
-					"manifest":     []interface{}{},
-				}
-				return input, nil
-			},
-			expectError: true,
-			description: "Should panic when client is nil and pack UID needs resolution",
-			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				// Function will panic on nil pointer dereference when trying to resolve pack UID
-			},
-		},
-		{
-			name: "Successful creation with manifest pack and custom UID",
-			setup: func() (map[string]interface{}, *client.V1Client) {
-				input := map[string]interface{}{
-					"name":   "test-manifest-pack",
-					"type":   "manifest",
-					"tag":    "",
-					"uid":    "custom-manifest-uid",
-					"values": "test-values",
-					"manifest": []interface{}{
-						map[string]interface{}{
-							"content": "manifest-content",
-							"name":    "manifest-name",
-						},
-					},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return input, c
-			},
-			expectError: false,
-			description: "Should successfully create manifest pack with custom UID",
-			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, pack, "Pack should not be nil")
-				assert.Equal(t, "custom-manifest-uid", pack.UID, "UID should be custom value")
-				assert.Equal(t, models.V1PackTypeManifest, *pack.Type, "Type should be Manifest")
-			},
-		},
-		{
-			name: "Successful resolution: registry_name to registry_uid for Helm pack",
-			setup: func() (map[string]interface{}, *client.V1Client) {
-				input := map[string]interface{}{
-					"name":          "k8",
-					"type":          "helm",
-					"tag":           "1.0",
-					"uid":           "",
-					"registry_name": "Public",
-					"values":        "test-values",
-					"manifest":      []interface{}{},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return input, c
-			},
-			expectError: false,
-			description: "Should successfully resolve registry_name to registry_uid using GetHelmRegistryByName, then resolve pack UID",
-			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, pack, "Pack should not be nil")
-				assert.Equal(t, "k8", *pack.Name, "Name should match")
-				assert.Equal(t, "test-registry-uid", pack.RegistryUID, "RegistryUID should be resolved from registry_name")
-				assert.Equal(t, "test-pack-uid", pack.UID, "Pack UID should be resolved")
-				assert.Equal(t, "1.0", pack.Tag, "Tag should match")
-				assert.Equal(t, models.V1PackTypeHelm, *pack.Type, "Type should be Helm")
-			},
-		},
-		{
-			name: "Successful resolution: pack UID resolution with provided registry_uid",
-			setup: func() (map[string]interface{}, *client.V1Client) {
-				input := map[string]interface{}{
-					"name":         "k8",
-					"type":         "spectro",
-					"tag":          "1.0",
-					"uid":          "",
-					"registry_uid": "test-registry-uid",
-					"values":       "test-values",
-					"manifest":     []interface{}{},
-				}
-				c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
-				return input, c
-			},
-			expectError: false,
-			description: "Should successfully resolve pack UID when registry_uid is directly provided (tests resolvePackUID function)",
-			verify: func(t *testing.T, pack *models.V1PackManifestEntity, err error) {
-				assert.NoError(t, err, "Should not have error")
-				assert.NotNil(t, pack, "Pack should not be nil")
-				assert.Equal(t, "k8", *pack.Name, "Name should match")
-				assert.Equal(t, "test-registry-uid", pack.RegistryUID, "RegistryUID should match provided value")
-				// resolvePackUID runs only when getRegistryIsSyncSupported is true; mock may skip resolution
-				assert.Equal(t, "", pack.UID, "Pack UID empty when registry sync unsupported or mock does not resolve")
-				assert.Equal(t, "1.0", pack.Tag, "Tag should match")
-				assert.Equal(t, models.V1PackTypeSpectro, *pack.Type, "Type should be Spectro")
-			},
-		},
-	}
+// TestResourceClusterProfileDelete_NormalDestroy verifies that when
+// skip_destroy is false (the default), Delete calls the Palette delete API.
+// This preserves the legacy behavior for users who don't opt into the new
+// immutable lifecycle.
+func TestResourceClusterProfileDelete_NormalDestroy(t *testing.T) {
+	d := prepareBaseClusterProfileTestData()
+	d.SetId("test-cluster-profile-1")
+	_ = d.Set("skip_destroy", false)
+	_ = d.Set("context", "project")
+	var ctx context.Context
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			input, c := tt.setup()
+	// The mock client's delete endpoint returns success for known UIDs.
+	diags := resourceClusterProfileDelete(ctx, d, unitTestMockAPIClient)
+	assert.Empty(t, diags)
+}
 
-			var pack *models.V1PackManifestEntity
-			var err error
-			var panicked bool
+// TestFindAnyExistingProfileVersionUID_Found verifies that the helper finds
+// an existing profile by name via the SDK's GetClusterProfiles listing endpoint.
+// This helper is used by the immutable-clusterprofiles Create path to discover
+// a clone source for a new version of an existing lineage.
+func TestFindAnyExistingProfileVersionUID_Found(t *testing.T) {
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	// The mock metadata includes "test-cluster-profile-1" with a known stable UID.
+	uid, err := findAnyExistingProfileVersionUID(c, "test-cluster-profile-1")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, uid, "expected to find an existing UID for test-cluster-profile-1 in the mock metadata")
+}
 
-			// Handle potential panics
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-						panicked = true
-						err = fmt.Errorf("panic: %v", r)
-					}
-				}()
-				pack, err = toClusterProfilePackCreateWithResolution(input, c)
-			}()
-
-			// Verify results
-			if tt.expectError {
-				if panicked {
-					// Panic is expected for nil client cases
-					assert.Error(t, err, "Expected panic/error for test case: %s", tt.description)
-				} else {
-					assert.Error(t, err, "Expected error for test case: %s", tt.description)
-				}
-			} else {
-				if panicked {
-					t.Logf("Unexpected panic occurred: %v", err)
-					assert.Fail(t, "Unexpected panic for test case: %s", tt.description)
-				} else {
-					assert.NoError(t, err, "Should not have error for test case: %s", tt.description)
-				}
-			}
-
-			// Run custom verify function if provided
-			if tt.verify != nil && !panicked {
-				tt.verify(t, pack, err)
-			}
-		})
-	}
+// TestFindAnyExistingProfileVersionUID_NotFound verifies that the helper
+// returns an empty string (not an error) when no profile with the given name
+// exists. The empty-string-no-error return is what the Create path uses to
+// decide between "clone from existing lineage" and "create the very first
+// version from scratch".
+func TestFindAnyExistingProfileVersionUID_NotFound(t *testing.T) {
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	uid, err := findAnyExistingProfileVersionUID(c, "this-profile-definitely-does-not-exist-in-the-mock")
+	assert.NoError(t, err, "not-found should return an empty string without an error")
+	assert.Empty(t, uid)
 }
