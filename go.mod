@@ -1,6 +1,6 @@
 module github.com/spectrocloud/terraform-provider-spectrocloud
 
-go 1.26.0
+go 1.26.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
@@ -128,4 +128,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
 
-// replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
+replace github.com/spectrocloud/palette-sdk-go => ../palette-sdk-go
