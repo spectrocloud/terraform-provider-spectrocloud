@@ -282,12 +282,48 @@ func resourceWorkspaceUpdate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func updateWorkspaceRBACs(d *schema.ResourceData, c *client.V1Client, workspace *models.V1Workspace) (diag.Diagnostics, bool) {
-	rbacs := toWorkspaceRBACs(d)
-	for id, rbac := range rbacs {
-		if err := c.UpdateWorkspaceRBACS(d.Id(), workspace.Spec.ClusterRbacs[id].Metadata.UID, rbac); err != nil {
+	desired := toWorkspaceRBACs(d)
+
+	existingByType := make(map[string]*models.V1ClusterRbac)
+	if workspace.Spec != nil {
+		for _, rbac := range workspace.Spec.ClusterRbacs {
+			bindingType := workspaceRbacBindingType(rbac)
+			if bindingType == "" {
+				continue
+			}
+			existingByType[bindingType] = rbac
+		}
+	}
+
+	for _, rbac := range desired {
+		bindingType := workspaceRbacBindingType(rbac)
+		if bindingType == "" {
+			continue
+		}
+		if existing, ok := existingByType[bindingType]; ok {
+			if existing.Metadata == nil || existing.Metadata.UID == "" {
+				return diag.Errorf("existing workspace RBAC for type %q is missing metadata UID", bindingType), true
+			}
+			if err := c.UpdateWorkspaceRBACS(d.Id(), existing.Metadata.UID, rbac); err != nil {
+				return diag.FromErr(err), true
+			}
+			delete(existingByType, bindingType)
+			continue
+		}
+		if _, err := c.CreateWorkspaceRBACS(d.Id(), rbac); err != nil {
 			return diag.FromErr(err), true
 		}
 	}
+
+	for _, rbac := range existingByType {
+		if rbac.Metadata == nil || rbac.Metadata.UID == "" {
+			continue
+		}
+		if err := c.DeleteWorkspaceRBACS(d.Id(), rbac.Metadata.UID); err != nil {
+			return diag.FromErr(err), true
+		}
+	}
+
 	return nil, false
 }
 
