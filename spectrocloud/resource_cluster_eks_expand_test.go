@@ -113,6 +113,40 @@ func TestToEksCluster(t *testing.T) {
 	assert.Equal(t, int64(10), cluster.Spec.Machinepoolconfig[0].CloudConfig.RootDeviceSize, "Unexpected disk size")
 }
 
+func TestToEksClusterWithOverrideClusterAPIConfig(t *testing.T) {
+	d := resourceClusterEks().TestResourceData()
+
+	d.Set("name", "test-cluster-override")
+	d.Set("context", "project")
+	d.Set("tags", []interface{}{"tag1:value1"})
+	d.Set("cloud_account_id", "test-cloud-id")
+	d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":                "test-ssh-key",
+			"region":                      "us-west-1",
+			"vpc_id":                      "test-vpc-id",
+			"endpoint_access":             "public",
+			"public_access_cidrs":         []interface{}{"0.0.0.0/0"},
+			"override_cluster_api_config": "awsManagedControlPlane:\n  spec:\n    additionalTags:\n      env: prod",
+		},
+	})
+	d.Set("machine_pool", []interface{}{
+		map[string]interface{}{
+			"name":            "test-pool",
+			"disk_size_gb":    10,
+			"count":           2,
+			"instance_type":   "t2.micro",
+			"capacity_type":   "on-demand",
+			"update_strategy": "RollingUpdateScaleOut",
+		},
+	})
+
+	cluster, err := toEksCluster(&client.V1Client{}, d)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "awsManagedControlPlane:\n  spec:\n    additionalTags:\n      env: prod", cluster.Spec.CloudConfig.OverrideClusterAPIConfig)
+}
+
 func TestToEksClusterWithAzSubnets(t *testing.T) {
 	// Setup a dummy ResourceData for testing with az_subnets
 	d := resourceClusterEks().TestResourceData()
