@@ -142,8 +142,8 @@ func resourceClusterEdgeNative() *schema.Resource {
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     false,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Computed:    true,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
@@ -812,6 +812,10 @@ func toEdgeNativeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 	}
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
+	// Edge Native defaults worker pool updates to sequential (false) when unset.
+	if _, ok := d.GetOkExists("update_worker_pools_in_parallel"); !ok {
+		cluster.Spec.ClusterConfig.UpdateWorkerPoolsInParallel = false
+	}
 
 	return cluster, nil
 }

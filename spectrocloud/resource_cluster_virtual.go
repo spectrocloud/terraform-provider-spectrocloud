@@ -148,7 +148,7 @@ func resourceClusterVirtual() *schema.Resource {
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
+				Computed:    true,
 				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"cluster_timezone": {
@@ -571,7 +571,7 @@ func toVirtualCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spe
 						UID: hostClusterUid,
 					},
 				},
-				UpdateWorkerPoolsInParallel: d.Get("update_worker_pools_in_parallel").(bool),
+				UpdateWorkerPoolsInParallel: updateWorkerPoolsInParallel(d),
 				Timezone:                    d.Get("cluster_timezone").(string),
 			},
 			Machinepoolconfig: nil,
