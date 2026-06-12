@@ -97,6 +97,25 @@ provider "spectrocloud" {
 }
 ```
 
+## Feature Preview
+
+The provider accepts optional feature preview flags through the `feature_preview` map argument in the provider block.
+
+### immutable-clusterprofiles
+
+When set to `true`, `spectrocloud_cluster_profile` uses the standard Terraform Plugin SDK v2 immutable-versioned-resource pattern. Version bumps trigger a Terraform replacement (`ForceNew`) instead of an in-place update. Combined with `skip_destroy = true` and `lifecycle { create_before_destroy = true }` on the resource, each version is preserved in Palette while Terraform state advances to the new version. See [`spectrocloud_cluster_profile`](resources/cluster_profile.md) for full usage details.
+
+```terraform
+provider "spectrocloud" {
+  host    = var.sc_host
+  api_key = var.sc_api_key
+
+  feature_preview = {
+    "immutable-clusterprofiles" = true
+  }
+}
+```
+
 ## Import
 Starting with Terraform v1.5.0 and later, you can use an [`import` block](https://developer.hashicorp.com/terraform/language/import) to import resources into your state file.
 

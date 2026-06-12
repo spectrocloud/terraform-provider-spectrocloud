@@ -49,9 +49,9 @@ resource "local_file" "admin_kube_config" {
 
 ### Read-Only
 
-- `admin_kube_config` (String) The admin kubeconfig file for accessing the cluster. This is computed automatically.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Computed from the cluster; treat as a highly sensitive secret.
 - `cluster_timezone` (String) The time zone used by this cluster to interpret scheduled operations. Maintenance tasks like upgrades follow this time zone to ensure they run at the appropriate local time for the cluster. Value is in IANA timezone format (e.g., 'America/New_York', 'Asia/Kolkata').
 - `health` (String) The current health status of the cluster. This is computed automatically.
 - `id` (String) The ID of this resource.
-- `kube_config` (String) The kubeconfig file for accessing the cluster as a non-admin user. This is computed automatically.
+- `kube_config` (String, Sensitive) Non-admin kubeconfig (credential material). Computed from the cluster; protect like any kubeconfig secret.
 - `state` (String) The current state of the cluster. This is computed automatically.

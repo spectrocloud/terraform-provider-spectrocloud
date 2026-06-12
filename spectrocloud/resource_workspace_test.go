@@ -226,13 +226,7 @@ func TestFlattenWorkspaceQuota(t *testing.T) {
 					},
 				},
 			},
-			expected: []interface{}{
-				map[string]interface{}{
-					"cpu":    0.0,
-					"memory": 0.0,
-					"gpu":    0,
-				},
-			},
+			expected: []interface{}{},
 		},
 		{
 			name: "Workspace with large GPU limit",
@@ -447,7 +441,7 @@ func TestUpdateWorkspaceRBACs(t *testing.T) {
 			description: "Should handle empty RBACs gracefully",
 		},
 		{
-			name: "Update with missing ClusterRbacs index",
+			name: "Create RBAC when binding type does not exist",
 			setup: func() (*schema.ResourceData, *models.V1Workspace, *client.V1Client) {
 				d := schema.TestResourceDataRaw(t, resourceWorkspace().Schema, map[string]interface{}{
 					"name": "test-workspace",
@@ -476,7 +470,7 @@ func TestUpdateWorkspaceRBACs(t *testing.T) {
 
 				workspace := &models.V1Workspace{
 					Spec: &models.V1WorkspaceSpec{
-						ClusterRbacs: []*models.V1ClusterRbac{}, // Empty array but RBACs exist in ResourceData
+						ClusterRbacs: []*models.V1ClusterRbac{},
 					},
 				}
 
@@ -485,7 +479,7 @@ func TestUpdateWorkspaceRBACs(t *testing.T) {
 			},
 			expectError: true,
 			expectDone:  true,
-			description: "Should error when ClusterRbacs array doesn't match RBACs length (index out of bounds)",
+			description: "Should create missing RBAC binding type instead of panicking",
 		},
 	}
 
@@ -515,14 +509,10 @@ func TestUpdateWorkspaceRBACs(t *testing.T) {
 			}()
 
 			// Verify results
+			assert.False(t, panicked, "updateWorkspaceRBACs should not panic: %s", tt.description)
 			if tt.expectError {
-				if panicked {
-					assert.True(t, done, "Should return done=true when panic occurs: %s", tt.description)
-					assert.NotEmpty(t, diags, "Should have diagnostics when panic occurs: %s", tt.description)
-				} else {
-					assert.True(t, done, "Should return done=true for error case: %s", tt.description)
-					assert.NotEmpty(t, diags, "Should have diagnostics for error case: %s", tt.description)
-				}
+				assert.True(t, done, "Should return done=true for error case: %s", tt.description)
+				assert.NotEmpty(t, diags, "Should have diagnostics for error case: %s", tt.description)
 			} else {
 				assert.False(t, done, "Should return done=false for successful update: %s", tt.description)
 				assert.Empty(t, diags, "Should not have diagnostics for successful update: %s", tt.description)

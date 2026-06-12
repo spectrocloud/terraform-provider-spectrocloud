@@ -389,6 +389,72 @@ resource "spectrocloud_cluster_profile" "profile" {
 ```
 
 
+## Immutable versioning
+
+This resource supports the standard Terraform Plugin SDK v2 pattern for immutable-versioned upstream resources, the same shape used by [`aws_lambda_layer_version`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_layer_version), `aws_db_snapshot`, `azurerm_shared_image_version`, `google_compute_instance_template`, and similar resources. When the `immutable-clusterprofiles` feature_preview flag is enabled on the provider:
+
+- Changes to `version` trigger a **Terraform resource replacement** (`ForceNew`) instead of an in-place update
+- The new version is created by calling `POST /v1/clusterprofiles/{uid}/clone` against any existing version of the lineage, then overwriting the clone with the user's HCL content
+- The previous version is preserved in Palette because `Delete` honors `skip_destroy = true`
+- `create_before_destroy = true` ensures the new version exists before Terraform removes the old one from state
+
+All three knobs (feature flag, `skip_destroy`, and `lifecycle`) are required together. Miss any one and the plan will either error out (missing `skip_destroy`) or the old version will be destroyed in Palette (missing `create_before_destroy`). This matches the standard SDK v2 pattern exactly.
+
+### Enabling immutable versioning
+
+```terraform
+provider "spectrocloud" {
+  host = "api.spectrocloud.com"
+
+  feature_preview = {
+    "immutable-clusterprofiles" = true
+  }
+}
+
+resource "spectrocloud_cluster_profile" "addon" {
+  name    = "example-addon"
+  version = var.profile_version  # bump this via git tags / CI
+  type    = "add-on"
+  context = "project"
+
+  pack {
+    name = "example-manifest"
+    type = "manifest"
+
+    manifest {
+      name    = "example"
+      content = file("${path.module}/manifests/example.yaml")
+    }
+  }
+
+  skip_destroy = true  # preserve old versions in Palette
+
+  lifecycle {
+    create_before_destroy = true  # create new version before destroying old
+  }
+}
+```
+
+Bumping `var.profile_version` from `1.0.0` to `1.1.0` and running `terraform apply`:
+
+1. Terraform plans a replacement (ForceNew on `version`)
+2. The new resource's `Create` runs first (because of `create_before_destroy`), calls the clone endpoint, applies the user's pack content
+3. The old resource is "destroyed" from Terraform's perspective, but `skip_destroy` makes the Delete call a no-op; the `1.0.0` version stays in Palette untouched
+4. State advances to `1.1.0`; Palette has both versions with distinct UIDs; `terraform output` returns the correct current uid without needing `terraform apply -refresh-only`
+
+### Why all three knobs are required
+
+| Knob | Why it's required | What happens if you skip it |
+|------|------------------|----------------------------|
+| `feature_preview.immutable-clusterprofiles = true` | Opts the resource into replacement-based versioning. Without it, the resource preserves its legacy in-place `PUT` behavior for backward compatibility. | Legacy in-place mutation; previous version is destroyed. |
+| `skip_destroy = true` | Prevents `Delete` from calling the Palette DELETE API on the replaced resource, so the old version is preserved in Palette even though Terraform removes it from state. | Plan fails with an error at `terraform plan` time (the provider catches this and tells you exactly what to add). |
+| `lifecycle { create_before_destroy = true }` | Ensures Terraform creates the new version before marking the old one for destruction. Without it, Terraform destroys first and creates second, causing a brief window where no version exists in Terraform state. | Terraform would attempt to `Delete` the old resource before `Create`ing the new one; because `skip_destroy = true` makes Delete a no-op, the Palette version still survives, but the planned operation order is wrong and some edge cases (state corruption on failure, for example) are riskier. Terraform core parses `lifecycle` blocks before the provider runs, so the provider cannot validate this automatically; this one is on the user to remember. |
+
+### Backward compatibility
+
+The `immutable-clusterprofiles` feature flag is opt-in. Without it, `spectrocloud_cluster_profile` behaves exactly as it did before the flag was introduced; version changes go through the in-place `PUT` path. Existing HCL, state files, and CI pipelines continue to work without modification. See the resource's `version` and `skip_destroy` field docs below for further details.
+
+
 ## Import
 
 In Terraform v1.5.0 and later, use an [`import` block](https://developer.hashicorp.com/terraform/language/import)
@@ -423,10 +489,17 @@ Refer to the [Import section](/docs#import) to learn more.
 - `description` (String) Description of the cluster profile.
 - `pack` (Block List) For packs of type `spectro`, `helm`, and `manifest`, at least one pack must be specified. (see [below for nested schema](#nestedblock--pack))
 - `profile_variables` (Block List, Max: 1) List of variables for the cluster profile. During Day 2 operations, variable updates are prioritized over pack updates due to variable reference constraints. Any additions or removals will apply variable changes first, followed by pack updates. (see [below for nested schema](#nestedblock--profile_variables))
+- `skip_destroy` (Boolean) When `true`, `terraform destroy` removes the cluster profile from Terraform state without calling the Palette delete API, leaving the underlying profile version intact in Palette. 
+
+This is the standard Terraform Plugin SDK v2 preservation pattern for immutable-versioned resources. Combined with the `immutable-clusterprofiles` feature_preview flag and `lifecycle { create_before_destroy = true }`, it lets you bump the `version` field as a normal in-HCL edit while every previous version stays preserved in Palette -- Terraform's state advances cleanly to the new version while older versions remain immutable in Palette. Defaults to `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `type` (String) Specify the cluster profile type to use. Allowed values are `cluster`, `infra`, `add-on`, and `system`. These values map to the following User Interface (UI) labels. Use the value ' cluster ' for a **Full** cluster profile.For an Infrastructure cluster profile, use the value `infra`; for an Add-on cluster profile, use the value `add-on`.System cluster profiles can be specified using the value `system`. To learn more about cluster profiles, refer to the [Cluster Profile](https://docs.spectrocloud.com/cluster-profiles) documentation. Default value is `add-on`.
-- `version` (String) Version of the cluster profile. Defaults to '1.0.0'. **Important**: Modifying this value will only update the version number of the existing cluster profile. It will NOT create a new version in Palette. To create a new version of a cluster profile, refer to the example at: https://github.com/spectrocloud/spectro-samples/tree/main/terraform/cluster-profiles.
+- `version` (String) Version of the cluster profile. Defaults to '1.0.0'. 
+
+Default behavior (no feature flag set): changing this value on an existing profile updates the version in place via `PUT /v1/clusterprofiles/{uid}`, which destroys the previous version. This is the legacy behavior preserved for backward compatibility. 
+
+When the `immutable-clusterprofiles` feature_preview flag is enabled, changing this value triggers a Terraform resource **replacement** (`ForceNew`) instead of an in-place update. This is the standard Terraform Plugin SDK v2 pattern for immutable-versioned resources. Combined with `skip_destroy = true` and `lifecycle { create_before_destroy = true }`, the new version is created by cloning from the existing Palette lineage while the previous version is preserved untouched in Palette. The Terraform resource id is set once at Create time and never mutates mid-update, so it respects the SDK v2 contract that a resource's primary id is stable across in-place updates -- outputs that reference `.id` always reflect the current version without needing `terraform apply -refresh-only`.
 
 ### Read-Only
 
