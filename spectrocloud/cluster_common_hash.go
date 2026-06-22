@@ -108,6 +108,9 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
+	if val, ok := m["override_cluster_api_config"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	if val, ok := m["instance_type"]; ok {
 		fmt.Fprintf(buf, "%s-", val.(string))
