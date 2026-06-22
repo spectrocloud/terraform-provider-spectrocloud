@@ -970,6 +970,12 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	if err != nil {
 		return nil, err
 	}
+
+	overrideClusterAPIConfig := ""
+	if cloudConfig["override_cluster_api_config"] != nil {
+		overrideClusterAPIConfig = cloudConfig["override_cluster_api_config"].(string)
+	}
+
 	cluster := &models.V1SpectroEksClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroEksClusterEntitySpec{
@@ -978,11 +984,12 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 			ClusterTemplate: toClusterTemplateReference(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
-				BastionDisabled:  true,
-				VpcID:            cloudConfig["vpc_id"].(string),
-				Region:           types.Ptr(cloudConfig["region"].(string)),
-				SSHKeyName:       cloudConfig["ssh_key_name"].(string),
-				EncryptionConfig: encryptionConfig,
+				BastionDisabled:          true,
+				VpcID:                    cloudConfig["vpc_id"].(string),
+				Region:                   types.Ptr(cloudConfig["region"].(string)),
+				SSHKeyName:               cloudConfig["ssh_key_name"].(string),
+				EncryptionConfig:         encryptionConfig,
+				OverrideClusterAPIConfig: overrideClusterAPIConfig,
 			},
 		},
 	}

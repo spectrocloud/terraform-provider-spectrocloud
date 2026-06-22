@@ -8,6 +8,13 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/constants"
 )
 
+func workspaceRbacBindingType(rbac *models.V1ClusterRbac) string {
+	if rbac == nil || rbac.Spec == nil || len(rbac.Spec.Bindings) == 0 {
+		return ""
+	}
+	return rbac.Spec.Bindings[0].Type
+}
+
 func toWorkspaceRBACs(d *schema.ResourceData) []*models.V1ClusterRbac {
 	rbacs := toClusterRBACsInputEntities(d)
 	workspace_rbacs := make([]*models.V1ClusterRbac, 0)
