@@ -29,6 +29,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
 
   cloud_config {
     ssh_key_name = "my-ssh-key"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
     
     zone {
       name = "Zone1"
@@ -74,6 +81,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     additional_labels = {
       "role" = "worker"
     }
+
+    override_cluster_api_config = <<-EOT
+      spec:
+        template:
+          spec:
+            nodeDrainTimeout: 5m
+    EOT
   }
 }
 ```
@@ -103,6 +117,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
 
   cloud_config {
     ssh_key_name = "production-ssh-key"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
     
     # Optional: Specify CloudStack project
     project {
@@ -686,6 +707,7 @@ Required:
 Optional:
 
 - `control_plane_endpoint` (String) Endpoint IP to be used for the API server. Should only be set for static CloudStack networks.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `project` (Block List, Max: 1) CloudStack project configuration (optional). If not specified, the cluster will be created in the domain's default project. (see [below for nested schema](#nestedblock--cloud_config--project))
 - `ssh_key_name` (String) SSH key name for accessing cluster nodes.
 - `sync_with_cks` (Boolean) Determines if an external managed CKS (CloudStack Kubernetes Service) cluster should be created. Default is `false`.
@@ -765,6 +787,7 @@ Optional:
 - `network` (Block List) Network configuration for the machine pool instances. (see [below for nested schema](#nestedblock--machine_pool--network))
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))

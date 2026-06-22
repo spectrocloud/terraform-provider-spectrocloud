@@ -32,6 +32,13 @@ resource "spectrocloud_cluster_azure" "cluster" {
     resource_group  = var.azure_resource_group
     region          = var.azure_region
     ssh_key         = var.cluster_ssh_public_key
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
 
      //Static placement config
         #    network_resource_group = "test-resource-group"
@@ -96,6 +103,12 @@ resource "spectrocloud_cluster_azure" "cluster" {
     count         = 1
     instance_type = "Standard_D2_v3"
     azs           = [""]
+    override_cluster_api_config = <<-EOT
+      spec:
+        template:
+          spec:
+            nodeDrainTimeout: 5m
+    EOT
   }
 
 }
@@ -181,6 +194,7 @@ Optional:
 - `container_name` (String) Container name within your azure storage account.
 - `control_plane_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--control_plane_subnet))
 - `network_resource_group` (String) Azure network resource group in which the cluster is to be provisioned.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `private_api_server` (Block List, Max: 1) Custom private DNS zone for your cluster's API server. For more details, refer to the https://docs.spectrocloud.com/clusters/public-cloud/azure/create-azure-cluster/#private-api-server-lb-settings (see [below for nested schema](#nestedblock--cloud_config--private_api_server))
 - `storage_account_name` (String) Azure storage account name.
 - `virtual_network_cidr_block` (String) Azure virtual network cidr block in which the cluster is to be provisioned.
@@ -248,6 +262,7 @@ Optional:
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `os_type` (String) Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))

@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
@@ -362,4 +363,72 @@ func sortSliceOfMaps(slice []interface{}) {
 		mapJ := slice[j].(map[string]interface{})
 		return mapI["name"].(string) < mapJ["name"].(string)
 	})
+}
+
+func TestAzureClusterConfigFromMapOverride(t *testing.T) {
+	t.Parallel()
+	cfg := azureClusterConfigFromMap(map[string]interface{}{
+		"region":                      "eastus",
+		"ssh_key":                     "ssh-rsa AAA",
+		"subscription_id":             "sub-1",
+		"resource_group":              "rg-1",
+		"storage_account_name":        "",
+		"container_name":              "",
+		"override_cluster_api_config": "kind: Cluster",
+	})
+	require.NotNil(t, cfg)
+	assert.Equal(t, "kind: Cluster", cfg.OverrideClusterAPIConfig)
+}
+
+func TestToCloudConfigAzureOverride(t *testing.T) {
+	t.Parallel()
+	entity := toCloudConfigAzure(map[string]interface{}{
+		"region":                      "eastus",
+		"ssh_key":                     "ssh-rsa AAA",
+		"subscription_id":             "sub-1",
+		"resource_group":              "rg-1",
+		"storage_account_name":        "",
+		"container_name":              "",
+		"override_cluster_api_config": "kind: Cluster",
+	})
+	require.NotNil(t, entity.ClusterConfig)
+	assert.Equal(t, "kind: Cluster", entity.ClusterConfig.OverrideClusterAPIConfig)
+}
+
+func TestToMachinePoolAzureOverrideClusterAPIConfig(t *testing.T) {
+	t.Parallel()
+	azsSet := schema.NewSet(schema.HashString, []interface{}{"1"})
+	mp, err := toMachinePoolAzure(map[string]interface{}{
+		"name":                        "worker",
+		"count":                       2,
+		"control_plane":               false,
+		"control_plane_as_worker":     false,
+		"instance_type":               "Standard_DS2_v2",
+		"os_type":                     "Linux",
+		"is_system_node_pool":         false,
+		"azs":                         azsSet,
+		"disk":                        []interface{}{},
+		"node_repave_interval":        0,
+		"override_cluster_api_config": "kind: MachinePool",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "kind: MachinePool", mp.PoolConfig.OverrideClusterAPIConfig)
+}
+
+func TestFlattenClusterConfigsAzureOverride(t *testing.T) {
+	t.Parallel()
+	out := flattenClusterConfigsAzure(&models.V1AzureCloudConfig{
+		Spec: &models.V1AzureCloudConfigSpec{
+			ClusterConfig: &models.V1AzureClusterConfig{
+				OverrideClusterAPIConfig: "kind: Cluster",
+				ResourceGroup:            "rg-1",
+				SubscriptionID:           types.Ptr("sub-1"),
+				Location:                 types.Ptr("eastus"),
+				SSHKey:                   types.Ptr("ssh"),
+			},
+		},
+	})
+	require.Len(t, out, 1)
+	m := out[0].(map[string]interface{})
+	assert.Equal(t, "kind: Cluster", m["override_cluster_api_config"])
 }

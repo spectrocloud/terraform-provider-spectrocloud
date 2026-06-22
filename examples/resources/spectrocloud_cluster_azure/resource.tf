@@ -14,10 +14,17 @@ resource "spectrocloud_cluster_azure" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_azure.account.id
 
   cloud_config {
-    subscription_id = var.azure_subscription_id
-    resource_group  = var.azure_resource_group
-    region          = var.azure_region
-    ssh_key         = var.cluster_ssh_public_key
+    subscription_id             = var.azure_subscription_id
+    resource_group              = var.azure_resource_group
+    region                      = var.azure_region
+    ssh_key                     = var.cluster_ssh_public_key
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
 
     //Static placement config
     #    network_resource_group = "test-resource-group"
@@ -55,11 +62,17 @@ resource "spectrocloud_cluster_azure" "cluster" {
   }
 
   machine_pool {
-    is_system_node_pool = true
-    name                = "worker-basic"
-    count               = 2
-    instance_type       = "Standard_D2_v3"
-    azs                 = []
+    is_system_node_pool         = true
+    name                        = "worker-basic"
+    count                       = 2
+    instance_type               = "Standard_D2_v3"
+    azs                         = []
+    override_cluster_api_config = <<-EOT
+      spec:
+        template:
+          spec:
+            nodeDrainTimeout: 5m
+    EOT
   }
 
 }
