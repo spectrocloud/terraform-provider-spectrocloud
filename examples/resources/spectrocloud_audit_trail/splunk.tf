@@ -9,7 +9,7 @@ resource "spectrocloud_audit_trail" "splunk" {
     source  = "palette"
 
     tls_config {
-      tls_verification = true
+      insecure_skip_verify = false
     }
   }
 }

@@ -69,7 +69,7 @@ resource "spectrocloud_audit_trail" "splunk" {
     source  = "palette"
 
     tls_config {
-      tls_verification = true
+      insecure_skip_verify = false
     }
   }
 }
@@ -142,7 +142,11 @@ Optional:
 Optional:
 
 - `ca_cert_base64` (String) Base64-encoded CA certificate for self-signed Splunk instances.
-- `tls_verification` (Boolean) Enable TLS certificate verification. Default is `true`.
+- `insecure_skip_verify` (Boolean) Skip TLS certificate verification when set to `true`. Default is `false`.
+
+Read-Only:
+
+- `tls_verification` (Boolean) Whether TLS certificate verification is enabled. Computed as the inverse of `insecure_skip_verify`.
 
 
 
