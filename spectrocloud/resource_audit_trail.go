@@ -18,7 +18,6 @@ import (
 const (
 	auditTrailTypeCloudWatch = "cloudwatch"
 	auditTrailTypeSplunk     = "splunk"
-	splunkTokenPreserve      = "***"
 )
 
 func resourceAuditTrail() *schema.Resource {
@@ -156,9 +155,14 @@ func resourceAuditTrail() *schema.Resource {
 									},
 									"tls_verification": {
 										Type:        schema.TypeBool,
+										Computed:    true,
+										Description: "Whether TLS certificate verification is enabled. Computed as the inverse of `insecure_skip_verify`.",
+									},
+									"insecure_skip_verify": {
+										Type:        schema.TypeBool,
 										Optional:    true,
 										Default:     true,
-										Description: "Enable TLS certificate verification. Default is `true`.",
+										Description: "Skip TLS certificate verification when set to `true`. Default is `false`.",
 									},
 								},
 							},
@@ -239,7 +243,7 @@ func resourceAuditTrailCreate(ctx context.Context, d *schema.ResourceData, m int
 		if err := validateSplunkAuditTrail(d, c, tenantUID); err != nil {
 			return diag.FromErr(err)
 		}
-		entity, err := toSplunkSinkEntity(d, false)
+		entity, err := toSplunkSinkEntity(d)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -319,8 +323,7 @@ func resourceAuditTrailUpdate(ctx context.Context, d *schema.ResourceData, m int
 		if err := validateSplunkAuditTrail(d, c, tenantUID); err != nil {
 			return diag.FromErr(err)
 		}
-		preserveToken := !d.HasChange("splunk.0.token")
-		updateEntity, err := toSplunkSinkEntity(d, preserveToken)
+		updateEntity, err := toSplunkSinkEntity(d)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -498,7 +501,7 @@ func validateCloudWatchAuditTrail(d *schema.ResourceData, c *client.V1Client) er
 }
 
 func validateSplunkAuditTrail(d *schema.ResourceData, c *client.V1Client, tenantUID string) error {
-	entity, err := toSplunkSinkEntity(d, false)
+	entity, err := toSplunkSinkEntity(d)
 	if err != nil {
 		return err
 	}
@@ -571,7 +574,7 @@ func toCloudWatchDataSinkConfig(d *schema.ResourceData, uid string) (*models.V1D
 	return config, nil
 }
 
-func toSplunkSinkEntity(d *schema.ResourceData, preserveToken bool) (*models.V1SplunkSinkEntity, error) {
+func toSplunkSinkEntity(d *schema.ResourceData) (*models.V1SplunkSinkEntity, error) {
 	spList := d.Get("splunk").([]interface{})
 	if len(spList) == 0 {
 		return nil, fmt.Errorf("splunk block is required")
@@ -579,9 +582,6 @@ func toSplunkSinkEntity(d *schema.ResourceData, preserveToken bool) (*models.V1S
 	sp := spList[0].(map[string]interface{})
 
 	token := sp["token"].(string)
-	if preserveToken {
-		token = splunkTokenPreserve
-	}
 	hecURL := sp["hec_url"].(string)
 	tokenVal := strfmt.Password(token)
 
@@ -594,11 +594,14 @@ func toSplunkSinkEntity(d *schema.ResourceData, preserveToken bool) (*models.V1S
 
 	if tlsList, ok := sp["tls_config"].([]interface{}); ok && len(tlsList) > 0 {
 		tls := tlsList[0].(map[string]interface{})
-		tlsVerification := tls["tls_verification"].(bool)
+		insecureSkipVerify := false
+		if v, ok := tls["insecure_skip_verify"].(bool); ok {
+			insecureSkipVerify = v
+		}
 		spec.TLSConfig = &models.V1TLSCA{
 			CaCertBase64:       tls["ca_cert_base64"].(string),
-			InsecureSkipVerify: !tlsVerification,
-			Enabled:            tls["ca_cert_base64"].(string) != "" || !tlsVerification,
+			InsecureSkipVerify: insecureSkipVerify,
+			Enabled:            true,
 		}
 	}
 
@@ -686,11 +689,12 @@ func flattenSplunkAuditTrail(d *schema.ResourceData, sink *models.V1SplunkSink) 
 	}
 
 	if sink.Spec.TLSConfig != nil {
-		tlsVerification := !sink.Spec.TLSConfig.InsecureSkipVerify
+		insecureSkipVerify := sink.Spec.TLSConfig.InsecureSkipVerify
 		spMap["tls_config"] = []interface{}{
 			map[string]interface{}{
-				"ca_cert_base64":   sink.Spec.TLSConfig.CaCertBase64,
-				"tls_verification": tlsVerification,
+				"ca_cert_base64":       sink.Spec.TLSConfig.CaCertBase64,
+				"insecure_skip_verify": insecureSkipVerify,
+				"tls_verification":     !insecureSkipVerify,
 			},
 		}
 	}

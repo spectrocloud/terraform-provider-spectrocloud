@@ -143,15 +143,15 @@ func TestToSplunkSinkEntity(t *testing.T) {
 				"source":  "palette",
 				"tls_config": []interface{}{
 					map[string]interface{}{
-						"ca_cert_base64":   "Y2VydA==",
-						"tls_verification": true,
+						"ca_cert_base64":       "Y2VydA==",
+						"insecure_skip_verify": false,
 					},
 				},
 			},
 		},
 	})
 
-	entity, err := toSplunkSinkEntity(d, false)
+	entity, err := toSplunkSinkEntity(d)
 	require.NoError(t, err)
 	require.NotNil(t, entity.Name)
 	assert.Equal(t, "test-splunk", *entity.Name)
@@ -160,25 +160,7 @@ func TestToSplunkSinkEntity(t *testing.T) {
 	assert.Equal(t, strfmt.Password("hec-token"), *entity.Spec.Token)
 	require.NotNil(t, entity.Spec.TLSConfig)
 	assert.True(t, entity.Spec.TLSConfig.Enabled)
-}
-
-func TestToSplunkSinkEntityPreserveToken(t *testing.T) {
-	t.Parallel()
-
-	d := schema.TestResourceDataRaw(t, resourceAuditTrail().Schema, map[string]interface{}{
-		"name": "test-splunk",
-		"type": auditTrailTypeSplunk,
-		"splunk": []interface{}{
-			map[string]interface{}{
-				"hec_url": "https://http-inputs-example.splunkcloud.com:443",
-				"token":   "hec-token",
-			},
-		},
-	})
-
-	entity, err := toSplunkSinkEntity(d, true)
-	require.NoError(t, err)
-	assert.Equal(t, strfmt.Password(splunkTokenPreserve), *entity.Spec.Token)
+	assert.False(t, entity.Spec.TLSConfig.InsecureSkipVerify)
 }
 
 func TestFlattenCloudWatchAuditTrail(t *testing.T) {
@@ -322,6 +304,38 @@ func TestFlattenSplunkAuditTrail(t *testing.T) {
 	sp := spList[0].(map[string]interface{})
 	assert.Equal(t, hecURL, sp["hec_url"])
 	assert.Equal(t, "main", sp["index"])
+	tlsList := sp["tls_config"].([]interface{})
+	require.Len(t, tlsList, 1)
+	tls := tlsList[0].(map[string]interface{})
+	assert.Equal(t, "Y2VydA==", tls["ca_cert_base64"])
+	assert.False(t, tls["insecure_skip_verify"].(bool))
+	assert.True(t, tls["tls_verification"].(bool))
+}
+
+func TestFlattenSplunkAuditTrailInsecureSkipVerify(t *testing.T) {
+	t.Parallel()
+
+	d := schema.TestResourceDataRaw(t, resourceAuditTrail().Schema, map[string]interface{}{
+		"name": "test-splunk",
+		"type": auditTrailTypeSplunk,
+	})
+
+	hecURL := "https://http-inputs-example.splunkcloud.com:443"
+	sink := &models.V1SplunkSink{
+		Metadata: &models.V1ObjectMeta{Name: "test-splunk"},
+		Spec: &models.V1SplunkSinkSpec{
+			HecURL: types.Ptr(hecURL),
+			TLSConfig: &models.V1TLSCA{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	require.NoError(t, flattenSplunkAuditTrail(d, sink))
+	sp := d.Get("splunk").([]interface{})[0].(map[string]interface{})
+	tls := sp["tls_config"].([]interface{})[0].(map[string]interface{})
+	assert.True(t, tls["insecure_skip_verify"].(bool))
+	assert.False(t, tls["tls_verification"].(bool))
 }
 
 func TestFlattenSplunkAuditTrailPreservesTokenFromState(t *testing.T) {
