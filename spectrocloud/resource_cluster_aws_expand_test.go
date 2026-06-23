@@ -91,6 +91,49 @@ func TestToMachinePoolAws(t *testing.T) {
 			expectedErr: false,
 		},
 		{
+			name: "Worker Pool with override_health_check_configuration",
+			machinePool: map[string]interface{}{
+				"name":                    "worker-pool-mhc",
+				"count":                   2,
+				"instance_type":           "t3.medium",
+				"disk_size_gb":            50,
+				"control_plane":           false,
+				"control_plane_as_worker": false,
+				"azs":                     schema.NewSet(schema.HashString, []interface{}{"us-west-1a"}),
+				"node_repave_interval":    0,
+				"override_health_check_configuration": `maxUnhealthy: 40%
+nodeStartupTimeout: 10m
+unhealthyConditions:
+  - type: Ready
+    status: "False"
+    timeout: 5m`,
+			},
+			vpcId: "vpc-67890",
+			expected: &models.V1AwsMachinePoolConfigEntity{
+				CloudConfig: &models.V1AwsMachinePoolCloudConfigEntity{
+					Azs:            []string{"us-west-1a"},
+					InstanceType:   types.Ptr("t3.medium"),
+					CapacityType:   types.Ptr("on-demand"),
+					RootDeviceSize: 50,
+					Subnets:        []*models.V1AwsSubnetEntity{},
+				},
+				PoolConfig: &models.V1MachinePoolConfigEntity{
+					Name:                             types.Ptr("worker-pool-mhc"),
+					Size:                             types.Ptr(int32(2)),
+					MinSize:                          2,
+					MaxSize:                          2,
+					IsControlPlane:                   false,
+					Labels:                           []string{"worker"},
+					UpdateStrategy:                   &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+					SkipK8sUpgrade:                   types.Ptr("disabled"),
+					OverrideHealthCheckConfiguration: "maxUnhealthy: 40%\nnodeStartupTimeout: 10m\nunhealthyConditions:\n  - type: Ready\n    status: \"False\"\n    timeout: 5m",
+					AdditionalLabels:                 map[string]string{},
+					AdditionalAnnotations:            map[string]string{},
+				},
+			},
+			expectedErr: false,
+		},
+		{
 			name: "Worker Pool with Spot Instances",
 			machinePool: map[string]interface{}{
 				"name":                    "worker-pool",

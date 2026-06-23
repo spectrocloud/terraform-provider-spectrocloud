@@ -61,4 +61,12 @@ resource "spectrocloud_cluster_gcp" "cluster" {
     azs           = ["us-west3-a"]
   }
 
+  override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+    EOT
 }

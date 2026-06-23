@@ -330,6 +330,7 @@ func resourceClusterMaas() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"azs": {
 							Type:     schema.TypeSet,
 							Required: true,
@@ -460,6 +461,7 @@ func resourceClusterMaasCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -615,6 +617,7 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		if !machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" when API omits field
 		skipK8sUpgrade := "disabled"
@@ -974,6 +977,7 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 		}
 		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	if len(m["network"].([]interface{})) > 0 {
 		network := m["network"].([]interface{})[0].(map[string]interface{})

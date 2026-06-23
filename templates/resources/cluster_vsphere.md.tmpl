@@ -89,6 +89,14 @@ to import the resource {{ .Name }} by using its `id` with the Palette `context` 
 import {
   to = {{ .Name }}.example
   id = "example_id:context"
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+    EOT
 }
 ```
 

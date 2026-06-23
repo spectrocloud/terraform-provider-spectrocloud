@@ -317,7 +317,8 @@ func resourceClusterAws() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
-						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
+						"override_cluster_api_config":         schemas.OverrideClusterAPIConfigMachinePoolSchema(),
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"disk_size_gb": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -391,6 +392,7 @@ func resourceClusterAwsCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -557,6 +559,7 @@ func flattenMachinePoolConfigsAws(machinePools []*models.V1AwsMachinePoolConfig)
 		if machinePool.OverrideClusterAPIConfig != "" {
 			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
@@ -625,6 +628,7 @@ func resourceClusterAwsUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 
 	// Validate that cluster_type is not being modified (it's a create-only field)
 	if err := ValidateClusterTypeUpdate(d); err != nil {
@@ -875,6 +879,7 @@ func toMachinePoolAws(machinePool interface{}, vpcId string) (*models.V1AwsMachi
 	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
 		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	if !controlPlane {
 		nodeRepaveInterval := 0

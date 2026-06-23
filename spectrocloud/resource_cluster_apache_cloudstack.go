@@ -375,7 +375,8 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
-						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
+						"override_cluster_api_config":         schemas.OverrideClusterAPIConfigMachinePoolSchema(),
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"min": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -529,6 +530,7 @@ func resourceClusterApacheCloudStackStateUpgradeV2(ctx context.Context, rawState
 func resourceClusterApacheCloudStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -595,6 +597,7 @@ func resourceClusterApacheCloudStackRead(_ context.Context, d *schema.ResourceDa
 
 func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
@@ -801,6 +804,7 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 	if overrideClusterAPIConfig, ok := mp["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
 		poolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
+	expandOverrideHealthCheckConfiguration(mp, poolConfig)
 
 	// Safe conversion for min size
 	if mp["min"] != nil {
@@ -1174,6 +1178,7 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 		if machinePool.OverrideClusterAPIConfig != "" {
 			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		if machinePool.MinSize > 0 {
 			oi["min"] = int(machinePool.MinSize)
