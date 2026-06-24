@@ -30,6 +30,8 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
 
   machine_pool {
     name = "wp-pool"
+    # optional: "enabled" to skip OS/K8s upgrade (N-3 skew)
+    skip_k8s_upgrade = "disabled"
 
     edge_host {
       host_uid        = "edge-bef8384adfasdtest"

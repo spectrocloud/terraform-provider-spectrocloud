@@ -161,7 +161,6 @@ func resourceClusterAzure() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -244,6 +243,7 @@ func resourceClusterAzure() *schema.Resource {
 								},
 							},
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -320,6 +320,7 @@ func resourceClusterAzure() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"disk": {
 							Type:     schema.TypeList,
 							Optional: true,
@@ -528,6 +529,9 @@ func flattenClusterConfigsAzure(config *models.V1AzureCloudConfig) []interface{}
 	if config.Spec.ClusterConfig.ContainerName != "" {
 		m["container_name"] = config.Spec.ClusterConfig.ContainerName
 	}
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
 	if config.Spec.ClusterConfig.VnetResourceGroup != "" {
 		m["network_resource_group"] = config.Spec.ClusterConfig.VnetResourceGroup
 	}
@@ -621,6 +625,9 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
+		}
 
 		oi["instance_type"] = machinePool.InstanceType
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
@@ -653,6 +660,12 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 	}
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if err := c.UpdateCloudConfigAzure(cloudConfigId, toCloudConfigAzure(cloudConfig)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 	//ClusterContext := d.Get("context").(string)
 	CloudConfig, err := c.GetCloudConfigAzure(cloudConfigId)
 	if err != nil {
@@ -763,18 +776,9 @@ func toAzureCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spect
 			Profiles:        profiles,
 			ClusterTemplate: toClusterTemplateReference(d),
 			Policies:        toPolicies(d),
-			CloudConfig: &models.V1AzureClusterConfig{
-				Location:           types.Ptr(cloudConfig["region"].(string)),
-				SSHKey:             types.Ptr(cloudConfig["ssh_key"].(string)),
-				SubscriptionID:     types.Ptr(cloudConfig["subscription_id"].(string)),
-				ResourceGroup:      cloudConfig["resource_group"].(string),
-				StorageAccountName: cloudConfig["storage_account_name"].(string),
-				ContainerName:      cloudConfig["container_name"].(string),
-			},
+			CloudConfig:     azureClusterConfigFromMap(cloudConfig),
 		},
 	}
-	// setting static placements
-	toStaticPlacement(cluster, cloudConfig)
 	//for _, machinePool := range d.Get("machine_pool").([]interface{}) {
 	machinePoolConfigs := make([]*models.V1AzureMachinePoolConfigEntity, 0)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
@@ -915,6 +919,9 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
 	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
+	}
 
 	if !controlPlane {
 		nodeRepaveInterval := 0
@@ -930,6 +937,32 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 	}
 
 	return mp, nil
+}
+
+func toCloudConfigAzure(cloudConfig map[string]interface{}) *models.V1AzureCloudClusterConfigEntity {
+	return &models.V1AzureCloudClusterConfigEntity{
+		ClusterConfig: azureClusterConfigFromMap(cloudConfig),
+	}
+}
+
+func azureClusterConfigFromMap(cloudConfig map[string]interface{}) *models.V1AzureClusterConfig {
+	cluster := &models.V1SpectroAzureClusterEntity{
+		Spec: &models.V1SpectroAzureClusterEntitySpec{
+			CloudConfig: &models.V1AzureClusterConfig{
+				Location:           types.Ptr(cloudConfig["region"].(string)),
+				SSHKey:             types.Ptr(cloudConfig["ssh_key"].(string)),
+				SubscriptionID:     types.Ptr(cloudConfig["subscription_id"].(string)),
+				ResourceGroup:      cloudConfig["resource_group"].(string),
+				StorageAccountName: cloudConfig["storage_account_name"].(string),
+				ContainerName:      cloudConfig["container_name"].(string),
+			},
+		},
+	}
+	toStaticPlacement(cluster, cloudConfig)
+	if override, ok := cloudConfig["override_cluster_api_config"].(string); ok {
+		cluster.Spec.CloudConfig.OverrideClusterAPIConfig = override
+	}
+	return cluster.Spec.CloudConfig
 }
 
 func validateCPPoolCount(machinePool []*models.V1AzureMachinePoolConfigEntity) diag.Diagnostics {

@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
 	github.com/robfig/cron v1.2.0
-	github.com/spectrocloud/palette-sdk-go v0.0.0-20260611023244-7df2522cec20
+	github.com/spectrocloud/palette-sdk-go v0.0.0-20260622075626-8d743f7192ba
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.36.2

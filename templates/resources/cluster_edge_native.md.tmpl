@@ -45,6 +45,8 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
 
   machine_pool {
     name      = "worker-pool"
+    # optional: "enabled" to skip OS/K8s upgrade (N-3 skew)
+    skip_k8s_upgrade = "disabled"
 
     edge_host {
       host_uid  = spectrocloud_appliance.appliance1.uid

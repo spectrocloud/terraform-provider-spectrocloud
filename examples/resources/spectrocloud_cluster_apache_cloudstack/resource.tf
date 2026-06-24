@@ -20,6 +20,14 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     # Optional: SSH key for cluster nodes
     ssh_key_name = var.ssh_key_name
 
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
+
     # Optional: CloudStack project (V1CloudStackResource)
     # project {
     #   id   = var.cloudstack_project_id    # CloudStack project ID
@@ -191,6 +199,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
       postKubeadmCommands:
         - echo 'Node setup complete'
         - systemctl restart kubelet
+    EOT
+
+    override_cluster_api_config = <<-EOT
+      spec:
+        template:
+          spec:
+            nodeDrainTimeout: 5m
     EOT
 
     # Update Strategy Options:

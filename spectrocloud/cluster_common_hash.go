@@ -108,6 +108,9 @@ func resourceMachinePoolAzureHash(v interface{}) int {
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
+	if val, ok := m["override_cluster_api_config"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
 
 	if val, ok := m["instance_type"]; ok {
 		fmt.Fprintf(buf, "%s-", val.(string))
@@ -322,6 +325,9 @@ func resourceMachinePoolEksHash(v interface{}) int {
 		buf.WriteString(HashStringMap(nodePool["additional_annotations"]))
 	}
 	if val, ok := nodePool["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(&buf, "%s-", val)
+	}
+	if val, ok := nodePool["override_cluster_api_config"].(string); ok && val != "" {
 		fmt.Fprintf(&buf, "%s-", val)
 	}
 
@@ -701,6 +707,9 @@ func resourceMachinePoolEdgeNativeHash(v interface{}) int {
 		buf.WriteString(HashStringMap(m["additional_annotations"]))
 	}
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+	if val, ok := m["skip_k8s_upgrade"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
 

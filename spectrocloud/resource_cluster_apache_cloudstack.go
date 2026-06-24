@@ -305,6 +305,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							},
 							Description: "List of CloudStack zones for multi-AZ deployments. If only one zone is specified, it will be treated as single-zone deployment.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 				Description: "CloudStack cluster configuration.",
@@ -374,6 +375,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"min": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -602,6 +604,13 @@ func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if err := c.UpdateCloudConfigCloudStack(cloudConfigId, toCloudStackCloudClusterConfigUpdate(cloudConfig)); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	if d.HasChange("machine_pool") {
 		// Validate override_Scaling configuration
 		if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -670,6 +679,9 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 		SSHKeyName:           cloudConfig["ssh_key_name"].(string),
 		ControlPlaneEndpoint: cloudConfig["control_plane_endpoint"].(string),
 		SyncWithCKS:          cloudConfig["sync_with_cks"].(bool),
+	}
+	if override, ok := cloudConfig["override_cluster_api_config"].(string); ok {
+		config.OverrideClusterAPIConfig = override
 	}
 
 	// Process project if specified
@@ -786,6 +798,9 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 			poolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
 	}
+	if overrideClusterAPIConfig, ok := mp["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		poolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
+	}
 
 	// Safe conversion for min size
 	if mp["min"] != nil {
@@ -825,6 +840,17 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 	return mpEntity, nil
 }
 
+func toCloudStackCloudClusterConfigUpdate(cloudConfig map[string]interface{}) *models.V1CloudStackCloudClusterConfigEntity {
+	update := &models.V1CloudStackClusterConfigUpdateEntity{}
+	if v, ok := cloudConfig["control_plane_endpoint"].(string); ok {
+		update.ControlPlaneEndpoint = v
+	}
+	if v, ok := cloudConfig["override_cluster_api_config"].(string); ok {
+		update.OverrideClusterAPIConfig = v
+	}
+	return &models.V1CloudStackCloudClusterConfigEntity{ClusterConfig: update}
+}
+
 func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
@@ -840,6 +866,9 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 
 	// Hash override_kubeadm_configuration
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+	if val, ok := m["override_cluster_api_config"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
 
@@ -1042,6 +1071,9 @@ func flattenClusterConfigsApacheCloudStack(config *models.V1CloudStackCloudConfi
 	if clusterConfig.ControlPlaneEndpoint != "" {
 		m["control_plane_endpoint"] = clusterConfig.ControlPlaneEndpoint
 	}
+	if clusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = clusterConfig.OverrideClusterAPIConfig
+	}
 	m["sync_with_cks"] = clusterConfig.SyncWithCKS
 
 	// Flatten zones
@@ -1138,6 +1170,9 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 		// Flatten override_kubeadm_configuration (worker pools only)
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
 
 		if machinePool.MinSize > 0 {
