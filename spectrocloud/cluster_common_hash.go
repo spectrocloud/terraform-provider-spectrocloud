@@ -82,6 +82,7 @@ func CommonHash(nodePool map[string]interface{}) *bytes.Buffer {
 	if _, ok := nodePool["node"]; ok {
 		buf.WriteString(HashStringMapList(nodePool["node"]))
 	}
+	writeOverrideHealthCheckConfigurationHash(&buf, nodePool)
 
 	return &buf
 }

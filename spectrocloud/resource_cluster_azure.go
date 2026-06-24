@@ -320,7 +320,8 @@ func resourceClusterAzure() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
-						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
+						"override_cluster_api_config":         schemas.OverrideClusterAPIConfigMachinePoolSchema(),
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"disk": {
 							Type:     schema.TypeList,
 							Optional: true,
@@ -441,6 +442,7 @@ func resourceClusterAzureCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -628,6 +630,7 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 		if machinePool.OverrideClusterAPIConfig != "" {
 			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		oi["instance_type"] = machinePool.InstanceType
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
@@ -654,6 +657,7 @@ func resourceClusterAzureUpdate(ctx context.Context, d *schema.ResourceData, m i
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -922,6 +926,7 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
 		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	if !controlPlane {
 		nodeRepaveInterval := 0

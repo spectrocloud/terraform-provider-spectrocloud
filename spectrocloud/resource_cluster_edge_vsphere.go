@@ -280,6 +280,7 @@ func resourceClusterEdgeVsphere() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"instance_type": {
 							Type:     schema.TypeList,
 							Required: true,
@@ -401,6 +402,7 @@ func resourceClusterEdgeVsphereCreate(ctx context.Context, d *schema.ResourceDat
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -505,6 +507,7 @@ func flattenMachinePoolConfigsEdgeVsphere(machinePools []*models.V1VsphereMachin
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		if machinePool.InstanceType != nil {
 			s := make(map[string]interface{})
@@ -545,6 +548,7 @@ func resourceClusterEdgeVsphereUpdate(ctx context.Context, d *schema.ResourceDat
 	c := getV1ClientWithResourceContext(m, resourceContext)
 
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -761,6 +765,7 @@ func toMachinePoolEdgeVsphere(machinePool interface{}) (*models.V1VsphereMachine
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
 	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	if !controlPlane {
 		nodeRepaveInterval := 0

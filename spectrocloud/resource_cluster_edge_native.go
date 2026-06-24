@@ -275,6 +275,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"edge_host": {
 							Type:     schema.TypeSet,
 							Required: true,
@@ -398,6 +399,7 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -583,6 +585,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		if !machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" when API omits field
 		skipK8sUpgrade := "disabled"
@@ -613,6 +616,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -873,6 +877,7 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 		}
 		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	nodeRepaveInterval := 0
 	if m["node_repave_interval"] != nil {

@@ -255,6 +255,7 @@ func resourceClusterGcp() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"disk_size_gb": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -309,6 +310,7 @@ func resourceClusterGcpCreate(ctx context.Context, d *schema.ResourceData, m int
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -449,6 +451,7 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		oi["instance_type"] = *machinePool.InstanceType
 
@@ -467,6 +470,7 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -637,6 +641,7 @@ func toMachinePoolGcp(machinePool interface{}) (*models.V1GcpMachinePoolConfigEn
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
 	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	if !controlPlane {
 		nodeRepaveInterval := 0
