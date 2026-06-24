@@ -623,6 +623,19 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_custom_kubeadm" {
 
     update_strategy      = "RollingUpdateScaleIn"
     node_repave_interval = 90
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
   timeouts {
@@ -642,14 +655,6 @@ to import the resource spectrocloud_cluster_apache_cloudstack by using its `id` 
 import {
   to = spectrocloud_cluster_apache_cloudstack.example
   id = "example_id:context"
-    override_health_check_configuration = <<-EOT
-      maxUnhealthy: 40%
-      nodeStartupTimeout: 10m
-      unhealthyConditions:
-        - type: Ready
-          status: "False"
-          timeout: 5m
-    EOT
 }
 ```
 

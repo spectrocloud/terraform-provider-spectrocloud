@@ -76,6 +76,19 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
       memory_mb    = 8192
       cpu          = 4
     }
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 }
 ```
@@ -89,14 +102,6 @@ to import the resource spectrocloud_cluster_vsphere by using its `id` with the P
 import {
   to = spectrocloud_cluster_vsphere.example
   id = "example_id:context"
-    override_health_check_configuration = <<-EOT
-      maxUnhealthy: 40%
-      nodeStartupTimeout: 10m
-      unhealthyConditions:
-        - type: Ready
-          status: "False"
-          timeout: 5m
-    EOT
 }
 ```
 

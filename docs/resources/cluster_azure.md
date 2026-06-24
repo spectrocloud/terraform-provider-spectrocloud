@@ -109,6 +109,19 @@ resource "spectrocloud_cluster_azure" "cluster" {
           spec:
             nodeDrainTimeout: 5m
     EOT
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
 }
@@ -122,14 +135,6 @@ to import the resource spectrocloud_cluster_azure by using its  `id` with the Pa
 import {
   to = spectrocloud_cluster_azure.example
   id = "example_id:context"
-    override_health_check_configuration = <<-EOT
-      maxUnhealthy: 40%
-      nodeStartupTimeout: 10m
-      unhealthyConditions:
-        - type: Ready
-          status: "False"
-          timeout: 5m
-    EOT
 }
 ```
 

@@ -73,14 +73,18 @@ resource "spectrocloud_cluster_azure" "cluster" {
           spec:
             nodeDrainTimeout: 5m
     EOT
-  }
 
-  override_health_check_configuration = <<-EOT
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
       maxUnhealthy: 40%
       nodeStartupTimeout: 10m
       unhealthyConditions:
         - type: Ready
           status: "False"
           timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
     EOT
+  }
 }

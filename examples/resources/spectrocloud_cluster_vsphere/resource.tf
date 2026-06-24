@@ -4,15 +4,7 @@ data "spectrocloud_cluster_profile" "vmware_profile" {
   context = "project"
 }
 data "spectrocloud_cloudaccount_vsphere" "vmware_account" {
-  name                                = var.shared_vmware_cloud_account_name
-  override_health_check_configuration = <<-EOT
-      maxUnhealthy: 40%
-      nodeStartupTimeout: 10m
-      unhealthyConditions:
-        - type: Ready
-          status: "False"
-          timeout: 5m
-    EOT
+  name = var.shared_vmware_cloud_account_name
 }
 
 
@@ -70,5 +62,18 @@ resource "spectrocloud_cluster_vsphere" "cluster" {
       memory_mb    = 8192
       cpu          = 4
     }
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 }

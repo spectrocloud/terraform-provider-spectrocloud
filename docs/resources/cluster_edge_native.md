@@ -57,6 +57,19 @@ resource "spectrocloud_cluster_edge_native" "cluster" {
       static_ip       = "112.21.12.21"
       subnet_mask     = "2.2.1.0"
     }
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
 }
@@ -70,14 +83,6 @@ to import the resource spectrocloud_cluster_edge_native by using its  `id` with 
 import {
   to = spectrocloud_cluster_edge_native.example
   id = "example_id:context"
-    override_health_check_configuration = <<-EOT
-      maxUnhealthy: 40%
-      nodeStartupTimeout: 10m
-      unhealthyConditions:
-        - type: Ready
-          status: "False"
-          timeout: 5m
-    EOT
 }
 ```
 

@@ -100,6 +100,19 @@ resource "spectrocloud_cluster_maas" "cluster" {
     placement {
       resource_pool = "Production-Compute-Pool-2"
     }
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 }
 ```
@@ -113,14 +126,6 @@ to import the resource spectrocloud_cluster_maas by using its `id` with the Pale
 import {
   to = spectrocloud_cluster_maas.example
   id = "example_id:context"
-    override_health_check_configuration = <<-EOT
-      maxUnhealthy: 40%
-      nodeStartupTimeout: 10m
-      unhealthyConditions:
-        - type: Ready
-          status: "False"
-          timeout: 5m
-    EOT
 }
 ```
 

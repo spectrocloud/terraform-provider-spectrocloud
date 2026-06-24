@@ -227,6 +227,19 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     #   max_unavailable = "0"
     # }
     node_repave_interval = 90
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
   # Optional: Additional Worker Pool with Minimum and Maximum Scaling
@@ -325,16 +338,8 @@ output "cluster_id" {
 }
 
 output "cluster_kubeconfig" {
-  value                               = spectrocloud_cluster_apache_cloudstack.cluster.kubeconfig
-  description                         = "Kubeconfig for the Apache CloudStack cluster"
-  sensitive                           = true
-  override_health_check_configuration = <<-EOT
-      maxUnhealthy: 40%
-      nodeStartupTimeout: 10m
-      unhealthyConditions:
-        - type: Ready
-          status: "False"
-          timeout: 5m
-    EOT
+  value       = spectrocloud_cluster_apache_cloudstack.cluster.kubeconfig
+  description = "Kubeconfig for the Apache CloudStack cluster"
+  sensitive   = true
 }
 
