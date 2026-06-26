@@ -690,9 +690,18 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 	// Process project if specified
 	if projects, ok := cloudConfig["project"].([]interface{}); ok && len(projects) > 0 {
 		project := projects[0].(map[string]interface{})
-		config.Project = &models.V1CloudStackResource{
-			ID:   project["id"].(string),
-			Name: project["name"].(string),
+		var id, name string
+		if v, ok := project["id"].(string); ok {
+			id = v
+		}
+		if v, ok := project["name"].(string); ok {
+			name = v
+		}
+		if id != "" || name != "" {
+			config.Project = &models.V1CloudStackResource{
+				ID:   id,
+				Name: name,
+			}
 		}
 	}
 

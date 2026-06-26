@@ -1082,6 +1082,63 @@ func TestToCloudStackCloudConfigOverride(t *testing.T) {
 	assert.Equal(t, "kind: Cluster", cfg.OverrideClusterAPIConfig)
 }
 
+func TestToCloudStackCloudConfigProjectNullFields(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"project": []interface{}{
+				map[string]interface{}{
+					"id":   nil,
+					"name": nil,
+				},
+			},
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-1",
+				},
+			},
+		},
+	}))
+
+	cfg := toCloudStackCloudConfig(d)
+	require.NotNil(t, cfg)
+	assert.Nil(t, cfg.Project)
+}
+
+func TestToCloudStackCloudConfigProjectPartialFields(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"project": []interface{}{
+				map[string]interface{}{
+					"name": "my-project",
+				},
+			},
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-1",
+				},
+			},
+		},
+	}))
+
+	cfg := toCloudStackCloudConfig(d)
+	require.NotNil(t, cfg)
+	require.NotNil(t, cfg.Project)
+	assert.Equal(t, "my-project", cfg.Project.Name)
+	assert.Empty(t, cfg.Project.ID)
+}
+
 func TestToCloudStackCloudClusterConfigUpdateOverride(t *testing.T) {
 	t.Parallel()
 	entity := toCloudStackCloudClusterConfigUpdate(map[string]interface{}{
