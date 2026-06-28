@@ -1059,3 +1059,123 @@ func TestValidateOverrideScaling(t *testing.T) {
 		})
 	}
 }
+
+func TestToCloudStackCloudConfigOverride(t *testing.T) {
+	t.Parallel()
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":                "",
+			"control_plane_endpoint":      "10.0.0.1",
+			"sync_with_cks":               false,
+			"override_cluster_api_config": "kind: Cluster",
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-1",
+				},
+			},
+		},
+	}))
+
+	cfg := toCloudStackCloudConfig(d)
+	require.NotNil(t, cfg)
+	assert.Equal(t, "kind: Cluster", cfg.OverrideClusterAPIConfig)
+}
+
+func TestToCloudStackCloudConfigProjectNullFields(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"project": []interface{}{
+				map[string]interface{}{
+					"id":   nil,
+					"name": nil,
+				},
+			},
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-1",
+				},
+			},
+		},
+	}))
+
+	cfg := toCloudStackCloudConfig(d)
+	require.NotNil(t, cfg)
+	assert.Nil(t, cfg.Project)
+}
+
+func TestToCloudStackCloudConfigProjectPartialFields(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"project": []interface{}{
+				map[string]interface{}{
+					"name": "my-project",
+				},
+			},
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-1",
+				},
+			},
+		},
+	}))
+
+	cfg := toCloudStackCloudConfig(d)
+	require.NotNil(t, cfg)
+	require.NotNil(t, cfg.Project)
+	assert.Equal(t, "my-project", cfg.Project.Name)
+	assert.Empty(t, cfg.Project.ID)
+}
+
+func TestToCloudStackCloudClusterConfigUpdateOverride(t *testing.T) {
+	t.Parallel()
+	entity := toCloudStackCloudClusterConfigUpdate(map[string]interface{}{
+		"control_plane_endpoint":      "10.0.0.2",
+		"override_cluster_api_config": "kind: Cluster",
+	})
+	require.NotNil(t, entity.ClusterConfig)
+	assert.Equal(t, "10.0.0.2", entity.ClusterConfig.ControlPlaneEndpoint)
+	assert.Equal(t, "kind: Cluster", entity.ClusterConfig.OverrideClusterAPIConfig)
+}
+
+func TestToMachinePoolCloudStackOverrideClusterAPIConfig(t *testing.T) {
+	t.Parallel()
+	mp, err := toMachinePoolCloudStack(map[string]interface{}{
+		"name":                        "worker",
+		"count":                       2,
+		"control_plane":               false,
+		"control_plane_as_worker":     false,
+		"offering":                    "medium",
+		"node_repave_interval":        0,
+		"override_cluster_api_config": "kind: MachinePool",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "kind: MachinePool", mp.PoolConfig.OverrideClusterAPIConfig)
+}
+
+func TestFlattenClusterConfigsApacheCloudStackOverride(t *testing.T) {
+	t.Parallel()
+	out := flattenClusterConfigsApacheCloudStack(&models.V1CloudStackCloudConfig{
+		Spec: &models.V1CloudStackCloudConfigSpec{
+			ClusterConfig: &models.V1CloudStackClusterConfig{
+				OverrideClusterAPIConfig: "kind: Cluster",
+				SSHKeyName:               "key-1",
+			},
+		},
+	})
+	require.Len(t, out, 1)
+	m := out[0].(map[string]interface{})
+	assert.Equal(t, "kind: Cluster", m["override_cluster_api_config"])
+}

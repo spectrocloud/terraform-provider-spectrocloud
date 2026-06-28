@@ -305,6 +305,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							},
 							Description: "List of CloudStack zones for multi-AZ deployments. If only one zone is specified, it will be treated as single-zone deployment.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 				Description: "CloudStack cluster configuration.",
@@ -374,6 +375,8 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config":         schemas.OverrideClusterAPIConfigMachinePoolSchema(),
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"min": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -527,6 +530,7 @@ func resourceClusterApacheCloudStackStateUpgradeV2(ctx context.Context, rawState
 func resourceClusterApacheCloudStackCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "")
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -593,6 +597,7 @@ func resourceClusterApacheCloudStackRead(_ context.Context, d *schema.ResourceDa
 
 func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 
 	cloudConfigId := d.Get("cloud_config_id").(string)
 	ClusterContext := d.Get("context").(string)
@@ -600,6 +605,13 @@ func resourceClusterApacheCloudStackUpdate(ctx context.Context, d *schema.Resour
 
 	if err := validateSystemRepaveApproval(d, c); err != nil {
 		return diag.FromErr(err)
+	}
+
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		if err := c.UpdateCloudConfigCloudStack(cloudConfigId, toCloudStackCloudClusterConfigUpdate(cloudConfig)); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if d.HasChange("machine_pool") {
@@ -671,13 +683,25 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 		ControlPlaneEndpoint: cloudConfig["control_plane_endpoint"].(string),
 		SyncWithCKS:          cloudConfig["sync_with_cks"].(bool),
 	}
+	if override, ok := cloudConfig["override_cluster_api_config"].(string); ok {
+		config.OverrideClusterAPIConfig = override
+	}
 
 	// Process project if specified
 	if projects, ok := cloudConfig["project"].([]interface{}); ok && len(projects) > 0 {
 		project := projects[0].(map[string]interface{})
-		config.Project = &models.V1CloudStackResource{
-			ID:   project["id"].(string),
-			Name: project["name"].(string),
+		var id, name string
+		if v, ok := project["id"].(string); ok {
+			id = v
+		}
+		if v, ok := project["name"].(string); ok {
+			name = v
+		}
+		if id != "" || name != "" {
+			config.Project = &models.V1CloudStackResource{
+				ID:   id,
+				Name: name,
+			}
 		}
 	}
 
@@ -786,6 +810,10 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 			poolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
 	}
+	if overrideClusterAPIConfig, ok := mp["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		poolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
+	}
+	expandOverrideHealthCheckConfiguration(mp, poolConfig)
 
 	// Safe conversion for min size
 	if mp["min"] != nil {
@@ -825,6 +853,17 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 	return mpEntity, nil
 }
 
+func toCloudStackCloudClusterConfigUpdate(cloudConfig map[string]interface{}) *models.V1CloudStackCloudClusterConfigEntity {
+	update := &models.V1CloudStackClusterConfigUpdateEntity{}
+	if v, ok := cloudConfig["control_plane_endpoint"].(string); ok {
+		update.ControlPlaneEndpoint = v
+	}
+	if v, ok := cloudConfig["override_cluster_api_config"].(string); ok {
+		update.OverrideClusterAPIConfig = v
+	}
+	return &models.V1CloudStackCloudClusterConfigEntity{ClusterConfig: update}
+}
+
 func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 	m := v.(map[string]interface{})
 	buf := CommonHash(m)
@@ -840,6 +879,9 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 
 	// Hash override_kubeadm_configuration
 	if val, ok := m["override_kubeadm_configuration"].(string); ok && val != "" {
+		fmt.Fprintf(buf, "%s-", val)
+	}
+	if val, ok := m["override_cluster_api_config"].(string); ok && val != "" {
 		fmt.Fprintf(buf, "%s-", val)
 	}
 
@@ -1042,6 +1084,9 @@ func flattenClusterConfigsApacheCloudStack(config *models.V1CloudStackCloudConfi
 	if clusterConfig.ControlPlaneEndpoint != "" {
 		m["control_plane_endpoint"] = clusterConfig.ControlPlaneEndpoint
 	}
+	if clusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = clusterConfig.OverrideClusterAPIConfig
+	}
 	m["sync_with_cks"] = clusterConfig.SyncWithCKS
 
 	// Flatten zones
@@ -1139,6 +1184,10 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
+		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		if machinePool.MinSize > 0 {
 			oi["min"] = int(machinePool.MinSize)

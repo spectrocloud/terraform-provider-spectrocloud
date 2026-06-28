@@ -37,6 +37,13 @@ resource "spectrocloud_cluster_eks" "cluster" {
   cloud_config {
     ssh_key_name = "default"
     region       = "us-west-2"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
   }
 
   cluster_profile {
@@ -169,6 +176,7 @@ Optional:
 - `azs` (List of String) List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning.
 - `encryption_config_arn` (String) The ARN of the KMS encryption key to use for the cluster. Refer to the [Enable Secrets Encryption for EKS Cluster](https://docs.spectrocloud.com/clusters/public-cloud/aws/enable-secrets-encryption-kms-key/) for additional guidance.
 - `endpoint_access` (String) Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `private_access_cidrs` (Set of String) List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.
 - `public_access_cidrs` (Set of String) List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.
 - `ssh_key_name` (String) Public SSH key to be used for the cluster nodes.
@@ -198,6 +206,7 @@ Optional:
 - `max_price` (String) Maximum hourly spot instance price for this machine pool. Used only when `capacity_type` is `spot`.
 - `min` (Number) Minimum number of nodes in the machine pool. Used for autoscaling together with `max`. When both `min` and `max` are greater than 0, `count` must equal `min`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
+- `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))

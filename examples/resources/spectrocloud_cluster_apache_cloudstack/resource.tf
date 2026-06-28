@@ -20,6 +20,14 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     # Optional: SSH key for cluster nodes
     ssh_key_name = var.ssh_key_name
 
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
+
     # Optional: CloudStack project (V1CloudStackResource)
     # project {
     #   id   = var.cloudstack_project_id    # CloudStack project ID
@@ -193,6 +201,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
         - systemctl restart kubelet
     EOT
 
+    override_cluster_api_config = <<-EOT
+      spec:
+        template:
+          spec:
+            nodeDrainTimeout: 5m
+    EOT
+
     # Update Strategy Options:
     # - "RollingUpdateScaleOut" (default): Adds new nodes before removing old ones
     # - "RollingUpdateScaleIn": Removes old nodes before adding new ones
@@ -212,6 +227,19 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     #   max_unavailable = "0"
     # }
     node_repave_interval = 90
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
   # Optional: Additional Worker Pool with Minimum and Maximum Scaling

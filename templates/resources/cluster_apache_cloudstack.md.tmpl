@@ -29,6 +29,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
 
   cloud_config {
     ssh_key_name = "my-ssh-key"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
     
     zone {
       name = "Zone1"
@@ -74,6 +81,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     additional_labels = {
       "role" = "worker"
     }
+
+    override_cluster_api_config = <<-EOT
+      spec:
+        template:
+          spec:
+            nodeDrainTimeout: 5m
+    EOT
   }
 }
 ```
@@ -103,6 +117,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
 
   cloud_config {
     ssh_key_name = "production-ssh-key"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
     
     # Optional: Specify CloudStack project
     project {
@@ -602,6 +623,19 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_custom_kubeadm" {
 
     update_strategy      = "RollingUpdateScaleIn"
     node_repave_interval = 90
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
   timeouts {
