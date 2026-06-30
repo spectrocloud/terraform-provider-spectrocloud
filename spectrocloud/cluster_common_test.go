@@ -1921,3 +1921,72 @@ func TestClusterTemplateProfileSetFromList(t *testing.T) {
 	profileSet := clusterTemplateProfileSetFromList(profiles)
 	require.Equal(t, 1, profileSet.Len())
 }
+
+// TestUpdateWorkerPoolsInParallelNoPerpetualDiff guards against the perpetual
+// reconcile diff for update_worker_pools_in_parallel. The field is
+// Optional+Computed (no schema Default), so the value the provider sends to the
+// API during expand must equal whatever value Read flattened into state from the
+// API. If the user did not configure the field, expand must fall back to the
+// create-time default (true) instead of forcing it onto an API value of false.
+func TestUpdateWorkerPoolsInParallelNoPerpetualDiff(t *testing.T) {
+	cases := []struct {
+		name string
+		// stateValue mimics the value Read flattens from the API into state.
+		// nil means the field is unset (user did not configure it).
+		stateValue *bool
+		expected   bool
+	}{
+		{name: "unset falls back to create default true", stateValue: nil, expected: true},
+		{name: "api/user value false is preserved", stateValue: BoolPtr(false), expected: false},
+		{name: "api/user value true is preserved", stateValue: BoolPtr(true), expected: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := resourceClusterAws().TestResourceData()
+			if tc.stateValue != nil {
+				_ = d.Set("update_worker_pools_in_parallel", *tc.stateValue)
+			}
+
+			got := updateWorkerPoolsInParallel(d)
+			assert.Equal(t, tc.expected, got)
+
+			// The expand result must match the value in state, otherwise Terraform
+			// would plan a change on every apply (the perpetual diff).
+			config := toClusterConfig(d)
+			assert.Equal(t, tc.expected, config.UpdateWorkerPoolsInParallel)
+		})
+	}
+}
+
+// TestUpdateWorkerPoolsInParallelEdgeNativeDefault verifies Edge Native keeps its
+// historical create-time default of false when the field is unset, while still
+// honoring an explicit user value (and therefore not creating a perpetual diff).
+func TestUpdateWorkerPoolsInParallelEdgeNativeDefault(t *testing.T) {
+	cases := []struct {
+		name       string
+		stateValue *bool
+		expected   bool
+	}{
+		{name: "unset falls back to edge native default false", stateValue: nil, expected: false},
+		{name: "explicit true is preserved", stateValue: BoolPtr(true), expected: true},
+		{name: "explicit false is preserved", stateValue: BoolPtr(false), expected: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := resourceClusterEdgeNative().TestResourceData()
+			if tc.stateValue != nil {
+				_ = d.Set("update_worker_pools_in_parallel", *tc.stateValue)
+			}
+
+			config := toClusterConfig(d)
+			// Mirror the edge native create override.
+			if _, ok := d.GetOkExists("update_worker_pools_in_parallel"); !ok {
+				config.UpdateWorkerPoolsInParallel = false
+			}
+
+			assert.Equal(t, tc.expected, config.UpdateWorkerPoolsInParallel)
+		})
+	}
+}

@@ -58,12 +58,22 @@ func toClusterConfig(d *schema.ResourceData) *models.V1ClusterConfigEntity {
 		Timezone:                toClusterTimezone(d),
 	}
 
-	// Set UpdateWorkerPoolsInParallel if specified
-	if v, ok := d.GetOk("update_worker_pools_in_parallel"); ok {
-		config.UpdateWorkerPoolsInParallel = v.(bool)
-	}
+	// The field is Optional+Computed (no schema Default) to avoid a perpetual diff
+	// against the API value. Honor an explicit user value (including false), and
+	// fall back to the create-time default of true when the user did not set it.
+	config.UpdateWorkerPoolsInParallel = updateWorkerPoolsInParallel(d)
 
 	return config
+}
+
+// updateWorkerPoolsInParallel returns the explicit user value (including false)
+// or the create-time default of true when the field is unset. GetOkExists is
+// used instead of GetOk because GetOk treats a bool false as "unset".
+func updateWorkerPoolsInParallel(d *schema.ResourceData) bool {
+	if v, ok := d.GetOkExists("update_worker_pools_in_parallel"); ok {
+		return v.(bool)
+	}
+	return true
 }
 
 func toClusterMetaAttribute(d *schema.ResourceData) string {
