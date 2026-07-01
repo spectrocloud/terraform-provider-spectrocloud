@@ -388,6 +388,9 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 			if err := c.PublishClusterProfile(newUID); err != nil {
 				return diag.FromErr(err)
 			}
+			if err := updateClusterProfileVariablesFromConfig(d, c, newUID); err != nil {
+				return diag.FromErr(err)
+			}
 
 			resourceClusterProfileRead(ctx, d, m)
 			return diags
@@ -919,6 +922,21 @@ func getManifestUID(name string, packs []*models.V1PackRef) string {
 	}
 
 	return ""
+}
+
+// updateClusterProfileVariablesFromConfig syncs profile_variables from Terraform
+// config to the dedicated Palette /variables endpoint. Clone copies variables
+// from the source version only; this applies the user's HCL variable definitions
+// after packs are published on the immutable version-bump Create path.
+func updateClusterProfileVariablesFromConfig(d *schema.ResourceData, c *client.V1Client, uid string) error {
+	if _, ok := d.GetOk("profile_variables"); !ok {
+		return nil
+	}
+	pvs, err := toClusterProfileVariables(d)
+	if err != nil {
+		return err
+	}
+	return c.UpdateProfileVariables(&models.V1Variables{Variables: pvs}, uid)
 }
 
 func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, error) {
