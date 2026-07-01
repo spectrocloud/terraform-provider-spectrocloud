@@ -1148,6 +1148,32 @@ func TestToCloudStackCloudConfigProjectNullFields(t *testing.T) {
 	assert.Nil(t, cfg.Project)
 }
 
+func TestToCloudStackCloudConfigProjectNilBlock(t *testing.T) {
+	t.Parallel()
+
+	// Matches terraform import / plan -generate-config-out: project {} → []interface{}{nil}
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"project":                []interface{}{nil},
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-1",
+				},
+			},
+		},
+	}))
+
+	require.NotPanics(t, func() {
+		cfg := toCloudStackCloudConfig(d)
+		require.NotNil(t, cfg)
+		assert.Nil(t, cfg.Project)
+	})
+}
+
 func TestToCloudStackCloudConfigProjectPartialFields(t *testing.T) {
 	t.Parallel()
 

@@ -680,6 +680,25 @@ func toCloudStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 	return cluster, nil
 }
 
+// cloudStackProjectFieldsFromConfig extracts project id/name from cloud_config.project.
+// Terraform may pass []interface{}{nil} for an empty project {} block (e.g. import-generated config).
+func cloudStackProjectFieldsFromConfig(projects []interface{}) (id, name string, hasValues bool) {
+	if len(projects) == 0 || projects[0] == nil {
+		return "", "", false
+	}
+	project, ok := projects[0].(map[string]interface{})
+	if !ok {
+		return "", "", false
+	}
+	if v, ok := project["id"].(string); ok {
+		id = v
+	}
+	if v, ok := project["name"].(string); ok {
+		name = v
+	}
+	return id, name, id != "" || name != ""
+}
+
 func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackClusterConfig {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 
@@ -694,15 +713,7 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 
 	// Process project if specified
 	if projects, ok := cloudConfig["project"].([]interface{}); ok && len(projects) > 0 {
-		project := projects[0].(map[string]interface{})
-		var id, name string
-		if v, ok := project["id"].(string); ok {
-			id = v
-		}
-		if v, ok := project["name"].(string); ok {
-			name = v
-		}
-		if id != "" || name != "" {
+		if id, name, hasValues := cloudStackProjectFieldsFromConfig(projects); hasValues {
 			config.Project = &models.V1CloudStackResource{
 				ID:   id,
 				Name: name,
@@ -783,8 +794,7 @@ func cloudStackNetworkLookupContext(d *schema.ResourceData) (zone, projectID, vp
 	}
 
 	if projects, ok := cloudConfig["project"].([]interface{}); ok && len(projects) > 0 {
-		project := projects[0].(map[string]interface{})
-		if id, ok := project["id"].(string); ok {
+		if id, _, hasValues := cloudStackProjectFieldsFromConfig(projects); hasValues {
 			projectID = id
 		}
 	}
