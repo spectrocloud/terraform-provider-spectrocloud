@@ -381,6 +381,7 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideKubeadmEmptyString(t *te
 		"offering":                       "medium-instance",
 		"control_plane":                  false,
 		"control_plane_as_worker":        false,
+		"node_repave_interval":           0,
 		"override_kubeadm_configuration": "",
 	}
 
