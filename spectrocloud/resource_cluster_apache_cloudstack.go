@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -456,10 +454,16 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 							Optional: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
+									"network_id": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Computed:    true,
+										Description: "CloudStack network ID attached to the machine pool. Optional in configuration; when omitted and `network_name` is set, the provider resolves the ID at apply time from the cloud account. Populated from the API after create or read.",
+									},
 									"network_name": {
 										Type:        schema.TypeString,
-										Required:    true,
-										Description: "Network name to attach to the machine pool.",
+										Optional:    true,
+										Description: "CloudStack network name to attach to the machine pool. Either `network_id` or `network_name` must be provided. When only `network_name` is set, the provider resolves `network_id` from the cloud account using `cloud_config.zone` (and optional project/VPC context).",
 									},
 									"ip_address": {
 										Type:        schema.TypeString,
@@ -469,7 +473,7 @@ func resourceClusterApacheCloudStack() *schema.Resource {
 									},
 								},
 							},
-							Description: "Network configuration for the machine pool instances.",
+							Description: "Network configuration for the machine pool instances. Set `network_name` (and optionally `network_id`); when `network_id` is omitted it is resolved at apply time and stored in state.",
 						},
 					},
 				},
@@ -662,8 +666,9 @@ func toCloudStackCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1
 	}
 
 	machinePoolConfigs := make([]*models.V1CloudStackMachinePoolConfigEntity, 0)
+	networkCache := make(map[string]string)
 	for _, machinePool := range d.Get("machine_pool").(*schema.Set).List() {
-		mp, err := toMachinePoolCloudStack(machinePool)
+		mp, err := toMachinePoolCloudStackWithResolution(c, d, machinePool, networkCache)
 		if err != nil {
 			return nil, err
 		}
@@ -747,7 +752,77 @@ func toCloudStackCloudConfig(d *schema.ResourceData) *models.V1CloudStackCluster
 	return config
 }
 
+// cloudStackNetworkLookupContext returns zone, project, and vpc identifiers from
+// cloud_config used to scope CloudStack network name resolution.
+func cloudStackNetworkLookupContext(d *schema.ResourceData) (zone, projectID, vpcID string, err error) {
+	cloudConfigRaw, ok := d.GetOk("cloud_config")
+	if !ok || len(cloudConfigRaw.([]interface{})) == 0 {
+		return "", "", "", fmt.Errorf("cloud_config is required to resolve machine_pool network_name")
+	}
+	cloudConfig := cloudConfigRaw.([]interface{})[0].(map[string]interface{})
+
+	if zones, ok := cloudConfig["zone"].([]interface{}); ok && len(zones) > 0 {
+		zoneMap := zones[0].(map[string]interface{})
+		if id, ok := zoneMap["id"].(string); ok && id != "" {
+			zone = id
+		} else if name, ok := zoneMap["name"].(string); ok && name != "" {
+			zone = name
+		}
+		if networks, ok := zoneMap["network"].([]interface{}); ok && len(networks) > 0 {
+			network := networks[0].(map[string]interface{})
+			if vpcs, ok := network["vpc"].([]interface{}); ok && len(vpcs) > 0 {
+				vpc := vpcs[0].(map[string]interface{})
+				if id, ok := vpc["id"].(string); ok {
+					vpcID = id
+				}
+			}
+		}
+	}
+	if zone == "" {
+		return "", "", "", fmt.Errorf("cloud_config.zone is required to resolve machine_pool network_name")
+	}
+
+	if projects, ok := cloudConfig["project"].([]interface{}); ok && len(projects) > 0 {
+		project := projects[0].(map[string]interface{})
+		if id, ok := project["id"].(string); ok {
+			projectID = id
+		}
+	}
+
+	return zone, projectID, vpcID, nil
+}
+
+func resolveMachinePoolNetworkID(c *client.V1Client, d *schema.ResourceData, networkName string, cache map[string]string) (string, error) {
+	if cache != nil {
+		if id, ok := cache[networkName]; ok {
+			return id, nil
+		}
+	}
+
+	accountUID := d.Get("cloud_account_id").(string)
+	if accountUID == "" {
+		return "", fmt.Errorf("cloud_account_id is required to resolve machine_pool network_name %q", networkName)
+	}
+	zone, projectID, vpcID, err := cloudStackNetworkLookupContext(d)
+	if err != nil {
+		return "", err
+	}
+
+	id, err := c.ResolveCloudStackNetworkID(accountUID, networkName, zone, projectID, vpcID)
+	if err != nil {
+		return "", err
+	}
+	if cache != nil {
+		cache[networkName] = id
+	}
+	return id, nil
+}
+
 func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachinePoolConfigEntity, error) {
+	return toMachinePoolCloudStackWithResolution(nil, nil, machinePool, nil)
+}
+
+func toMachinePoolCloudStackWithResolution(c *client.V1Client, d *schema.ResourceData, machinePool interface{}, networkCache map[string]string) (*models.V1CloudStackMachinePoolConfigEntity, error) {
 	mp := machinePool.(map[string]interface{})
 
 	labels := make([]string, 0)
@@ -784,9 +859,22 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 		cloudConfig.Networks = make([]*models.V1CloudStackNetworkConfig, 0, len(networks))
 		for _, n := range networks {
 			network := n.(map[string]interface{})
-			netConfig := &models.V1CloudStackNetworkConfig{
-				Name: network["network_name"].(string),
-				// Note: IP address assignment moved to different level in new SDK
+			netConfig := &models.V1CloudStackNetworkConfig{}
+			if id, ok := network["network_id"].(string); ok && id != "" {
+				netConfig.ID = id
+			}
+			if name, ok := network["network_name"].(string); ok && name != "" {
+				netConfig.Name = name
+			}
+			if netConfig.ID == "" && netConfig.Name == "" {
+				return nil, fmt.Errorf("machine_pool network requires either network_id or network_name")
+			}
+			if netConfig.ID == "" && netConfig.Name != "" && c != nil && d != nil {
+				id, err := resolveMachinePoolNetworkID(c, d, netConfig.Name, networkCache)
+				if err != nil {
+					return nil, err
+				}
+				netConfig.ID = id
 			}
 			cloudConfig.Networks = append(cloudConfig.Networks, netConfig)
 		}
@@ -839,7 +927,11 @@ func toMachinePoolCloudStack(machinePool interface{}) (*models.V1CloudStackMachi
 		}
 		poolConfig.NodeRepaveInterval = SafeInt32(nodeRepaveInterval)
 	} else {
-		err := ValidationNodeRepaveIntervalForControlPlane(mp["node_repave_interval"].(int))
+		nodeRepaveInterval := 0
+		if mp["node_repave_interval"] != nil {
+			nodeRepaveInterval = mp["node_repave_interval"].(int)
+		}
+		err := ValidationNodeRepaveIntervalForControlPlane(nodeRepaveInterval)
 		if err != nil {
 			return nil, err
 		}
@@ -911,15 +1003,15 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 
 	// Hash networks
 	if networksList, ok := m["network"].([]interface{}); ok && len(networksList) > 0 {
-		var networkNames []string
 		for _, n := range networksList {
 			network := n.(map[string]interface{})
+			if val, ok := network["network_id"]; ok {
+				fmt.Fprintf(buf, "%s-", val.(string))
+			}
 			if val, ok := network["network_name"]; ok {
-				networkNames = append(networkNames, val.(string))
+				fmt.Fprintf(buf, "%s-", val.(string))
 			}
 		}
-		sort.Strings(networkNames)
-		buf.WriteString(strings.Join(networkNames, "-"))
 	}
 
 	return int(hash(buf.String()))
@@ -933,6 +1025,8 @@ func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *sch
 	newMachinePools := new.(*schema.Set)
 
 	log.Printf("[DEBUG] Old machine pools count: %d, New machine pools count: %d", oldMachinePools.Len(), newMachinePools.Len())
+
+	networkCache := make(map[string]string)
 
 	// Create maps by machine pool name for proper comparison
 	osMap := make(map[string]interface{})
@@ -955,7 +1049,7 @@ func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *sch
 			if oldMachinePool, exists := osMap[name]; !exists {
 				// NEW machine pool - CREATE
 				log.Printf("[DEBUG] Creating new machine pool %s", name)
-				machinePool, err := toMachinePoolCloudStack(machinePoolResource)
+				machinePool, err := toMachinePoolCloudStackWithResolution(c, d, machinePoolResource, networkCache)
 				if err != nil {
 					return err
 				}
@@ -970,7 +1064,7 @@ func updateMachinePoolCloudStack(ctx context.Context, c *client.V1Client, d *sch
 				if oldHash != newHash {
 					// MODIFIED machine pool - UPDATE
 					log.Printf("[DEBUG] Updating machine pool %s (hash changed: %d -> %d)", name, oldHash, newHash)
-					machinePool, err := toMachinePoolCloudStack(machinePoolResource)
+					machinePool, err := toMachinePoolCloudStackWithResolution(c, d, machinePoolResource, networkCache)
 					if err != nil {
 						return err
 					}
@@ -1238,6 +1332,9 @@ func flattenMachinePoolConfigsApacheCloudStack(machinePools []*models.V1CloudSta
 			networks := make([]interface{}, 0, len(machinePool.Networks))
 			for _, network := range machinePool.Networks {
 				netMap := make(map[string]interface{})
+				if network.ID != "" {
+					netMap["network_id"] = network.ID
+				}
 				if network.Name != "" {
 					netMap["network_name"] = network.Name
 				}
