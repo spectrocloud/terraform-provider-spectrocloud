@@ -478,6 +478,19 @@ func CloudAccountsRoutes() []Route {
 		},
 		{
 			Method: "GET",
+			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}/properties/zones",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1CloudStackZones{
+					Zones: []*models.V1CloudStackZone{
+						{ID: "zone-id-1", Name: "zone-name-1"},
+						{ID: "zone-id-spectro", Name: "spectro"},
+					},
+				},
+			},
+		},
+		{
+			Method: "GET",
 			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}/properties/networks",
 			Response: ResponseData{
 				StatusCode: 200,

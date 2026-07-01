@@ -734,7 +734,7 @@ Required:
 
 Optional:
 
-- `id` (String) CloudStack zone ID. Either `id` or `name` can be used to identify the zone. If both are specified, `id` takes precedence.
+- `id` (String) CloudStack zone ID. Optional in configuration; when omitted, the provider resolves the ID at apply time from the cloud account using `name`. If both `id` and `name` are set, `id` takes precedence. Populated from the API after create or read.
 - `network` (Block List, Max: 1) Network configuration for this zone. (see [below for nested schema](#nestedblock--cloud_config--zone--network))
 
 <a id="nestedblock--cloud_config--zone--network"></a>
@@ -819,7 +819,7 @@ Optional:
 
 - `ip_address` (String, Deprecated) Static IP address to assign. **DEPRECATED**: This field is no longer supported by CloudStack and will be ignored.
 - `network_id` (String) CloudStack network ID attached to the machine pool. Optional in configuration; when omitted and `network_name` is set, the provider resolves the ID at apply time from the cloud account. Populated from the API after create or read.
-- `network_name` (String) CloudStack network name to attach to the machine pool. Either `network_id` or `network_name` must be provided. When only `network_name` is set, the provider resolves `network_id` from the cloud account using `cloud_config.zone` (and optional project/VPC context).
+- `network_name` (String) CloudStack network name to attach to the machine pool. Either `network_id` or `network_name` must be provided. When only `network_name` is set, the provider resolves `network_id` from the cloud account using `cloud_config.zone.id` (resolved from `zone.name` when needed) and optional project/VPC context.
 
 
 <a id="nestedblock--machine_pool--node"></a>

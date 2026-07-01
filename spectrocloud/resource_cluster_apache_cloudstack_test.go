@@ -1454,11 +1454,99 @@ func TestCloudStackNetworkLookupContext(t *testing.T) {
 		},
 	}))
 
-	zone, projectID, vpcID, err := cloudStackNetworkLookupContext(d)
+	zone, projectID, vpcID, err := cloudStackNetworkLookupContext(nil, d, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "zone-id-1", zone)
 	assert.Equal(t, "project-1", projectID)
 	assert.Equal(t, "vpc-1", vpcID)
+}
+
+func TestCloudStackNetworkLookupContextZoneNameResolution(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_account_id", "test-apache-cloudstack-account-id-1"))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-name-1",
+				},
+			},
+		},
+	}))
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	zoneID, _, _, err := cloudStackNetworkLookupContext(c, d, make(map[string]string))
+	require.NoError(t, err)
+	assert.Equal(t, "zone-id-1", zoneID)
+}
+
+func TestToCloudStackCloudConfigZoneNameResolution(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_account_id", "test-apache-cloudstack-account-id-1"))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-name-1",
+				},
+			},
+		},
+	}))
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	cfg, err := toCloudStackCloudConfigWithResolution(c, d, make(map[string]string))
+	require.NoError(t, err)
+	require.Len(t, cfg.Zones, 1)
+	assert.Equal(t, "zone-id-1", cfg.Zones[0].ID)
+	assert.Equal(t, "zone-name-1", cfg.Zones[0].Name)
+}
+
+func TestToMachinePoolCloudStackWithResolutionNetworkNameZoneNameOnly(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_account_id", "test-apache-cloudstack-account-id-1"))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-name-1",
+				},
+			},
+		},
+	}))
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	zoneCache := make(map[string]string)
+	result, err := toMachinePoolCloudStackWithResolution(c, d, map[string]interface{}{
+		"name":                    "control-plane-pool",
+		"count":                   1,
+		"offering":                "qa-offering",
+		"control_plane":           true,
+		"control_plane_as_worker": false,
+		"network": []interface{}{
+			map[string]interface{}{
+				"network_name": "spectro",
+			},
+		},
+	}, make(map[string]string), zoneCache)
+	require.NoError(t, err)
+	require.Len(t, result.CloudConfig.Networks, 1)
+	assert.Equal(t, "6a3ee8af-9b12-4c11-8c57-498c57498abc", result.CloudConfig.Networks[0].ID)
+	assert.Equal(t, "spectro", result.CloudConfig.Networks[0].Name)
 }
 
 func TestToMachinePoolCloudStackWithResolutionNetworkName(t *testing.T) {
@@ -1492,7 +1580,7 @@ func TestToMachinePoolCloudStackWithResolutionNetworkName(t *testing.T) {
 				"network_name": "spectro",
 			},
 		},
-	}, make(map[string]string))
+	}, make(map[string]string), make(map[string]string))
 	require.NoError(t, err)
 	require.Len(t, result.CloudConfig.Networks, 1)
 	assert.Equal(t, "6a3ee8af-9b12-4c11-8c57-498c57498abc", result.CloudConfig.Networks[0].ID)
@@ -1532,7 +1620,7 @@ func TestToMachinePoolCloudStackWithResolutionNetworkNameCached(t *testing.T) {
 				"network_name": "spectro",
 			},
 		},
-	}, cache)
+	}, cache, make(map[string]string))
 	require.NoError(t, err)
 	assert.Equal(t, "cached-network-id", result.CloudConfig.Networks[0].ID)
 }
@@ -1555,7 +1643,7 @@ func TestToMachinePoolCloudStackWithResolutionExplicitNetworkID(t *testing.T) {
 				"network_name": "spectro",
 			},
 		},
-	}, nil)
+	}, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "explicit-id", result.CloudConfig.Networks[0].ID)
 }
