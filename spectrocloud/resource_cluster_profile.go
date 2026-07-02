@@ -363,6 +363,13 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 			}
 			d.SetId(newUID)
 
+			// Sync profile variables from HCL before updating packs. Palette validates
+			// pack variable references against variables stored on the profile during
+			// UpdateClusterProfile; clone only copies the source version's variables.
+			if err := syncClusterProfileVariablesFromConfig(d, c, newUID); err != nil {
+				return diag.FromErr(err)
+			}
+
 			// Apply the user's pack/tags/description to the cloned version. The
 			// Palette clone API copies content from the source version, not from
 			// the user's HCL -- we have to overwrite it with the desired content
@@ -386,9 +393,6 @@ func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m
 				return diag.FromErr(err)
 			}
 			if err := c.PublishClusterProfile(newUID); err != nil {
-				return diag.FromErr(err)
-			}
-			if err := updateClusterProfileVariablesFromConfig(d, c, newUID); err != nil {
 				return diag.FromErr(err)
 			}
 
@@ -924,19 +928,54 @@ func getManifestUID(name string, packs []*models.V1PackRef) string {
 	return ""
 }
 
-// updateClusterProfileVariablesFromConfig syncs profile_variables from Terraform
-// config to the dedicated Palette /variables endpoint. Clone copies variables
-// from the source version only; this applies the user's HCL variable definitions
-// after packs are published on the immutable version-bump Create path.
-func updateClusterProfileVariablesFromConfig(d *schema.ResourceData, c *client.V1Client, uid string) error {
+// syncClusterProfileVariablesFromConfig applies profile_variables from Terraform
+// config to the Palette /variables endpoint. New variables (not present on the
+// cloned profile) are registered via PATCH; the full desired set is then applied
+// via PUT so existing definitions stay in sync with HCL.
+//
+// This must run before UpdateClusterProfile on the immutable clone Create path:
+// UpdateClusterProfile validates pack references against variables already stored
+// on the profile. Applying variables after publish causes PackVariablesUndefined
+// when HCL adds packs or variables that the clone did not inherit.
+func syncClusterProfileVariablesFromConfig(d *schema.ResourceData, c *client.V1Client, uid string) error {
 	if _, ok := d.GetOk("profile_variables"); !ok {
 		return nil
 	}
-	pvs, err := toClusterProfileVariables(d)
+	desired, err := toClusterProfileVariables(d)
 	if err != nil {
 		return err
 	}
-	return c.UpdateProfileVariables(&models.V1Variables{Variables: pvs}, uid)
+	if len(desired) == 0 {
+		return nil
+	}
+
+	existing, err := c.GetProfileVariables(uid)
+	if err != nil {
+		return err
+	}
+	existingNames := make(map[string]struct{}, len(existing))
+	for _, v := range existing {
+		if v != nil && v.Name != nil {
+			existingNames[*v.Name] = struct{}{}
+		}
+	}
+
+	var newVars []*models.V1Variable
+	for _, v := range desired {
+		if v.Name == nil {
+			continue
+		}
+		if _, ok := existingNames[*v.Name]; !ok {
+			newVars = append(newVars, v)
+		}
+	}
+	if len(newVars) > 0 {
+		if err := c.PatchProfileVariables(&models.V1Variables{Variables: newVars}, uid); err != nil {
+			return err
+		}
+	}
+
+	return c.UpdateProfileVariables(&models.V1Variables{Variables: desired}, uid)
 }
 
 func toClusterProfileVariables(d *schema.ResourceData) ([]*models.V1Variable, error) {

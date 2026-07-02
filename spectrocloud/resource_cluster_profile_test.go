@@ -1128,7 +1128,7 @@ func TestResourceClusterProfileDelete_NormalDestroy(t *testing.T) {
 
 // TestResourceClusterProfileCreate_ImmutableCloneUpdatesVariables verifies that
 // the immutable version-bump Create path (clone + overwrite) syncs
-// profile_variables from HCL via the dedicated /variables endpoint after publish.
+// profile_variables from HCL via PATCH/PUT before pack update.
 func TestResourceClusterProfileCreate_ImmutableCloneUpdatesVariables(t *testing.T) {
 	orig := ProviderFeaturePreview
 	defer func() { ProviderFeaturePreview = orig }()
@@ -1143,6 +1143,16 @@ func TestResourceClusterProfileCreate_ImmutableCloneUpdatesVariables(t *testing.
 	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
 	assert.Equal(t, "cloned-profile-uid", d.Id())
+}
+
+func TestSyncClusterProfileVariablesFromConfigNewVariable(t *testing.T) {
+	t.Parallel()
+
+	d := prepareBaseClusterProfileTestData()
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+
+	// Mock GET /variables returns empty; variables from HCL are registered via PATCH then PUT.
+	assert.NoError(t, syncClusterProfileVariablesFromConfig(d, c, "cloned-profile-uid"))
 }
 
 // TestFindAnyExistingProfileVersionUID_Found verifies that the helper finds
