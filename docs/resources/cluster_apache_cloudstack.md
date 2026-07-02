@@ -734,7 +734,7 @@ Required:
 
 Optional:
 
-- `id` (String) CloudStack zone ID. Either `id` or `name` can be used to identify the zone. If both are specified, `id` takes precedence.
+- `id` (String) CloudStack zone ID. Optional in configuration; when omitted, the provider resolves the ID at apply time from the cloud account using `name`. If both `id` and `name` are set, `id` takes precedence. Populated from the API after create or read.
 - `network` (Block List, Max: 1) Network configuration for this zone. (see [below for nested schema](#nestedblock--cloud_config--zone--network))
 
 <a id="nestedblock--cloud_config--zone--network"></a>
@@ -797,7 +797,7 @@ Optional:
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling.
-- `network` (Block List) Network configuration for the machine pool instances. (see [below for nested schema](#nestedblock--machine_pool--network))
+- `network` (Block List) Network configuration for the machine pool instances. Set `network_name` (and optionally `network_id`); when `network_id` is omitted it is resolved at apply time and stored in state. (see [below for nested schema](#nestedblock--machine_pool--network))
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
@@ -815,13 +815,11 @@ Read-Only:
 <a id="nestedblock--machine_pool--network"></a>
 ### Nested Schema for `machine_pool.network`
 
-Required:
-
-- `network_name` (String) Network name to attach to the machine pool.
-
 Optional:
 
 - `ip_address` (String, Deprecated) Static IP address to assign. **DEPRECATED**: This field is no longer supported by CloudStack and will be ignored.
+- `network_id` (String) CloudStack network ID attached to the machine pool. Optional in configuration; when omitted and `network_name` is set, the provider resolves the ID at apply time from the cloud account. Populated from the API after create or read.
+- `network_name` (String) CloudStack network name to attach to the machine pool. Either `network_id` or `network_name` must be provided. When only `network_name` is set, the provider resolves `network_id` from the cloud account using `cloud_config.zone.id` (resolved from `zone.name` when needed) and optional project/VPC context.
 
 
 <a id="nestedblock--machine_pool--node"></a>

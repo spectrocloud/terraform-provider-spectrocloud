@@ -129,6 +129,22 @@ func ClusterProfileRoutes() []Route {
 			},
 		},
 		{
+			Method: "PATCH",
+			Path:   "/v1/clusterprofiles/{uid}/variables",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/clusterprofiles/{uid}/variables",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
 			Method: "DELETE",
 			Path:   "/v1/clusterprofiles/{uid}",
 			Response: ResponseData{
