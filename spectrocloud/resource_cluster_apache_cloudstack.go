@@ -1086,15 +1086,17 @@ func resourceMachinePoolApacheCloudStackHash(v interface{}) int {
 		}
 	}
 
-	// Hash networks
+	// Hash networks. network_id is optional/computed when network_name is set;
+	// exclude resolved IDs from set identity so name-only config does not drift
+	// against state after apply/read (same pattern as instance_config above).
 	if networksList, ok := m["network"].([]interface{}); ok && len(networksList) > 0 {
 		for _, n := range networksList {
 			network := n.(map[string]interface{})
-			if val, ok := network["network_id"]; ok {
-				fmt.Fprintf(buf, "%s-", val.(string))
-			}
-			if val, ok := network["network_name"]; ok {
-				fmt.Fprintf(buf, "%s-", val.(string))
+			networkName, hasNetworkName := network["network_name"].(string)
+			if hasNetworkName && networkName != "" {
+				fmt.Fprintf(buf, "%s-", networkName)
+			} else if val, ok := network["network_id"].(string); ok && val != "" {
+				fmt.Fprintf(buf, "%s-", val)
 			}
 		}
 	}

@@ -237,15 +237,14 @@ func TestResourceMachinePoolApacheCloudStackHashAllFields(t *testing.T) {
 			description: "Changing network should change hash",
 		},
 		{
-			name: "Network ID change affects hash",
+			name: "Network ID change affects hash when only network_id is set",
 			baseInput: map[string]interface{}{
 				"name":     "pool-1",
 				"count":    2,
 				"offering": "small-instance",
 				"network": []interface{}{
 					map[string]interface{}{
-						"network_id":   "net-uuid-1",
-						"network_name": "network-1",
+						"network_id": "net-uuid-1",
 					},
 				},
 				"control_plane":           false,
@@ -254,12 +253,11 @@ func TestResourceMachinePoolApacheCloudStackHashAllFields(t *testing.T) {
 			modifyField: func(m map[string]interface{}) {
 				m["network"] = []interface{}{
 					map[string]interface{}{
-						"network_id":   "net-uuid-2",
-						"network_name": "network-1",
+						"network_id": "net-uuid-2",
 					},
 				}
 			},
-			description: "Changing network_id should change hash",
+			description: "Changing network_id should change hash when network_name is not set",
 		},
 		{
 			name: "Annotation change affects hash",
@@ -399,6 +397,69 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideKubeadmEmptyString(t *te
 
 	// Empty string should be treated same as no override
 	assert.Equal(t, emptyOverrideHash, withoutOverrideHash, "Empty override_kubeadm_configuration should have same hash as no override")
+}
+
+func TestResourceMachinePoolApacheCloudStackHashNetworkNameOnlyStable(t *testing.T) {
+	t.Parallel()
+
+	base := map[string]interface{}{
+		"name":                    "control-plane-pool",
+		"count":                   1,
+		"offering":                "qa-offering-30gb-4cpu",
+		"control_plane":           true,
+		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
+	}
+
+	configOnly := copyMachinePoolMap(base)
+	configOnly["network"] = []interface{}{
+		map[string]interface{}{
+			"network_name": "spectro",
+		},
+	}
+
+	stateWithResolvedID := copyMachinePoolMap(base)
+	stateWithResolvedID["network"] = []interface{}{
+		map[string]interface{}{
+			"network_name": "spectro",
+			"network_id":   "242486e8-611a-4d28-8aee-24d22ec2642b",
+		},
+	}
+	stateWithResolvedID["instance_config"] = []interface{}{
+		map[string]interface{}{
+			"disk_size_gb": 30,
+		},
+	}
+
+	configHash := resourceMachinePoolApacheCloudStackHash(configOnly)
+	stateHash := resourceMachinePoolApacheCloudStackHash(stateWithResolvedID)
+	assert.Equal(t, configHash, stateHash, "resolved network_id and instance_config must not change machine_pool set identity when network_name is configured")
+
+	explicitIDOnly := copyMachinePoolMap(base)
+	explicitIDOnly["network"] = []interface{}{
+		map[string]interface{}{
+			"network_id": "242486e8-611a-4d28-8aee-24d22ec2642b",
+		},
+	}
+	differentID := copyMachinePoolMap(base)
+	differentID["network"] = []interface{}{
+		map[string]interface{}{
+			"network_id": "other-network-id",
+		},
+	}
+	assert.NotEqual(t,
+		resourceMachinePoolApacheCloudStackHash(explicitIDOnly),
+		resourceMachinePoolApacheCloudStackHash(differentID),
+		"network_id-only pools should still hash by network_id",
+	)
+}
+
+func copyMachinePoolMap(src map[string]interface{}) map[string]interface{} {
+	dst := make(map[string]interface{}, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
 
 func TestToMachinePoolCloudStackOverrideKubeadmConfiguration(t *testing.T) {
