@@ -56,6 +56,7 @@ func TestResourceMachinePoolApacheCloudStackHash(t *testing.T) {
 				"offering":                "small-instance",
 				"control_plane":           true,
 				"control_plane_as_worker": false,
+				"node_repave_interval":    0,
 			},
 			expected: 0, // Will be calculated in test
 		},
@@ -95,6 +96,7 @@ func TestResourceMachinePoolApacheCloudStackHashAnnotationChangeDetection(t *tes
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 	}
 
 	// Machine pool with annotations
@@ -110,6 +112,7 @@ func TestResourceMachinePoolApacheCloudStackHashAnnotationChangeDetection(t *tes
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 	}
 
 	// Machine pool with different annotations
@@ -125,6 +128,7 @@ func TestResourceMachinePoolApacheCloudStackHashAnnotationChangeDetection(t *tes
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 	}
 
 	// Machine pool with additional annotations
@@ -141,6 +145,7 @@ func TestResourceMachinePoolApacheCloudStackHashAnnotationChangeDetection(t *tes
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 	}
 
 	baseHash := resourceMachinePoolApacheCloudStackHash(baseMachinePool)
@@ -232,6 +237,29 @@ func TestResourceMachinePoolApacheCloudStackHashAllFields(t *testing.T) {
 			description: "Changing network should change hash",
 		},
 		{
+			name: "Network ID change affects hash when only network_id is set",
+			baseInput: map[string]interface{}{
+				"name":     "pool-1",
+				"count":    2,
+				"offering": "small-instance",
+				"network": []interface{}{
+					map[string]interface{}{
+						"network_id": "net-uuid-1",
+					},
+				},
+				"control_plane":           false,
+				"control_plane_as_worker": false,
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["network"] = []interface{}{
+					map[string]interface{}{
+						"network_id": "net-uuid-2",
+					},
+				}
+			},
+			description: "Changing network_id should change hash when network_name is not set",
+		},
+		{
 			name: "Annotation change affects hash",
 			baseInput: map[string]interface{}{
 				"name":     "pool-1",
@@ -285,6 +313,7 @@ func TestResourceMachinePoolApacheCloudStackHashKubernetesStyleAnnotations(t *te
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 	}
 
 	// Should generate a valid hash with Kubernetes-style annotations
@@ -304,6 +333,7 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideKubeadmConfiguration(t *
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 	}
 
 	// Machine pool with override_kubeadm_configuration
@@ -349,6 +379,7 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideKubeadmEmptyString(t *te
 		"offering":                       "medium-instance",
 		"control_plane":                  false,
 		"control_plane_as_worker":        false,
+		"node_repave_interval":           0,
 		"override_kubeadm_configuration": "",
 	}
 
@@ -358,6 +389,7 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideKubeadmEmptyString(t *te
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 	}
 
 	emptyOverrideHash := resourceMachinePoolApacheCloudStackHash(poolWithEmptyOverride)
@@ -365,6 +397,69 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideKubeadmEmptyString(t *te
 
 	// Empty string should be treated same as no override
 	assert.Equal(t, emptyOverrideHash, withoutOverrideHash, "Empty override_kubeadm_configuration should have same hash as no override")
+}
+
+func TestResourceMachinePoolApacheCloudStackHashNetworkNameOnlyStable(t *testing.T) {
+	t.Parallel()
+
+	base := map[string]interface{}{
+		"name":                    "control-plane-pool",
+		"count":                   1,
+		"offering":                "qa-offering-30gb-4cpu",
+		"control_plane":           true,
+		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
+	}
+
+	configOnly := copyMachinePoolMap(base)
+	configOnly["network"] = []interface{}{
+		map[string]interface{}{
+			"network_name": "spectro",
+		},
+	}
+
+	stateWithResolvedID := copyMachinePoolMap(base)
+	stateWithResolvedID["network"] = []interface{}{
+		map[string]interface{}{
+			"network_name": "spectro",
+			"network_id":   "242486e8-611a-4d28-8aee-24d22ec2642b",
+		},
+	}
+	stateWithResolvedID["instance_config"] = []interface{}{
+		map[string]interface{}{
+			"disk_size_gb": 30,
+		},
+	}
+
+	configHash := resourceMachinePoolApacheCloudStackHash(configOnly)
+	stateHash := resourceMachinePoolApacheCloudStackHash(stateWithResolvedID)
+	assert.Equal(t, configHash, stateHash, "resolved network_id and instance_config must not change machine_pool set identity when network_name is configured")
+
+	explicitIDOnly := copyMachinePoolMap(base)
+	explicitIDOnly["network"] = []interface{}{
+		map[string]interface{}{
+			"network_id": "242486e8-611a-4d28-8aee-24d22ec2642b",
+		},
+	}
+	differentID := copyMachinePoolMap(base)
+	differentID["network"] = []interface{}{
+		map[string]interface{}{
+			"network_id": "other-network-id",
+		},
+	}
+	assert.NotEqual(t,
+		resourceMachinePoolApacheCloudStackHash(explicitIDOnly),
+		resourceMachinePoolApacheCloudStackHash(differentID),
+		"network_id-only pools should still hash by network_id",
+	)
+}
+
+func copyMachinePoolMap(src map[string]interface{}) map[string]interface{} {
+	dst := make(map[string]interface{}, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
 
 func TestToMachinePoolCloudStackOverrideKubeadmConfiguration(t *testing.T) {
@@ -672,6 +767,7 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideScaling(t *testing.T) {
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 		"update_strategy":         "RollingUpdateScaleOut",
 	}
 
@@ -682,6 +778,7 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideScaling(t *testing.T) {
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 		"update_strategy":         "OverrideScaling",
 		"override_scaling": []interface{}{
 			map[string]interface{}{
@@ -698,6 +795,7 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideScaling(t *testing.T) {
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 		"update_strategy":         "OverrideScaling",
 		"override_scaling": []interface{}{
 			map[string]interface{}{
@@ -714,6 +812,7 @@ func TestResourceMachinePoolApacheCloudStackHashOverrideScaling(t *testing.T) {
 		"offering":                "medium-instance",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 		"update_strategy":         "OverrideScaling",
 		"override_scaling": []interface{}{
 			map[string]interface{}{
@@ -885,6 +984,7 @@ func TestToMachinePoolCloudStackWithOverrideScaling(t *testing.T) {
 		"offering":                "medium",
 		"control_plane":           false,
 		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
 		"update_strategy":         "OverrideScaling",
 		"override_scaling": []interface{}{
 			map[string]interface{}{
@@ -892,7 +992,6 @@ func TestToMachinePoolCloudStackWithOverrideScaling(t *testing.T) {
 				"max_unavailable": "1",
 			},
 		},
-		"node_repave_interval": 0,
 	}
 
 	result, err := toMachinePoolCloudStack(input)
@@ -1110,6 +1209,32 @@ func TestToCloudStackCloudConfigProjectNullFields(t *testing.T) {
 	assert.Nil(t, cfg.Project)
 }
 
+func TestToCloudStackCloudConfigProjectNilBlock(t *testing.T) {
+	t.Parallel()
+
+	// Matches terraform import / plan -generate-config-out: project {} → []interface{}{nil}
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"project":                []interface{}{nil},
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-1",
+				},
+			},
+		},
+	}))
+
+	require.NotPanics(t, func() {
+		cfg := toCloudStackCloudConfig(d)
+		require.NotNil(t, cfg)
+		assert.Nil(t, cfg.Project)
+	})
+}
+
 func TestToCloudStackCloudConfigProjectPartialFields(t *testing.T) {
 	t.Parallel()
 
@@ -1178,4 +1303,408 @@ func TestFlattenClusterConfigsApacheCloudStackOverride(t *testing.T) {
 	require.Len(t, out, 1)
 	m := out[0].(map[string]interface{})
 	assert.Equal(t, "kind: Cluster", m["override_cluster_api_config"])
+}
+
+func TestToMachinePoolCloudStackNetwork(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		input        map[string]interface{}
+		expectError  bool
+		expectedID   string
+		expectedName string
+	}{
+		{
+			name: "network_id and network_name",
+			input: map[string]interface{}{
+				"name":                    "control-plane-pool",
+				"count":                   1,
+				"offering":                "qa-offering",
+				"control_plane":           true,
+				"control_plane_as_worker": false,
+				"node_repave_interval":    0,
+				"network": []interface{}{
+					map[string]interface{}{
+						"network_id":   "6a3ee8af-9b12-4c11-8c57-498c57498abc",
+						"network_name": "spectro",
+					},
+				},
+			},
+			expectedID:   "6a3ee8af-9b12-4c11-8c57-498c57498abc",
+			expectedName: "spectro",
+		},
+		{
+			name: "network_name only",
+			input: map[string]interface{}{
+				"name":                    "control-plane-pool",
+				"count":                   1,
+				"offering":                "qa-offering",
+				"control_plane":           true,
+				"control_plane_as_worker": false,
+				"node_repave_interval":    0,
+				"network": []interface{}{
+					map[string]interface{}{
+						"network_name": "spectro",
+					},
+				},
+			},
+			expectedName: "spectro",
+		},
+		{
+			name: "network_id only",
+			input: map[string]interface{}{
+				"name":                    "control-plane-pool",
+				"count":                   1,
+				"offering":                "qa-offering",
+				"control_plane":           true,
+				"control_plane_as_worker": false,
+				"node_repave_interval":    0,
+				"network": []interface{}{
+					map[string]interface{}{
+						"network_id": "6a3ee8af-9b12-4c11-8c57-498c57498abc",
+					},
+				},
+			},
+			expectedID: "6a3ee8af-9b12-4c11-8c57-498c57498abc",
+		},
+		{
+			name: "missing network_id and network_name",
+			input: map[string]interface{}{
+				"name":                    "control-plane-pool",
+				"count":                   1,
+				"offering":                "qa-offering",
+				"control_plane":           true,
+				"control_plane_as_worker": false,
+				"node_repave_interval":    0,
+				"network": []interface{}{
+					map[string]interface{}{},
+				},
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := toMachinePoolCloudStack(tt.input)
+			if tt.expectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, result.CloudConfig.Networks, 1)
+			assert.Equal(t, tt.expectedID, result.CloudConfig.Networks[0].ID)
+			assert.Equal(t, tt.expectedName, result.CloudConfig.Networks[0].Name)
+		})
+	}
+}
+
+func TestFlattenMachinePoolConfigsApacheCloudStackNetwork(t *testing.T) {
+	t.Parallel()
+
+	input := []*models.V1CloudStackMachinePoolConfig{
+		{
+			V1MachinePoolBaseConfig: models.V1MachinePoolBaseConfig{
+				Name:                    "control-plane-pool",
+				Size:                    1,
+				IsControlPlane:          types.Ptr(true),
+				UseControlPlaneAsWorker: false,
+				UpdateStrategy:          &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+			},
+			V1CloudStackMachineConfig: models.V1CloudStackMachineConfig{
+				Offering: &models.V1CloudStackResource{Name: "qa-offering"},
+				Networks: []*models.V1CloudStackNetworkConfig{
+					{
+						ID:   "6a3ee8af-9b12-4c11-8c57-498c57498abc",
+						Name: "spectro",
+					},
+				},
+			},
+		},
+	}
+
+	result := flattenMachinePoolConfigsApacheCloudStack(input)
+	require.Len(t, result, 1)
+
+	pool := result[0].(map[string]interface{})
+	networks := pool["network"].([]interface{})
+	require.Len(t, networks, 1)
+
+	netMap := networks[0].(map[string]interface{})
+	assert.Equal(t, "6a3ee8af-9b12-4c11-8c57-498c57498abc", netMap["network_id"])
+	assert.Equal(t, "spectro", netMap["network_name"])
+}
+
+func TestMachinePoolNetworkRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	originalInput := map[string]interface{}{
+		"name":                    "control-plane-pool",
+		"count":                   1,
+		"offering":                "qa-offering",
+		"control_plane":           true,
+		"control_plane_as_worker": false,
+		"network": []interface{}{
+			map[string]interface{}{
+				"network_id":   "6a3ee8af-9b12-4c11-8c57-498c57498abc",
+				"network_name": "spectro",
+			},
+		},
+	}
+
+	apiModel, err := toMachinePoolCloudStack(originalInput)
+	require.NoError(t, err)
+
+	apiResponse := &models.V1CloudStackMachinePoolConfig{
+		V1MachinePoolBaseConfig: models.V1MachinePoolBaseConfig{
+			Name:                    "control-plane-pool",
+			Size:                    1,
+			IsControlPlane:          types.Ptr(true),
+			UseControlPlaneAsWorker: false,
+			UpdateStrategy:          &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+		},
+		V1CloudStackMachineConfig: models.V1CloudStackMachineConfig{
+			Offering: apiModel.CloudConfig.Offering,
+			Networks: apiModel.CloudConfig.Networks,
+		},
+	}
+
+	flattened := flattenMachinePoolConfigsApacheCloudStack([]*models.V1CloudStackMachinePoolConfig{apiResponse})
+	require.Len(t, flattened, 1)
+
+	pool := flattened[0].(map[string]interface{})
+	networks := pool["network"].([]interface{})
+	require.Len(t, networks, 1)
+
+	netMap := networks[0].(map[string]interface{})
+	assert.Equal(t, originalInput["network"].([]interface{})[0].(map[string]interface{})["network_id"], netMap["network_id"])
+	assert.Equal(t, originalInput["network"].([]interface{})[0].(map[string]interface{})["network_name"], netMap["network_name"])
+}
+
+func TestCloudStackNetworkLookupContext(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"project": []interface{}{
+				map[string]interface{}{
+					"id": "project-1",
+				},
+			},
+			"zone": []interface{}{
+				map[string]interface{}{
+					"id":   "zone-id-1",
+					"name": "zone-name-1",
+					"network": []interface{}{
+						map[string]interface{}{
+							"name": "zone-network",
+							"vpc": []interface{}{
+								map[string]interface{}{
+									"id": "vpc-1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}))
+
+	zone, projectID, vpcID, err := cloudStackNetworkLookupContext(nil, d, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "zone-id-1", zone)
+	assert.Equal(t, "project-1", projectID)
+	assert.Equal(t, "vpc-1", vpcID)
+}
+
+func TestCloudStackNetworkLookupContextZoneNameResolution(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_account_id", "test-apache-cloudstack-account-id-1"))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-name-1",
+				},
+			},
+		},
+	}))
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	zoneID, _, _, err := cloudStackNetworkLookupContext(c, d, make(map[string]string))
+	require.NoError(t, err)
+	assert.Equal(t, "zone-id-1", zoneID)
+}
+
+func TestToCloudStackCloudConfigZoneNameResolution(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_account_id", "test-apache-cloudstack-account-id-1"))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-name-1",
+				},
+			},
+		},
+	}))
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	cfg, err := toCloudStackCloudConfigWithResolution(c, d, make(map[string]string))
+	require.NoError(t, err)
+	require.Len(t, cfg.Zones, 1)
+	assert.Equal(t, "zone-id-1", cfg.Zones[0].ID)
+	assert.Equal(t, "zone-name-1", cfg.Zones[0].Name)
+}
+
+func TestToMachinePoolCloudStackWithResolutionNetworkNameZoneNameOnly(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_account_id", "test-apache-cloudstack-account-id-1"))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"zone": []interface{}{
+				map[string]interface{}{
+					"name": "zone-name-1",
+				},
+			},
+		},
+	}))
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	zoneCache := make(map[string]string)
+	result, err := toMachinePoolCloudStackWithResolution(c, d, map[string]interface{}{
+		"name":                    "control-plane-pool",
+		"count":                   1,
+		"offering":                "qa-offering",
+		"control_plane":           true,
+		"control_plane_as_worker": false,
+		"network": []interface{}{
+			map[string]interface{}{
+				"network_name": "spectro",
+			},
+		},
+	}, make(map[string]string), zoneCache)
+	require.NoError(t, err)
+	require.Len(t, result.CloudConfig.Networks, 1)
+	assert.Equal(t, "6a3ee8af-9b12-4c11-8c57-498c57498abc", result.CloudConfig.Networks[0].ID)
+	assert.Equal(t, "spectro", result.CloudConfig.Networks[0].Name)
+}
+
+func TestToMachinePoolCloudStackWithResolutionNetworkName(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_account_id", "test-apache-cloudstack-account-id-1"))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"zone": []interface{}{
+				map[string]interface{}{
+					"id":   "zone-id-1",
+					"name": "zone-name-1",
+				},
+			},
+		},
+	}))
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	result, err := toMachinePoolCloudStackWithResolution(c, d, map[string]interface{}{
+		"name":                    "control-plane-pool",
+		"count":                   1,
+		"offering":                "qa-offering",
+		"control_plane":           true,
+		"control_plane_as_worker": false,
+		"network": []interface{}{
+			map[string]interface{}{
+				"network_name": "spectro",
+			},
+		},
+	}, make(map[string]string), make(map[string]string))
+	require.NoError(t, err)
+	require.Len(t, result.CloudConfig.Networks, 1)
+	assert.Equal(t, "6a3ee8af-9b12-4c11-8c57-498c57498abc", result.CloudConfig.Networks[0].ID)
+	assert.Equal(t, "spectro", result.CloudConfig.Networks[0].Name)
+}
+
+func TestToMachinePoolCloudStackWithResolutionNetworkNameCached(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	require.NoError(t, d.Set("cloud_account_id", "test-apache-cloudstack-account-id-1"))
+	require.NoError(t, d.Set("cloud_config", []interface{}{
+		map[string]interface{}{
+			"ssh_key_name":           "",
+			"control_plane_endpoint": "",
+			"sync_with_cks":          false,
+			"zone": []interface{}{
+				map[string]interface{}{
+					"id": "zone-id-1",
+				},
+			},
+		},
+	}))
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	cache := map[string]string{"spectro": "cached-network-id"}
+
+	result, err := toMachinePoolCloudStackWithResolution(c, d, map[string]interface{}{
+		"name":                    "worker-pool",
+		"count":                   2,
+		"offering":                "qa-offering",
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"node_repave_interval":    0,
+		"network": []interface{}{
+			map[string]interface{}{
+				"network_name": "spectro",
+			},
+		},
+	}, cache, make(map[string]string))
+	require.NoError(t, err)
+	assert.Equal(t, "cached-network-id", result.CloudConfig.Networks[0].ID)
+}
+
+func TestToMachinePoolCloudStackWithResolutionExplicitNetworkID(t *testing.T) {
+	t.Parallel()
+
+	d := resourceClusterApacheCloudStack().TestResourceData()
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+
+	result, err := toMachinePoolCloudStackWithResolution(c, d, map[string]interface{}{
+		"name":                    "control-plane-pool",
+		"count":                   1,
+		"offering":                "qa-offering",
+		"control_plane":           true,
+		"control_plane_as_worker": false,
+		"network": []interface{}{
+			map[string]interface{}{
+				"network_id":   "explicit-id",
+				"network_name": "spectro",
+			},
+		},
+	}, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "explicit-id", result.CloudConfig.Networks[0].ID)
 }
