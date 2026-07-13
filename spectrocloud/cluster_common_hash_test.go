@@ -360,6 +360,38 @@ func TestResourceMachinePoolAksHashAllFields(t *testing.T) {
 			description: "Changing storage_account_type should change hash",
 		},
 		{
+			name: "OS SKU change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"os_sku":               "Ubuntu",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["os_sku"] = "AzureLinux"
+			},
+			description: "Changing os_sku should change hash",
+		},
+		{
+			name: "OS type change affects hash",
+			baseInput: map[string]interface{}{
+				"name":                 "pool-1",
+				"count":                2,
+				"instance_type":        "Standard_D2s_v3",
+				"disk_size_gb":         100,
+				"is_system_node_pool":  false,
+				"storage_account_type": "Premium_LRS",
+				"os_type":              "Linux",
+			},
+			modifyField: func(m map[string]interface{}) {
+				m["os_type"] = "Windows"
+			},
+			description: "Changing os_type should change hash",
+		},
+		{
 			name: "Additional labels change affects hash",
 			baseInput: map[string]interface{}{
 				"name":                 "pool-1",
@@ -786,6 +818,22 @@ func TestResourceMachinePoolEdgeNativeHash(t *testing.T) {
 		hash2 := resourceMachinePoolEdgeNativeHash(machinePool2)
 		assert.NotEqual(t, hash1, hash2, "different inputs must produce different hashes")
 	})
+
+	base := map[string]interface{}{
+		"name":          "worker",
+		"control_plane": false,
+		"edge_host": schema.NewSet(resourceEdgeHostHash, []interface{}{
+			map[string]interface{}{"host_uid": "uid1"},
+		}),
+		"skip_k8s_upgrade": "disabled",
+	}
+	enabled := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		enabled[k] = v
+	}
+	enabled["skip_k8s_upgrade"] = "enabled"
+	assert.NotEqual(t, resourceMachinePoolEdgeNativeHash(base), resourceMachinePoolEdgeNativeHash(enabled),
+		"edge native machine pool hash should change when skip_k8s_upgrade changes")
 }
 
 func TestGpuConfigHash(t *testing.T) {

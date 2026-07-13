@@ -103,14 +103,14 @@ Refer to the [Import section](/docs#import) to learn more.
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
+- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
 
 <a id="nestedblock--backup_policy"></a>

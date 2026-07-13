@@ -74,6 +74,19 @@ resource "spectrocloud_cluster_gcp" "cluster" {
     count         = 1
     instance_type = "e2-standard-2"
     azs           = ["us-west3-a"]
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
 }
@@ -133,14 +146,14 @@ Refer to the [Import section](/docs#import) to learn more.
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
+- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
 
 <a id="nestedblock--cloud_config"></a>
@@ -175,6 +188,7 @@ Optional:
 - `disk_size_gb` (Number) Root disk size in GB for each node in this machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `override_health_check_configuration` (String) YAML override for Machine Health Check configuration at the node pool level (control plane and worker pools). Accepts CAPI MachineHealthCheck fields such as maxUnhealthy, nodeStartupTimeout, and unhealthyConditions. Falls back to Palette defaults when unset. Still respects the project/tenant Cluster Auto Remediation setting. Changing this value may repave your nodes.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))

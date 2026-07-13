@@ -143,17 +143,19 @@ func resourceClusterEdgeNative() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -214,6 +216,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							//ForceNew: true,
 							Description: "Name of the machine pool.",
 						},
+						"arch_type": schemas.MachinePoolArchTypeSchema(),
 						"additional_labels": {
 							Type:     schema.TypeMap,
 							Optional: true,
@@ -252,6 +255,13 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Default:     0,
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
+						"skip_k8s_upgrade": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "disabled",
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
+						},
 						"update_strategy": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -265,6 +275,7 @@ func resourceClusterEdgeNative() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"edge_host": {
 							Type:     schema.TypeSet,
 							Required: true,
@@ -388,6 +399,7 @@ func resourceClusterEdgeNativeCreate(ctx context.Context, d *schema.ResourceData
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -562,6 +574,7 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		oi["control_plane"] = machinePool.IsControlPlane
 		oi["control_plane_as_worker"] = machinePool.UseControlPlaneAsWorker
 		oi["name"] = machinePool.Name
+		oi["arch_type"] = flattenMachinePoolArchType(machinePool.MachinePoolProperties)
 		if machinePool.UpdateStrategy != nil {
 			oi["update_strategy"] = machinePool.UpdateStrategy.Type
 			// Flatten override_Scaling if using OverrideScaling strategy
@@ -572,6 +585,14 @@ func flattenMachinePoolConfigsEdgeNative(machinePools []*models.V1EdgeNativeMach
 		if !machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
+
+		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" when API omits field
+		skipK8sUpgrade := "disabled"
+		if machinePool.SkipK8sUpgrade != nil && *machinePool.SkipK8sUpgrade != "" {
+			skipK8sUpgrade = *machinePool.SkipK8sUpgrade
+		}
+		oi["skip_k8s_upgrade"] = skipK8sUpgrade
 
 		var hosts []interface{}
 		for _, host := range machinePool.Hosts {
@@ -595,6 +616,7 @@ func resourceClusterEdgeNativeUpdate(ctx context.Context, d *schema.ResourceData
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -849,7 +871,13 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+		skipK8sUpgrade := "disabled"
+		if v, ok := m["skip_k8s_upgrade"].(string); ok && v != "" {
+			skipK8sUpgrade = v
+		}
+		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	nodeRepaveInterval := 0
 	if m["node_repave_interval"] != nil {
@@ -863,6 +891,8 @@ func toMachinePoolEdgeNative(machinePool interface{}) (*models.V1EdgeNativeMachi
 			return mp, err
 		}
 	}
+
+	mp.PoolConfig.MachinePoolProperties = toMachinePoolProperties(m)
 
 	return mp, nil
 }

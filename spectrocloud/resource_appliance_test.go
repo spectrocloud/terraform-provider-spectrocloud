@@ -26,11 +26,34 @@ func TestToApplianceEntity(t *testing.T) {
 		},
 		Spec: &models.V1EdgeHostDeviceSpecEntity{
 			HostPairingKey: strfmt.Password("testKey"),
+			ArchType:       models.V1ArchTypeAmd64.Pointer(),
 		},
 	}
 
 	result := toApplianceEntity(d)
 	assert.Equal(t, expectedEntity, result)
+}
+
+func TestToApplianceEntityArchType(t *testing.T) {
+	d := resourceAppliance().TestResourceData()
+	d.Set("uid", "testID")
+	d.Set("arch_type", "arm64")
+
+	result := toApplianceEntity(d)
+	assert.NotNil(t, result.Spec.ArchType)
+	assert.Equal(t, models.V1ArchTypeArm64, *result.Spec.ArchType)
+}
+
+func TestFlattenApplianceArchType(t *testing.T) {
+	assert.Equal(t, "amd64", flattenApplianceArchType(nil))
+	assert.Equal(t, "amd64", flattenApplianceArchType(&models.V1EdgeHostDevice{}))
+
+	archType := "arm64"
+	assert.Equal(t, "arm64", flattenApplianceArchType(&models.V1EdgeHostDevice{
+		Spec: &models.V1EdgeHostDeviceSpec{
+			Device: &models.V1DeviceSpec{ArchType: &archType},
+		},
+	}))
 }
 
 func TestToApplianceMeta_WithTags(t *testing.T) {
@@ -143,6 +166,7 @@ func TestResourceApplianceRead(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{"type": "test"}, tags)
 	assert.Equal(t, "disabled", d.Get("remote_shell"))
 	assert.Equal(t, "disabled", d.Get("temporary_shell_credentials"))
+	assert.Equal(t, "amd64", d.Get("arch_type"))
 	assert.Equal(t, d.Id(), d.Get("uid"))
 }
 

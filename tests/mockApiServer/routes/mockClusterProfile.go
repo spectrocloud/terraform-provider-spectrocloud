@@ -134,6 +134,22 @@ func ClusterProfileRoutes() []Route {
 			},
 		},
 		{
+			Method: "PATCH",
+			Path:   "/v1/clusterprofiles/{uid}/variables",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/clusterprofiles/{uid}/variables",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
 			Method: "DELETE",
 			Path:   "/v1/clusterprofiles/{uid}",
 			Response: ResponseData{
@@ -147,6 +163,30 @@ func ClusterProfileRoutes() []Route {
 			Response: ResponseData{
 				StatusCode: 201,
 				Payload:    map[string]string{"UID": "cluster-profile-1"},
+			},
+		},
+		{
+			Method: "POST",
+			Path:   "/v1/clusterprofiles/{uid}/clone",
+			Response: ResponseData{
+				StatusCode: 201,
+				Payload:    map[string]string{"UID": "cloned-profile-uid"},
+			},
+		},
+		{
+			Method: "PUT",
+			Path:   "/v1/clusterprofiles/{uid}",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
+			},
+		},
+		{
+			Method: "PATCH",
+			Path:   "/v1/clusterprofiles/{uid}/metadata",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
 			},
 		},
 		{
@@ -187,11 +227,29 @@ func ClusterProfileRoutes() []Route {
 func ClusterProfileNegativeRoutes() []Route {
 	return []Route{
 		{
+			Method: "POST",
+			Path:   "/v1/clusterprofiles",
+			Response: ResponseData{
+				StatusCode: http.StatusConflict,
+				Payload:    getError("ClusterProfileAlreadyExists", "Cluster Profile already exists"),
+			},
+		},
+		{
 			Method: "GET",
 			Path:   "/v1/dashboard/clusterprofiles/metadata",
 			Response: ResponseData{
 				StatusCode: 200,
-				Payload:    &models.V1ClusterProfilesMetadata{},
+				// Same metadata as positive server so Create-on-conflict can adopt via GetClusterProfileUID.
+				// Data source negative tests must use a name not present in this list.
+				Payload: getClusterProfilesMetadataResponse(),
+			},
+		},
+		{
+			Method: "PATCH",
+			Path:   "/v1/clusterprofiles/{uid}/publish",
+			Response: ResponseData{
+				StatusCode: 204,
+				Payload:    nil,
 			},
 		},
 		{

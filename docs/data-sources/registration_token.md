@@ -40,4 +40,4 @@ output "token" {
 - `expiry_date` (String) The expiration date of the registration token in `YYYY-MM-DD` format.
 - `project_uid` (String) The unique identifier of the project associated with the registration token.
 - `status` (String) The status of the registration token. Allowed values are `active` or `inactive`. Default is `active`.
-- `token` (String) The registration token value.
+- `token` (String, Sensitive) Registration token value (credential). Treat as a secret.

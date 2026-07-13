@@ -477,6 +477,32 @@ func CloudAccountsRoutes() []Route {
 			},
 		},
 		{
+			Method: "GET",
+			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}/properties/zones",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1CloudStackZones{
+					Zones: []*models.V1CloudStackZone{
+						{ID: "zone-id-1", Name: "zone-name-1"},
+						{ID: "zone-id-spectro", Name: "spectro"},
+					},
+				},
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/cloudaccounts/apache-cloudstack/{uid}/properties/networks",
+			Response: ResponseData{
+				StatusCode: 200,
+				Payload: &models.V1CloudStackNetworks{
+					Networks: []*models.V1CloudStackNetwork{
+						{ID: "6a3ee8af-9b12-4c11-8c57-498c57498abc", Name: "spectro"},
+						{ID: "net-other", Name: "other-network"},
+					},
+				},
+			},
+		},
+		{
 			Method: "POST",
 			Path:   "/v1/overlords/apache-cloudstack/{uid}/account/validate",
 			Response: ResponseData{

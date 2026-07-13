@@ -138,8 +138,8 @@ func resourceClusterGke() *schema.Resource {
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			// we will depricate it opearional is update_worker_pools_in_parallel
 			"update_worker_pool_in_parallel": {
@@ -247,12 +247,14 @@ func resourceClusterGke() *schema.Resource {
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"backup_policy":        schemas.BackupPolicySchema(),
 			"scan_policy":          schemas.ScanPolicySchema(),

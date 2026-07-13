@@ -37,6 +37,13 @@ resource "spectrocloud_cluster_eks" "cluster" {
   cloud_config {
     ssh_key_name = "default"
     region       = "us-west-2"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
   }
 
   cluster_profile {
@@ -146,14 +153,14 @@ Refer to the [Import section](/docs#import) to learn more.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`. The `tags` attribute will soon be deprecated. It is recommended to use `tags_map` instead.
 - `tags_map` (Map of String) A map of tags to be applied to the cluster. `tags` and `tags_map` are mutually exclusive; only one should be used at a time.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
+- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
 
 <a id="nestedblock--cloud_config"></a>
@@ -169,6 +176,7 @@ Optional:
 - `azs` (List of String) List of availability zone names. Mutually exclusive with `az_subnets`; use for dynamic provisioning.
 - `encryption_config_arn` (String) The ARN of the KMS encryption key to use for the cluster. Refer to the [Enable Secrets Encryption for EKS Cluster](https://docs.spectrocloud.com/clusters/public-cloud/aws/enable-secrets-encryption-kms-key/) for additional guidance.
 - `endpoint_access` (String) Choose between `private`, `public`, or `private_and_public` to define how communication is established with the endpoint for the managed Kubernetes API server and your cluster. The default value is `public`.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `private_access_cidrs` (Set of String) List of CIDR blocks that define the allowed private access to the resource. Only requests originating from addresses within these CIDR blocks will be permitted to access the resource.
 - `public_access_cidrs` (Set of String) List of CIDR blocks that define the allowed public access to the resource. Requests originating from addresses within these CIDR blocks will be permitted to access the resource. All other addresses will be denied access.
 - `ssh_key_name` (String) Public SSH key to be used for the cluster nodes.
@@ -198,6 +206,7 @@ Optional:
 - `max_price` (String) Maximum hourly spot instance price for this machine pool. Used only when `capacity_type` is `spot`.
 - `min` (Number) Minimum number of nodes in the machine pool. Used for autoscaling together with `max`. When both `min` and `max` are greater than 0, `count` must equal `min`.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
+- `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))

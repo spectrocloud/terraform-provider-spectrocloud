@@ -32,6 +32,13 @@ resource "spectrocloud_cluster_azure" "cluster" {
     resource_group  = var.azure_resource_group
     region          = var.azure_region
     ssh_key         = var.cluster_ssh_public_key
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
 
      //Static placement config
         #    network_resource_group = "test-resource-group"
@@ -96,6 +103,25 @@ resource "spectrocloud_cluster_azure" "cluster" {
     count         = 1
     instance_type = "Standard_D2_v3"
     azs           = [""]
+    override_cluster_api_config = <<-EOT
+      spec:
+        template:
+          spec:
+            nodeDrainTimeout: 5m
+    EOT
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
 }
@@ -156,14 +182,14 @@ Refer to the [Import section](/docs#import) to learn more.
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
+- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `azure`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
 
 <a id="nestedblock--cloud_config"></a>
@@ -181,6 +207,7 @@ Optional:
 - `container_name` (String) Container name within your azure storage account.
 - `control_plane_subnet` (Block List, Max: 1) (see [below for nested schema](#nestedblock--cloud_config--control_plane_subnet))
 - `network_resource_group` (String) Azure network resource group in which the cluster is to be provisioned.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `private_api_server` (Block List, Max: 1) Custom private DNS zone for your cluster's API server. For more details, refer to the https://docs.spectrocloud.com/clusters/public-cloud/azure/create-azure-cluster/#private-api-server-lb-settings (see [below for nested schema](#nestedblock--cloud_config--private_api_server))
 - `storage_account_name` (String) Azure storage account name.
 - `virtual_network_cidr_block` (String) Azure virtual network cidr block in which the cluster is to be provisioned.
@@ -248,6 +275,8 @@ Optional:
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
 - `os_type` (String) Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
+- `override_health_check_configuration` (String) YAML override for Machine Health Check configuration at the node pool level (control plane and worker pools). Accepts CAPI MachineHealthCheck fields such as maxUnhealthy, nodeStartupTimeout, and unhealthyConditions. Falls back to Palette defaults when unset. Still respects the project/tenant Cluster Auto Remediation setting. Changing this value may repave your nodes.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))

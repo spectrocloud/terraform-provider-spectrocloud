@@ -119,6 +119,25 @@ provider "spectrocloud" {
 }
 ```
 
+## Feature Preview
+
+The provider accepts optional feature preview flags through the `feature_preview` map argument in the provider block.
+
+### immutable-clusterprofiles
+
+When set to `true`, `spectrocloud_cluster_profile` uses the standard Terraform Plugin SDK v2 immutable-versioned-resource pattern. Version bumps trigger a Terraform replacement (`ForceNew`) instead of an in-place update. Combined with `skip_destroy = true` and `lifecycle { create_before_destroy = true }` on the resource, each version is preserved in Palette while Terraform state advances to the new version. See [`spectrocloud_cluster_profile`](resources/cluster_profile.md) for full usage details.
+
+```terraform
+provider "spectrocloud" {
+  host    = var.sc_host
+  api_key = var.sc_api_key
+
+  feature_preview = {
+    "immutable-clusterprofiles" = true
+  }
+}
+```
+
 ## Import
 Starting with Terraform v1.5.0 and later, you can use an [`import` block](https://developer.hashicorp.com/terraform/language/import) to import resources into your state file.
 
@@ -203,6 +222,11 @@ For questions or issues with the provider, open up an issue in the provider GitH
 
 - `api_key` (String, Sensitive) The Spectro Cloud API key. Can also be set with the `SPECTROCLOUD_APIKEY` environment variable.
 - `feature_flag` (Map of Boolean) Optional provider feature flags (map of booleans). Unknown keys are ignored. Set `disable_addon_deployment_resource` to `true` to block the `spectrocloud_addon_deployment` resource during plan and apply.
+- `feature_preview` (Map of Boolean) A map of feature preview flags. Supported flags: `immutable-clusterprofiles`. 
+
+The `immutable-clusterprofiles` flag enables the standard Terraform Plugin SDK v2 immutable-versioned-resource pattern for `spectrocloud_cluster_profile`. When set, the resource's `version` field becomes `ForceNew` (changes trigger a Terraform replacement instead of an in-place update), the new `skip_destroy` schema field is honored, and the Create function clones from any existing version of the lineage to produce the new immutable version. The Terraform resource id is set once at Create time and never mutates mid-update, so it respects the SDK v2 contract that a resource's primary id is stable across in-place updates. 
+
+Without the flag, `spectrocloud_cluster_profile` uses its legacy in-place mutation behavior (PUT-based updates that overwrite the previous version). The flag is purely opt-in; existing user configurations are unaffected.
 - `host` (String) The Spectro Cloud API host url. Can also be set with the `SPECTROCLOUD_HOST` environment variable. Defaults to https://api.spectrocloud.com
 - `ignore_insecure_tls_error` (Boolean) Ignore insecure TLS errors for Spectro Cloud API endpoints. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this in development/testing environments or when connecting to self-signed certificates in trusted networks. Defaults to false.
 - `project_name` (String) The Palette project the provider will target. If no value is provided, the `Default` Palette project is used. The default value is `Default`.

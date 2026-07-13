@@ -74,12 +74,14 @@ func resourceRegistryHelm() *schema.Resource {
 						"password": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The password for basic authentication. Required if 'credential_type' is set to 'basic'.",
+							Sensitive:   true,
+							Description: "Password for basic auth (credential). Required when credential_type is `basic`.",
 						},
 						"token": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The authentication token. Required if 'credential_type' is set to 'token'.",
+							Sensitive:   true,
+							Description: "Auth token (credential). Required when credential_type is `token`.",
 						},
 					},
 				},

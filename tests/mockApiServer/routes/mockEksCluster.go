@@ -42,12 +42,12 @@ func getMockEksCloudConfig() *models.V1EksCloudConfig {
 					},
 				},
 				{
-					Name:         "worker-pool",
-					InstanceType: "m5.large",
-					Size:         2,
-					AmiType:      "AL2023_x86_64_STANDARD",
+					Name:           "worker-pool",
+					InstanceType:   "m5.large",
+					Size:           2,
+					AmiType:        "AL2023_x86_64_STANDARD",
 					RootDeviceSize: 100,
-					CapacityType: &onDemand,
+					CapacityType:   &onDemand,
 					SubnetIds: map[string]string{
 						"us-east-1a": "subnet-worker",
 					},

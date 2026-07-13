@@ -146,18 +146,20 @@ func resourceClusterVsphere() *schema.Resource {
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -319,6 +321,7 @@ func resourceClusterVsphere() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"instance_type": {
 							Type:     schema.TypeList,
 							Required: true,
@@ -442,6 +445,7 @@ func resourceClusterVsphereCreate(ctx context.Context, d *schema.ResourceData, m
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationCreateWarnings(d, &diags)
 
 	// Validate override_Scaling configuration
 	if err := validateOverrideScaling(d, "machine_pool"); err != nil {
@@ -614,6 +618,7 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		// Flatten skip_k8s_upgrade; default "disabled" when API omits field
 		skipK8sUpgrade := "disabled"
@@ -735,6 +740,7 @@ func resourceClusterVsphereUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+	appendOverrideHealthCheckConfigurationUpdateWarnings(d, &diags)
 	err := validateSystemRepaveApproval(d, c)
 	if err != nil {
 		return diag.FromErr(err)
@@ -1031,6 +1037,7 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		}
 		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
+	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	if !controlPlane {
 		nodeRepaveInterval := 0

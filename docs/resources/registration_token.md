@@ -61,7 +61,7 @@ terraform import spectrocloud_registration_token.example tenant_uid/tenant_name
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `token` (String) Generated registration token value returned by Palette.
+- `token` (String, Sensitive) Generated registration token (credential). Anyone with this value can enroll hosts against the token scope; treat as a secret.
 
 <a id="nestedblock--timeouts"></a>
 ### Nested Schema for `timeouts`

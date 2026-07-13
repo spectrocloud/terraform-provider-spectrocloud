@@ -47,7 +47,8 @@ func dataSourceRegistrationToken() *schema.Resource {
 			"token": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The registration token value.",
+				Sensitive:   true,
+				Description: "Registration token value (credential). Treat as a secret.",
 			},
 		},
 	}

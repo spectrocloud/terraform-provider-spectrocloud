@@ -2,14 +2,12 @@ package spectrocloud
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	"github.com/spectrocloud/palette-sdk-go/api/apiutil/transport"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
@@ -18,6 +16,8 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/client"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	schemas "github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/schemas"
 )
 
 func resourceAppliance() *schema.Resource {
@@ -44,8 +44,13 @@ func resourceAppliance() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The unique identifier (UID) for the appliance.",
+				Description: "The unique identifier (UID) for the appliance. Note: This field is required and must be unique across all appliances in the tenant.",
 			},
+			"arch_type": func() *schema.Schema {
+				s := schemas.MachinePoolArchTypeSchema()
+				s.ForceNew = true
+				return s
+			}(),
 			"tags": {
 				Type:        schema.TypeMap,
 				Optional:    true,
@@ -106,15 +111,8 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 
 	appliance := toApplianceEntity(d)
 	uid, err := c.CreateAppliance(appliance)
-
 	if err != nil {
-		var e *transport.TransportError
-		if errors.As(err, &e) && e.Payload.Code == "AlreadyRegisteredEdgeHostDevice" {
-			uid = d.Get("uid").(string)
-			d.SetId(uid)
-		} else {
-			return diag.FromErr(err)
-		}
+		return diag.FromErr(err)
 	}
 
 	d.SetId(uid)
@@ -192,7 +190,27 @@ func resourceApplianceRead(ctx context.Context, d *schema.ResourceData, m interf
 	if err := d.Set("temporary_shell_credentials", temporaryShellCredentials); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := d.Set("arch_type", flattenApplianceArchType(appliance)); err != nil {
+		return diag.FromErr(err)
+	}
 	return diags
+}
+
+func flattenApplianceArchType(appliance *models.V1EdgeHostDevice) string {
+	if appliance != nil && appliance.Spec != nil && appliance.Spec.Device != nil &&
+		appliance.Spec.Device.ArchType != nil && *appliance.Spec.Device.ArchType != "" {
+		return *appliance.Spec.Device.ArchType
+	}
+	return "amd64"
+}
+
+func toApplianceArchType(d *schema.ResourceData) *models.V1ArchType {
+	archType := "amd64"
+	if v, ok := d.GetOk("arch_type"); ok && v.(string) != "" {
+		archType = v.(string)
+	}
+	arch := models.V1ArchType(archType)
+	return &arch
 }
 
 func flattenApplianceTunnelConfig(spec *models.V1EdgeHostDeviceSpec) (remoteShell, temporaryShellCredentials string) {
@@ -269,6 +287,7 @@ func toApplianceEntity(d *schema.ResourceData) *models.V1EdgeHostDeviceEntity {
 		Metadata: metadata,
 		Spec: &models.V1EdgeHostDeviceSpecEntity{
 			HostPairingKey: strfmt.Password(key),
+			ArchType:       toApplianceArchType(d),
 		},
 	}
 }

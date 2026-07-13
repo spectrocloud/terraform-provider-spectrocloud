@@ -147,18 +147,20 @@ func resourceClusterAks() *schema.Resource {
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
@@ -339,6 +341,19 @@ func resourceClusterAks() *schema.Resource {
 							Required: true,
 							//ExactlyOneOf: []string{"Standard_LRS", "Standard_GRS", "Standard_RAGRS", "Standard_ZRS", "Premium_LRS", "Premium_ZRS", "Standard_GZRS", "Standard_RAGZRS"},
 							Description: "Storage account type for managed disks in this machine pool.",
+						},
+						"os_sku": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							ValidateFunc: validation.StringInSlice([]string{"Ubuntu", "AzureLinux", "Windows2022"}, false),
+							Description:  "OS SKU for the AKS node pool. Valid values are `Ubuntu`, `AzureLinux`, and `Windows2022`. Immutable after creation.",
+						},
+						"os_type": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "Linux",
+							ValidateFunc: validation.StringInSlice([]string{"Linux", "Windows"}, false),
+							Description:  "Operating system type for the machine pool. Valid values are `Linux` and `Windows`. Defaults to `Linux`.",
 						},
 					},
 				},
@@ -592,6 +607,14 @@ func flattenMachinePoolConfigsAks(machinePools []*models.V1AzureMachinePoolConfi
 		oi["disk_size_gb"] = int(machinePool.OsDisk.DiskSizeGB)
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 		oi["storage_account_type"] = machinePool.OsDisk.ManagedDisk.StorageAccountType
+		if machinePool.OsSku != "" {
+			oi["os_sku"] = string(machinePool.OsSku)
+		}
+		if machinePool.OsType != nil {
+			oi["os_type"] = string(*machinePool.OsType)
+		} else if machinePool.OsDisk != nil && machinePool.OsDisk.OsType != nil {
+			oi["os_type"] = string(*machinePool.OsDisk.OsType)
+		}
 		oi["min"] = int(machinePool.MinSize)
 		oi["max"] = int(machinePool.MaxSize)
 		ois = append(ois, oi)
@@ -831,6 +854,21 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 		max = SafeInt32(m["max"].(int))
 	}
 
+	managedPoolConfig := &models.V1AzureManagedMachinePoolConfig{
+		IsSystemNodePool: m["is_system_node_pool"].(bool),
+	}
+	if osSku, ok := m["os_sku"].(string); ok && osSku != "" {
+		managedPoolConfig.OsSku = models.V1OsSku(osSku)
+	}
+
+	osType := models.V1OsTypeLinux
+	if m["os_type"] != nil && m["os_type"].(string) != "" {
+		if m["os_type"].(string) == "Windows" {
+			osType = models.V1OsTypeWindows
+		}
+	}
+	managedPoolConfig.OsType = &osType
+
 	mp := &models.V1AzureMachinePoolConfigEntity{
 		CloudConfig: &models.V1AzureMachinePoolCloudConfigEntity{
 			InstanceType: m["instance_type"].(string),
@@ -839,13 +877,11 @@ func toMachinePoolAks(machinePool interface{}) *models.V1AzureMachinePoolConfigE
 				ManagedDisk: &models.V1ManagedDisk{
 					StorageAccountType: m["storage_account_type"].(string),
 				},
-				OsType: models.NewV1OsType(""), // TODO: PA1-SIVA fix a right type
+				OsType: &osType,
 			},
 			IsSystemNodePool: m["is_system_node_pool"].(bool),
 		},
-		ManagedPoolConfig: &models.V1AzureManagedMachinePoolConfig{
-			IsSystemNodePool: m["is_system_node_pool"].(bool),
-		},
+		ManagedPoolConfig: managedPoolConfig,
 		PoolConfig: &models.V1MachinePoolConfigEntity{
 			AdditionalLabels:      toAdditionalNodePoolLabels(m),
 			AdditionalAnnotations: toAdditionalNodePoolAnnotations(m),

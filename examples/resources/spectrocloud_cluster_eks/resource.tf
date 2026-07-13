@@ -18,8 +18,15 @@ resource "spectrocloud_cluster_eks" "cluster" {
   cloud_account_id = data.spectrocloud_cloudaccount_aws.account.id
 
   cloud_config {
-    ssh_key_name = "default"
-    region       = "us-west-2"
+    ssh_key_name                = "default"
+    region                      = "us-west-2"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
   }
 
   cluster_profile {

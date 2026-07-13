@@ -29,6 +29,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
 
   cloud_config {
     ssh_key_name = "my-ssh-key"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
     
     zone {
       name = "Zone1"
@@ -74,6 +81,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster" {
     additional_labels = {
       "role" = "worker"
     }
+
+    override_cluster_api_config = <<-EOT
+      spec:
+        template:
+          spec:
+            nodeDrainTimeout: 5m
+    EOT
   }
 }
 ```
@@ -103,6 +117,13 @@ resource "spectrocloud_cluster_apache_cloudstack" "advanced_cluster" {
 
   cloud_config {
     ssh_key_name = "production-ssh-key"
+    override_cluster_api_config = <<-EOT
+      spec:
+        controlPlaneConfiguration:
+          apiServer:
+            extraArgs:
+              authorization-mode: Node,RBAC
+    EOT
     
     # Optional: Specify CloudStack project
     project {
@@ -602,6 +623,19 @@ resource "spectrocloud_cluster_apache_cloudstack" "cluster_custom_kubeadm" {
 
     update_strategy      = "RollingUpdateScaleIn"
     node_repave_interval = 90
+
+    # Optional: override Machine Health Check settings for this node pool
+    override_health_check_configuration = <<-EOT
+      maxUnhealthy: 40%
+      nodeStartupTimeout: 10m
+      unhealthyConditions:
+        - type: Ready
+          status: "False"
+          timeout: 5m
+        - type: Ready
+          status: "Unknown"
+          timeout: 5m
+    EOT
   }
 
   timeouts {
@@ -666,14 +700,14 @@ terraform import spectrocloud_cluster_apache_cloudstack.{cluster_uid}/{cluster_n
 - `skip_completion` (Boolean) If `true`, the cluster will be created asynchronously. Default value is `false`.
 - `tags` (Set of String) A list of tags to be applied to the cluster. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
+- `update_worker_pools_in_parallel` (Boolean) Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.
 
 ### Read-Only
 
-- `admin_kube_config` (String) Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.
+- `admin_kube_config` (String, Sensitive) Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.
 - `cloud_config_id` (String, Deprecated) ID of the cloud config used for the cluster. This cloud config must be of type `cloudstack`.
 - `id` (String) The ID of this resource.
-- `kubeconfig` (String) Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.
+- `kubeconfig` (String, Sensitive) Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.
 - `location_config` (List of Object) The location of the cluster. (see [below for nested schema](#nestedatt--location_config))
 
 <a id="nestedblock--cloud_config"></a>
@@ -686,6 +720,7 @@ Required:
 Optional:
 
 - `control_plane_endpoint` (String) Endpoint IP to be used for the API server. Should only be set for static CloudStack networks.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `project` (Block List, Max: 1) CloudStack project configuration (optional). If not specified, the cluster will be created in the domain's default project. (see [below for nested schema](#nestedblock--cloud_config--project))
 - `ssh_key_name` (String) SSH key name for accessing cluster nodes.
 - `sync_with_cks` (Boolean) Determines if an external managed CKS (CloudStack Kubernetes Service) cluster should be created. Default is `false`.
@@ -699,7 +734,7 @@ Required:
 
 Optional:
 
-- `id` (String) CloudStack zone ID. Either `id` or `name` can be used to identify the zone. If both are specified, `id` takes precedence.
+- `id` (String) CloudStack zone ID. Optional in configuration; when omitted, the provider resolves the ID at apply time from the cloud account using `name`. If both `id` and `name` are set, `id` takes precedence. Populated from the API after create or read.
 - `network` (Block List, Max: 1) Network configuration for this zone. (see [below for nested schema](#nestedblock--cloud_config--zone--network))
 
 <a id="nestedblock--cloud_config--zone--network"></a>
@@ -762,9 +797,11 @@ Optional:
 - `control_plane_as_worker` (Boolean) Whether this machine pool is a control plane and a worker. Defaults to `false`.
 - `max` (Number) Maximum number of nodes in the machine pool. This is used for autoscaling.
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling.
-- `network` (Block List) Network configuration for the machine pool instances. (see [below for nested schema](#nestedblock--machine_pool--network))
+- `network` (Block List) Network configuration for the machine pool instances. Set `network_name` (and optionally `network_id`); when `network_id` is omitted it is resolved at apply time and stored in state. (see [below for nested schema](#nestedblock--machine_pool--network))
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
+- `override_health_check_configuration` (String) YAML override for Machine Health Check configuration at the node pool level (control plane and worker pools). Accepts CAPI MachineHealthCheck fields such as maxUnhealthy, nodeStartupTimeout, and unhealthyConditions. Falls back to Palette defaults when unset. Still respects the project/tenant Cluster Auto Remediation setting. Changing this value may repave your nodes.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
@@ -778,13 +815,11 @@ Read-Only:
 <a id="nestedblock--machine_pool--network"></a>
 ### Nested Schema for `machine_pool.network`
 
-Required:
-
-- `network_name` (String) Network name to attach to the machine pool.
-
 Optional:
 
 - `ip_address` (String, Deprecated) Static IP address to assign. **DEPRECATED**: This field is no longer supported by CloudStack and will be ignored.
+- `network_id` (String) CloudStack network ID attached to the machine pool. Optional in configuration; when omitted and `network_name` is set, the provider resolves the ID at apply time from the cloud account. Populated from the API after create or read.
+- `network_name` (String) CloudStack network name to attach to the machine pool. Either `network_id` or `network_name` must be provided. When only `network_name` is set, the provider resolves `network_id` from the cloud account using `cloud_config.zone.id` (resolved from `zone.name` when needed) and optional project/VPC context.
 
 
 <a id="nestedblock--machine_pool--node"></a>

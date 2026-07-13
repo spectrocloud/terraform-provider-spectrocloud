@@ -159,18 +159,20 @@ func resourceClusterEks() *schema.Resource {
 			"update_worker_pools_in_parallel": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
-				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true` (default), all worker pools are updated simultaneously. When `false`, worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
+				Default:     false,
+				Description: "Controls whether worker pool updates occur in parallel or sequentially. When set to `true`, all worker pools are updated simultaneously. When set to `false` (default), worker pools are updated one at a time, reducing cluster disruption but taking longer to complete updates.",
 			},
 			"kubeconfig": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Kubeconfig for the cluster. This can be used to connect to the cluster using `kubectl`.",
+				Sensitive:   true,
+				Description: "Kubeconfig for the cluster (credential material). Use with `kubectl` and protect like any kubeconfig secret.",
 			},
 			"admin_kube_config": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Admin Kube-config for the cluster. This can be used to connect to the cluster using `kubectl`, With admin privilege.",
+				Sensitive:   true,
+				Description: "Admin kubeconfig (cluster-admin credential). Full cluster control; treat as a highly sensitive secret.",
 			},
 			"cloud_config": {
 				Type:        schema.TypeList,
@@ -251,6 +253,7 @@ func resourceClusterEks() *schema.Resource {
 							ForceNew:    true,
 							Optional:    true,
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -311,6 +314,7 @@ func resourceClusterEks() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"min": {
 							Type:     schema.TypeInt,
 							Optional: true,
@@ -649,6 +653,9 @@ func flattenClusterConfigsEKS(cloudConfig *models.V1EksCloudConfig) interface{} 
 	ret["region"] = *cloudConfig.Spec.ClusterConfig.Region
 	ret["vpc_id"] = cloudConfig.Spec.ClusterConfig.VpcID
 	ret["ssh_key_name"] = cloudConfig.Spec.ClusterConfig.SSHKeyName
+	if cloudConfig.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		ret["override_cluster_api_config"] = cloudConfig.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
 
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
@@ -705,6 +712,9 @@ func flattenMachinePoolConfigsEks(machinePools []*models.V1EksMachinePoolConfig)
 		// Flatten override_kubeadm_configuration (worker pools only)
 		if machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
 
 		oi["min"] = int(machinePool.MinSize)
@@ -960,6 +970,12 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	if err != nil {
 		return nil, err
 	}
+
+	overrideClusterAPIConfig := ""
+	if cloudConfig["override_cluster_api_config"] != nil {
+		overrideClusterAPIConfig = cloudConfig["override_cluster_api_config"].(string)
+	}
+
 	cluster := &models.V1SpectroEksClusterEntity{
 		Metadata: getClusterMetadata(d),
 		Spec: &models.V1SpectroEksClusterEntitySpec{
@@ -968,11 +984,12 @@ func toEksCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 			ClusterTemplate: toClusterTemplateReference(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1EksClusterConfig{
-				BastionDisabled:  true,
-				VpcID:            cloudConfig["vpc_id"].(string),
-				Region:           types.Ptr(cloudConfig["region"].(string)),
-				SSHKeyName:       cloudConfig["ssh_key_name"].(string),
-				EncryptionConfig: encryptionConfig,
+				BastionDisabled:          true,
+				VpcID:                    cloudConfig["vpc_id"].(string),
+				Region:                   types.Ptr(cloudConfig["region"].(string)),
+				SSHKeyName:               cloudConfig["ssh_key_name"].(string),
+				EncryptionConfig:         encryptionConfig,
+				OverrideClusterAPIConfig: overrideClusterAPIConfig,
 			},
 		},
 	}
@@ -1140,6 +1157,9 @@ func toMachinePoolEks(machinePool interface{}) *models.V1EksMachinePoolConfigEnt
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
 	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
+	}
 
 	if capacityType == "spot" {
 		maxPrice := "0.0" // default value
@@ -1295,14 +1315,20 @@ func toCloudConfigEks(cloudConfig map[string]interface{}) *models.V1EksCloudClus
 		access.PrivateCIDRs = cidrs
 	}
 
+	overrideClusterAPIConfig := ""
+	if cloudConfig["override_cluster_api_config"] != nil {
+		overrideClusterAPIConfig = cloudConfig["override_cluster_api_config"].(string)
+	}
+
 	clusterConfigEntity := &models.V1EksCloudClusterConfigEntity{
 		ClusterConfig: &models.V1EksClusterConfig{
-			BastionDisabled:  true,
-			VpcID:            cloudConfig["vpc_id"].(string),
-			Region:           types.Ptr(cloudConfig["region"].(string)),
-			SSHKeyName:       cloudConfig["ssh_key_name"].(string),
-			EncryptionConfig: encryptionConfig,
-			EndpointAccess:   access,
+			BastionDisabled:          true,
+			VpcID:                    cloudConfig["vpc_id"].(string),
+			Region:                   types.Ptr(cloudConfig["region"].(string)),
+			SSHKeyName:               cloudConfig["ssh_key_name"].(string),
+			EncryptionConfig:         encryptionConfig,
+			EndpointAccess:           access,
+			OverrideClusterAPIConfig: overrideClusterAPIConfig,
 		},
 	}
 
