@@ -20,7 +20,6 @@ func defaultEksMachinePool(overrides map[string]interface{}) map[string]interfac
 	pool := map[string]interface{}{
 		"name":            "worker-pool",
 		"count":           2,
-		"control_plane":   false,
 		"instance_type":   "m5.large",
 		"ami_type":        "AL2023_x86_64_STANDARD",
 		"disk_size_gb":    100,

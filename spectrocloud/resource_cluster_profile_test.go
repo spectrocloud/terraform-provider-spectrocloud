@@ -858,7 +858,7 @@ func TestResourceClusterProfileCreateAdoptExisting(t *testing.T) {
 	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
 	// Should have adopted the existing UID from the mock metadata.
-	assert.Equal(t, "existing-profile-uid-1", d.Id())
+	assert.Equal(t, "cluster-profile-import-1", d.Id())
 }
 
 // TestResourceClusterProfileCreateNoAdoptWithoutFlag verifies that when the

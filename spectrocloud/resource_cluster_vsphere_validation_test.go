@@ -49,7 +49,8 @@ func TestValidateMachinePoolChange(t *testing.T) {
 	})
 
 	t.Run("placement length change is rejected", func(t *testing.T) {
-		newPlacement := append(basePlacement, map[string]interface{}{
+		newPlacement := append([]interface{}{}, basePlacement...)
+		newPlacement = append(newPlacement, map[string]interface{}{
 			"cluster":           "cluster-b",
 			"datastore":         "ds-b",
 			"resource_pool":     "rp-b",
