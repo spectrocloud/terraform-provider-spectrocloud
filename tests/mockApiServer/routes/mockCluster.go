@@ -6,7 +6,6 @@ import (
 
 	v1 "github.com/spectrocloud/palette-sdk-go/api/client/version1"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 )
 
 func getMockSpectroCluster() *models.V1SpectroCluster {
@@ -145,10 +144,10 @@ func ClusterRoutes() []Route {
 				StatusCode: 200,
 				Payload: []*models.V1SpectroClusterVariables{
 					{
-						ProfileUID: spectrocloud.StringPtr(clusterProfileUID1),
+						ProfileUID: strPtr(clusterProfileUID1),
 						Variables: []*models.V1SpectroClusterVariableResponse{
 							{
-								Name:  spectrocloud.StringPtr("region"),
+								Name:  strPtr("region"),
 								Value: "us-east-1",
 							},
 						},

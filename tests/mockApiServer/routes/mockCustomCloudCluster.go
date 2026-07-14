@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 )
 
 const (
@@ -28,7 +27,7 @@ func getMockCustomCloudConfig() *models.V1CustomCloudConfig {
 				UID: MockCustomCloudAccountUID,
 			},
 			ClusterConfig: &models.V1CustomClusterConfig{
-				Values: spectrocloud.StringPtr(`kind: Cluster
+				Values: strPtr(`kind: Cluster
 metadata:
   name: test-custom-cluster`),
 			},

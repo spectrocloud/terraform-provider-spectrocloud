@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"context"
 	"testing"
 
 	"github.com/go-openapi/strfmt"
@@ -366,3 +367,177 @@ func TestFlattenSplunkAuditTrailPreservesTokenFromState(t *testing.T) {
 	sp := d.Get("splunk").([]interface{})[0].(map[string]interface{})
 	assert.Equal(t, "configured-token", sp["token"])
 }
+
+// ---------------------------------------------------------------------------
+// CRUD coverage — CloudWatch + Splunk
+//
+// This resource carries two subtypes, each with its own endpoint set +
+// pre-create validate call. Tests below run both paths; the mock server
+// stubs Create/Read/Update/Delete for the data-sink endpoints and the
+// per-provider validate endpoints (see tests/mockApiServer/routes/
+// mockAuditTrail.go).
+// ---------------------------------------------------------------------------
+
+func prepareCloudWatchAuditTrailFor(tt *testing.T) *schema.ResourceData {
+	return schema.TestResourceDataRaw(tt, resourceAuditTrail().Schema, map[string]interface{}{
+		"name": "test-cw-audit",
+		"type": auditTrailTypeCloudWatch,
+		"cloudwatch": []interface{}{
+			map[string]interface{}{
+				"group":           "logs",
+				"region":          "us-east-1",
+				"stream":          "audit",
+				"credential_type": "secret",
+				"access_key":      "AKIATEST",
+				"secret_key":      "supersecret",
+				"partition":       "aws",
+			},
+		},
+	})
+}
+
+func prepareSplunkAuditTrailFor(tt *testing.T) *schema.ResourceData {
+	return schema.TestResourceDataRaw(tt, resourceAuditTrail().Schema, map[string]interface{}{
+		"name": "test-splunk-audit",
+		"type": auditTrailTypeSplunk,
+		"splunk": []interface{}{
+			map[string]interface{}{
+				"hec_url": "https://splunk.example.com:8088",
+				"token":   "supersecret-token",
+				"index":   "main",
+				"source":  "palette-audit",
+			},
+		},
+	})
+}
+
+func TestResourceAuditTrailCloudWatchCRUD(t *testing.T) {
+	testResourceCRUD(t, func() *schema.ResourceData { return prepareCloudWatchAuditTrailFor(t) },
+		unitTestMockAPIClient,
+		resourceAuditTrailCreate, resourceAuditTrailRead,
+		resourceAuditTrailUpdate, resourceAuditTrailDelete)
+}
+
+func TestResourceAuditTrailSplunkCRUD(t *testing.T) {
+	testResourceCRUD(t, func() *schema.ResourceData { return prepareSplunkAuditTrailFor(t) },
+		unitTestMockAPIClient,
+		resourceAuditTrailCreate, resourceAuditTrailRead,
+		resourceAuditTrailUpdate, resourceAuditTrailDelete)
+}
+
+func TestResourceAuditTrailUnsupportedType(t *testing.T) {
+	// Force the "unsupported audit trail type" branch on Create/Update/
+	// Delete. Type is ForceNew so this can only happen via
+	// TestResourceData, but it's still worth pinning that the code
+	// returns a diag.Error rather than panicking.
+	d := schema.TestResourceDataRaw(t, resourceAuditTrail().Schema, map[string]interface{}{
+		"name": "x",
+		"type": auditTrailTypeCloudWatch,
+	})
+	// Overwrite after schema validation with a bogus type.
+	_ = d.Set("type", "elasticsearch")
+
+	diags := resourceAuditTrailCreate(context.Background(), d, unitTestMockAPIClient)
+	require.NotEmpty(t, diags)
+	assert.Contains(t, diags[0].Summary, "unsupported audit trail type")
+
+	diags = resourceAuditTrailUpdate(context.Background(), d, unitTestMockAPIClient)
+	require.NotEmpty(t, diags)
+	assert.Contains(t, diags[0].Summary, "unsupported audit trail type")
+
+	diags = resourceAuditTrailDelete(context.Background(), d, unitTestMockAPIClient)
+	require.NotEmpty(t, diags)
+	assert.Contains(t, diags[0].Summary, "unsupported audit trail type")
+}
+
+func TestResourceAuditTrailCRUDNegative(t *testing.T) {
+	t.Run("CloudWatch Create fails validate", func(t *testing.T) {
+		d := prepareCloudWatchAuditTrailFor(t)
+		diags := resourceAuditTrailCreate(context.Background(), d, unitTestMockAPINegativeClient)
+		require.NotEmpty(t, diags)
+		assert.Contains(t, diags[0].Summary, "Invalid CloudWatch credentials")
+	})
+
+	t.Run("Splunk Create fails validate", func(t *testing.T) {
+		d := prepareSplunkAuditTrailFor(t)
+		diags := resourceAuditTrailCreate(context.Background(), d, unitTestMockAPINegativeClient)
+		require.NotEmpty(t, diags)
+		assert.Contains(t, diags[0].Summary, "Invalid Splunk configuration")
+	})
+
+	t.Run("CloudWatch Delete surfaces error", func(t *testing.T) {
+		d := prepareCloudWatchAuditTrailFor(t)
+		d.SetId("test-cw-audit-uid")
+		diags := resourceAuditTrailDelete(context.Background(), d, unitTestMockAPINegativeClient)
+		require.NotEmpty(t, diags)
+		assert.Contains(t, diags[0].Summary, "Failed to delete CloudWatch audit trail")
+	})
+
+	t.Run("Splunk Delete surfaces error", func(t *testing.T) {
+		d := prepareSplunkAuditTrailFor(t)
+		d.SetId("test-splunk-audit-uid")
+		diags := resourceAuditTrailDelete(context.Background(), d, unitTestMockAPINegativeClient)
+		require.NotEmpty(t, diags)
+		assert.Contains(t, diags[0].Summary, "Failed to delete Splunk audit trail")
+	})
+}
+
+func TestResourceAuditTrailImport(t *testing.T) {
+	t.Run("empty id errors", func(t *testing.T) {
+		d := resourceAuditTrail().TestResourceData()
+		d.SetId("")
+		_, err := resourceAuditTrailImport(context.Background(), d, unitTestMockAPIClient)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "required")
+	})
+
+	t.Run("splunk uid found", func(t *testing.T) {
+		// The positive mock's splunk GET returns a payload for any UID —
+		// so the "splunk first" fallback wins. This exercises the code
+		// path that skips CloudWatch when Splunk answers.
+		d := resourceAuditTrail().TestResourceData()
+		d.SetId("test-splunk-audit-uid")
+		got, err := resourceAuditTrailImport(context.Background(), d, unitTestMockAPIClient)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, auditTrailTypeSplunk, got[0].Get("type"))
+	})
+}
+
+// TestPriorBlockStringHelpers pins the defensive nil/empty branches in
+// priorCloudWatchBlockString and priorSplunkBlockString. Neither has a
+// dedicated caller test — they're only reached via *ForRead helpers —
+// so covering the sad paths here prevents silent regressions.
+func TestPriorBlockStringHelpers(t *testing.T) {
+	d := resourceAuditTrail().TestResourceData()
+
+	// No cloudwatch/splunk blocks configured → empty string.
+	assert.Equal(t, "", priorCloudWatchBlockString(d, "secret_key"))
+	assert.Equal(t, "", priorSplunkBlockString(d, "token"))
+
+	// With a populated cloudwatch block, the field extractor returns the value.
+	_ = d.Set("cloudwatch", []interface{}{
+		map[string]interface{}{
+			"group":      "g",
+			"region":     "us-east-1",
+			"secret_key": "stashed",
+		},
+	})
+	assert.Equal(t, "stashed", priorCloudWatchBlockString(d, "secret_key"))
+	assert.Equal(t, "", priorCloudWatchBlockString(d, "nonexistent-field"))
+}
+
+// TestSplunkTokenForRead is trivial but pins the delegating behavior.
+func TestSplunkTokenForRead(t *testing.T) {
+	d := resourceAuditTrail().TestResourceData()
+	assert.Equal(t, "", splunkTokenForRead(d))
+
+	_ = d.Set("splunk", []interface{}{
+		map[string]interface{}{
+			"hec_url": "https://x.example.com",
+			"token":   "kept-in-state",
+		},
+	})
+	assert.Equal(t, "kept-in-state", splunkTokenForRead(d))
+}
+

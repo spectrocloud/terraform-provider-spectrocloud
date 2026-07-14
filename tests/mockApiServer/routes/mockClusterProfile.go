@@ -2,7 +2,6 @@ package routes
 
 import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 	"net/http"
 )
 
@@ -62,7 +61,7 @@ func getClusterProfileResponse() *models.V1ClusterProfile {
 				PackServerSecret: "",
 				Packs: []*models.V1PackRef{
 					{
-						Name:        spectrocloud.StringPtr("k8"),
+						Name:        strPtr("k8"),
 						PackUID:     generateRandomStringUID(),
 						RegistryUID: generateRandomStringUID(),
 						Schema:      nil,

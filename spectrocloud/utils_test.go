@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -425,4 +426,159 @@ func TestStringWithDefaultValue(t *testing.T) {
 // Helper function for creating string pointers
 func stringPtr(s string) *string {
 	return &s
+}
+
+// ---------------------------------------------------------------------------
+// Pointer helper coverage
+//
+// The block below rounds out coverage for the pointer-safe accessors in
+// utils.go — Bool, Int, Int8..Int64, Float32/64, plus their *Ptr and
+// *WithDefault siblings, Time, Interface, and SafeUint32. These helpers
+// have no dependencies (no schema, no client, no context) so a plain
+// nil / non-nil / boundary sweep is sufficient. Testing them here is
+// worthwhile because they're called from ~all resource create/read paths;
+// a regression that swaps nil-handling would silently corrupt many
+// resources, and the current suite would not catch it.
+// ---------------------------------------------------------------------------
+
+func TestSafeUint32(t *testing.T) {
+	tests := []struct {
+		name  string
+		input int
+		want  uint32
+	}{
+		{"zero", 0, 0},
+		{"positive small", 42, 42},
+		{"negative clamps to zero", -1, 0},
+		{"very negative clamps to zero", math.MinInt, 0},
+		{"MaxInt32", int(math.MaxInt32), uint32(math.MaxInt32)},
+		{"above MaxInt32 within uint32", int(math.MaxInt32) + 1, uint32(math.MaxInt32) + 1},
+		{"MaxUint32", int(math.MaxUint32), uint32(math.MaxUint32)},
+		{"above MaxUint32 clamps", int(math.MaxUint32) + 1, uint32(math.MaxUint32)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, SafeUint32(tt.input))
+		})
+	}
+}
+
+func TestBool(t *testing.T) {
+	assert.False(t, Bool(nil), "nil should read as false")
+	assert.True(t, Bool(BoolPtr(true)), "*true should read as true")
+	assert.False(t, Bool(BoolPtr(false)), "*false should read as false")
+}
+
+func TestInt(t *testing.T) {
+	assert.Equal(t, 0, Int(nil))
+	assert.Equal(t, 5, Int(IntPtr(5)))
+	assert.Equal(t, -3, Int(IntPtr(-3)))
+}
+
+func TestIntPtr(t *testing.T) {
+	p := IntPtr(7)
+	assert.NotNil(t, p)
+	assert.Equal(t, 7, *p)
+
+	// IntPtr must copy the argument, not alias caller storage.
+	v := 10
+	p2 := IntPtr(v)
+	v = 99
+	assert.Equal(t, 10, *p2, "IntPtr should snapshot its argument")
+}
+
+// TestFixedWidthIntHelpers covers Int8/Int16/Int32/Int64 (nil + populated),
+// their *Ptr constructors (independence from caller storage), and their
+// *WithDefault siblings (nil→default, populated→value, populated-zero→zero).
+// Kept as a single table-driven test to avoid 12 near-identical functions.
+func TestFixedWidthIntHelpers(t *testing.T) {
+	t.Run("Int8", func(t *testing.T) {
+		assert.Equal(t, int8(0), Int8(nil))
+		assert.Equal(t, int8(5), Int8(Int8Ptr(5)))
+		assert.Equal(t, int8(math.MaxInt8), Int8(Int8Ptr(math.MaxInt8)))
+		assert.Equal(t, int8(math.MinInt8), Int8(Int8Ptr(math.MinInt8)))
+
+		assert.Equal(t, int8(9), Int8WithDefault(nil, 9), "nil should fall back to default")
+		assert.Equal(t, int8(0), Int8WithDefault(Int8Ptr(0), 9), "*0 should beat default")
+		assert.Equal(t, int8(7), Int8WithDefault(Int8Ptr(7), 9))
+
+		// Ptr snapshots its argument.
+		v := int8(1)
+		p := Int8Ptr(v)
+		v = 2
+		assert.Equal(t, int8(1), *p)
+	})
+
+	t.Run("Int16", func(t *testing.T) {
+		assert.Equal(t, int16(0), Int16(nil))
+		assert.Equal(t, int16(math.MaxInt16), Int16(Int16Ptr(math.MaxInt16)))
+		assert.Equal(t, int16(math.MinInt16), Int16(Int16Ptr(math.MinInt16)))
+
+		v := int16(1)
+		p := Int16Ptr(v)
+		v = 2
+		assert.Equal(t, int16(1), *p)
+	})
+
+	t.Run("Int32", func(t *testing.T) {
+		assert.Equal(t, int32(0), Int32(nil))
+		assert.Equal(t, int32(math.MaxInt32), Int32(Int32Ptr(math.MaxInt32)))
+		assert.Equal(t, int32(math.MinInt32), Int32(Int32Ptr(math.MinInt32)))
+
+		assert.Equal(t, int32(9), Int32WithDefault(nil, 9))
+		assert.Equal(t, int32(0), Int32WithDefault(Int32Ptr(0), 9), "*0 should beat default")
+		assert.Equal(t, int32(7), Int32WithDefault(Int32Ptr(7), 9))
+	})
+
+	t.Run("Int64", func(t *testing.T) {
+		assert.Equal(t, int64(0), Int64(nil))
+		assert.Equal(t, int64(math.MaxInt64), Int64(Int64Ptr(math.MaxInt64)))
+		assert.Equal(t, int64(math.MinInt64), Int64(Int64Ptr(math.MinInt64)))
+
+		assert.Equal(t, int64(9), Int64WithDefault(nil, 9))
+		assert.Equal(t, int64(0), Int64WithDefault(Int64Ptr(0), 9), "*0 should beat default")
+		assert.Equal(t, int64(7), Int64WithDefault(Int64Ptr(7), 9))
+	})
+}
+
+func TestFloatHelpers(t *testing.T) {
+	t.Run("Float32", func(t *testing.T) {
+		p := Float32Ptr(1.25)
+		assert.NotNil(t, p)
+		assert.Equal(t, float32(1.25), *p)
+
+		assert.Equal(t, float32(9.5), Float32WithDefault(nil, 9.5), "nil → default")
+		assert.Equal(t, float32(0), Float32WithDefault(Float32Ptr(0), 9.5), "*0 should beat default")
+		assert.Equal(t, float32(-2.5), Float32WithDefault(Float32Ptr(-2.5), 9.5))
+	})
+
+	t.Run("Float64", func(t *testing.T) {
+		p := Float64Ptr(3.14)
+		assert.NotNil(t, p)
+		assert.Equal(t, 3.14, *p)
+
+		assert.Equal(t, 9.5, Float64WithDefault(nil, 9.5))
+		assert.Equal(t, 0.0, Float64WithDefault(Float64Ptr(0), 9.5))
+		assert.Equal(t, -2.5, Float64WithDefault(Float64Ptr(-2.5), 9.5))
+	})
+}
+
+func TestTime(t *testing.T) {
+	// nil pointer returns the zero value; assert on IsZero rather than
+	// equality so we don't get tripped up by monotonic-clock reads.
+	assert.True(t, Time(nil).IsZero())
+
+	moment := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
+	assert.Equal(t, moment, Time(&moment))
+}
+
+func TestInterface(t *testing.T) {
+	// The current implementation returns nil for a nil pointer and the
+	// pointer (not the underlying value) otherwise. Test what's actually
+	// implemented so a future contract change is obvious in the diff.
+	assert.Nil(t, Interface(nil))
+
+	val := interface{}("hello")
+	got := Interface(&val)
+	assert.NotNil(t, got)
 }

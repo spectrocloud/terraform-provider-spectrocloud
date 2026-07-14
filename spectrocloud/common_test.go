@@ -2,20 +2,15 @@ package spectrocloud
 
 import (
 	"context"
-	"crypto/tls"
-	"errors"
 	"fmt"
-	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/client"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/mockserver"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,24 +45,29 @@ func (e CodedError) Error() string {
 var unitTestMockAPIClient interface{}
 var unitTestMockAPINegativeClient interface{}
 
-var basePath = ""
-var startMockApiServerScript = ""
-var stopMockApiServerScript = ""
+// mockAPIServer is the in-process mock started by TestMain. It replaces the
+// previous shell-script-driven MockBuild process — no openssl, no nohup,
+// no /tmp binary to clean up.
+var mockAPIServer *mockserver.Server
 
 func TestMain(m *testing.M) {
-	cwd, _ := os.Getwd()
-	_ = os.Setenv("TF_SRC", filepath.Dir(cwd))
-	basePath = os.Getenv("TF_SRC")
-	startMockApiServerScript = basePath + "/tests/mockApiServer/start_mock_api_server.sh"
-	stopMockApiServerScript = basePath + "/tests/mockApiServer/stop_mock_api_server.sh"
-	fmt.Printf("\033[1;36m%s\033[0m", "> [Debug] Basepath -"+basePath+" \n")
-	err := setup()
+	srv, err := mockserver.Start()
 	if err != nil {
-		fmt.Printf("Error during setup: %v\n", err)
+		fmt.Printf("Error starting mock API server: %v\n", err)
 		os.Exit(1)
 	}
+	mockAPIServer = srv
+	fmt.Printf("\033[1;36m%s\033[0m", "> Started Mock Api Server at https://127.0.0.1:8088 (positive) & https://127.0.0.1:8888 (negative)\n")
+
+	ctx := context.Background()
+	unitTestMockAPIClient, _ = unitTestProviderConfigure(ctx)
+	unitTestMockAPINegativeClient, _ = unitTestNegativeCaseProviderConfigure(ctx)
+	fmt.Printf("\033[1;36m%s\033[0m", "> Setup completed \n")
+
 	code := m.Run()
-	teardown()
+
+	mockAPIServer.Stop()
+	fmt.Printf("\033[1;36m%s\033[0m", "> Stopped Mock Api Server \n")
 	os.Exit(code)
 }
 
@@ -118,93 +118,30 @@ func unitTestNegativeCaseProviderConfigure(ctx context.Context) (interface{}, di
 	return c, diags
 }
 
-func checkMockServerHealth() error {
-	maxRetries := 5
-	delay := 2 * time.Second
-
-	// Skip TLS verification (use with caution; not recommended for production)
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	c := &http.Client{Transport: tr}
-
-	for i := 0; i < maxRetries; i++ {
-		// Create a new HTTP request
-		req, err := http.NewRequest("GET", "https://127.0.0.1:8088/v1/health", nil)
-		if err != nil {
-			return err
-		}
-
-		// Add the API key as a header
-		req.Header.Set("ApiKey", "12345")
-
-		// Send the request
-		resp, err := c.Do(req)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			// Server is up and running
-			err := resp.Body.Close()
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-
-		if resp != nil {
-			err := resp.Body.Close()
-			if err != nil {
-				return err
-			}
-		}
-
-		// Wait before retrying
-		time.Sleep(delay)
-	}
-
-	return errors.New("server is not responding after multiple attempts")
-}
-
-func setup() error {
-	fmt.Printf("\033[1;36m%s\033[0m", "> Starting Mock API Server \n")
-	var ctx context.Context
-
-	cmd := exec.Command("sh", startMockApiServerScript)
-	output, err := cmd.CombinedOutput()
-	err = checkMockServerHealth()
-	if err != nil {
-		fmt.Printf("Failed to run start api server script: %s\nError: %s", output, err)
-		return err
-	}
-
-	fmt.Printf("\033[1;36m%s\033[0m", "> Started Mock Api Server at https://127.0.0.1:8088 & https://127.0.0.1:8888 \n")
-	unitTestMockAPIClient, _ = unitTestProviderConfigure(ctx)
-	unitTestMockAPINegativeClient, _ = unitTestNegativeCaseProviderConfigure(ctx)
-	fmt.Printf("\033[1;36m%s\033[0m", "> Setup completed \n")
-	return nil
-}
-
-func teardown() {
-	cmd := exec.Command("bash", stopMockApiServerScript)
-	_, _ = cmd.CombinedOutput()
-	fmt.Printf("\033[1;36m%s\033[0m", "> Stopped Mock Api Server \n")
-	fmt.Printf("\033[1;36m%s\033[0m", "> Teardown completed \n")
-	err := deleteBuild()
-	if err != nil {
-		fmt.Printf("Test Clean up is incomplete: %v\n", err)
-	}
-}
-
-func deleteBuild() error {
-	err := os.Remove(basePath + "/tests/mockApiServer/MockBuild")
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func assertFirstDiagMessage(t *testing.T, diags diag.Diagnostics, msg string) {
 	if assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
 		assert.Contains(t, diags[0].Summary, msg, "The first diagnostic message does not contain the expected error message")
 	}
+}
+
+// assertAnyDiagContains passes if any diag's Summary OR Detail contains msg.
+// Prefer this over assertFirstDiagMessage when the diag order isn't stable —
+// e.g. a Create that fans out and reports two independent failures.
+func assertAnyDiagContains(t *testing.T, diags diag.Diagnostics, msg string) {
+	if !assert.NotEmpty(t, diags, "Expected diags to contain at least one element") {
+		return
+	}
+	for _, d := range diags {
+		if strings.Contains(d.Summary, msg) || strings.Contains(d.Detail, msg) {
+			return
+		}
+	}
+	// Build a readable failure that surfaces every diag we saw, not just diags[0].
+	var got []string
+	for _, d := range diags {
+		got = append(got, fmt.Sprintf("{summary=%q detail=%q}", d.Summary, d.Detail))
+	}
+	t.Errorf("no diag matched %q; got %s", msg, strings.Join(got, ", "))
 }
 
 // resourceCRUDFunc is the signature of resource Create/Read/Update/Delete functions.
@@ -230,6 +167,45 @@ func testResourceCRUD(t *testing.T, prepareData func() *schema.ResourceData, met
 
 	diags = delete(ctx, d, meta)
 	assert.Empty(t, diags, "Delete should not return diagnostics")
+}
+
+// testResourceCreateReadDelete runs Create -> Read -> Delete without the Update
+// leg. Use it for resources where Update is a no-op, ForceNew-only, or where
+// the mock's Update endpoint doesn't yet round-trip cleanly. Keeping this
+// separate from testResourceCRUD means new coverage doesn't have to fake an
+// Update path just to satisfy the harness.
+func testResourceCreateReadDelete(t *testing.T, prepareData func() *schema.ResourceData, meta interface{},
+	create, read, delete resourceCRUDFunc) {
+	ctx := context.Background()
+	d := prepareData()
+
+	diags := create(ctx, d, meta)
+	assert.Empty(t, diags, "Create should not return diagnostics")
+	assert.NotEmpty(t, d.Id(), "Create should set resource ID")
+
+	diags = read(ctx, d, meta)
+	assert.Empty(t, diags, "Read should not return diagnostics")
+
+	diags = delete(ctx, d, meta)
+	assert.Empty(t, diags, "Delete should not return diagnostics")
+}
+
+// testResourceCRUDReturningDiags runs the full Create/Read/Update/Read/Delete
+// cycle and returns the diags from every step so the caller can make
+// finer-grained assertions — e.g. "Update returned a Warning but no Error".
+// testResourceCRUD is a strict wrapper around this; pick this one when you
+// need to inspect diags instead of just failing on non-empty.
+func testResourceCRUDReturningDiags(t *testing.T, prepareData func() *schema.ResourceData, meta interface{},
+	create, read, update, delete resourceCRUDFunc) (createDiags, readDiags, updateDiags, readAfterUpdateDiags, deleteDiags diag.Diagnostics) {
+	ctx := context.Background()
+	d := prepareData()
+
+	createDiags = create(ctx, d, meta)
+	readDiags = read(ctx, d, meta)
+	updateDiags = update(ctx, d, meta)
+	readAfterUpdateDiags = read(ctx, d, meta)
+	deleteDiags = delete(ctx, d, meta)
+	return
 }
 
 // testResourceCRUDNegative runs one CRUD op with negative client and asserts diags contain msgSubstr.
