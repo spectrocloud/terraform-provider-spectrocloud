@@ -540,4 +540,3 @@ func TestSplunkTokenForRead(t *testing.T) {
 	})
 	assert.Equal(t, "kept-in-state", splunkTokenForRead(d))
 }
-
