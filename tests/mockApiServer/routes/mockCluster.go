@@ -140,8 +140,18 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 
 // getMockSpectroClusterWithAddonReady returns a cluster whose Conditions
 // are all True and whose Packs match the addon profile UID used in tests.
+//
+// IMPORTANT: Metadata.UID is overwritten to match the fixture's dispatch
+// key. resourceAddonDeploymentStateRefreshFunc closes over the cluster's
+// OWN Metadata.UID and re-fetches on every poll — if we leave the default
+// "test-cluster-id" here, that re-fetch returns the plain fixture (no
+// packs, no conditions), the refresh func reports Profile:NotAttached
+// forever, and the wait hangs until the 60-minute timeout. Every fixture
+// used by state-refresh tests must set Metadata.UID to the same key
+// tests use when calling the refresh func.
 func getMockSpectroClusterWithAddonReady() *models.V1SpectroCluster {
 	c := getMockSpectroCluster()
+	c.Metadata.UID = "cluster-uid-addon-ready"
 	tru := "True"
 	ready := "Ready"
 	c.Status.Conditions = []*models.V1ClusterCondition{
@@ -164,6 +174,7 @@ func getMockSpectroClusterWithAddonReady() *models.V1SpectroCluster {
 // of resourceAddonDeploymentStateRefreshFunc.
 func getMockSpectroClusterWithNodeNotReady() *models.V1SpectroCluster {
 	c := getMockSpectroCluster()
+	c.Metadata.UID = "cluster-uid-addon-node-not-ready"
 	pending := "False"
 	ready := "Ready"
 	c.Status.Conditions = []*models.V1ClusterCondition{
@@ -177,6 +188,7 @@ func getMockSpectroClusterWithNodeNotReady() *models.V1SpectroCluster {
 // profile UID the test asks about.
 func getMockSpectroClusterWithoutMatchingProfile() *models.V1SpectroCluster {
 	c := getMockSpectroCluster()
+	c.Metadata.UID = "cluster-uid-addon-profile-not-attached"
 	tru := "True"
 	ready := "Ready"
 	c.Status.Conditions = []*models.V1ClusterCondition{

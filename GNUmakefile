@@ -55,13 +55,17 @@ docs-score-check: ## Fail when docs score has unresolved defects
 # TestMain — see tests/mockApiServer/mockserver. The canonical target is
 # `make test`; `testacc` is retained as an alias so existing CI pipelines
 # (.github/workflows/ci.yml) keep working.
-# `go tool covdata help` returns 0 when the tool is present (Go 1.20+) and
-# non-zero otherwise. The previous check invoked it without a subcommand,
-# which always exits 2 — meaning coverage never actually ran under `make
-# test`. `help` is the cheapest valid subcommand.
+# `go tool -n covdata` prints the tool binary path and exits 0 when
+# covdata is installed (Go 1.20+), non-zero otherwise. Both prior probes
+# failed:
+#   - `go tool covdata` alone exits 2 ("missing command selector")
+#   - `go tool covdata help` exits 1 ("unknown command selector")
+# `-n` is the documented "just report the path, don't run it" flag —
+# the only invocation that reliably returns 0 without needing a valid
+# subcommand.
 .PHONY: test testacc
 test: ## Run unit tests with coverage
-	@if go tool covdata help >/dev/null 2>&1; then \
+	@if go tool -n covdata >/dev/null 2>&1; then \
 		go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m; \
 	else \
 		echo "go tool covdata not available; running tests without coverage flags"; \
