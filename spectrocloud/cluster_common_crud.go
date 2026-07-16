@@ -48,7 +48,7 @@ func waitForClusterReady(ctx context.Context, d *schema.ResourceData, uid string
 		Refresh:    resourceClusterReadyRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors
@@ -69,7 +69,7 @@ func waitForVirtualClusterLifecyclePause(ctx context.Context, d *schema.Resource
 		Refresh:    resourceVirtualClusterLifecycleStateRefreshFunc(c, clusterContext, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors
@@ -89,7 +89,7 @@ func waitForVirtualClusterLifecycleResume(ctx context.Context, d *schema.Resourc
 		Refresh:    resourceVirtualClusterLifecycleStateRefreshFunc(c, clusterContext, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors
@@ -136,7 +136,7 @@ func waitForClusterCreation(ctx context.Context, d *schema.ResourceData, uid str
 		Refresh:    resourceClusterStateRefreshFunc(c, d.Id()),
 		Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors
@@ -194,7 +194,7 @@ func waitForClusterDeletion(ctx context.Context, c *client.V1Client, scope, id s
 		Refresh:    resourceClusterStateRefreshFunc(c, id),
 		Timeout:    timeout,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	_, err := stateConf.WaitForStateContext(ctx)

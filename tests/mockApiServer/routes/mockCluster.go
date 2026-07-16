@@ -99,6 +99,15 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 		}
 		return c, http.StatusOK
 
+	case "cluster-uid-vcluster-running":
+		// Batch 18 — for waitForVirtualClusterLifecycleResume, whose
+		// target state is "Running" on Status.Virtual.LifecycleStatus.
+		c := getMockSpectroCluster()
+		c.Status.Virtual = &models.V1Virtual{
+			LifecycleStatus: &models.V1LifecycleStatus{Status: "Running"},
+		}
+		return c, http.StatusOK
+
 	case "cluster-uid-addon-ready":
 		// resourceAddonDeploymentStateRefreshFunc scans Status.Conditions
 		// and Status.Packs. This payload passes all checks for the
@@ -110,6 +119,58 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 
 	case "cluster-uid-addon-profile-not-attached":
 		return getMockSpectroClusterWithoutMatchingProfile(), http.StatusOK
+
+	case "test-gcp-cluster-id":
+		// Batch 3c GCP CRUD: the default fixture reports CloudType="aws"
+		// which fails ValidateCloudType inside resourceClusterGcpRead.
+		// Serve a GCP-typed clone under a dedicated UID.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-gcp-cluster-id"
+		c.Spec.CloudType = "gcp"
+		return c, http.StatusOK
+
+	case "test-gke-cluster-id":
+		// Batch 3c GKE CRUD counterpart.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-gke-cluster-id"
+		c.Spec.CloudType = "gke"
+		return c, http.StatusOK
+
+	case "test-vsphere-cluster-id":
+		// Batch 3f vSphere CRUD: separate UID so ValidateCloudType inside
+		// resourceClusterVsphereRead sees CloudType="vsphere".
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-vsphere-cluster-id"
+		c.Spec.CloudType = "vsphere"
+		return c, http.StatusOK
+
+	case "test-edge-vsphere-cluster-id":
+		// Batch 3f edge_vsphere counterpart. Edge vSphere shares the
+		// vsphere cloud-config model but the outer cluster reports
+		// CloudType="edge-vsphere" (see NameToCloudType).
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-edge-vsphere-cluster-id"
+		c.Spec.CloudType = "edge-vsphere"
+		return c, http.StatusOK
+
+	case "test-maas-cluster-id":
+		// Batch 3g MaaS CRUD.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-maas-cluster-id"
+		c.Spec.CloudType = "maas"
+		return c, http.StatusOK
+
+	case "test-edge-native-cluster-id":
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-edge-native-cluster-id"
+		c.Spec.CloudType = "edge-native"
+		return c, http.StatusOK
+
+	case "test-cloudstack-cluster-id":
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-cloudstack-cluster-id"
+		c.Spec.CloudType = "apache-cloudstack"
+		return c, http.StatusOK
 
 	default:
 		// test-cluster-id and every other UID: return the well-populated

@@ -152,6 +152,24 @@ func WorkspaceRoutes() []Route {
 			},
 		},
 		{
+			// Batch 11 — reach createWorkspaceBackupPolicy.
+			Method: "POST",
+			Path:   "/v1/workspaces/{uid}/backup",
+			Response: ResponseData{
+				StatusCode: http.StatusCreated,
+				Payload:    &models.V1UID{UID: strPtr("test-ws-backup-uid")},
+			},
+		},
+		{
+			// Batch 11 — reach updateWorkspaceBackupPolicy.
+			Method: "PUT",
+			Path:   "/v1/workspaces/{uid}/backup",
+			Response: ResponseData{
+				StatusCode: http.StatusNoContent,
+				Payload:    nil,
+			},
+		},
+		{
 			Method: "PUT",
 			Path:   "/v1/workspaces/{uid}/clusterNamespaces",
 			Response: ResponseData{

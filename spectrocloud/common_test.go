@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -51,6 +52,15 @@ var unitTestMockAPINegativeClient interface{}
 var mockAPIServer *mockserver.Server
 
 func TestMain(m *testing.M) {
+	// Batch 22 — zero out the retry.StateChangeConf.Delay across every
+	// wait loop in the provider (see wait_delay.go). Without this the
+	// initial 30-second Delay would block Create-path tests for the
+	// full test-binary timeout, hiding coverage of the post-wait
+	// branches. Setting the override before m.Run means every test
+	// goroutine that reads it sees the zeroed value.
+	zero := time.Duration(0)
+	waitDelayOverride = &zero
+
 	srv, err := mockserver.Start()
 	if err != nil {
 		fmt.Printf("Error starting mock API server: %v\n", err)

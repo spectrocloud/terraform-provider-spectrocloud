@@ -1018,3 +1018,42 @@ func TestResourceVirtualMachineActions_CaseInsensitive(t *testing.T) {
 		})
 	}
 }
+
+// TestResourceKubevirtVirtualMachineRead Exercises the Read
+// path against the /v1/spectroclusters/{uid}/vms/{vmName} mock in
+// routes/mockKubevirtVM.go. IdParts requires the ID to have exactly 4
+// slash-separated segments.
+func TestResourceKubevirtVirtualMachineRead(t *testing.T) {
+	d := resourceKubevirtVirtualMachine().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	_ = d.Set("cluster_uid", "test-cluster-uid")
+	d.SetId("project/test-cluster-uid/default/test-vm")
+
+	diags := resourceKubevirtVirtualMachineRead(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+	// The mock echoes back "test-vm" as the VM name → ToResourceData
+	// writes it back to d.
+	assert.Equal(t, "test-vm", d.Get("name"))
+}
+
+// TestResourceKubevirtVirtualMachineRead_BadID pins the "malformed ID"
+// branch that routes through handleReadError.
+func TestResourceKubevirtVirtualMachineRead_BadID(t *testing.T) {
+	d := resourceKubevirtVirtualMachine().TestResourceData()
+	d.SetId("only-two/parts")
+	diags := resourceKubevirtVirtualMachineRead(context.Background(), d, unitTestMockAPIClient)
+	// handleReadError may clear the ID; either way this branch is reached.
+	_ = diags
+}
+
+// TestResourceKubevirtVirtualMachineDelete GetCluster
+// resolves against the existing cluster mock; then Delete on
+// /v1/spectroclusters/{uid}/vms/{vmName} returns 204.
+func TestResourceKubevirtVirtualMachineDelete(t *testing.T) {
+	d := resourceKubevirtVirtualMachine().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	d.SetId("project/test-cluster-uid/default/test-vm")
+
+	diags := resourceKubevirtVirtualMachineDelete(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+}

@@ -540,3 +540,21 @@ func TestSplunkTokenForRead(t *testing.T) {
 	})
 	assert.Equal(t, "kept-in-state", splunkTokenForRead(d))
 }
+
+// TestCloudWatchExternalIDForRead The func mirrors
+// cloudWatchSecretKeyForRead (already tested): prior state wins;
+// masked values are dropped; empty falls through.
+func TestCloudWatchExternalIDForRead(t *testing.T) {
+	// If nothing is in state and the API sends a real value, return it.
+	d := resourceAuditTrail().TestResourceData()
+	got := cloudWatchExternalIDForRead(d, "external-abc")
+	assert.Equal(t, "external-abc", got)
+
+	// Masked API value → dropped.
+	got = cloudWatchExternalIDForRead(d, "***")
+	assert.Equal(t, "", got)
+
+	// Empty API value → empty.
+	got = cloudWatchExternalIDForRead(d, "")
+	assert.Equal(t, "", got)
+}

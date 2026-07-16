@@ -932,15 +932,17 @@ func TestFlattenCloudConfigEdgeNative(t *testing.T) {
 				})
 				return d
 			},
-			client:      unitTestMockAPIClient,
-			expectError: true, // GetCloudConfigEdgeNative may fail
-			description: "Should use existing cloud_config from ResourceData when available",
+			client: unitTestMockAPIClient,
+			// Batch 3g wired up EdgeNativeClusterRoutes, so
+			// GetCloudConfigEdgeNative now returns success against the
+			// positive mock — the flatten path completes cleanly and
+			// diags is empty. Was expectError: true when the endpoint
+			// wasn't mocked.
+			expectError: false,
+			description: "Should use existing cloud_config from ResourceData; flatten succeeds against the mock",
 			verify: func(t *testing.T, diags diag.Diagnostics, d *schema.ResourceData) {
-				// Verify cloud_config_id is set even if API call fails
-				if len(diags) == 0 {
-					cloudConfigID := d.Get("cloud_config_id")
-					assert.Equal(t, configUID, cloudConfigID, "cloud_config_id should be set")
-				}
+				cloudConfigID := d.Get("cloud_config_id")
+				assert.Equal(t, configUID, cloudConfigID, "cloud_config_id should be set")
 			},
 		},
 		{
@@ -969,14 +971,17 @@ func TestFlattenCloudConfigEdgeNative(t *testing.T) {
 				}))
 				return d
 			},
-			client:      unitTestMockAPIClient,
-			expectError: true, // GetCloudConfigEdgeNative or GetNodeStatusMapEdgeNative may fail
-			description: "Should flatten machine pools and call flattenNodeMaintenanceStatus",
+			client: unitTestMockAPIClient,
+			// Same story as the case above (sweep)'s mock provides
+			// both GetCloudConfigEdgeNative and GetNodeStatusMapEdgeNative
+			// endpoints, so flatten succeeds. Was expectError: true.
+			expectError: false,
+			description: "Should flatten machine pools and call flattenNodeMaintenanceStatus against the mock",
 			verify: func(t *testing.T, diags diag.Diagnostics, d *schema.ResourceData) {
-				// Function should attempt to flatten machine pools
-				if len(diags) > 0 {
-					assert.NotEmpty(t, diags, "Should have diagnostics when API routes are not available")
-				}
+				// The flatten completes cleanly; nothing more to assert
+				// beyond the outer suite's diags-empty check.
+				_ = diags
+				_ = d
 			},
 		},
 	}
