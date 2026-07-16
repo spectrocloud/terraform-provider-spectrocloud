@@ -1921,3 +1921,16 @@ func TestClusterTemplateProfileSetFromList(t *testing.T) {
 	profileSet := clusterTemplateProfileSetFromList(profiles)
 	require.Equal(t, 1, profileSet.Len())
 }
+
+// TestUpdateClusterTimezone_NotSet Exercises the early-return
+// branch of updateClusterTimezone when cluster_timezone is not set on the
+// ResourceData (no SDK call needed).
+func TestUpdateClusterTimezone_NotSet(t *testing.T) {
+	// resourceClusterEks is one of the concrete resource schemas that
+	// includes cluster_timezone via cluster_common_fields; using it lets
+	// us build a valid ResourceData without a shared fixture helper.
+	d := resourceClusterEks().TestResourceData()
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	err := updateClusterTimezone(c, d)
+	assert.NoError(t, err)
+}

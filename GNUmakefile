@@ -48,14 +48,31 @@ docs-score-check: ## Fail when docs score has unresolved defects
 	@python3 -c 'import json,sys; d=json.load(open("tools/docs_score/score.json")); ts=d.get("total_score",0); pf=d.get("pages_failing",0); print(f"docs score check: total_score={ts}, pages_failing={pf}"); sys.exit(1 if (ts > 0 and pf > 0) else 0)'
 
 ##@ Test Targets
-.PHONY: testacc
-testacc: ## Run acceptance tests
-	@if go tool covdata >/dev/null 2>&1; then \
-		TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m; \
+# Note: despite the historical `testacc` name, nothing in this repo uses the
+# Terraform acceptance-test framework (there are no resource.TestCase blocks
+# gated on TF_ACC). Everything under spectrocloud/*_test.go is a plain Go
+# unit test that talks to an in-process mock Palette API server started by
+# TestMain — see tests/mockApiServer/mockserver. The canonical target is
+# `make test`; `testacc` is retained as an alias so existing CI pipelines
+# (.github/workflows/ci.yml) keep working.
+# `go tool -n covdata` prints the tool binary path and exits 0 when
+# covdata is installed (Go 1.20+), non-zero otherwise. Both prior probes
+# failed:
+#   - `go tool covdata` alone exits 2 ("missing command selector")
+#   - `go tool covdata help` exits 1 ("unknown command selector")
+# `-n` is the documented "just report the path, don't run it" flag —
+# the only invocation that reliably returns 0 without needing a valid
+# subcommand.
+.PHONY: test testacc
+test: ## Run unit tests with coverage
+	@if go tool -n covdata >/dev/null 2>&1; then \
+		go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m; \
 	else \
-		echo "go tool covdata not available; running acceptance tests without coverage flags"; \
-		TF_ACC=1 go test -v $(TESTARGS) ./spectrocloud/... -timeout 120m; \
+		echo "go tool covdata not available; running tests without coverage flags"; \
+		go test -v $(TESTARGS) ./spectrocloud/... -timeout 120m; \
 	fi
+
+testacc: test ## Deprecated alias for `test`; retained for CI compatibility
 
 ##@ Development Targets
 DEV_PROVIDER_VERSION=100.100.100
@@ -63,8 +80,7 @@ dev-provider:  ## Generate dev provider
 	bash generate_dev_provider.sh $(DEV_PROVIDER_VERSION)
 
 .PHONY: test-with-coverage
-test-with-coverage: ## Show coverage from existing profile.cov
-	TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m
+test-with-coverage: test ## Alias for `test` that prints total coverage after running
 	@echo "Total coverage:"
 	@go tool cover -func=profile.cov | grep total
 

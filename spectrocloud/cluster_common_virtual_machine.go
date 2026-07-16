@@ -52,7 +52,7 @@ func waitForVirtualMachineToTargetState(ctx context.Context, d *schema.ResourceD
 		Refresh:    resourceVirtualMachineStateRefreshFunc(c, clusterUid, vmName, namespace),
 		Timeout:    d.Timeout(state) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors

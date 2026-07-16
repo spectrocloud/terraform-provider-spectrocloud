@@ -2149,3 +2149,56 @@ func TestAKSAndEKSHashWithAnnotationsAndOverride(t *testing.T) {
 		})
 	}
 }
+
+// TestYamlContentHash Covers YamlContentHash,
+// yamlContentToCanonicalString, and toCanonicalString (three previously
+// 0% funcs). Round-trips a variety of YAML shapes and confirms:
+//   - equal content → equal hash regardless of formatting
+//   - different content → different hash
+//   - all canonical-string branches (map, slice, primitive types) are hit
+func TestYamlContentHash(t *testing.T) {
+	t.Run("empty input hashes to a stable empty-content hash", func(t *testing.T) {
+		h1 := YamlContentHash("")
+		h2 := YamlContentHash("   \n")
+		assert.Equal(t, h1, h2, "whitespace-only input should hash the same as empty")
+	})
+
+	t.Run("formatting differences produce same hash", func(t *testing.T) {
+		a := "name: foo\nvalue: 1\n"
+		b := "value: 1\nname: foo\n" // reordered keys
+		assert.Equal(t,
+			YamlContentHash(a), YamlContentHash(b),
+			"key order should not affect the canonical hash")
+	})
+
+	t.Run("content differences produce different hash", func(t *testing.T) {
+		a := "name: foo\n"
+		b := "name: bar\n"
+		assert.NotEqual(t, YamlContentHash(a), YamlContentHash(b))
+	})
+
+	t.Run("multi-document YAML with mixed types", func(t *testing.T) {
+		// Exercises toCanonicalString branches: map, slice, int, bool, string, null.
+		content := `---
+name: main
+count: 3
+enabled: true
+missing: ~
+items:
+  - a
+  - b
+---
+name: other
+count: 5
+`
+		h := YamlContentHash(content)
+		assert.NotEmpty(t, h)
+	})
+
+	t.Run("malformed YAML falls back to raw", func(t *testing.T) {
+		// Deliberately-bad YAML routes through the fallback branch that
+		// keeps the raw text; still produces a hash.
+		h := YamlContentHash("this: is: not: valid: [")
+		assert.NotEmpty(t, h)
+	})
+}

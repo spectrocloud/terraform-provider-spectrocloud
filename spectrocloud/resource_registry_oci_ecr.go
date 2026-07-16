@@ -712,7 +712,7 @@ func waitForOciRegistrySync(ctx context.Context, d *schema.ResourceData, uid str
 		Refresh:    resourceOciRegistrySyncRefreshFunc(c, uid, registryType),
 		Timeout:    d.Timeout(timeoutType) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors

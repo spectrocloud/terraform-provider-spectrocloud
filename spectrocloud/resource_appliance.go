@@ -125,7 +125,7 @@ func resourceApplianceCreate(ctx context.Context, d *schema.ResourceData, m inte
 			Refresh:    resourceApplianceStateRefreshFunc(c, d.Id()),
 			Timeout:    d.Timeout(schema.TimeoutCreate) - 1*time.Minute,
 			MinTimeout: 10 * time.Second,
-			Delay:      30 * time.Second,
+			Delay:      resolveWaitDelay(30 * time.Second),
 		}
 
 		_, err = stateConf.WaitForStateContext(ctx)
