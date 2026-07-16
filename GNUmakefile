@@ -49,20 +49,18 @@ docs-score-check: ## Fail when docs score has unresolved defects
 
 ##@ Test Targets
 # Note: despite the historical `testacc` name, nothing in this repo uses the
-# Terraform acceptance-test framework (there are no resource.TestCase blocks
-# gated on TF_ACC). Everything under spectrocloud/*_test.go is a plain Go
-# unit test that talks to an in-process mock Palette API server started by
-# TestMain — see tests/mockApiServer/mockserver. The canonical target is
-# `make test`; `testacc` is retained as an alias so existing CI pipelines
-# (.github/workflows/ci.yml) keep working.
-# `go tool -n covdata` prints the tool binary path and exits 0 when
-# covdata is installed (Go 1.20+), non-zero otherwise. Both prior probes
-# failed:
-#   - `go tool covdata` alone exits 2 ("missing command selector")
-#   - `go tool covdata help` exits 1 ("unknown command selector")
-# `-n` is the documented "just report the path, don't run it" flag —
-# the only invocation that reliably returns 0 without needing a valid
-# subcommand.
+# Terraform acceptance-test framework (no resource.TestCase blocks gated on
+# TF_ACC). Everything under spectrocloud/*_test.go is a plain Go unit test
+# that talks to an in-process mock Palette API server started by TestMain —
+# see tests/mockApiServer/mockserver. The canonical target is `make test`;
+# `testacc` is retained as an alias so existing CI pipelines keep working.
+#
+# Presence check: `go tool -n covdata` prints the tool's cached path and
+# exits 0 iff the tool is installed (Go 1.20+). Every other approach we
+# tried (`go tool covdata`, `... help`, `... percent -h`) exits non-zero
+# even when the tool is present, so the coverage branch was silently
+# never taken — leaving profile.cov unwritten and CI's coverage summary
+# blank. Don't "simplify" this back.
 .PHONY: test testacc
 test: ## Run unit tests with coverage
 	@if go tool -n covdata >/dev/null 2>&1; then \
