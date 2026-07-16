@@ -6,6 +6,8 @@ import (
 	"strconv"
 )
 
+const defaultProjectUID = "testprojectuid"
+
 func getMockProjectPayload() models.V1Project {
 	return models.V1Project{
 		Metadata: &models.V1ObjectMeta{
@@ -17,7 +19,7 @@ func getMockProjectPayload() models.V1Project {
 			},
 			LastModifiedTimestamp: models.V1Time{},
 			Name:                  "Default",
-			UID:                   generateRandomStringUID(),
+			UID:                   defaultProjectUID,
 		},
 		Spec: &models.V1ProjectSpec{
 			Alerts:  nil,
@@ -60,7 +62,7 @@ func ProjectRoutes() []Route {
 						{
 							Metadata: &models.V1ObjectEntity{
 								Name: "Default",
-								UID:  generateRandomStringUID(),
+								UID:  defaultProjectUID,
 							},
 						},
 					},
@@ -93,7 +95,7 @@ func ProjectRoutes() []Route {
 						{
 							Metadata: &models.V1ObjectEntity{
 								Name: "Default",
-								UID:  generateRandomStringUID(),
+								UID:  defaultProjectUID,
 							},
 						},
 					},

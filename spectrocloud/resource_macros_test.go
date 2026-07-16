@@ -120,6 +120,9 @@ func prepareBaseTenantMacrosSchema() *schema.ResourceData {
 	if err != nil {
 		panic(err) // Handle the error as appropriate in your test setup
 	}
+	if err := d.Set("context", "tenant"); err != nil {
+		panic(err)
+	}
 	return d
 }
 

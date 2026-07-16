@@ -67,12 +67,39 @@ func getUsersResponse() models.V1Users {
 
 func UserRoutes() []Route {
 	return []Route{
+		// Must be registered before /v1/users/{uid} so "info" is not captured as a UID.
+		{
+			Method: "GET",
+			Path:   "/v1/users/info",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload:    getMockUserInfoPayload(),
+			},
+		},
 		{
 			Method: "GET",
 			Path:   "/v1/users",
 			Response: ResponseData{
 				StatusCode: http.StatusOK,
 				Payload:    getUsersResponse(),
+			},
+		},
+		{
+			Method: "GET",
+			Path:   "/v1/users/{uid}",
+			Response: ResponseData{
+				StatusCode: http.StatusOK,
+				Payload: &models.V1User{
+					Metadata: &models.V1ObjectMeta{
+						Name: "test",
+						UID:  "12345",
+					},
+					Spec: &models.V1UserSpec{
+						EmailID:   "test@spectrocloud.com",
+						FirstName: "test",
+						LastName:  "spectro",
+					},
+				},
 			},
 		},
 	}

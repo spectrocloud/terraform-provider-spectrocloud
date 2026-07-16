@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"log"
+	"reflect"
 	"strings"
 	"time"
 
@@ -221,12 +222,23 @@ func resourceClusterProfileCustomizeDiff(_ context.Context, d *schema.ResourceDi
 	// Version did NOT change, but the flag is on. Look for any content changes
 	// that would have silently mutated the supposedly-immutable published
 	// version. If any content field has changed, reject the plan.
-	contentFields := []string{"name", "tags", "pack", "description", "profile_variables"}
+	//
+	// `pack` and `profile_variables` go through semantic comparisons rather
+	// than the raw `d.HasChange` so that harmless refresh drift (API-normalized
+	// YAML, computed uid, defaulted type/format) doesn't false-positive on a
+	// no-op plan immediately after Create -- see hasSemanticPackChange for the
+	// full rationale.
 	var changedContentFields []string
-	for _, f := range contentFields {
+	for _, f := range []string{"name", "tags", "description"} {
 		if d.HasChange(f) {
 			changedContentFields = append(changedContentFields, f)
 		}
+	}
+	if hasSemanticPackChange(d) {
+		changedContentFields = append(changedContentFields, "pack")
+	}
+	if hasSemanticProfileVariablesChange(d) {
+		changedContentFields = append(changedContentFields, "profile_variables")
 	}
 	if len(changedContentFields) > 0 {
 		return fmt.Errorf(
@@ -248,6 +260,184 @@ func resourceClusterProfileCustomizeDiff(_ context.Context, d *schema.ResourceDi
 	}
 
 	return nil
+}
+
+// hasSemanticPackChange reports whether the pack list changed in a way the
+// user would consider a real edit -- i.e., beyond the harmless drift the API
+// introduces when Read writes normalized values back into state.
+//
+// The naive `d.HasChange("pack")` fires on ANY state-vs-config divergence.
+// `flattenPacksWithRegistryMaps` writes `pack.Values` from the API verbatim
+// into state, so any server-side normalization (whitespace, YAML key
+// reordering, expanded `{{.spectro.var.X}}` templates) shows up as drift on
+// the next refresh. Under the `immutable-clusterprofiles` flag this false
+// positive blocked plain `terraform plan` right after a successful `apply`.
+//
+// The comparison here mirrors the schema's per-field `DiffSuppressFunc`:
+//   - `values` and `manifest.*.content`: `strings.TrimSpace`
+//   - `type`: empty string treated as the schema default "spectro"
+//   - `uid`: ignored (Computed, API-populated -- config never sets it directly)
+//   - registry: only the identifier the user provided is compared, so a state
+//     that flattened `registry_name` back from the API and a config using
+//     `registry_name` still match
+//
+// If drift beyond these normalizations exists (e.g. YAML key reordering),
+// this returns true and the caller errors -- that's the correct outcome for
+// the immutability guardrail; the fix belongs at the flatten layer, not here.
+func hasSemanticPackChange(d *schema.ResourceDiff) bool {
+	oldPack, newPack := d.GetChange("pack")
+	return !reflect.DeepEqual(canonicalizePackList(oldPack), canonicalizePackList(newPack))
+}
+
+// hasSemanticProfileVariablesChange is the profile_variables analogue of
+// hasSemanticPackChange. `flattenProfileVariables` sorts variables to match
+// config order, but individual variables' optional fields can drift: `format`
+// and `input_type` have schema defaults ("string", "text") that the API may
+// return as empty, and the options list contains a Computed `default` field
+// that the user never sets.
+func hasSemanticProfileVariablesChange(d *schema.ResourceDiff) bool {
+	oldPV, newPV := d.GetChange("profile_variables")
+	return !reflect.DeepEqual(canonicalizeProfileVariablesList(oldPV), canonicalizeProfileVariablesList(newPV))
+}
+
+func canonicalizePackList(v interface{}) []map[string]interface{} {
+	raw, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]interface{}, 0, len(raw))
+	for _, item := range raw {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		out = append(out, canonicalizePackElement(m))
+	}
+	return out
+}
+
+func canonicalizePackElement(m map[string]interface{}) map[string]interface{} {
+	packType := canonicalString(m["type"])
+	if packType == "" {
+		packType = "spectro"
+	}
+	return map[string]interface{}{
+		"name":          canonicalString(m["name"]),
+		"tag":           canonicalString(m["tag"]),
+		"type":          packType,
+		"values":        strings.TrimSpace(canonicalString(m["values"])),
+		"registry_uid":  canonicalString(m["registry_uid"]),
+		"registry_name": canonicalString(m["registry_name"]),
+		"manifest":      canonicalizeManifestList(m["manifest"]),
+	}
+}
+
+func canonicalizeManifestList(v interface{}) []map[string]interface{} {
+	raw, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]interface{}, 0, len(raw))
+	for _, item := range raw {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		out = append(out, map[string]interface{}{
+			"name":    canonicalString(m["name"]),
+			"content": strings.TrimSpace(canonicalString(m["content"])),
+		})
+	}
+	return out
+}
+
+func canonicalizeProfileVariablesList(v interface{}) []map[string]interface{} {
+	// profile_variables is TypeList (MaxItems=1) wrapping a "variable" TypeList.
+	raw, ok := v.([]interface{})
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	wrapper, ok := raw[0].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	vars, ok := wrapper["variable"].([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]interface{}, 0, len(vars))
+	for _, item := range vars {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		out = append(out, canonicalizeProfileVariable(m))
+	}
+	return out
+}
+
+func canonicalizeProfileVariable(m map[string]interface{}) map[string]interface{} {
+	format := canonicalString(m["format"])
+	if format == "" {
+		format = "string"
+	}
+	inputType := canonicalString(m["input_type"])
+	if inputType == "" {
+		inputType = "text"
+	}
+	return map[string]interface{}{
+		"name":          canonicalString(m["name"]),
+		"display_name":  canonicalString(m["display_name"]),
+		"description":   canonicalString(m["description"]),
+		"format":        format,
+		"default_value": canonicalString(m["default_value"]),
+		"regex":         canonicalString(m["regex"]),
+		"required":      canonicalBool(m["required"]),
+		"immutable":     canonicalBool(m["immutable"]),
+		"hidden":        canonicalBool(m["hidden"]),
+		"is_sensitive":  canonicalBool(m["is_sensitive"]),
+		"input_type":    inputType,
+		"options":       canonicalizeVariableOptions(m["options"]),
+	}
+}
+
+func canonicalizeVariableOptions(v interface{}) []map[string]interface{} {
+	raw, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]map[string]interface{}, 0, len(raw))
+	for _, item := range raw {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		// `default` is Computed, the user never sets it directly -- excluded.
+		out = append(out, map[string]interface{}{
+			"description": canonicalString(m["description"]),
+			"label":       canonicalString(m["label"]),
+			"value":       canonicalString(m["value"]),
+		})
+	}
+	return out
+}
+
+func canonicalString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return s
+	}
+	if p, ok := v.(*string); ok && p != nil {
+		return *p
+	}
+	return ""
+}
+
+func canonicalBool(v interface{}) bool {
+	b, _ := v.(bool)
+	return b
 }
 
 // bumpPatchHint returns a best-effort "next patch version" suggestion for the

@@ -548,7 +548,15 @@ func TestIsClusterRunningHealthy(t *testing.T) {
 			description: "Should return true and Running when GetClusterOverview fails (assumes Running is enough)",
 		},
 		{
-			name: "Cluster state is Running, health not available - returns true, Running",
+			// Historically this case expected "Running" because the mock
+			// didn't implement /v1/dashboard/spectroclusters/{uid}/overview
+			// (see the note at the top of TestIsClusterRunningHealthy).
+			// Batch 4 wired the endpoint up — see overviewHandler in
+			// tests/mockApiServer/routes/mockCluster.go. Default responses
+			// now return Health=Healthy for any UID not listed in the
+			// handler's switch, so this positive-client cluster comes
+			// back Running-Healthy. That matches real production behavior.
+			name: "Cluster state is Running, overview reports Healthy - returns true, Running-Healthy",
 			setupClient: func() *client.V1Client {
 				return getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
 			},
@@ -561,8 +569,8 @@ func TestIsClusterRunningHealthy(t *testing.T) {
 				},
 			},
 			expected:    true,
-			expectedMsg: "Running",
-			description: "Should return true and Running when health is not available (Running is acceptable)",
+			expectedMsg: "Running-Healthy",
+			description: "Should return true and Running-Healthy when overview reports Health=Healthy",
 		},
 	}
 

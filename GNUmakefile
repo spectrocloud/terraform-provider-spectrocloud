@@ -78,8 +78,7 @@ dev-provider:  ## Generate dev provider
 	bash generate_dev_provider.sh $(DEV_PROVIDER_VERSION)
 
 .PHONY: test-with-coverage
-test-with-coverage: ## Show coverage from existing profile.cov
-	TF_ACC=1 go test -v $(TESTARGS) -covermode=atomic -coverpkg=./... -coverprofile=profile.cov ./spectrocloud/... -timeout 120m
+test-with-coverage: test ## Alias for `test` that prints total coverage after running
 	@echo "Total coverage:"
 	@go tool cover -func=profile.cov | grep total
 

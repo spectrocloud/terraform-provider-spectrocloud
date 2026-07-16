@@ -36,7 +36,7 @@ func waitForApplication(ctx context.Context, d *schema.ResourceData, diags diag.
 		Refresh:    resourceApplicationStateRefreshFunc(c, d, 5, 60),
 		Timeout:    d.Timeout(state) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors

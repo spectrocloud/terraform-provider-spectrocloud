@@ -2,7 +2,6 @@ package routes
 
 import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 	"net/http"
 	"strconv"
 )
@@ -56,7 +55,7 @@ func getFilterSummary() *models.V1TagFilterSummary {
 		},
 		Spec: &models.V1TagFilterSpec{
 			FilterGroup: &models.V1TagFilterGroup{
-				Conjunction: (*models.V1SearchFilterConjunctionOperator)(spectrocloud.StringPtr("and")),
+				Conjunction: (*models.V1SearchFilterConjunctionOperator)(strPtr("and")),
 				Filters: []*models.V1TagFilterItem{
 					{
 						Key:      "name",
