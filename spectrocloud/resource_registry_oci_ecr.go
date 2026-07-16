@@ -18,6 +18,44 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
+// ociBasicTLSConfigForRead builds the tls_config list to store in state for a
+// basic OCI registry. It returns an empty list when the block should be
+// omitted so that HCL configs which don't set tls_config produce a clean
+// plan even though the Palette API always returns a default TLS block
+// (see PLT-2300).
+//
+// The block is preserved when either:
+//   - the user's current state already contains a tls_config entry (round
+//     trip an explicit block, even if its values match the API defaults), or
+//   - the API returned meaningful TLS: a non-empty certificate, or
+//     insecure_skip_verify=true.
+func ociBasicTLSConfigForRead(d *schema.ResourceData, apiTLS *models.V1TLSConfiguration) []interface{} {
+	tlsConfig := make([]interface{}, 0, 1)
+	if apiTLS == nil {
+		return tlsConfig
+	}
+	hasStateTLS := false
+	if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
+		if currentCredsList, ok := currentCredsRaw.([]interface{}); ok && len(currentCredsList) > 0 {
+			if currentCredMap, ok := currentCredsList[0].(map[string]interface{}); ok {
+				if tlsRaw, exists := currentCredMap["tls_config"]; exists && tlsRaw != nil {
+					if tlsList, ok := tlsRaw.([]interface{}); ok && len(tlsList) > 0 {
+						hasStateTLS = true
+					}
+				}
+			}
+		}
+	}
+	hasMeaningfulTLS := apiTLS.Certificate != "" || apiTLS.InsecureSkipVerify
+	if hasStateTLS || hasMeaningfulTLS {
+		tlsConfig = append(tlsConfig, map[string]interface{}{
+			"certificate":          apiTLS.Certificate,
+			"insecure_skip_verify": apiTLS.InsecureSkipVerify,
+		})
+	}
+	return tlsConfig
+}
+
 // ociEcrSecretKeyForRead prefers secret_key from state and ignores masked values returned by the API.
 func ociEcrSecretKeyForRead(d *schema.ResourceData, apiSecret string) string {
 	if currentCredsRaw := d.Get("credentials"); currentCredsRaw != nil {
@@ -463,12 +501,11 @@ func resourceRegistryEcrRead(ctx context.Context, d *schema.ResourceData, m inte
 				acc["password"] = registry.Spec.Auth.Password.String()
 			}
 		}
-		tlsConfig := make([]interface{}, 0, 1)
-		tls := make(map[string]interface{})
-		tls["certificate"] = registry.Spec.Auth.TLS.Certificate
-		tls["insecure_skip_verify"] = registry.Spec.Auth.TLS.InsecureSkipVerify
-		tlsConfig = append(tlsConfig, tls)
-		acc["tls_config"] = tlsConfig
+		// Materialize tls_config only when it's meaningful, otherwise Read
+		// will inject the API's default TLS block into state and produce
+		// perpetual plan drift for configs that omit tls_config entirely
+		// (see PLT-2300).
+		acc["tls_config"] = ociBasicTLSConfigForRead(d, registry.Spec.Auth.TLS)
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
