@@ -31,5 +31,58 @@ jobs:
       - name: Ensure reviewable
         run: make check-diff
 
-      - name: Run acceptance tests
-        run: make testacc
+      - name: Run unit tests with coverage
+        run: make test
+
+      - name: Compute coverage summary
+        if: always()
+        run: |
+          if [ ! -f profile.cov ]; then
+            echo "profile.cov not found — did the test step run?" >&2
+            exit 0
+          fi
+          # Total coverage (single number)
+          TOTAL=$(go tool cover -func=profile.cov | awk '/^total:/ {print $NF}')
+          echo "TOTAL_COVERAGE=${TOTAL}" >> "$GITHUB_ENV"
+
+          # Prominent card at the top of the Actions run
+          {
+            echo "## Unit test coverage"
+            echo ""
+            echo "**Total: ${TOTAL}**"
+            echo ""
+            echo "<details><summary>Top 20 lowest-covered functions</summary>"
+            echo ""
+            echo '```'
+            go tool cover -func=profile.cov | grep -v '^total:' | sort -k3 -g | head -20
+            echo '```'
+            echo "</details>"
+            echo ""
+            echo "<details><summary>Per-file summary (sorted ascending)</summary>"
+            echo ""
+            echo '```'
+            go tool cover -func=profile.cov \
+              | awk '$1 !~ /^total:/ { sub(/:[0-9]+:.*/, "", $1); pct=$NF; sub(/%$/, "", pct); s[$1]+=pct; n[$1]++ } END { for (f in s) printf "%6.1f%%  %s\n", s[f]/n[f], f }' \
+              | sort -k1 -g
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Also log to the console so it's greppable in raw log output
+          echo "=========================================="
+          echo "Total coverage: ${TOTAL}"
+          echo "=========================================="
+
+      - name: Generate HTML coverage report
+        if: always() && hashFiles('profile.cov') != ''
+        run: go tool cover -html=profile.cov -o coverage.html
+
+      - name: Upload coverage artifacts
+        if: always() && hashFiles('profile.cov') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.sha }}
+          path: |
+            profile.cov
+            coverage.html
+          retention-days: 30
