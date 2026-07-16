@@ -62,7 +62,7 @@ The import will automatically detect whether the registry is an ECR or basic typ
 
 ### Optional
 
-- `base_content_path` (String) The relative path to the endpoint specified.
+- `base_content_path` (String) The relative path to the endpoint specified. Required when `is_synchronization` is set to `true`.
 - `endpoint_suffix` (String) Specifies a suffix to append to the endpoint. This field is optional, but some registries (e.g., JFrog) may require it. The final registry URL is constructed by appending this suffix to the endpoint.
 - `is_synchronization` (Boolean) Specifies whether the registry is synchronized.
 - `provider_type` (String) The type of provider used for interacting with the registry. Supported value's are `helm`, `zarf` and `pack`, The default is 'helm'. `zarf` is allowed with `type="basic"`

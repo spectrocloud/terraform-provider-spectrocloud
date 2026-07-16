@@ -95,7 +95,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "",
-				Description: "The relative path to the endpoint specified.",
+				Description: "The relative path to the endpoint specified. Required when `is_synchronization` is set to `true`.",
 			},
 			"provider_type": {
 				Type:         schema.TypeString,
@@ -192,6 +192,7 @@ func resourceRegistryOciEcr() *schema.Resource {
 			providerType := d.Get("provider_type").(string)
 			registryType := d.Get("type").(string)
 			isSync := d.Get("is_synchronization").(bool)
+			baseContentPath := d.Get("base_content_path").(string)
 			// Validate that `provider_type` is "zarf" only if `type` is "basic"
 			if providerType == "zarf" && registryType != "basic" {
 				return fmt.Errorf("`provider_type` set to `zarf` is only allowed when `type` is `basic`")
@@ -199,6 +200,12 @@ func resourceRegistryOciEcr() *schema.Resource {
 
 			if providerType == "pack" && !isSync {
 				return fmt.Errorf("`provider_type` set to `pack` is only allowed when `is_synchronization` is set to `true`")
+			}
+
+			// The Palette API requires `base_content_path` when synchronization is enabled;
+			// surface this at plan time rather than as a raw API error at apply.
+			if isSync && baseContentPath == "" {
+				return fmt.Errorf("`base_content_path` is required when `is_synchronization` is set to `true`")
 			}
 			return nil
 		},
