@@ -397,6 +397,19 @@ func getAttachedProfileType(cluster *models.V1SpectroCluster, profileUID string)
 	return ""
 }
 
+// getAttachedProfileName returns the display name for a profile UID on the cluster, if attached.
+func getAttachedProfileName(cluster *models.V1SpectroCluster, profileUID string) string {
+	if cluster == nil || cluster.Spec == nil || profileUID == "" {
+		return ""
+	}
+	for _, template := range cluster.Spec.ClusterProfileTemplates {
+		if template != nil && template.UID == profileUID {
+			return template.Name
+		}
+	}
+	return ""
+}
+
 // findAttachedInfraProfile returns the UID of the first attached infra/cluster profile on the cluster.
 func findAttachedInfraProfile(cluster *models.V1SpectroCluster) string {
 	if cluster == nil || cluster.Spec == nil {
@@ -465,7 +478,19 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData, cluster *mo
 	oldProfilesRaw, newProfilesRaw := d.GetChange("cluster_profile")
 	oldProfiles := normalizeInterfaceSliceFromListOrSet(oldProfilesRaw)
 	newProfiles := normalizeInterfaceSliceFromListOrSet(newProfilesRaw)
+	return computeProfilesToDelete(c, oldProfiles, newProfiles, cluster)
+}
 
+// computeProfilesToDelete is the pure decision logic behind getProfilesToDelete,
+// factored out for direct unit testing without a Terraform diff. It returns the
+// UIDs of profiles present in oldProfiles but absent from newProfiles that must
+// be explicitly deleted before the PATCH — after applying the skip rules:
+//   - Not attached on the cluster snapshot → nothing to delete.
+//   - Infra/cluster type → PATCH ReplaceWithProfile handles it in place.
+//   - Same profile NAME still present in newProfiles (version upgrade) → PATCH
+//     ReplaceWithProfile handles it in place; deleting first would leave the
+//     replace target dangling and turn the swap into delete-then-recreate.
+func computeProfilesToDelete(c *client.V1Client, oldProfiles, newProfiles []interface{}, cluster *models.V1SpectroCluster) []string {
 	newProfileUIDs := make(map[string]bool, len(newProfiles))
 	for _, p := range newProfiles {
 		if p == nil {
@@ -474,6 +499,29 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData, cluster *mo
 		profile := p.(map[string]interface{})
 		if id, ok := profile["id"].(string); ok && id != "" {
 			newProfileUIDs[id] = true
+		}
+	}
+
+	// Build the set of profile NAMES that will still be present after the update.
+	// A same-name / different-UID entry in the new config is a version upgrade, which
+	// setReplaceWithProfileForExisting handles via PATCH ReplaceWithProfile — we must not
+	// delete the old UID beforehand, or the replace target no longer exists.
+	newProfileNames := make(map[string]bool, len(newProfileUIDs))
+	for newUID := range newProfileUIDs {
+		if name := getAttachedProfileName(cluster, newUID); name != "" {
+			newProfileNames[name] = true
+			continue
+		}
+		if c == nil {
+			continue
+		}
+		clusterProfile, err := c.GetClusterProfile(newUID)
+		if err != nil {
+			log.Printf("Warning: could not get profile %s for version-upgrade check: %v", newUID, err)
+			continue
+		}
+		if clusterProfile != nil && clusterProfile.Metadata != nil && clusterProfile.Metadata.Name != "" {
+			newProfileNames[clusterProfile.Metadata.Name] = true
 		}
 	}
 
@@ -495,6 +543,11 @@ func getProfilesToDelete(c *client.V1Client, d *schema.ResourceData, cluster *mo
 
 		if isInfraClusterProfileType(getAttachedProfileType(cluster, oldUID)) {
 			log.Printf("Profile %s is infra/cluster on cluster - skip delete, will be replaced via PATCH", oldUID)
+			continue
+		}
+
+		if oldName := getAttachedProfileName(cluster, oldUID); oldName != "" && newProfileNames[oldName] {
+			log.Printf("Profile %s (name: %s) is a version upgrade - skip delete, will be replaced via PATCH", oldUID, oldName)
 			continue
 		}
 

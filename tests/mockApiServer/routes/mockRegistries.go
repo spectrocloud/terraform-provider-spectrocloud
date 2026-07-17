@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/spectrocloud/palette-sdk-go/api/models"
-	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud"
 )
 
 func getPackRegistryPayload() *models.V1PackRegistry {
@@ -22,7 +21,7 @@ func getPackRegistryPayload() *models.V1PackRegistry {
 		},
 		Spec: &models.V1PackRegistrySpec{
 			Auth:     &models.V1RegistryAuth{Type: "basic"},
-			Endpoint: spectrocloud.StringPtr("https://pack.example.com"),
+			Endpoint: strPtr("https://pack.example.com"),
 			Name:     "test-registry-name",
 			Scope:    "project",
 		},
@@ -51,7 +50,7 @@ func getHelmRegistryPayload() *models.V1HelmRegistry {
 				Type:     "token",
 				Username: "sf",
 			},
-			Endpoint:    spectrocloud.StringPtr("test.com"),
+			Endpoint:    strPtr("test.com"),
 			IsPrivate:   false,
 			Name:        "Public",
 			RegistryUID: generateRandomStringUID(),
@@ -107,7 +106,7 @@ func RegistriesRoutes() []Route {
 						Credentials: &models.V1AwsCloudAccount{
 							AccessKey:      "test-key",
 							CredentialType: models.V1AwsCloudAccountCredentialTypeSts.Pointer(),
-							Partition:      spectrocloud.StringPtr("test-part"),
+							Partition:      strPtr("test-part"),
 							PolicyARNs:     []string{"test-arns"},
 							SecretKey:      "test-secret-key",
 							Sts: &models.V1AwsStsCredentials{
@@ -116,9 +115,9 @@ func RegistriesRoutes() []Route {
 							},
 						},
 						DefaultRegion: "test-region",
-						Endpoint:      spectrocloud.StringPtr("test.point"),
-						IsPrivate:     spectrocloud.BoolPtr(false),
-						ProviderType:  spectrocloud.StringPtr("test-type"),
+						Endpoint:      strPtr("test.point"),
+						IsPrivate:     boolPtr(false),
+						ProviderType:  strPtr("test-type"),
 						RegistryUID:   "test-reg-uid",
 						Scope:         "project",
 						TLS: &models.V1TLSConfiguration{
@@ -186,10 +185,10 @@ func RegistriesRoutes() []Route {
 						UID:                   "test-zarf-oci-reg-basic-uid",
 					},
 					Spec: &models.V1BasicOciRegistrySpec{
-						Endpoint:        spectrocloud.StringPtr("https://registry.example.com"),
+						Endpoint:        strPtr("https://registry.example.com"),
 						BasePath:        "",
 						BaseContentPath: "/",
-						ProviderType:    spectrocloud.StringPtr("zarf"),
+						ProviderType:    strPtr("zarf"),
 						IsSyncSupported: true,
 						Auth: &models.V1RegistryAuth{
 							Username: "test-username",

@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-openapi/strfmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -551,4 +552,69 @@ func TestToRegistryAwsAccountCredential(t *testing.T) {
 			}
 		})
 	}
+}
+
+func registryOciCustomizeDiffFixture(cfg map[string]interface{}) error {
+	r := resourceRegistryOciEcr()
+	_, err := r.Diff(context.Background(), nil, terraform.NewResourceConfigRaw(cfg), unitTestMockAPIClient)
+	return err
+}
+
+func TestResourceRegistryOciCustomizeDiff_BaseContentPathRequiredWhenSync(t *testing.T) {
+	err := registryOciCustomizeDiffFixture(map[string]interface{}{
+		"name":               "irepo-oci-mirror",
+		"type":               "basic",
+		"endpoint":           "https://irepo-helm.example.com",
+		"is_private":         true,
+		"is_synchronization": true,
+		"provider_type":      "helm",
+		"credentials": []interface{}{
+			map[string]interface{}{
+				"credential_type": "basic",
+				"username":        "user",
+				"password":        "pass",
+			},
+		},
+	})
+	assert.Error(t, err, "plan must error when is_synchronization=true and base_content_path is empty")
+	assert.Contains(t, err.Error(), "base_content_path")
+}
+
+func TestResourceRegistryOciCustomizeDiff_BaseContentPathOptionalWhenNoSync(t *testing.T) {
+	err := registryOciCustomizeDiffFixture(map[string]interface{}{
+		"name":               "irepo-oci-mirror",
+		"type":               "basic",
+		"endpoint":           "https://irepo-helm.example.com",
+		"is_private":         true,
+		"is_synchronization": false,
+		"provider_type":      "helm",
+		"credentials": []interface{}{
+			map[string]interface{}{
+				"credential_type": "basic",
+				"username":        "user",
+				"password":        "pass",
+			},
+		},
+	})
+	assert.NoError(t, err, "plan must succeed when is_synchronization=false regardless of base_content_path")
+}
+
+func TestResourceRegistryOciCustomizeDiff_BaseContentPathProvidedWhenSync(t *testing.T) {
+	err := registryOciCustomizeDiffFixture(map[string]interface{}{
+		"name":               "irepo-oci-mirror",
+		"type":               "basic",
+		"endpoint":           "https://irepo-helm.example.com",
+		"is_private":         true,
+		"is_synchronization": true,
+		"provider_type":      "helm",
+		"base_content_path":  "charts",
+		"credentials": []interface{}{
+			map[string]interface{}{
+				"credential_type": "basic",
+				"username":        "user",
+				"password":        "pass",
+			},
+		},
+	})
+	assert.NoError(t, err, "plan must succeed when is_synchronization=true and base_content_path is set")
 }

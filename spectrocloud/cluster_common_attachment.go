@@ -37,7 +37,7 @@ func waitForAddonDeployment(ctx context.Context, d *schema.ResourceData, cl mode
 		Refresh:    resourceAddonDeploymentStateRefreshFunc(c, *cluster, profile_uid),
 		Timeout:    d.Timeout(state) - 1*time.Minute,
 		MinTimeout: 10 * time.Second,
-		Delay:      30 * time.Second,
+		Delay:      resolveWaitDelay(30 * time.Second),
 	}
 
 	// Wait, catching any errors

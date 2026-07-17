@@ -1,6 +1,7 @@
 package patch
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 )
@@ -163,5 +164,56 @@ func TestEscapeJsonPointer(t *testing.T) {
 			t.Fatalf("Expected %q as after escaping %q, given: %q",
 				tc.ExpectedOutput, tc.Input, output)
 		}
+	}
+}
+
+// TestPatchOperationsMarshalJSON — Batch 11. Covers the 7 previously-
+// unreached type-methods: MarshalJSON + String on Replace/Add/Remove
+// operations plus PatchOperations.MarshalJSON.
+func TestPatchOperationsMarshalJSON(t *testing.T) {
+	rep := &ReplaceOperation{Path: "/a", Value: "b"}
+	repJSON, err := rep.MarshalJSON()
+	if err != nil {
+		t.Fatalf("ReplaceOperation.MarshalJSON: %v", err)
+	}
+	if !bytes.Contains(repJSON, []byte(`"op":"replace"`)) {
+		t.Errorf("expected op=replace in %s", repJSON)
+	}
+	if s := rep.String(); s == "" || !bytes.Contains([]byte(s), []byte(`"replace"`)) {
+		t.Errorf("ReplaceOperation.String: unexpected %q", s)
+	}
+
+	add := &AddOperation{Path: "/b", Value: 42}
+	addJSON, err := add.MarshalJSON()
+	if err != nil {
+		t.Fatalf("AddOperation.MarshalJSON: %v", err)
+	}
+	if !bytes.Contains(addJSON, []byte(`"op":"add"`)) {
+		t.Errorf("expected op=add in %s", addJSON)
+	}
+	if s := add.String(); s == "" || !bytes.Contains([]byte(s), []byte(`"add"`)) {
+		t.Errorf("AddOperation.String: unexpected %q", s)
+	}
+
+	rem := &RemoveOperation{Path: "/c"}
+	remJSON, err := rem.MarshalJSON()
+	if err != nil {
+		t.Fatalf("RemoveOperation.MarshalJSON: %v", err)
+	}
+	if !bytes.Contains(remJSON, []byte(`"op":"remove"`)) {
+		t.Errorf("expected op=remove in %s", remJSON)
+	}
+	if s := rem.String(); s == "" || !bytes.Contains([]byte(s), []byte(`"remove"`)) {
+		t.Errorf("RemoveOperation.String: unexpected %q", s)
+	}
+
+	// PatchOperations.MarshalJSON: emits an array of the individual ops.
+	po := PatchOperations{rep, add, rem}
+	poJSON, err := po.MarshalJSON()
+	if err != nil {
+		t.Fatalf("PatchOperations.MarshalJSON: %v", err)
+	}
+	if !bytes.HasPrefix(poJSON, []byte("[")) {
+		t.Errorf("expected JSON array; got %s", poJSON)
 	}
 }

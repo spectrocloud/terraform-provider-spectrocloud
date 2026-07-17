@@ -538,13 +538,14 @@ func TestDisableSSO(t *testing.T) {
 		verify      func(t *testing.T, err error)
 	}{
 		{
-			name:        "Disable SSO - API route may not be available (mock server limitation)",
+			// Batch 2b wired SSO endpoints. Was expectError:true when
+			// mock lacked SAML/OIDC/domains/providers routes.
+			name:        "Disable SSO - success against mocked SSO endpoints",
 			client:      unitTestMockAPIClient,
-			expectError: true, // Mock API may not have SSO routes
-			description: "Should handle API route unavailability gracefully (verifies function structure)",
+			expectError: false,
+			description: "Should complete disableSSO cleanly against the mocked endpoint set",
 			verify: func(t *testing.T, err error) {
-				// Function should attempt to call GetSAML and return error if route not available
-				assert.Error(t, err, "Should return error when API route is not available")
+				assert.NoError(t, err, "disableSSO should succeed against the mock")
 			},
 		},
 		{
@@ -633,7 +634,7 @@ func TestResourceCommonUpdate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // disableSSO may fail due to missing API routes
+			expectError: false, // Batch 2b: endpoint now mocked
 			description: "Should call disableSSO when sso_auth_type is 'none'",
 		},
 		{
@@ -655,7 +656,7 @@ func TestResourceCommonUpdate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // UpdateSAML may fail due to missing API routes
+			expectError: false, // Batch 2b: endpoint now mocked
 			description: "Should convert to SAML entity and call UpdateSAML when sso_auth_type is 'saml'",
 		},
 		{
@@ -680,7 +681,7 @@ func TestResourceCommonUpdate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // UpdateOIDC may fail due to missing API routes
+			expectError: false, // Batch 2b: endpoint now mocked
 			description: "Should convert to OIDC entity and call UpdateOIDC when sso_auth_type is 'oidc'",
 		},
 		{
@@ -703,7 +704,7 @@ func TestResourceCommonUpdate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // API routes may not be available
+			expectError: false, // Batch 2b: endpoint now mocked
 			description: "Should update SAML and domains when both are set",
 		},
 		{
@@ -729,7 +730,7 @@ func TestResourceCommonUpdate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // API routes may not be available
+			expectError: false, // Batch 2b: endpoint now mocked
 			description: "Should update OIDC and auth_providers when both are set",
 		},
 		{
@@ -741,7 +742,7 @@ func TestResourceCommonUpdate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // disableSSO may fail, or UpdateProviders may fail
+			expectError: false, // Batch 2b: endpoint now mocked
 			description: "Should update auth_providers even when SSO type is 'none'",
 		},
 		{
@@ -838,8 +839,8 @@ func TestResourceSSOCreate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // disableSSO may fail due to missing API routes
-			expectID:    "",   // ID should not be set if there's an error
+			expectError: false,          // Batch 2b: endpoint now mocked
+			expectID:    "sso_settings", // Batch 2b: endpoint mocked, Create succeeds
 			description: "Should call disableSSO and set ID only if successful",
 		},
 		{
@@ -861,8 +862,8 @@ func TestResourceSSOCreate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // UpdateSAML may fail due to missing API routes
-			expectID:    "",   // ID should not be set if there's an error
+			expectError: false,          // Batch 2b: endpoint now mocked
+			expectID:    "sso_settings", // Batch 2b: endpoint mocked, Create succeeds
 			description: "Should convert to SAML entity, call UpdateSAML, and set ID only if successful",
 		},
 		{
@@ -888,8 +889,8 @@ func TestResourceSSOCreate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // API routes may not be available
-			expectID:    "",   // ID should not be set if there's an error
+			expectError: false,          // Batch 2b: endpoint now mocked
+			expectID:    "sso_settings", // Batch 2b: endpoint mocked, Create succeeds
 			description: "Should update OIDC and auth_providers, set ID only if successful",
 		},
 		{
@@ -913,8 +914,8 @@ func TestResourceSSOCreate(t *testing.T) {
 				return d
 			},
 			client:      unitTestMockAPIClient,
-			expectError: true, // API routes may not be available
-			expectID:    "",   // ID should not be set if there's an error
+			expectError: false,          // Batch 2b: endpoint now mocked
+			expectID:    "sso_settings", // Batch 2b: endpoint mocked, Create succeeds
 			description: "Should update SAML, domains, and auth_providers, set ID only if successful",
 		},
 		{
@@ -937,7 +938,7 @@ func TestResourceSSOCreate(t *testing.T) {
 			},
 			client:      unitTestMockAPINegativeClient,
 			expectError: true,
-			expectID:    "", // ID should not be set if there's an error
+			expectID:    "", // Negative client — resourceCommonUpdate errors before SetId
 			description: "Should return error from resourceCommonUpdate and not set ID",
 		},
 	}

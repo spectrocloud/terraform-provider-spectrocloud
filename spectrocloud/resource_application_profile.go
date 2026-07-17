@@ -179,10 +179,37 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 	registryNameMap := buildPackRegistryNameMap(d)
 	registryUIDMap := buildPackRegistryUIDMap(d)
 
+	// Preserve user-supplied `uid` values from config so state does not drift.
+	// The `uid` schema field is Computed+Optional and its value is never sent
+	// to the API on create/update (see toApplicationProfilePackCreate). Users
+	// typically supply a pack catalog UID here, whereas tier.Metadata.UID is
+	// the freshly-minted UID of the tier inside this profile — a different
+	// object. Overwriting state with tier.Metadata.UID causes drift on every
+	// second apply (PLT-2297). Mirror config where possible; fall back to the
+	// tier metadata UID when the user did not provide one.
+	configPackUIDByName := map[string]string{}
+	if raw, ok := d.GetOk("pack"); ok {
+		for _, item := range raw.([]interface{}) {
+			pm, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			name, _ := pm["name"].(string)
+			uid, _ := pm["uid"].(string)
+			if name != "" && uid != "" {
+				configPackUIDByName[name] = uid
+			}
+		}
+	}
+
 	ps := make([]interface{}, len(tiers))
 	for i, tier := range tierDet {
 		p := make(map[string]interface{})
-		p["uid"] = tier.Metadata.UID
+		if uid, ok := configPackUIDByName[tier.Metadata.Name]; ok {
+			p["uid"] = uid
+		} else {
+			p["uid"] = tier.Metadata.UID
+		}
 
 		// Get the registry UID from the API response
 		registryUID := tier.Spec.RegistryUID
@@ -217,7 +244,11 @@ func flattenAppPacks(c *client.V1Client, diagPacks []*models.V1PackManifestEntit
 		// (they probably used uid directly), so don't set either in state
 
 		p["name"] = tier.Metadata.Name
-		//p["tag"] = tier.Tag
+		// PLT-2297: populate tag and install_order into state on read.
+		// Without these, every second apply plans a change because state
+		// diverges from the config that was successfully applied.
+		p["tag"] = tier.Spec.Version
+		p["install_order"] = int(tier.Spec.InstallOrder)
 		p["type"] = tier.Spec.Type
 		p["source_app_tier"] = tier.Spec.SourceAppTierUID
 		prop := make(map[string]string)
@@ -400,13 +431,22 @@ func toApplicationProfilePackCreateWithClient(pSrc interface{}, c *client.V1Clie
 		pRegistryUID = resolvedUID
 	}
 
+	// PLT-2297: propagate install_order to the API on create. Without this,
+	// newly-created tiers always land with installOrder=0 regardless of what
+	// the user configured, and the next read plans a drift back to config.
+	pInstallOrder := int32(0)
+	if v, ok := p["install_order"].(int); ok {
+		pInstallOrder = int32(v)
+	}
+
 	tier := &models.V1AppTierEntity{
 		Name:             types.Ptr(pName),
 		Version:          pVersion,
 		SourceAppTierUID: source_app_tier,
 		RegistryUID:      pRegistryUID,
 		//UID:         pUID,
-		Type: &pType,
+		Type:         &pType,
+		InstallOrder: pInstallOrder,
 		// UI strips a single newline, so we should do the same
 		Values:     strings.TrimSpace(p["values"].(string)),
 		Properties: toPropertiesTier(p),
@@ -526,11 +566,19 @@ func toApplicationProfilePackUpdate(pSrc interface{}) *models.V1AppTierUpdateEnt
 		})
 	}
 
+	// PLT-2297: propagate install_order on updates too, so re-ordering packs
+	// in HCL actually reaches the API.
+	pInstallOrder := int32(0)
+	if v, ok := p["install_order"].(int); ok {
+		pInstallOrder = int32(v)
+	}
+
 	pack := &models.V1AppTierUpdateEntity{
 
-		Name:      pName,
-		Version:   pTag,
-		Manifests: manifests,
+		Name:         pName,
+		Version:      pTag,
+		Manifests:    manifests,
+		InstallOrder: pInstallOrder,
 		//RegistryUID: pRegistryUID,
 		// UI strips a single newline, so we should do the same
 		Values:     strings.TrimSpace(p["values"].(string)),

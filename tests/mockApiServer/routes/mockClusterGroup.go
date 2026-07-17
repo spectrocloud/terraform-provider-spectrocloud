@@ -93,7 +93,7 @@ func ClusterGroupRoutes() []Route {
 				StatusCode: 200,
 				Payload: &models.V1ClusterGroup{
 					Metadata: &models.V1ObjectMeta{
-						Annotations: nil,
+						Annotations: map[string]string{"scope": "project"},
 						Labels: map[string]string{
 							"test": "dev",
 						},

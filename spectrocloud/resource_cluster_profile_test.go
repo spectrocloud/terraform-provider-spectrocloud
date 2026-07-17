@@ -858,7 +858,7 @@ func TestResourceClusterProfileCreateAdoptExisting(t *testing.T) {
 	diags := resourceClusterProfileCreate(ctx, d, unitTestMockAPIClient)
 	assert.Empty(t, diags)
 	// Should have adopted the existing UID from the mock metadata.
-	assert.Equal(t, "existing-profile-uid-1", d.Id())
+	assert.Equal(t, "cluster-profile-import-1", d.Id())
 }
 
 // TestResourceClusterProfileCreateNoAdoptWithoutFlag verifies that when the
@@ -1088,6 +1088,144 @@ func TestResourceClusterProfileCustomizeDiff_NoChanges_UnderFlag(t *testing.T) {
 	// Same description on both sides -- no change.
 	_, err := customizeDiffContentChangeFixture("same description", "same description")
 	assert.NoError(t, err, "no-op applies under the flag must not error")
+}
+
+// customizeDiffPackFixture drives Resource.Diff with a single-element pack
+// list on both sides. It models the exact false-positive scenario reported
+// in the pack-drift bug: state carries API-normalized values (a trailing
+// newline on `values`, a Computed `uid`) while the user's HCL didn't touch
+// the resource at all.
+//
+// stateValues/newValues let a test simulate the drift shape (trailing
+// whitespace, defaulted type, etc.) or a real user edit (semantically
+// different `values` content). packCountInConfig controls how many pack
+// elements the config declares -- setting it to 0 or 2 while state has 1
+// simulates a real pack add/remove.
+func customizeDiffPackFixture(stateValues, newValues string, packCountInConfig int) (*terraform.InstanceDiff, error) {
+	r := resourceClusterProfile()
+	state := &terraform.InstanceState{
+		ID: "cluster-profile-1",
+		Attributes: map[string]string{
+			"name":                 "example-addon",
+			"version":              "1.0.0",
+			"context":              "project",
+			"description":          "",
+			"cloud":                "all",
+			"type":                 "add-on",
+			"skip_destroy":         "true",
+			"tags.#":               "0",
+			"profile_variables.#":  "0",
+			"pack.#":               "1",
+			"pack.0.uid":           "abc123",
+			"pack.0.name":          "argo-cd",
+			"pack.0.tag":           "9.6.0",
+			"pack.0.type":          "oci",
+			"pack.0.values":        stateValues,
+			"pack.0.registry_uid":  "",
+			"pack.0.registry_name": "",
+			"pack.0.manifest.#":    "0",
+		},
+	}
+	cfg := map[string]interface{}{
+		"name":         "example-addon",
+		"version":      "1.0.0",
+		"context":      "project",
+		"cloud":        "all",
+		"type":         "add-on",
+		"skip_destroy": true,
+	}
+	packs := make([]interface{}, 0, packCountInConfig)
+	for i := 0; i < packCountInConfig; i++ {
+		packs = append(packs, map[string]interface{}{
+			// uid deliberately omitted -- user config never sets the Computed uid.
+			"name":   "argo-cd",
+			"tag":    "9.6.0",
+			"type":   "oci",
+			"values": newValues,
+		})
+	}
+	if len(packs) > 0 {
+		cfg["pack"] = packs
+	}
+	return r.Diff(context.Background(), state, terraform.NewResourceConfigRaw(cfg), unitTestMockAPIClient)
+}
+
+// TestResourceClusterProfileCustomizeDiff_NoOpRefresh_WithPack_UnderFlag
+// reproduces the pack-drift false-positive: state has a Computed `uid` and
+// a trailing newline on `values` (both API-side, not user-authored), config
+// has neither. A plain `terraform plan` right after a successful `apply`
+// must return no error -- the flag's guardrail should only fire on real
+// content edits.
+func TestResourceClusterProfileCustomizeDiff_NoOpRefresh_WithPack_UnderFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	// State value has trailing newline (API-normalized form). Config value
+	// doesn't (user HCL form). The existing DiffSuppressFunc on pack.values
+	// trims whitespace so this is a semantic no-op -- CustomizeDiff must
+	// agree.
+	_, err := customizeDiffPackFixture(
+		"argocd:\n  version: 9.6.0\n",
+		"argocd:\n  version: 9.6.0",
+		1,
+	)
+	assert.NoError(t, err, "no-op refresh with API-normalized pack drift must not trip the immutability guardrail")
+}
+
+// TestResourceClusterProfileCustomizeDiff_RealPackValuesEdit_UnderFlag
+// guards against over-suppressing: if the user genuinely edits pack.values,
+// the guardrail must still fire and mention `pack` in the diagnostic.
+func TestResourceClusterProfileCustomizeDiff_RealPackValuesEdit_UnderFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	// Not just whitespace -- the payload semantics change.
+	_, err := customizeDiffPackFixture(
+		"argocd:\n  version: 9.6.0",
+		"argocd:\n  version: 9.7.0",
+		1,
+	)
+	assert.Error(t, err, "a real pack.values edit must still trip the immutability guardrail")
+	assert.Contains(t, err.Error(), "immutable-clusterprofiles")
+	assert.Contains(t, err.Error(), "pack")
+	assert.Contains(t, err.Error(), "1.0.0")
+}
+
+// TestResourceClusterProfileCustomizeDiff_PackAdded_UnderFlag guards the
+// length arm of the semantic compare: adding a pack element without a
+// version bump is a real content change and must still error.
+func TestResourceClusterProfileCustomizeDiff_PackAdded_UnderFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	// State has 1 pack (from fixture), config has 2.
+	_, err := customizeDiffPackFixture(
+		"argocd:\n  version: 9.6.0",
+		"argocd:\n  version: 9.6.0",
+		2,
+	)
+	assert.Error(t, err, "adding a pack element under the flag must trip the immutability guardrail")
+	assert.Contains(t, err.Error(), "pack")
+}
+
+// TestResourceClusterProfileCustomizeDiff_PackRemoved_UnderFlag covers the
+// symmetric case: removing a pack element without a version bump must also
+// error.
+func TestResourceClusterProfileCustomizeDiff_PackRemoved_UnderFlag(t *testing.T) {
+	orig := ProviderFeaturePreview
+	defer func() { ProviderFeaturePreview = orig }()
+	ProviderFeaturePreview = map[string]bool{"immutable-clusterprofiles": true}
+
+	_, err := customizeDiffPackFixture(
+		"argocd:\n  version: 9.6.0",
+		"argocd:\n  version: 9.6.0",
+		0,
+	)
+	assert.Error(t, err, "removing a pack element under the flag must trip the immutability guardrail")
+	assert.Contains(t, err.Error(), "pack")
 }
 
 // TestResourceClusterProfileDelete_SkipDestroy verifies that when

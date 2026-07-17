@@ -78,7 +78,12 @@ func TestGetProfilesToDeleteSkipsClusterTypeInfra(t *testing.T) {
 	assert.NotContains(t, toDelete, oldInfraUID, "infra/cluster profile must not be deleted; use PATCH replace")
 }
 
-func TestGetProfilesToDeleteUIDNotSkippedForSameNameAddon(t *testing.T) {
+// TestComputeProfilesToDeleteSkipsAddonVersionUpgrade verifies that swapping an addon
+// profile's UID while keeping the same name is treated as a version upgrade — the
+// old UID must NOT be deleted, because setReplaceWithProfileForExisting will handle
+// the swap in-place via PATCH ReplaceWithProfile. Deleting first would leave the
+// replace target dangling and result in a delete-then-recreate on the cluster.
+func TestComputeProfilesToDeleteSkipsAddonVersionUpgrade(t *testing.T) {
 	oldUID := "6a0c2a821d2aa718e3836f1a"
 	newUID := "6a0c2a579caf38df9cc3e290"
 
@@ -92,6 +97,44 @@ func TestGetProfilesToDeleteUIDNotSkippedForSameNameAddon(t *testing.T) {
 		},
 	}
 
-	assert.False(t, isInfraClusterProfileType(getAttachedProfileType(cluster, oldUID)))
-	assert.True(t, isProfileAttachedToCluster(cluster, oldUID))
+	oldProfiles := []interface{}{
+		map[string]interface{}{"id": oldUID},
+	}
+	newProfiles := []interface{}{
+		map[string]interface{}{"id": newUID},
+	}
+
+	toDelete := computeProfilesToDelete(nil, oldProfiles, newProfiles, cluster)
+	assert.NotContains(t, toDelete, oldUID, "same-name addon UID swap must be handled via PATCH ReplaceWithProfile, not deleted first")
+	assert.Empty(t, toDelete)
+}
+
+// TestComputeProfilesToDeleteRemovesAddonNotInNewSet verifies that a profile whose name
+// is absent from the new cluster_profile set IS deleted — the version-upgrade guard
+// must not swallow genuine removals.
+func TestComputeProfilesToDeleteRemovesAddonNotInNewSet(t *testing.T) {
+	removedUID := "6a0c2a821d2aa718e3836f1a"
+	keptUID := "6a0c2a579caf38df9cc3e290"
+
+	cluster := &models.V1SpectroCluster{
+		Spec: &models.V1SpectroClusterSpec{
+			ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
+				{UID: removedUID, Name: "logging", Type: "addon"},
+				{UID: keptUID, Name: "monitoring", Type: "addon"},
+				{UID: "6a06b7162bc7f49b5b6140f3", Name: "base", Type: "cluster"},
+			},
+		},
+	}
+
+	oldProfiles := []interface{}{
+		map[string]interface{}{"id": removedUID},
+		map[string]interface{}{"id": keptUID},
+	}
+	newProfiles := []interface{}{
+		map[string]interface{}{"id": keptUID},
+	}
+
+	toDelete := computeProfilesToDelete(nil, oldProfiles, newProfiles, cluster)
+	assert.Contains(t, toDelete, removedUID, "addon profile removed entirely from config must be deleted")
+	assert.NotContains(t, toDelete, keptUID)
 }

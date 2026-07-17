@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	palettemodels "github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -324,4 +325,18 @@ func TestFlattenResourceList(t *testing.T) {
 		"cpu":    "100m",
 		"memory": "200Mi",
 	}, m)
+}
+
+// TestBuildId — Batch 11. Covers BuildId and BuildIdDV in structures.go.
+func TestBuildId(t *testing.T) {
+	meta := &palettemodels.V1VMObjectMeta{Name: "vm1", Namespace: "ns1"}
+	assert.Equal(t, "project/uid1/ns1/vm1", BuildId("project", "uid1", meta))
+	assert.Equal(t, "project/uid1/vmns/vmname/vm1", BuildIdDV("project", "uid1", "vmns", "vmname", meta))
+}
+
+// TestSchemaSetToInt64Array — covers the []int64 helper.
+func TestSchemaSetToInt64Array(t *testing.T) {
+	set := schema.NewSet(schema.HashInt, []interface{}{1, 2, 3})
+	arr := SchemaSetToInt64Array(set)
+	assert.ElementsMatch(t, []int64{1, 2, 3}, arr)
 }

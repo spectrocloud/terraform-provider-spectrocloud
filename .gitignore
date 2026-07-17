@@ -31,3 +31,4 @@ mock_server.crt
 mock_server.key
 MockBuild
 mock_api_server.log
+.claude
