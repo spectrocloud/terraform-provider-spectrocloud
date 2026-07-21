@@ -18,6 +18,16 @@ resource "spectrocloud_cluster_gcp" "cluster" {
     network = var.gcp_network
     project = var.gcp_project
     region  = var.gcp_region
+
+    # Optional: YAML passthrough for CAPG (GCP IaaS) properties not yet first-class
+    # in Palette. Overrides pack-level and Palette-managed values. Palette does
+    # not pre-validate keys/types/values; the API surfaces any errors.
+    # override_cluster_api_config = <<-EOT
+    #   GCPCluster:
+    #     spec:
+    #       network:
+    #         autoCreateSubnetworks: false
+    # EOT
   }
 
   cluster_profile {
@@ -59,6 +69,15 @@ resource "spectrocloud_cluster_gcp" "cluster" {
     count         = 1
     instance_type = "e2-standard-2"
     azs           = ["us-west3-a"]
+
+    # Optional: YAML passthrough for pool-level CAPG properties (e.g. GCPMachineTemplate).
+    # override_cluster_api_config = <<-EOT
+    #   GCPMachineTemplate:
+    #     spec:
+    #       template:
+    #         spec:
+    #           rootDeviceSize: 100
+    # EOT
 
     # Optional: override Machine Health Check settings for this node pool
     override_health_check_configuration = <<-EOT

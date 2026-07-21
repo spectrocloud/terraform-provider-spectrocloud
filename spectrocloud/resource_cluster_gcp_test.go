@@ -7,6 +7,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestToMachinePoolGcp(t *testing.T) {
@@ -216,4 +217,57 @@ func TestFlattenClusterConfigsGcp(t *testing.T) {
 			assert.Equal(t, tt.expectedOutput, output)
 		})
 	}
+}
+
+func TestFlattenMachinePoolConfigsGcpOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "GCPMachineTemplate:\n  spec:\n    template:\n      spec:\n        rootDeviceSize: 100\n"
+	mp := &models.V1GcpMachinePoolConfig{
+		Name:                     "worker-pool",
+		Size:                     int32(1),
+		IsControlPlane:           BoolPtr(false),
+		InstanceType:             types.Ptr("n1-standard-4"),
+		RootDeviceSize:           int64(60),
+		Azs:                      []string{"us-central1-a"},
+		OverrideClusterAPIConfig: yaml,
+		UpdateStrategy:           &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+	}
+	out := flattenMachinePoolConfigsGcp([]*models.V1GcpMachinePoolConfig{mp})
+	require.Len(t, out, 1)
+	assert.Equal(t, yaml, out[0].(map[string]interface{})["override_cluster_api_config"])
+}
+
+func TestToMachinePoolGcpOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "GCPCluster:\n  spec:\n    network:\n      autoCreateSubnetworks: false\n"
+	makeInput := func(controlPlane bool, override string) map[string]interface{} {
+		return map[string]interface{}{
+			"control_plane":               controlPlane,
+			"control_plane_as_worker":     false,
+			"azs":                         schema.NewSet(schema.HashString, []interface{}{"us-central1-a"}),
+			"instance_type":               "n1-standard-2",
+			"disk_size_gb":                50,
+			"name":                        "pool",
+			"count":                       1,
+			"node_repave_interval":        0,
+			"update_strategy":             "RollingUpdateScaleOut",
+			"override_cluster_api_config": override,
+		}
+	}
+
+	t.Run("worker sets OverrideClusterAPIConfig", func(t *testing.T) {
+		mp, err := toMachinePoolGcp(makeInput(false, yaml))
+		require.NoError(t, err)
+		assert.Equal(t, yaml, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+
+	t.Run("control plane sets OverrideClusterAPIConfig", func(t *testing.T) {
+		mp, err := toMachinePoolGcp(makeInput(true, yaml))
+		require.NoError(t, err)
+		assert.Equal(t, yaml, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+
+	t.Run("empty passthrough leaves the field zero-valued", func(t *testing.T) {
+		mp, err := toMachinePoolGcp(makeInput(false, ""))
+		require.NoError(t, err)
+		assert.Empty(t, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
 }

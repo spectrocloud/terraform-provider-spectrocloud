@@ -221,6 +221,7 @@ func resourceClusterMaas() *schema.Resource {
 							},
 							Description: "A list of NTP servers to use instead of the machine image's default NTP server list.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -286,6 +287,7 @@ func resourceClusterMaas() *schema.Resource {
 							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
 							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"min": {
 							Type:        schema.TypeInt,
 							Optional:    true,
@@ -588,6 +590,10 @@ func flattenClusterConfigsMaas(d *schema.ResourceData, config *models.V1MaasClou
 		m["ssh_keys"] = config.Spec.ClusterConfig.SSHKeys
 	}
 
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
+
 	return []interface{}{m}
 }
 
@@ -616,6 +622,9 @@ func flattenMachinePoolConfigsMaas(machinePools []*models.V1MaasMachinePoolConfi
 		// Flatten override_kubeadm_configuration (worker pools only)
 		if !machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
 		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
@@ -782,12 +791,14 @@ func resourceClusterMaasUpdate(ctx context.Context, d *schema.ResourceData, m in
 
 func toMaasCloudConfigUpdate(cloudConfig map[string]interface{}) *models.V1MaasCloudClusterConfigEntity {
 	DomainVal := cloudConfig["domain"].(string)
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
 	return &models.V1MaasCloudClusterConfigEntity{
 		ClusterConfig: &models.V1MaasClusterConfig{
-			Domain:      &DomainVal,
-			EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
-			NtpServers:  toNtpServers(cloudConfig),
-			SSHKeys:     getMaasSSHKeys(cloudConfig),
+			Domain:                   &DomainVal,
+			EnableLxdVM:              cloudConfig["enable_lxd_vm"].(bool),
+			NtpServers:               toNtpServers(cloudConfig),
+			SSHKeys:                  getMaasSSHKeys(cloudConfig),
+			OverrideClusterAPIConfig: overrideClusterAPIConfig,
 		},
 	}
 }
@@ -811,6 +822,7 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	DomainVal := cloudConfig["domain"].(string)
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
 
 	clusterContext := d.Get("context").(string)
 	profiles, err := toProfiles(c, d, clusterContext)
@@ -826,10 +838,11 @@ func toMaasCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectr
 			ClusterType:     toClusterType(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1MaasClusterConfig{
-				Domain:      &DomainVal,
-				EnableLxdVM: cloudConfig["enable_lxd_vm"].(bool),
-				NtpServers:  toNtpServers(cloudConfig),
-				SSHKeys:     getMaasSSHKeys(cloudConfig),
+				Domain:                   &DomainVal,
+				EnableLxdVM:              cloudConfig["enable_lxd_vm"].(bool),
+				NtpServers:               toNtpServers(cloudConfig),
+				SSHKeys:                  getMaasSSHKeys(cloudConfig),
+				OverrideClusterAPIConfig: overrideClusterAPIConfig,
 			},
 		},
 	}
@@ -976,6 +989,9 @@ func toMachinePoolMaas(machinePool interface{}) (*models.V1MaasMachinePoolConfig
 			skipK8sUpgrade = v
 		}
 		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
+	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
 	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 

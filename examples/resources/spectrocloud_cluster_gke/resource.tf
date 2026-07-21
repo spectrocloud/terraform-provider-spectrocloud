@@ -21,11 +21,28 @@ resource "spectrocloud_cluster_gke" "cluster" {
   cloud_config {
     project = var.gcp_project
     region  = var.gcp_region
+
+    # Optional: YAML passthrough for CAPG-managed (GKE) properties not yet
+    # first-class in Palette. Overrides pack-level and Palette-managed values.
+    # Palette does not pre-validate keys/types/values; the API surfaces any errors.
+    # override_cluster_api_config = <<-EOT
+    #   GCPManagedControlPlane:
+    #     spec:
+    #       releaseChannel: REGULAR
+    # EOT
   }
   update_worker_pool_in_parallel = true
   machine_pool {
     name          = "worker-basic"
     count         = 3
     instance_type = "n2-standard-4"
+
+    # Optional: YAML passthrough for pool-level CAPG-managed properties
+    # (e.g. GCPManagedMachinePool).
+    # override_cluster_api_config = <<-EOT
+    #   GCPManagedMachinePool:
+    #     spec:
+    #       nodePoolName: worker-basic
+    # EOT
   }
 }

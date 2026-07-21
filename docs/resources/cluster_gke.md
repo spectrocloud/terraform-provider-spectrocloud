@@ -122,6 +122,10 @@ Required:
 - `project` (String) GCP project name.
 - `region` (String) Google Cloud region where the GKE cluster is deployed. Changing this forces a new resource.
 
+Optional:
+
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
+
 
 <a id="nestedblock--machine_pool"></a>
 ### Nested Schema for `machine_pool`
@@ -138,6 +142,7 @@ Optional:
 - `additional_labels` (Map of String) Additional labels to be applied to the machine pool. Labels must be in the form of `key:value`.
 - `disk_size_gb` (Number) Root disk size in GB for each node in this machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
+- `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))
 - `taints` (Block List) (see [below for nested schema](#nestedblock--machine_pool--taints))
