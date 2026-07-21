@@ -481,3 +481,73 @@ func TestToMachinePoolVsphereSkipK8sUpgrade(t *testing.T) {
 		assert.Nil(t, mp.PoolConfig.SkipK8sUpgrade)
 	})
 }
+
+func TestFlattenMachinePoolConfigsVsphereOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "VSphereMachineTemplate:\n  spec:\n    template:\n      spec:\n        diskGiB: 80\n"
+	mp := &models.V1VsphereMachinePoolConfig{
+		Name:                     "worker-pool",
+		Size:                     1,
+		MinSize:                  1,
+		MaxSize:                  1,
+		IsControlPlane:           types.Ptr(false),
+		Labels:                   []string{"worker"},
+		OverrideClusterAPIConfig: yaml,
+		InstanceType: &models.V1VsphereInstanceType{
+			DiskGiB:   types.Ptr(int32(50)),
+			MemoryMiB: types.Ptr(int64(4096)),
+			NumCPUs:   types.Ptr(int32(2)),
+		},
+		Placements: []*models.V1VspherePlacementConfig{{
+			UID: "p1", Cluster: "cl", ResourcePool: "rp", Datastore: "ds",
+			Network: &models.V1VsphereNetworkConfig{NetworkName: types.Ptr("net")},
+		}},
+		UpdateStrategy: &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+	}
+	out := flattenMachinePoolConfigsVsphere([]*models.V1VsphereMachinePoolConfig{mp})
+	require.Len(t, out, 1)
+	assert.Equal(t, yaml, out[0].(map[string]interface{})["override_cluster_api_config"])
+}
+
+func TestToMachinePoolVsphereOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "VSphereCluster:\n  spec:\n    identityRef:\n      kind: VSphereClusterIdentity\n      name: my-identity\n"
+	makeInput := func(controlPlane bool, override string) map[string]interface{} {
+		return map[string]interface{}{
+			"control_plane":           controlPlane,
+			"control_plane_as_worker": false,
+			"name":                    "pool",
+			"count":                   1,
+			"min":                     1,
+			"max":                     1,
+			"node_repave_interval":    0,
+			"update_strategy":         "RollingUpdateScaleOut",
+			"instance_type": []interface{}{
+				map[string]interface{}{"disk_size_gb": 50, "memory_mb": 4096, "cpu": 2},
+			},
+			"placement": []interface{}{
+				map[string]interface{}{
+					"id": "", "cluster": "cl", "resource_pool": "rp",
+					"datastore": "ds", "network": "net", "static_ip_pool_id": "",
+				},
+			},
+			"override_cluster_api_config": override,
+		}
+	}
+
+	t.Run("worker sets OverrideClusterAPIConfig", func(t *testing.T) {
+		mp, err := toMachinePoolVsphere(makeInput(false, yaml))
+		require.NoError(t, err)
+		assert.Equal(t, yaml, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+
+	t.Run("control plane sets OverrideClusterAPIConfig", func(t *testing.T) {
+		mp, err := toMachinePoolVsphere(makeInput(true, yaml))
+		require.NoError(t, err)
+		assert.Equal(t, yaml, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+
+	t.Run("empty passthrough leaves the field zero-valued", func(t *testing.T) {
+		mp, err := toMachinePoolVsphere(makeInput(false, ""))
+		require.NoError(t, err)
+		assert.Empty(t, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+}

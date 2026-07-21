@@ -608,3 +608,130 @@ func TestToMaasCloudConfigUpdate(t *testing.T) {
 		assert.Contains(t, result.ClusterConfig.NtpServers, "time3.google.com")
 	})
 }
+
+// TestToMaasCloudConfigUpdateOverrideClusterAPIConfig covers the day-2
+// cluster-level update path for MAAS. MAAS is the only one of the four
+// resources whose cloud_config is not ForceNew, so this is the only surface
+// with a live update code path (vs. Create-only on GCP/GKE/vSphere).
+func TestToMaasCloudConfigUpdateOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "MaasCluster:\n  spec:\n    failureDomains: [az1, az2]\n"
+
+	t.Run("passthrough round-trips through update path", func(t *testing.T) {
+		result := toMaasCloudConfigUpdate(map[string]interface{}{
+			"domain":                      "maas.test.local",
+			"enable_lxd_vm":               false,
+			"override_cluster_api_config": yaml,
+		})
+		require.NotNil(t, result)
+		require.NotNil(t, result.ClusterConfig)
+		assert.Equal(t, yaml, result.ClusterConfig.OverrideClusterAPIConfig)
+	})
+
+	t.Run("missing key does not panic (defensive cast)", func(t *testing.T) {
+		// Guards the regression where a direct .(string) type-assert crashed
+		// unit tests that constructed cloudConfig without the field.
+		result := toMaasCloudConfigUpdate(map[string]interface{}{
+			"domain":        "maas.test.local",
+			"enable_lxd_vm": false,
+		})
+		require.NotNil(t, result)
+		require.NotNil(t, result.ClusterConfig)
+		assert.Empty(t, result.ClusterConfig.OverrideClusterAPIConfig)
+	})
+}
+
+// TestFlattenMachinePoolConfigsMaasOverrideClusterAPIConfig verifies that a
+// non-empty OverrideClusterAPIConfig on the API model is surfaced into state.
+func TestFlattenMachinePoolConfigsMaasOverrideClusterAPIConfig(t *testing.T) {
+	t.Run("worker with override_cluster_api_config", func(t *testing.T) {
+		yaml := "MaasMachineTemplate:\n  spec:\n    template:\n      spec:\n        minCPU: 4\n"
+		mp := &models.V1MaasMachinePoolConfig{
+			Name:                     "worker-pool",
+			Size:                     1,
+			MinSize:                  1,
+			MaxSize:                  1,
+			IsControlPlane:           false,
+			Labels:                   []string{"worker"},
+			OverrideClusterAPIConfig: yaml,
+			InstanceType: &models.V1MaasInstanceType{
+				MinCPU:     2,
+				MinMemInMB: 4096,
+			},
+			UpdateStrategy: &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+		}
+		out := flattenMachinePoolConfigsMaas([]*models.V1MaasMachinePoolConfig{mp}, nil)
+		require.Len(t, out, 1)
+		oi := out[0].(map[string]interface{})
+		assert.Equal(t, yaml, oi["override_cluster_api_config"])
+	})
+
+	t.Run("empty passthrough is omitted from state", func(t *testing.T) {
+		mp := &models.V1MaasMachinePoolConfig{
+			Name:           "worker-pool",
+			Size:           1,
+			MinSize:        1,
+			MaxSize:        1,
+			IsControlPlane: false,
+			Labels:         []string{"worker"},
+			InstanceType: &models.V1MaasInstanceType{
+				MinCPU:     2,
+				MinMemInMB: 4096,
+			},
+			UpdateStrategy: &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+		}
+		out := flattenMachinePoolConfigsMaas([]*models.V1MaasMachinePoolConfig{mp}, nil)
+		require.Len(t, out, 1)
+		oi := out[0].(map[string]interface{})
+		_, present := oi["override_cluster_api_config"]
+		assert.False(t, present, "empty OverrideClusterAPIConfig should not be written to state")
+	})
+}
+
+// TestToMachinePoolMaasOverrideClusterAPIConfig verifies expand of the
+// pool-level passthrough on both worker and control-plane pools.
+func TestToMachinePoolMaasOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "MaasCluster:\n  spec:\n    failureDomains: [az1]\n"
+
+	makeInput := func(controlPlane bool, override string) map[string]interface{} {
+		return map[string]interface{}{
+			"control_plane":           controlPlane,
+			"control_plane_as_worker": false,
+			"name":                    "pool",
+			"count":                   1,
+			"min":                     1,
+			"max":                     1,
+			"node_repave_interval":    0,
+			"update_strategy":         "RollingUpdateScaleOut",
+			"instance_type": []interface{}{
+				map[string]interface{}{"min_cpu": 2, "min_memory_mb": 4096},
+			},
+			"placement": []interface{}{
+				map[string]interface{}{"resource_pool": "rp"},
+			},
+			"azs":                         schema.NewSet(schema.HashString, []interface{}{"az1"}),
+			"node_tags":                   schema.NewSet(schema.HashString, []interface{}{}),
+			"use_lxd_vm":                  false,
+			"network":                     []interface{}{},
+			"override_cluster_api_config": override,
+		}
+	}
+
+	t.Run("worker sets OverrideClusterAPIConfig", func(t *testing.T) {
+		mp, err := toMachinePoolMaas(makeInput(false, yaml))
+		require.NoError(t, err)
+		assert.Equal(t, yaml, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+
+	t.Run("control plane sets OverrideClusterAPIConfig", func(t *testing.T) {
+		mp, err := toMachinePoolMaas(makeInput(true, yaml))
+		require.NoError(t, err)
+		assert.Equal(t, yaml, mp.PoolConfig.OverrideClusterAPIConfig,
+			"passthrough should apply to control-plane pools too, not just workers")
+	})
+
+	t.Run("empty passthrough leaves the field zero-valued", func(t *testing.T) {
+		mp, err := toMachinePoolMaas(makeInput(false, ""))
+		require.NoError(t, err)
+		assert.Empty(t, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+}
