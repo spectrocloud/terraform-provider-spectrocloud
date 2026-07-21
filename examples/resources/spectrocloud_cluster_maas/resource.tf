@@ -28,6 +28,15 @@ resource "spectrocloud_cluster_maas" "cluster" {
     enable_lxd_vm = false
     ntp_servers   = ["0.pool.ntp.org", "1.pool.ntp.org", "time.google.com"]
     ssh_keys      = var.cluster_ssh_public_keys
+
+    # Optional: YAML passthrough for CAPMAAS properties not yet first-class in
+    # Palette. Overrides pack-level and Palette-managed values. Palette does
+    # not pre-validate keys/types/values; the API surfaces any errors.
+    # override_cluster_api_config = <<-EOT
+    #   MaasCluster:
+    #     spec:
+    #       failureDomains: ["az1", "az2"]
+    # EOT
   }
 
   cluster_profile {
@@ -109,6 +118,16 @@ resource "spectrocloud_cluster_maas" "cluster" {
     # Useful for Canonical K8s LTS upgrade paths (e.g. 1.36 LTS -> 1.42 LTS)
     # where you want to advance the control plane first and roll workers later.
     skip_k8s_upgrade = "disabled"
+
+    # Optional: YAML passthrough for pool-level CAPMAAS properties. Same
+    # no-pre-validation posture as the cluster-level attribute.
+    # override_cluster_api_config = <<-EOT
+    #   MaasMachineTemplate:
+    #     spec:
+    #       template:
+    #         spec:
+    #           minCPU: 4
+    # EOT
 
     # Optional: override Machine Health Check settings for this node pool
     override_health_check_configuration = <<-EOT

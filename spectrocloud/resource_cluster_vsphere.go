@@ -233,6 +233,7 @@ func resourceClusterVsphere() *schema.Resource {
 							},
 							Description: "A list of NTP servers to be used by the cluster.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -321,6 +322,7 @@ func resourceClusterVsphere() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config":         schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"instance_type": {
 							Type:     schema.TypeList,
@@ -585,6 +587,10 @@ func flattenClusterConfigsVsphere(d *schema.ResourceData, cloudConfig *models.V1
 		ret["ntp_servers"] = cloudConfig.Spec.ClusterConfig.NtpServers
 	}
 
+	if cloudConfig.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		ret["override_cluster_api_config"] = cloudConfig.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
+
 	cloudConfigFlatten = append(cloudConfigFlatten, ret)
 
 	return cloudConfigFlatten
@@ -617,6 +623,9 @@ func flattenMachinePoolConfigsVsphere(machinePools []*models.V1VsphereMachinePoo
 		// Flatten override_kubeadm_configuration (worker pools only)
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
+		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
 		}
 		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
@@ -1037,6 +1046,9 @@ func toMachinePoolVsphere(machinePool interface{}) (*models.V1VsphereMachinePool
 		}
 		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
+	}
 	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 
 	if !controlPlane {
@@ -1079,6 +1091,9 @@ func getStaticIP(cloudConfig map[string]interface{}) bool {
 }
 
 func getClusterConfigEntity(cloudConfig map[string]interface{}) *models.V1VsphereClusterConfigEntity {
+	// Safe-cast: this helper is also called from resource_cluster_edge_vsphere.go,
+	// whose cloud_config schema does not (yet) expose override_cluster_api_config.
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
 	clusterConfigEntity := &models.V1VsphereClusterConfigEntity{
 		NtpServers: toNtpServers(cloudConfig),
 		Placement: &models.V1VspherePlacementConfigEntity{
@@ -1086,8 +1101,9 @@ func getClusterConfigEntity(cloudConfig map[string]interface{}) *models.V1Vspher
 			Folder:              cloudConfig["folder"].(string),
 			ImageTemplateFolder: getImageTemplateFolder(cloudConfig),
 		},
-		SSHKeys:  getSSHKey(cloudConfig),
-		StaticIP: getStaticIP(cloudConfig),
+		SSHKeys:                  getSSHKey(cloudConfig),
+		StaticIP:                 getStaticIP(cloudConfig),
+		OverrideClusterAPIConfig: overrideClusterAPIConfig,
 	}
 	return clusterConfigEntity
 }
