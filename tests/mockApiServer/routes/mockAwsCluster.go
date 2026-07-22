@@ -1,14 +1,70 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 const (
 	MockAwsCloudAccountUID = "test-aws-account-id-1"
+
+	// AwsMachinesListErrorConfigUID / AwsMachinesListFoundConfigUID drive the
+	// resolveNodeID (resource_cluster_brownfield.go) API-error and
+	// success-with-match branches. Any other configUID keeps the original
+	// empty-Items response, which resolveNodeID interprets as "not found".
+	AwsMachinesListErrorConfigUID = "aws-machines-list-error"
+	AwsMachinesListFoundConfigUID = "aws-machines-list-found"
+	AwsMachinesListFoundNodeName  = "ip-10-0-0-1"
+	AwsMachinesListFoundNodeUID   = "aws-machine-uid-1"
 )
+
+func awsPoolMachinesListHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	switch configUID {
+	case AwsMachinesListErrorConfigUID:
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to list aws machines"))
+	case AwsMachinesListFoundConfigUID:
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(&models.V1AwsMachines{
+			Items: []*models.V1AwsMachine{
+				{
+					Metadata: &models.V1ObjectMeta{
+						Name: AwsMachinesListFoundNodeName,
+						UID:  AwsMachinesListFoundNodeUID,
+					},
+				},
+			},
+		})
+	default:
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(&models.V1AwsMachines{Items: []*models.V1AwsMachine{}})
+	}
+}
+
+// awsPoolMachineUIDGetHandler serves GET .../machines/{machineUid}, used by
+// GetNodeMaintenanceStatusAws. It always reports the node's current
+// maintenance action as "cordon" — since resourceNodeAction only calls
+// ToggleMaintenanceOnNode when the requested action differs from the
+// current one, a brownfield machine_pool Update test that requests
+// action=="cordon" short-circuits here without needing a toggle/wait mock.
+func awsPoolMachineUIDGetHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(&models.V1AwsMachine{
+		Metadata: &models.V1ObjectMeta{UID: mux.Vars(r)["machineUid"]},
+		Status: &models.V1CloudMachineStatus{
+			MaintenanceStatus: &models.V1MachineMaintenanceStatus{
+				Action: "cordon",
+				State:  "Completed",
+			},
+		},
+	})
+}
 
 func getMockAwsCloudConfig() *models.V1AwsCloudConfig {
 	cp := true
@@ -97,14 +153,18 @@ func AwsClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudconfigs/aws/{configUid}/machinePools/{machinePoolName}/machines",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload: &models.V1AwsMachines{
-					Items: []*models.V1AwsMachine{},
-				},
-			},
+			// UID-dispatched — see awsPoolMachinesListHandler for the
+			// AwsMachinesListErrorConfigUID / AwsMachinesListFoundConfigUID
+			// branches used by resolveNodeID tests.
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/aws/{configUid}/machinePools/{machinePoolName}/machines",
+			Handler: awsPoolMachinesListHandler,
+		},
+		{
+			// GetNodeMaintenanceStatusAws — see awsPoolMachineUIDGetHandler.
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/aws/{configUid}/machinePools/{machinePoolName}/machines/{machineUid}",
+			Handler: awsPoolMachineUIDGetHandler,
 		},
 	}
 }

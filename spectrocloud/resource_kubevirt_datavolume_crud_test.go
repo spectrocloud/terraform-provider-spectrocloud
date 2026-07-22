@@ -71,6 +71,75 @@ func TestResourceKubevirtDataVolumeRead_ValidNoMatch(t *testing.T) {
 	assert.False(t, diags.HasError(), "diags: %+v", diags)
 }
 
+// TestResourceKubevirtDataVolumeCreate exercises the success path: GetCluster
+// resolves against the mock cluster fixture, CreateDataVolume hits the
+// PUT .../addVolume route (204 No Content), and the ID gets built from the
+// resulting metadata.
+func TestResourceKubevirtDataVolumeCreate(t *testing.T) {
+	d := resourceKubevirtDataVolume().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	_ = d.Set("cluster_uid", "test-cluster-uid")
+	_ = d.Set("vm_name", "test-vm")
+	_ = d.Set("vm_namespace", "default")
+	_ = d.Set("metadata", []interface{}{
+		map[string]interface{}{
+			"name":      "boot-vol",
+			"namespace": "default",
+		},
+	})
+
+	diags := resourceKubevirtDataVolumeCreate(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+	assert.NotEmpty(t, d.Id())
+}
+
+// TestResourceKubevirtDataVolumeCreate_GetClusterError exercises the early
+// GetCluster error branch via the negative mock client.
+func TestResourceKubevirtDataVolumeCreate_GetClusterError(t *testing.T) {
+	d := resourceKubevirtDataVolume().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	_ = d.Set("cluster_uid", "test-cluster-uid")
+	_ = d.Set("vm_name", "test-vm")
+	_ = d.Set("vm_namespace", "default")
+
+	diags := resourceKubevirtDataVolumeCreate(context.Background(), d, unitTestMockAPINegativeClient)
+	assert.True(t, diags.HasError())
+}
+
+// TestResourceKubevirtDataVolumeUpdate — Update is implemented as Delete
+// followed by Create, so a single end-to-end call exercises both.
+func TestResourceKubevirtDataVolumeUpdate(t *testing.T) {
+	d := resourceKubevirtDataVolume().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	_ = d.Set("cluster_uid", "test-cluster-uid")
+	_ = d.Set("vm_name", "test-vm")
+	_ = d.Set("vm_namespace", "default")
+	_ = d.Set("metadata", []interface{}{
+		map[string]interface{}{
+			"name":      "boot-vol",
+			"namespace": "default",
+		},
+	})
+	// IdPartsDV expects: context/clusterUid/vmNamespace/vmName/volName
+	d.SetId("project/test-cluster-uid/default/test-vm/boot-vol")
+
+	diags := resourceKubevirtDataVolumeUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+	// Create (the second half of Update) rebuilds the ID.
+	assert.NotEmpty(t, d.Id())
+}
+
+// TestResourceKubevirtDataVolumeUpdate_DeleteError — Delete fails first (bad
+// ID), so Create is never reached.
+func TestResourceKubevirtDataVolumeUpdate_DeleteError(t *testing.T) {
+	d := resourceKubevirtDataVolume().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	d.SetId("only-two/parts")
+
+	diags := resourceKubevirtDataVolumeUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError())
+}
+
 // TestResourceKubevirtDataVolumeRead_ValidMatch — valid ID with metadata
 // name matching the mock's "boot-vol" fixture, so the flatten branch is
 // entered.

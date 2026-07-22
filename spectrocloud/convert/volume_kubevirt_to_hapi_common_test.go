@@ -4,7 +4,11 @@ import (
 	"math"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"github.com/spectrocloud/terraform-provider-spectrocloud/spectrocloud/kubevirt/schema/datavolume"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestExpandInt64FromInterface covers each branch of the switch, plus the
@@ -34,4 +38,93 @@ func TestExpandInt64FromInterface(t *testing.T) {
 			assert.Equal(t, tt.want, expandInt64FromInterface(tt.in))
 		})
 	}
+}
+
+func TestExpandDataVolumeMetadataToVM(t *testing.T) {
+	t.Run("empty metadata returns empty object meta", func(t *testing.T) {
+		d := schema.TestResourceDataRaw(t, datavolume.DataVolumeFields(), map[string]interface{}{
+			"cluster_context": "project",
+		})
+		got := expandDataVolumeMetadataToVM(d)
+		require.NotNil(t, got)
+		assert.Empty(t, got.Name)
+	})
+
+	t.Run("populated metadata", func(t *testing.T) {
+		d := schema.TestResourceDataRaw(t, datavolume.DataVolumeFields(), map[string]interface{}{
+			"cluster_context": "project",
+			"metadata": []interface{}{
+				map[string]interface{}{
+					"name":      "boot-vol",
+					"namespace": "default",
+					"labels": map[string]interface{}{
+						"app": "demo",
+					},
+					"annotations": map[string]interface{}{
+						"note": "test",
+					},
+				},
+			},
+		})
+		got := expandDataVolumeMetadataToVM(d)
+		require.NotNil(t, got)
+		assert.Equal(t, "boot-vol", got.Name)
+		assert.Equal(t, "default", got.Namespace)
+		assert.Equal(t, map[string]string{"app": "demo"}, got.Labels)
+		assert.Equal(t, map[string]string{"note": "test"}, got.Annotations)
+	})
+}
+
+func TestToHapiVolume(t *testing.T) {
+	t.Run("minimal input succeeds", func(t *testing.T) {
+		d := schema.TestResourceDataRaw(t, datavolume.DataVolumeFields(), map[string]interface{}{
+			"cluster_context": "project",
+			"metadata": []interface{}{
+				map[string]interface{}{
+					"name":      "boot-vol",
+					"namespace": "default",
+				},
+			},
+		})
+		opts := &models.V1VMAddVolumeOptions{}
+		got, err := ToHapiVolume(d, opts)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Same(t, opts, got.AddVolumeOptions)
+		assert.True(t, got.Persist)
+		require.NotNil(t, got.DataVolumeTemplate)
+		require.NotNil(t, got.DataVolumeTemplate.Metadata)
+		assert.Equal(t, "boot-vol", got.DataVolumeTemplate.Metadata.Name)
+		require.NotNil(t, got.DataVolumeTemplate.Spec)
+	})
+
+	t.Run("populated spec", func(t *testing.T) {
+		d := schema.TestResourceDataRaw(t, datavolume.DataVolumeFields(), map[string]interface{}{
+			"cluster_context": "project",
+			"metadata": []interface{}{
+				map[string]interface{}{
+					"name":      "boot-vol",
+					"namespace": "default",
+				},
+			},
+			"spec": []interface{}{
+				map[string]interface{}{
+					"content_type": "kubevirt",
+					"source": []interface{}{
+						map[string]interface{}{
+							"blank": []interface{}{
+								map[string]interface{}{},
+							},
+						},
+					},
+				},
+			},
+		})
+		got, err := ToHapiVolume(d, nil)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Nil(t, got.AddVolumeOptions)
+		require.NotNil(t, got.DataVolumeTemplate.Spec)
+		assert.Equal(t, "kubevirt", got.DataVolumeTemplate.Spec.ContentType)
+	})
 }

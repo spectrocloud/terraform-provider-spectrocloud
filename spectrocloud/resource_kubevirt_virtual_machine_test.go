@@ -1023,6 +1023,86 @@ func TestResourceVirtualMachineActions_CaseInsensitive(t *testing.T) {
 // path against the /v1/spectroclusters/{uid}/vms/{vmName} mock in
 // routes/mockKubevirtVM.go. IdParts requires the ID to have exactly 4
 // slash-separated segments.
+// TestResourceKubevirtVirtualMachineCreate exercises the non-clone success
+// path: GetCluster resolves, FromResourceData builds the hapi VM, and
+// CreateVirtualMachine hits the mock POST /v1/spectroclusters/{uid}/vms
+// route (which echoes back "test-vm").
+func TestResourceKubevirtVirtualMachineCreate(t *testing.T) {
+	d := resourceKubevirtVirtualMachine().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	_ = d.Set("cluster_uid", "test-cluster-uid")
+	_ = d.Set("name", "test-vm")
+	_ = d.Set("namespace", "default")
+
+	diags := resourceKubevirtVirtualMachineCreate(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+	assert.NotEmpty(t, d.Id())
+}
+
+// TestResourceKubevirtVirtualMachineCreate_GetClusterError exercises the
+// early GetCluster error branch via the negative mock client.
+func TestResourceKubevirtVirtualMachineCreate_GetClusterError(t *testing.T) {
+	d := resourceKubevirtVirtualMachine().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	_ = d.Set("cluster_uid", "test-cluster-uid")
+	_ = d.Set("name", "test-vm")
+	_ = d.Set("namespace", "default")
+
+	diags := resourceKubevirtVirtualMachineCreate(context.Background(), d, unitTestMockAPINegativeClient)
+	assert.True(t, diags.HasError())
+}
+
+// TestResourceKubevirtVirtualMachineCreate_Clone exercises the
+// base_vm_name/clone branch. There's no mock route for the clone endpoint,
+// so CloneVirtualMachine returns a clean 404 error — that still exercises
+// the branch dispatch.
+func TestResourceKubevirtVirtualMachineCreate_Clone(t *testing.T) {
+	d := resourceKubevirtVirtualMachine().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	_ = d.Set("cluster_uid", "test-cluster-uid")
+	_ = d.Set("name", "test-vm")
+	_ = d.Set("namespace", "default")
+	_ = d.Set("base_vm_name", "source-vm")
+
+	diags := resourceKubevirtVirtualMachineCreate(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError(), "diags: %+v", diags)
+}
+
+// TestResourceVirtualMachineUpdate exercises the main Update success path:
+// GetVirtualMachine, FromResourceData, GetCluster, UpdateVirtualMachine and
+// the final Read.
+func TestResourceVirtualMachineUpdate(t *testing.T) {
+	d := resourceKubevirtVirtualMachine().TestResourceData()
+	_ = d.Set("cluster_context", "project")
+	_ = d.Set("cluster_uid", "test-cluster-uid")
+	_ = d.Set("name", "test-vm")
+	_ = d.Set("namespace", "default")
+	d.SetId("project/test-cluster-uid/default/test-vm")
+
+	diags := resourceVirtualMachineUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+}
+
+// TestResourceVirtualMachineUpdate_BadID exercises the malformed-ID early
+// return.
+func TestResourceVirtualMachineUpdate_BadID(t *testing.T) {
+	d := resourceKubevirtVirtualMachine().TestResourceData()
+	d.SetId("only-two/parts")
+
+	diags := resourceVirtualMachineUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError())
+}
+
+// TestResourceVirtualMachineUpdate_GetVirtualMachineError exercises the
+// GetVirtualMachine error branch via the negative mock client.
+func TestResourceVirtualMachineUpdate_GetVirtualMachineError(t *testing.T) {
+	d := resourceKubevirtVirtualMachine().TestResourceData()
+	d.SetId("project/test-cluster-uid/default/test-vm")
+
+	diags := resourceVirtualMachineUpdate(context.Background(), d, unitTestMockAPINegativeClient)
+	assert.True(t, diags.HasError())
+}
+
 func TestResourceKubevirtVirtualMachineRead(t *testing.T) {
 	d := resourceKubevirtVirtualMachine().TestResourceData()
 	_ = d.Set("cluster_context", "project")

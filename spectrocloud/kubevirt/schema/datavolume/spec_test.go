@@ -537,6 +537,34 @@ func TestFlattenDataVolumeSpec_WithBothPVCAndStorage(t *testing.T) {
 	assert.Contains(t, flattened, "storage")
 }
 
+func TestLabelSelectorK8sToModel(t *testing.T) {
+	t.Run("nil input returns nil", func(t *testing.T) {
+		assert.Nil(t, labelSelectorK8sToModel(nil))
+	})
+
+	t.Run("populated input", func(t *testing.T) {
+		in := &metav1.LabelSelector{
+			MatchLabels: map[string]string{"type": "ssd"},
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      "zone",
+					Operator: metav1.LabelSelectorOpIn,
+					Values:   []string{"us-west-1a", "us-west-1b"},
+				},
+			},
+		}
+		got := labelSelectorK8sToModel(in)
+		require.NotNil(t, got)
+		assert.Equal(t, map[string]string{"type": "ssd"}, got.MatchLabels)
+		require.Len(t, got.MatchExpressions, 1)
+		require.NotNil(t, got.MatchExpressions[0].Key)
+		require.NotNil(t, got.MatchExpressions[0].Operator)
+		assert.Equal(t, "zone", *got.MatchExpressions[0].Key)
+		assert.Equal(t, string(metav1.LabelSelectorOpIn), *got.MatchExpressions[0].Operator)
+		assert.Equal(t, []string{"us-west-1a", "us-west-1b"}, got.MatchExpressions[0].Values)
+	})
+}
+
 func TestFlattenDataVolumeSpec_WithBlankSource(t *testing.T) {
 	input := &models.V1VMDataVolumeSpec{
 		Source: &models.V1VMDataVolumeSource{

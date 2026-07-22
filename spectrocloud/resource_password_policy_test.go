@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -268,21 +269,72 @@ func TestResourcePasswordPolicyCRUDNegative(t *testing.T) {
 	})
 }
 
+// passwordPolicyDiffFixture drives Resource.Diff (which runs the registered
+// CustomizeDiff internally) against a brand new resource (nil old state) built
+// from cfg. This is the same pattern proven out in
+// resource_cluster_profile_test.go's customizeDiffFixture: Resource.Diff builds
+// a real *schema.ResourceDiff internally, which a naive &schema.ResourceDiff{}
+// literal cannot do since its fields are unexported.
+func passwordPolicyDiffFixture(cfg map[string]interface{}) (*terraform.InstanceDiff, error) {
+	r := resourcePasswordPolicy()
+	return r.Diff(context.Background(), nil, terraform.NewResourceConfigRaw(cfg), unitTestMockAPIClient)
+}
+
 // TestResourcePasswordPolicyCustomizeDiff pins each branch of the
 // CustomizeDiff validator — the "regex + individual mins" conflict, the
 // "regex requires expiry" and "regex requires reminder" required-field
 // checks, and the passthrough (no regex → no error).
 func TestResourcePasswordPolicyCustomizeDiff(t *testing.T) {
-	// This is called by Terraform against a *schema.ResourceDiff — we can't
-	// build a real ResourceDiff outside a full plan cycle, but the function
-	// only reads via diff.Get(), which TestResourceData satisfies via its
-	// own Get(). Cast via an interface adapter isn't clean either, so
-	// exercise the branches through the pure toPasswordPolicy path (regex
-	// on/off) which is what actually reaches the API — and check the
-	// CustomizeDiff signature/wiring separately by importing it doesn't
-	// panic. Keeping this test minimal avoids relying on unexported
-	// Terraform SDK types.
-	assert.NotNil(t, resourcePasswordPolicyCustomizeDiff, "CustomizeDiff is wired")
+	r := resourcePasswordPolicy()
+	assert.NotNil(t, r.CustomizeDiff, "CustomizeDiff is wired")
+
+	t.Run("regex conflicts with min_password_length", func(t *testing.T) {
+		_, err := passwordPolicyDiffFixture(map[string]interface{}{
+			"password_regex":      "^[a-z]+$",
+			"min_password_length": 8,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "password_regex cannot be used together with min_password_length")
+	})
+
+	t.Run("regex requires password_expiry_days", func(t *testing.T) {
+		_, err := passwordPolicyDiffFixture(map[string]interface{}{
+			"password_regex":       "^[a-z]+$",
+			"password_expiry_days": 0,
+			"first_reminder_days":  5,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "password_expiry_days is required when using password_regex")
+	})
+
+	t.Run("regex requires first_reminder_days", func(t *testing.T) {
+		_, err := passwordPolicyDiffFixture(map[string]interface{}{
+			"password_regex":       "^[a-z]+$",
+			"password_expiry_days": 30,
+			"first_reminder_days":  0,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "first_reminder_days is required when using password_regex")
+	})
+
+	t.Run("regex with all required fields set is valid", func(t *testing.T) {
+		diff, err := passwordPolicyDiffFixture(map[string]interface{}{
+			"password_regex":       "^[a-z]+$",
+			"password_expiry_days": 30,
+			"first_reminder_days":  5,
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, diff)
+	})
+
+	t.Run("empty regex is a passthrough regardless of min fields", func(t *testing.T) {
+		diff, err := passwordPolicyDiffFixture(map[string]interface{}{
+			"password_regex":      "",
+			"min_password_length": 10,
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, diff)
+	})
 }
 
 // TestResourcePasswordPolicyImport covers the happy path (matching tenant

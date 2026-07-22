@@ -1,6 +1,7 @@
 package spectrocloud
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -1232,4 +1233,38 @@ func TestExtractManifestURL(t *testing.T) {
 			assert.Equal(t, tt.expected, result, "Extracted manifest URL should match expected")
 		})
 	}
+}
+
+// ---------------------------------------------------------------------------
+// resourceClusterBrownfieldImportCreate (0%)
+//
+// There's no mock route for POST /v1/spectroclusters/generic/import (the
+// endpoint ImportSpectroClusterGeneric hits), so the "generic" cloud_type
+// case (which is also the `default:` switch branch, covering both with one
+// test) 404s and the function returns a clean error *before* reaching the
+// hardcoded `time.Sleep(5 * time.Second)` later in the function body — so
+// this test stays fast despite that sleep existing in the source.
+// ---------------------------------------------------------------------------
+
+func TestResourceClusterBrownfieldImportCreate_GenericNoRoute(t *testing.T) {
+	d := resourceClusterBrownfield().TestResourceData()
+	_ = d.Set("name", "test-brownfield-cluster")
+	_ = d.Set("cloud_type", "generic")
+	_ = d.Set("context", "project")
+
+	diags := resourceClusterBrownfieldImportCreate(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError())
+}
+
+func TestResourceClusterBrownfieldImportCreate_DefaultBranchNoRoute(t *testing.T) {
+	// Unrecognized cloud_type falls to the same `default:` branch as
+	// "generic" — same ImportSpectroClusterGeneric call, same missing
+	// route, same clean error before the 5s sleep.
+	d := resourceClusterBrownfield().TestResourceData()
+	_ = d.Set("name", "test-brownfield-cluster")
+	_ = d.Set("cloud_type", "not-a-real-cloud-type")
+	_ = d.Set("context", "project")
+
+	diags := resourceClusterBrownfieldImportCreate(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError())
 }

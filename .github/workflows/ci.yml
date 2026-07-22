@@ -73,6 +73,17 @@ jobs:
           echo "Total coverage: ${TOTAL}"
           echo "=========================================="
 
+      - name: Enforce coverage floor
+        if: env.TOTAL_COVERAGE != ''
+        run: |
+          THRESHOLD=$(cat .github/coverage-threshold)
+          CURRENT=$(echo "${TOTAL_COVERAGE}" | tr -d '%')
+          echo "Coverage floor: ${THRESHOLD}%, current: ${CURRENT}%"
+          awk -v cur="$CURRENT" -v min="$THRESHOLD" 'BEGIN { exit !(cur >= min) }' || {
+            echo "::error::Total coverage ${CURRENT}% dropped below the required floor of ${THRESHOLD}% (see .github/coverage-threshold). Add tests or, if this is an intentional baseline update, bump the threshold file." >&2
+            exit 1
+          }
+
       - name: Generate HTML coverage report
         if: always() && hashFiles('profile.cov') != ''
         run: go tool cover -html=profile.cov -o coverage.html

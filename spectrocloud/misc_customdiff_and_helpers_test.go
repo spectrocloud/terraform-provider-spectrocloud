@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,16 +64,162 @@ func TestResourceApplicationRead_BadID(t *testing.T) {
 // resource_cluster_eks — resourceClusterEksCustomizeDiff at 0% (wired-check)
 // ---------------------------------------------------------------------------
 
-func TestResourceClusterEksCustomizeDiffWired(t *testing.T) {
-	assert.NotNil(t, resourceClusterEks().CustomizeDiff, "EKS CustomizeDiff must be wired")
+// TestResourceClusterEksCustomizeDiff drives the 2-line
+// resourceClusterEksCustomizeDiff wrapper through a real Resource.Diff cycle
+// so the wrapper itself (not just its already-tested inner
+// validateEksMachinePoolsAutoscalingCount helper) gets attributed coverage.
+func TestResourceClusterEksCustomizeDiff(t *testing.T) {
+	r := resourceClusterEks()
+	assert.NotNil(t, r.CustomizeDiff, "EKS CustomizeDiff must be wired")
+
+	_, err := r.Diff(context.Background(), nil, terraform.NewResourceConfigRaw(map[string]interface{}{
+		"cloud_account_id": "test-account",
+	}), unitTestMockAPIClient)
+	require.NoError(t, err)
 }
 
 // ---------------------------------------------------------------------------
 // resource_audit_trail CustomizeDiff wired
 // ---------------------------------------------------------------------------
 
-func TestResourceAuditTrailCustomizeDiffWired(t *testing.T) {
-	assert.NotNil(t, resourceAuditTrail().CustomizeDiff, "audit trail CustomizeDiff must be wired")
+// auditTrailDiffFixture drives Resource.Diff (which runs the registered
+// resourceAuditTrailCustomizeDiff internally) against a brand new resource
+// (nil old state) built from cfg.
+func auditTrailDiffFixture(cfg map[string]interface{}) (*terraform.InstanceDiff, error) {
+	r := resourceAuditTrail()
+	return r.Diff(context.Background(), nil, terraform.NewResourceConfigRaw(cfg), unitTestMockAPIClient)
+}
+
+func TestResourceAuditTrailCustomizeDiff(t *testing.T) {
+	r := resourceAuditTrail()
+	assert.NotNil(t, r.CustomizeDiff, "audit trail CustomizeDiff must be wired")
+
+	t.Run("cloudwatch type without cloudwatch block errors", func(t *testing.T) {
+		_, err := auditTrailDiffFixture(map[string]interface{}{
+			"name": "at1",
+			"type": "cloudwatch",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "`cloudwatch` block is required when `type` is `cloudwatch`")
+	})
+
+	t.Run("cloudwatch type with splunk also set errors", func(t *testing.T) {
+		_, err := auditTrailDiffFixture(map[string]interface{}{
+			"name": "at1",
+			"type": "cloudwatch",
+			"cloudwatch": []interface{}{
+				map[string]interface{}{
+					"group":           "g",
+					"region":          "us-east-1",
+					"credential_type": "secret",
+					"access_key":      "ak",
+					"secret_key":      "sk",
+				},
+			},
+			"splunk": []interface{}{
+				map[string]interface{}{
+					"hec_url": "https://splunk.example.com",
+					"token":   "tok",
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "`splunk` block must not be set when `type` is `cloudwatch`")
+	})
+
+	t.Run("cloudwatch secret credential_type missing keys errors", func(t *testing.T) {
+		_, err := auditTrailDiffFixture(map[string]interface{}{
+			"name": "at1",
+			"type": "cloudwatch",
+			"cloudwatch": []interface{}{
+				map[string]interface{}{
+					"group":           "g",
+					"region":          "us-east-1",
+					"credential_type": "secret",
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "`access_key` and `secret_key` are required when `credential_type` is `secret`")
+	})
+
+	t.Run("cloudwatch sts credential_type missing arn errors", func(t *testing.T) {
+		_, err := auditTrailDiffFixture(map[string]interface{}{
+			"name": "at1",
+			"type": "cloudwatch",
+			"cloudwatch": []interface{}{
+				map[string]interface{}{
+					"group":           "g",
+					"region":          "us-east-1",
+					"credential_type": "sts",
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "`arn` is required when `credential_type` is `sts`")
+	})
+
+	t.Run("valid cloudwatch config has no error", func(t *testing.T) {
+		diff, err := auditTrailDiffFixture(map[string]interface{}{
+			"name": "at1",
+			"type": "cloudwatch",
+			"cloudwatch": []interface{}{
+				map[string]interface{}{
+					"group":           "g",
+					"region":          "us-east-1",
+					"credential_type": "sts",
+					"arn":             "arn:aws:iam::123456789012:role/audit",
+				},
+			},
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, diff)
+	})
+
+	t.Run("splunk type without splunk block errors", func(t *testing.T) {
+		_, err := auditTrailDiffFixture(map[string]interface{}{
+			"name": "at1",
+			"type": "splunk",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "`splunk` block is required when `type` is `splunk`")
+	})
+
+	t.Run("splunk type with cloudwatch also set errors", func(t *testing.T) {
+		_, err := auditTrailDiffFixture(map[string]interface{}{
+			"name": "at1",
+			"type": "splunk",
+			"splunk": []interface{}{
+				map[string]interface{}{
+					"hec_url": "https://splunk.example.com",
+					"token":   "tok",
+				},
+			},
+			"cloudwatch": []interface{}{
+				map[string]interface{}{
+					"group":  "g",
+					"region": "us-east-1",
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "`cloudwatch` block must not be set when `type` is `splunk`")
+	})
+
+	t.Run("valid splunk config has no error", func(t *testing.T) {
+		diff, err := auditTrailDiffFixture(map[string]interface{}{
+			"name": "at1",
+			"type": "splunk",
+			"splunk": []interface{}{
+				map[string]interface{}{
+					"hec_url": "https://splunk.example.com",
+					"token":   "tok",
+				},
+			},
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, diff)
+	})
 }
 
 // ---------------------------------------------------------------------------
