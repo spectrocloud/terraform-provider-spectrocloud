@@ -18,6 +18,10 @@ const MockGcpCloudAccountUID = "test-gcp-account-id-1"
 // the function).
 const GcpCloudConfigGetErrorUID = "gcp-cloud-config-get-error"
 
+// GcpCloudConfigUpdateErrorUID drives the UpdateCloudConfigGcp API-error
+// branch inside resourceClusterGcpUpdate's cloud_config HasChange block.
+const GcpCloudConfigUpdateErrorUID = "gcp-cloud-config-update-error"
+
 // gcpCloudConfigGetHandler serves GET /v1/cloudconfigs/gcp/{configUid},
 // dispatching on the config UID so resourceClusterGcpUpdate's
 // GetCloudConfigGcp error branch can be exercised.
@@ -31,6 +35,21 @@ func gcpCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(getMockGcpCloudConfig())
+}
+
+// gcpCloudConfigUpdateHandler serves PUT
+// /v1/cloudconfigs/gcp/{configUid}/clusterConfig, dispatching on the config
+// UID so resourceClusterGcpUpdate's UpdateCloudConfigGcp error branch can be
+// exercised.
+func gcpCloudConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == GcpCloudConfigUpdateErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to update gcp cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // getMockGcpCloudConfig returns the payload the mock's GET
@@ -111,12 +130,11 @@ func GcpClusterRoutes() []Route {
 			Handler: gcpCloudConfigGetHandler,
 		},
 		{
-			Method: "PUT",
-			Path:   "/v1/cloudconfigs/gcp/{configUid}/clusterConfig",
-			Response: ResponseData{
-				StatusCode: http.StatusNoContent,
-				Payload:    nil,
-			},
+			// UID-dispatched — see gcpCloudConfigUpdateHandler for the
+			// GcpCloudConfigUpdateErrorUID branch.
+			Method:  "PUT",
+			Path:    "/v1/cloudconfigs/gcp/{configUid}/clusterConfig",
+			Handler: gcpCloudConfigUpdateHandler,
 		},
 		{
 			Method: "POST",

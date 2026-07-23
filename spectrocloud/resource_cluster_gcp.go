@@ -159,7 +159,6 @@ func resourceClusterGcp() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -484,6 +483,15 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
+
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		cloudConfigEntity := toCloudConfigGcp(cloudConfig)
+		if err := c.UpdateCloudConfigGcp(cloudConfigId, cloudConfigEntity); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	CloudConfig, err := c.GetCloudConfigGcp(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -607,6 +615,19 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster, nil
+}
+
+func toCloudConfigGcp(cloudConfig map[string]interface{}) *models.V1GcpCloudClusterConfigEntity {
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
+
+	return &models.V1GcpCloudClusterConfigEntity{
+		ClusterConfig: &models.V1GcpClusterConfig{
+			Network:                  cloudConfig["network"].(string),
+			Project:                  types.Ptr(cloudConfig["project"].(string)),
+			Region:                   types.Ptr(cloudConfig["region"].(string)),
+			OverrideClusterAPIConfig: overrideClusterAPIConfig,
+		},
+	}
 }
 
 func toMachinePoolGcp(machinePool interface{}) (*models.V1GcpMachinePoolConfigEntity, error) {
