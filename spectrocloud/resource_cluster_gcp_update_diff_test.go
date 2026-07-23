@@ -12,18 +12,13 @@ import (
 	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 )
 
-// resourceClusterGcpUpdate's machine_pool branch is gated behind
-// d.HasChange("machine_pool"), which the Set-then-Set pattern used by
+// resourceClusterGcpUpdate's cloud_config/machine_pool branches are gated
+// behind d.HasChange(...), which the Set-then-Set pattern used by
 // resource_cluster_gcp_wave2_test.go never fires (see
 // resource_cluster_eks_update_diff_test.go's buildEksUpdateResourceData for
 // the rationale). buildGcpUpdateResourceData builds a real InstanceState +
 // config diff via Resource.Diff so HasChange/GetChange behave the way
 // Terraform's own apply pipeline would produce them.
-//
-// Note: GCP's cloud_config block is entirely ForceNew (see
-// resource_cluster_gcp.go's "cloud_config" schema entry), and unlike vSphere,
-// resourceClusterGcpUpdate has no d.HasChange("cloud_config") branch at all
-// — so there's nothing to drive there.
 func buildGcpUpdateResourceData(t *testing.T, oldRaw, newRaw map[string]interface{}, configUID string) *schema.ResourceData {
 	t.Helper()
 	res := resourceClusterGcp()
@@ -111,6 +106,42 @@ func TestResourceClusterGcpUpdate_GetCloudConfigError(t *testing.T) {
 
 	d := buildUpdateResourceData(resourceClusterGcp(), gcpClusterID,
 		base, simpleDiff("cluster_timezone", "", "America/New_York"))
+
+	diags := resourceClusterGcpUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError())
+}
+
+// TestResourceClusterGcpUpdate_CloudConfigDiff exercises the
+// d.HasChange("cloud_config") branch's happy path: toCloudConfigGcp +
+// UpdateCloudConfigGcp are invoked with the new override_cluster_api_config
+// value. project/region/network are unchanged, so this must not force a
+// replace.
+func TestResourceClusterGcpUpdate_CloudConfigDiff(t *testing.T) {
+	pool := []interface{}{defaultGcpMachinePoolRaw(nil)}
+	oldRaw := baseGcpRaw(gcpCloudConfigRawMap(nil), pool)
+	newRaw := baseGcpRaw(gcpCloudConfigRawMap(map[string]interface{}{
+		"override_cluster_api_config": "gcpClusterConfig:\n  spec:\n    releaseChannel: regular\n",
+	}), pool)
+
+	d := buildGcpUpdateResourceData(t, oldRaw, newRaw, gcpCloudConfigUID)
+	require.True(t, d.HasChange("cloud_config"))
+
+	diags := resourceClusterGcpUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+}
+
+// TestResourceClusterGcpUpdate_CloudConfigUpdateError exercises the
+// UpdateCloudConfigGcp API-error branch inside the cloud_config HasChange
+// block.
+func TestResourceClusterGcpUpdate_CloudConfigUpdateError(t *testing.T) {
+	pool := []interface{}{defaultGcpMachinePoolRaw(nil)}
+	oldRaw := baseGcpRaw(gcpCloudConfigRawMap(nil), pool)
+	newRaw := baseGcpRaw(gcpCloudConfigRawMap(map[string]interface{}{
+		"override_cluster_api_config": "gcpClusterConfig:\n  spec:\n    releaseChannel: regular\n",
+	}), pool)
+
+	d := buildGcpUpdateResourceData(t, oldRaw, newRaw, routes.GcpCloudConfigUpdateErrorUID)
+	require.True(t, d.HasChange("cloud_config"))
 
 	diags := resourceClusterGcpUpdate(context.Background(), d, unitTestMockAPIClient)
 	assert.True(t, diags.HasError())
