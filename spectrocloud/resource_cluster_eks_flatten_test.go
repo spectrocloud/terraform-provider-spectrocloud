@@ -397,6 +397,127 @@ func TestFlattenClusterConfigsEKS(t *testing.T) {
 	}
 }
 
+func TestFlattenFargateProfilesEks(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    []*models.V1FargateProfile
+		expected []interface{}
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: []interface{}{},
+		},
+		{
+			name:     "empty input",
+			input:    []*models.V1FargateProfile{},
+			expected: []interface{}{},
+		},
+		{
+			name: "single profile with one selector",
+			input: []*models.V1FargateProfile{
+				{
+					Name:      types.Ptr("fargate-1"),
+					SubnetIds: []string{"subnet-1", "subnet-2"},
+					AdditionalTags: map[string]string{
+						"env": "prod",
+					},
+					Selectors: []*models.V1FargateSelector{
+						{
+							Namespace: types.Ptr("default"),
+							Labels:    map[string]string{"app": "web"},
+						},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":    types.Ptr("fargate-1"),
+					"subnets": []string{"subnet-1", "subnet-2"},
+					"additional_tags": map[string]string{
+						"env": "prod",
+					},
+					"selector": []interface{}{
+						map[string]interface{}{
+							"namespace": types.Ptr("default"),
+							"labels":    map[string]string{"app": "web"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "profile with zero selectors",
+			input: []*models.V1FargateProfile{
+				{
+					Name:           types.Ptr("fargate-empty-selector"),
+					SubnetIds:      []string{},
+					AdditionalTags: map[string]string{},
+					Selectors:      []*models.V1FargateSelector{},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-empty-selector"),
+					"subnets":         []string{},
+					"additional_tags": map[string]string{},
+					"selector":        []interface{}{},
+				},
+			},
+		},
+		{
+			name: "multiple profiles with multiple selectors",
+			input: []*models.V1FargateProfile{
+				{
+					Name:           types.Ptr("fargate-1"),
+					SubnetIds:      []string{"subnet-1"},
+					AdditionalTags: map[string]string{"a": "1"},
+					Selectors: []*models.V1FargateSelector{
+						{Namespace: types.Ptr("ns1"), Labels: map[string]string{"l1": "v1"}},
+						{Namespace: types.Ptr("ns2"), Labels: map[string]string{"l2": "v2"}},
+					},
+				},
+				{
+					Name:           types.Ptr("fargate-2"),
+					SubnetIds:      []string{"subnet-2"},
+					AdditionalTags: map[string]string{"b": "2"},
+					Selectors: []*models.V1FargateSelector{
+						{Namespace: types.Ptr("ns3"), Labels: map[string]string{"l3": "v3"}},
+					},
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-1"),
+					"subnets":         []string{"subnet-1"},
+					"additional_tags": map[string]string{"a": "1"},
+					"selector": []interface{}{
+						map[string]interface{}{"namespace": types.Ptr("ns1"), "labels": map[string]string{"l1": "v1"}},
+						map[string]interface{}{"namespace": types.Ptr("ns2"), "labels": map[string]string{"l2": "v2"}},
+					},
+				},
+				map[string]interface{}{
+					"name":            types.Ptr("fargate-2"),
+					"subnets":         []string{"subnet-2"},
+					"additional_tags": map[string]string{"b": "2"},
+					"selector": []interface{}{
+						map[string]interface{}{"namespace": types.Ptr("ns3"), "labels": map[string]string{"l3": "v3"}},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := flattenFargateProfilesEks(tc.input)
+			if !cmp.Equal(result, tc.expected) {
+				t.Errorf("Unexpected result (-want +got):\n%s", cmp.Diff(tc.expected, result))
+			}
+		})
+	}
+}
+
 func TestFlattenClusterConfigsEKSPrivateCIDRS(t *testing.T) {
 	testCases := []struct {
 		name     string

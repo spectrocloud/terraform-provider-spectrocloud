@@ -1,10 +1,32 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
+
+// GkeCloudConfigGetErrorUID drives the GetCloudConfigGke API-error branch
+// inside resourceClusterGkeUpdate (the unconditional fetch at the top of
+// the function).
+const GkeCloudConfigGetErrorUID = "gke-cloud-config-get-error"
+
+// gkeCloudConfigGetHandler serves GET /v1/cloudconfigs/gke/{configUid},
+// dispatching on the config UID so resourceClusterGkeUpdate's
+// GetCloudConfigGke error branch can be exercised.
+func gkeCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == GkeCloudConfigGetErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get gke cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getMockGkeCloudConfig())
+}
 
 // getMockGkeCloudConfig returns the payload for GET
 // /v1/cloudconfigs/gke/{configUid}. GKE reuses V1GcpCloudConfig — see
@@ -60,12 +82,11 @@ func GkeClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudconfigs/gke/{configUid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getMockGkeCloudConfig(),
-			},
+			// UID-dispatched — see gkeCloudConfigGetHandler for the
+			// GkeCloudConfigGetErrorUID branch.
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/gke/{configUid}",
+			Handler: gkeCloudConfigGetHandler,
 		},
 		{
 			Method: "PUT",

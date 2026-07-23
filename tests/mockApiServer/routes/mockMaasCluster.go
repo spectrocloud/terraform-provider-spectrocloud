@@ -1,12 +1,54 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 const MockMaasCloudAccountUID = "test-maas-account-id-1"
+
+// MaasCloudConfigErrorUID drives the GetCloudConfigMaas API-error branch:
+// both the unconditional fetch inside resourceClusterMaasUpdate and the
+// flattenCloudConfigMaas call inside resourceClusterMaasRead hit
+// /v1/cloudconfigs/maas/{configUid}.
+const MaasCloudConfigErrorUID = "maas-cloud-config-error"
+
+// MaasCloudConfigUpdateErrorUID drives the UpdateCloudConfigMaas API-error
+// branch inside resourceClusterMaasUpdate's cloud_config HasChange block.
+const MaasCloudConfigUpdateErrorUID = "maas-cloud-config-update-error"
+
+// maasCloudConfigGetHandler serves GET /v1/cloudconfigs/maas/{configUid},
+// dispatching on the config UID so GetCloudConfigMaas's error branch can be
+// exercised.
+func maasCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == MaasCloudConfigErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get maas cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getMockMaasCloudConfig())
+}
+
+// maasCloudConfigUpdateHandler serves PUT
+// /v1/cloudconfigs/maas/{configUid}/clusterConfig, dispatching on the config
+// UID so resourceClusterMaasUpdate's UpdateCloudConfigMaas error branch can
+// be exercised.
+func maasCloudConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == MaasCloudConfigUpdateErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to update maas cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 // getMockMaasCloudConfig — payload for GET /v1/cloudconfigs/maas/{configUid}.
 // Structure mirrors what prepareMaasClusterResourceData sets so the Read
@@ -67,20 +109,14 @@ func MaasClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudconfigs/maas/{configUid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getMockMaasCloudConfig(),
-			},
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/maas/{configUid}",
+			Handler: maasCloudConfigGetHandler,
 		},
 		{
-			Method: "PUT",
-			Path:   "/v1/cloudconfigs/maas/{configUid}/clusterConfig",
-			Response: ResponseData{
-				StatusCode: http.StatusNoContent,
-				Payload:    nil,
-			},
+			Method:  "PUT",
+			Path:    "/v1/cloudconfigs/maas/{configUid}/clusterConfig",
+			Handler: maasCloudConfigUpdateHandler,
 		},
 		{
 			Method: "POST",

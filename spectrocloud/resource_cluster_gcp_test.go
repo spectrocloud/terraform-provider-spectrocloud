@@ -219,6 +219,60 @@ func TestFlattenClusterConfigsGcp(t *testing.T) {
 	}
 }
 
+func TestFlattenMachinePoolConfigsGcpNil(t *testing.T) {
+	out := flattenMachinePoolConfigsGcp(nil)
+	assert.Equal(t, make([]interface{}, 0), out)
+}
+
+func TestFlattenClusterConfigsGcpOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "GCPCluster:\n  spec:\n    network:\n      autoCreateSubnetworks: false\n"
+	input := &models.V1GcpCloudConfig{
+		Spec: &models.V1GcpCloudConfigSpec{
+			ClusterConfig: &models.V1GcpClusterConfig{
+				OverrideClusterAPIConfig: yaml,
+			},
+		},
+	}
+	out := flattenClusterConfigsGcp(input)
+	require.Len(t, out, 1)
+	assert.Equal(t, yaml, out[0].(map[string]interface{})["override_cluster_api_config"])
+}
+
+func TestFlattenMachinePoolConfigsGcpOverrideKubeadmConfiguration(t *testing.T) {
+	kubeadmYaml := "kubeletExtraArgs:\n  v: \"4\"\n"
+	mp := &models.V1GcpMachinePoolConfig{
+		Name:                         "worker-pool",
+		Size:                         int32(1),
+		IsControlPlane:               BoolPtr(false),
+		InstanceType:                 types.Ptr("n1-standard-4"),
+		RootDeviceSize:               int64(60),
+		Azs:                          []string{"us-central1-a"},
+		OverrideKubeadmConfiguration: kubeadmYaml,
+		UpdateStrategy:               &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+	}
+	out := flattenMachinePoolConfigsGcp([]*models.V1GcpMachinePoolConfig{mp})
+	require.Len(t, out, 1)
+	assert.Equal(t, kubeadmYaml, out[0].(map[string]interface{})["override_kubeadm_configuration"])
+}
+
+func TestToMachinePoolGcpOverrideKubeadmConfiguration(t *testing.T) {
+	m := map[string]interface{}{
+		"control_plane":                  false,
+		"control_plane_as_worker":        false,
+		"azs":                            schema.NewSet(schema.HashString, []interface{}{"us-central1-a"}),
+		"instance_type":                  "n1-standard-2",
+		"disk_size_gb":                   50,
+		"name":                           "pool",
+		"count":                          1,
+		"node_repave_interval":           0,
+		"update_strategy":                "RollingUpdateScaleOut",
+		"override_kubeadm_configuration": "kind: X",
+	}
+	mp, err := toMachinePoolGcp(m)
+	require.NoError(t, err)
+	assert.Equal(t, "kind: X", mp.PoolConfig.OverrideKubeadmConfiguration)
+}
+
 func TestFlattenMachinePoolConfigsGcpOverrideClusterAPIConfig(t *testing.T) {
 	yaml := "GCPMachineTemplate:\n  spec:\n    template:\n      spec:\n        rootDeviceSize: 100\n"
 	mp := &models.V1GcpMachinePoolConfig{

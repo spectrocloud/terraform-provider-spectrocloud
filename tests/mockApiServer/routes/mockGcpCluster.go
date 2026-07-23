@@ -1,8 +1,10 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -10,6 +12,26 @@ import (
 // expect back from flattenCloudConfigGcp. Kept as a constant because
 // the test and the mock have to agree on the string.
 const MockGcpCloudAccountUID = "test-gcp-account-id-1"
+
+// GcpCloudConfigGetErrorUID drives the GetCloudConfigGcp API-error branch
+// inside resourceClusterGcpUpdate (the unconditional fetch at the top of
+// the function).
+const GcpCloudConfigGetErrorUID = "gcp-cloud-config-get-error"
+
+// gcpCloudConfigGetHandler serves GET /v1/cloudconfigs/gcp/{configUid},
+// dispatching on the config UID so resourceClusterGcpUpdate's
+// GetCloudConfigGcp error branch can be exercised.
+func gcpCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == GcpCloudConfigGetErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get gcp cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getMockGcpCloudConfig())
+}
 
 // getMockGcpCloudConfig returns the payload the mock's GET
 // /v1/cloudconfigs/gcp/{configUid} route serves. It mirrors what the
@@ -82,12 +104,11 @@ func GcpClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudconfigs/gcp/{configUid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getMockGcpCloudConfig(),
-			},
+			// UID-dispatched — see gcpCloudConfigGetHandler for the
+			// GcpCloudConfigGetErrorUID branch.
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/gcp/{configUid}",
+			Handler: gcpCloudConfigGetHandler,
 		},
 		{
 			Method: "PUT",

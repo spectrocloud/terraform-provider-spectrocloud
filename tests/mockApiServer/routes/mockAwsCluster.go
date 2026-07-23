@@ -19,7 +19,47 @@ const (
 	AwsMachinesListFoundConfigUID = "aws-machines-list-found"
 	AwsMachinesListFoundNodeName  = "ip-10-0-0-1"
 	AwsMachinesListFoundNodeUID   = "aws-machine-uid-1"
+
+	// AwsCloudConfigGetErrorUID drives the GetCloudConfigAws API-error branch:
+	// both the unconditional fetch inside resourceClusterAwsUpdate and the
+	// fetch inside flattenCloudConfigAws (resourceClusterAwsRead) hit
+	// /v1/cloudconfigs/aws/{configUid}.
+	AwsCloudConfigGetErrorUID = "aws-cloud-config-get-error"
+
+	// AwsCloudConfigUpdateErrorUID drives the UpdateCloudConfigAws API-error
+	// branch inside resourceClusterAwsUpdate's cloud_config HasChange block.
+	AwsCloudConfigUpdateErrorUID = "aws-cloud-config-update-error"
 )
+
+// awsCloudConfigGetHandler serves GET /v1/cloudconfigs/aws/{configUid},
+// dispatching on the config UID so GetCloudConfigAws's error branch can be
+// exercised.
+func awsCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == AwsCloudConfigGetErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get aws cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getMockAwsCloudConfig())
+}
+
+// awsCloudConfigUpdateHandler serves PUT
+// /v1/cloudconfigs/aws/{configUid}/clusterConfig, dispatching on the config
+// UID so resourceClusterAwsUpdate's UpdateCloudConfigAws error branch can be
+// exercised.
+func awsCloudConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == AwsCloudConfigUpdateErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to update aws cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 func awsPoolMachinesListHandler(w http.ResponseWriter, r *http.Request) {
 	configUID := mux.Vars(r)["configUid"]
@@ -113,20 +153,18 @@ func AwsClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudconfigs/aws/{configUid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getMockAwsCloudConfig(),
-			},
+			// UID-dispatched — see awsCloudConfigGetHandler for the
+			// AwsCloudConfigGetErrorUID branch.
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/aws/{configUid}",
+			Handler: awsCloudConfigGetHandler,
 		},
 		{
-			Method: "PUT",
-			Path:   "/v1/cloudconfigs/aws/{configUid}/clusterConfig",
-			Response: ResponseData{
-				StatusCode: http.StatusNoContent,
-				Payload:    nil,
-			},
+			// UID-dispatched — see awsCloudConfigUpdateHandler for the
+			// AwsCloudConfigUpdateErrorUID branch.
+			Method:  "PUT",
+			Path:    "/v1/cloudconfigs/aws/{configUid}/clusterConfig",
+			Handler: awsCloudConfigUpdateHandler,
 		},
 		{
 			Method: "POST",

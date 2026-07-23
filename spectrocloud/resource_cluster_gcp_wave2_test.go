@@ -7,6 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/spectrocloud/terraform-provider-spectrocloud/tests/mockApiServer/routes"
 )
 
 // (test file header) GCP CRUD coverage.
@@ -93,6 +95,29 @@ func TestResourceClusterGcpReadWithMock(t *testing.T) {
 	assert.Greater(t, pools.Len(), 0)
 }
 
+// TestResourceClusterGcpReadClusterDeleted exercises the "cluster == nil"
+// branch: GetCluster returns (nil, nil) once the fixture's State is
+// "Deleted", so Read must clear the resource's ID instead of erroring.
+func TestResourceClusterGcpReadClusterDeleted(t *testing.T) {
+	d := prepareGcpClusterResourceData(t)
+	d.SetId("cluster-uid-deleted-state")
+
+	diags := resourceClusterGcpRead(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+	assert.Equal(t, "", d.Id())
+}
+
+// TestResourceClusterGcpReadCloudTypeMismatch exercises the
+// ValidateCloudType error branch: the default cluster fixture reports
+// CloudType="aws", which resourceClusterGcpRead must reject.
+func TestResourceClusterGcpReadCloudTypeMismatch(t *testing.T) {
+	d := prepareGcpClusterResourceData(t)
+	d.SetId("test-cluster-id")
+
+	diags := resourceClusterGcpRead(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError())
+}
+
 func TestFlattenCloudConfigGcpWithMock(t *testing.T) {
 	// Direct call into flattenCloudConfigGcp to cover the cloud-config
 	// GET → set path. resourceClusterGcpRead exercises the outer edges
@@ -109,6 +134,16 @@ func TestFlattenCloudConfigGcpWithMock(t *testing.T) {
 	require.Len(t, cfg, 1)
 	assert.Equal(t, "us-central1", cfg[0].(map[string]interface{})["region"])
 	assert.Equal(t, "test-gcp-project", cfg[0].(map[string]interface{})["project"])
+}
+
+// TestFlattenCloudConfigGcp_GetCloudConfigError exercises
+// flattenCloudConfigGcp's GetCloudConfigGcp error branch directly.
+func TestFlattenCloudConfigGcp_GetCloudConfigError(t *testing.T) {
+	d := resourceClusterGcp().TestResourceData()
+	c := mustUnitClient(t, false)
+
+	diags := flattenCloudConfigGcp(routes.GcpCloudConfigGetErrorUID, d, c)
+	assert.True(t, diags.HasError())
 }
 
 func TestResourceClusterGcpCreateWithMock(t *testing.T) {

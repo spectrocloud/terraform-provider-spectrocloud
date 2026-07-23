@@ -150,6 +150,16 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 		c.Spec.CloudType = "vsphere"
 		return c, http.StatusOK
 
+	case "test-vsphere-cluster-cloudconfig-error-id":
+		// Drives resourceClusterVsphereRead's GetCloudConfigVsphere error
+		// branch: CloudConfigRef points at VsphereCloudConfigErrorUID so the
+		// subsequent cloud-config fetch fails.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-vsphere-cluster-cloudconfig-error-id"
+		c.Spec.CloudType = "vsphere"
+		c.Spec.CloudConfigRef = &models.V1ObjectReference{UID: VsphereCloudConfigErrorUID}
+		return c, http.StatusOK
+
 	case "test-edge-vsphere-cluster-id":
 		// Batch 3f edge_vsphere counterpart. Edge vSphere shares the
 		// vsphere cloud-config model but the outer cluster reports
@@ -164,6 +174,16 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 		c := getMockSpectroCluster()
 		c.Metadata.UID = "test-maas-cluster-id"
 		c.Spec.CloudType = "maas"
+		return c, http.StatusOK
+
+	case "test-aks-cluster-cloudconfig-error-id":
+		// Drives resourceClusterAksRead's GetCloudConfigAks error branch:
+		// CloudConfigRef points at AksCloudConfigGetErrorUID so the
+		// subsequent cloud-config fetch fails.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-aks-cluster-cloudconfig-error-id"
+		c.Spec.CloudType = "aks"
+		c.Spec.CloudConfigRef = &models.V1ObjectReference{UID: AksCloudConfigGetErrorUID}
 		return c, http.StatusOK
 
 	case "test-edge-native-cluster-id":

@@ -11,9 +11,28 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 )
+
+// TestResourceClusterEksAzSubnetsDiffSuppressFunc directly invokes the
+// inline DiffSuppressFunc closure on cloud_config.az_subnets. Like
+// StateFunc, DiffSuppressFunc is only ever invoked by the SDK during a real
+// Diff computation — a bare TestResourceData() / Set()+Get() round trip
+// never reaches it. Grab the closure off the schema and call it directly.
+func TestResourceClusterEksAzSubnetsDiffSuppressFunc(t *testing.T) {
+	res := resourceClusterEks()
+	cloudConfigElem, ok := res.Schema["cloud_config"].Elem.(*schema.Resource)
+	require.True(t, ok)
+	azSubnets := cloudConfigElem.Schema["az_subnets"]
+	require.NotNil(t, azSubnets.DiffSuppressFunc)
+
+	assert.True(t, azSubnets.DiffSuppressFunc("cloud_config.0.az_subnets", "subnet-1\n", "subnet-1", nil),
+		"trailing newline on either side should be suppressed")
+	assert.False(t, azSubnets.DiffSuppressFunc("cloud_config.0.az_subnets", "subnet-1", "subnet-2", nil),
+		"genuinely different values must not be suppressed")
+}
 
 func TestSetAwsLaunchTemplate(t *testing.T) {
 	testCases := []struct {

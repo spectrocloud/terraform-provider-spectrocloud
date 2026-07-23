@@ -1,15 +1,58 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 const (
 	MockAksCloudAccountUID = "test-azure-account-id-1"
 	MockAksClusterUID      = "test-aks-cluster-id"
+
+	// AksCloudConfigGetErrorUID drives the GetCloudConfigAks API-error
+	// branch: both the unconditional fetch inside resourceClusterAksUpdate
+	// and the fetch inside resourceClusterAksRead hit
+	// /v1/cloudconfigs/aks/{configUid}.
+	AksCloudConfigGetErrorUID = "aks-cloud-config-get-error"
+
+	// AksCloudConfigUpdateErrorUID drives the UpdateCloudConfigAks
+	// API-error branch inside resourceClusterAksUpdate's cloud_config
+	// HasChange block.
+	AksCloudConfigUpdateErrorUID = "aks-cloud-config-update-error"
 )
+
+// aksCloudConfigGetHandler serves GET /v1/cloudconfigs/aks/{configUid},
+// dispatching on the config UID so GetCloudConfigAks's error branch can be
+// exercised.
+func aksCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == AksCloudConfigGetErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get aks cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getMockAksCloudConfig())
+}
+
+// aksCloudConfigUpdateHandler serves PUT
+// /v1/cloudconfigs/aks/{configUid}/clusterConfig, dispatching on the config
+// UID so resourceClusterAksUpdate's UpdateCloudConfigAks error branch can be
+// exercised.
+func aksCloudConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == AksCloudConfigUpdateErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to update aks cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 func getMockAksCloudConfig() *models.V1AzureCloudConfig {
 	region := "eastus"
@@ -74,20 +117,14 @@ func AksClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudconfigs/aks/{configUid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getMockAksCloudConfig(),
-			},
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/aks/{configUid}",
+			Handler: aksCloudConfigGetHandler,
 		},
 		{
-			Method: "PUT",
-			Path:   "/v1/cloudconfigs/aks/{configUid}/clusterConfig",
-			Response: ResponseData{
-				StatusCode: http.StatusNoContent,
-				Payload:    nil,
-			},
+			Method:  "PUT",
+			Path:    "/v1/cloudconfigs/aks/{configUid}/clusterConfig",
+			Handler: aksCloudConfigUpdateHandler,
 		},
 		{
 			Method: "POST",
