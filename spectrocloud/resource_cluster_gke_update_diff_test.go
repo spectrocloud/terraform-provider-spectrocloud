@@ -160,6 +160,66 @@ func TestResourceClusterGkeUpdate_GetCloudConfigError(t *testing.T) {
 	assert.True(t, diags.HasError())
 }
 
+// gkeCloudConfigRaw builds a cloud_config block for buildGkeUpdateResourceData,
+// defaulting to the same project/region as baseGkeUpdateRaw and letting
+// callers layer in override_cluster_api_config changes.
+func gkeCloudConfigRaw(overrides map[string]interface{}) map[string]interface{} {
+	cc := map[string]interface{}{
+		"project": "test-gcp-project",
+		"region":  "us-central1",
+	}
+	for k, v := range overrides {
+		cc[k] = v
+	}
+	return cc
+}
+
+func baseGkeUpdateRawWithCloudConfig(cloudConfig map[string]interface{}, machinePools []interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"name":             "test-gke-cluster",
+		"context":          "project",
+		"cloud_account_id": gkeCloudAccountUID,
+		"cloud_config":     []interface{}{cloudConfig},
+		"machine_pool":     machinePools,
+	}
+}
+
+// TestResourceClusterGkeUpdate_CloudConfigDiff exercises the
+// d.HasChange("cloud_config") branch's happy path: toCloudConfigGke +
+// UpdateCloudConfigGke are invoked with the new override_cluster_api_config
+// value. project/region are unchanged, so this must not force a replace
+// (see the cloud_config schema's ForceNew removal in resource_cluster_gke.go).
+func TestResourceClusterGkeUpdate_CloudConfigDiff(t *testing.T) {
+	pool := []interface{}{defaultGkeMachinePool(map[string]interface{}{"name": "pool-keep"})}
+	oldRaw := baseGkeUpdateRawWithCloudConfig(gkeCloudConfigRaw(nil), pool)
+	newRaw := baseGkeUpdateRawWithCloudConfig(gkeCloudConfigRaw(map[string]interface{}{
+		"override_cluster_api_config": "gcpManagedControlPlane:\n  spec:\n    releaseChannel: regular\n",
+	}), pool)
+
+	d := buildGkeUpdateResourceData(t, oldRaw, newRaw, gkeCloudConfigUID)
+	require.True(t, d.HasChange("cloud_config"))
+
+	diags := resourceClusterGkeUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+}
+
+// TestResourceClusterGkeUpdate_CloudConfigUpdateError exercises the
+// UpdateCloudConfigGke API-error branch inside the cloud_config HasChange
+// block.
+func TestResourceClusterGkeUpdate_CloudConfigUpdateError(t *testing.T) {
+	pool := []interface{}{defaultGkeMachinePool(map[string]interface{}{"name": "pool-keep"})}
+	oldRaw := baseGkeUpdateRawWithCloudConfig(gkeCloudConfigRaw(nil), pool)
+	newRaw := baseGkeUpdateRawWithCloudConfig(gkeCloudConfigRaw(map[string]interface{}{
+		"override_cluster_api_config": "gcpManagedControlPlane:\n  spec:\n    releaseChannel: regular\n",
+	}), pool)
+
+	d := buildGkeUpdateResourceData(t, oldRaw, newRaw, routes.GkeCloudConfigUpdateErrorUID)
+	require.True(t, d.HasChange("cloud_config"))
+
+	diags := resourceClusterGkeUpdate(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError())
+}
+
 // TestResourceClusterGkeUpdate_MachinePoolDiff drives, in a single Update
 // call, all three machine_pool branches gated by
 // d.HasChange("machine_pool"): create (new-pool), update (pool-to-change,
