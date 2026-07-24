@@ -1,13 +1,21 @@
 package routes
 
 import (
-	"github.com/spectrocloud/palette-sdk-go/api/models"
+	"encoding/json"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 const (
 	clusterProfileUID1 = "cluster-profile-import-1"
 	clusterProfileUID2 = "cluster-profile-import-2"
+
+	// clusterProfileGetErrorUID drives the GetClusterProfile error branch inside
+	// setReplaceWithProfileForExisting (cluster_common_profiles.go), which otherwise never
+	// errors against the always-200 static fixture.
+	clusterProfileGetErrorUID = "cluster-profile-get-error-uid"
 )
 
 func getClusterProfilesMetadataResponse() *models.V1ClusterProfilesMetadata {
@@ -83,6 +91,41 @@ func getClusterProfileResponse() *models.V1ClusterProfile {
 			InUseClusters: nil,
 			IsPublished:   true,
 		},
+	}
+}
+
+// clusterProfileGetHandler serves GET /v1/clusterprofiles/{uid} by dispatching on UID.
+// The default branch preserves the original static payload (name
+// "test-cluster-profile-1", Published.Type "cluster") so every pre-existing test keeps
+// passing. clusterProfileUID2 gets its own addon-typed payload matching the name/type it
+// already has as an attached ClusterProfileTemplate in mockCluster.go's default cluster
+// fixture (name "test-cluster-profile-2", type "addon") — needed so computeProfilesToDelete's
+// final defensive GetClusterProfile(oldUID) check (cluster_common_profiles.go) can see a
+// non-infra type and actually mark the profile for deletion instead of always treating
+// every UID as infra (which the single static payload did for every UID before this change).
+func clusterProfileGetHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	if uid == clusterProfileGetErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get cluster profile"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(clusterProfileFixtureFor(uid))
+}
+
+func clusterProfileFixtureFor(uid string) *models.V1ClusterProfile {
+	switch uid {
+	case clusterProfileUID2:
+		p := getClusterProfileResponse()
+		p.Metadata.Name = "test-cluster-profile-2"
+		p.Metadata.UID = clusterProfileUID2
+		p.Spec.Published.Name = "test-cluster-profile-2"
+		p.Spec.Published.Type = "addon"
+		return p
+	default:
+		return getClusterProfileResponse()
 	}
 }
 
@@ -205,12 +248,9 @@ func ClusterProfileRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/clusterprofiles/{uid}",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload:    getClusterProfileResponse(),
-			},
+			Method:  "GET",
+			Path:    "/v1/clusterprofiles/{uid}",
+			Handler: clusterProfileGetHandler,
 		},
 		{
 			Method: "GET",

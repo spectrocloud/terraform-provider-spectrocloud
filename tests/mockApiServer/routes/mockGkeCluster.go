@@ -1,10 +1,51 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
+
+// GkeCloudConfigGetErrorUID drives the GetCloudConfigGke API-error branch
+// inside resourceClusterGkeUpdate (the unconditional fetch at the top of
+// the function).
+const GkeCloudConfigGetErrorUID = "gke-cloud-config-get-error"
+
+// GkeCloudConfigUpdateErrorUID drives the UpdateCloudConfigGke API-error
+// branch inside resourceClusterGkeUpdate's cloud_config HasChange block.
+const GkeCloudConfigUpdateErrorUID = "gke-cloud-config-update-error"
+
+// gkeCloudConfigGetHandler serves GET /v1/cloudconfigs/gke/{configUid},
+// dispatching on the config UID so resourceClusterGkeUpdate's
+// GetCloudConfigGke error branch can be exercised.
+func gkeCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == GkeCloudConfigGetErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get gke cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getMockGkeCloudConfig())
+}
+
+// gkeCloudConfigUpdateHandler serves PUT
+// /v1/cloudconfigs/gke/{configUid}/clusterConfig, dispatching on the config
+// UID so resourceClusterGkeUpdate's UpdateCloudConfigGke error branch can be
+// exercised.
+func gkeCloudConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == GkeCloudConfigUpdateErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to update gke cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 // getMockGkeCloudConfig returns the payload for GET
 // /v1/cloudconfigs/gke/{configUid}. GKE reuses V1GcpCloudConfig — see
@@ -60,20 +101,18 @@ func GkeClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudconfigs/gke/{configUid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getMockGkeCloudConfig(),
-			},
+			// UID-dispatched — see gkeCloudConfigGetHandler for the
+			// GkeCloudConfigGetErrorUID branch.
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/gke/{configUid}",
+			Handler: gkeCloudConfigGetHandler,
 		},
 		{
-			Method: "PUT",
-			Path:   "/v1/cloudconfigs/gke/{configUid}/clusterConfig",
-			Response: ResponseData{
-				StatusCode: http.StatusNoContent,
-				Payload:    nil,
-			},
+			// UID-dispatched — see gkeCloudConfigUpdateHandler for the
+			// GkeCloudConfigUpdateErrorUID branch.
+			Method:  "PUT",
+			Path:    "/v1/cloudconfigs/gke/{configUid}/clusterConfig",
+			Handler: gkeCloudConfigUpdateHandler,
 		},
 		{
 			Method: "POST",

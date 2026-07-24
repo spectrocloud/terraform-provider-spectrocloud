@@ -2202,3 +2202,119 @@ count: 5
 		assert.NotEmpty(t, h)
 	})
 }
+
+// The following four tests guard the PLT-2298 hash fix: without
+// override_cluster_api_config in the pool hash, day-2 changes to the
+// passthrough on an existing pool would not flip the set hash, and Terraform
+// would silently skip UpdateMachinePool. See resource_cluster_{maas,vsphere,
+// gcp,gke}.go for the schema wiring.
+
+func TestResourceMachinePoolMaasHashIncludesOverrideClusterAPIConfig(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                    "pool-a",
+		"count":                   2,
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "RollingUpdateScaleOut",
+		"min":                     0,
+		"max":                     0,
+		"node_repave_interval":    0,
+		"instance_type": []interface{}{
+			map[string]interface{}{
+				"min_cpu":       2,
+				"min_memory_mb": 4096,
+			},
+		},
+		"azs":                         schema.NewSet(schema.HashString, []interface{}{"az1"}),
+		"node_tags":                   schema.NewSet(schema.HashString, []interface{}{}),
+		"use_lxd_vm":                  false,
+		"placement":                   []interface{}{map[string]interface{}{"resource_pool": "rp"}},
+		"network":                     []interface{}{},
+		"skip_k8s_upgrade":            "disabled",
+		"override_cluster_api_config": "",
+	}
+	withOverride := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		withOverride[k] = v
+	}
+	withOverride["override_cluster_api_config"] = "MaasCluster:\n  spec:\n    failureDomains: [az1]\n"
+
+	assert.NotEqual(t, resourceMachinePoolMaasHash(base), resourceMachinePoolMaasHash(withOverride),
+		"MAAS machine pool hash should change when override_cluster_api_config changes")
+}
+
+func TestResourceMachinePoolVsphereHashIncludesOverrideClusterAPIConfig(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                    "pool-a",
+		"count":                   2,
+		"control_plane":           false,
+		"control_plane_as_worker": false,
+		"update_strategy":         "RollingUpdateScaleOut",
+		"min":                     0,
+		"max":                     0,
+		"node_repave_interval":    0,
+		"instance_type": []interface{}{
+			map[string]interface{}{
+				"cpu":          2,
+				"disk_size_gb": 50,
+				"memory_mb":    4096,
+			},
+		},
+		"placement": []interface{}{
+			map[string]interface{}{
+				"cluster":           "c1",
+				"resource_pool":     "rp",
+				"datastore":         "ds",
+				"network":           "n",
+				"static_ip_pool_id": "",
+			},
+		},
+		"skip_k8s_upgrade":            "disabled",
+		"override_cluster_api_config": "",
+	}
+	withOverride := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		withOverride[k] = v
+	}
+	withOverride["override_cluster_api_config"] = "VSphereMachineTemplate:\n  spec:\n    diskGiB: 80\n"
+
+	assert.NotEqual(t, resourceMachinePoolVsphereHash(base), resourceMachinePoolVsphereHash(withOverride),
+		"vSphere machine pool hash should change when override_cluster_api_config changes")
+}
+
+func TestResourceMachinePoolGcpHashIncludesOverrideClusterAPIConfig(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                        "pool-a",
+		"instance_type":               "n1-standard-4",
+		"disk_size_gb":                60,
+		"azs":                         schema.NewSet(schema.HashString, []interface{}{"us-central1-a"}),
+		"override_cluster_api_config": "",
+	}
+	withOverride := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		withOverride[k] = v
+	}
+	withOverride["override_cluster_api_config"] = "GCPMachineTemplate:\n  spec:\n    rootDeviceSize: 100\n"
+
+	assert.NotEqual(t, resourceMachinePoolGcpHash(base), resourceMachinePoolGcpHash(withOverride),
+		"GCP machine pool hash should change when override_cluster_api_config changes")
+}
+
+func TestResourceMachinePoolGkeHashIncludesOverrideClusterAPIConfig(t *testing.T) {
+	base := map[string]interface{}{
+		"name":                        "gke-pool-1",
+		"count":                       3,
+		"disk_size_gb":                60,
+		"instance_type":               "n1-standard-4",
+		"update_strategy":             "RollingUpdateScaleOut",
+		"override_cluster_api_config": "",
+	}
+	withOverride := make(map[string]interface{}, len(base))
+	for k, v := range base {
+		withOverride[k] = v
+	}
+	withOverride["override_cluster_api_config"] = "GCPManagedMachinePool:\n  spec:\n    nodePoolName: worker-basic\n"
+
+	assert.NotEqual(t, resourceMachinePoolGkeHash(base), resourceMachinePoolGkeHash(withOverride),
+		"GKE machine pool hash should change when override_cluster_api_config changes")
+}

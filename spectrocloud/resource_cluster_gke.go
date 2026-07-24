@@ -105,7 +105,6 @@ func resourceClusterGke() *schema.Resource {
 
 			"cloud_config": {
 				Type:        schema.TypeList,
-				ForceNew:    true,
 				Required:    true,
 				MaxItems:    1,
 				Description: "The GKE environment configuration settings such as project parameters and region parameters that apply to this cluster.",
@@ -123,6 +122,7 @@ func resourceClusterGke() *schema.Resource {
 							Required:    true,
 							Description: "Google Cloud region where the GKE cluster is deployed. Changing this forces a new resource.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -207,8 +207,9 @@ func resourceClusterGke() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
-						"node":   schemas.NodeSchema(),
-						"taints": schemas.ClusterTaintsSchema(),
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigMachinePoolSchema(),
+						"node":                        schemas.NodeSchema(),
+						"taints":                      schemas.ClusterTaintsSchema(),
 					},
 				},
 			},
@@ -390,6 +391,14 @@ func resourceClusterGkeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
 
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		cloudConfigEntity := toCloudConfigGke(cloudConfig)
+		if err := c.UpdateCloudConfigGke(cloudConfigId, cloudConfigEntity); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	CloudConfig, err := c.GetCloudConfigGke(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -534,6 +543,9 @@ func flattenClusterConfigsGke(config *models.V1GcpCloudConfig) []interface{} {
 	if String(config.Spec.ClusterConfig.Region) != "" {
 		m["region"] = String(config.Spec.ClusterConfig.Region)
 	}
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
 	return []interface{}{m}
 }
 
@@ -560,6 +572,9 @@ func flattenMachinePoolConfigsGke(machinePools []*models.V1GcpMachinePoolConfig)
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
+		}
 
 		oi["instance_type"] = *machinePool.InstanceType
 
@@ -572,6 +587,7 @@ func flattenMachinePoolConfigsGke(machinePools []*models.V1GcpMachinePoolConfig)
 
 func toGkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1SpectroGcpClusterEntity, error) {
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
 
 	clusterContext := d.Get("context").(string)
 	profiles, err := toProfiles(c, d, clusterContext)
@@ -591,6 +607,7 @@ func toGkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 				ManagedClusterConfig: &models.V1GcpManagedClusterConfig{
 					Location: cloudConfig["region"].(string),
 				},
+				OverrideClusterAPIConfig: overrideClusterAPIConfig,
 			},
 		},
 	}
@@ -606,6 +623,21 @@ func toGkeCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.Machinepoolconfig = machinePoolConfigs
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 	return cluster, err
+}
+
+func toCloudConfigGke(cloudConfig map[string]interface{}) *models.V1GcpCloudClusterConfigEntity {
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
+
+	return &models.V1GcpCloudClusterConfigEntity{
+		ClusterConfig: &models.V1GcpClusterConfig{
+			Project: types.Ptr(cloudConfig["project"].(string)),
+			Region:  types.Ptr(cloudConfig["region"].(string)),
+			ManagedClusterConfig: &models.V1GcpManagedClusterConfig{
+				Location: cloudConfig["region"].(string),
+			},
+			OverrideClusterAPIConfig: overrideClusterAPIConfig,
+		},
+	}
 }
 
 func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEntity, error) {
@@ -631,6 +663,9 @@ func toMachinePoolGke(machinePool interface{}) (*models.V1GcpMachinePoolConfigEn
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
 	return mp, nil
 }

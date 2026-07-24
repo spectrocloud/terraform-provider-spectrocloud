@@ -56,6 +56,64 @@ func TestResourceOciRegistrySyncRefreshFunc_ErrorBranch(t *testing.T) {
 	_, _, _ = refresh()
 }
 
+// TestResourceOciRegistrySyncRefreshFunc_StatusBranches calls
+// resourceOciRegistrySyncRefreshFunc directly (bypassing
+// retry.StateChangeConf entirely) against a real V1Client backed by the
+// mock server, driving every distinct branch of its status-mapping
+// switch/if-chain via the UID-dispatched fixtures in
+// ociRegistrySyncStatusFixtureFor (tests/mockApiServer/routes/mockRegistries.go).
+// Calling it directly — rather than through waitForOciRegistrySync — avoids
+// the retry loop's MinTimeout/Delay entirely for the "pending"-style
+// statuses that would otherwise poll for minutes.
+func TestResourceOciRegistrySyncRefreshFunc_StatusBranches(t *testing.T) {
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "tenant")
+
+	tests := []struct {
+		name          string
+		uid           string
+		wantState     string
+		wantErr       bool
+		wantErrSubstr string
+	}{
+		{name: "success", uid: "oci-sync-completed-no-message", wantState: "Success"},
+		{name: "not supported short-circuits to Success", uid: "oci-sync-not-supported", wantState: "Success"},
+		{name: "empty status is pending", uid: "oci-sync-empty-status", wantState: ""},
+		{name: "failed with message", uid: "oci-sync-failed-with-message", wantState: "Failed", wantErr: true, wantErrSubstr: "boom"},
+		{name: "failed without message", uid: "oci-sync-failed-no-message", wantState: "Error", wantErr: true, wantErrSubstr: "registry sync failed"},
+		{name: "in progress", uid: "oci-sync-inprogress", wantState: "InProgress"},
+		{name: "unknown status treated as pending", uid: "oci-sync-unknown", wantState: "Weird"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			refresh := resourceOciRegistrySyncRefreshFunc(c, tt.uid, "basic")
+			result, state, err := refresh()
+			assert.NotNil(t, result)
+			assert.Equal(t, tt.wantState, state)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrSubstr != "" {
+					assert.Contains(t, err.Error(), tt.wantErrSubstr)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestResourceOciRegistrySyncRefreshFunc_GetStatusError covers the
+// `err != nil` branch when the underlying getOciRegistrySyncStatus call
+// itself fails.
+func TestResourceOciRegistrySyncRefreshFunc_GetStatusError(t *testing.T) {
+	c := getV1ClientWithResourceContext(unitTestMockAPINegativeClient, "tenant")
+	refresh := resourceOciRegistrySyncRefreshFunc(c, "any-uid", "basic")
+	result, state, err := refresh()
+	assert.Nil(t, result)
+	assert.Empty(t, state)
+	assert.Error(t, err)
+}
+
 // Compile-time reference so unused-import warnings don't fire in the
 // event a future refactor drops the syncStatus struct.
 var _ = &models.V1RegistrySyncStatus{}

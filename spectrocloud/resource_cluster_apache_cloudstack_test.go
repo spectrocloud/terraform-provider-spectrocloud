@@ -1,9 +1,11 @@
 package spectrocloud
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
@@ -1707,4 +1709,133 @@ func TestToMachinePoolCloudStackWithResolutionExplicitNetworkID(t *testing.T) {
 	}, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "explicit-id", result.CloudConfig.Networks[0].ID)
+}
+
+// ---------------------------------------------------------------------------
+// updateMachinePoolCloudStack (0%)
+//
+// d.GetChange("machine_pool") reads "old" from the state level and "new"
+// from the diff level. schema.TestResourceDataRaw only produces a nil→config
+// diff (old is always empty), so to get a real old/new pair we build our
+// own state (from an old ResourceData's .State()) and diff it against a new
+// ResourceConfig via the exported Resource.Diff/schema.InternalMap.Data
+// methods — the same pipeline Terraform itself uses for an apply.
+// ---------------------------------------------------------------------------
+
+func buildMachinePoolChangeResourceData(t *testing.T, oldPools, newPools []interface{}) *schema.ResourceData {
+	t.Helper()
+	res := resourceClusterApacheCloudStack()
+
+	base := map[string]interface{}{
+		"name":             "test-cluster",
+		"cloud_account_id": "test-account",
+		"cloud_config": []interface{}{
+			map[string]interface{}{
+				"zone": []interface{}{
+					map[string]interface{}{
+						"name": "test-zone",
+					},
+				},
+			},
+		},
+	}
+
+	oldRaw := map[string]interface{}{}
+	for k, v := range base {
+		oldRaw[k] = v
+	}
+	oldRaw["machine_pool"] = oldPools
+	oldRD := schema.TestResourceDataRaw(t, res.Schema, oldRaw)
+	oldRD.SetId("test-cloudstack-cluster-id")
+	oldState := oldRD.State()
+	require.NotNil(t, oldState)
+
+	newRaw := map[string]interface{}{}
+	for k, v := range base {
+		newRaw[k] = v
+	}
+	newRaw["machine_pool"] = newPools
+	newConfig := terraform.NewResourceConfigRaw(newRaw)
+
+	diff, err := res.Diff(context.Background(), oldState, newConfig, nil)
+	require.NoError(t, err)
+	require.NotNil(t, diff)
+
+	finalRD, err := schema.InternalMap(res.Schema).Data(oldState, diff)
+	require.NoError(t, err)
+	finalRD.SetId("test-cloudstack-cluster-id")
+	return finalRD
+}
+
+func TestUpdateMachinePoolCloudStack(t *testing.T) {
+	oldPools := []interface{}{
+		map[string]interface{}{
+			"name":                    "pool-keep-unchanged",
+			"count":                   1,
+			"offering":                "small-instance",
+			"control_plane":           true,
+			"control_plane_as_worker": true,
+		},
+		map[string]interface{}{
+			"name":                    "pool-to-remove",
+			"count":                   1,
+			"offering":                "small-instance",
+			"control_plane":           false,
+			"control_plane_as_worker": false,
+		},
+	}
+	newPools := []interface{}{
+		map[string]interface{}{
+			"name":                    "pool-keep-unchanged",
+			"count":                   1,
+			"offering":                "small-instance",
+			"control_plane":           true,
+			"control_plane_as_worker": true,
+		},
+		map[string]interface{}{
+			"name":                    "pool-new",
+			"count":                   2,
+			"offering":                "medium-instance",
+			"control_plane":           false,
+			"control_plane_as_worker": false,
+		},
+	}
+
+	d := buildMachinePoolChangeResourceData(t, oldPools, newPools)
+
+	old, new := d.GetChange("machine_pool")
+	require.Equal(t, 2, old.(*schema.Set).Len())
+	require.Equal(t, 2, new.(*schema.Set).Len())
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	err := updateMachinePoolCloudStack(context.Background(), c, d, "test-cloudstack-config-uid")
+	assert.NoError(t, err)
+}
+
+func TestUpdateMachinePoolCloudStack_Error(t *testing.T) {
+	oldPools := []interface{}{}
+	newPools := []interface{}{
+		map[string]interface{}{
+			"name":                    "pool-new",
+			"count":                   1,
+			"offering":                "small-instance",
+			"control_plane":           false,
+			"control_plane_as_worker": false,
+			"network": []interface{}{
+				map[string]interface{}{
+					// Neither network_id nor network_name set →
+					// toMachinePoolCloudStackWithResolution returns an
+					// error, exercising the CREATE-branch error path.
+					"network_id":   "",
+					"network_name": "",
+				},
+			},
+		},
+	}
+
+	d := buildMachinePoolChangeResourceData(t, oldPools, newPools)
+
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+	err := updateMachinePoolCloudStack(context.Background(), c, d, "test-cloudstack-config-uid")
+	assert.Error(t, err)
 }

@@ -1316,3 +1316,86 @@ func TestFindAnyExistingProfileVersionUID_NotFound(t *testing.T) {
 	assert.NoError(t, err, "not-found should return an empty string without an error")
 	assert.Empty(t, uid)
 }
+
+// TestCanonicalizeProfileVariable covers the default-fallback branches
+// (empty format -> "string", empty input_type -> "text") plus a fully
+// populated input passing through canonicalString/canonicalBool/
+// canonicalizeVariableOptions unchanged.
+func TestCanonicalizeProfileVariable(t *testing.T) {
+	t.Run("empty format and input_type fall back to defaults", func(t *testing.T) {
+		got := canonicalizeProfileVariable(map[string]interface{}{
+			"name": "var1",
+		})
+		assert.Equal(t, "string", got["format"])
+		assert.Equal(t, "text", got["input_type"])
+		assert.Equal(t, "var1", got["name"])
+		assert.Equal(t, false, got["required"])
+		assert.Nil(t, got["options"])
+	})
+
+	t.Run("explicit format and input_type are preserved", func(t *testing.T) {
+		got := canonicalizeProfileVariable(map[string]interface{}{
+			"name":          "var2",
+			"display_name":  "Var 2",
+			"description":   "desc",
+			"format":        "number",
+			"default_value": "5",
+			"regex":         "^[0-9]+$",
+			"required":      true,
+			"immutable":     true,
+			"hidden":        true,
+			"is_sensitive":  true,
+			"input_type":    "dropdown",
+			"options": []interface{}{
+				map[string]interface{}{"label": "L1", "value": "V1", "description": "D1"},
+			},
+		})
+		assert.Equal(t, "number", got["format"])
+		assert.Equal(t, "dropdown", got["input_type"])
+		assert.Equal(t, true, got["required"])
+		assert.Equal(t, true, got["immutable"])
+		assert.Equal(t, true, got["hidden"])
+		assert.Equal(t, true, got["is_sensitive"])
+		assert.Equal(t, []map[string]interface{}{
+			{"label": "L1", "value": "V1", "description": "D1"},
+		}, got["options"])
+	})
+}
+
+// TestCanonicalizeVariableOptions covers the type-assertion guard (non-
+// []interface{} input returns nil) and the happy path where valid items
+// pass through with only description/label/value (the Computed "default"
+// field is deliberately excluded).
+func TestCanonicalizeVariableOptions(t *testing.T) {
+	t.Run("non-slice input returns nil", func(t *testing.T) {
+		assert.Nil(t, canonicalizeVariableOptions("not-a-slice"))
+		assert.Nil(t, canonicalizeVariableOptions(nil))
+		assert.Nil(t, canonicalizeVariableOptions(42))
+	})
+
+	t.Run("valid items pass through, non-map items are skipped", func(t *testing.T) {
+		got := canonicalizeVariableOptions([]interface{}{
+			map[string]interface{}{"label": "L1", "value": "V1", "description": "D1", "default": true},
+			"not-a-map",
+		})
+		assert.Equal(t, []map[string]interface{}{
+			{"label": "L1", "value": "V1", "description": "D1"},
+		}, got)
+	})
+
+	t.Run("empty slice returns empty (non-nil) slice", func(t *testing.T) {
+		got := canonicalizeVariableOptions([]interface{}{})
+		assert.NotNil(t, got)
+		assert.Empty(t, got)
+	})
+}
+
+// TestCanonicalBool covers the type-assertion guard (non-bool input returns
+// the zero value, false) alongside the straightforward true/false pass-through.
+func TestCanonicalBool(t *testing.T) {
+	assert.False(t, canonicalBool("not-a-bool"))
+	assert.False(t, canonicalBool(nil))
+	assert.False(t, canonicalBool(0))
+	assert.True(t, canonicalBool(true))
+	assert.False(t, canonicalBool(false))
+}

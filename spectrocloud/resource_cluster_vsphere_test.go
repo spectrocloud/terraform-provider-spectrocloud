@@ -2,6 +2,7 @@ package spectrocloud
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"testing"
 
@@ -264,6 +265,36 @@ func TestFlattenClusterConfigsVsphereNil(t *testing.T) {
 	}
 }
 
+// TestFlattenClusterConfigsVsphereNilClusterConfig exercises the
+// "cloudConfig.Spec.ClusterConfig == nil" branch — distinct from the
+// whole-cloudConfig-nil branch covered above.
+func TestFlattenClusterConfigsVsphereNilClusterConfig(t *testing.T) {
+	d := prepareClusterVsphereTestResourceData()
+	cloudConfig := &models.V1VsphereCloudConfig{
+		Spec: &models.V1VsphereCloudConfigSpec{ClusterConfig: nil},
+	}
+	flat := flattenClusterConfigsVsphere(d, cloudConfig)
+	assert.Equal(t, make([]interface{}, 0), flat)
+}
+
+// TestFlattenClusterConfigsVsphereOverrideClusterAPIConfig exercises the
+// OverrideClusterAPIConfig-populated branch inside flattenClusterConfigsVsphere.
+func TestFlattenClusterConfigsVsphereOverrideClusterAPIConfig(t *testing.T) {
+	d := prepareClusterVsphereTestResourceData()
+	yaml := "VSphereCluster:\n  spec:\n    identityRef:\n      kind: VSphereClusterIdentity\n"
+	cloudConfig := &models.V1VsphereCloudConfig{
+		Spec: &models.V1VsphereCloudConfigSpec{
+			ClusterConfig: &models.V1VsphereClusterConfig{
+				Placement:                &models.V1VspherePlacementConfig{Datacenter: "dc1", Folder: "f1"},
+				OverrideClusterAPIConfig: yaml,
+			},
+		},
+	}
+	flat := flattenClusterConfigsVsphere(d, cloudConfig)
+	flatMap := flat.([]interface{})[0].(map[string]interface{})
+	assert.Equal(t, yaml, flatMap["override_cluster_api_config"])
+}
+
 func TestFlattenMachinePoolConfigsVsphereNil(t *testing.T) {
 	flatPool := flattenMachinePoolConfigsVsphere(nil)
 	if len(flatPool) > 0 {
@@ -479,5 +510,251 @@ func TestToMachinePoolVsphereSkipK8sUpgrade(t *testing.T) {
 		mp, err := toMachinePoolVsphere(m)
 		require.NoError(t, err)
 		assert.Nil(t, mp.PoolConfig.SkipK8sUpgrade)
+	})
+}
+
+func TestFlattenMachinePoolConfigsVsphereOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "VSphereMachineTemplate:\n  spec:\n    template:\n      spec:\n        diskGiB: 80\n"
+	mp := &models.V1VsphereMachinePoolConfig{
+		Name:                     "worker-pool",
+		Size:                     1,
+		MinSize:                  1,
+		MaxSize:                  1,
+		IsControlPlane:           types.Ptr(false),
+		Labels:                   []string{"worker"},
+		OverrideClusterAPIConfig: yaml,
+		InstanceType: &models.V1VsphereInstanceType{
+			DiskGiB:   types.Ptr(int32(50)),
+			MemoryMiB: types.Ptr(int64(4096)),
+			NumCPUs:   types.Ptr(int32(2)),
+		},
+		Placements: []*models.V1VspherePlacementConfig{{
+			UID: "p1", Cluster: "cl", ResourcePool: "rp", Datastore: "ds",
+			Network: &models.V1VsphereNetworkConfig{NetworkName: types.Ptr("net")},
+		}},
+		UpdateStrategy: &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+	}
+	out := flattenMachinePoolConfigsVsphere([]*models.V1VsphereMachinePoolConfig{mp})
+	require.Len(t, out, 1)
+	assert.Equal(t, yaml, out[0].(map[string]interface{})["override_cluster_api_config"])
+}
+
+func TestFlattenMachinePoolConfigsVsphereOverrideKubeadmConfiguration(t *testing.T) {
+	kubeadmYaml := "kubeletExtraArgs:\n  v: \"4\"\n"
+	mp := &models.V1VsphereMachinePoolConfig{
+		Name:                         "worker-pool",
+		Size:                         1,
+		MinSize:                      1,
+		MaxSize:                      1,
+		IsControlPlane:               types.Ptr(false),
+		Labels:                       []string{"worker"},
+		OverrideKubeadmConfiguration: kubeadmYaml,
+		InstanceType: &models.V1VsphereInstanceType{
+			DiskGiB:   types.Ptr(int32(50)),
+			MemoryMiB: types.Ptr(int64(4096)),
+			NumCPUs:   types.Ptr(int32(2)),
+		},
+		Placements: []*models.V1VspherePlacementConfig{{
+			UID: "p1", Cluster: "cl", ResourcePool: "rp", Datastore: "ds",
+			Network: &models.V1VsphereNetworkConfig{NetworkName: types.Ptr("net")},
+		}},
+		UpdateStrategy: &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+	}
+	out := flattenMachinePoolConfigsVsphere([]*models.V1VsphereMachinePoolConfig{mp})
+	require.Len(t, out, 1)
+	assert.Equal(t, kubeadmYaml, out[0].(map[string]interface{})["override_kubeadm_configuration"])
+}
+
+func TestToMachinePoolVsphereOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "VSphereCluster:\n  spec:\n    identityRef:\n      kind: VSphereClusterIdentity\n      name: my-identity\n"
+	makeInput := func(controlPlane bool, override string) map[string]interface{} {
+		return map[string]interface{}{
+			"control_plane":           controlPlane,
+			"control_plane_as_worker": false,
+			"name":                    "pool",
+			"count":                   1,
+			"min":                     1,
+			"max":                     1,
+			"node_repave_interval":    0,
+			"update_strategy":         "RollingUpdateScaleOut",
+			"instance_type": []interface{}{
+				map[string]interface{}{"disk_size_gb": 50, "memory_mb": 4096, "cpu": 2},
+			},
+			"placement": []interface{}{
+				map[string]interface{}{
+					"id": "", "cluster": "cl", "resource_pool": "rp",
+					"datastore": "ds", "network": "net", "static_ip_pool_id": "",
+				},
+			},
+			"override_cluster_api_config": override,
+		}
+	}
+
+	t.Run("worker sets OverrideClusterAPIConfig", func(t *testing.T) {
+		mp, err := toMachinePoolVsphere(makeInput(false, yaml))
+		require.NoError(t, err)
+		assert.Equal(t, yaml, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+
+	t.Run("control plane sets OverrideClusterAPIConfig", func(t *testing.T) {
+		mp, err := toMachinePoolVsphere(makeInput(true, yaml))
+		require.NoError(t, err)
+		assert.Equal(t, yaml, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+
+	t.Run("empty passthrough leaves the field zero-valued", func(t *testing.T) {
+		mp, err := toMachinePoolVsphere(makeInput(false, ""))
+		require.NoError(t, err)
+		assert.Empty(t, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+}
+
+// TestToMachinePoolVsphereBoundsValidation exercises every negative/overflow
+// guard clause in toMachinePoolVsphere. Each case starts from a valid worker
+// (or control-plane) pool and overrides a single numeric field to trigger one
+// specific error branch.
+func TestToMachinePoolVsphereBoundsValidation(t *testing.T) {
+	basePlacement := []interface{}{
+		map[string]interface{}{
+			"id": "", "cluster": "cl", "resource_pool": "rp",
+			"datastore": "ds", "network": "net", "static_ip_pool_id": "",
+		},
+	}
+	makeInput := func(controlPlane bool, overrides map[string]interface{}) map[string]interface{} {
+		m := map[string]interface{}{
+			"control_plane":           controlPlane,
+			"control_plane_as_worker": false,
+			"name":                    "pool",
+			"count":                   1,
+			"min":                     1,
+			"max":                     1,
+			"node_repave_interval":    0,
+			"update_strategy":         "RollingUpdateScaleOut",
+			"instance_type": []interface{}{
+				map[string]interface{}{"disk_size_gb": 50, "memory_mb": 4096, "cpu": 2},
+			},
+			"placement": basePlacement,
+		}
+		for k, v := range overrides {
+			m[k] = v
+		}
+		return m
+	}
+
+	t.Run("negative disk_size_gb errors", func(t *testing.T) {
+		m := makeInput(false, nil)
+		m["instance_type"] = []interface{}{map[string]interface{}{"disk_size_gb": -1, "memory_mb": 4096, "cpu": 2}}
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be negative")
+	})
+
+	t.Run("negative memory_mb errors", func(t *testing.T) {
+		m := makeInput(false, nil)
+		m["instance_type"] = []interface{}{map[string]interface{}{"disk_size_gb": 50, "memory_mb": -1, "cpu": 2}}
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be negative")
+	})
+
+	t.Run("negative cpu errors", func(t *testing.T) {
+		m := makeInput(false, nil)
+		m["instance_type"] = []interface{}{map[string]interface{}{"disk_size_gb": 50, "memory_mb": 4096, "cpu": -1}}
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot be negative")
+	})
+
+	t.Run("disk_size_gb out of int32 range errors", func(t *testing.T) {
+		m := makeInput(false, nil)
+		m["instance_type"] = []interface{}{map[string]interface{}{"disk_size_gb": math.MaxInt32 + 1, "memory_mb": 4096, "cpu": 2}}
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "out of range")
+	})
+
+	t.Run("cpu out of int32 range errors", func(t *testing.T) {
+		m := makeInput(false, nil)
+		m["instance_type"] = []interface{}{map[string]interface{}{"disk_size_gb": 50, "memory_mb": 4096, "cpu": math.MaxInt32 + 1}}
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "out of range")
+	})
+
+	t.Run("negative count errors", func(t *testing.T) {
+		m := makeInput(false, map[string]interface{}{"count": -1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "count value")
+	})
+
+	t.Run("count out of int32 range errors", func(t *testing.T) {
+		m := makeInput(false, map[string]interface{}{"count": math.MaxInt32 + 1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "out of range for int32")
+	})
+
+	t.Run("negative min errors", func(t *testing.T) {
+		m := makeInput(false, map[string]interface{}{"min": -1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "min value")
+	})
+
+	t.Run("min out of int32 range errors", func(t *testing.T) {
+		m := makeInput(false, map[string]interface{}{"min": math.MaxInt32 + 1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "min value")
+	})
+
+	t.Run("negative max errors", func(t *testing.T) {
+		m := makeInput(false, map[string]interface{}{"max": -1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "max value")
+	})
+
+	t.Run("max out of int32 range errors", func(t *testing.T) {
+		m := makeInput(false, map[string]interface{}{"max": math.MaxInt32 + 1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "max value")
+	})
+
+	t.Run("worker override_kubeadm_configuration is set", func(t *testing.T) {
+		m := makeInput(false, map[string]interface{}{"override_kubeadm_configuration": "kind: X"})
+		mp, err := toMachinePoolVsphere(m)
+		require.NoError(t, err)
+		assert.Equal(t, "kind: X", mp.PoolConfig.OverrideKubeadmConfiguration)
+	})
+
+	t.Run("negative node_repave_interval errors for worker", func(t *testing.T) {
+		m := makeInput(false, map[string]interface{}{"node_repave_interval": -1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "node_repave_interval")
+	})
+
+	t.Run("node_repave_interval out of int32 range errors for worker", func(t *testing.T) {
+		m := makeInput(false, map[string]interface{}{"node_repave_interval": math.MaxInt32 + 1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "node_repave_interval")
+	})
+
+	t.Run("negative node_repave_interval errors for control plane", func(t *testing.T) {
+		m := makeInput(true, map[string]interface{}{"node_repave_interval": -1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "node_repave_interval")
+	})
+
+	t.Run("node_repave_interval out of int32 range errors for control plane", func(t *testing.T) {
+		m := makeInput(true, map[string]interface{}{"node_repave_interval": math.MaxInt32 + 1})
+		_, err := toMachinePoolVsphere(m)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "node_repave_interval")
 	})
 }

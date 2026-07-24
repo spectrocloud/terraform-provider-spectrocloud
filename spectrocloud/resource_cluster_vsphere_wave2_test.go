@@ -100,6 +100,40 @@ func TestResourceClusterVsphereReadWithMock(t *testing.T) {
 	assert.Greater(t, pools.Len(), 0)
 }
 
+// TestResourceClusterVsphereReadClusterDeleted exercises the "cluster == nil"
+// branch: GetCluster returns (nil, nil) once the fixture's State is
+// "Deleted", so Read must clear the resource's ID instead of erroring.
+func TestResourceClusterVsphereReadClusterDeleted(t *testing.T) {
+	d := prepareVsphereClusterResourceData(t)
+	d.SetId("cluster-uid-deleted-state")
+
+	diags := resourceClusterVsphereRead(context.Background(), d, unitTestMockAPIClient)
+	assert.False(t, diags.HasError(), "diags: %+v", diags)
+	assert.Equal(t, "", d.Id())
+}
+
+// TestResourceClusterVsphereReadCloudTypeMismatch exercises the
+// ValidateCloudType error branch: the default cluster fixture reports
+// CloudType="aws", which resourceClusterVsphereRead must reject.
+func TestResourceClusterVsphereReadCloudTypeMismatch(t *testing.T) {
+	d := prepareVsphereClusterResourceData(t)
+	d.SetId("test-cluster-id")
+
+	diags := resourceClusterVsphereRead(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError())
+}
+
+// TestResourceClusterVsphereReadGetCloudConfigError exercises the
+// GetCloudConfigVsphere error branch: the fixture's CloudConfigRef points at
+// routes.VsphereCloudConfigErrorUID.
+func TestResourceClusterVsphereReadGetCloudConfigError(t *testing.T) {
+	d := prepareVsphereClusterResourceData(t)
+	d.SetId("test-vsphere-cluster-cloudconfig-error-id")
+
+	diags := resourceClusterVsphereRead(context.Background(), d, unitTestMockAPIClient)
+	assert.True(t, diags.HasError())
+}
+
 func TestResourceClusterVsphereCreateWithMock(t *testing.T) {
 	d := prepareVsphereClusterResourceData(t)
 	require.NoError(t, d.Set("tags", []interface{}{"skip_completion"}))

@@ -1,15 +1,58 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
 const (
 	MockAzureCloudAccountUID = "test-azure-account-id-1"
 	MockAzureClusterUID      = "test-azure-cluster-id"
+
+	// AzureCloudConfigGetErrorUID drives the GetCloudConfigAzure API-error
+	// branch: both the unconditional fetch inside resourceClusterAzureUpdate
+	// and the fetch inside flattenCloudConfigAzure (resourceClusterAzureRead)
+	// hit /v1/cloudconfigs/azure/{configUid}.
+	AzureCloudConfigGetErrorUID = "azure-cloud-config-get-error"
+
+	// AzureCloudConfigUpdateErrorUID drives the UpdateCloudConfigAzure
+	// API-error branch inside resourceClusterAzureUpdate's cloud_config
+	// HasChange block.
+	AzureCloudConfigUpdateErrorUID = "azure-cloud-config-update-error"
 )
+
+// azureCloudConfigGetHandler serves GET /v1/cloudconfigs/azure/{configUid},
+// dispatching on the config UID so GetCloudConfigAzure's error branch can be
+// exercised.
+func azureCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == AzureCloudConfigGetErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get azure cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getMockAzureCloudConfig())
+}
+
+// azureCloudConfigUpdateHandler serves PUT
+// /v1/cloudconfigs/azure/{configUid}/clusterConfig, dispatching on the config
+// UID so resourceClusterAzureUpdate's UpdateCloudConfigAzure error branch can
+// be exercised.
+func azureCloudConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == AzureCloudConfigUpdateErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to update azure cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 func getMockAzureCloudConfig() *models.V1AzureCloudConfig {
 	region := "eastus"
@@ -73,20 +116,18 @@ func AzureClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudconfigs/azure/{configUid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getMockAzureCloudConfig(),
-			},
+			// UID-dispatched — see azureCloudConfigGetHandler for the
+			// AzureCloudConfigGetErrorUID branch.
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/azure/{configUid}",
+			Handler: azureCloudConfigGetHandler,
 		},
 		{
-			Method: "PUT",
-			Path:   "/v1/cloudconfigs/azure/{configUid}/clusterConfig",
-			Response: ResponseData{
-				StatusCode: http.StatusNoContent,
-				Payload:    nil,
-			},
+			// UID-dispatched — see azureCloudConfigUpdateHandler for the
+			// AzureCloudConfigUpdateErrorUID branch.
+			Method:  "PUT",
+			Path:    "/v1/cloudconfigs/azure/{configUid}/clusterConfig",
+			Handler: azureCloudConfigUpdateHandler,
 		},
 		{
 			Method: "POST",

@@ -9,6 +9,7 @@ import (
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 	"github.com/spectrocloud/terraform-provider-spectrocloud/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestToMachinePoolGke(t *testing.T) {
@@ -324,4 +325,50 @@ func TestFlattenClusterConfigsGke(t *testing.T) {
 			assert.Equal(t, tt.expected, result, "Unexpected result for test case: %s", tt.name)
 		})
 	}
+}
+
+func TestFlattenMachinePoolConfigsGkeOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "GCPManagedMachinePool:\n  spec:\n    nodePoolName: worker-basic\n"
+	mp := &models.V1GcpMachinePoolConfig{
+		Name:                     "worker-pool",
+		Size:                     int32(3),
+		IsControlPlane:           BoolPtr(false),
+		InstanceType:             types.Ptr("n2-standard-4"),
+		RootDeviceSize:           int64(60),
+		OverrideClusterAPIConfig: yaml,
+		UpdateStrategy:           &models.V1UpdateStrategy{Type: "RollingUpdateScaleOut"},
+	}
+	out := flattenMachinePoolConfigsGke([]*models.V1GcpMachinePoolConfig{mp})
+	require.Len(t, out, 1)
+	assert.Equal(t, yaml, out[0].(map[string]interface{})["override_cluster_api_config"])
+}
+
+func TestToMachinePoolGkeOverrideClusterAPIConfig(t *testing.T) {
+	yaml := "GCPManagedControlPlane:\n  spec:\n    releaseChannel: REGULAR\n"
+
+	t.Run("worker sets OverrideClusterAPIConfig", func(t *testing.T) {
+		m := map[string]interface{}{
+			"name":                        "worker-basic",
+			"count":                       3,
+			"instance_type":               "n2-standard-4",
+			"disk_size_gb":                60,
+			"override_cluster_api_config": yaml,
+		}
+		mp, err := toMachinePoolGke(m)
+		require.NoError(t, err)
+		assert.Equal(t, yaml, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
+
+	t.Run("empty passthrough leaves the field zero-valued", func(t *testing.T) {
+		m := map[string]interface{}{
+			"name":                        "worker-basic",
+			"count":                       3,
+			"instance_type":               "n2-standard-4",
+			"disk_size_gb":                60,
+			"override_cluster_api_config": "",
+		}
+		mp, err := toMachinePoolGke(m)
+		require.NoError(t, err)
+		assert.Empty(t, mp.PoolConfig.OverrideClusterAPIConfig)
+	})
 }

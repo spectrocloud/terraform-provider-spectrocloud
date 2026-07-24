@@ -138,3 +138,45 @@ func TestComputeProfilesToDeleteRemovesAddonNotInNewSet(t *testing.T) {
 	assert.Contains(t, toDelete, removedUID, "addon profile removed entirely from config must be deleted")
 	assert.NotContains(t, toDelete, keptUID)
 }
+
+// TestComputeProfilesToDeleteWithRealClient exercises the c != nil branches that
+// TestComputeProfilesToDeleteSkipsAddonVersionUpgrade/TestComputeProfilesToDeleteRemovesAddonNotInNewSet
+// (both pass c=nil) never reach: the newProfileNames lookup via GetClusterProfile for a
+// new profile UID that isn't already attached on the cluster, and the final defensive
+// GetClusterProfile(oldUID) check before deleting.
+func TestComputeProfilesToDeleteWithRealClient(t *testing.T) {
+	t.Run("GetClusterProfile succeeds for both the new-name lookup and the final check", func(t *testing.T) {
+		c := mustUnitClient(t, false)
+		cluster := &models.V1SpectroCluster{
+			Spec: &models.V1SpectroClusterSpec{
+				ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
+					{UID: "cluster-profile-import-2", Name: "test-cluster-profile-2", Type: "addon"},
+				},
+			},
+		}
+		oldProfiles := []interface{}{map[string]interface{}{"id": "cluster-profile-import-2"}}
+		// Not attached on the cluster -> getAttachedProfileName misses -> falls back to
+		// c.GetClusterProfile(newUID) to build newProfileNames.
+		newProfiles := []interface{}{map[string]interface{}{"id": "brand-new-uid-not-attached"}}
+
+		toDelete := computeProfilesToDelete(c, oldProfiles, newProfiles, cluster)
+		assert.Contains(t, toDelete, "cluster-profile-import-2",
+			"mock's addon-typed GetClusterProfile response for cluster-profile-import-2 must pass the final infra check and be deleted")
+	})
+
+	t.Run("GetClusterProfile error on the final check still marks the profile for deletion", func(t *testing.T) {
+		cNeg := mustUnitClient(t, true)
+		cluster := &models.V1SpectroCluster{
+			Spec: &models.V1SpectroClusterSpec{
+				ClusterProfileTemplates: []*models.V1ClusterProfileTemplate{
+					{UID: "addon-old-uid", Name: "addon-old", Type: "addon"},
+				},
+			},
+		}
+		oldProfiles := []interface{}{map[string]interface{}{"id": "addon-old-uid"}}
+		newProfiles := []interface{}{}
+
+		toDelete := computeProfilesToDelete(cNeg, oldProfiles, newProfiles, cluster)
+		assert.Contains(t, toDelete, "addon-old-uid")
+	})
+}

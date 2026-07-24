@@ -1,8 +1,10 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
 )
 
@@ -10,6 +12,48 @@ import (
 // echoed back through the CloudAccountRef. Test files reference this
 // constant so both sides stay in lockstep.
 const MockVsphereCloudAccountUID = "test-vsphere-account-id-1"
+
+// VsphereCloudConfigErrorUID drives the GetCloudConfigVsphere /
+// GetCloudConfigEdgeVsphere API-error branches (both vsphere and edge
+// vsphere resources hit the same /v1/cloudconfigs/vsphere/{configUid}
+// endpoint under the hood).
+const VsphereCloudConfigErrorUID = "vsphere-cloud-config-error"
+
+// VsphereCloudConfigUpdateErrorUID drives the UpdateCloudConfigVsphere
+// API-error branch inside resourceClusterVsphereUpdate's cloud_config
+// HasChange block (PUT .../clusterConfig).
+const VsphereCloudConfigUpdateErrorUID = "vsphere-cloud-config-update-error"
+
+// vsphereCloudConfigGetHandler serves GET
+// /v1/cloudconfigs/vsphere/{configUid}, dispatching on the config UID so
+// the GetCloudConfigVsphere/GetCloudConfigEdgeVsphere error branches can
+// be exercised.
+func vsphereCloudConfigGetHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == VsphereCloudConfigErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get vsphere cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(getMockVsphereCloudConfig())
+}
+
+// vsphereCloudConfigUpdateHandler serves PUT
+// /v1/cloudconfigs/vsphere/{configUid}/clusterConfig, dispatching on the
+// config UID so resourceClusterVsphereUpdate's UpdateCloudConfigVsphere
+// error branch can be exercised.
+func vsphereCloudConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	configUID := mux.Vars(r)["configUid"]
+	w.Header().Set("Content-Type", "application/json")
+	if configUID == VsphereCloudConfigUpdateErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to update vsphere cloud config"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
 // getMockVsphereCloudConfig returns the payload for GET
 // /v1/cloudconfigs/vsphere/{configUid}. Shape mirrors what the resource
@@ -99,20 +143,18 @@ func VsphereClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/cloudconfigs/vsphere/{configUid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getMockVsphereCloudConfig(),
-			},
+			// UID-dispatched — see vsphereCloudConfigGetHandler for the
+			// VsphereCloudConfigErrorUID branch.
+			Method:  "GET",
+			Path:    "/v1/cloudconfigs/vsphere/{configUid}",
+			Handler: vsphereCloudConfigGetHandler,
 		},
 		{
-			Method: "PUT",
-			Path:   "/v1/cloudconfigs/vsphere/{configUid}/clusterConfig",
-			Response: ResponseData{
-				StatusCode: http.StatusNoContent,
-				Payload:    nil,
-			},
+			// UID-dispatched — see vsphereCloudConfigUpdateHandler for the
+			// VsphereCloudConfigUpdateErrorUID branch.
+			Method:  "PUT",
+			Path:    "/v1/cloudconfigs/vsphere/{configUid}/clusterConfig",
+			Handler: vsphereCloudConfigUpdateHandler,
 		},
 		{
 			Method: "POST",

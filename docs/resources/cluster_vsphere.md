@@ -173,6 +173,7 @@ Optional:
 - `network_search_domain` (String) The search domain to use for the cluster in case of DHCP.
 - `network_type` (String) The type of network to use for the cluster. This can be `VIP` or `DDNS`.
 - `ntp_servers` (Set of String) A list of NTP servers to be used by the cluster.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at cluster level. Overrides pack-level and Palette-managed values.
 - `ssh_key` (String, Deprecated) The SSH key to be used for the cluster. This is the public key that will be used to access the cluster nodes. `ssh_key & ssh_keys` are mutually exclusive.
 - `ssh_keys` (Set of String) List of public SSH (Secure Shell) keys to establish, administer, and communicate with remote clusters, `ssh_key & ssh_keys` are mutually exclusive.
 - `static_ip` (Boolean) Whether to use static IP addresses for the cluster. If `true`, the cluster will use static IP addresses. If `false`, the cluster will use DDNS. Default is `false`.
@@ -198,6 +199,7 @@ Optional:
 - `min` (Number) Minimum number of nodes in the machine pool. This is used for autoscaling the machine pool.
 - `node` (Block List) (see [below for nested schema](#nestedblock--machine_pool--node))
 - `node_repave_interval` (Number) Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.
+- `override_cluster_api_config` (String) YAML override for CAPI properties at machine pool level. Overrides pack-level and Palette-managed values.
 - `override_health_check_configuration` (String) YAML override for Machine Health Check configuration at the node pool level (control plane and worker pools). Accepts CAPI MachineHealthCheck fields such as maxUnhealthy, nodeStartupTimeout, and unhealthyConditions. Falls back to Palette defaults when unset. Still respects the project/tenant Cluster Auto Remediation setting. Changing this value may repave your nodes.
 - `override_kubeadm_configuration` (String) YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.
 - `override_scaling` (Block List, Max: 1) Rolling update strategy for the machine pool. (see [below for nested schema](#nestedblock--machine_pool--override_scaling))

@@ -159,7 +159,6 @@ func resourceClusterGcp() *schema.Resource {
 			},
 			"cloud_config": {
 				Type:     schema.TypeList,
-				ForceNew: true,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -179,6 +178,7 @@ func resourceClusterGcp() *schema.Resource {
 							Required:    true,
 							Description: "Google Cloud region where the cluster is deployed.",
 						},
+						"override_cluster_api_config": schemas.OverrideClusterAPIConfigSchema(),
 					},
 				},
 			},
@@ -255,6 +255,7 @@ func resourceClusterGcp() *schema.Resource {
 							Optional:    true,
 							Description: "YAML config for kubeletExtraArgs, preKubeadmCommands, postKubeadmCommands. Overrides pack-level settings. Worker pools only.",
 						},
+						"override_cluster_api_config":         schemas.OverrideClusterAPIConfigMachinePoolSchema(),
 						"override_health_check_configuration": schemas.OverrideHealthCheckConfigurationSchema(),
 						"disk_size_gb": {
 							Type:        schema.TypeInt,
@@ -422,6 +423,9 @@ func flattenClusterConfigsGcp(config *models.V1GcpCloudConfig) []interface{} {
 	if String(config.Spec.ClusterConfig.Region) != "" {
 		m["region"] = String(config.Spec.ClusterConfig.Region)
 	}
+	if config.Spec.ClusterConfig.OverrideClusterAPIConfig != "" {
+		m["override_cluster_api_config"] = config.Spec.ClusterConfig.OverrideClusterAPIConfig
+	}
 	return []interface{}{m}
 }
 
@@ -451,6 +455,9 @@ func flattenMachinePoolConfigsGcp(machinePools []*models.V1GcpMachinePoolConfig)
 		if machinePool.IsControlPlane != nil && !*machinePool.IsControlPlane && machinePool.OverrideKubeadmConfiguration != "" {
 			oi["override_kubeadm_configuration"] = machinePool.OverrideKubeadmConfiguration
 		}
+		if machinePool.OverrideClusterAPIConfig != "" {
+			oi["override_cluster_api_config"] = machinePool.OverrideClusterAPIConfig
+		}
 		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
 		oi["instance_type"] = *machinePool.InstanceType
@@ -476,6 +483,15 @@ func resourceClusterGcpUpdate(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 	cloudConfigId := d.Get("cloud_config_id").(string)
+
+	if d.HasChange("cloud_config") {
+		cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
+		cloudConfigEntity := toCloudConfigGcp(cloudConfig)
+		if err := c.UpdateCloudConfigGcp(cloudConfigId, cloudConfigEntity); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	CloudConfig, err := c.GetCloudConfigGcp(cloudConfigId)
 	if err != nil {
 		return diag.FromErr(err)
@@ -563,6 +579,7 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	// gnarly, I know! =/
 	cloudConfig := d.Get("cloud_config").([]interface{})[0].(map[string]interface{})
 	//clientSecret := strfmt.Password(d.Get("gcp_client_secret").(string))
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
 
 	clusterContext := d.Get("context").(string)
 	profiles, err := toProfiles(c, d, clusterContext)
@@ -577,9 +594,10 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 			ClusterTemplate: toClusterTemplateReference(d),
 			Policies:        toPolicies(d),
 			CloudConfig: &models.V1GcpClusterConfig{
-				Network: cloudConfig["network"].(string),
-				Project: types.Ptr(cloudConfig["project"].(string)),
-				Region:  types.Ptr(cloudConfig["region"].(string)),
+				Network:                  cloudConfig["network"].(string),
+				Project:                  types.Ptr(cloudConfig["project"].(string)),
+				Region:                   types.Ptr(cloudConfig["region"].(string)),
+				OverrideClusterAPIConfig: overrideClusterAPIConfig,
 			},
 		},
 	}
@@ -597,6 +615,19 @@ func toGcpCluster(c *client.V1Client, d *schema.ResourceData) (*models.V1Spectro
 	cluster.Spec.ClusterConfig = toClusterConfig(d)
 
 	return cluster, nil
+}
+
+func toCloudConfigGcp(cloudConfig map[string]interface{}) *models.V1GcpCloudClusterConfigEntity {
+	overrideClusterAPIConfig, _ := cloudConfig["override_cluster_api_config"].(string)
+
+	return &models.V1GcpCloudClusterConfigEntity{
+		ClusterConfig: &models.V1GcpClusterConfig{
+			Network:                  cloudConfig["network"].(string),
+			Project:                  types.Ptr(cloudConfig["project"].(string)),
+			Region:                   types.Ptr(cloudConfig["region"].(string)),
+			OverrideClusterAPIConfig: overrideClusterAPIConfig,
+		},
+	}
 }
 
 func toMachinePoolGcp(machinePool interface{}) (*models.V1GcpMachinePoolConfigEntity, error) {
@@ -640,6 +671,9 @@ func toMachinePoolGcp(machinePool interface{}) (*models.V1GcpMachinePoolConfigEn
 		if overrideKubeadm, ok := m["override_kubeadm_configuration"].(string); ok && overrideKubeadm != "" {
 			mp.PoolConfig.OverrideKubeadmConfiguration = overrideKubeadm
 		}
+	}
+	if overrideClusterAPIConfig, ok := m["override_cluster_api_config"].(string); ok && overrideClusterAPIConfig != "" {
+		mp.PoolConfig.OverrideClusterAPIConfig = overrideClusterAPIConfig
 	}
 	expandOverrideHealthCheckConfiguration(m, mp.PoolConfig)
 

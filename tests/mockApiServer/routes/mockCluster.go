@@ -77,6 +77,12 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 	case "cluster-uid-running-unhealthy":
 		c := getMockSpectroCluster()
 		c.Status.State = "Running"
+		// isClusterRunningHealthy (resource_cluster_brownfield.go) calls
+		// GetClusterOverview(cluster.Metadata.UID), not the requested uid —
+		// override Metadata.UID here so that lookup lands back on this same
+		// dispatch key instead of falling through to the default fixture's
+		// "test-cluster-id".
+		c.Metadata.UID = "cluster-uid-running-unhealthy"
 		return c, http.StatusOK
 
 	case "cluster-uid-deleted-state":
@@ -144,6 +150,16 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 		c.Spec.CloudType = "vsphere"
 		return c, http.StatusOK
 
+	case "test-vsphere-cluster-cloudconfig-error-id":
+		// Drives resourceClusterVsphereRead's GetCloudConfigVsphere error
+		// branch: CloudConfigRef points at VsphereCloudConfigErrorUID so the
+		// subsequent cloud-config fetch fails.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-vsphere-cluster-cloudconfig-error-id"
+		c.Spec.CloudType = "vsphere"
+		c.Spec.CloudConfigRef = &models.V1ObjectReference{UID: VsphereCloudConfigErrorUID}
+		return c, http.StatusOK
+
 	case "test-edge-vsphere-cluster-id":
 		// Batch 3f edge_vsphere counterpart. Edge vSphere shares the
 		// vsphere cloud-config model but the outer cluster reports
@@ -160,6 +176,16 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 		c.Spec.CloudType = "maas"
 		return c, http.StatusOK
 
+	case "test-aks-cluster-cloudconfig-error-id":
+		// Drives resourceClusterAksRead's GetCloudConfigAks error branch:
+		// CloudConfigRef points at AksCloudConfigGetErrorUID so the
+		// subsequent cloud-config fetch fails.
+		c := getMockSpectroCluster()
+		c.Metadata.UID = "test-aks-cluster-cloudconfig-error-id"
+		c.Spec.CloudType = "aks"
+		c.Spec.CloudConfigRef = &models.V1ObjectReference{UID: AksCloudConfigGetErrorUID}
+		return c, http.StatusOK
+
 	case "test-edge-native-cluster-id":
 		c := getMockSpectroCluster()
 		c.Metadata.UID = "test-edge-native-cluster-id"
@@ -172,11 +198,52 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 		c.Spec.CloudType = "apache-cloudstack"
 		return c, http.StatusOK
 
+	case "cluster-uid-brownfield-import-running":
+		// resourceClusterBrownfieldRead success path: State=="Running" +
+		// ClusterImport populated → no "import pending" warning, and
+		// getClusterImportInfo succeeds.
+		c := getMockSpectroCluster()
+		c.Status.State = "Running"
+		c.Status.ClusterImport = &models.V1ClusterImport{
+			ImportLink: "kubectl apply -f https://api.dev.spectrocloud.com/v1/spectroclusters/cluster-uid-brownfield-import-running/import/manifest",
+		}
+		return c, http.StatusOK
+
+	case "cluster-uid-brownfield-import-pending":
+		// Same as above but State!="Running" → drives the extra
+		// "Cluster import pending" warning diagnostic.
+		c := getMockSpectroCluster()
+		c.Status.State = "Pending"
+		c.Status.ClusterImport = &models.V1ClusterImport{
+			ImportLink: "kubectl apply -f https://api.dev.spectrocloud.com/v1/spectroclusters/cluster-uid-brownfield-import-pending/import/manifest",
+		}
+		return c, http.StatusOK
+
+	case "cluster-uid-overview-error", "cluster-uid-overview-missing-health":
+		// GetCluster must still succeed for these — only the paired
+		// overviewHandler branch differs. See overviewHandler below.
+		return getMockSpectroCluster(), http.StatusOK
+
 	default:
 		// test-cluster-id and every other UID: return the well-populated
 		// fixture the pre-batch-4 CRUD tests already depend on.
 		return getMockSpectroCluster(), http.StatusOK
 	}
+}
+
+// clusterVariablesPatchErrorUID drives the UpdateClusterProfileVariableInCluster error
+// branch — any other UID gets the original blanket 204 success.
+const clusterVariablesPatchErrorUID = "cluster-uid-variables-patch-error"
+
+func clusterVariablesPatchHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	if uid == clusterVariablesPatchErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to update cluster profile variables"))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // overviewHandler serves GET /v1/dashboard/spectroclusters/{uid}/overview.
@@ -185,18 +252,118 @@ func clusterFixtureFor(uid string) (interface{}, int) {
 // the state string. Dispatch on UID so tests can drive both branches.
 func overviewHandler(w http.ResponseWriter, r *http.Request) {
 	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+
+	// cluster-uid-overview-error drives resourceClusterBrownfieldRead's
+	// "GetClusterOverview failed" branch (health_status → "Unknown").
+	if uid == "cluster-uid-overview-error" {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get cluster overview"))
+		return
+	}
+
 	summary := &models.V1SpectroClusterUIDSummary{
 		Status: &models.V1SpectroClusterUIDStatusSummary{},
 	}
 	switch uid {
 	case "cluster-uid-running-unhealthy":
 		summary.Status.Health = &models.V1SpectroClusterHealthStatus{State: "Unhealthy"}
+	case "cluster-uid-overview-missing-health":
+		// Health left nil — drives resourceClusterBrownfieldRead's
+		// "health info missing" branch (health_status → "Unknown").
 	default:
 		summary.Status.Health = &models.V1SpectroClusterHealthStatus{State: "Healthy"}
 	}
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(summary)
+}
+
+// -----------------------------------------------------------------------------
+// UID-dispatched handlers for the four brownfield readCommonFieldsBrownfield
+// policy/config lookups (GetClusterBackupConfig, GetClusterScanConfig,
+// GetClusterRbacConfig, GetClusterNamespaceConfig). All four share the same
+// two special UIDs so a single readCommonFieldsBrownfield test can drive the
+// error branch or the "populated payload" branch regardless of which field
+// it's exercising. Any other UID preserves the original static payload used
+// by pre-existing tests.
+// -----------------------------------------------------------------------------
+
+const (
+	clusterPolicyConfigErrorUID = "cluster-uid-policy-error"
+	clusterPolicyConfigFullUID  = "cluster-uid-policy-full"
+)
+
+func clusterFeatureBackupHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	switch uid {
+	case clusterPolicyConfigErrorUID:
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get cluster backup config"))
+	case clusterPolicyConfigFullUID:
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(&models.V1ClusterBackup{
+			Spec: &models.V1ClusterBackupSpec{
+				Config: &models.V1ClusterBackupConfig{
+					BackupPrefix:      "test-prefix",
+					BackupLocationUID: "test-location-uid",
+					DurationInHours:   24,
+					Schedule: &models.V1ClusterFeatureSchedule{
+						ScheduledRunTime: "0 1 * * *",
+					},
+				},
+			},
+		})
+	default:
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(&models.V1ClusterBackup{Spec: &models.V1ClusterBackupSpec{}})
+	}
+}
+
+func clusterFeatureScanHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	switch uid {
+	case clusterPolicyConfigErrorUID:
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get cluster scan config"))
+	case clusterPolicyConfigFullUID:
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(&models.V1ClusterComplianceScan{
+			Spec: &models.V1ClusterComplianceScanSpec{
+				DriverSpec: map[string]models.V1ComplianceScanDriverSpec{
+					"other-driver": {},
+				},
+			},
+		})
+	default:
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(&models.V1ClusterComplianceScan{Spec: &models.V1ClusterComplianceScanSpec{}})
+	}
+}
+
+func clusterConfigRbacsHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	if uid == clusterPolicyConfigErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get cluster rbac config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(&models.V1ClusterRbacs{Items: []*models.V1ClusterRbac{}})
+}
+
+func clusterConfigNamespacesHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	if uid == clusterPolicyConfigErrorUID {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(getError("500", "failed to get cluster namespace config"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(&models.V1ClusterNamespaceResources{Items: []*models.V1ClusterNamespaceResource{}})
 }
 
 // getMockSpectroClusterWithAddonReady returns a cluster whose Conditions
@@ -436,52 +603,36 @@ func ClusterRoutes() []Route {
 			},
 		},
 		{
-			Method: "PATCH",
-			Path:   "/v1/spectroclusters/{uid}/variables",
-			Response: ResponseData{
-				StatusCode: 204,
-				Payload:    nil,
-			},
+			// UID-dispatched so tests can drive the UpdateClusterProfileVariableInCluster
+			// error branch inside updateProfiles/updateClusterTemplateVariables
+			// (cluster_common_profiles.go), which the previous blanket-204 response
+			// could never exercise.
+			Method:  "PATCH",
+			Path:    "/v1/spectroclusters/{uid}/variables",
+			Handler: clusterVariablesPatchHandler,
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/spectroclusters/{uid}/features/backup",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &models.V1ClusterBackup{
-					Spec: &models.V1ClusterBackupSpec{},
-				},
-			},
+			// UID-dispatched — see clusterFeatureBackupHandler for the
+			// clusterPolicyConfigErrorUID / clusterPolicyConfigFullUID
+			// branches used by brownfield readCommonFieldsBrownfield tests.
+			Method:  "GET",
+			Path:    "/v1/spectroclusters/{uid}/features/backup",
+			Handler: clusterFeatureBackupHandler,
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/spectroclusters/{uid}/features/complianceScan",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &models.V1ClusterComplianceScan{
-					Spec: &models.V1ClusterComplianceScanSpec{},
-				},
-			},
+			Method:  "GET",
+			Path:    "/v1/spectroclusters/{uid}/features/complianceScan",
+			Handler: clusterFeatureScanHandler,
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/spectroclusters/{uid}/config/rbacs",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &models.V1ClusterRbacs{
-					Items: []*models.V1ClusterRbac{},
-				},
-			},
+			Method:  "GET",
+			Path:    "/v1/spectroclusters/{uid}/config/rbacs",
+			Handler: clusterConfigRbacsHandler,
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/spectroclusters/{uid}/config/namespaces",
-			Response: ResponseData{
-				StatusCode: 200,
-				Payload: &models.V1ClusterNamespaceResources{
-					Items: []*models.V1ClusterNamespaceResource{},
-				},
-			},
+			Method:  "GET",
+			Path:    "/v1/spectroclusters/{uid}/config/namespaces",
+			Handler: clusterConfigNamespacesHandler,
 		},
 	}
 }
