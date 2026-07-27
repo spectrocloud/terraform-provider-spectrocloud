@@ -341,6 +341,21 @@ func resourceClusterCustomCloudCreate(ctx context.Context, d *schema.ResourceDat
 	if isError && diagnostics != nil {
 		return diagnostics
 	}
+
+	// Apply backup policy after cluster creation if specified
+	if _, found := d.GetOk("backup_policy"); found {
+		if err := updateBackupPolicy(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	// Apply scan policy after cluster creation if specified
+	if _, found := d.GetOk("scan_policy"); found {
+		if err := updateScanPolicy(c, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	resourceClusterCustomCloudRead(ctx, d, m)
 
 	return diags
