@@ -238,6 +238,8 @@ github.com/spectrocloud/palette-sdk-go v0.0.0-20260723032834-6a171fe0550b h1:PRy
 github.com/spectrocloud/palette-sdk-go v0.0.0-20260723032834-6a171fe0550b/go.mod h1:Mdo5z2EWDjM0IeStsm01cCdPsE6j6q/0nB+y0gou5hk=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20260724150014-1c252625bad2 h1:WEtxdQJjZVtIHVt8OKJhm9uT9ntAGRifNZqj7e0bkbI=
 github.com/spectrocloud/palette-sdk-go v0.0.0-20260724150014-1c252625bad2/go.mod h1:Mdo5z2EWDjM0IeStsm01cCdPsE6j6q/0nB+y0gou5hk=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20260729054230-d71c5b4801e7 h1:lUijk+w4U8vgaQsBwAGCgC4i13q21oVcxrh4sJP8P6g=
+github.com/spectrocloud/palette-sdk-go v0.0.0-20260729054230-d71c5b4801e7/go.mod h1:Mdo5z2EWDjM0IeStsm01cCdPsE6j6q/0nB+y0gou5hk=
 github.com/spf13/cast v1.3.1/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
 github.com/spf13/cast v1.5.0/go.mod h1:SpXXQ5YoyJw6s3/6cMTQuxvgRl3PCJiyaX9p6b155UU=
