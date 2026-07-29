@@ -412,3 +412,16 @@ func ValidateClusterTypeUpdate(d *schema.ResourceData) error {
 	}
 	return nil
 }
+
+// ValidateUpdateWorkerPoolsInParallelUpdate checks if update_worker_pools_in_parallel
+// has been modified during an update operation. Returns an error if the field has
+// changed, as it is a create-only field.
+func ValidateUpdateWorkerPoolsInParallelUpdate(d *schema.ResourceData) error {
+	if d.HasChange("update_worker_pools_in_parallel") {
+		oldVal, newVal := d.GetChange("update_worker_pools_in_parallel")
+		return fmt.Errorf("update_worker_pools_in_parallel cannot be modified after cluster creation. "+
+			"Current value: %v, attempted new value: %v. "+
+			"To change this setting, you must delete and recreate the cluster", oldVal, newVal)
+	}
+	return nil
+}
