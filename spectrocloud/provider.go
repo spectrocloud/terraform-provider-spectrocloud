@@ -21,13 +21,29 @@ const (
 var ProviderInitProjectUid = ""
 var ProviderFeaturePreview = map[string]bool{}
 
+// providerVersion holds the compiled binary's version, as set by goreleaser via main.go.
+var providerVersion = "dev"
+
 // isFeaturePreviewEnabled returns true if the given feature flag name is
 // explicitly set to true in the provider's feature_preview map.
 func isFeaturePreviewEnabled(name string) bool {
 	return ProviderFeaturePreview[name]
 }
 
-func New(_ string) func() *schema.Provider {
+// clientHeaderValue builds the X-SpectroCloud-Client header value sent on Hubble
+// API calls, e.g. "terraform-v1.2.3". Falls back to the "dev" placeholder version
+// used by local/dev builds when no real version is available.
+func clientHeaderValue(version string) string {
+	if version == "" {
+		version = "dev"
+	}
+	return "terraform-v" + version
+}
+
+func New(version string) func() *schema.Provider {
+	if version != "" {
+		providerVersion = version
+	}
 	return func() *schema.Provider {
 		p := &schema.Provider{
 			Schema: map[string]*schema.Schema{
@@ -288,6 +304,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		client.WithAPIKey(apiKey),
 		client.WithInsecureSkipVerify(insecure),
 		client.WithRetries(retryAttempts),
+		client.WithClientHeader(clientHeaderValue(providerVersion)),
 	)
 	if transportDebug {
 		client.WithTransportDebug()(c)

@@ -18,6 +18,25 @@ func TestProvider(t *testing.T) {
 	}
 }
 
+func TestNewCapturesProviderVersion(t *testing.T) {
+	orig := providerVersion
+	defer func() { providerVersion = orig }()
+
+	New("9.9.9")()
+	assert.Equal(t, "9.9.9", providerVersion)
+
+	// an empty version (e.g. a bare `go build` with no ldflags) must not clobber
+	// a previously captured real version.
+	New("")()
+	assert.Equal(t, "9.9.9", providerVersion)
+}
+
+func TestClientHeaderValue(t *testing.T) {
+	assert.Equal(t, "terraform-v1.2.3", clientHeaderValue("1.2.3"))
+	assert.Equal(t, "terraform-vdev", clientHeaderValue("dev"))
+	assert.Equal(t, "terraform-vdev", clientHeaderValue(""))
+}
+
 func prepareBaseProviderConfig() *schema.ResourceData {
 	basSchema := &schema.Resource{
 		Schema: map[string]*schema.Schema{
