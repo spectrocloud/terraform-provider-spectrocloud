@@ -40,6 +40,19 @@ func clientHeaderValue(version string) string {
 	return "terraform-v" + version
 }
 
+// resolveClientHeader returns the X-SpectroCloud-Client header value to send.
+// If the undocumented client_header override is set (used by wrapper
+// integrations such as provider-palette), it takes precedence over the
+// default terraform-vX.Y.Z value.
+func resolveClientHeader(d *schema.ResourceData, version string) string {
+	if override, ok := d.GetOk("client_header"); ok {
+		if s, ok := override.(string); ok && s != "" {
+			return s
+		}
+	}
+	return clientHeaderValue(version)
+}
+
 func New(version string) func() *schema.Provider {
 	if version != "" {
 		providerVersion = version
@@ -93,6 +106,16 @@ func New(version string) func() *schema.Provider {
 					},
 					Description: "Optional provider feature flags (map of booleans). Unknown keys are ignored. " +
 						"Set `disable_addon_deployment_resource` to `true` to block the `spectrocloud_addon_deployment` resource during plan and apply.",
+				},
+				// client_header is intentionally undocumented and absent from the provider's
+				// public description text. It exists only so that wrapper integrations built
+				// on top of this provider (e.g. the Crossplane provider-palette, which forks
+				// this provider's compiled binary and drives it via generated HCL) can identify
+				// themselves to the Palette API in place of the default terraform-vX.Y.Z value.
+				// It is not intended to be set by a human authoring Terraform configuration.
+				"client_header": {
+					Type:     schema.TypeString,
+					Optional: true,
 				},
 				"feature_preview": {
 					Type:     schema.TypeMap,
@@ -304,7 +327,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		client.WithAPIKey(apiKey),
 		client.WithInsecureSkipVerify(insecure),
 		client.WithRetries(retryAttempts),
-		client.WithClientHeader(clientHeaderValue(providerVersion)),
+		client.WithClientHeader(resolveClientHeader(d, providerVersion)),
 	)
 	if transportDebug {
 		client.WithTransportDebug()(c)

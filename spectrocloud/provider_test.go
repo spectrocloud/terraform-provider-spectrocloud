@@ -37,6 +37,17 @@ func TestClientHeaderValue(t *testing.T) {
 	assert.Equal(t, "terraform-vdev", clientHeaderValue(""))
 }
 
+func TestResolveClientHeaderDefaultsWhenOverrideUnset(t *testing.T) {
+	d := prepareBaseProviderConfig()
+	assert.Equal(t, "terraform-v1.2.3", resolveClientHeader(d, "1.2.3"))
+}
+
+func TestResolveClientHeaderUsesOverrideWhenSet(t *testing.T) {
+	d := prepareBaseProviderConfig()
+	_ = d.Set("client_header", "crossplane-v0.29.9")
+	assert.Equal(t, "crossplane-v0.29.9", resolveClientHeader(d, "1.2.3"))
+}
+
 func prepareBaseProviderConfig() *schema.ResourceData {
 	basSchema := &schema.Resource{
 		Schema: map[string]*schema.Schema{
@@ -91,6 +102,10 @@ func prepareBaseProviderConfig() *schema.ResourceData {
 				Elem: &schema.Schema{
 					Type: schema.TypeBool,
 				},
+			},
+			"client_header": {
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 		},
 	}
