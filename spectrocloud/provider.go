@@ -116,6 +116,7 @@ func New(version string) func() *schema.Provider {
 				"client_header": {
 					Type:     schema.TypeString,
 					Optional: true,
+					Default:  "terraform-v0.29.8",
 				},
 				"feature_preview": {
 					Type:     schema.TypeMap,
