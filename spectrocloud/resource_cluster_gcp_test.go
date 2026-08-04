@@ -145,6 +145,7 @@ func TestFlattenMachinePoolConfigsGcp(t *testing.T) {
 					"instance_type":           "n1-standard-4",
 					"disk_size_gb":            100,
 					"azs":                     []string{"us-west1-a", "us-west1-b"},
+					"skip_k8s_upgrade":        "disabled",
 				},
 			},
 		},

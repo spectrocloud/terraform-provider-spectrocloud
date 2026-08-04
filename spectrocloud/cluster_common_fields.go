@@ -139,8 +139,8 @@ func readCommonFields(c *client.V1Client, d *schema.ResourceData, cluster *model
 	}
 
 	// Flatten cluster_type from the cluster spec (read-only after creation)
-	if _, ok := d.GetOk("cluster_type"); ok && cluster.Spec != nil && cluster.Spec.ClusterType != "" {
-		if err := d.Set("cluster_type", cluster.Spec.ClusterType); err != nil {
+	if _, ok := d.GetOk("cluster_type"); ok && cluster.Spec != nil && cluster.Spec.ClusterType != nil && *cluster.Spec.ClusterType != "" {
+		if err := d.Set("cluster_type", string(*cluster.Spec.ClusterType)); err != nil {
 			return diag.FromErr(err), true
 		}
 	}
@@ -186,6 +186,10 @@ func updateCommonFieldsForBrownfieldCluster(d *schema.ResourceData, c *client.V1
 
 // update common fields like namespaces, cluster_rbac_binding, cluster_profile, backup_policy, scan_policy
 func updateCommonFields(d *schema.ResourceData, c *client.V1Client) (diag.Diagnostics, bool) {
+	if err := ValidateUpdateWorkerPoolsInParallelUpdate(d); err != nil {
+		return diag.FromErr(err), true
+	}
+
 	if d.HasChanges("name", "tags", "description", "tags_map") {
 		if err := updateClusterMetadata(c, d); err != nil {
 			return diag.FromErr(err), true
