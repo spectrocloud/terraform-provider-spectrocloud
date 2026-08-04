@@ -109,11 +109,13 @@ func resourceClusterGroup() *schema.Resource {
 							Description: "YAML values override string applied to the cluster group configuration.",
 						},
 						"k8s_distribution": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Default:     "vcluster-generic",
-							ForceNew:    true,
-							Description: "The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`.",
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "vcluster-generic",
+							ForceNew: true,
+							Description: "The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`. " +
+								"`k3s` is no longer supported for new Cluster Groups - use `vcluster-generic` or `cncf_k8s` instead. " +
+								"Existing Cluster Groups on `k3s` remain manageable but must be migrated to a new Cluster Group manually.",
 						},
 					},
 				},
@@ -171,6 +173,16 @@ func resourceClusterGroupCreate(ctx context.Context, d *schema.ResourceData, m i
 
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
+
+	if resourcesObj, ok := d.GetOk("config"); ok {
+		resources := resourcesObj.([]interface{})[0].(map[string]interface{})
+		if distro, ok := resources["k8s_distribution"].(string); ok && distro == string(models.V1ClusterKubernetesDistroTypeK3s) {
+			return diag.Errorf("k3s is no longer supported for new Cluster Groups. Use `vcluster-generic` or `cncf_k8s` " +
+				"instead. Existing k3s Cluster Groups remain manageable but must be migrated to a new Cluster Group manually - " +
+				"see https://docs.spectrocloud.com/clusters/cluster-groups/vcluster-upgrades/")
+		}
+	}
+
 	cluster := toClusterGroup(c, d)
 
 	uid, err := c.CreateClusterGroup(cluster)
