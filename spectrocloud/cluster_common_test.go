@@ -640,7 +640,7 @@ func prepareSpectroClusterModel() *models.V1SpectroCluster {
 				UpdateWorkerPoolsInParallel: false,
 			},
 			ClusterProfileTemplates: nil,
-			ClusterType:             "full",
+			ClusterType:             models.V1ClusterTypePureManage.Pointer(),
 		},
 		Status: &models.V1SpectroClusterStatus{
 			AbortTimestamp: models.V1Time{},
@@ -1798,7 +1798,7 @@ func TestToClusterType(t *testing.T) {
 
 func TestClusterTypeInClusterSpec(t *testing.T) {
 	// Test that cluster spec contains ClusterType field when set
-	clusterType := "PureManage"
+	clusterType := models.V1ClusterTypePureManage.Pointer()
 	cluster := &models.V1SpectroCluster{
 		Metadata: &models.V1ObjectMeta{
 			Name: "test-cluster",
