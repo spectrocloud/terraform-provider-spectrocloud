@@ -1399,3 +1399,90 @@ func TestCanonicalBool(t *testing.T) {
 	assert.True(t, canonicalBool(true))
 	assert.False(t, canonicalBool(false))
 }
+
+// TestSelectNewestProfileVersionUID covers findAnyExistingProfileVersionUID's
+// clone-source selection: it must pick the highest-semver-version match for
+// the given name, not whichever entry the listing endpoint happened to return
+// first. Regression coverage for a bug where the previous "return the first
+// match" implementation deterministically picked the OLDEST surviving
+// version of an `immutable-clusterprofiles` lineage as the clone source --
+// if that old version's pack content referenced a profile variable the
+// current HCL no longer declares, the subsequent overwrite steps in
+// resourceClusterProfileCreate could fail with PackVariablesUndefined,
+// leaving the new immutable version permanently stuck showing the old
+// version's stale, never-overwritten content.
+func TestSelectNewestProfileVersionUID(t *testing.T) {
+	meta := func(uid, name, version string) *models.V1ClusterProfileMetadata {
+		return &models.V1ClusterProfileMetadata{
+			Metadata: &models.V1ObjectEntity{UID: uid, Name: name},
+			Spec:     &models.V1ClusterProfileMetadataSpec{Version: version},
+		}
+	}
+
+	tests := []struct {
+		name     string
+		profiles []*models.V1ClusterProfileMetadata
+		lookup   string
+		want     string
+	}{
+		{
+			name: "oldest-listed-first: must still pick the newest version, not the first match",
+			// Mirrors the real-world shape that triggered this bug: a
+			// long-lived lineage where the listing endpoint returns older
+			// versions before newer ones.
+			profiles: []*models.V1ClusterProfileMetadata{
+				meta("uid-0.2.121", "aigw-instance", "0.2.121"),
+				meta("uid-0.2.130", "aigw-instance", "0.2.130"),
+				meta("uid-0.2.133", "aigw-instance", "0.2.133"),
+			},
+			lookup: "aigw-instance",
+			want:   "uid-0.2.133",
+		},
+		{
+			name: "newest-listed-first: still picks the newest (not a first-match-happens-to-work case)",
+			profiles: []*models.V1ClusterProfileMetadata{
+				meta("uid-0.2.133", "aigw-instance", "0.2.133"),
+				meta("uid-0.2.121", "aigw-instance", "0.2.121"),
+			},
+			lookup: "aigw-instance",
+			want:   "uid-0.2.133",
+		},
+		{
+			name: "filters by name -- ignores other lineages, including ones with a higher version",
+			profiles: []*models.V1ClusterProfileMetadata{
+				meta("uid-other-9.9.9", "some-other-profile", "9.9.9"),
+				meta("uid-target-0.1.0", "aigw-instance", "0.1.0"),
+			},
+			lookup: "aigw-instance",
+			want:   "uid-target-0.1.0",
+		},
+		{
+			name:     "no match returns empty string",
+			profiles: []*models.V1ClusterProfileMetadata{meta("uid-x", "some-other-profile", "1.0.0")},
+			lookup:   "aigw-instance",
+			want:     "",
+		},
+		{
+			name:     "empty profile list returns empty string",
+			profiles: nil,
+			lookup:   "aigw-instance",
+			want:     "",
+		},
+		{
+			name: "double-digit version components sort numerically, not lexicographically",
+			profiles: []*models.V1ClusterProfileMetadata{
+				meta("uid-0.2.9", "aigw-instance", "0.2.9"),
+				meta("uid-0.2.10", "aigw-instance", "0.2.10"),
+			},
+			lookup: "aigw-instance",
+			want:   "uid-0.2.10",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := selectNewestProfileVersionUID(tt.profiles, tt.lookup)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

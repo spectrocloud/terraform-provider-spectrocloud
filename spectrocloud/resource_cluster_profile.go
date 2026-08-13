@@ -11,9 +11,11 @@ import (
 
 	"log"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/spectrocloud/palette-sdk-go/api/models"
@@ -461,16 +463,37 @@ func bumpPatchHint(current string) string {
 	return strings.Join(parts, ".")
 }
 
-// findAnyExistingProfileVersionUID returns the UID of any existing version of
-// the given profile name in the current scope, or an empty string if none exists.
+// findAnyExistingProfileVersionUID returns the UID of the existing version of
+// the given profile name with the highest semver version in the current scope,
+// or an empty string if none exists.
 //
 // Used by the `immutable-clusterprofiles` Create path to find a clone source:
 // when the user bumps the `version` field, Terraform plans a replacement
 // (destroy + create), and the new resource's Create function runs against an
 // existing Palette lineage. To produce the new immutable version, Create needs
-// any existing uid in that lineage to call `CloneClusterProfile` against -- the
-// exact source version doesn't matter, since clone always produces a new uid
-// that we then overwrite with the user's pack content.
+// an existing uid in that lineage to call `CloneClusterProfile` against, then
+// overwrites the clone's pack content with the user's HCL via the standard
+// update chain below.
+//
+// This deliberately prefers the NEWEST surviving version rather than an
+// arbitrary one (previously: whichever entry `GetClusterProfiles()` happened
+// to list first for this name, which in practice was consistently the OLDEST
+// surviving version). The choice matters even though the clone is overwritten
+// immediately afterward: if the chosen source's own pack content references a
+// profile variable (`{{.spectro.var.X}}`) that the current HCL no longer
+// declares, the variable-sync + pack-update calls below can fail with
+// PackVariablesUndefined -- there is no safe ordering of "drop the now-unused
+// variable" vs. "push pack content that no longer references it" that isn't
+// circular when the *old, not-yet-overwritten* content is what's being
+// validated. When that happens, Create aborts partway through and the new
+// immutable version is left permanently stuck showing the stale, cloned-but-
+// never-overwritten content of whichever version was picked as the source.
+// Preferring the newest surviving version doesn't eliminate this class of bug
+// (a version bump that itself removes a variable the *current* version's own
+// content still uses would still hit it), but it removes the common case,
+// where an old profile has accumulated a variable-schema change somewhere in
+// its history and the previous "any" selection was choosing from arbitrarily
+// far back in that history on every single clone.
 //
 // This helper exists because Palette's data model treats every profile version
 // as a separate object with its own UID -- there is no "lineage parent" object,
@@ -481,12 +504,56 @@ func findAnyExistingProfileVersionUID(c *client.V1Client, name string) (string, 
 	if err != nil {
 		return "", err
 	}
+	return selectNewestProfileVersionUID(profiles, name), nil
+}
+
+// selectNewestProfileVersionUID returns the UID of the entry in profiles whose
+// name matches and whose version sorts highest (semver), or "" if there's no
+// match. Split out from findAnyExistingProfileVersionUID so the selection
+// logic is testable without mocking the Palette client.
+func selectNewestProfileVersionUID(profiles []*models.V1ClusterProfileMetadata, name string) string {
+	var matches []*models.V1ClusterProfileMetadata
 	for _, p := range profiles {
 		if p.Metadata != nil && p.Metadata.Name == name {
-			return p.Metadata.UID, nil
+			matches = append(matches, p)
 		}
 	}
-	return "", nil
+	if len(matches) == 0 {
+		return ""
+	}
+
+	// Sort by version (semver) ascending and take the highest -- same
+	// tie-break/fallback convention as the "Latest" resolution in
+	// resource_cluster_profile_import.go, so a non-semver-parseable version
+	// string (defensively; every version we've observed is well-formed) sorts
+	// as lowest rather than panicking or being skipped.
+	sort.Slice(matches, func(i, j int) bool {
+		vi := profileMetadataVersion(matches[i])
+		vj := profileMetadataVersion(matches[j])
+		si, ei := semver.NewVersion(vi)
+		sj, ej := semver.NewVersion(vj)
+		if ei != nil && ej != nil {
+			return vi < vj
+		}
+		if ei != nil {
+			return true
+		}
+		if ej != nil {
+			return false
+		}
+		return si.LessThan(sj)
+	})
+	return matches[len(matches)-1].Metadata.UID
+}
+
+// profileMetadataVersion returns p's version string, or "0.0.0" if p or its
+// spec is nil (matches getProfileVersion's nil-handling convention in
+// resource_cluster_profile_import.go).
+func profileMetadataVersion(p *models.V1ClusterProfileMetadata) string {
+	if p != nil && p.Spec != nil {
+		return p.Spec.Version
+	}
+	return "0.0.0"
 }
 
 func resourceClusterProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
