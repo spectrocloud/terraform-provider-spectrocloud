@@ -1030,5 +1030,7 @@ func flattenCommonAttributeForBrownfieldClusterImport(c *client.V1Client, d *sch
 	}
 
 	_ = d.Set("import_mode", "")
-	return setCommonClusterImportAttributes(cluster, d, true)
+	// Brownfield schema does not include os_patch_* fields; setting them
+	// causes "Invalid address to set" during import / config generation (PLT-2350).
+	return setCommonClusterImportAttributes(cluster, d, true, false)
 }
