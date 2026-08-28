@@ -280,26 +280,3 @@ func TestResourceClusterGroupCRUD(t *testing.T) {
 	}, unitTestMockAPIClient,
 		resourceClusterGroupCreate, resourceClusterGroupRead, resourceClusterGroupUpdate, resourceClusterGroupDelete)
 }
-
-func TestResourceClusterGroupCreate_RejectsK3s(t *testing.T) {
-	prepare := func() *schema.ResourceData {
-		d, err := prepareClusterGroupTestData()
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = d.Set("config", []map[string]interface{}{
-			{
-				"host_endpoint_type": "LoadBalancer",
-				"k8s_distribution":   "k3s",
-			},
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return d
-	}
-
-	testResourceCRUDNegative(t, "Create", prepare, unitTestMockAPIClient,
-		resourceClusterGroupCreate, resourceClusterGroupRead, resourceClusterGroupUpdate, resourceClusterGroupDelete,
-		false, "k3s is no longer supported")
-}

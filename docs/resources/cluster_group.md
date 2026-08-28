@@ -88,7 +88,7 @@ Optional:
 
 - `cpu_millicore` (Number) The CPU limit in millicores.
 - `host_endpoint_type` (String) The host endpoint type. Allowed values are 'Ingress' or 'LoadBalancer'. Defaults to 'Ingress'.
-- `k8s_distribution` (String) The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`. `k3s` is no longer supported for new Cluster Groups - use `vcluster-generic` or `cncf_k8s` instead. Existing Cluster Groups on `k3s` remain manageable but must be migrated to a new Cluster Group manually.
+- `k8s_distribution` (String) The Kubernetes distribution, allowed values are `vcluster-generic`,`k3s` and `cncf_k8s`.
 - `memory_in_mb` (Number) The memory limit in megabytes (MB).
 - `oversubscription_percent` (Number) The allowed oversubscription percentage.
 - `storage_in_gb` (Number) The storage limit in gigabytes (GB).
