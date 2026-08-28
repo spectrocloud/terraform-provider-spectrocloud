@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
 	github.com/robfig/cron v1.2.0
 	github.com/spectrocloud/palette-sdk-go v0.0.0-20260724150014-1c252625bad2
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.36.4
 	k8s.io/apimachinery v0.36.4
@@ -31,7 +31,6 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
@@ -88,7 +87,6 @@ require (
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/posener/complete v1.2.3 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
@@ -106,6 +104,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/mod v0.37.0 // indirect
