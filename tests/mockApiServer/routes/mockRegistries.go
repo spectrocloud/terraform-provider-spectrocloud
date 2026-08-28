@@ -69,6 +69,38 @@ func getHelmRegistryPayload() *models.V1HelmRegistry {
 	}
 }
 
+// helmRegistryFixtureFor dispatches GET /v1/registries/helm/{uid} by UID,
+// mirroring ecrRegistryFixtureFor/basicRegistryFixtureFor below. PLT-2356:
+// added the "helm-uid-tls" case so resourceRegistryHelmRead's TLS mapping
+// (registry.Spec.Auth.TLS != nil branch) can be exercised directly. The
+// default branch preserves the original static payload so every pre-existing
+// helm registry test keeps passing unmodified.
+func helmRegistryFixtureFor(uid string) (*models.V1HelmRegistry, int) {
+	switch uid {
+	case "helm-uid-tls":
+		r := getHelmRegistryPayload()
+		r.Metadata.UID = uid
+		r.Spec.Auth.TLS = &models.V1TLSConfiguration{
+			Ca:                 "test-ca-pem",
+			Certificate:        "test-cert-pem",
+			Enabled:            true,
+			InsecureSkipVerify: true,
+			Key:                "test-key-pem",
+		}
+		return r, http.StatusOK
+	default:
+		return getHelmRegistryPayload(), http.StatusOK
+	}
+}
+
+func helmRegistryGetHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	payload, status := helmRegistryFixtureFor(uid)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
 // ecrRegistryFixtureFor dispatches GET /v1/registries/oci/{uid}/ecr by UID so
 // resourceRegistryEcrRead's credential-type switch and the TLS nil/non-nil
 // branch can each be exercised directly. The default branch preserves the
@@ -412,12 +444,9 @@ func RegistriesRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/registries/helm/{uid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getHelmRegistryPayload(),
-			},
+			Method:  "GET",
+			Path:    "/v1/registries/helm/{uid}",
+			Handler: helmRegistryGetHandler,
 		},
 		{
 			Method: "GET",

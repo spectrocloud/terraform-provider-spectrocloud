@@ -20,6 +20,15 @@ resource "spectrocloud_registry_helm" "r1" {
     credential_type = "noAuth"
     username        = "abc"
     password        = "def"
+    # Optional: TLS configuration. Omit the block to send no TLS configuration.
+    # Certificates are PEM content, not paths - use file() to read them from disk.
+    # tls_config {
+    #   enabled              = true
+    #   ca                   = file("${path.module}/ca.pem")
+    #   certificate          = file("${path.module}/client.pem")
+    #   key                  = file("${path.module}/client-key.pem")
+    #   insecure_skip_verify = false
+    # }
   }
   # Optional: Wait for the registry to complete synchronization
   # wait_for_sync = true
