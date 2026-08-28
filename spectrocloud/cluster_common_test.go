@@ -640,7 +640,7 @@ func prepareSpectroClusterModel() *models.V1SpectroCluster {
 				UpdateWorkerPoolsInParallel: false,
 			},
 			ClusterProfileTemplates: nil,
-			ClusterType:             "full",
+			ClusterType:             models.V1ClusterTypePureManage.Pointer(),
 		},
 		Status: &models.V1SpectroClusterStatus{
 			AbortTimestamp: models.V1Time{},
@@ -1798,7 +1798,7 @@ func TestToClusterType(t *testing.T) {
 
 func TestClusterTypeInClusterSpec(t *testing.T) {
 	// Test that cluster spec contains ClusterType field when set
-	clusterType := "PureManage"
+	clusterType := models.V1ClusterTypePureManage.Pointer()
 	cluster := &models.V1SpectroCluster{
 		Metadata: &models.V1ObjectMeta{
 			Name: "test-cluster",
@@ -1855,6 +1855,35 @@ func TestValidateClusterTypeUpdate(t *testing.T) {
 
 		err := ValidateClusterTypeUpdate(d)
 		assert.NoError(t, err, "Should not error when cluster_type is not present in state")
+	})
+}
+
+func TestValidateUpdateWorkerPoolsInParallelUpdate(t *testing.T) {
+	schemaMap := map[string]*schema.Schema{
+		"update_worker_pools_in_parallel": {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  false,
+		},
+	}
+
+	t.Run("Error message format is correct", func(t *testing.T) {
+		expectedSubstring := "update_worker_pools_in_parallel cannot be modified after cluster creation"
+		errMsg := fmt.Sprintf("update_worker_pools_in_parallel cannot be modified after cluster creation. "+
+			"Current value: %v, attempted new value: %v. "+
+			"To change this setting, you must delete and recreate the cluster", false, true)
+		assert.Contains(t, errMsg, expectedSubstring)
+		assert.Contains(t, errMsg, "false")
+		assert.Contains(t, errMsg, "true")
+		assert.Contains(t, errMsg, "delete and recreate the cluster")
+	})
+
+	t.Run("Empty state has no change", func(t *testing.T) {
+		d := schema.TestResourceDataRaw(t, schemaMap, map[string]interface{}{})
+		d.SetId("test-cluster-id")
+
+		err := ValidateUpdateWorkerPoolsInParallelUpdate(d)
+		assert.NoError(t, err, "Should not error when update_worker_pools_in_parallel has no change")
 	})
 }
 

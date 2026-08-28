@@ -48,7 +48,10 @@ func resourceClusterProfile() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "1.0.0", // default as in UI
-				Description: "Version of the cluster profile. Defaults to '1.0.0'. " +
+				Description: "Version of the cluster profile. Defaults to '1.0.0'. Must be a valid " +
+					"semantic version (e.g. `1.2.3`) or a short/coerced form (e.g. `1`, `1.2`, `v1.2.3`) - " +
+					"malformed versions (e.g. `1.2.3.beta`, `V1.2.3`, `chart-v1.2.3`) are rejected by the API " +
+					"on create and update. " +
 					"\n\n" +
 					"Default behavior (no feature flag set): changing this value on an existing " +
 					"profile updates the version in place via `PUT /v1/clusterprofiles/{uid}`, " +

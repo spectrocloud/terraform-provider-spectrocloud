@@ -302,6 +302,13 @@ func resourceClusterAzure() *schema.Resource {
 							Default:     0,
 							Description: "Minimum number of seconds node should be Ready, before the next node is selected for repave. Default value is `0`, Applicable only for worker pools.",
 						},
+						"skip_k8s_upgrade": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "disabled",
+							ValidateFunc: validation.StringInSlice([]string{"enabled", "disabled"}, false),
+							Description:  "Skip Kubernetes version upgrade for this worker pool. Use 'enabled' to skip OS/K8s update on profile upgrade (N-3 skew allowed); 'disabled' to upgrade with profile (default). Applicable only for worker pools.",
+						},
 						"instance_type": {
 							Type:        schema.TypeString,
 							Required:    true,
@@ -632,6 +639,13 @@ func flattenMachinePoolConfigsAzure(machinePools []*models.V1AzureMachinePoolCon
 		}
 		flattenOverrideHealthCheckConfiguration(machinePool.OverrideHealthCheckConfiguration, oi)
 
+		// Flatten skip_k8s_upgrade (worker pools only); default "disabled" for backward compat when API omits field
+		skipK8sUpgrade := "disabled"
+		if machinePool.SkipK8sUpgrade != nil && *machinePool.SkipK8sUpgrade != "" {
+			skipK8sUpgrade = *machinePool.SkipK8sUpgrade
+		}
+		oi["skip_k8s_upgrade"] = skipK8sUpgrade
+
 		oi["instance_type"] = machinePool.InstanceType
 		oi["is_system_node_pool"] = machinePool.IsSystemNodePool
 
@@ -939,6 +953,14 @@ func toMachinePoolAzure(machinePool interface{}) (*models.V1AzureMachinePoolConf
 		if err != nil {
 			return mp, err
 		}
+	}
+
+	if !controlPlane {
+		skipK8sUpgrade := "disabled"
+		if v, ok := m["skip_k8s_upgrade"].(string); ok && v != "" {
+			skipK8sUpgrade = v
+		}
+		mp.PoolConfig.SkipK8sUpgrade = &skipK8sUpgrade
 	}
 
 	return mp, nil

@@ -382,7 +382,7 @@ terraform import spectrocloud_application_profile.example profile_uid_here/profi
 - `description` (String) Description of the profile.
 - `tags` (Set of String) A list of tags to be applied to the application profile. Tags must be in the form of `key:value`.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `version` (String) Version of the profile. Default value is 1.0.0.
+- `version` (String) Version of the profile. Default value is 1.0.0. Must be a valid semantic version (e.g. `1.2.3`) or a short/coerced form (e.g. `1`, `1.2`, `v1.2.3`) - malformed versions (e.g. `1.2.3.beta`, `V1.2.3`, `chart-v1.2.3`) are rejected by the API on create and update.
 
 ### Read-Only
 
