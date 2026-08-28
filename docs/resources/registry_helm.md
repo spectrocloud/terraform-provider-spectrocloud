@@ -20,6 +20,15 @@ resource "spectrocloud_registry_helm" "r1" {
     credential_type = "noAuth"
     username        = "abc"
     password        = "def"
+    # Optional: TLS configuration. Omit the block to send no TLS configuration.
+    # Certificates are PEM content, not paths - use file() to read them from disk.
+    # tls_config {
+    #   enabled              = true
+    #   ca                   = file("${path.module}/ca.pem")
+    #   certificate          = file("${path.module}/client.pem")
+    #   key                  = file("${path.module}/client-key.pem")
+    #   insecure_skip_verify = false
+    # }
   }
   # Optional: Wait for the registry to complete synchronization
   # wait_for_sync = true
@@ -70,8 +79,21 @@ Required:
 Optional:
 
 - `password` (String, Sensitive) Password for basic auth (credential). Required when credential_type is `basic`.
+- `tls_config` (Block List, Max: 1) TLS configuration for the registry. If omitted, no TLS configuration is sent. (see [below for nested schema](#nestedblock--credentials--tls_config))
 - `token` (String, Sensitive) Auth token (credential). Required when credential_type is `token`.
 - `username` (String) The username for basic authentication. Required if 'credential_type' is set to 'basic'.
+
+<a id="nestedblock--credentials--tls_config"></a>
+### Nested Schema for `credentials.tls_config`
+
+Optional:
+
+- `ca` (String) The certificate authority (CA) certificate, in PEM format, used to validate the Helm registry's TLS certificate.
+- `certificate` (String) The client certificate, in PEM format, used for mutual TLS (mTLS) authentication with the Helm registry.
+- `enabled` (Boolean) Specifies whether TLS is enabled for the connection to the Helm registry. Default value is `true`.
+- `insecure_skip_verify` (Boolean) Disables TLS certificate verification when set to true. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this when connecting to registries with self-signed certificates in trusted networks.
+- `key` (String, Sensitive) The private key, in PEM format, corresponding to the client certificate used for mutual TLS (mTLS) authentication with the Helm registry.
+
 
 
 <a id="nestedblock--timeouts"></a>

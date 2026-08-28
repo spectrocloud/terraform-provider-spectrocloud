@@ -83,6 +83,44 @@ func resourceRegistryHelm() *schema.Resource {
 							Sensitive:   true,
 							Description: "Auth token (credential). Required when credential_type is `token`.",
 						},
+						"tls_config": {
+							Type:        schema.TypeList,
+							Optional:    true,
+							MaxItems:    1,
+							Description: "TLS configuration for the registry. If omitted, no TLS configuration is sent.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     true,
+										Description: "Specifies whether TLS is enabled for the connection to the Helm registry. Default value is `true`.",
+									},
+									"ca": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The certificate authority (CA) certificate, in PEM format, used to validate the Helm registry's TLS certificate.",
+									},
+									"certificate": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The client certificate, in PEM format, used for mutual TLS (mTLS) authentication with the Helm registry.",
+									},
+									"key": {
+										Type:        schema.TypeString,
+										Optional:    true,
+										Sensitive:   true,
+										Description: "The private key, in PEM format, corresponding to the client certificate used for mutual TLS (mTLS) authentication with the Helm registry.",
+									},
+									"insecure_skip_verify": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     false,
+										Description: "Disables TLS certificate verification when set to true. ⚠️ WARNING: Setting this to true disables SSL certificate verification and makes connections vulnerable to man-in-the-middle attacks. Only use this when connecting to registries with self-signed certificates in trusted networks.",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -121,6 +159,36 @@ func resourceRegistryHelmCreate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
+// helmRegistryTLSConfigForRead flattens the API TLS payload back into state.
+// It mirrors ociBasicTLSConfigForRead: the block is only emitted when the
+// practitioner configured one or the API returned something meaningful, so a
+// registry stored without TLS does not produce a diff.
+func helmRegistryTLSConfigForRead(d *schema.ResourceData, apiTLS *models.V1TLSConfiguration) []interface{} {
+	tlsConfig := make([]interface{}, 0, 1)
+	if apiTLS == nil {
+		return tlsConfig
+	}
+	hasStateTLS := false
+	if credsRaw, ok := d.Get("credentials").([]interface{}); ok && len(credsRaw) > 0 {
+		if credMap, ok := credsRaw[0].(map[string]interface{}); ok {
+			if tlsRaw, ok := credMap["tls_config"].([]interface{}); ok && len(tlsRaw) > 0 {
+				hasStateTLS = true
+			}
+		}
+	}
+	hasMeaningfulTLS := apiTLS.Ca != "" || apiTLS.Certificate != "" || apiTLS.Key != "" || apiTLS.InsecureSkipVerify
+	if hasStateTLS || hasMeaningfulTLS {
+		tlsConfig = append(tlsConfig, map[string]interface{}{
+			"enabled":              apiTLS.Enabled,
+			"ca":                   apiTLS.Ca,
+			"certificate":          apiTLS.Certificate,
+			"key":                  apiTLS.Key,
+			"insecure_skip_verify": apiTLS.InsecureSkipVerify,
+		})
+	}
+	return tlsConfig
+}
+
 func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
@@ -151,11 +219,14 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		return diag.FromErr(err)
 	}
 
+	tlsConfig := helmRegistryTLSConfigForRead(d, registry.Spec.Auth.TLS)
+
 	switch registry.Spec.Auth.Type {
 	case "noAuth":
 		credentials := make([]interface{}, 0, 1)
 		acc := make(map[string]interface{})
 		acc["credential_type"] = "noAuth"
+		acc["tls_config"] = tlsConfig
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
@@ -166,6 +237,7 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		acc["credential_type"] = "basic"
 		acc["username"] = registry.Spec.Auth.Username
 		acc["password"] = registry.Spec.Auth.Password.String()
+		acc["tls_config"] = tlsConfig
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
@@ -176,6 +248,7 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		acc["credential_type"] = "token"
 		acc["username"] = registry.Spec.Auth.Username
 		acc["token"] = registry.Spec.Auth.Token.String()
+		acc["tls_config"] = tlsConfig
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
@@ -269,6 +342,19 @@ func toRegistryHelmCredential(regCred map[string]interface{}) *models.V1Registry
 		auth.Username = regCred["username"].(string)
 		auth.Token = strfmt.Password(regCred["token"].(string))
 	}
+
+	// TLS is only sent when configured, so existing configs are unaffected.
+	if tlsCfg, ok := regCred["tls_config"].([]interface{}); ok && len(tlsCfg) > 0 && tlsCfg[0] != nil {
+		tlsMap := tlsCfg[0].(map[string]interface{})
+		auth.TLS = &models.V1TLSConfiguration{
+			Enabled:            tlsMap["enabled"].(bool),
+			Ca:                 tlsMap["ca"].(string),
+			Certificate:        tlsMap["certificate"].(string),
+			Key:                tlsMap["key"].(string),
+			InsecureSkipVerify: tlsMap["insecure_skip_verify"].(bool),
+		}
+	}
+
 	return auth
 }
 
