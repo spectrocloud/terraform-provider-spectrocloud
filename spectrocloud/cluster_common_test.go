@@ -1921,7 +1921,7 @@ func TestSetCommonClusterImportAttributesNilClusterConfig(t *testing.T) {
 		},
 	}
 
-	err := setCommonClusterImportAttributes(cluster, d, true)
+	err := setCommonClusterImportAttributes(cluster, d, true, true)
 	require.NoError(t, err)
 	assert.Equal(t, "template cluster", d.Get("description"))
 	assert.Equal(t, "DownloadAndInstall", d.Get("apply_setting"))
@@ -1933,8 +1933,56 @@ func TestSetCommonClusterImportAttributesNilClusterConfig(t *testing.T) {
 
 func TestSetCommonClusterImportAttributesNilCluster(t *testing.T) {
 	d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{}, map[string]interface{}{})
-	err := setCommonClusterImportAttributes(nil, d, true)
+	err := setCommonClusterImportAttributes(nil, d, true, true)
 	require.Error(t, err)
+}
+
+// TestSetCommonClusterImportAttributes_BrownfieldSkipsOsPatch is the PLT-2350
+// regression: brownfield schema has no os_patch_* attributes, but the API may
+// still return OsPatchConfig. Import must skip those sets.
+func TestSetCommonClusterImportAttributes_BrownfieldSkipsOsPatch(t *testing.T) {
+	d := resourceClusterBrownfield().TestResourceData()
+	d.SetId("brownfield-cluster-id")
+
+	cluster := &models.V1SpectroCluster{
+		Metadata: &models.V1ObjectMeta{
+			Name: "brownfield-cluster",
+			Annotations: map[string]string{
+				"description": "imported brownfield",
+			},
+		},
+		Spec: &models.V1SpectroClusterSpec{
+			ClusterConfig: &models.V1ClusterConfig{
+				Timezone: "UTC",
+				MachineManagementConfig: &models.V1MachineManagementConfig{
+					OsPatchConfig: &models.V1OsPatchConfig{
+						PatchOnBoot: true,
+						Schedule:    "0 0 * * *",
+					},
+				},
+			},
+		},
+		Status: &models.V1SpectroClusterStatus{
+			SpcApply: &models.V1SpcApply{
+				ActionType: "DownloadAndInstall",
+			},
+			Repave: &models.V1ClusterRepaveStatus{
+				State: models.V1ClusterRepaveStateApproved.Pointer(),
+			},
+		},
+	}
+
+	// includeOsPatch=true reproduces the bug against brownfield schema.
+	err := setCommonClusterImportAttributes(cluster, d, true, true)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "os_patch_on_boot")
+
+	// Brownfield import path passes includeOsPatch=false.
+	err = setCommonClusterImportAttributes(cluster, d, true, false)
+	require.NoError(t, err)
+	assert.Equal(t, "UTC", d.Get("cluster_timezone"))
+	assert.Equal(t, "imported brownfield", d.Get("description"))
+	assert.Equal(t, "DownloadAndInstall", d.Get("apply_setting"))
 }
 
 func TestClusterTemplateProfileSetFromList(t *testing.T) {

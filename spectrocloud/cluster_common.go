@@ -164,7 +164,9 @@ func updateAgentUpgradeSetting(c *client.V1Client, d *schema.ResourceData) error
 
 // setCommonClusterImportAttributes sets shared cluster attributes during import.
 // ClusterConfig, Metadata, and Status may be nil for template-based clusters.
-func setCommonClusterImportAttributes(cluster *models.V1SpectroCluster, d *schema.ResourceData, includeRepaveState bool) error {
+// includeOsPatch must be false for resources whose schema omits OS patch fields
+// (e.g. spectrocloud_cluster_brownfield — see PLT-2350).
+func setCommonClusterImportAttributes(cluster *models.V1SpectroCluster, d *schema.ResourceData, includeRepaveState, includeOsPatch bool) error {
 	if cluster == nil {
 		return fmt.Errorf("cluster data is unavailable for import")
 	}
@@ -198,7 +200,7 @@ func setCommonClusterImportAttributes(cluster *models.V1SpectroCluster, d *schem
 		return err
 	}
 
-	if clusterConfig != nil && clusterConfig.MachineManagementConfig != nil && clusterConfig.MachineManagementConfig.OsPatchConfig != nil {
+	if includeOsPatch && clusterConfig != nil && clusterConfig.MachineManagementConfig != nil && clusterConfig.MachineManagementConfig.OsPatchConfig != nil {
 		osPatch := clusterConfig.MachineManagementConfig.OsPatchConfig
 		if err := d.Set("os_patch_on_boot", osPatch.PatchOnBoot); err != nil {
 			return err
@@ -235,7 +237,7 @@ func flattenCommonAttributeForClusterImport(c *client.V1Client, d *schema.Resour
 		return err
 	}
 
-	return setCommonClusterImportAttributes(cluster, d, true)
+	return setCommonClusterImportAttributes(cluster, d, true, true)
 }
 
 func GetCommonCluster(d *schema.ResourceData, m interface{}) (*client.V1Client, error) {
@@ -294,7 +296,7 @@ func flattenCommonAttributeForCustomClusterImport(c *client.V1Client, d *schema.
 		return err
 	}
 
-	return setCommonClusterImportAttributes(cluster, d, false)
+	return setCommonClusterImportAttributes(cluster, d, false, true)
 }
 
 func flattenCloudConfigGeneric(configUID string, d *schema.ResourceData, c *client.V1Client) diag.Diagnostics {
