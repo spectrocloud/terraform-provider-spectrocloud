@@ -1283,14 +1283,24 @@ func TestResourceClusterProfileCreate_ImmutableCloneUpdatesVariables(t *testing.
 	assert.Equal(t, "cloned-profile-uid", d.Id())
 }
 
-func TestSyncClusterProfileVariablesFromConfigNewVariable(t *testing.T) {
+func TestAddNewProfileVariablesFromConfigNewVariable(t *testing.T) {
 	t.Parallel()
 
 	d := prepareBaseClusterProfileTestData()
 	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
 
-	// Mock GET /variables returns empty; variables from HCL are registered via PATCH then PUT.
-	assert.NoError(t, syncClusterProfileVariablesFromConfig(d, c, "cloned-profile-uid"))
+	// Mock GET /variables returns empty; new variables from HCL are registered via PATCH.
+	assert.NoError(t, addNewProfileVariablesFromConfig(d, c, "cloned-profile-uid"))
+}
+
+func TestPruneProfileVariablesToConfig(t *testing.T) {
+	t.Parallel()
+
+	d := prepareBaseClusterProfileTestData()
+	c := getV1ClientWithResourceContext(unitTestMockAPIClient, "project")
+
+	// Mock GET /variables returns empty; the desired set from HCL is applied via PUT.
+	assert.NoError(t, pruneProfileVariablesToConfig(d, c, "cloned-profile-uid"))
 }
 
 // TestFindAnyExistingProfileVersionUID_Found verifies that the helper finds
