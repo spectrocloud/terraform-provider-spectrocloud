@@ -57,16 +57,19 @@ func ProfileVariables() *schema.Schema {
 							"immutable": {
 								Type:        schema.TypeBool,
 								Optional:    true,
+								Computed:    true,
 								Description: "If `immutable` is set to `true`, then variable value can't be editable. By default the `immutable` flag will be set to `false`.",
 							},
 							"is_sensitive": {
 								Type:        schema.TypeBool,
 								Optional:    true,
+								Computed:    true,
 								Description: "If `is_sensitive` is set to `true`, then default value will be masked. By default the `is_sensitive` flag will be set to false.",
 							},
 							"hidden": {
 								Type:        schema.TypeBool,
 								Optional:    true,
+								Computed:    true,
 								Description: "If `hidden` is set to `true`, then variable will be hidden for overriding the value. By default the `hidden` flag will be set to `false`.",
 							},
 							"input_type": {
