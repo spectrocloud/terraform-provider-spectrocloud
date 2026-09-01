@@ -70,11 +70,13 @@ func getHelmRegistryPayload() *models.V1HelmRegistry {
 }
 
 // helmRegistryFixtureFor dispatches GET /v1/registries/helm/{uid} by UID,
-// mirroring ecrRegistryFixtureFor/basicRegistryFixtureFor below. PLT-2356:
+// mirroring ecrRegistryFixtureFor/basicRegistryFixtureFor below. PLT-2356
 // added the "helm-uid-tls" case so resourceRegistryHelmRead's TLS mapping
-// (registry.Spec.Auth.TLS != nil branch) can be exercised directly. The
-// default branch preserves the original static payload so every pre-existing
-// helm registry test keeps passing unmodified.
+// (registry.Spec.Auth.TLS != nil branch) can be exercised directly; PLT-2400
+// added "test-helm-basic-uid" so the "basic" credential branch (as opposed to
+// the default "token" payload) can be exercised for the password-drift fix.
+// The default branch preserves the original static payload so every
+// pre-existing helm registry test keeps passing unmodified.
 func helmRegistryFixtureFor(uid string) (*models.V1HelmRegistry, int) {
 	switch uid {
 	case "helm-uid-tls":
@@ -86,6 +88,15 @@ func helmRegistryFixtureFor(uid string) (*models.V1HelmRegistry, int) {
 			Enabled:            true,
 			InsecureSkipVerify: true,
 			Key:                "test-key-pem",
+		}
+		return r, http.StatusOK
+	case "test-helm-basic-uid":
+		r := getHelmRegistryPayload()
+		r.Spec.Auth = &models.V1RegistryAuth{
+			Password: "api-returned-password",
+			TLS:      nil,
+			Type:     "basic",
+			Username: "sf",
 		}
 		return r, http.StatusOK
 	default:
