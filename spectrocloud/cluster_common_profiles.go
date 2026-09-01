@@ -549,7 +549,10 @@ func updateProfiles(c *client.V1Client, d *schema.ResourceData) error {
 		// Restore old value on API error (e.g., DuplicateClusterPacksForbidden)
 		// This ensures Terraform state stays in sync with actual API state
 		restoreOldProfile()
-		return err
+		// PE-9338: make the server's Kubernetes multi-minor-upgrade / post-upgrade-downgrade
+		// block (HTTP 400 + machine code) legible instead of the opaque "(status 400): {}".
+		// Unrecognized errors pass through unchanged.
+		return mapClusterProfileUpdateErr(err)
 	}
 
 	if _, found := toTags(d)["skip_apply"]; found {
