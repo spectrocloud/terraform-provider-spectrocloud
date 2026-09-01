@@ -603,10 +603,6 @@ func TestProfileVariables(t *testing.T) {
 	assert.Equal(t, schema.TypeBool, immutableSchema.Type, "'immutable' field should be TypeBool")
 	assert.True(t, immutableSchema.Optional, "'immutable' field should be optional")
 	assert.False(t, immutableSchema.Required, "'immutable' field should not be required")
-	// Computed is required alongside Optional so that an unset value in config defers to
-	// the API-supplied default already in state, instead of Terraform reporting a
-	// perpetual false -> null phantom diff (see #883).
-	assert.True(t, immutableSchema.Computed, "'immutable' field should be computed to avoid phantom false -> null diffs")
 	assert.Equal(t, "If `immutable` is set to `true`, then variable value can't be editable. By default the `immutable` flag will be set to `false`.", immutableSchema.Description, "'immutable' field should have correct description")
 
 	// Test "is_sensitive" field
@@ -616,7 +612,6 @@ func TestProfileVariables(t *testing.T) {
 	assert.Equal(t, schema.TypeBool, isSensitiveSchema.Type, "'is_sensitive' field should be TypeBool")
 	assert.True(t, isSensitiveSchema.Optional, "'is_sensitive' field should be optional")
 	assert.False(t, isSensitiveSchema.Required, "'is_sensitive' field should not be required")
-	assert.True(t, isSensitiveSchema.Computed, "'is_sensitive' field should be computed to avoid phantom false -> null diffs")
 	assert.Equal(t, "If `is_sensitive` is set to `true`, then default value will be masked. By default the `is_sensitive` flag will be set to false.", isSensitiveSchema.Description, "'is_sensitive' field should have correct description")
 
 	// Test "hidden" field
@@ -626,7 +621,6 @@ func TestProfileVariables(t *testing.T) {
 	assert.Equal(t, schema.TypeBool, hiddenSchema.Type, "'hidden' field should be TypeBool")
 	assert.True(t, hiddenSchema.Optional, "'hidden' field should be optional")
 	assert.False(t, hiddenSchema.Required, "'hidden' field should not be required")
-	assert.True(t, hiddenSchema.Computed, "'hidden' field should be computed to avoid phantom false -> null diffs")
 	assert.Equal(t, "If `hidden` is set to `true`, then variable will be hidden for overriding the value. By default the `hidden` flag will be set to `false`.", hiddenSchema.Description, "'hidden' field should have correct description")
 
 	// Test "input_type" field

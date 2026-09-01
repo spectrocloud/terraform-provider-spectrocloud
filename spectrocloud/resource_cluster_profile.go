@@ -1327,10 +1327,48 @@ func flattenVariableOptions(opts []*models.V1VariableOption) []interface{} {
 	return out
 }
 
+// priorProfileVariableDefaultValues returns the previously-stored default_value for each
+// profile variable, keyed by name, so a masked API response for a sensitive variable can
+// fall back to what was already in state/config instead of overwriting it.
+func priorProfileVariableDefaultValues(d *schema.ResourceData) map[string]string {
+	prior := make(map[string]string)
+	v, ok := d.GetOk("profile_variables")
+	if !ok {
+		return prior
+	}
+	list, ok := v.([]interface{})
+	if !ok || len(list) == 0 || list[0] == nil {
+		return prior
+	}
+	wrapper, ok := list[0].(map[string]interface{})
+	if !ok {
+		return prior
+	}
+	vars, ok := wrapper["variable"].([]interface{})
+	if !ok {
+		return prior
+	}
+	for _, item := range vars {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, _ := m["name"].(string)
+		if name == "" {
+			continue
+		}
+		if dv, ok := m["default_value"].(string); ok {
+			prior[name] = dv
+		}
+	}
+	return prior
+}
+
 func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([]interface{}, error) {
 	if len(pv) == 0 {
 		return make([]interface{}, 0), nil
 	}
+	priorDefaults := priorProfileVariableDefaultValues(d)
 	var variables []interface{}
 	for _, v := range pv {
 		variable := make(map[string]interface{})
@@ -1338,7 +1376,11 @@ func flattenProfileVariables(d *schema.ResourceData, pv []*models.V1Variable) ([
 		variable["display_name"] = v.DisplayName
 		variable["description"] = v.Description
 		variable["format"] = v.Format
-		variable["default_value"] = v.DefaultValue
+		// The API masks default_value (e.g. "********") whenever the variable is
+		// IsSensitive, so writing it straight to state clobbers the real value on
+		// every refresh -- see PLT-2249's resolveProfileVariableValue, which this
+		// mirrors for profile_variables' own default_value field.
+		variable["default_value"] = resolveProfileVariableValue(priorDefaults[String(v.Name)], v.DefaultValue, v.IsSensitive)
 		variable["regex"] = v.Regex
 		variable["required"] = v.Required
 		variable["immutable"] = v.Immutable
