@@ -31,6 +31,34 @@ func getPackRegistryPayload() *models.V1PackRegistry {
 	}
 }
 
+// helmRegistryFixtureFor dispatches GET /v1/registries/helm/{uid} by UID so
+// resourceRegistryHelmRead's "basic" branch can be exercised directly, in
+// addition to the default "token" payload. The default branch preserves the
+// original static payload so every pre-existing test keeps passing
+// unmodified.
+func helmRegistryFixtureFor(uid string) *models.V1HelmRegistry {
+	switch uid {
+	case "test-helm-basic-uid":
+		r := getHelmRegistryPayload()
+		r.Spec.Auth = &models.V1RegistryAuth{
+			Password: "api-returned-password",
+			TLS:      nil,
+			Type:     "basic",
+			Username: "sf",
+		}
+		return r
+	default:
+		return getHelmRegistryPayload()
+	}
+}
+
+func helmRegistryGetHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(helmRegistryFixtureFor(uid))
+}
+
 func getHelmRegistryPayload() *models.V1HelmRegistry {
 	return &models.V1HelmRegistry{
 		APIVersion: "",
@@ -412,12 +440,9 @@ func RegistriesRoutes() []Route {
 			},
 		},
 		{
-			Method: "GET",
-			Path:   "/v1/registries/helm/{uid}",
-			Response: ResponseData{
-				StatusCode: http.StatusOK,
-				Payload:    getHelmRegistryPayload(),
-			},
+			Method:  "GET",
+			Path:    "/v1/registries/helm/{uid}",
+			Handler: helmRegistryGetHandler,
 		},
 		{
 			Method: "GET",

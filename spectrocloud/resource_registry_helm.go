@@ -121,6 +121,23 @@ func resourceRegistryHelmCreate(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
+// helmRegistryCredentialFieldForRead preserves a sensitive credential field
+// (password, token) from state instead of the value the API just returned.
+// Palette's GET does not echo back the plaintext secret (empty or masked),
+// so writing it into state on every Read produces perpetual plan drift
+// against the value configured in HCL. Mirrors the fix already applied to
+// spectrocloud_registry_oci for the same root cause (see PLT-2400).
+func helmRegistryCredentialFieldForRead(d *schema.ResourceData, field string, apiValue string) interface{} {
+	if credsRaw, ok := d.Get("credentials").([]interface{}); ok && len(credsRaw) > 0 {
+		if credMap, ok := credsRaw[0].(map[string]interface{}); ok {
+			if val, exists := credMap[field]; exists && val != nil {
+				return val
+			}
+		}
+	}
+	return apiValue
+}
+
 func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c := getV1ClientWithResourceContext(m, "tenant")
 	var diags diag.Diagnostics
@@ -165,7 +182,7 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		acc := make(map[string]interface{})
 		acc["credential_type"] = "basic"
 		acc["username"] = registry.Spec.Auth.Username
-		acc["password"] = registry.Spec.Auth.Password.String()
+		acc["password"] = helmRegistryCredentialFieldForRead(d, "password", registry.Spec.Auth.Password.String())
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)
@@ -175,7 +192,7 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 		acc := make(map[string]interface{})
 		acc["credential_type"] = "token"
 		acc["username"] = registry.Spec.Auth.Username
-		acc["token"] = registry.Spec.Auth.Token.String()
+		acc["token"] = helmRegistryCredentialFieldForRead(d, "token", registry.Spec.Auth.Token.String())
 		credentials = append(credentials, acc)
 		if err := d.Set("credentials", credentials); err != nil {
 			return diag.FromErr(err)

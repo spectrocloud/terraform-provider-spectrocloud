@@ -92,3 +92,49 @@ func TestResourceRegistryHelmUpdateWithWaitForSync(t *testing.T) {
 	// Should complete successfully with no errors or warnings
 	assert.Equal(t, 0, len(diags))
 }
+
+// The mock's helm registry payload returns password "test=pwd" and token "as",
+// which differ from what's set in state below. Read must preserve the
+// state values rather than overwriting them with the API's response, or
+// every subsequent plan reports spurious drift (PLT-2400).
+func TestResourceRegistryHelmReadPreservesCredentialsFromState(t *testing.T) {
+	d := prepareResourceRegistryHelm()
+	d.SetId("test-registry-uid")
+	var cred []interface{}
+	cred = append(cred, map[string]interface{}{
+		"credential_type": "token",
+		"username":        "test-username",
+		"password":        "",
+		"token":           "state-token",
+	})
+	_ = d.Set("credentials", cred)
+
+	var diags diag.Diagnostics
+	ctx := context.Background()
+	diags = resourceRegistryHelmRead(ctx, d, unitTestMockAPIClient)
+	assert.Equal(t, 0, len(diags))
+
+	creds := d.Get("credentials").([]interface{})[0].(map[string]interface{})
+	assert.Equal(t, "state-token", creds["token"])
+}
+
+func TestResourceRegistryHelmReadPreservesPasswordFromState(t *testing.T) {
+	d := prepareResourceRegistryHelm()
+	d.SetId("test-helm-basic-uid")
+	var cred []interface{}
+	cred = append(cred, map[string]interface{}{
+		"credential_type": "basic",
+		"username":        "test-username",
+		"password":        "state-password",
+		"token":           "",
+	})
+	_ = d.Set("credentials", cred)
+
+	var diags diag.Diagnostics
+	ctx := context.Background()
+	diags = resourceRegistryHelmRead(ctx, d, unitTestMockAPIClient)
+	assert.Equal(t, 0, len(diags))
+
+	creds := d.Get("credentials").([]interface{})[0].(map[string]interface{})
+	assert.Equal(t, "state-password", creds["password"])
+}
