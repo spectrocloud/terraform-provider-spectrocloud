@@ -2,10 +2,14 @@ package spectrocloud
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/spectrocloud/palette-sdk-go/client"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestProvider(t *testing.T) {
@@ -88,7 +92,7 @@ func prepareBaseProviderConfig() *schema.ResourceData {
 
 func TestProviderConfig(t *testing.T) {
 	d := prepareBaseProviderConfig()
-	_, diags := providerConfigure(context.Background(), d)
+	_, diags := providerConfigure(context.Background(), d, "test")
 	assert.Empty(t, diags)
 }
 
@@ -108,6 +112,39 @@ func TestProviderConfigValidError(t *testing.T) {
 	d := prepareBaseProviderConfig()
 	// validating empty api key use case
 	_ = d.Set("api_key", "")
-	_, diags := providerConfigure(context.Background(), d)
+	_, diags := providerConfigure(context.Background(), d, "test")
 	assertFirstDiagMessage(t, diags, "Unable to create Spectro Cloud client")
+}
+
+func TestResolveClientHeader(t *testing.T) {
+	t.Setenv("SPECTROCLOUD_CLIENT_HEADER", "")
+	assert.Equal(t, "terraform-v1.2.3", resolveClientHeader("1.2.3"))
+	assert.Equal(t, "terraform-v0.29.9-dev", resolveClientHeader("0.29.9-dev"))
+
+	t.Setenv("SPECTROCLOUD_CLIENT_HEADER", "crossplane-provider-palette-v0.29.9")
+	assert.Equal(t, "crossplane-provider-palette-v0.29.9", resolveClientHeader("1.2.3"))
+}
+
+// TestClientHeaderReachesWire proves resolveClientHeader's output actually gets
+// sent on real requests via client.WithClientHeader, not just that the string
+// logic is correct in isolation -- this is the acceptance criteria in PLT-2292.
+func TestClientHeaderReachesWire(t *testing.T) {
+	var got string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.Header.Get("X-SpectroCloud-Client")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"items":[{"metadata":{"name":"Default","uid":"testprojectuid"}}]}`))
+	}))
+	defer srv.Close()
+
+	c := client.New(
+		client.WithPaletteURI(srv.Listener.Addr().String()),
+		client.WithAPIKey("k"),
+		client.WithSchemes([]string{"http"}),
+		client.WithClientHeader(resolveClientHeader("1.2.3")),
+	)
+	_, err := c.GetProjectUID("Default")
+	assert.NoError(t, err)
+	assert.Equal(t, "terraform-v1.2.3", got)
 }
