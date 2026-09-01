@@ -61,7 +61,7 @@ The import will automatically populate all configuration fields from the Spectro
 
 ### Optional
 
-- `is_private` (Boolean, Deprecated) Specifies whether the Helm registry is private or public. Private registries require authentication to access. **Deprecated:** use `is_synchronization` here instead for naming consistency across registry resources.
+- `is_private` (Boolean, Deprecated) Specifies whether the Helm registry is private or public. Private registries require authentication to access. **Deprecated:** use `is_synchronization` here instead.
 - `is_synchronization` (Boolean) Specifies whether the Helm registry is private (requiring authentication) and, as a result, synchronized by Palette. Replaces `is_private` for naming parity with `spectrocloud_registry_oci`; the Helm registry API has no independent sync flag, so this maps onto the same underlying value as the deprecated `is_private`. Mutually exclusive with `is_private` — set only one.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait_for_sync` (Boolean) If `true`, Terraform will wait for the Helm registry to complete its initial synchronization before marking the resource as created or updated. Default value is `false`.
