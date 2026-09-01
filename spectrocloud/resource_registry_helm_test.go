@@ -307,3 +307,80 @@ func TestPLT2356_HelmRegistryTLSReadOmittedWhenEmpty(t *testing.T) {
 	assert.Len(t, creds, 1)
 	assert.Empty(t, creds[0].(map[string]interface{})["tls_config"])
 }
+
+// PLT-2401: spectrocloud_registry_helm had only `is_private`, unlike
+// spectrocloud_registry_oci's `is_private` + `is_synchronization` pair. The
+// Helm API has no independent sync flag, so `is_synchronization` is added as
+// a naming-parity alias over the same underlying value, `is_private` is
+// deprecated, and the two are mutually exclusive via ExactlyOneOf.
+
+func TestPLT2401_HelmRegistryIsSynchronizationSchema(t *testing.T) {
+	s := resourceRegistryHelm().Schema
+
+	isPrivate, ok := s["is_private"]
+	assert.True(t, ok, "expected an is_private attribute")
+	assert.True(t, isPrivate.Optional)
+	assert.True(t, isPrivate.Computed)
+	assert.NotEmpty(t, isPrivate.Deprecated, "is_private should be marked deprecated")
+	assert.ElementsMatch(t, []string{"is_private", "is_synchronization"}, isPrivate.ExactlyOneOf)
+
+	isSync, ok := s["is_synchronization"]
+	assert.True(t, ok, "expected an is_synchronization attribute")
+	assert.Equal(t, schema.TypeBool, isSync.Type)
+	assert.True(t, isSync.Optional)
+	assert.True(t, isSync.Computed)
+	assert.Empty(t, isSync.Deprecated)
+	assert.ElementsMatch(t, []string{"is_private", "is_synchronization"}, isSync.ExactlyOneOf)
+}
+
+func TestPLT2401_ResolveHelmIsPrivate(t *testing.T) {
+	tests := []struct {
+		name         string
+		isPrivate    bool
+		isSync       bool
+		wantResolved bool
+	}{
+		{"only is_private true", true, false, true},
+		{"only is_private false", false, false, false},
+		{"only is_synchronization true", false, true, true},
+		{"only is_synchronization false", false, false, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := prepareResourceRegistryHelm()
+			_ = d.Set("is_private", tt.isPrivate)
+			_ = d.Set("is_synchronization", tt.isSync)
+			assert.Equal(t, tt.wantResolved, resolveHelmIsPrivate(d))
+			assert.Equal(t, tt.wantResolved, toRegistryEntityHelm(d).Spec.IsPrivate)
+			assert.Equal(t, tt.wantResolved, toRegistryHelm(d).Spec.IsPrivate)
+		})
+	}
+}
+
+// Read must mirror the single API isPrivate value into both is_private and
+// is_synchronization so neither attribute drifts regardless of which one the
+// practitioner configured.
+func TestPLT2401_HelmRegistryReadMirrorsIsPrivateAndIsSynchronization(t *testing.T) {
+	tests := []struct {
+		name string
+		uid  string
+		want bool
+	}{
+		{"private registry", "test-helm-private-uid", true},
+		{"public registry", "test-registry-uid", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := resourceRegistryHelm().TestResourceData()
+			d.SetId(tt.uid)
+
+			diags := resourceRegistryHelmRead(context.Background(), d, unitTestMockAPIClient)
+			assert.False(t, diags.HasError(), "unexpected error: %v", diags)
+
+			assert.Equal(t, tt.want, d.Get("is_private"))
+			assert.Equal(t, tt.want, d.Get("is_synchronization"))
+		})
+	}
+}

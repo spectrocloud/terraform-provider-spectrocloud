@@ -44,9 +44,19 @@ func resourceRegistryHelm() *schema.Resource {
 				Description: "The name of the Helm registry. This must be unique.",
 			},
 			"is_private": {
-				Type:        schema.TypeBool,
-				Required:    true,
-				Description: "Specifies whether the Helm registry is private or public.",
+				Type:         schema.TypeBool,
+				Optional:     true,
+				Computed:     true,
+				ExactlyOneOf: []string{"is_private", "is_synchronization"},
+				Deprecated:   "Use `is_synchronization` instead. This field is retained for backward compatibility and will be removed in a future release.",
+				Description:  "Specifies whether the Helm registry is private or public. Private registries require authentication to access. **Deprecated:** use `is_synchronization` here instead.",
+			},
+			"is_synchronization": {
+				Type:         schema.TypeBool,
+				Optional:     true,
+				Computed:     true,
+				ExactlyOneOf: []string{"is_private", "is_synchronization"},
+				Description:  "Specifies whether the Helm registry is private (requiring authentication) and, as a result, synchronized by Palette. Replaces `is_private` for naming parity with `spectrocloud_registry_oci`; the Helm registry API has no independent sync flag, so this maps onto the same underlying value as the deprecated `is_private`. Mutually exclusive with `is_private` — set only one.",
 			},
 			"endpoint": {
 				Type:        schema.TypeString,
@@ -225,6 +235,13 @@ func resourceRegistryHelmRead(ctx context.Context, d *schema.ResourceData, m int
 	if err := d.Set("is_private", registry.Spec.IsPrivate); err != nil {
 		return diag.FromErr(err)
 	}
+	// is_synchronization mirrors is_private: the Helm API has no separate sync
+	// flag, so both attributes always reflect the same underlying value. Both
+	// are Optional+Computed with ExactlyOneOf, so writing the same value into
+	// whichever one the practitioner did NOT configure produces no diff.
+	if err := d.Set("is_synchronization", registry.Spec.IsPrivate); err != nil {
+		return diag.FromErr(err)
+	}
 	if err := d.Set("endpoint", registry.Spec.Endpoint); err != nil {
 		return diag.FromErr(err)
 	}
@@ -310,9 +327,19 @@ func resourceRegistryHelmDelete(ctx context.Context, d *schema.ResourceData, m i
 	return diags
 }
 
+// resolveHelmIsPrivate resolves the single `isPrivate` API value from
+// whichever of `is_private` (deprecated) or `is_synchronization` the
+// practitioner configured. `ExactlyOneOf` guarantees at most one is present
+// in config; the other stays at its Computed zero/prior value, so an OR is
+// sufficient to recover the configured value regardless of which attribute
+// carries it (see PLT-2401).
+func resolveHelmIsPrivate(d *schema.ResourceData) bool {
+	return d.Get("is_private").(bool) || d.Get("is_synchronization").(bool)
+}
+
 func toRegistryEntityHelm(d *schema.ResourceData) *models.V1HelmRegistryEntity {
 	endpoint := d.Get("endpoint").(string)
-	isPrivate := d.Get("is_private").(bool)
+	isPrivate := resolveHelmIsPrivate(d)
 	config := d.Get("credentials").([]interface{})[0].(map[string]interface{})
 	return &models.V1HelmRegistryEntity{
 		Metadata: &models.V1ObjectMeta{
@@ -329,7 +356,7 @@ func toRegistryEntityHelm(d *schema.ResourceData) *models.V1HelmRegistryEntity {
 
 func toRegistryHelm(d *schema.ResourceData) *models.V1HelmRegistry {
 	endpoint := d.Get("endpoint").(string)
-	isPrivate := d.Get("is_private").(bool)
+	isPrivate := resolveHelmIsPrivate(d)
 	config := d.Get("credentials").([]interface{})[0].(map[string]interface{})
 	return &models.V1HelmRegistry{
 		Metadata: &models.V1ObjectMeta{

@@ -74,11 +74,18 @@ func getHelmRegistryPayload() *models.V1HelmRegistry {
 // added the "helm-uid-tls" case so resourceRegistryHelmRead's TLS mapping
 // (registry.Spec.Auth.TLS != nil branch) can be exercised directly; PLT-2400
 // added "test-helm-basic-uid" so the "basic" credential branch (as opposed to
-// the default "token" payload) can be exercised for the password-drift fix.
+// the default "token" payload) can be exercised for the password-drift fix;
+// PLT-2401 added "test-helm-private-uid" (IsPrivate: true) so Read's
+// is_private/is_synchronization mirroring can be exercised with a non-default
+// value, since the static default payload below is already IsPrivate: false.
 // The default branch preserves the original static payload so every
 // pre-existing helm registry test keeps passing unmodified.
 func helmRegistryFixtureFor(uid string) (*models.V1HelmRegistry, int) {
 	switch uid {
+	case "test-helm-private-uid":
+		r := getHelmRegistryPayload()
+		r.Spec.IsPrivate = true
+		return r, http.StatusOK
 	case "helm-uid-tls":
 		r := getHelmRegistryPayload()
 		r.Metadata.UID = uid

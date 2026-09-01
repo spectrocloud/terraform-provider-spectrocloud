@@ -13,9 +13,9 @@ description: |-
 
 ```terraform
 resource "spectrocloud_registry_helm" "r1" {
-  name       = "us-artifactory"
-  endpoint   = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
-  is_private = true
+  name               = "us-artifactory"
+  endpoint           = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
+  is_synchronization = true # preferred; the deprecated is_private accepts the same value
   credentials {
     credential_type = "noAuth"
     username        = "abc"
