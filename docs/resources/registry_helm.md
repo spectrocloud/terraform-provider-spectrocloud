@@ -13,9 +13,9 @@ description: |-
 
 ```terraform
 resource "spectrocloud_registry_helm" "r1" {
-  name       = "us-artifactory"
-  endpoint   = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
-  is_private = true
+  name               = "us-artifactory"
+  endpoint           = "https://123456.dkr.ecr.us-west-1.amazonaws.com"
+  is_synchronization = true # preferred; the deprecated is_private accepts the same value
   credentials {
     credential_type = "noAuth"
     username        = "abc"
@@ -57,11 +57,12 @@ The import will automatically populate all configuration fields from the Spectro
 
 - `credentials` (Block List, Min: 1, Max: 1) Authentication credentials for accessing the Helm registry. (see [below for nested schema](#nestedblock--credentials))
 - `endpoint` (String) The URL endpoint of the Helm registry where the charts are hosted.
-- `is_private` (Boolean) Specifies whether the Helm registry is private or public.
 - `name` (String) The name of the Helm registry. This must be unique.
 
 ### Optional
 
+- `is_private` (Boolean, Deprecated) Specifies whether the Helm registry is private or public. Private registries require authentication to access. **Deprecated:** use `is_synchronization` here instead for naming consistency across registry resources.
+- `is_synchronization` (Boolean) Specifies whether the Helm registry is private (requiring authentication) and, as a result, synchronized by Palette. Replaces `is_private` for naming parity with `spectrocloud_registry_oci`; the Helm registry API has no independent sync flag, so this maps onto the same underlying value as the deprecated `is_private`. Mutually exclusive with `is_private` — set only one.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait_for_sync` (Boolean) If `true`, Terraform will wait for the Helm registry to complete its initial synchronization before marking the resource as created or updated. Default value is `false`.
 

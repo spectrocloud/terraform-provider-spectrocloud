@@ -83,6 +83,9 @@ func setHelmRegistryState(d *schema.ResourceData, registry *models.V1HelmRegistr
 		if err := d.Set("is_private", registry.Spec.IsPrivate); err != nil {
 			return err
 		}
+		if err := d.Set("is_synchronization", registry.Spec.IsPrivate); err != nil {
+			return err
+		}
 	}
 	d.SetId(registryUID)
 	return nil
